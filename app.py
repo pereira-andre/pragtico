@@ -408,6 +408,8 @@ def redirect_to_portal_target(port_call_id: str):
     target = request.form.get("redirect_to", "").strip().lower()
     if target == "scale":
         return redirect(url_for("port_call_detail", port_call_id=port_call_id))
+    if target == "register":
+        return redirect(url_for("port_call_register"))
     return redirect(url_for("dashboard"))
 
 
@@ -432,8 +434,20 @@ def port_call_scope_required(view):
 
 @app.context_processor
 def inject_globals():
+    chatbot_conversation = None
+    chatbot_messages = []
+    chatbot_conversations = []
+    username = session.get("username")
+    if username:
+        try:
+            requested_conv_id = request.args.get("conversation_id", "").strip() or None
+            chatbot_conversation = store.ensure_conversation(username=username, conversation_id=requested_conv_id)
+            chatbot_messages = store.list_messages(username, chatbot_conversation["id"])
+            chatbot_conversations = store.list_conversations(username)
+        except Exception:
+            pass
     return {
-        "current_user": session.get("username"),
+        "current_user": username,
         "current_role": session.get("role"),
         "provider": "Gemini",
         "auth_backend": getattr(auth_service, "backend_name", "unknown"),
@@ -444,6 +458,10 @@ def inject_globals():
         "vessel_type_options": VESSEL_TYPE_OPTIONS,
         "constraint_options": CONSTRAINT_OPTIONS,
         "current_profile": current_user_profile(),
+        "chatbot_conversation": chatbot_conversation,
+        "chatbot_messages": chatbot_messages,
+        "chatbot_conversations": chatbot_conversations,
+        "chatbot_model": rag.generation_model,
     }
 
 
@@ -2443,26 +2461,8 @@ def admin_migrate_local_data():
 @login_required
 def dashboard():
     refresh_knowledge_state(force_reindex=False)
-    username = session["username"]
-    current_conversation = get_current_conversation(username)
-    messages = store.list_messages(username, current_conversation["id"])
     port_activity = store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
-    docs = store.list_documents()
-    users = store.list_users() if session.get("role") == "admin" else []
-    conversations = store.list_conversations(username)
-    api_ready = bool(os.getenv("GEMINI_API_KEY"))
-    try:
-        rag_stats = rag.index_summary()
-    except Exception as exc:
-        rag_stats = {
-            "document_count": 0,
-            "chunk_count": 0,
-            "embedded_chunks": 0,
-            "index_backend": getattr(index_store, "backend_name", "unknown"),
-            "index_error": str(exc),
-        }
-        app.logger.exception("Falha ao gerar resumo do índice")
     tides_today = tide_service.summary_for_date(tide_service.resolve_query_dates("hoje")[0])
     weather_data = None
     weather_error = ""
@@ -2474,25 +2474,14 @@ def dashboard():
         except Exception as exc:
             weather_error = str(exc)
     ais_context = ais_service.dashboard_context()
-    reindex_status = current_reindex_status_payload()
     return render_template(
         "dashboard.html",
-        messages=messages,
         port_activity=port_activity,
-        tracked_scales=build_tracked_scales(port_activity),
-        docs=docs,
-        users=users,
-        conversations=conversations,
-        current_conversation=current_conversation,
-        api_ready=api_ready,
-        rag_stats=rag_stats,
         tides_today=tides_today,
         weather_data=weather_data,
         weather_timeline=weather_timeline,
         weather_error=weather_error,
         ais=ais_context,
-        reindex_status=reindex_status,
-        models={"generation": rag.generation_model, "embedding": rag.embedding_model},
         title="PRAGtico",
     )
 
@@ -2517,6 +2506,46 @@ def maneuver_archive():
         "maneuver_archive.html",
         port_activity=port_activity,
         title="Arquivo de Manobras",
+    )
+
+
+@app.route("/port-calls/register")
+@login_required
+@role_required("admin", "agente")
+def port_call_register():
+    port_activity = store.get_port_activity_snapshot(window_days=5)
+    port_activity = filter_port_activity_for_session(port_activity)
+    return render_template(
+        "port_call_register.html",
+        port_activity=port_activity,
+        tracked_scales=build_tracked_scales(port_activity),
+        title="Registo de Escalas",
+    )
+
+
+@app.route("/admin/documents")
+@login_required
+@role_required("admin")
+def admin_documents():
+    refresh_knowledge_state(force_reindex=False)
+    docs = store.list_documents()
+    try:
+        rag_stats = rag.index_summary()
+    except Exception as exc:
+        rag_stats = {
+            "document_count": 0,
+            "chunk_count": 0,
+            "embedded_chunks": 0,
+            "index_backend": getattr(index_store, "backend_name", "unknown"),
+            "index_error": str(exc),
+        }
+    reindex_status = current_reindex_status_payload()
+    return render_template(
+        "admin_documents.html",
+        docs=docs,
+        rag_stats=rag_stats,
+        reindex_status=reindex_status,
+        title="Gestão de Documentos",
     )
 
 

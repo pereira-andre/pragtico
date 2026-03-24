@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Base documental</p>
+        <h1>Gestão de documentos</h1>
+        <p class="lead">Gestão da base de conhecimento do chatbot. Indexação, upload, edição e monitorização do estado semântico.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('admin_status') }}">Estado da plataforma</a>
+        <a class="hero-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Documentos</span>
+        <strong>{{ rag_stats.document_count }}</strong>
+        <small>na base de conhecimento</small>
+      </article>
+      <article class="hero-stat">
+        <span>Chunks</span>
+        <strong>{{ rag_stats.chunk_count }}</strong>
+        <small>{{ rag_stats.embedded_chunks }} com embedding</small>
+      </article>
+      <article class="hero-stat">
+        <span>Backend</span>
+        <strong>{{ rag_stats.index_backend }}</strong>
+        <small>índice documental</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Indexação</p>
+        <h2>Estado do índice documental</h2>
+      </div>
+      <form id="reindex-form" method="post" action="{{ url_for('reindex_knowledge') }}">
+        <button type="submit" class="mini-button">Reindexar incremental</button>
+      </form>
+    </div>
+    <article
+      class="reindex-status-card is-{{ reindex_status.state }}"
+      id="reindex-status-card"
+      data-reindex-card
+    >
+      <div class="reindex-status-head">
+        <div>
+          <p class="mini-label">Estado da indexação</p>
+          <strong id="reindex-message">{{ reindex_status.message }}</strong>
+        </div>
+        <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
+          {{ reindex_status.state }}
+        </span>
+      </div>
+      <div class="reindex-progress-track" aria-hidden="true">
+        <span id="reindex-progress-fill" style="width: {{ (reindex_status.progress_pct or 0)|round|int }}%"></span>
+      </div>
+      <div class="reindex-meta-grid">
+        <span id="reindex-phase">{{ reindex_status.phase }}</span>
+        <span id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</span>
+        <span id="reindex-chunks">{{ reindex_status.embedded_chunks or 0 }}/{{ reindex_status.total_chunks or 0 }} chunks</span>
+        <span id="reindex-docs">{{ reindex_status.processed_documents or 0 }}/{{ reindex_status.total_documents or 0 }} docs</span>
+        <span id="reindex-eta">
+          {% if reindex_status.eta_seconds %}
+            ETA {{ reindex_status.eta_seconds }}s
+          {% elif reindex_status.scheduled_retry_eta_seconds %}
+            Nova tentativa em {{ reindex_status.scheduled_retry_eta_seconds }}s
+          {% else %}
+            ETA --
+          {% endif %}
+        </span>
+      </div>
+      <div class="reindex-sync-grid">
+        <span id="reindex-embedding-provider">embeddings Gemini</span>
+        <span id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}% cobertura semântica</span>
+        <span id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }} docs totalmente embebidos</span>
+        <span id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }} docs parciais</span>
+        <span id="reindex-knowledge-docs">knowledge {{ reindex_status.knowledge_documents or 0 }} docs</span>
+        <span id="reindex-index-docs">indice {{ reindex_status.indexed_documents or 0 }} docs</span>
+        <span id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }} chunks sem embedding</span>
+        <span id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }} docs com embeddings em falta</span>
+        <span id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }} docs pendentes</span>
+      </div>
+      <p class="reindex-query-summary" id="reindex-query-summary">{{ reindex_status.query_embedding_summary or "" }}</p>
+      <p class="reindex-sync-summary" id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
+      <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
+      <details class="reindex-doc-detail" {% if reindex_status.document_sync_rows %}open{% endif %}>
+        <summary>Ver detalhe por documento</summary>
+        <div class="reindex-doc-list" id="reindex-doc-list">
+          {% for item in reindex_status.document_sync_rows or [] %}
+            <article class="reindex-doc-row reindex-doc-row-{{ item.status }}">
+              <div class="reindex-doc-row-head">
+                <strong>{{ item.name }}</strong>
+                <span class="reindex-doc-status">{{ item.status }}</span>
+              </div>
+              <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding · {{ item.coverage_pct }}% · faltam {{ item.missing_chunks }}</p>
+            </article>
+          {% else %}
+            <p class="muted">Sem detalhe documental disponível.</p>
+          {% endfor %}
+        </div>
+      </details>
+      {% if reindex_status.error %}
+        <p class="reindex-error" id="reindex-error">{{ reindex_status.error }}</p>
+      {% else %}
+        <p class="reindex-error hidden" id="reindex-error"></p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Catálogo</p>
+        <h2>Documentos indexados</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ docs|length }}</span>
+    </div>
+    <div class="document-list">
+      {% for doc in docs %}
+        <article class="doc-card">
+          <div class="doc-head">
+            <h3>{{ doc.original_name }}</h3>
+            <span class="doc-badge">{{ doc.doc_type }}</span>
+          </div>
+          <p>{{ doc.preview }}</p>
+          <div class="doc-meta">
+            <span>{{ doc.size_label }}</span>
+            <span>{{ doc.uploaded_by }}</span>
+          </div>
+          <div class="doc-actions">
+            <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">Ver</a>
+            <a class="inline-link" href="{{ url_for('download_document', name=doc.name) }}">Download</a>
+            <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">
+              {% if doc.editable %}Editar{% else %}Gerir{% endif %}
+            </a>
+          </div>
+        </article>
+      {% else %}
+        <article class="ops-empty">
+          <p>Sem documentos na base de conhecimento.</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="knowledge-admin-grid">
+    <section class="panel section-panel compact-ingest-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Ingestão</p>
+          <h2>Adicionar ficheiros</h2>
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('upload_documents') }}" enctype="multipart/form-data" class="stack">
+        <label>
+          Ficheiros documentais
+          <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
+        </label>
+        <p class="muted small-note">Sincroniza a base `knowledge/` e reindexa o conteúdo do bot.</p>
+        <button type="submit">Substituir ou adicionar</button>
+      </form>
+    </section>
+
+    <section class="panel section-panel compact-ingest-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Manual</p>
+          <h2>Novo documento manual</h2>
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('add_document') }}" class="stack">
+        <label>
+          Título
+          <input type="text" name="title" placeholder="Procedimento de Entrada" required>
+        </label>
+        <label>
+          Conteúdo
+          <textarea name="content" rows="6" placeholder="Cole aqui texto operacional ou normativo..." required></textarea>
+        </label>
+        <button type="submit">Guardar e reindexar</button>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script>
+  const reindexForm = document.getElementById("reindex-form");
+  const reindexCard = document.getElementById("reindex-status-card");
+  const reindexMessage = document.getElementById("reindex-message");
+  const reindexStateChip = document.getElementById("reindex-state-chip");
+  const reindexProgressFill = document.getElementById("reindex-progress-fill");
+  const reindexPhase = document.getElementById("reindex-phase");
+  const reindexProgressLabel = document.getElementById("reindex-progress-label");
+  const reindexChunks = document.getElementById("reindex-chunks");
+  const reindexDocs = document.getElementById("reindex-docs");
+  const reindexEta = document.getElementById("reindex-eta");
+  const reindexError = document.getElementById("reindex-error");
+  const reindexDocList = document.getElementById("reindex-doc-list");
+  let reindexPollTimer = null;
+
+  function renderReindexStatus(p) {
+    if (!p || !reindexCard) return;
+    const s = p.state || "idle";
+    const pct = Math.max(0, Math.min(100, Math.round(p.progress_pct || 0)));
+    reindexCard.className = "reindex-status-card is-" + s;
+    reindexMessage.textContent = p.message || "Sem atividade.";
+    reindexStateChip.textContent = s;
+    reindexStateChip.className = "reindex-chip is-" + s;
+    reindexProgressFill.style.width = pct + "%";
+    reindexPhase.textContent = p.phase || "idle";
+    reindexProgressLabel.textContent = pct + "%";
+    reindexChunks.textContent = (p.embedded_chunks||0) + "/" + (p.total_chunks||0) + " chunks";
+    reindexDocs.textContent = (p.processed_documents||0) + "/" + (p.total_documents||0) + " docs";
+    if (p.eta_seconds) reindexEta.textContent = "ETA " + p.eta_seconds + "s";
+    else if (p.scheduled_retry_eta_seconds) reindexEta.textContent = "Nova tentativa em " + p.scheduled_retry_eta_seconds + "s";
+    else reindexEta.textContent = "ETA --";
+    if (p.error) { reindexError.textContent = p.error; reindexError.classList.remove("hidden"); }
+    else { reindexError.textContent = ""; reindexError.classList.add("hidden"); }
+    const btn = reindexForm ? reindexForm.querySelector("button") : null;
+    if (btn) btn.disabled = s === "running";
+  }
+
+  async function fetchReindexStatus() {
+    const r = await fetch("{{ url_for('reindex_status') }}");
+    if (!r.ok) return null;
+    const p = await r.json();
+    renderReindexStatus(p);
+    return p;
+  }
+
+  function scheduleReindexPolling() {
+    if (reindexPollTimer) return;
+    reindexPollTimer = setInterval(async () => {
+      try {
+        const p = await fetchReindexStatus();
+        if (p && p.state !== "running" && !p.scheduled_retry_at) {
+          clearInterval(reindexPollTimer);
+          reindexPollTimer = null;
+        }
+      } catch (e) { clearInterval(reindexPollTimer); reindexPollTimer = null; }
+    }, 2500);
+  }
+
+  if (reindexForm) {
+    reindexForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = reindexForm.querySelector("button");
+      if (btn) btn.disabled = true;
+      try {
+        const r = await fetch(reindexForm.action, { method: "POST", headers: { Accept: "application/json", "X-Requested-With": "fetch" } });
+        const d = await r.json();
+        renderReindexStatus(d.status || {});
+        if (d.started || (d.status && d.status.scheduled_retry_at)) scheduleReindexPolling();
+      } catch (err) {
+        renderReindexStatus({ state: "error", phase: "error", message: err.message, progress_pct: 0, error: err.message });
+      }
+    });
+  }
+
+  fetchReindexStatus().then((p) => {
+    if (p && (p.state === "running" || p.scheduled_retry_at)) scheduleReindexPolling();
+  }).catch(() => {});
+</script>
+{% endblock %}

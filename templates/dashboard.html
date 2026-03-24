@@ -11,29 +11,35 @@
         </p>
       </div>
       <div class="hero-actions">
+        {% if current_role in ["admin", "agente"] %}
+          <a class="hero-link" href="{{ url_for('port_call_register') }}">Registar escala</a>
+        {% endif %}
+        <a class="hero-link" href="{{ url_for('maneuver_archive') }}">Arquivo</a>
         {% if current_role == "admin" %}
-          <a class="hero-link" href="{{ url_for('admin_status') }}">Estado da plataforma</a>
+          <a class="hero-link" href="{{ url_for('admin_documents') }}">Documentos</a>
+          <a class="hero-link" href="{{ url_for('admin_status') }}">Estado</a>
           <a class="hero-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
         {% endif %}
-        <a class="hero-link" href="{{ url_for('logout') }}">Terminar sessão</a>
+        <a class="hero-link" href="{{ url_for('profile') }}">Perfil</a>
+        <a class="hero-link" href="{{ url_for('logout') }}">Sair</a>
       </div>
     </div>
 
     <div class="hero-meta-grid">
       <article class="hero-stat hero-stat-user">
-        <span>Email</span>
-        <strong>{{ current_user }}</strong>
-        <small>{{ current_role }} · auth {{ auth_backend }}</small>
+        <span>Operador</span>
+        <strong>{{ current_profile.full_name or current_user }}</strong>
+        <small>{{ current_role }} · {{ current_profile.organization or '—' }}</small>
       </article>
       <article class="hero-stat">
         <span>Navios em porto</span>
         <strong>{{ port_activity.stats.in_port_count }}</strong>
-        <small>{{ port_activity.stats.berth_count }} cais com ocupação</small>
+        <small>{{ port_activity.stats.berth_count }} cais ocupados</small>
       </article>
       <article class="hero-stat">
-        <span>Chegadas até {{ port_activity.window_days }} dias</span>
+        <span>Chegadas previstas</span>
         <strong>{{ port_activity.stats.scheduled_count }}</strong>
-        <small>ordenadas por ETA</small>
+        <small>próximos {{ port_activity.window_days }} dias</small>
       </article>
       <article class="hero-stat">
         <span>Saídas recentes</span>
@@ -43,12 +49,12 @@
     </div>
 
     <div class="hero-footer">
-      <p><strong>Janela operacional:</strong> atualizado em {{ port_activity.generated_at_label }}</p>
+      <p><strong>Atualizado:</strong> {{ port_activity.generated_at_label }}</p>
       <p><strong>Marés:</strong> {{ tides_today.summary }}</p>
-      <p><strong>RAG:</strong> {{ rag_stats.document_count }} documentos · {{ rag_stats.chunk_count }} chunks</p>
     </div>
   </section>
 
+  {# ── METEOROLOGIA com ícones ── #}
   <section class="panel meteo-ribbon-panel">
     <div class="section-head">
       <div>
@@ -69,11 +75,32 @@
               {% if show_day %}
                 <span class="meteo-date">{{ slot.date }}</span>
               {% else %}
-                <span class="meteo-date meteo-date-muted">continuação</span>
+                <span class="meteo-date meteo-date-muted">·</span>
               {% endif %}
               <strong>{{ slot.time }}</strong>
             </div>
-            <p>{{ slot.condition }}</p>
+            <div class="meteo-icon">
+              {% set cond_lower = slot.condition|lower %}
+              {% if 'sol' in cond_lower or 'céu limpo' in cond_lower or 'clear' in cond_lower or 'sunny' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">☀️</span>
+              {% elif 'parcial' in cond_lower or 'nublado' in cond_lower or 'nuvens' in cond_lower or 'cloud' in cond_lower or 'overcast' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">⛅</span>
+              {% elif 'chuva' in cond_lower or 'chuvisco' in cond_lower or 'rain' in cond_lower or 'drizzle' in cond_lower or 'shower' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">🌧️</span>
+              {% elif 'trovoada' in cond_lower or 'thunder' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">⛈️</span>
+              {% elif 'neve' in cond_lower or 'snow' in cond_lower or 'sleet' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">🌨️</span>
+              {% elif 'nevoeiro' in cond_lower or 'fog' in cond_lower or 'mist' in cond_lower %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">🌫️</span>
+              {% else %}
+                <span class="meteo-emoji" title="{{ slot.condition }}">🌤️</span>
+              {% endif %}
+              {% if slot.wind_kts and slot.wind_kts >= 20 %}
+                <span class="meteo-emoji meteo-wind-icon" title="Vento forte {{ slot.wind_kts }} kts">💨</span>
+              {% endif %}
+            </div>
+            <p class="meteo-condition">{{ slot.condition }}</p>
             <div class="meteo-metrics">
               <span>{{ slot.temp_c }} °C</span>
               <span>{{ slot.wind_kts }} kts {{ slot.wind_dir }}</span>
@@ -81,8 +108,6 @@
               <span>chuva {{ slot.chance_of_rain }}%</span>
               {% if slot.wave_m is not none %}
                 <span>ond. {{ slot.wave_m }} m{% if slot.wave_dir %} · {{ slot.wave_dir }}{% endif %}</span>
-              {% else %}
-                <span class="muted">ondulação indisponível</span>
               {% endif %}
             </div>
           </article>
@@ -95,6 +120,7 @@
     {% endif %}
   </section>
 
+  {# ── AIS ── #}
   <section class="panel ais-panel">
     <div class="section-head">
       <div>
@@ -103,35 +129,30 @@
       </div>
       <div class="ais-status-line">
         <span class="ops-pill ops-pill-strong">{{ ais.provider_name }}</span>
-        <span class="muted">{{ ais.status_label }} · {{ ais.source_label }}</span>
+        <span class="muted">{{ ais.status_label }}</span>
       </div>
     </div>
 
     {% if ais.map_available %}
       <div class="ais-map-frame-wrap">
-        <iframe
-          class="ais-map-frame"
-          title="Mapa AIS Setúbal"
-          src="{{ ais.map_url }}">
-        </iframe>
+        <iframe class="ais-map-frame" title="Mapa AIS Setúbal" src="{{ ais.map_url }}"></iframe>
       </div>
     {% else %}
-      <article class="ops-empty">
-        <p>O mapa AIS ainda não foi gerado.</p>
-      </article>
+      <article class="ops-empty"><p>Mapa AIS indisponível.</p></article>
     {% endif %}
 
     <div class="ais-footnote">
       <p class="muted">Mapa servido por embed oficial do VesselFinder, sem API nem sincronização local.</p>
-      <p class="muted">Centro Setúbal: {{ ais.embed.latitude }}, {{ ais.embed.longitude }} · zoom {{ ais.embed.zoom }}</p>
+      <p class="muted">Porto de Setúbal: {{ ais.embed.latitude_dm }} / {{ ais.embed.longitude_dm }} · zoom {{ ais.embed.zoom }}</p>
     </div>
   </section>
 
+  {# ── CHEGADAS PREVISTAS & SAÍDAS ── #}
   <section class="panel traffic-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Movimento</p>
-        <h2>Navios previstos e saídas recentes</h2>
+        <h2>Chegadas previstas e saídas recentes</h2>
       </div>
       <span class="ops-pill">{{ port_activity.stats.scheduled_count + port_activity.stats.departed_count }}</span>
     </div>
@@ -139,7 +160,7 @@
     <div class="traffic-grid">
       <section class="traffic-column">
         <div class="traffic-head">
-          <h3>Navios previstos</h3>
+          <h3>Chegadas previstas</h3>
           <span class="ops-pill">{{ port_activity.stats.scheduled_count }}</span>
         </div>
         <div class="ops-list">
@@ -149,12 +170,10 @@
                 <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
                 <span class="ops-tag">ETA {{ item.eta_label }}</span>
               </div>
-              <p>Escala {{ item.reference_code }} · cais previsto <strong>{{ item.berth_label }}</strong></p>
+              <p>Cais <strong>{{ item.berth_label }}</strong></p>
             </article>
           {% else %}
-            <article class="ops-empty">
-              <p>Sem chegadas previstas para os próximos {{ port_activity.window_days }} dias.</p>
-            </article>
+            <article class="ops-empty"><p>Sem chegadas previstas.</p></article>
           {% endfor %}
         </div>
       </section>
@@ -171,67 +190,60 @@
                 <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
                 <span class="ops-tag">ATD {{ item.departure_label }}</span>
               </div>
-              <p>Escala {{ item.reference_code }} · {{ item.berth_label }} → {{ item.next_port or "Destino não indicado" }}</p>
+              <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
             </article>
           {% else %}
-            <article class="ops-empty">
-              <p>Sem saídas registadas nos últimos {{ port_activity.window_days }} dias.</p>
-            </article>
+            <article class="ops-empty"><p>Sem saídas registadas.</p></article>
           {% endfor %}
         </div>
       </section>
     </div>
   </section>
 
+  {# ── NAVIOS POR CAIS (compacto: nome + localização + ETD) ── #}
   <section class="panel berth-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Em porto</p>
-        <h2>Navios em porto por cais</h2>
+        <h2>Navios por cais</h2>
       </div>
       <div class="berth-panel-meta">
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.in_port_count }} navios</span>
-        <span class="ops-pill">{{ berth_options|length - port_activity.stats.berth_count }} cais livres</span>
+        <span class="ops-pill">{{ berth_options|length - port_activity.stats.berth_count }} livres</span>
       </div>
     </div>
 
-    {% for berth in port_activity.berthed %}
-      <section class="berth-group berth-group-wide">
-        <div class="berth-head">
-          <h3>{{ berth.berth }}</h3>
-          <span>{{ berth.count }} navio{{ "" if berth.count == 1 else "s" }}</span>
-        </div>
-        <div class="berth-list berth-list-wide">
+    <div class="berth-compact-grid">
+      {% for berth in port_activity.berthed %}
+        <section class="berth-group-compact">
+          <div class="berth-head-compact">
+            <h3>{{ berth.berth }}</h3>
+            <span>{{ berth.count }}</span>
+          </div>
           {% for vessel in berth.vessels %}
-            <article class="berth-card berth-card-wide">
-              <div class="berth-card-row">
-                <strong><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">{{ vessel.vessel_name }}</a></strong>
-                <span class="ops-tag">ATA {{ vessel.ata_label }}</span>
-              </div>
-              <p>Escala {{ vessel.reference_code }}</p>
-              <p class="muted">{{ berth.berth }} · agente {{ vessel.agent_label }}</p>
-            </article>
+            <a class="berth-vessel-compact" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">
+              <strong>{{ vessel.vessel_name }}</strong>
+              <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
+            </a>
           {% endfor %}
-        </div>
-      </section>
-    {% else %}
-      <article class="ops-empty">
-        <p>Sem navios atualmente em porto.</p>
-      </article>
-    {% endfor %}
+        </section>
+      {% else %}
+        <article class="ops-empty"><p>Sem navios em porto.</p></article>
+      {% endfor %}
+    </div>
   </section>
 
+  {# ── PLANEAMENTO ── #}
   <section class="panel planned-panel">
     <div class="section-head planned-head">
       <div>
         <p class="eyebrow">Planeamento</p>
-        <h2>Planeamento</h2>
-        <p class="muted">Toda a marcação e validação operacional fica concentrada aqui. As caixas de topo são apenas panorama visual.</p>
+        <h2>Planeamento operacional</h2>
       </div>
       <div class="planned-head-meta">
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.planned_count }}</span>
-        <span class="muted">{{ port_activity.stats.pending_count }} pendentes de validação</span>
-        <a class="hero-link planned-archive-link" href="{{ url_for('maneuver_archive') }}">Consultar arquivo</a>
+        <span class="muted">{{ port_activity.stats.pending_count }} pendentes</span>
+        <a class="hero-link planned-archive-link" href="{{ url_for('maneuver_archive') }}">Arquivo</a>
       </div>
     </div>
 
@@ -248,11 +260,7 @@
 
     <div class="planned-table-stage">
       <div class="planned-table-toolbar">
-        <div class="planned-table-copy">
-          <p class="eyebrow">Execução</p>
-          <h3>Marcações, validações e fechos operacionais</h3>
-          <p class="muted">A tabela fica isolada para leitura rápida. Os registos do agente descem para uma zona própria logo abaixo.</p>
-        </div>
+        <h3>Marcações, validações e fechos</h3>
         <div class="planned-legend">
           <span class="maneuver-chip maneuver-chip-entry">Entrar</span>
           <span class="maneuver-chip maneuver-chip-departure">Sair</span>
@@ -267,27 +275,27 @@
           <thead>
             <tr>
               <th>Data</th>
-              <th>Tipo Navio</th>
+              <th>Tipo</th>
               <th>Escala/Navio</th>
               <th>Hora</th>
               <th>Situação</th>
               <th>Manobra</th>
-              <th>Local Origem</th>
-              <th>Local Destino</th>
+              <th>Origem</th>
+              <th>Destino</th>
               <th>LOA</th>
               <th>Boca</th>
               <th>Calado</th>
-              <th>Nº Reb.</th>
+              <th>Reb.</th>
               <th>Restrições</th>
               <th>Agente</th>
               <th>Piloto</th>
-              <th>Observações</th>
+              <th>Obs.</th>
             </tr>
           </thead>
           <tbody>
             {% for item in port_activity.planned_maneuvers %}
-              {% set maneuver_class = "entry" if item.maneuver_label == "Entrar" else "departure" if item.maneuver_label == "Sair" else "shift" %}
-              <tr class="planned-row planned-row-{{ item.situation_class }} planned-row-{{ maneuver_class }}">
+              {% set mc = "entry" if item.maneuver_label == "Entrar" else "departure" if item.maneuver_label == "Sair" else "shift" %}
+              <tr class="planned-row planned-row-{{ item.situation_class }} planned-row-{{ mc }}">
                 <td>{{ item.date_label }}</td>
                 <td>
                   <div class="planned-vessel-type">
@@ -303,7 +311,7 @@
                 </td>
                 <td>{{ item.planned_label }}</td>
                 <td><span class="planned-status planned-status-{{ item.situation_class }}">{{ item.situation_label }}</span></td>
-                <td><span class="maneuver-chip maneuver-chip-{{ maneuver_class }}">{{ item.maneuver_label }}</span></td>
+                <td><span class="maneuver-chip maneuver-chip-{{ mc }}">{{ item.maneuver_label }}</span></td>
                 <td>{{ item.local_origin }}</td>
                 <td>{{ item.local_destination }}</td>
                 <td>{{ item.loa_label }}</td>
@@ -312,1232 +320,30 @@
                 <td>{{ item.tug_count_label }}</td>
                 <td>
                   <div class="constraint-badge-list">
-                    {% for constraint in item.constraint_badges %}
-                      <span class="constraint-badge" title="{{ constraint.label }}">
-                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                    {% for c in item.constraint_badges %}
+                      <span class="constraint-badge" title="{{ c.label }}">
+                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ c.icon) }}" alt="{{ c.label }}">
                       </span>
                     {% else %}
                       <span class="muted">--</span>
                     {% endfor %}
                   </div>
                 </td>
-                <td>
-                  <strong>{{ item.agent_label }}</strong><br>
-                  <span class="muted">{{ item.agent_profile.contact_label if item.agent_profile else '--' }}</span>
-                </td>
-                <td>
-                  <strong>{{ item.pilot_label }}</strong><br>
-                  <span class="muted">{{ item.pilot_profile.contact_label if item.pilot_profile else '--' }}</span>
-                </td>
+                <td><strong>{{ item.agent_label }}</strong></td>
+                <td><strong>{{ item.pilot_label }}</strong></td>
                 <td class="planned-detail-cell">
-                  {% if item.has_changes %}
-                    <span class="doc-badge">Alterada {{ item.change_count }}x</span>
-                  {% endif %}
-                  {% if item.detail_note %}
-                    <p class="planned-note">{{ item.detail_note }}</p>
-                  {% else %}
-                    <span class="muted">--</span>
-                  {% endif %}
-                  <a class="inline-link planned-open-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala para atuar</a>
+                  {% if item.has_changes %}<span class="doc-badge">{{ item.change_count }}x</span>{% endif %}
+                  {% if item.detail_note %}<p class="planned-note">{{ item.detail_note }}</p>{% else %}<span class="muted">--</span>{% endif %}
+                  <a class="inline-link planned-open-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">Abrir</a>
                 </td>
               </tr>
             {% else %}
-              <tr>
-                <td colspan="16" class="planned-empty">Sem manobras planeadas para a janela operacional atual.</td>
-              </tr>
+              <tr><td colspan="16" class="planned-empty">Sem manobras planeadas.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
   </section>
-
-  {% if current_role in ["admin", "agente"] %}
-    <section class="panel planning-register-panel">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Registo</p>
-          <h2>Registo de navio e escalas ativas</h2>
-          <p class="muted">A criação de novas escalas continua aqui. A marcação e o fecho das manobras passam a ser feitos diretamente na página de cada escala.</p>
-        </div>
-      </div>
-
-      <div class="planning-register-grid">
-        <section class="ops-form-card planning-block planning-register-card">
-          <div class="planning-block-heading">
-            <p class="eyebrow">Registo</p>
-            <h3>Tabela de registo de navio</h3>
-            <p class="planning-block-lead">Regista a escala e a ETA. A validação e o fecho continuam concentrados na tabela de planeamento acima.</p>
-          </div>
-          <form method="post" action="{{ url_for('create_port_call') }}" class="stack planning-form planning-register-form">
-            <div class="planning-register-table">
-              <div class="planning-register-row planning-register-row-primary">
-                <label>
-                  Navio
-                  <input type="text" name="vessel_name" placeholder="Ex.: MSC Lyria" required>
-                </label>
-                <label>
-                  ETA de chegada
-                  <input type="datetime-local" name="eta_local" required>
-                </label>
-              </div>
-              <div class="planning-register-row planning-register-row-main">
-                <label>
-                  Cais previsto
-                  <input type="text" name="berth" list="berth-options" placeholder="Ex.: Secil W" required>
-                </label>
-                <label>
-                  Último porto
-                  <input type="text" name="last_port" placeholder="Ex.: Sines" required>
-                </label>
-                <label>
-                  Próximo destino
-                  <input type="text" name="next_port" placeholder="Ex.: Vigo" required>
-                </label>
-              </div>
-            </div>
-            <details class="planning-optional-box" open>
-              <summary>Ficha do navio obrigatória</summary>
-              <div class="stack planning-optional-body">
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    IMO
-                    <input type="text" name="vessel_imo" placeholder="Ex.: 9723345" required>
-                  </label>
-                  <label>
-                    Indicativo
-                    <input type="text" name="vessel_call_sign" placeholder="Ex.: CQAN7" required>
-                  </label>
-                </div>
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    Bandeira
-                    <input type="text" name="vessel_flag" placeholder="Ex.: Madeira" required>
-                  </label>
-                  <label>
-                    Tipo de navio
-                    <input type="text" name="vessel_type" list="vessel-type-options" placeholder="Ex.: Graneis sólidos" required>
-                  </label>
-                  <label>
-                    LOA (m)
-                    <input type="text" name="vessel_loa_m" placeholder="Ex.: 189.9" required>
-                  </label>
-                </div>
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    Boca (m)
-                    <input type="text" name="vessel_beam_m" placeholder="Ex.: 32.2" required>
-                  </label>
-                  <label>
-                    GT (t)
-                    <input type="text" name="vessel_gt_t" placeholder="Ex.: 32.540" required>
-                  </label>
-                  <label>
-                    DWT (t)
-                    <input type="text" name="vessel_dwt_t" placeholder="Ex.: 38.600" required>
-                  </label>
-                </div>
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    Calado
-                    <input type="text" name="vessel_max_draft_m" placeholder="Ex.: 11.8" required>
-                  </label>
-                </div>
-              </div>
-            </details>
-            <details class="planning-optional-box">
-              <summary>Dados operacionais obrigatórios</summary>
-              <div class="stack planning-optional-body">
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    Marcação
-                    <input type="datetime-local" name="booking_local" required>
-                  </label>
-                </div>
-                <div class="mini-grid planned-mini-grid">
-                  <label>
-                    Calado
-                    <input type="text" name="draft_m" placeholder="Ex.: 4,65" required>
-                  </label>
-                  <label>
-                    Rebocadores
-                    <input type="number" min="0" name="tug_count" placeholder="0" required>
-                  </label>
-                </div>
-                <div class="constraint-picker">
-                  <span class="mini-label">Restrições</span>
-                  <div class="constraint-option-list">
-                    {% for constraint in constraint_options %}
-                      <label class="constraint-option">
-                        <input type="checkbox" name="constraints" value="{{ constraint.code }}">
-                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
-                        <span>{{ constraint.label }}</span>
-                      </label>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-            </details>
-            <label>
-              Nota operacional
-              <textarea name="notes" rows="3" placeholder="Restrições, rebocadores, janela de maré..."></textarea>
-            </label>
-            <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. A ficha do navio é obrigatória em todos os registos.</p>
-            <button type="submit">Guardar manobra</button>
-          </form>
-        </section>
-
-        <section class="ops-form-card planning-block planning-block-secondary planning-register-card">
-          <div class="planning-block-heading">
-            <p class="eyebrow">Escalas</p>
-            <h3>Escalas em acompanhamento</h3>
-            <p class="planning-block-lead">A escala é a referência operacional e de faturação. Abre a página do navio para aprovar, concluir ou registar cada manobra.</p>
-          </div>
-
-          <div class="ops-list planning-register-list">
-            {% for vessel in tracked_scales %}
-              <article class="ops-card planning-candidate-card">
-                <div class="ops-card-head planning-candidate-head">
-                  <div>
-                    <span class="planning-candidate-label">Escala {{ vessel.reference_code }}</span>
-                    <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">{{ vessel.vessel_name }}</a></h3>
-                  </div>
-                  <div class="planning-candidate-meta">
-                    <span class="ops-tag">{{ vessel.location_label }}</span>
-                    <span class="planned-status planned-status-{{ vessel.status_class }}">{{ vessel.status_label }}</span>
-                  </div>
-                </div>
-                <p class="muted">{{ vessel.meta }}</p>
-                <a class="inline-link planning-scale-link" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">Abrir escala</a>
-              </article>
-            {% endfor %}
-
-            {% if not tracked_scales %}
-              <article class="ops-empty planning-register-empty">
-                <p>Sem escalas ativas neste momento.</p>
-              </article>
-            {% endif %}
-          </div>
-        </section>
-      </div>
-    </section>
-  {% endif %}
-
-  <section class="ops-secondary-grid">
-    <section class="panel chat-panel section-panel">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Assistente</p>
-          <h2>{{ current_conversation.title }}</h2>
-        </div>
-        <div class="chat-header-actions">
-          <span class="muted">Modelo: {{ models.generation }}</span>
-          <div class="voice-toolbar">
-            <button type="button" class="mini-button secondary-button" id="voice-toggle">Ativar voz</button>
-            <span class="muted" id="voice-status">Leitura por voz desativada.</span>
-          </div>
-          <form method="post" action="{{ url_for('create_conversation') }}">
-            <button type="submit" class="mini-button">Nova conversa</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="conversation-strip">
-        {% for conversation in conversations %}
-          <a
-            class="conversation-chip {{ 'active' if conversation.id == current_conversation.id else '' }}"
-            href="{{ url_for('dashboard', conversation_id=conversation.id) }}"
-          >
-            <strong>{{ conversation.title }}</strong>
-            <span>{{ conversation.updated_at_label }}</span>
-          </a>
-        {% endfor %}
-      </div>
-
-      <div class="conversation-admin">
-        <form method="post" action="{{ url_for('rename_conversation', conversation_id=current_conversation.id) }}" class="conversation-form">
-          <input type="text" name="title" value="{{ current_conversation.title }}" required>
-          <button type="submit" class="mini-button">Renomear</button>
-        </form>
-        <div class="conversation-actions">
-          <form method="post" action="{{ url_for('clear_conversation', conversation_id=current_conversation.id) }}">
-            <button type="submit" class="mini-button secondary-button">Limpar</button>
-          </form>
-          <form method="post" action="{{ url_for('delete_conversation', conversation_id=current_conversation.id) }}">
-            <button type="submit" class="mini-button danger-button">Apagar</button>
-          </form>
-        </div>
-      </div>
-
-      <div id="chat-log" class="chat-log">
-        {% if messages %}
-          {% for item in messages %}
-            <article class="bubble bubble-{{ item.role }}" {% if item.role == "assistant" %}data-message-id="{{ item.id }}"{% endif %}>
-              <span class="bubble-role">{{ item.role }}</span>
-              <p>{{ item.content }}</p>
-              {% if item.citations %}
-                <details class="citation-disclosure">
-                  <summary>Ver base da resposta</summary>
-                  <div class="citation-list">
-                    {% for citation in item.citations %}
-                      <article class="citation-card">
-                        <div class="citation-head">
-                          <strong>{{ citation.document }}</strong>
-                          <span>{{ citation.source_id }}</span>
-                        </div>
-                        <div class="citation-meta">
-                          <span>{{ citation.retrieval_mode }}</span>
-                        </div>
-                        <p>{{ citation.snippet }}</p>
-                      </article>
-                    {% endfor %}
-                  </div>
-                </details>
-              {% endif %}
-              {% if item.role == "assistant" %}
-                <div class="feedback-box" data-feedback-box data-message-id="{{ item.id }}">
-                  <div class="feedback-head">
-                    <strong>Feedback operacional</strong>
-                    <span class="feedback-status {% if item.feedback_status %}is-{{ item.feedback_status }}{% endif %}" data-feedback-status>
-                      {% if item.feedback_status == "approved" %}
-                        Aprovada como base fiável
-                      {% elif item.feedback_status == "review" %}
-                        Marcada para rever
-                      {% else %}
-                        Sem avaliação
-                      {% endif %}
-                    </span>
-                  </div>
-                  <textarea class="feedback-note" data-feedback-note rows="2" placeholder="Nota opcional: quando usar esta resposta, limitações, ajustes...">{{ item.feedback_note or "" }}</textarea>
-                  <div class="feedback-actions">
-                    <button type="button" class="mini-button" data-feedback-action="approved">Aprovar</button>
-                    <button type="button" class="mini-button secondary-button" data-feedback-action="review">Pedir revisão</button>
-                  </div>
-                </div>
-              {% endif %}
-            </article>
-          {% endfor %}
-        {% else %}
-          <article class="bubble bubble-assistant">
-            <span class="bubble-role">assistant</span>
-            <p>Esta conversa está vazia. Pergunta sobre procedimentos, documentação, marés ou estado operacional.</p>
-          </article>
-        {% endif %}
-      </div>
-
-      <form id="chat-form" class="chat-form">
-        <input type="hidden" id="conversation-id" value="{{ current_conversation.id }}">
-        <textarea id="question" name="question" rows="4" placeholder="Ex.: O que devo validar antes de aprovar a próxima manobra?" required></textarea>
-        <div class="chat-actions">
-          <button type="submit">Perguntar</button>
-          <span id="chat-status" class="muted">Sem atividade.</span>
-        </div>
-      </form>
-      <article class="pending-action-panel hidden" id="pending-action-panel">
-        <div class="pending-action-head">
-          <div>
-            <p class="eyebrow">Ação pendente</p>
-            <strong id="pending-action-title">Confirmação operacional</strong>
-          </div>
-          <span class="ops-pill" id="pending-action-target"></span>
-        </div>
-        <p class="pending-action-summary" id="pending-action-summary"></p>
-        <p class="muted small-note" id="pending-action-hint"></p>
-        <p class="pending-action-missing hidden" id="pending-action-missing"></p>
-        <div class="pending-action-actions">
-          <button type="button" class="mini-button" id="pending-action-confirm">Confirmar ação</button>
-          <button type="button" class="mini-button secondary-button" id="pending-action-cancel">Cancelar</button>
-        </div>
-      </article>
-    </section>
-
-    <section class="side-stack docs-side-stack">
-      <section class="panel section-panel compressed-doc-panel">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Base documental</p>
-            <h2>Documentos no bot</h2>
-          </div>
-          {% if current_role == "admin" %}
-            <form id="reindex-form" method="post" action="{{ url_for('reindex_knowledge') }}">
-              <button type="submit" class="mini-button">Reindexar incremental</button>
-            </form>
-          {% endif %}
-        </div>
-        <article
-          class="reindex-status-card is-{{ reindex_status.state }}"
-          id="reindex-status-card"
-          data-reindex-card
-        >
-          <div class="reindex-status-head">
-            <div>
-              <p class="mini-label">Estado da indexação</p>
-              <strong id="reindex-message">{{ reindex_status.message }}</strong>
-            </div>
-            <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
-              {{ reindex_status.state }}
-            </span>
-          </div>
-          <div class="reindex-progress-track" aria-hidden="true">
-            <span id="reindex-progress-fill" style="width: {{ (reindex_status.progress_pct or 0)|round|int }}%"></span>
-          </div>
-          <div class="reindex-meta-grid">
-            <span id="reindex-phase">{{ reindex_status.phase }}</span>
-            <span id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</span>
-            <span id="reindex-chunks">{{ reindex_status.embedded_chunks or 0 }}/{{ reindex_status.total_chunks or 0 }} chunks</span>
-            <span id="reindex-docs">{{ reindex_status.processed_documents or 0 }}/{{ reindex_status.total_documents or 0 }} docs</span>
-            <span id="reindex-eta">
-              {% if reindex_status.eta_seconds %}
-                ETA {{ reindex_status.eta_seconds }}s
-              {% elif reindex_status.scheduled_retry_eta_seconds %}
-                Nova tentativa em {{ reindex_status.scheduled_retry_eta_seconds }}s
-              {% else %}
-                ETA --
-              {% endif %}
-            </span>
-          </div>
-          <div class="reindex-sync-grid">
-            <span id="reindex-embedding-provider">embeddings Gemini</span>
-            <span id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}% cobertura semântica</span>
-            <span id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }} docs totalmente embebidos</span>
-            <span id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }} docs parciais</span>
-            <span id="reindex-knowledge-docs">knowledge {{ reindex_status.knowledge_documents or 0 }} docs</span>
-            <span id="reindex-index-docs">indice {{ reindex_status.indexed_documents or 0 }} docs</span>
-            <span id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }} chunks sem embedding</span>
-            <span id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }} docs com embeddings em falta</span>
-            <span id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }} docs pendentes</span>
-          </div>
-          <p class="reindex-query-summary" id="reindex-query-summary">{{ reindex_status.query_embedding_summary or "" }}</p>
-          <p class="reindex-sync-summary" id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
-          <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
-          <details class="reindex-doc-detail" {% if reindex_status.document_sync_rows %}open{% endif %}>
-            <summary>Ver detalhe por documento</summary>
-            <div class="reindex-doc-list" id="reindex-doc-list">
-              {% for item in reindex_status.document_sync_rows or [] %}
-                <article class="reindex-doc-row reindex-doc-row-{{ item.status }}">
-                  <div class="reindex-doc-row-head">
-                    <strong>{{ item.name }}</strong>
-                    <span class="reindex-doc-status">{{ item.status }}</span>
-                  </div>
-                  <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding · {{ item.coverage_pct }}% · faltam {{ item.missing_chunks }}</p>
-                </article>
-              {% else %}
-                <p class="muted">Sem detalhe documental disponível.</p>
-              {% endfor %}
-            </div>
-          </details>
-          {% if reindex_status.error %}
-            <p class="reindex-error" id="reindex-error">{{ reindex_status.error }}</p>
-          {% else %}
-            <p class="reindex-error hidden" id="reindex-error"></p>
-          {% endif %}
-        </article>
-        <div class="document-list document-list-compact">
-          {% for doc in docs %}
-            <article class="doc-card doc-card-compact">
-              <div class="doc-head">
-                <h3>{{ doc.original_name }}</h3>
-                <span class="doc-badge">{{ doc.doc_type }}</span>
-              </div>
-              <p>{{ doc.preview }}</p>
-              <div class="doc-meta">
-                <span>{{ doc.size_label }}</span>
-                <span>{{ doc.uploaded_by }}</span>
-              </div>
-              <div class="doc-actions">
-                <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">Ver</a>
-                <a class="inline-link" href="{{ url_for('download_document', name=doc.name) }}">Download</a>
-                {% if current_role == "admin" %}
-                  <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">
-                    {% if doc.editable %}Editar{% else %}Gerir{% endif %}
-                  </a>
-                {% endif %}
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-      </section>
-    </section>
-  </section>
-
-  {% if current_role == "admin" %}
-    <section class="knowledge-admin-grid">
-      <section class="panel section-panel compact-ingest-panel">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Ingestão</p>
-            <h2>Adicionar ficheiros</h2>
-          </div>
-        </div>
-        <form method="post" action="{{ url_for('upload_documents') }}" enctype="multipart/form-data" class="stack">
-          <label>
-            Ficheiros documentais
-            <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
-          </label>
-          <p class="muted small-note">Sincroniza a base `knowledge/` e reindexa o conteúdo do bot.</p>
-          <button type="submit">Substituir ou adicionar</button>
-        </form>
-      </section>
-
-      <section class="panel section-panel compact-ingest-panel">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Manual</p>
-            <h2>Novo documento manual</h2>
-          </div>
-        </div>
-        <form method="post" action="{{ url_for('add_document') }}" class="stack">
-          <label>
-            Título
-            <input type="text" name="title" placeholder="Procedimento de Entrada" required>
-          </label>
-          <label>
-            Conteúdo
-            <textarea name="content" rows="6" placeholder="Cole aqui texto operacional ou normativo..." required></textarea>
-          </label>
-          <button type="submit">Guardar e reindexar</button>
-        </form>
-      </section>
-    </section>
-  {% endif %}
 </main>
-
-<script>
-  const form = document.getElementById("chat-form");
-  const log = document.getElementById("chat-log");
-  const status = document.getElementById("chat-status");
-  const conversationIdField = document.getElementById("conversation-id");
-  const voiceToggle = document.getElementById("voice-toggle");
-  const voiceStatus = document.getElementById("voice-status");
-  const pendingActionPanel = document.getElementById("pending-action-panel");
-  const pendingActionTitle = document.getElementById("pending-action-title");
-  const pendingActionTarget = document.getElementById("pending-action-target");
-  const pendingActionSummary = document.getElementById("pending-action-summary");
-  const pendingActionHint = document.getElementById("pending-action-hint");
-  const pendingActionMissing = document.getElementById("pending-action-missing");
-  const pendingActionConfirm = document.getElementById("pending-action-confirm");
-  const pendingActionCancel = document.getElementById("pending-action-cancel");
-  const reindexForm = document.getElementById("reindex-form");
-  const reindexButton = reindexForm ? reindexForm.querySelector("button") : null;
-  const reindexCard = document.getElementById("reindex-status-card");
-  const reindexMessage = document.getElementById("reindex-message");
-  const reindexStateChip = document.getElementById("reindex-state-chip");
-  const reindexProgressFill = document.getElementById("reindex-progress-fill");
-  const reindexPhase = document.getElementById("reindex-phase");
-  const reindexProgressLabel = document.getElementById("reindex-progress-label");
-  const reindexChunks = document.getElementById("reindex-chunks");
-  const reindexDocs = document.getElementById("reindex-docs");
-  const reindexEta = document.getElementById("reindex-eta");
-  const reindexError = document.getElementById("reindex-error");
-  const reindexKnowledgeDocs = document.getElementById("reindex-knowledge-docs");
-  const reindexIndexDocs = document.getElementById("reindex-index-docs");
-  const reindexMissingChunks = document.getElementById("reindex-missing-chunks");
-  const reindexMissingDocs = document.getElementById("reindex-missing-docs");
-  const reindexPendingDocs = document.getElementById("reindex-pending-docs");
-  const reindexEmbeddingProvider = document.getElementById("reindex-embedding-provider");
-  const reindexSemanticCoverage = document.getElementById("reindex-semantic-coverage");
-  const reindexFullyEmbeddedDocs = document.getElementById("reindex-fully-embedded-docs");
-  const reindexPartiallyEmbeddedDocs = document.getElementById("reindex-partially-embedded-docs");
-  const reindexQuerySummary = document.getElementById("reindex-query-summary");
-  const reindexSyncSummary = document.getElementById("reindex-sync-summary");
-  const reindexPendingSummary = document.getElementById("reindex-pending-summary");
-  const reindexDocList = document.getElementById("reindex-doc-list");
-  const speechSupported = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
-  const voicePreferenceKey = "pragtico.voice.enabled";
-  let voiceEnabled = speechSupported && window.localStorage.getItem(voicePreferenceKey) === "1";
-  let activeVoiceButton = null;
-  let voiceRegistry = [];
-  let reindexPollTimer = null;
-
-  function loadVoices() {
-    if (!speechSupported) {
-      return;
-    }
-    voiceRegistry = window.speechSynthesis.getVoices() || [];
-  }
-
-  function pickVoice() {
-    if (!voiceRegistry.length) {
-      return null;
-    }
-    const preferredLocales = ["pt-PT", "pt_PT", "pt-BR", "pt_BR", "pt"];
-    for (const locale of preferredLocales) {
-      const match = voiceRegistry.find((voice) => voice.lang === locale);
-      if (match) {
-        return match;
-      }
-    }
-    return voiceRegistry[0];
-  }
-
-  function sanitizeSpeechText(text) {
-    return (text || "")
-      .replace(/\[S\d+\]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function setVoiceStatus(message) {
-    if (!voiceStatus) {
-      return;
-    }
-    voiceStatus.textContent = message;
-  }
-
-  function updateVoiceToggle() {
-    if (!voiceToggle) {
-      return;
-    }
-    if (!speechSupported) {
-      voiceToggle.disabled = true;
-      voiceToggle.textContent = "Voz indisponível";
-      setVoiceStatus("Este browser não suporta leitura por voz.");
-      return;
-    }
-    voiceToggle.disabled = false;
-    voiceToggle.textContent = voiceEnabled ? "Desativar voz" : "Ativar voz";
-    setVoiceStatus(
-      voiceEnabled
-        ? "O assistente lê automaticamente as respostas."
-        : "Leitura por voz desativada."
-    );
-  }
-
-  function resetVoiceButton(button) {
-    if (!button) {
-      return;
-    }
-    button.dataset.speaking = "false";
-    button.textContent = "Ouvir";
-  }
-
-  function stopSpeaking() {
-    if (!speechSupported) {
-      return;
-    }
-    window.speechSynthesis.cancel();
-    resetVoiceButton(activeVoiceButton);
-    activeVoiceButton = null;
-    updateVoiceToggle();
-  }
-
-  function speakText(text, button = null) {
-    if (!speechSupported) {
-      updateVoiceToggle();
-      return;
-    }
-
-    const content = sanitizeSpeechText(text);
-    if (!content) {
-      return;
-    }
-
-    if (button && button === activeVoiceButton && button.dataset.speaking === "true") {
-      stopSpeaking();
-      return;
-    }
-
-    stopSpeaking();
-
-    const utterance = new SpeechSynthesisUtterance(content);
-    const preferredVoice = pickVoice();
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-      utterance.lang = preferredVoice.lang || "pt-PT";
-    } else {
-      utterance.lang = "pt-PT";
-    }
-
-    if (button) {
-      activeVoiceButton = button;
-      button.dataset.speaking = "true";
-      button.textContent = "Parar";
-    }
-
-    utterance.onstart = () => {
-      setVoiceStatus("A ler a resposta em voz.");
-    };
-
-    utterance.onend = () => {
-      resetVoiceButton(activeVoiceButton);
-      activeVoiceButton = null;
-      updateVoiceToggle();
-    };
-
-    utterance.onerror = () => {
-      resetVoiceButton(activeVoiceButton);
-      activeVoiceButton = null;
-      setVoiceStatus("Falha na leitura por voz neste browser.");
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-
-  function createVoiceControl(content) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "bubble-tools";
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "mini-button secondary-button voice-bubble-button";
-    button.dataset.voiceAction = "speak";
-    button.dataset.voiceText = content;
-    button.dataset.speaking = "false";
-    button.textContent = "Ouvir";
-
-    wrapper.appendChild(button);
-    return wrapper;
-  }
-
-  function attachVoiceControlsToBubble(article, content) {
-    if (!article || article.querySelector("[data-voice-action]")) {
-      return;
-    }
-    const control = createVoiceControl(content);
-    const feedbackNode = article.querySelector("[data-feedback-box]");
-    if (feedbackNode) {
-      article.insertBefore(control, feedbackNode);
-      return;
-    }
-    article.appendChild(control);
-  }
-
-  function attachVoiceControlsToExistingBubbles() {
-    if (!speechSupported || !log) {
-      return;
-    }
-    const assistantBubbles = log.querySelectorAll(".bubble-assistant");
-    assistantBubbles.forEach((article) => {
-      const paragraph = article.querySelector("p");
-      if (!paragraph) {
-        return;
-      }
-      attachVoiceControlsToBubble(article, paragraph.textContent || "");
-    });
-  }
-
-  function buildCitations(citations) {
-    if (!citations || !citations.length) {
-      return null;
-    }
-
-    const disclosure = document.createElement("details");
-    disclosure.className = "citation-disclosure";
-
-    const summary = document.createElement("summary");
-    summary.textContent = "Ver base da resposta";
-    disclosure.appendChild(summary);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "citation-list";
-
-    citations.forEach((citation) => {
-      const article = document.createElement("article");
-      article.className = "citation-card";
-      article.innerHTML = `
-        <div class="citation-head">
-          <strong>${citation.document}</strong>
-          <span>${citation.source_id}</span>
-        </div>
-        <div class="citation-meta">
-          <span>${citation.retrieval_mode}</span>
-        </div>
-        <p>${citation.snippet}</p>
-      `;
-      wrapper.appendChild(article);
-    });
-
-    disclosure.appendChild(wrapper);
-    return disclosure;
-  }
-
-  function feedbackStatusLabel(status) {
-    if (status === "approved") return "Aprovada como base fiável";
-    if (status === "review") return "Marcada para rever";
-    return "Sem avaliação";
-  }
-
-  function buildFeedbackPanel(messageId, feedbackStatus = "", feedbackNote = "") {
-    if (!messageId) {
-      return null;
-    }
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "feedback-box";
-    wrapper.dataset.feedbackBox = "true";
-    wrapper.dataset.messageId = messageId;
-    wrapper.innerHTML = `
-      <div class="feedback-head">
-        <strong>Feedback operacional</strong>
-        <span class="feedback-status ${feedbackStatus ? `is-${feedbackStatus}` : ""}" data-feedback-status>${feedbackStatusLabel(feedbackStatus)}</span>
-      </div>
-      <textarea class="feedback-note" data-feedback-note rows="2" placeholder="Nota opcional: quando usar esta resposta, limitações, ajustes..."></textarea>
-      <div class="feedback-actions">
-        <button type="button" class="mini-button" data-feedback-action="approved">Aprovar</button>
-        <button type="button" class="mini-button secondary-button" data-feedback-action="review">Pedir revisão</button>
-      </div>
-    `;
-    wrapper.querySelector("[data-feedback-note]").value = feedbackNote || "";
-    return wrapper;
-  }
-
-  function applyFeedbackState(panel, feedbackStatus, feedbackNote = "") {
-    const statusNode = panel.querySelector("[data-feedback-status]");
-    const noteNode = panel.querySelector("[data-feedback-note]");
-    statusNode.textContent = feedbackStatusLabel(feedbackStatus);
-    statusNode.className = `feedback-status ${feedbackStatus ? `is-${feedbackStatus}` : ""}`.trim();
-    if (typeof feedbackNote === "string" && noteNode) {
-      noteNode.value = feedbackNote;
-    }
-  }
-
-  function renderPendingAction(pendingAction) {
-    if (!pendingActionPanel) {
-      return;
-    }
-    if (!pendingAction) {
-      pendingActionPanel.classList.add("hidden");
-      if (pendingActionMissing) {
-        pendingActionMissing.textContent = "";
-        pendingActionMissing.classList.add("hidden");
-      }
-      return;
-    }
-    pendingActionPanel.classList.remove("hidden");
-    pendingActionTitle.textContent = "Confirmação operacional";
-    pendingActionTarget.textContent = pendingAction.target_reference
-      ? `${pendingAction.target_reference} · ${pendingAction.target_vessel_name || "--"}`
-      : "Nova escala";
-    pendingActionSummary.textContent = pendingAction.summary || "Ação operacional pronta para confirmação.";
-    pendingActionHint.textContent = pendingAction.can_confirm
-      ? "A ação só será aplicada depois de confirmares."
-      : "Ainda faltam dados obrigatórios. Pede ao bot para completar a proposta ou cancela.";
-    const missingFields = pendingAction.proposal && Array.isArray(pendingAction.proposal.missing_fields)
-      ? pendingAction.proposal.missing_fields.filter(Boolean)
-      : [];
-    if (pendingActionMissing) {
-      if (missingFields.length) {
-        pendingActionMissing.textContent = `Faltam: ${missingFields.join(", ")}.`;
-        pendingActionMissing.classList.remove("hidden");
-      } else {
-        pendingActionMissing.textContent = "";
-        pendingActionMissing.classList.add("hidden");
-      }
-    }
-    pendingActionConfirm.disabled = !pendingAction.can_confirm;
-    pendingActionCancel.disabled = false;
-  }
-
-  async function fetchPendingAction() {
-    const conversationId = conversationIdField ? conversationIdField.value : "";
-    if (!conversationId) {
-      renderPendingAction(null);
-      return null;
-    }
-    const response = await fetch(`/api/chat/pending-action?conversation_id=${encodeURIComponent(conversationId)}`);
-    const data = await response.json();
-    renderPendingAction(data.pending_action || null);
-    return data.pending_action || null;
-  }
-
-  async function confirmPendingAction() {
-    const response = await fetch("/api/chat/pending-action/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversation_id: conversationIdField.value,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      if (data.answer) {
-        appendBubble("assistant", data.answer, data.sources || [], data.message_id || "", "", "");
-      }
-      renderPendingAction(data.pending_action || null);
-      throw new Error(data.error || "Falha ao confirmar a ação.");
-    }
-    renderPendingAction(data.pending_action || null);
-    if (data.answer) {
-      appendBubble("assistant", data.answer, data.sources || [], data.message_id || "", "", "");
-    }
-    return data;
-  }
-
-  async function cancelPendingAction() {
-    const response = await fetch("/api/chat/pending-action/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversation_id: conversationIdField.value,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Falha ao cancelar a ação.");
-    }
-    renderPendingAction(null);
-    if (data.answer) {
-      appendBubble("assistant", data.answer, [], data.message_id || "", "", "");
-    }
-    return data;
-  }
-
-  function appendBubble(role, content, citations = [], messageId = "", feedbackStatus = "", feedbackNote = "") {
-    const article = document.createElement("article");
-    article.className = `bubble bubble-${role}`;
-    if (messageId) {
-      article.dataset.messageId = messageId;
-    }
-
-    const badge = document.createElement("span");
-    badge.className = "bubble-role";
-    badge.textContent = role;
-
-    const text = document.createElement("p");
-    text.textContent = content;
-
-    article.appendChild(badge);
-    article.appendChild(text);
-
-    const citationNode = buildCitations(citations);
-    if (citationNode) {
-      article.appendChild(citationNode);
-    }
-
-    if (role === "assistant") {
-      attachVoiceControlsToBubble(article, content);
-      const feedbackNode = buildFeedbackPanel(messageId, feedbackStatus, feedbackNote);
-      if (feedbackNode) {
-        article.appendChild(feedbackNode);
-      }
-    }
-
-    log.appendChild(article);
-    log.scrollTop = log.scrollHeight;
-
-    if (role === "assistant" && voiceEnabled) {
-      const voiceButton = article.querySelector("[data-voice-action]");
-      window.setTimeout(() => {
-        speakText(content, voiceButton);
-      }, 120);
-    }
-  }
-
-  async function submitFeedback(panel, feedbackStatus) {
-    const messageId = panel.dataset.messageId;
-    const feedbackNoteNode = panel.querySelector("[data-feedback-note]");
-    const feedbackNote = feedbackNoteNode ? feedbackNoteNode.value.trim() : "";
-    const buttons = panel.querySelectorAll("button");
-
-    buttons.forEach((button) => {
-      button.disabled = true;
-    });
-    status.textContent = "A guardar feedback...";
-
-    try {
-      const response = await fetch(`/api/messages/${messageId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation_id: conversationIdField.value,
-          feedback_status: feedbackStatus,
-          feedback_note: feedbackNote,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Falha a guardar feedback.");
-      }
-      applyFeedbackState(panel, data.feedback_status, data.feedback_note || "");
-      status.textContent = "Feedback guardado.";
-    } catch (error) {
-      status.textContent = `Erro no feedback: ${error.message}`;
-    } finally {
-      buttons.forEach((button) => {
-        button.disabled = false;
-      });
-    }
-  }
-
-  log.addEventListener("click", async (event) => {
-    const voiceButton = event.target.closest("[data-voice-action]");
-    if (voiceButton) {
-      speakText(voiceButton.dataset.voiceText || "", voiceButton);
-      return;
-    }
-
-    const button = event.target.closest("[data-feedback-action]");
-    if (!button) {
-      return;
-    }
-    const panel = button.closest("[data-feedback-box]");
-    if (!panel) {
-      return;
-    }
-    await submitFeedback(panel, button.dataset.feedbackAction);
-  });
-
-  if (voiceToggle) {
-    voiceToggle.addEventListener("click", () => {
-      if (!speechSupported) {
-        updateVoiceToggle();
-        return;
-      }
-      voiceEnabled = !voiceEnabled;
-      window.localStorage.setItem(voicePreferenceKey, voiceEnabled ? "1" : "0");
-      if (!voiceEnabled) {
-        stopSpeaking();
-      } else {
-        updateVoiceToggle();
-      }
-    });
-  }
-
-  if (pendingActionConfirm) {
-    pendingActionConfirm.addEventListener("click", async () => {
-      pendingActionConfirm.disabled = true;
-      pendingActionCancel.disabled = true;
-      status.textContent = "A aplicar ação operacional...";
-      try {
-        await confirmPendingAction();
-        status.textContent = "Ação operacional aplicada.";
-      } catch (error) {
-        status.textContent = `Erro na confirmação: ${error.message}`;
-      } finally {
-        pendingActionCancel.disabled = false;
-        fetchPendingAction().catch(() => {});
-      }
-    });
-  }
-
-  if (pendingActionCancel) {
-    pendingActionCancel.addEventListener("click", async () => {
-      pendingActionConfirm.disabled = true;
-      pendingActionCancel.disabled = true;
-      status.textContent = "A cancelar ação operacional...";
-      try {
-        await cancelPendingAction();
-        status.textContent = "Ação operacional cancelada.";
-      } catch (error) {
-        status.textContent = `Erro no cancelamento: ${error.message}`;
-      } finally {
-        fetchPendingAction().catch(() => {});
-      }
-    });
-  }
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const questionField = document.getElementById("question");
-    const question = questionField.value.trim();
-
-    if (!question) {
-      return;
-    }
-
-    appendBubble("user", question);
-    status.textContent = "A consultar documentação e a chamar o modelo...";
-    questionField.value = "";
-
-    try {
-      const response = await fetch("{{ url_for('api_chat') }}", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          conversation_id: conversationIdField.value,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Falha no chatbot.");
-      }
-
-      appendBubble(
-        "assistant",
-        data.answer,
-        data.sources || [],
-        data.message_id || "",
-        "",
-        "",
-      );
-      renderPendingAction(data.pending_action || null);
-      if (data.answer_origin === "approved_memory") {
-        status.textContent = "Resposta reaproveitada de feedback aprovado.";
-      } else if (data.answer_origin === "operational_proposal") {
-        status.textContent = "Proposta operacional criada. Falta confirmar.";
-      } else if (data.feedback_match && data.feedback_match.similarity >= 0.6) {
-        status.textContent = "Resposta recebida com apoio de histórico aprovado.";
-      } else {
-        status.textContent = "Resposta recebida.";
-      }
-    } catch (error) {
-      appendBubble("assistant", `Erro: ${error.message}`);
-      status.textContent = "Erro na chamada.";
-      fetchPendingAction().catch(() => {});
-    }
-  });
-
-  function renderReindexStatus(payload) {
-    if (!payload || !reindexCard) {
-      return;
-    }
-    const state = payload.state || "idle";
-    const progress = Math.max(0, Math.min(100, Math.round(payload.progress_pct || 0)));
-    reindexCard.className = `reindex-status-card is-${state}`;
-    reindexMessage.textContent = payload.message || "Sem atividade.";
-    reindexStateChip.textContent = state;
-    reindexStateChip.className = `reindex-chip is-${state}`;
-    reindexProgressFill.style.width = `${progress}%`;
-    reindexPhase.textContent = payload.phase || "idle";
-    reindexProgressLabel.textContent = `${progress}%`;
-    reindexChunks.textContent = `${payload.embedded_chunks || 0}/${payload.total_chunks || 0} chunks`;
-    reindexDocs.textContent = `${payload.processed_documents || 0}/${payload.total_documents || 0} docs`;
-    reindexEmbeddingProvider.textContent = `embeddings ${payload.embedding_provider || "indisponivel"}`;
-    reindexSemanticCoverage.textContent = `${payload.semantic_chunk_coverage_pct || 0}% cobertura semântica`;
-    reindexFullyEmbeddedDocs.textContent = `${payload.fully_embedded_documents || 0} docs totalmente embebidos`;
-    reindexPartiallyEmbeddedDocs.textContent = `${payload.partially_embedded_documents || 0} docs parciais`;
-    reindexKnowledgeDocs.textContent = `knowledge ${payload.knowledge_documents || 0} docs`;
-    reindexIndexDocs.textContent = `indice ${payload.indexed_documents || 0} docs`;
-    reindexMissingChunks.textContent = `${payload.missing_embedding_chunks || 0} chunks sem embedding`;
-    reindexMissingDocs.textContent = `${payload.documents_with_missing_embeddings || 0} docs com embeddings em falta`;
-    reindexPendingDocs.textContent = `${payload.pending_documents_total || 0} docs pendentes`;
-    reindexQuerySummary.textContent = payload.query_embedding_summary || "";
-    reindexSyncSummary.textContent = payload.sync_summary || "Resumo de sincronização indisponível.";
-    reindexPendingSummary.textContent = payload.pending_summary || "Sem pendências conhecidas.";
-    if (reindexDocList) {
-      const rows = Array.isArray(payload.document_sync_rows) ? payload.document_sync_rows : [];
-      if (!rows.length) {
-        reindexDocList.innerHTML = '<p class="muted">Sem detalhe documental disponível.</p>';
-      } else {
-        reindexDocList.innerHTML = rows.map((item) => `
-          <article class="reindex-doc-row reindex-doc-row-${item.status || "unknown"}">
-            <div class="reindex-doc-row-head">
-              <strong>${item.name || "sem nome"}</strong>
-              <span class="reindex-doc-status">${item.status || "unknown"}</span>
-            </div>
-            <p>${item.embedded_chunks || 0}/${item.total_chunks || 0} chunks com embedding · ${item.coverage_pct || 0}% · faltam ${item.missing_chunks || 0}</p>
-          </article>
-        `).join("");
-      }
-    }
-    if (payload.eta_seconds) {
-      reindexEta.textContent = `ETA ${payload.eta_seconds}s`;
-    } else if (payload.scheduled_retry_eta_seconds) {
-      reindexEta.textContent = `Nova tentativa em ${payload.scheduled_retry_eta_seconds}s`;
-    } else {
-      reindexEta.textContent = "ETA --";
-    }
-
-    if (payload.error) {
-      reindexError.textContent = payload.error;
-      reindexError.classList.remove("hidden");
-    } else {
-      reindexError.textContent = "";
-      reindexError.classList.add("hidden");
-    }
-
-    if (reindexButton) {
-      reindexButton.disabled = state === "running";
-    }
-  }
-
-  async function fetchReindexStatus() {
-    const response = await fetch("{{ url_for('reindex_status') }}");
-    if (!response.ok) {
-      throw new Error("Falha ao ler estado da reindexação.");
-    }
-    const payload = await response.json();
-    renderReindexStatus(payload);
-    return payload;
-  }
-
-  function scheduleReindexPolling() {
-    if (reindexPollTimer) {
-      return;
-    }
-    reindexPollTimer = window.setInterval(async () => {
-      try {
-        const payload = await fetchReindexStatus();
-        if (payload.state !== "running" && !payload.scheduled_retry_at) {
-          window.clearInterval(reindexPollTimer);
-          reindexPollTimer = null;
-        }
-      } catch (error) {
-        window.clearInterval(reindexPollTimer);
-        reindexPollTimer = null;
-      }
-    }, 2500);
-  }
-
-  if (reindexForm) {
-    reindexForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const button = reindexForm.querySelector("button");
-      if (button) {
-        button.disabled = true;
-      }
-      try {
-        const response = await fetch(reindexForm.action, {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "X-Requested-With": "fetch",
-          },
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.message || "Falha ao iniciar reindexação.");
-        }
-        renderReindexStatus(payload.status || {});
-        if (payload.started || payload.status?.scheduled_retry_at) {
-          scheduleReindexPolling();
-        }
-      } catch (error) {
-        renderReindexStatus({
-          state: "error",
-          phase: "error",
-          message: error.message,
-          progress_pct: 0,
-          total_documents: 0,
-          processed_documents: 0,
-          total_chunks: 0,
-          embedded_chunks: 0,
-          error: error.message,
-        });
-      } finally {
-        if (button && (!reindexCard || !reindexCard.classList.contains("is-running"))) {
-          button.disabled = false;
-        }
-      }
-    });
-  }
-
-  if (speechSupported) {
-    loadVoices();
-    if (typeof window.speechSynthesis.addEventListener === "function") {
-      window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
-    } else {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-    window.addEventListener("beforeunload", () => {
-      stopSpeaking();
-    });
-  }
-
-  attachVoiceControlsToExistingBubbles();
-  updateVoiceToggle();
-
-  if (reindexCard) {
-    fetchReindexStatus()
-      .then((payload) => {
-        if (payload.state === "running" || payload.scheduled_retry_at) {
-          scheduleReindexPolling();
-        }
-      })
-      .catch(() => {});
-  }
-  fetchPendingAction().catch(() => {});
-</script>
 {% endblock %}

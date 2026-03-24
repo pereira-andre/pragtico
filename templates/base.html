@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title or "RAG Marítimo" }}</title>
+    <title>{{ title or "PRAGtico · Coordenação Portuária" }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
@@ -34,5 +34,6 @@
         <option value="{{ vessel_type.label }}"></option>
       {% endfor %}
     </datalist>
+    {% include "chatbot_widget.html" ignore missing %}
   </body>
 </html>

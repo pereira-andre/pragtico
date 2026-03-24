@@ -2821,3 +2821,433 @@ button:hover {
     position: static;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   FLOATING CHATBOT WIDGET
+   ══════════════════════════════════════════════════════════ */
+
+.chatbot-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(10, 108, 102, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.chatbot-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 32px rgba(10, 108, 102, 0.45);
+}
+
+.chatbot-fab-hidden {
+  display: none;
+}
+
+.chatbot-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--alert);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.chatbot-drawer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9001;
+  width: min(420px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 48px));
+  border-radius: var(--radius-lg);
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px rgba(26, 41, 40, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.chatbot-drawer.hidden {
+  display: none;
+}
+
+.chatbot-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #f7f4ef;
+}
+
+.chatbot-drawer-title {
+  display: grid;
+  gap: 2px;
+}
+
+.chatbot-drawer-title .eyebrow {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.chatbot-drawer-title h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--font-display);
+  color: #fff;
+}
+
+.chatbot-drawer-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.chatbot-icon-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chatbot-icon-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.chatbot-conversations {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.chatbot-conv-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  background: rgba(10, 108, 102, 0.08);
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.chatbot-conv-chip:hover {
+  background: rgba(10, 108, 102, 0.14);
+}
+
+.chatbot-conv-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.chatbot-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatbot-bubble {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.chatbot-bubble p {
+  margin: 0;
+}
+
+.chatbot-bubble-user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chatbot-bubble-assistant {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+}
+
+.chatbot-citations {
+  margin-top: 6px;
+  font-size: 0.78rem;
+}
+
+.chatbot-citations summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.chatbot-citation-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 2px;
+  border-radius: 6px;
+  background: rgba(10, 108, 102, 0.08);
+  font-size: 0.72rem;
+}
+
+.chatbot-pending {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 108, 102, 0.04);
+  flex-shrink: 0;
+}
+
+.chatbot-pending.hidden {
+  display: none;
+}
+
+.chatbot-pending-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.chatbot-pending-head strong {
+  font-size: 0.82rem;
+}
+
+.chatbot-pending p {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.chatbot-pending-missing {
+  color: var(--alert);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chatbot-pending-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chatbot-input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+.chatbot-input textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  background: #fff;
+  min-height: 36px;
+  max-height: 100px;
+}
+
+.chatbot-input textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chatbot-input button[type="submit"] {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.chatbot-input button[type="submit"]:hover {
+  background: var(--accent-strong);
+}
+
+.chatbot-status {
+  padding: 4px 14px 8px;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   COMPACT BERTH CARDS (navios por cais)
+   ══════════════════════════════════════════════════════════ */
+
+.berth-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.berth-group-compact {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.berth-head-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(10, 108, 102, 0.06);
+  border-bottom: 1px solid var(--line);
+}
+
+.berth-head-compact h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-family: var(--font-display);
+}
+
+.berth-head-compact span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.berth-vessel-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 14px;
+  text-decoration: none;
+  color: var(--text);
+  border-bottom: 1px solid rgba(29, 44, 43, 0.06);
+  transition: background 0.12s;
+}
+
+.berth-vessel-compact:last-child {
+  border-bottom: none;
+}
+
+.berth-vessel-compact:hover {
+  background: rgba(10, 108, 102, 0.04);
+}
+
+.berth-vessel-compact strong {
+  font-size: 0.84rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.berth-vessel-compact .ops-tag {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.berth-vessel-compact .muted {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════
+   METEO ICON ENHANCEMENTS
+   ══════════════════════════════════════════════════════════ */
+
+.meteo-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.meteo-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.meteo-wind-icon {
+  font-size: 1.1rem;
+}
+
+.meteo-condition {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE ADJUSTMENTS FOR CHATBOT
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .chatbot-drawer {
+    bottom: 0;
+    right: 0;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .chatbot-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+}

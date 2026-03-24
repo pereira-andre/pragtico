@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Registo de Escalas</p>
+        <h1>Nova escala e acompanhamento</h1>
+        <p class="lead">Regista novas escalas e acompanha as que já estão ativas. A validação e fecho das manobras fazem-se na página de cada escala.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('maneuver_archive') }}">Consultar arquivo</a>
+        {% if current_role == "admin" %}
+          <a class="hero-link" href="{{ url_for('admin_documents') }}">Documentos</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Escalas ativas</span>
+        <strong>{{ tracked_scales|length }}</strong>
+        <small>em acompanhamento</small>
+      </article>
+      <article class="hero-stat">
+        <span>Em porto</span>
+        <strong>{{ port_activity.stats.in_port_count }}</strong>
+        <small>navios</small>
+      </article>
+      <article class="hero-stat">
+        <span>Manobras planeadas</span>
+        <strong>{{ port_activity.stats.planned_count }}</strong>
+        <small>{{ port_activity.stats.pending_count }} pendentes</small>
+      </article>
+    </div>
+  </section>
+
+  <div class="planning-register-grid">
+    <section class="panel ops-form-card planning-block planning-register-card">
+      <div class="planning-block-heading">
+        <p class="eyebrow">Registo</p>
+        <h3>Tabela de registo de navio</h3>
+        <p class="planning-block-lead">Regista a escala e a ETA. A validação e o fecho continuam concentrados na tabela de planeamento.</p>
+      </div>
+      <form method="post" action="{{ url_for('create_port_call') }}" class="stack planning-form planning-register-form">
+        <input type="hidden" name="redirect_to" value="register">
+        <div class="planning-register-table">
+          <div class="planning-register-row planning-register-row-primary">
+            <label>
+              Navio
+              <input type="text" name="vessel_name" placeholder="Ex.: MSC Lyria" required>
+            </label>
+            <label>
+              ETA de chegada
+              <input type="datetime-local" name="eta_local" required>
+            </label>
+          </div>
+          <div class="planning-register-row planning-register-row-main">
+            <label>
+              Cais previsto
+              <input type="text" name="berth" list="berth-options" placeholder="Ex.: Secil W" required>
+            </label>
+            <label>
+              Último porto
+              <input type="text" name="last_port" placeholder="Ex.: Sines" required>
+            </label>
+            <label>
+              Próximo destino
+              <input type="text" name="next_port" placeholder="Ex.: Vigo" required>
+            </label>
+          </div>
+        </div>
+        <details class="planning-optional-box" open>
+          <summary>Ficha do navio obrigatória</summary>
+          <div class="stack planning-optional-body">
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                IMO
+                <input type="text" name="vessel_imo" placeholder="Ex.: 9723345" required>
+              </label>
+              <label>
+                Indicativo
+                <input type="text" name="vessel_call_sign" placeholder="Ex.: CQAN7" required>
+              </label>
+            </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Bandeira
+                <input type="text" name="vessel_flag" placeholder="Ex.: Madeira" required>
+              </label>
+              <label>
+                Tipo de navio
+                <input type="text" name="vessel_type" list="vessel-type-options" placeholder="Ex.: Graneis sólidos" required>
+              </label>
+              <label>
+                LOA (m)
+                <input type="text" name="vessel_loa_m" placeholder="Ex.: 189.9" required>
+              </label>
+            </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Boca (m)
+                <input type="text" name="vessel_beam_m" placeholder="Ex.: 32.2" required>
+              </label>
+              <label>
+                GT (t)
+                <input type="text" name="vessel_gt_t" placeholder="Ex.: 32.540" required>
+              </label>
+              <label>
+                DWT (t)
+                <input type="text" name="vessel_dwt_t" placeholder="Ex.: 38.600" required>
+              </label>
+            </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Calado
+                <input type="text" name="vessel_max_draft_m" placeholder="Ex.: 11.8" required>
+              </label>
+            </div>
+          </div>
+        </details>
+        <details class="planning-optional-box">
+          <summary>Dados operacionais obrigatórios</summary>
+          <div class="stack planning-optional-body">
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Marcação
+                <input type="datetime-local" name="booking_local" required>
+              </label>
+            </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Calado
+                <input type="text" name="draft_m" placeholder="Ex.: 4,65" required>
+              </label>
+              <label>
+                Rebocadores
+                <input type="number" min="0" name="tug_count" placeholder="0" required>
+              </label>
+            </div>
+            <div class="constraint-picker">
+              <span class="mini-label">Restrições</span>
+              <div class="constraint-option-list">
+                {% for constraint in constraint_options %}
+                  <label class="constraint-option">
+                    <input type="checkbox" name="constraints" value="{{ constraint.code }}">
+                    <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                    <span>{{ constraint.label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </details>
+        <label>
+          Nota operacional
+          <textarea name="notes" rows="3" placeholder="Restrições, rebocadores, janela de maré..."></textarea>
+        </label>
+        <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. A ficha do navio é obrigatória em todos os registos.</p>
+        <button type="submit">Guardar manobra</button>
+      </form>
+    </section>
+
+    <section class="panel ops-form-card planning-block planning-block-secondary planning-register-card">
+      <div class="planning-block-heading">
+        <p class="eyebrow">Escalas</p>
+        <h3>Escalas em acompanhamento</h3>
+        <p class="planning-block-lead">A escala é a referência operacional e de faturação. Abre a página do navio para aprovar, concluir ou registar cada manobra.</p>
+      </div>
+
+      <div class="ops-list planning-register-list">
+        {% for vessel in tracked_scales %}
+          <article class="ops-card planning-candidate-card">
+            <div class="ops-card-head planning-candidate-head">
+              <div>
+                <span class="planning-candidate-label">Escala {{ vessel.reference_code }}</span>
+                <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">{{ vessel.vessel_name }}</a></h3>
+              </div>
+              <div class="planning-candidate-meta">
+                <span class="ops-tag">{{ vessel.location_label }}</span>
+                <span class="planned-status planned-status-{{ vessel.status_class }}">{{ vessel.status_label }}</span>
+              </div>
+            </div>
+            <p class="muted">{{ vessel.meta }}</p>
+            <a class="inline-link planning-scale-link" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">Abrir escala</a>
+          </article>
+        {% endfor %}
+
+        {% if not tracked_scales %}
+          <article class="ops-empty planning-register-empty">
+            <p>Sem escalas ativas neste momento.</p>
+          </article>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

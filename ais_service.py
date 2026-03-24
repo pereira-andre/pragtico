@@ -7,6 +7,29 @@ from typing import Any
 
 DEFAULT_MAP_CENTER = [38.459517, -8.868642]
 DEFAULT_ZOOM = 11
+
+
+def _decimal_to_dm(decimal_degrees: float, is_latitude: bool) -> str:
+    """Convert decimal degrees to degrees and decimal minutes format.
+
+    Parameters:
+        decimal_degrees: Coordinate in decimal degrees.
+        is_latitude: True for latitude (N/S), False for longitude (E/W).
+
+    Returns:
+        Formatted string like 38° 27.571' N or 008° 52.119' W.
+    """
+    hemisphere = ""
+    if is_latitude:
+        hemisphere = "N" if decimal_degrees >= 0 else "S"
+    else:
+        hemisphere = "E" if decimal_degrees >= 0 else "W"
+    absolute_value = abs(decimal_degrees)
+    degrees = int(absolute_value)
+    decimal_minutes = (absolute_value - degrees) * 60
+    if is_latitude:
+        return f"{degrees:02d}° {decimal_minutes:06.3f}' {hemisphere}"
+    return f"{degrees:03d}° {decimal_minutes:06.3f}' {hemisphere}"
 DEFAULT_PORT_LABEL = "Porto de Setubal"
 DEFAULT_DASHBOARD_URL = "https://www.vesselfinder.com/embed"
 DEFAULT_SCRIPT_URL = "https://www.vesselfinder.com/aismap.js"
@@ -69,6 +92,8 @@ class AISMapService:
             "height": "100%",
             "latitude": f"{latitude:.6f}",
             "longitude": f"{longitude:.6f}",
+            "latitude_dm": _decimal_to_dm(latitude, is_latitude=True),
+            "longitude_dm": _decimal_to_dm(longitude, is_latitude=False),
             "zoom": str(self.zoom_start),
             "names": self.names,
             "port_label": self.port_label,
