@@ -1,0 +1,15 @@
+Navios RORO verificar sempre se manobra com vento forte (aproximandamente 20 kts de vento) e a direção.
+
+Se vento forte do sul, 2 reboques são suficientes para parar o abatimento do navio para o cais.
+
+Se vento forte do norte, 3 reboques é o ideal para empurrar o navio para o cais de forma controlada.
+
+Não se manobram navios RORO para o cais com ventos acima dos 25 kts.
+
+Navios RORO da grimaldi levam sempre 2 reboques, com vento forte norte considerar 3 reboques.
+
+Navios com 200 m e mais de 32 m de boca, levam sempre 3 reboques.
+
+Atracam normalmente no cais 10 e 11, dependendo da configuração da sua rampa. O 10 é para rampas laterais enquanto que o 11 é para rampas de popa.
+
+Também podem atracar no TMS 1, ou Terminal Multiusos 1, para descarregar unidades pesadas.

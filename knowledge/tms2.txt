@@ -1,0 +1,42 @@
+TIPO DE NAVIO QUE ATRACA NESTES CAIS:
+- CONTENTORES
+- CARGA GERAL
+
+INSTRUÇÃO DE TRABALHO IT-006 - REGRAS EXPLÍCITAS PARA TERMINAL MULTIUSOS ZONA 2 OU TMS2 / TMS-2 OU SADOPORT
+
+1. ESTRUTURA DO TERMINAL:
+- Cabeços 40 a 63 (comprimento total do cais: 723m)
+- Não há subdivisões por cais - toda a área é tratada como zona única
+
+2. REGRA DE ESTACIONAMENTO (DISTÂNCIA ENTRE NAVIOS):
+- Cada navio deve ter espaço livre equivalente a 10% do SEU PRÓPRIO COMPRIMENTO em CADA LADO (proa e popa)
+- Fórmula de cálculo para espaço total ocupado por um navio:
+  * Comprimento do navio (L) + 10%L (lado proa) + 10%L (lado popa) = 1.2L
+- Regra para navios adjacentes:
+  * Distância mínima entre dois navios = (10% do comprimento do navio A) + (10% do comprimento do navio B)
+- Exemplos explícitos:
+  * Navio de 100m atracando sozinho:
+    - Espaço total necessário: 100m + 10m (frente) + 10m (ré) = 120m
+  * Dois navios adjacentes (A=120m, B=80m):
+    - Distância mínima entre eles: (10% de 120m = 12m) + (10% de 80m = 8m) = 20m
+    - Espaço total ocupado: 
+      Navio A: 120m + 12m (lado livre) = 132m
+      Navio B: 80m + 8m (lado livre) = 88m
+      Total: 132m + 88m + 20m (espaço entre eles) = 240m
+
+3. REGRA DE CALADOS:
+- Calado máximo absoluto permitido em QUALQUER ponto da Zona 2: 12.0 metros
+- Não há exceções ou variações por maré, cabeço ou equipamento
+- Navios com calado > 12.0m são PROIBIDOS nesta zona
+
+4. OBSERVAÇÕES:
+- Não há menção a necessidade de rebocadores (diferente da Zona 1)
+- Não há restrições específicas por tipo de atracagem (EB/BB)
+- A tabela de "Registos" é marcada como "Não aplicável" - sem requisitos adicionais de documentação
+
+RESUMO DAS REGRAS CRÍTICAS:
+1. Espaçamento entre navios: 10% do comprimento de cada navio em CADA extremidade
+2. Distância entre navios adjacentes: SOMA dos 10% de cada navio
+3. Calado máximo: LIMITE FIXO de 12.0m (sem cálculos de maré)
+
+AVISO: Documento sujeito a atualizações - sempre verificar versão oficial no Porto de Setúbal

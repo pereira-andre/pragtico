@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="auth-layout">
+  <section class="hero-card">
+    <p class="eyebrow">Portal operacional</p>
+    <h1>Portal com chatbot RAG para operações marítimas.</h1>
+    <p class="lead">
+      Assistente documental com autenticação por perfis, pesquisa contextual e apoio operacional.
+    </p>
+    <div class="card-grid mini-grid">
+      <article class="mini-card">
+        <h2>Perfis</h2>
+        <p>`admin`, `agente`, `piloto`</p>
+      </article>
+      <article class="mini-card">
+        <h2>Auth</h2>
+        <p>local seguro com perfis operacionais</p>
+      </article>
+      <article class="mini-card">
+        <h2>RAG</h2>
+        <p>Documentação operacional indexada com pesquisa vetorial.</p>
+      </article>
+      <article class="mini-card">
+        <h2>LLM</h2>
+        <p>Gemini como provider principal.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel auth-panel">
+    <h2>Entrar</h2>
+    <form method="post" class="stack">
+      <label>
+        Email
+        <input type="email" name="email" placeholder="operador@porto.pt" required>
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" required>
+      </label>
+      <button type="submit">Iniciar sessão</button>
+    </form>
+
+    <p class="muted">
+      Usa o email e a password da conta já criada na aplicação.
+    </p>
+    <p class="link-line">Ou cria uma conta em <a href="{{ url_for('register') }}">registo</a>.</p>
+  </section>
+</main>
+{% endblock %}

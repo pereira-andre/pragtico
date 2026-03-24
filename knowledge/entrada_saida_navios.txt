@@ -1,0 +1,65 @@
+INSTRUÇÃO DE TRABALHO IT-041 - REGRAS EXPLÍCITAS PARA ENTRADA/SAÍDA DE NAVIOS
+
+1. ÁREAS DE RESPONSABILIDADE:
+- ÁREA VTS PORTUÁRIO:
+  * Limite: Montante do arco de 4 milhas náuticas centrado na Baliza nº2
+  * Oeste deste arco: Responsabilidade do VTS Costeiro
+- ÁREA DE PILOTAGEM OBRIGATÓRIA:
+  * Extensão: Até 5 milhas náuticas do Farol do Outão
+
+2. PROCEDIMENTOS DE ENTRADA (CHEGADA):
+a) CONTROLO INICIAL:
+  * OVTS mantém navio fora das 4 milhas até regularização da entrada
+  * Exemplo: Navio aguarda a 4.5 milhas até autorização
+b) POSICIONAMENTO PRÉ-EMBARQUE:
+  * 1 hora antes do embarque do piloto:
+    - Distância ideal: 3 milhas da entrada da barra
+    - Mínimo absoluto: 2 milhas da barra
+    - Posição: Próximo do enfiamento da barra
+c) TRANSIÇÃO DE RESPONSABILIDADE:
+  * Quando piloto navega na lancha em direção ao navio:
+    - Contato via canal 14
+    - Passagem formal de OVTS para Piloto
+    - Frase padrão: "Piloto assumindo controle do navio [NOME]"
+
+3. PROCEDIMENTOS DE SAÍDA (PARTIDA):
+a) DESEMBARQUE PADRÃO:
+  * Local: Junto ou fora da linha Baliza 2/Boia 1
+  * Ação: Piloto informa OVTS imediatamente após desembarque
+b) DESEMBARQUE ALTERNATIVO (CONDIÇÕES NORMAIS):
+  * Local permitido: Zona OUTÃO/Boia 3
+  * Requisitos:
+    - Acordo prévio com Comandante
+    - Garantia de condições seguras
+    - Respeito às restrições de comprimento e calado da IT específica
+    - Comunicação obrigatória ao OVTS via canal 14
+c) DESEMBARQUE EM MAU TEMPO (PILOTAGEM ASSISTIDA):
+  * Local permitido: Entre OUTÃO e Boia João Farto
+  * Procedimento:
+    - Piloto físico desembarca
+    - Piloto em terra assume assistência via radar
+    - Cobertura até os limites da barra
+    - Segue protocolo da IT-017 (Pilotagem Assistida)
+
+4. REGRAS CRÍTICAS:
+- CANAL DE COMUNICAÇÃO PRIMÁRIO: Sempre canal 14 para troca VTS-Piloto
+- DISTÂNCIA MÍNIMA DE SEGURANÇA: 2 milhas da barra durante espera
+- RESPONSABILIDADES CLARAS:
+  * VTS: Controle fora das 4 milhas e monitorização
+  * Piloto: Controle a partir do ponto de transição
+- CONDIÇÕES ESPECIAIS: Desembarque em Outão/Boia 3 requer conformidade com IT específica (não detalhada neste documento)
+
+EXEMPLOS PRÁTICOS:
+1) Entrada de navio cargueiro:
+   - 08:00: Navio a 5 milhas (área VTS Costeiro)
+   - 08:30: Autorizado a aproximar-se até 3 milhas (VTS Portuário)
+   - 09:00: Piloto inicia aproximação na lancha
+   - 09:15: Transição via canal 14: "OVTS, piloto assumindo MV Horizonte"
+
+2) Saída em mau tempo:
+   - Piloto desembarca entre Outão e João Farto
+   - Informa OVTS: "Desembarcado do MV Oceano na posição X"
+   - Piloto em terra guia navio via radar até barra
+
+AVISO FINAL: 
+Documento não controlado quando impresso. Versão atual deve ser sempre confirmada com Administração dos Portos de Setúbal antes das operações. Em caso de conflito entre documentos, prevalece a regulamentação mais recente.

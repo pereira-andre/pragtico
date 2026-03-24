@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="detail-layout">
+  <section class="panel detail-main">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Documento</p>
+        <h1>{{ document.original_name }}</h1>
+        <p class="muted">
+          {{ document.doc_type }} · {{ document.size_label }} · atualizado {{ document.updated_at_label }}
+        </p>
+      </div>
+      <div class="detail-actions">
+        <a class="outline-link" href="{{ url_for('dashboard') }}">Voltar</a>
+        <a class="outline-link" href="{{ url_for('download_document', name=document.name) }}">Download</a>
+        {% if current_role == "admin" %}
+          <form method="post" action="{{ url_for('reindex_knowledge') }}">
+            <button type="submit" class="secondary-button">Reindexar incremental</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <article class="panel inset-panel">
+        <p class="eyebrow">Resumo</p>
+        <p>{{ document.preview }}</p>
+        <div class="doc-meta">
+          <span>Inserido por {{ document.uploaded_by }}</span>
+          <span>{{ document.doc_type }}</span>
+        </div>
+      </article>
+
+      <article class="panel inset-panel">
+        <p class="eyebrow">Conteúdo extraído</p>
+        <pre class="document-text">{{ document_text }}</pre>
+      </article>
+    </div>
+  </section>
+
+  {% if current_role == "admin" %}
+    <section class="detail-side">
+      {% if document.editable %}
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Edição</p>
+              <h2>Atualizar texto</h2>
+            </div>
+          </div>
+          <form method="post" action="{{ url_for('edit_document', name=document.name) }}" class="stack">
+            <label>
+              Conteúdo
+              <textarea name="content" rows="18" required>{{ document_text }}</textarea>
+            </label>
+            <button type="submit">Guardar e reindexar</button>
+          </form>
+        </section>
+      {% else %}
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Atualização</p>
+              <h2>Substituir conhecimento</h2>
+            </div>
+          </div>
+          <p class="muted">
+            Este tipo de ficheiro não é editável no browser. Para atualizar a regra, apaga este documento e carrega uma nova versão.
+          </p>
+        </section>
+      {% endif %}
+
+      <section class="panel danger-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Remoção</p>
+            <h2>Eliminar conhecimento</h2>
+          </div>
+        </div>
+        <p class="muted">
+          Ao remover este ficheiro, o conteúdo deixa de ser usado no RAG após reindexação.
+        </p>
+        <form method="post" action="{{ url_for('delete_document', name=document.name) }}">
+          <button type="submit" class="danger-button">Apagar documento</button>
+        </form>
+      </section>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}

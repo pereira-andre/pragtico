@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="dashboard">
+  <aside class="sidebar panel">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Estado</h1>
+      <p class="muted">Backends ativos e saúde da plataforma.</p>
+    </div>
+    <div class="stack tight">
+      <div>
+        <p class="mini-label">Auth</p>
+        <strong>{{ admin.auth_backend }}</strong>
+        <p class="muted">{{ admin.auth_method_label }}</p>
+      </div>
+      <div>
+        <p class="mini-label">Store</p>
+        <strong>{{ admin.storage_backend }}</strong>
+      </div>
+      <div>
+        <p class="mini-label">Índice</p>
+        <strong>{{ admin.rag_backend }}</strong>
+      </div>
+    </div>
+    <a class="secondary-link" href="{{ url_for('dashboard') }}">Portal</a>
+    <a class="secondary-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
+  </aside>
+
+  <section class="main-column">
+    <section class="panel section-panel admin-users-panel admin-status-panel">
+      <div class="admin-users-topbar">
+        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
+        <div class="admin-users-kpis">
+          <span class="admin-users-kpi">Auth {{ admin.auth_backend }} · {{ admin.auth_method_label }}</span>
+          <span class="admin-users-kpi">Store {{ admin.storage_backend }}</span>
+          <span class="admin-users-kpi">Índice {{ admin.rag_backend }}</span>
+        </div>
+      </div>
+
+      <div class="section-head admin-users-head">
+        <div>
+          <p class="eyebrow">Configuração</p>
+          <h2>Estado de env</h2>
+          <p class="muted admin-users-intro">Visão técnica dos serviços ativos, base de dados, AIS e índice documental da plataforma.</p>
+        </div>
+        <div class="admin-users-tools">
+          <a class="outline-link admin-users-backlink" href="{{ url_for('admin_users') }}">Ir para utilizadores</a>
+        </div>
+      </div>
+      <div class="card-grid architecture-grid">
+        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.gemini_ready else 'is-missing' }}"><h3>Gemini</h3><p>{{ "ok" if admin.config.gemini_ready else "em falta" }}</p></article>
+        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.weather_ready else 'is-missing' }}"><h3>WeatherAPI</h3><p>{{ "ok" if admin.config.weather_ready else "em falta" }}</p></article>
+        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.ais_ready else 'is-missing' }}"><h3>{{ admin.ais_status.provider_name }} AIS</h3><p>{{ "ok" if admin.config.ais_ready else "em falta" }}</p></article>
+        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.database_url_ready else 'is-missing' }}"><h3>DATABASE_URL</h3><p>{{ "ok" if admin.config.database_url_ready else "em falta" }}</p></article>
+      </div>
+    </section>
+
+    <section class="workspace-grid">
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Operação</p>
+            <h2>Resumo de dados operacionais</h2>
+          </div>
+        </div>
+        <div class="card-grid architecture-grid">
+          <article class="mini-card"><h3>Previstos</h3><p>{{ admin.port_activity.stats.scheduled_count }}</p></article>
+          <article class="mini-card"><h3>Em porto</h3><p>{{ admin.port_activity.stats.in_port_count }}</p></article>
+          <article class="mini-card"><h3>Saídas recentes</h3><p>{{ admin.port_activity.stats.departed_count }}</p></article>
+          <article class="mini-card"><h3>Manobras planeadas</h3><p>{{ admin.port_activity.stats.planned_count }}</p></article>
+          <article class="mini-card"><h3>Arquivo</h3><p>{{ admin.port_activity.stats.archive_count }}</p></article>
+          <article class="mini-card"><h3>Abortadas</h3><p>{{ admin.port_activity.stats.aborted_count }}</p></article>
+          <article class="mini-card"><h3>Pendentes</h3><p>{{ admin.port_activity.stats.pending_count }}</p></article>
+          <article class="mini-card"><h3>Cais ocupados</h3><p>{{ admin.port_activity.stats.berth_count }}</p></article>
+        </div>
+
+        {% if admin.port_activity.error %}
+          <p class="muted">Erro ao gerar resumo operacional: {{ admin.port_activity.error }}</p>
+        {% else %}
+          <p class="muted">Resumo calculado a partir do snapshot operacional atual da plataforma para validar volume e consistência dos dados.</p>
+        {% endif %}
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Base de dados</p>
+            <h2>Estado operacional</h2>
+          </div>
+        </div>
+        {% if admin.db_runtime %}
+          <div class="card-grid architecture-grid">
+            <article class="mini-card"><h3>DB</h3><p>{{ admin.db_runtime.database_name }}</p></article>
+            <article class="mini-card"><h3>User</h3><p>{{ admin.db_runtime.database_user }}</p></article>
+            <article class="mini-card"><h3>pgvector</h3><p>{{ "instalado" if admin.db_runtime.vector_installed else "em falta" }}</p></article>
+            <article class="mini-card"><h3>Users</h3><p>{{ admin.db_runtime.counts.app_users }}</p></article>
+            <article class="mini-card"><h3>Docs</h3><p>{{ admin.db_runtime.counts.documents }}</p></article>
+            <article class="mini-card"><h3>Operações</h3><p>{{ admin.db_runtime.counts.port_calls }}</p></article>
+            <article class="mini-card"><h3>Conversas</h3><p>{{ admin.db_runtime.counts.conversations }}</p></article>
+            <article class="mini-card"><h3>Mensagens</h3><p>{{ admin.db_runtime.counts.messages }}</p></article>
+            <article class="mini-card"><h3>Chunks</h3><p>{{ admin.db_runtime.counts.rag_chunks }}</p></article>
+          </div>
+        {% elif admin.db_runtime_error %}
+          <p class="muted">Erro ao consultar a base: {{ admin.db_runtime_error }}</p>
+        {% else %}
+          <p class="muted">Sem runtime Postgres ativo neste arranque.</p>
+        {% endif %}
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">AIS</p>
+            <h2>Estado do mapa</h2>
+          </div>
+          <span class="status-chip {{ 'status-chip-ok' if admin.ais_status.map_available else 'status-chip-off' }}">
+            {{ admin.ais_status.status_label }}
+          </span>
+        </div>
+
+        <div class="card-grid architecture-grid">
+          <article class="mini-card mini-card-status {{ 'is-ok' if admin.ais_status.map_available else 'is-missing' }}"><h3>Modo</h3><p>{{ admin.ais_status.source_label }}</p></article>
+          <article class="mini-card"><h3>Fornecedor</h3><p>{{ admin.ais_status.provider_name }}</p></article>
+          <article class="mini-card"><h3>Centro</h3><p>{{ admin.ais_status.embed.latitude }}, {{ admin.ais_status.embed.longitude }}</p></article>
+          <article class="mini-card"><h3>Zoom</h3><p>{{ admin.ais_status.embed.zoom }}</p></article>
+          <article class="mini-card"><h3>Nomes</h3><p>{{ "ativos" if admin.ais_status.embed.names else "ocultos" }}</p></article>
+          <article class="mini-card"><h3>Script</h3><p>aismap.js</p></article>
+        </div>
+
+        <div class="status-box {{ 'ok' if admin.ais_status.map_available else 'off' }}">
+          <span class="status-dot"></span>
+          Embed do VesselFinder pronto a carregar no dashboard.
+        </div>
+
+        {% if admin.ais_status.last_error %}
+          <p class="muted">Erro AIS: {{ admin.ais_status.last_error }}</p>
+        {% endif %}
+        <p class="muted">Página do fornecedor: {{ admin.ais_status.dashboard_url }}</p>
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">RAG</p>
+            <h2>Estado do índice</h2>
+          </div>
+        </div>
+        <div class="card-grid architecture-grid">
+          <article class="mini-card"><h3>Backend</h3><p>{{ admin.rag_status.index_backend }}</p></article>
+          <article class="mini-card"><h3>Documentos</h3><p>{{ admin.rag_status.document_count }}</p></article>
+          <article class="mini-card"><h3>Chunks</h3><p>{{ admin.rag_status.chunk_count }}</p></article>
+          <article class="mini-card"><h3>Embeddings</h3><p>{{ admin.rag_status.embedded_chunks }}</p></article>
+        </div>
+        <div class="card-grid architecture-grid">
+          <article class="mini-card"><h3>Novos</h3><p>{{ admin.rag_reindex_status.new_documents or 0 }}</p></article>
+          <article class="mini-card"><h3>Alterados</h3><p>{{ admin.rag_reindex_status.changed_documents or 0 }}</p></article>
+          <article class="mini-card"><h3>Apagados</h3><p>{{ admin.rag_reindex_status.removed_documents or 0 }}</p></article>
+          <article class="mini-card"><h3>Sem alterações</h3><p>{{ admin.rag_reindex_status.unchanged_documents or 0 }}</p></article>
+        </div>
+        <p class="muted">Última verificação do knowledge: {{ admin.rag_reindex_status.message }}</p>
+        {% if admin.rag_status.index_error %}
+          <p class="muted">Último erro do índice: {{ admin.rag_status.index_error }}</p>
+        {% endif %}
+      </section>
+    </section>
+
+  </section>
+</main>
+{% endblock %}

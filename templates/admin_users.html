@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="dashboard">
+  <aside class="sidebar panel">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Utilizadores</h1>
+      <p class="muted">Editar perfis locais, papéis e contactos operacionais.</p>
+    </div>
+    <div class="stack tight">
+      <div>
+        <p class="mini-label">Total</p>
+        <strong>{{ users|length }}</strong>
+      </div>
+      <div>
+        <p class="mini-label">Perfis</p>
+        <strong>admin · agente · piloto</strong>
+      </div>
+    </div>
+    <a class="secondary-link" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
+    <a class="secondary-link" href="{{ url_for('admin_status') }}">Estado admin</a>
+  </aside>
+
+  <section class="main-column">
+    <section class="panel section-panel admin-users-panel">
+      <div class="admin-users-topbar">
+        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
+        <div class="admin-users-kpis">
+          <span class="admin-users-kpi">{{ users|length }} contas</span>
+          <span class="admin-users-kpi">Gestão local</span>
+        </div>
+      </div>
+
+      <div class="section-head admin-users-head">
+        <div>
+          <p class="eyebrow">Perfis</p>
+          <h2>Gestão de utilizadores</h2>
+          <p class="muted admin-users-intro">Administra acessos, corrige perfis e controla a operação sem edições acidentais.</p>
+        </div>
+        <div class="admin-users-tools">
+          <label class="admin-search-field">
+            <span class="mini-label">Buscar utilizador</span>
+            <input id="user-search" type="search" placeholder="Email, nome, agência, telefone...">
+          </label>
+        </div>
+      </div>
+
+      <div class="admin-user-list" id="admin-user-list">
+        {% for user in users %}
+          {% set profile_ok = user.full_name and user.organization and user.email and user.phone %}
+          {% set search_text = (user.username ~ ' ' ~ (user.full_name or '') ~ ' ' ~ (user.organization or '') ~ ' ' ~ (user.phone or '') ~ ' ' ~ (user.role or ''))|lower %}
+          <article class="admin-user-card admin-user-edit-card" data-user-card data-search="{{ search_text }}">
+            <form method="post" action="{{ url_for('admin_update_user', username=user.username) }}" class="admin-user-form">
+              <div class="admin-user-form-head">
+                <div>
+                  <p class="mini-label">Email de acesso</p>
+                  <h3>{{ user.username }}</h3>
+                </div>
+                <div class="admin-user-badges">
+                  <span class="doc-badge">{{ user.role }}</span>
+                  <span class="doc-badge {{ 'doc-badge-ok' if profile_ok else 'doc-badge-warn' }}">
+                    {{ 'Perfil completo' if profile_ok else 'Perfil incompleto' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="admin-user-lockbar">
+                <button type="button" class="admin-edit-toggle" data-edit-toggle aria-pressed="false">
+                  <span class="admin-edit-toggle-icon" aria-hidden="true">+</span>
+                  <span data-edit-toggle-label>Editar utilizador</span>
+                </button>
+                <span class="admin-edit-state is-locked" data-edit-status>Edição bloqueada</span>
+              </div>
+
+              <div class="admin-user-grid">
+                <label>
+                  Nome completo
+                  <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Nome do utilizador" disabled data-lockable>
+                </label>
+                <label>
+                  Entidade / agência
+                  <input type="text" name="organization" value="{{ user.organization or '' }}" placeholder="Organização" disabled data-lockable>
+                </label>
+                <label>
+                  Telefone
+                  <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="Contacto" disabled data-lockable>
+                </label>
+                <label>
+                  Papel
+                  <select name="role" required disabled data-lockable>
+                    <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
+                    <option value="agente" {% if user.role == "agente" %}selected{% endif %}>Agente</option>
+                    <option value="piloto" {% if user.role == "piloto" %}selected{% endif %}>Piloto</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="admin-user-form-foot">
+                <p class="muted">O email de login fica associado à conta e é usado como identificador principal.</p>
+                <div class="admin-user-actions">
+                  <button type="submit" class="mini-button" disabled data-lockable>Guardar utilizador</button>
+                  <button
+                    type="submit"
+                    class="mini-button danger-button"
+                    formaction="{{ url_for('admin_delete_user', username=user.username) }}"
+                    formmethod="post"
+                    onclick="return confirm('Apagar o utilizador {{ user.username }}? Esta ação remove também o histórico de conversas dessa conta.')"
+                  >
+                    Apagar
+                  </button>
+                </div>
+              </div>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+      <p id="admin-user-empty" class="muted hidden">Nenhum utilizador corresponde à pesquisa.</p>
+    </section>
+  </section>
+</main>
+
+<script>
+  const searchField = document.getElementById("user-search");
+  const emptyState = document.getElementById("admin-user-empty");
+  const userCards = Array.from(document.querySelectorAll("[data-user-card]"));
+
+  function filterUsers() {
+    const query = (searchField?.value || "").trim().toLowerCase();
+    let visible = 0;
+    userCards.forEach((card) => {
+      const haystack = card.dataset.search || "";
+      const match = !query || haystack.includes(query);
+      card.classList.toggle("hidden", !match);
+      if (match) visible += 1;
+    });
+    emptyState.classList.toggle("hidden", visible !== 0);
+  }
+
+  if (searchField) {
+    searchField.addEventListener("input", filterUsers);
+  }
+
+  document.querySelectorAll(".admin-user-form").forEach((form) => {
+    const toggle = form.querySelector("[data-edit-toggle]");
+    const status = form.querySelector("[data-edit-status]");
+    const fields = Array.from(form.querySelectorAll("[data-lockable]"));
+    let unlocked = false;
+
+    function renderLockState() {
+      fields.forEach((field) => {
+        field.disabled = !unlocked;
+      });
+      if (toggle) {
+        toggle.setAttribute("aria-pressed", unlocked ? "true" : "false");
+        toggle.classList.toggle("is-unlocked", unlocked);
+        const label = toggle.querySelector("[data-edit-toggle-label]");
+        if (label) {
+          label.textContent = unlocked ? "Bloquear edição" : "Editar utilizador";
+        }
+      }
+      if (status) {
+        status.textContent = unlocked ? "Edição desbloqueada" : "Edição bloqueada";
+        status.classList.toggle("is-unlocked", unlocked);
+        status.classList.toggle("is-locked", !unlocked);
+      }
+    }
+
+    renderLockState();
+
+    if (toggle) {
+      toggle.addEventListener("click", () => {
+        unlocked = !unlocked;
+        renderLockState();
+      });
+    }
+  });
+</script>
+{% endblock %}

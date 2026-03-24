@@ -1,0 +1,742 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card scale-hero">
+    <div class="hero-topline">
+      <div class="scale-hero-copy">
+        <p class="eyebrow">Escala Navio</p>
+        <h1>{{ scale.ship_profile.name }}</h1>
+        <div class="scale-badge-strip">
+          <span class="scale-chip">{{ scale.ship_profile.imo }}</span>
+          <span class="scale-chip">{{ scale.ship_profile.flag }}</span>
+          <span class="scale-chip">{{ scale.ship_profile.type }}</span>
+          <span class="scale-chip scale-chip-strong">{{ scale.summary.status_label }}</span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+      </div>
+    </div>
+
+    <div class="scale-kpi-strip">
+      <article class="scale-kpi">
+        <span>LOA</span>
+        <strong>{{ scale.ship_profile.loa }}</strong>
+        <small>m</small>
+      </article>
+      <article class="scale-kpi">
+        <span>Boca Sinal</span>
+        <strong>{{ scale.ship_profile.beam }}</strong>
+        <small>m</small>
+      </article>
+      <article class="scale-kpi">
+        <span>GT</span>
+        <strong>{{ scale.ship_profile.gt }}</strong>
+        <small>t</small>
+      </article>
+      <article class="scale-kpi">
+        <span>Calado</span>
+        <strong>{{ scale.ship_profile.draft }}</strong>
+        <small>m</small>
+      </article>
+      <article class="scale-kpi">
+        <span>DWT</span>
+        <strong>{{ scale.ship_profile.dwt }}</strong>
+        <small>t</small>
+      </article>
+    </div>
+
+    <div class="scale-masthead">
+      <article class="scale-meta-card">
+        <span class="mini-label">Escala</span>
+        <strong>{{ scale.summary.scale_reference }}</strong>
+        <small>{{ scale.summary.status_label }}</small>
+      </article>
+      <article class="scale-meta-card">
+        <span class="mini-label">ETA</span>
+        <strong>{{ scale.summary.eta_label }}</strong>
+        <small>{{ scale.summary.eta_status_label }} · porto anterior {{ scale.summary.last_port }}</small>
+      </article>
+      <article class="scale-meta-card">
+        <span class="mini-label">ETD</span>
+        <strong>{{ scale.summary.etd_label }}</strong>
+        <small>{{ scale.summary.etd_status_label }} · porto seguinte {{ scale.summary.next_port }}</small>
+      </article>
+      <article class="scale-meta-card">
+        <span class="mini-label">Local Atual</span>
+        <strong>{{ scale.summary.current_location }}</strong>
+        <small>agente {{ scale.summary.agent_label }}</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="detail-layout scale-detail-layout">
+    <section class="panel detail-main">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Resumo de Escala</p>
+          <h2>Resumo operacional</h2>
+        </div>
+      </div>
+
+      <div class="scale-overview-grid">
+        <section class="panel inset-panel scale-actions-panel">
+          <div class="section-head compact-head">
+            <div>
+              <p class="eyebrow">Operação</p>
+              <h3>Ações da escala</h3>
+            </div>
+          </div>
+          {% if scale.actions.must_complete_label and current_role in ["admin", "piloto"] %}
+            <article class="ops-empty">
+              <p>Existe uma manobra validada nesta escala. O próximo passo operacional é: {{ scale.actions.must_complete_label }}.</p>
+            </article>
+          {% endif %}
+          <div class="scale-actions-grid">
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_approve_entry %}
+              <form method="post" action="{{ url_for('approve_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Aprovar entrada</strong>
+                <label>
+                  Nota de aprovação
+                  <textarea name="approval_note" rows="2" placeholder="Condições, restrições ou janela operacional..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Aprovar</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "agente"] and scale.actions.can_abort_entry %}
+              <form method="post" action="{{ url_for('abort_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Abortar entrada</strong>
+                <label>
+                  Motivo
+                  <textarea name="aborted_reason" rows="2" placeholder="Motivo obrigatório..." required></textarea>
+                </label>
+                <label>
+                  Nota adicional
+                  <textarea name="approval_note" rows="2" placeholder="Observações adicionais..."></textarea>
+                </label>
+                <button type="submit" class="mini-button secondary-button">Abortar</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_complete_entry %}
+              <form method="post" action="{{ url_for('mark_port_call_arrived', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Concluir entrada</strong>
+                <p class="muted">A hora operacional final fica no registo do piloto.</p>
+                <label>
+                  Cais confirmado
+                  <input type="text" name="berth" list="berth-options" value="{{ port_call.berth if port_call.berth else '' }}" placeholder="Ex.: Secil W">
+                </label>
+                <button type="submit" class="mini-button">Marcar concluída</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "agente"] and scale.actions.can_plan_departure %}
+              <form method="post" action="{{ url_for('schedule_departure_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Planear saída</strong>
+                <label>
+                  ETD
+                  <input type="datetime-local" name="planned_departure_at_local" required>
+                </label>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Próximo porto
+                    <input type="text" name="next_port" value="{{ port_call.next_port if port_call.next_port else '' }}" placeholder="Ex.: Vigo" required>
+                  </label>
+                  <label>
+                    Calado
+                    <input type="text" name="draft_m" placeholder="Ex.: 7,2" required>
+                  </label>
+                  <label>
+                    Rebocadores
+                    <input type="number" min="0" name="tug_count" placeholder="0" required>
+                  </label>
+                  <label>
+                    Marcação
+                    <input type="datetime-local" name="booking_local" required>
+                  </label>
+                </div>
+                <div class="constraint-picker">
+                  <span class="mini-label">Restrições</span>
+                  <div class="constraint-option-list">
+                    {% for constraint in constraint_options %}
+                      <label class="constraint-option">
+                        <input type="checkbox" name="constraints" value="{{ constraint.code }}">
+                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                        <span>{{ constraint.label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+                <label>
+                  Nota operacional
+                  <textarea name="departure_plan_note" rows="2" placeholder="Condições, meios e observações..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Guardar planeamento</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_approve_departure %}
+              <form method="post" action="{{ url_for('approve_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Aprovar saída</strong>
+                <label>
+                  Nota de aprovação
+                  <textarea name="approval_note" rows="2" placeholder="Condições, restrições ou janela operacional..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Aprovar</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "agente"] and scale.actions.can_plan_shift %}
+              <form method="post" action="{{ url_for('schedule_shift_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Planear mudança</strong>
+                <label>
+                  Hora prevista da mudança
+                  <input type="datetime-local" name="planned_shift_at_local" required>
+                </label>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Cais origem
+                    <input type="text" name="origin_berth" list="berth-options" value="{{ port_call.berth if port_call.berth else '' }}" placeholder="Ex.: TMS 1 - Cais 8" required>
+                  </label>
+                  <label>
+                    Cais destino
+                    <input type="text" name="destination_berth" list="berth-options" placeholder="Ex.: TMS 2" required>
+                  </label>
+                  <label>
+                    Calado
+                    <input type="text" name="draft_m" placeholder="Ex.: 5,1" required>
+                  </label>
+                  <label>
+                    Rebocadores
+                    <input type="number" min="0" name="tug_count" placeholder="0" required>
+                  </label>
+                  <label>
+                    Marcação
+                    <input type="datetime-local" name="booking_local" required>
+                  </label>
+                </div>
+                <div class="constraint-picker">
+                  <span class="mini-label">Restrições</span>
+                  <div class="constraint-option-list">
+                    {% for constraint in constraint_options %}
+                      <label class="constraint-option">
+                        <input type="checkbox" name="constraints" value="{{ constraint.code }}">
+                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                        <span>{{ constraint.label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+                <label>
+                  Nota operacional
+                  <textarea name="shift_plan_note" rows="2" placeholder="Condições, meios e observações..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Guardar mudança</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_approve_shift %}
+              <form method="post" action="{{ url_for('approve_shift_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Aprovar mudança</strong>
+                <label>
+                  Nota de aprovação
+                  <textarea name="approval_note" rows="2" placeholder="Condições, restrições ou janela operacional..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Aprovar</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "agente"] and scale.actions.can_abort_shift %}
+              <form method="post" action="{{ url_for('abort_shift_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Abortar mudança</strong>
+                <label>
+                  Motivo
+                  <textarea name="aborted_reason" rows="2" placeholder="Motivo obrigatório..." required></textarea>
+                </label>
+                <button type="submit" class="mini-button secondary-button">Remover mudança</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_complete_shift %}
+              <form method="post" action="{{ url_for('mark_shift_completed', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Concluir mudança</strong>
+                <p class="muted">A hora operacional final fica no registo do piloto.</p>
+                <button type="submit" class="mini-button">Marcar concluída</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "agente"] and scale.actions.can_abort_departure %}
+              <form method="post" action="{{ url_for('abort_departure_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Abortar saída</strong>
+                <label>
+                  Motivo
+                  <textarea name="aborted_reason" rows="2" placeholder="Motivo obrigatório..." required></textarea>
+                </label>
+                <button type="submit" class="mini-button secondary-button">Remover planeamento</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_complete_departure %}
+              <form method="post" action="{{ url_for('mark_port_call_departed', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Concluir saída</strong>
+                <p class="muted">A hora operacional final fica no registo do piloto.</p>
+                <label>
+                  Próximo porto
+                  <input type="text" name="next_port" value="{{ port_call.next_port if port_call.next_port else '' }}" placeholder="Ex.: Vigo">
+                </label>
+                <button type="submit" class="mini-button">Marcar concluída</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_register_entry %}
+              <form method="post" action="{{ url_for('attach_entry_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Registo da entrada</strong>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Início da manobra
+                    <input type="datetime-local" name="maneuver_started_local" required>
+                  </label>
+                  <label>
+                    Fim da manobra
+                    <input type="datetime-local" name="maneuver_finished_local" required>
+                  </label>
+                </div>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Calado
+                    <input type="text" name="draft_m" placeholder="Ex.: 4,65" required>
+                  </label>
+                </div>
+                <label>
+                  Observações
+                  <textarea name="notes" rows="2" placeholder="Observações do registo final..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Guardar registo</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_register_departure %}
+              <form method="post" action="{{ url_for('attach_departure_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Registo da saída</strong>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Início da manobra
+                    <input type="datetime-local" name="maneuver_started_local" required>
+                  </label>
+                  <label>
+                    Fim da manobra
+                    <input type="datetime-local" name="maneuver_finished_local" required>
+                  </label>
+                </div>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Calado
+                    <input type="text" name="draft_m" placeholder="Ex.: 6,9" required>
+                  </label>
+                </div>
+                <label>
+                  Observações
+                  <textarea name="notes" rows="2" placeholder="Observações do registo final..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Guardar registo</button>
+              </form>
+            {% endif %}
+
+            {% if current_role in ["admin", "piloto"] and scale.actions.can_register_shift %}
+              <form method="post" action="{{ url_for('attach_shift_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+                <input type="hidden" name="redirect_to" value="scale">
+                <strong>Registo da mudança</strong>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Início da manobra
+                    <input type="datetime-local" name="maneuver_started_local" required>
+                  </label>
+                  <label>
+                    Fim da manobra
+                    <input type="datetime-local" name="maneuver_finished_local" required>
+                  </label>
+                </div>
+                <div class="mini-grid planned-mini-grid">
+                  <label>
+                    Calado
+                    <input type="text" name="draft_m" placeholder="Ex.: 4,90" required>
+                  </label>
+                </div>
+                <label>
+                  Observações
+                  <textarea name="notes" rows="2" placeholder="Observações do registo final..."></textarea>
+                </label>
+                <button type="submit" class="mini-button">Guardar registo</button>
+              </form>
+            {% endif %}
+
+            {% if not scale.actions.can_approve_entry and not scale.actions.can_abort_entry and not scale.actions.can_complete_entry and not scale.actions.can_plan_departure and not scale.actions.can_approve_departure and not scale.actions.can_abort_departure and not scale.actions.can_complete_departure and not scale.actions.can_register_entry and not scale.actions.can_register_departure and not scale.actions.can_plan_shift and not scale.actions.can_approve_shift and not scale.actions.can_abort_shift and not scale.actions.can_complete_shift and not scale.actions.can_register_shift %}
+              <article class="ops-empty">
+                <p>Sem ações pendentes nesta escala.</p>
+              </article>
+            {% endif %}
+          </div>
+        </section>
+
+        <section class="panel inset-panel scale-summary-panel">
+          <div class="section-head compact-head">
+            <div>
+              <p class="eyebrow">Dados Gerais da Escala</p>
+              <h3>Panorama</h3>
+            </div>
+          </div>
+          <div class="scale-summary-grid">
+            <article class="mini-card">
+              <h3>Local</h3>
+              <p>{{ scale.summary.current_location }}</p>
+            </article>
+            <article class="mini-card">
+              <h3>Pontos de relato</h3>
+              <p>{{ scale.summary.report_points_count }}</p>
+            </article>
+            <article class="mini-card">
+              <h3>Total de manobras</h3>
+              <p>{{ scale.summary.maneuver_count }}</p>
+            </article>
+            <article class="mini-card">
+              <h3>ETA</h3>
+              <p>{{ scale.summary.eta_label }}</p>
+            </article>
+            <article class="mini-card">
+              <h3>ETD</h3>
+              <p>{{ scale.summary.etd_label }}</p>
+            </article>
+            <article class="mini-card">
+              <h3>Estadia</h3>
+              <p>{{ scale.summary.stay_hours_label }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel inset-panel scale-maneuvers-panel">
+          <div class="section-head compact-head">
+            <div>
+              <p class="eyebrow">Manobras</p>
+              <h3>Lista da escala</h3>
+            </div>
+          </div>
+          <div class="scale-maneuver-list">
+            {% for item in scale.maneuvers %}
+              <article class="scale-maneuver-card">
+                <div class="scale-maneuver-top">
+                  <div>
+                    <span class="mini-label">Manobra</span>
+                    <h3>{{ item.title }}</h3>
+                  </div>
+                  <div class="stack tight">
+                    <span class="planned-status planned-status-{{ 'completed' if item.status == 'Realizada' else 'approved' if item.status == 'Aprovada' else 'aborted' if item.status == 'Abortada' else 'pending' }}">{{ item.status }}</span>
+                    {% if item.has_changes %}
+                      <span class="doc-badge">Alterada {{ item.change_count }}x</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="scale-maneuver-grid">
+                  <div>
+                    <span class="mini-label">Momento</span>
+                    <p>{{ item.when_label }}</p>
+                  </div>
+                  <div>
+                    <span class="mini-label">Calado</span>
+                    <p>{{ item.draft }}</p>
+                  </div>
+                </div>
+                {% if item.constraints %}
+                  <div class="constraint-badge-list">
+                    {% for constraint in item.constraints %}
+                      <span class="constraint-badge" title="{{ constraint.label }}">
+                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                <div class="scale-route">
+                  <div>
+                    <span class="mini-label">Local Origem</span>
+                    <p>{{ item.origin }}</p>
+                  </div>
+                  <span class="scale-route-arrow">→</span>
+                  <div>
+                    <span class="mini-label">Local Destino</span>
+                    <p>{{ item.destination }}</p>
+                  </div>
+                </div>
+                {% if item.notes %}
+                  <p class="muted scale-maneuver-note">{{ item.notes }}</p>
+                {% endif %}
+                <div class="scale-maneuver-grid">
+                  <div>
+                    <span class="mini-label">Agente</span>
+                    <p>{{ item.agent_profile.label or '--' }}</p>
+                    <small>{{ item.agent_profile.contact_label or '--' }}</small>
+                  </div>
+                  <div>
+                    <span class="mini-label">Validado por</span>
+                    <p>{{ item.validated_by_profile.label or '--' }}</p>
+                    <small>{{ item.validated_by_profile.contact_label or '--' }}</small>
+                  </div>
+                </div>
+                <div>
+                  <span class="mini-label">Executado por</span>
+                  <p>{{ item.executed_by_profile.label or '--' }}</p>
+                  <small>{{ item.executed_by_profile.contact_label or '--' }}</small>
+                </div>
+                {% if item.can_edit_plan %}
+                  <details class="planning-optional-box">
+                    <summary>Editar planeamento</summary>
+                    <form method="post" action="{{ url_for('edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+                      <div class="mini-grid planned-mini-grid">
+                        <label>
+                          Hora
+                          <input type="datetime-local" name="planned_at_local" value="{{ item.planned_input_value }}" required>
+                        </label>
+                        <label>
+                          Origem
+                          <input type="text" name="origin" value="{{ item.origin if item.origin != '--' else '' }}" required>
+                        </label>
+                        <label>
+                          Destino
+                          <input type="text" name="destination" value="{{ item.destination if item.destination != '--' else '' }}" required>
+                        </label>
+                        <label>
+                          Calado
+                          <input type="text" name="draft_m" value="{{ item.draft if item.draft != '--' else '' }}" required>
+                        </label>
+                        <label>
+                          Rebocadores
+                          <input type="number" min="0" name="tug_count" value="{{ item.tug_count }}" required>
+                        </label>
+                      </div>
+                      <div class="constraint-picker">
+                        <span class="mini-label">Restrições</span>
+                        <div class="constraint-option-list">
+                          {% for constraint in constraint_options %}
+                            <label class="constraint-option">
+                              <input type="checkbox" name="constraints" value="{{ constraint.code }}" {% if constraint.code in item.constraint_codes %}checked{% endif %}>
+                              <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                              <span>{{ constraint.label }}</span>
+                            </label>
+                          {% endfor %}
+                        </div>
+                      </div>
+                      <label>
+                        Observações
+                        <textarea name="plan_observations" rows="2">{{ item.plan_observations }}</textarea>
+                      </label>
+                      <label>
+                        Motivo da alteração
+                        <textarea name="change_reason" rows="2" placeholder="Ex.: atraso de carga, avaria, alteração operacional..." required></textarea>
+                      </label>
+                      <button type="submit" class="mini-button">Guardar alteração</button>
+                    </form>
+                  </details>
+                {% endif %}
+                {% if item.can_edit_report %}
+                  <details class="planning-optional-box">
+                    <summary>{% if item.executed_by_profile.label != '--' %}Editar registo{% else %}Preencher registo{% endif %}</summary>
+                    <form method="post" action="{{ url_for('edit_maneuver_report', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+                      <input type="hidden" name="maneuver_label" value="{{ item.title }}">
+                      <div class="mini-grid planned-mini-grid">
+                        <label>
+                          Início da manobra
+                          <input type="datetime-local" name="maneuver_started_local" value="{{ item.execution_started_input_value }}" required>
+                        </label>
+                        <label>
+                          Fim da manobra
+                          <input type="datetime-local" name="maneuver_finished_local" value="{{ item.execution_finished_input_value }}" required>
+                        </label>
+                        <label>
+                          Calado
+                          <input type="text" name="draft_m" value="{{ item.draft if item.draft != '--' else '' }}" required>
+                        </label>
+                      </div>
+                      <label>
+                        Observações
+                        <textarea name="notes" rows="2">{{ item.report_note }}</textarea>
+                      </label>
+                      <label>
+                        Motivo da alteração
+                        <textarea name="change_reason" rows="2" placeholder="Ex.: correção de hora, lapso no registo..." required></textarea>
+                      </label>
+                      <button type="submit" class="mini-button">Guardar revisão</button>
+                    </form>
+                  </details>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="panel inset-panel scale-maneuvers-panel">
+          <div class="section-head compact-head">
+            <div>
+              <p class="eyebrow">Histórico</p>
+              <h3>Alterações da escala</h3>
+            </div>
+          </div>
+          <div class="planned-table-wrap">
+            <table class="planned-table">
+              <thead>
+                <tr>
+                  <th>Quando</th>
+                  <th>Manobra</th>
+                  <th>Alterado por</th>
+                  <th>Motivo</th>
+                  <th>Resumo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for log in scale.change_log_rows %}
+                  <tr>
+                    <td>{{ log.changed_at_label }}</td>
+                    <td>{{ log.maneuver_title }}</td>
+                    <td>
+                      <strong>{{ log.changed_by_label }}</strong><br>
+                      <span class="muted">{{ log.changed_by_contact }}</span>
+                    </td>
+                    <td>{{ log.reason }}</td>
+                    <td>{{ log.summary }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="5" class="planned-empty">Sem alterações registadas nesta escala.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="detail-side">
+      <section class="panel inset-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Ficha</p>
+            <h2>Ficha do navio</h2>
+          </div>
+        </div>
+        <div class="scale-fact-sheet">
+          <article class="scale-fact-row">
+            <span>Documento</span>
+            <strong>{{ scale.ship_profile.doc_number }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Número de escala</span>
+            <strong>{{ scale.ship_profile.scale_reference }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>IMO</span>
+            <strong>{{ scale.ship_profile.imo }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Indicativo</span>
+            <strong>{{ scale.ship_profile.call_sign }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Bandeira</span>
+            <strong>{{ scale.ship_profile.flag }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Tipo de navio</span>
+            <strong class="scale-inline-meta">
+              {% if scale.ship_profile.type_icon %}
+                <img src="{{ url_for('image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
+              {% endif %}
+              <span>{{ scale.ship_profile.type }}</span>
+            </strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>LOA</span>
+            <strong>{{ scale.ship_profile.loa }} m</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Boca</span>
+            <strong>{{ scale.ship_profile.beam }} m</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>GT</span>
+            <strong>{{ scale.ship_profile.gt }} t</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Calado</span>
+            <strong>{{ scale.ship_profile.draft }} m</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>DWT</span>
+            <strong>{{ scale.ship_profile.dwt }} t</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Agente</span>
+            <strong>{{ scale.summary.agent_profile.label }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Contacto agente</span>
+            <strong>{{ scale.summary.agent_profile.contact_label }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Piloto</span>
+            <strong>{{ scale.summary.pilot_profile.label }}</strong>
+          </article>
+          <article class="scale-fact-row">
+            <span>Contacto piloto</span>
+            <strong>{{ scale.summary.pilot_profile.contact_label }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel inset-panel">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Fluxo</p>
+            <h3>Escala</h3>
+          </div>
+        </div>
+        <div class="scale-timeline">
+          <article class="scale-timeline-stop">
+            <span class="scale-timeline-dot"></span>
+            <div>
+              <strong>Porto anterior</strong>
+              <p>{{ scale.summary.last_port }}</p>
+            </div>
+          </article>
+          <article class="scale-timeline-stop">
+            <span class="scale-timeline-dot"></span>
+            <div>
+              <strong>Local atual</strong>
+              <p>{{ scale.summary.current_location }}</p>
+            </div>
+          </article>
+          <article class="scale-timeline-stop">
+            <span class="scale-timeline-dot"></span>
+            <div>
+              <strong>Porto seguinte</strong>
+              <p>{{ scale.summary.next_port }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </section>
+  </section>
+</main>
+{% endblock %}

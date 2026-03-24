@@ -1,0 +1,113 @@
+INSTRUÇÃO DE TRABALHO IT-016 - REGRAS EXPLÍCITAS PARA USO DE REBOCADORES
+
+1. DEFINIÇÕES:
+- Rebocador Grande: rebocador com capacidade igual ou superior a 25 toneladas de tração
+- Rebocador Pequeno: rebocador com capacidade inferior a 25 toneladas de tração
+- Navio sem hélice de proa: navio que não possui sistema de propulsão lateral na proa (bow thruster)
+- Navio com hélice de proa: navio equipado com sistema de propulsão lateral na proa (bow thruster)
+- Navio com hélice lateral de popa: navio equipado com sistema de propulsão lateral na popa (stern thruster)
+- Atracar carregado: operação de atracação com o navio transportando carga
+- Atracar vazio: operação de atracação com o navio sem carga
+- Desatracar carregado: operação de desatracação com o navio transportando carga
+- Desatracar vazio: operação de desatracação com o navio sem carga
+
+2. REGRAS GERAIS:
+- Decisão final: O Piloto e o Comandante determinam o número real de rebocadores necessários
+- Exceção obrigatória: Navios transportando cargas perigosas com mais de 70 metros devem cumprir os requisitos MÍNIMOS estabelecidos na tabela
+- Pressupostos para aplicação das regras:
+  * Navio em boas condições de manobra
+  * Condições meteorológicas favoráveis
+  * Condições normais de maré e atracação
+  * Equipamentos auxiliares de manobra operacionais
+  * Sistemas de propulsão lateral (bow/stern thrusters) suficientemente imersos para funcionamento eficaz
+
+3. REGRAS POR TONELAGEM DE PORTE BRUTO (DWT):
+
+A. NAVIOS ATÉ 4.000 TONELADAS:
+- Cargas perigosas:
+  * Atracar carregado (navio sem hélice de proa): 2 rebocadores pequenos
+  * Atracar carregado (navio com hélice de proa): 1 rebocador pequeno
+  * Atracar carregado (navio com hélice de proa e hélice lateral de popa): 1 rebocador pequeno → OBRIGATÓRIO
+  * Atracar vazio (qualquer configuração): 1 rebocador pequeno → OBRIGATÓRIO
+  * Desatracar carregado (navio sem hélice de proa): 2 rebocadores pequenos
+  * Desatracar carregado (navio com hélice de proa): 1 rebocador pequeno
+  * Desatracar vazio: 1 rebocador pequeno
+- Outras cargas:
+  * ATRACAR/DESATRACAR: 1 rebocador pequeno se comprimento superior a 90 metros E calado superior a 6 metros
+
+B. NAVIOS DE 4.001 A 8.000 TONELADAS:
+- Cargas perigosas:
+  * Atracar carregado (navio sem hélice de proa): 2 rebocadores pequenos
+  * Atracar carregado (navio com hélice de proa): 1 rebocador pequeno → OBRIGATÓRIO
+  * Atracar vazio: 2 rebocadores pequenos
+  * Desatracar carregado (navio sem hélice de proa): 2 rebocadores pequenos
+  * Desatracar carregado (navio com hélice de proa): 1 rebocador pequeno
+  * Desatracar vazio: 1 rebocador pequeno
+- Outras cargas: 
+  * ATRACAR/DESATRACAR: 1 rebocador pequeno
+
+C. NAVIOS DE 8.001 A 15.000 TONELADAS:
+- Cargas perigosas:
+  * Atracar carregado (navio sem hélice de proa): 2 rebocadores grandes
+  * Atracar carregado (navio com hélice de proa): 1 rebocador grande + 1 rebocador pequeno
+  * Atracar carregado (navio com hélice de proa e hélice lateral de popa): 1 rebocador grande → OBRIGATÓRIO
+  * Atracar vazio (navio sem hélice de proa): 2 rebocadores pequenos
+  * Atracar vazio (navio com hélice de proa): 1 rebocador grande
+  * Desatracar carregado (navio sem hélice de proa): 2 rebocadores grandes
+  * Desatracar carregado (navio com hélice de proa): 1 rebocador grande + 1 rebocador pequeno
+  * Desatracar vazio (navio sem hélice de proa): 2 rebocadores pequenos
+  * Desatracar vazio (navio com hélice de proa): 1 rebocador pequeno
+- Outras cargas:
+  * Atracar carregado: 2 rebocadores grandes
+  * Atracar vazio: 1 rebocador pequeno
+  * Desatracar carregado: 2 rebocadores grandes
+  * Desatracar vazio: 1 rebocador pequeno
+
+D. NAVIOS DE 15.001 A 25.000 TONELADAS:
+- Cargas perigosas:
+  * Atracar carregado (navio sem hélice de proa): 2 rebocadores grandes + 1 rebocador pequeno
+  * Atracar carregado (navio com hélice de proa): 2 rebocadores grandes
+  * Atracar carregado (navio com hélice de proa e hélice lateral de popa): 1 rebocador grande → OBRIGATÓRIO
+  * Atracar vazio (navio sem hélice de proa): 2 rebocadores grandes
+  * Atracar vazio (navio com hélice de proa): 1 rebocador grande
+  * Desatracar carregado (navio sem hélice de proa): 2 rebocadores grandes
+  * Desatracar carregado (navio com hélice de proa): 1 rebocador grande + 1 rebocador pequeno
+  * Desatracar vazio (navio sem hélice de proa): 2 rebocadores grandes
+  * Desatracar vazio (navio com hélice de proa): 1 rebocador grande + 1 rebocador pequeno
+- Outras cargas:
+  * Atracar carregado: 2 rebocadores grandes + 1 rebocador pequeno
+  * Atracar vazio: 2 rebocadores grandes
+  * Desatracar carregado: 2 rebocadores grandes
+  * Desatracar vazio: 2 rebocadores grandes
+
+E. NAVIOS COM MAIS DE 25.001 TONELADAS:
+- Cargas perigosas:
+  * Atracar carregado (navio sem hélice de proa): 3 rebocadores grandes → OBRIGATÓRIO
+  * Atracar carregado (navio com hélice de proa): 2 rebocadores grandes
+  * Atracar vazio (navio sem hélice de proa): 2 rebocadores grandes
+  * Atracar vazio (navio com hélice de proa): 2 rebocadores grandes
+  * Desatracar carregado (navio sem hélice de proa): 2 rebocadores grandes
+  * Desatracar carregado (navio com hélice de proa): 2 rebocadores grandes + 1 rebocador pequeno
+  * Desatracar vazio (navio sem hélice de proa): 2 rebocadores grandes
+  * Desatracar vazio (navio com hélice de proa): 1 rebocador grande
+- Outras cargas:
+  * Atracar carregado: 3 rebocadores grandes
+  * Atracar vazio: 2 rebocadores grandes
+  * Desatracar carregado: 2 rebocadores grandes
+  * Desatracar vazio: 1 rebocador grande
+
+4. REGRAS ESPECÍFICAS PARA LISNAVE-MITRENA:
+- Navios com destino ao estaleiro Lisnave-Mitrena:
+  * Até 50.000 toneladas: Calado máximo 6.0 metros → SEM rebocadores necessários
+  * De 50.001 a 90.000 toneladas: Calado máximo 7.0 metros → 1 rebocador necessário
+  * De 90.001 a 130.000 toneladas: Calado máximo 7.0 metros → 2 rebocadores necessários
+  * De 130.001 a 170.000 toneladas: Calado máximo 7.5 metros → 3 rebocadores necessários
+  * Mais de 170.001 toneladas: Calado máximo 7.5 metros → 4 rebocadores necessários
+
+5. EXCEÇÕES E OBSERVAÇÕES:
+- "Obrigatório" indica requisito mínimo absoluto que deve ser cumprido
+- Navios com menos de 4.000 toneladas transportando cargas perigosas: Exigências de segurança reforçadas
+- Operações realizadas com vento superior a 20 nós: Podem exigir rebocadores adicionais para garantir segurança
+- Base legal: Decreto-Lei número 46/2002 de 2 de março (artigo 2º)
+
+AVISO: Documento não controlado quando impresso. A versão atual deve ser sempre confirmada junto da Administração dos Portos de Setúbal e Sesimbra.

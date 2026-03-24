@@ -1,0 +1,44 @@
+INSTRUÇÃO DE TRABALHO IT-036 - REGRAS EXPLÍCITAS PARA REGULAÇÃO DE AGULHAS (COMPASSOS)
+
+1. CONDIÇÕES ONDE A REGULAÇÃO DE AGULHAS (RA) É PERMITIDA:
+- Em repontos de maré (altura estacionária) para navios com comprimento total (LOA) inferior a 250 metros.
+- Em marés mortas (baixa amplitude, PM < 3.0m) para navios com LOA inferior a 225 metros.
+- Em marés vivas (alta amplitude) para navios com LOA inferior a 120 metros.
+- Durante correntes de água (em qualquer condição de maré) para navios que cumpram os limites de tamanho acima.
+
+2. CONDIÇÕES ONDE A REGULAÇÃO DE AGULHAS É EXPRESSAMENTE PROIBIDA:
+- Se existirem navios fundeados num raio de 0.7 milhas náuticas (aproximadamente 1.3 km).
+- Operações noturnas para navios com LOA superior a 225 metros.
+- Em repontos de maré para navios com LOA igual ou superior a 250 metros.
+- Durante correntes de água em marés mortas para navios com LOA superior a 225 metros.
+- Durante correntes de água em marés vivas para navios com LOA superior a 120 metros.
+
+3. DEFINIÇÕES OPERACIONAIS:
+- Reponto de maré: Momento de transição entre maré cheia/vazante quando a corrente é mínima.
+- Marés mortas (neap tides): Períodos com menor amplitude entre maré alta e baixa (PM < 3.0m).
+- Marés vivas (spring tides): Períodos com maior amplitude entre maré alta e baixa.
+- Correntes de água: Períodos entre repontos com fluxo significativo de água.
+
+4. LIMITES DE COMPRIMENTO (LOA) RESUMIDOS:
+- Máximo absoluto em qualquer condição: 250m (apenas em repontos de maré)
+- Marés mortas: Até 225m
+- Marés vivas: Até 120m
+- Noturno: Máximo 225m (mesmo em condições favoráveis)
+
+5. REGRA DE SEGURANÇA CRÍTICA:
+- Proibição absoluta de RA com navios fundeados próximos (0.7 NM) devido a risco de interferência magnética.
+
+6. EXEMPLOS EXPLÍCITOS DE PROIBIÇÃO:
+- Navio de 230m em maré morta com corrente: PROIBIDO (limite 225m)
+- Navio de 130m em maré viva: PROIBIDO (limite 120m)
+- Navio de 240m à noite: PROIBIDO (limite noturno 225m)
+- Navio de 180m com outro navio fundeado a 0.5 NM: PROIBIDO (distância mínima 0.7 NM)
+
+RESUMO DAS REGRAS CHAVE:
+1. Verificar sempre navios fundeados próximos antes de iniciar RA
+2. Respeitar limites de comprimento por tipo de maré
+3. Operações noturnas só para navios ≤225m
+4. Correntes de água reduzem limites operacionais
+5. Repontos de maré permitem maiores navios (até 250m)
+
+AVISO: Documento não controlado quando impresso. Versão atual deve ser sempre confirmada com a Administração dos Portos de Setúbal antes de operações.

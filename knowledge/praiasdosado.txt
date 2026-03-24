@@ -1,0 +1,77 @@
+TIPO DE NAVIO QUE ATRACA NO CAIS DAS PRAIAS DO SADO OU TAMBÉM CHAMADO PIRITES ALENTEJANAS:
+- RORO
+- OUTRO
+
+### Instrução de Trabalho IT-012 - Terminal Praias do Sado (Versão Explicativa em Texto Simples)
+
+**1. Onde estas regras se aplicam:**  
+Estas regras servem apenas para o Terminal Praias do Sado. Elas definem como os navios devem estacionar e manobrar neste terminal específico.
+
+**2. Quem faz o quê:**  
+- O Piloto Coordenador é responsável por:  
+  Verificar se os pedidos de manobra seguem estas regras.  
+- O Piloto que executar a manobra é responsável por:  
+  Seguir exatamente estas regras durante toda a operação.
+
+**3. Características do terminal:**  
+- O cais tem comprimento fixo de 125 metros.  
+  → Navios maiores que 125 metros NÃO PODEM atracar no cais.  
+- O comprimento máximo aconselhado para operações é 200 metros.  
+  → Navios entre 125m e 200m podem operar na área, mas NÃO podem atracar no cais.  
+- O calado máximo ABSOLUTO é 10.0 metros.  
+  → EM NENHUMA SITUAÇÃO um navio pode ter calado superior a 10.0 metros.
+
+**4. Como calcular o calado permitido (PASSO A PASSO):**  
+Existem DOIS cálculos diferentes: um para quando o navio está PARADO (estacionado) e outro para quando está EM MOVIMENTO (percurso). O navio deve obedecer ao MENOR valor entre esses dois cálculos.
+
+**A. Cálculo para navio PARADO (estacionado no cais):**  
+Fórmula: Calado permitido = 8.7 metros + Altura da maré na baixa-mar  
+- O que é "baixa-mar"?  
+  É o nível mais baixo que a maré atinge no dia.  
+- Limite: O resultado NUNCA pode ser maior que 10.0 metros.  
+
+Exemplos claros:  
+- Se a baixa-mar for 1.3 metros → Calado = 8.7 + 1.3 = 10.0 metros (usar 10.0, pois não pode ultrapassar)  
+- Se a baixa-mar for 0.5 metros → Calado = 8.7 + 0.5 = 9.2 metros (valor aceitável)  
+- Se a baixa-mar for 2.0 metros → Calado = 8.7 + 2.0 = 10.7 metros → IGNORAR e usar apenas 10.0 metros  
+
+**B. Cálculo para navio EM MOVIMENTO (percurso na área de manobra):**  
+Fórmula: Calado permitido = 7.40 metros + Altura real da água durante a manobra  
+- O que é "altura real da água"?  
+  É o nível da maré no exato momento em que o navio está se movendo.  
+- Limite: O resultado NUNCA pode ser maior que 10.0 metros.  
+
+Exemplos claros:  
+- Se a água estiver a 1.8 metros → Calado = 7.40 + 1.8 = 9.2 metros (valor aceitável)  
+- Se a água estiver a 3.0 metros → Calado = 7.40 + 3.0 = 10.4 metros → IGNORAR e usar apenas 10.0 metros  
+- Se a água estiver a 2.1 metros → Calado = 7.40 + 2.1 = 9.5 metros (valor aceitável)  
+
+**C. Regra final para decidir o calado do navio:**  
+O navio deve usar o MENOR valor entre os dois cálculos (estacionamento e percurso), SEMPRE RESPEITANDO o limite máximo de 10.0 metros.  
+
+Exemplos completos:  
+- Situação 1:  
+  Estacionamento calculado: 9.5 metros  
+  Percurso calculado: 8.8 metros  
+  → Calado FINAL permitido = 8.8 metros (pois é o menor valor)  
+
+- Situação 2:  
+  Estacionamento calculado: 10.0 metros (após corte)  
+  Percurso calculado: 9.7 metros  
+  → Calado FINAL permitido = 9.7 metros  
+
+- Situação 3:  
+  Estacionamento calculado: 10.0 metros (após corte)  
+  Percurso calculado: 10.0 metros (após corte)  
+  → Calado FINAL permitido = 10.0 metros  
+
+**5. Aviso importante sobre cópias:**  
+Qualquer cópia impressa deste documento pode estar desatualizada. Sempre verifique se está usando a versão mais recente no sistema oficial antes de tomar decisões.  
+
+**Resumo final:**  
+- Nunca exceder 10.0 metros de calado  
+- Para estacionamento: 8.7m + baixa-mar (máx 10.0m)  
+- Para movimento: 7.40m + altura real da água (máx 10.0m)  
+- Usar SEMPRE o menor valor entre os dois cálculos  
+- Navios >125m não atracam no cais  
+- Navios >200m não operam no terminal

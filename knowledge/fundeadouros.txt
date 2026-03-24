@@ -1,0 +1,91 @@
+INSTRUÇÃO DE TRABALHO IT-015 - ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL
+
+1. FUNDEADOURO NORTE:
+- Coordenadas geográficas (WGS84) e cartográficas (Datum73):
+  * Ponto A: 
+    - WGS84: 38°30.56'N 008°54.44'W 
+    - Datum73: X = -67531.8, Y = -128376.4
+  * Ponto B: 
+    - WGS84: 38°30.89'N 008°53.89'W 
+    - Datum73: X = -66727.2, Y = -127772.6
+  * Ponto C: 
+    - WGS84: 38°30.98'N 008°53.51'W 
+    - Datum73: X = -66173.4, Y = -127610.6
+  * Ponto D: 
+    - WGS84: 38°30.96'N 008°53.14'W 
+    - Datum73: X = -65635.9, Y = -127652.1
+  * Ponto E: 
+    - WGS84: 38°30.70'N 008°53.14'W 
+    - Datum73: X = -65639.9, Y = -128133.1
+  * Ponto F: 
+    - WGS84: 38°30.70'N 008°53.43'W 
+    - Datum73: X = -66061.4, Y = -128129.6
+  * Ponto G: 
+    - WGS84: 38°30.42'N 008°53.43'W 
+    - Datum73: X = -66065.7, Y = -128647.7
+  * Ponto H: 
+    - WGS84: 38°30.42'N 008°54.44'W 
+    - Datum73: X = -67534.0, Y = -128635.5
+
+2. FUNDEADOURO DE TROIA (1ª ZONA):
+- Coordenadas:
+  * Ponto I: 
+    - WGS84: 38°28.90'N 008°51.80'W 
+    - Datum73: X = -63718.4, Y = -131479.1
+  * Ponto J: 
+    - WGS84: 38°28.60'N 008°51.00'W 
+    - Datum73: X = -62559.3, Y = -132043.3
+  * Ponto K: 
+    - WGS84: 38°27.60'N 008°51.00'W 
+    - Datum73: X = -62573.7, Y = -133893.5
+  * Ponto L: 
+    - WGS84: 38°28.25'N 008°51.80'W 
+    - Datum73: X = -63728.0, Y = -132681.7
+
+3. FUNDEADOURO DE TROIA (2ª ZONA):
+- Coordenadas:
+  * Ponto M: 
+    - WGS84: 38°28.17'N 008°51.00'W 
+    - Datum73: X = -62565.5, Y = -132838.9
+  * Ponto N: 
+    - WGS84: 38°27.42'N 008°48.20'W 
+    - Datum73: X = -58503.0, Y = -134257.2
+  * Ponto O: 
+    - WGS84: 38°27.27'N 008°49.19'W 
+    - Datum73: X = -59945.3, Y = -134524.1
+  * Ponto P: 
+    - WGS84: 38°27.14'N 008°50.00'W 
+    - Datum73: X = -61125.5, Y = -134755.7
+  * Ponto K (reutilizado): 
+    - WGS84: 38°27.60'N 008°51.00'W 
+    - Datum73: X = -62573.7, Y = -133893.5
+
+4. FUNDEADOURO PARA EMBARCAÇÕES DE TRÁFEGO LOCAL:
+- Coordenadas:
+  * Ponto F (reutilizado): 
+    - WGS84: 38°30.70'N 008°53.43'W 
+    - Datum73: X = -66061.4, Y = -128129.6
+  * Ponto Q: 
+    - WGS84: 38°30.70'N 008°52.75'W 
+    - Datum73: X = -65073.0, Y = -128137.8
+  * Ponto R: 
+    - WGS84: 38°30.60'N 008°52.48'W 
+    - Datum73: X = -64682.0, Y = -128326.0
+  * Ponto S: 
+    - WGS84: 38°30.50'N 008°52.48'W 
+    - Datum73: X = -64683.5, Y = -128511.0
+  * Ponto T: 
+    - WGS84: 38°30.50'N 008°53.43'W 
+    - Datum73: X = -66064.5, Y = -128499.7
+
+OBSERVAÇÕES:
+- Todas as coordenadas estão em dois sistemas: WGS84 (sistema global) e Datum73 (sistema cartográfico português).
+- O ponto K é compartilhado entre as duas zonas de Troia.
+- O ponto F é compartilhado entre o Fundeadouro Norte e a zona de Tráfego Local.
+- Não há restrições operacionais adicionais descritas para uso das zonas.
+
+RESPONSABILIDADES:
+- O Piloto Coordenador deve validar todas as requisições de manobra com base nestas delimitações geográficas.
+
+AVISO: 
+Qualquer cópia impressa deste documento é considerada não controlada. A versão atualizada deve ser sempre confirmada com a Administração dos Portos de Setúbal e Sesimbra antes de operações.

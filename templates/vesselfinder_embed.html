@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <style>
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #dbe6e2;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="text/javascript">
+      var width = "{{ embed.width }}";
+      var height = String(window.innerHeight || document.documentElement.clientHeight || 460);
+      var latitude = "{{ embed.latitude }}";
+      var longitude = "{{ embed.longitude }}";
+      var zoom = "{{ embed.zoom }}";
+      var names = {{ "true" if embed.names else "false" }};
+    </script>
+    <script type="text/javascript" src="{{ embed.script_url }}"></script>
+  </body>
+</html>

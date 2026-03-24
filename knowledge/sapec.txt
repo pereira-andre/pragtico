@@ -1,0 +1,80 @@
+### INSTRUÇÃO DE TRABALHO IT-029 - REGRAS EXPLÍCITAS PARA TERMINAL SAPEC (TPS e TGL)
+
+TIPO DE NAVIO QUE ATRACA NO CAIS DA SAPEC SÓLIDOS:
+- CARGA GERAL
+
+TIPO DE NAVIO QUE ATRACA NO CAIS DA SAPEC LIQUÍDOS:
+- TANQUES
+
+**1. ESTRUTURA DOS TERMINAIS:**
+- **Terminal TPS (Granéis Sólidos):**  
+  Comprimento físico do cais: 112 metros.  
+  Comprimento máximo permitido para navios: 200 metros.  
+  Distância obrigatória ao Duque d'Alba: 70 metros.  
+
+- **Terminal TGL (Granéis Líquidos):**  
+  Espaçamento entre duques d'alba:  
+  - Entre extremos: 70 metros  
+  - No centro: 35 metros  
+  Comprimento máximo permitido para navios: 200 metros.  
+
+**2. REGRAS DE CALADO - FÓRMULAS E LIMITES:**
+- **PARA O TPS (SÓLIDOS):**  
+  - Navios com carga IMO (perigosas):  
+    • Fórmula: Calado permitido = 7.1 metros + altura atual da maré  
+    • Limite máximo absoluto: 9.5 metros  
+    • Calado mínimo garantido (qualquer maré): 7.2 metros  
+
+  - Outros navios (não-IMO):  
+    • Fórmula: Calado permitido = 7.6 metros + altura atual da maré  
+    • Limite máximo absoluto: 10.0 metros  
+    • Calado mínimo garantido (qualquer maré): 7.7 metros  
+
+- **PARA O TGL (LÍQUIDOS):**  
+  - Navios com carga IMO:  
+    • Fórmula: Calado permitido = 7.1 metros + altura atual da maré  
+    • Limite máximo absoluto: 9.5 metros  
+
+  - Cargas não-IMO:  
+    • Fórmula: Calado permitido = 7.6 metros + altura atual da maré  
+    • Limite máximo absoluto: 10.0 metros  
+
+**3. REGRA ESPECIAL PARA USO DE AFASTADORES (CAROCHAS) NO TPS:**  
+- Obrigatório quando:  
+  Calado do navio > [8.8 metros + altura da baixa-mar]  
+- Exemplo numérico:  
+  Se altura da baixa-mar = 1.5 metros → Limite = 10.3 metros  
+  Navio com 10.5 metros DEVE usar carochas  
+
+**4. RESTRIÇÕES OPERACIONAIS:**  
+- Velocidade máxima no canal de acesso: 5 nós (para evitar "squat" - afundamento do navio)  
+- Exceções: Calados até 0.5 metros acima dos máximos podem ser autorizados caso a caso  
+- Todos cálculos usam como referência altura mínima anual de preia-mar = 2.4 metros  
+
+**5. EXEMPLOS PRÁTICOS DE CÁLCULO:**  
+- **Exemplo 1 (TPS - Navio IMO):**  
+  Maré atual = 2.0 metros  
+  Calado permitido = 7.1 + 2.0 = 9.1 metros (inferior a 9.5m → ACEITE)  
+
+- **Exemplo 2 (TPS - Navio não-IMO):**  
+  Maré atual = 3.0 metros  
+  Calado permitido = 7.6 + 3.0 = 10.6 metros → Limitado a 10.0 metros (máximo absoluto)  
+
+- **Exemplo 3 (Carochas no TPS):**  
+  Baixa-mar = 1.8 metros  
+  Limite para carochas = 8.8 + 1.8 = 10.6 metros  
+  Navio com 11.0 metros → USO OBRIGATÓRIO DE CAROCHAS  
+
+**RESUMO DAS REGRAS ESSENCIAIS:**  
+1. Cada terminal (TPS/TGL) e tipo de carga (IMO/não-IMO) tem fórmula própria  
+2. TPS exige carochas quando calado excede 8.8m + altura da baixa-mar  
+3. Velocidade máxima no canal: 5 nós (somente para TPS)  
+4. Calados absolutos máximos:  
+   - Cargas IMO: 9.5 metros (aplicável a ambos terminais)  
+   - Outras cargas: 10.0 metros (aplicável a ambos terminais)  
+5. Calados mínimos garantidos (só para TPS):  
+   - IMO: 7.2m em qualquer maré  
+   - Não-IMO: 7.7m em qualquer maré  
+
+**AVISO LEGAL:**  
+Qualquer cópia impressa deste documento é considerada não controlada. A versão atualizada deve ser sempre confirmada com a Administração do Porto de Setúbal antes de operações. Dados baseados em levantamento hidrográfico com referência a PM mínimo de 2.4m.

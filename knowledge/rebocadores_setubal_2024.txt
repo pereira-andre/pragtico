@@ -1,0 +1,91 @@
+Listagem dos Rebocadores com Atividade no Porto de Setúbal (Licenciados em 2024)
+
+Resumo Analítico: Rebocadores com Atividade no Porto de Setúbal
+
+Total de rebocadores identificados: 18 unidades.
+
+Empresas operadoras presentes:
+
+Rebonave
+
+Svitzer
+
+Portugs
+
+TINITA
+
+Rebocador mais potente:
+
+"SVITZER SETUBAL" – potência de 5.000 bhp, o mais robusto da lista.
+
+Rebocador mais antigo:
+
+"TINITA" – construído em 1972, destacando-se pela longevidade em operação.
+
+Rebocador mais recente:
+
+"PORTUGS ATLANTICO" – construído em 2020, representa a renovação mais recente da frota.
+
+Distribuição por ano de construção:
+
+Anos 1970: 1 unidade
+
+Anos 1980-1990: 3 unidades
+
+Anos 2000: 7 unidades
+
+Anos 2010+: 7 unidades
+
+Distribuição por potência (bhp):
+
+< 2.000 bhp: 2 unidades
+
+2.000–3.000 bhp: 8 unidades
+
+3.000–4.000 bhp: 5 unidades
+
+4.000 bhp: 3 unidades
+
+Observações adicionais:
+
+A maioria dos rebocadores opera com potência entre 2.000 e 4.000 bhp, o que indica um padrão de desempenho intermédio adequado às necessidades locais.
+
+A presença de empresas internacionais (como a Svitzer) sugere concorrência e diversidade operacional no porto.
+
+Apesar da idade avançada de alguns rebocadores, muitos permanecem ativos, sinalizando manutenção contínua e fiabilidade da frota.
+
+O rebocador número 1 chama-se Danado e pertence à empresa Rebocadores do Atlântico, Lda. Trata-se de um rebocador do tipo VOITH, construído em 1968. Está equipado com um motor com potência de 1775 BHP, capaz de gerar uma força de tração de 20.96 toneladas. O seu arqueamento bruto (GT) é de 193.00 toneladas e encontra-se registado sob o número PT-124470-RL.
+
+O rebocador número 2 chama-se Valente * e pertence à empresa Rebocadores do Atlântico, Lda. Trata-se de um rebocador do tipo Convencional, construído em 1970. Está equipado com um motor com potência de 2508 BHP, capaz de gerar uma força de tração de 29.96 toneladas. O seu arqueamento bruto (GT) é de 262.00 toneladas e encontra-se registado sob o número S-69-RC.
+
+O rebocador número 3 chama-se Safado * e pertence à empresa Rebocadores do Atlântico, Lda. Trata-se de um rebocador do tipo VOITH, construído em 1969. Está equipado com um motor com potência de 1300 BHP, capaz de gerar uma força de tração de 12.92 toneladas. O seu arqueamento bruto (GT) é de 122.67 toneladas e encontra-se registado sob o número PT-108702-RL.
+
+O rebocador número 4 chama-se Resistente e pertence à empresa Rebocadores do Atlântico, Lda. Trata-se de um rebocador do tipo Convencional, construído em 1968. Está equipado com um motor com potência de 1810 BHP, capaz de gerar uma força de tração de 29.63 toneladas. O seu arqueamento bruto (GT) é de 295.00 toneladas e encontra-se registado sob o número PT-124893-RC.
+
+O rebocador número 5 chama-se Mitrena e pertence à empresa Rebocadores do Atlântico, Lda. Trata-se de um rebocador do tipo Convencional, construído em 1974. Está equipado com um motor com potência de 2200 BHP, capaz de gerar uma força de tração de 32.21 toneladas. O seu arqueamento bruto (GT) é de 258.80 toneladas e encontra-se registado sob o número PT-109501-RL.
+
+O rebocador número 6 chama-se Fogueteiro e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo Convencional, construído em 1971. Está equipado com um motor com potência de 2160 BHP, capaz de gerar uma força de tração de 30.05 toneladas. O seu arqueamento bruto (GT) é de 258.00 toneladas e encontra-se registado sob o número PT-12941-RC.
+
+O rebocador número 7 chama-se Palença e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo Convencional, construído em 1982. Está equipado com um motor com potência de 3256 BHP, capaz de gerar uma força de tração de 40.27 toneladas. O seu arqueamento bruto (GT) é de 320.00 toneladas e encontra-se registado sob o número PT-130432-RC.
+
+O rebocador número 8 chama-se Puxa ¹ e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo Convencional, construído em 1967. Está equipado com um motor com potência de 1190 BHP, capaz de gerar uma força de tração de 13.50 toneladas. O seu arqueamento bruto (GT) é de 99.00 toneladas e encontra-se registado sob o número PT-112130-RL.
+
+O rebocador número 9 chama-se Castelo de Óbidos e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo ASD, construído em 2006. Está equipado com um motor com potência de 5500 BHP, capaz de gerar uma força de tração de 65.16 toneladas. O seu arqueamento bruto (GT) é de 1083.00 toneladas e encontra-se registado sob o número IMO 9356945.
+
+O rebocador número 10 chama-se Monte da Luz ² e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo Convencional, construído em 2013. Está equipado com um motor com potência de 4400 BHP, capaz de gerar uma força de tração de 55.62 toneladas. O seu arqueamento bruto (GT) é de 495.00 toneladas e encontra-se registado sob o número PT-106550-RA.
+
+O rebocador número 11 chama-se Montinho e pertence à empresa Rebonave, S.A. Trata-se de um rebocador do tipo Convencional, construído em 1982. Está equipado com um motor com potência de 2400 BHP, capaz de gerar uma força de tração de 30.18 toneladas. O seu arqueamento bruto (GT) é de 206.00 toneladas e encontra-se registado sob o número PT-126469-RC.
+
+O rebocador número 12 chama-se Portugs Lisboa e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo ASD, construído em 1982. Está equipado com um motor com potência de 2400 BHP, capaz de gerar uma força de tração de 24.31 toneladas. O seu arqueamento bruto (GT) é de 252.00 toneladas e encontra-se registado sob o número PT-104153-RC.
+
+O rebocador número 13 chama-se Cabo da Roca e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo VOITH, construído em 1973. Está equipado com um motor com potência de 1836 BHP, capaz de gerar uma força de tração de 25.94 toneladas. O seu arqueamento bruto (GT) é de 193.57 toneladas e encontra-se registado sob o número PT-126577-RC.
+
+O rebocador número 14 chama-se Cabo Espichel e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo Convencional, construído em 1972. Está equipado com um motor com potência de 1650 BHP, capaz de gerar uma força de tração de 32.78 toneladas. O seu arqueamento bruto (GT) é de 258.30 toneladas e encontra-se registado sob o número PT-108003-RL.
+
+O rebocador número 15 chama-se Peneda e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo Convencional, construído em 1978. Está equipado com um motor com potência de 2400 BHP, capaz de gerar uma força de tração de 30.39 toneladas. O seu arqueamento bruto (GT) é de 256.55 toneladas e encontra-se registado sob o número PT-126580-RC.
+
+O rebocador número 16 chama-se Portel ³ e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo Convencional, construído em 1978. Está equipado com um motor com potência de 2400 BHP, capaz de gerar uma força de tração de 31.47 toneladas. O seu arqueamento bruto (GT) é de 256.00 toneladas e encontra-se registado sob o número PT-126576-RC.
+
+O rebocador número 17 chama-se Vira ⁴ e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo Convencional, construído em 1967. Está equipado com um motor com potência de 1190 BHP, capaz de gerar uma força de tração de 17.60 toneladas. O seu arqueamento bruto (GT) é de 99.01 toneladas e encontra-se registado sob o número PT-126574-RL.
+
+O rebocador número 18 chama-se Sobreda e pertence à empresa Portugs II S.A. Trata-se de um rebocador do tipo Convencional, construído em 1974. Está equipado com um motor com potência de 2160 BHP, capaz de gerar uma força de tração de 28.23 toneladas. O seu arqueamento bruto (GT) é de 258.30 toneladas e encontra-se registado sob o número PT-126575-RL.

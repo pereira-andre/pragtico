@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="auth-layout">
+  <section class="hero-card compact">
+    <p class="eyebrow">Perfil operacional</p>
+    <h1>Completa a tua ficha de contacto.</h1>
+    <p class="lead">
+      O teu nome, agência ou entidade, email e telefone ficam associados às manobras e aprovações que registares.
+    </p>
+  </section>
+
+  <section class="panel auth-panel">
+    <h2>{{ (current_role or profile.role or 'operacional')|capitalize }}</h2>
+    <form method="post" class="stack auth-form-pro">
+      <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>Identificação</h3>
+          <p>Usada como assinatura operacional em aprovações e registos.</p>
+        </div>
+        <div class="auth-form-grid">
+          <label>
+            Nome completo
+            <input type="text" name="full_name" value="{{ profile.full_name or '' }}" required>
+          </label>
+          <label>
+            Entidade / agência
+            <input type="text" name="organization" value="{{ profile.organization or '' }}" required>
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" value="{{ profile.email or profile.username or '' }}" readonly>
+          </label>
+          <label>
+            Telefone
+            <input type="text" name="phone" value="{{ profile.phone or '' }}" required>
+          </label>
+        </div>
+      </section>
+      <button type="submit">Guardar perfil</button>
+    </form>
+    <p class="muted auth-note">Se saíres desta página sem concluir, a sessão é terminada e o acesso volta ao login.</p>
+  </section>
+</main>
+<script>
+  (() => {
+    let skipAutoLogout = false;
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', () => {
+        skipAutoLogout = true;
+      });
+    }
+    const sendLogout = () => {
+      if (skipAutoLogout) return;
+      try {
+        navigator.sendBeacon('{{ url_for("logout_beacon") }}');
+      } catch (error) {
+        fetch('{{ url_for("logout_beacon") }}', { method: 'POST', keepalive: true }).catch(() => {});
+      }
+    };
+    window.addEventListener('pagehide', sendLogout);
+    window.addEventListener('beforeunload', sendLogout);
+    window.addEventListener('popstate', sendLogout);
+  })();
+</script>
+{% endblock %}

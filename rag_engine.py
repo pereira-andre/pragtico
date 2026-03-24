@@ -1,0 +1,953 @@
+from __future__ import annotations
+
+import hashlib
+import os
+import re
+import threading
+import time
+from collections import deque
+from datetime import datetime, timezone
+from typing import Dict, List
+
+from google import genai
+
+from document_processing import extract_text_from_path
+from reindex_scheduler import PACIFIC_TZ, next_gemini_quota_reset_utc
+from vector_store import BaseIndexStore
+
+
+def chunk_text(text: str, chunk_size: int = 700, overlap: int = 120) -> List[str]:
+    clean = re.sub(r"\s+", " ", text).strip()
+    if not clean:
+        return []
+
+    chunks = []
+    start = 0
+    while start < len(clean):
+        end = min(len(clean), start + chunk_size)
+        chunks.append(clean[start:end])
+        if end == len(clean):
+            break
+        start = max(end - overlap, 0)
+    return chunks
+
+
+def lexical_score(query: str, text: str) -> float:
+    query_tokens = set(re.findall(r"\w+", query.lower()))
+    text_tokens = set(re.findall(r"\w+", text.lower()))
+    if not query_tokens or not text_tokens:
+        return 0.0
+    overlap = query_tokens & text_tokens
+    return len(overlap) / len(query_tokens)
+
+
+class SimpleRAGEngine:
+    def __init__(
+        self,
+        api_key: str,
+        knowledge_dir: str,
+        index_store: BaseIndexStore,
+        generation_model: str,
+        embedding_model: str,
+    ) -> None:
+        self.api_key = api_key
+        self.knowledge_dir = knowledge_dir
+        self.index_store = index_store
+        self.generation_model = generation_model
+        self.embedding_model = embedding_model
+        self.client = genai.Client(api_key=api_key) if api_key else None
+        self.allowed_extensions = {".md", ".txt", ".pdf", ".docx", ".csv"}
+        self.last_index_error = ""
+        self.embedding_batch_size = max(int(os.getenv("EMBEDDING_BATCH_SIZE", "32")), 1)
+        self.embedding_requests_per_minute = max(
+            int(os.getenv("EMBEDDING_REQUESTS_PER_MINUTE", "90")), 0
+        )
+        self.embedding_requests_per_day = max(int(os.getenv("EMBEDDING_REQUESTS_PER_DAY", "900")), 0)
+        self.embedding_max_retries = max(int(os.getenv("EMBEDDING_MAX_RETRIES", "60")), 1)
+        self.embedding_retry_window_seconds = max(
+            float(os.getenv("EMBEDDING_RETRY_WINDOW_SECONDS", "45")), 0.0
+        )
+        self.embedding_max_retry_delay_seconds = max(
+            float(os.getenv("EMBEDDING_MAX_RETRY_DELAY_SECONDS", "12")), 0.0
+        )
+        self.embedding_retry_padding_seconds = max(
+            float(os.getenv("EMBEDDING_RETRY_PADDING_SECONDS", "2")), 0.0
+        )
+        self._reindex_lock = threading.Lock()
+        self._status_lock = threading.Lock()
+        self._embedding_rate_lock = threading.Lock()
+        self._embedding_request_timestamps: deque[float] = deque()
+        self._embedding_request_day = self._current_pacific_date()
+        self._embedding_request_count_today = 0
+        self._embedding_quota_blocked_until = None
+        self._embedding_quota_block_reason = ""
+        self._reindex_started_monotonic: float | None = None
+        self._reindex_status = self._build_initial_reindex_status()
+
+    def _has_embedding_payload(self, embedding) -> bool:
+        if embedding is None:
+            return False
+        try:
+            if isinstance(embedding, dict):
+                return len(embedding.get("values", [])) > 0
+            if isinstance(embedding, (list, tuple)):
+                return len(embedding) > 0
+            if hasattr(embedding, "tolist"):
+                return len(embedding.tolist()) > 0
+            if hasattr(embedding, "embedding"):
+                return len(getattr(embedding, "embedding", [])) > 0
+            return True
+        except Exception:
+            return True
+
+    def _count_embedded_chunks(self, chunks: List[Dict]) -> int:
+        total = 0
+        for item in chunks:
+            if item.get("has_embedding"):
+                total += 1
+                continue
+            if self._has_embedding_payload(item.get("embedding")):
+                total += 1
+        return total
+
+    def _manifest_diff(self, manifest: Dict, previous_manifest: Dict | None) -> Dict:
+        previous = previous_manifest or {}
+        current_names = set(manifest)
+        previous_names = set(previous)
+        added = current_names - previous_names
+        removed = previous_names - current_names
+        common = current_names & previous_names
+        changed = {name for name in common if manifest.get(name) != previous.get(name)}
+        unchanged = common - changed
+        return {
+            "new_documents": len(added),
+            "changed_documents": len(changed),
+            "removed_documents": len(removed),
+            "unchanged_documents": len(unchanged),
+        }
+
+    def _set_ready_status(self, manifest: Dict, chunks: List[Dict], diff: Dict) -> None:
+        self._set_reindex_status(
+            state="completed",
+            phase="up_to_date",
+            message="Índice já sincronizado com a pasta knowledge.",
+            progress_pct=100.0,
+            processed_documents=len(manifest),
+            total_documents=len(manifest),
+            total_chunks=len(chunks),
+            embedded_chunks=self._count_embedded_chunks(chunks),
+            error=self.last_index_error,
+            **diff,
+        )
+
+    def _build_initial_reindex_status(self) -> Dict:
+        return {
+            "state": "idle",
+            "phase": "idle",
+            "message": "Índice pronto.",
+            "progress_pct": 0.0,
+            "started_at": None,
+            "updated_at": None,
+            "finished_at": None,
+            "elapsed_seconds": 0,
+            "eta_seconds": None,
+            "total_documents": 0,
+            "processed_documents": 0,
+            "total_chunks": 0,
+            "embedded_chunks": 0,
+            "new_documents": 0,
+            "changed_documents": 0,
+            "removed_documents": 0,
+            "unchanged_documents": 0,
+            "knowledge_documents": 0,
+            "indexed_documents": 0,
+            "missing_embedding_chunks": 0,
+            "documents_with_missing_embeddings": 0,
+            "pending_documents_total": 0,
+            "sync_summary": "",
+            "pending_summary": "",
+            "pending_documents_preview": [],
+            "error": "",
+        }
+
+    def _timestamp(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _set_reindex_status(self, **updates) -> None:
+        with self._status_lock:
+            self._reindex_status.update(updates)
+            self._reindex_status["updated_at"] = self._timestamp()
+            elapsed_seconds = 0
+            if self._reindex_started_monotonic is not None:
+                elapsed_seconds = max(int(time.monotonic() - self._reindex_started_monotonic), 0)
+            self._reindex_status["elapsed_seconds"] = elapsed_seconds
+
+            progress_pct = float(self._reindex_status.get("progress_pct") or 0.0)
+            if self._reindex_status.get("state") == "running" and progress_pct > 0:
+                remaining_pct = max(100.0 - progress_pct, 0.0)
+                eta_seconds = int((elapsed_seconds / progress_pct) * remaining_pct) if elapsed_seconds else 0
+                self._reindex_status["eta_seconds"] = max(eta_seconds, 0)
+            elif self._reindex_status.get("state") == "running":
+                self._reindex_status["eta_seconds"] = None
+            else:
+                self._reindex_status["eta_seconds"] = None
+
+            if self._reindex_status.get("state") in {"completed", "error"}:
+                self._reindex_status["finished_at"] = self._timestamp()
+
+    def get_reindex_status(self) -> Dict:
+        with self._status_lock:
+            return dict(self._reindex_status)
+
+    def is_reindex_running(self) -> bool:
+        with self._status_lock:
+            return self._reindex_status.get("state") == "running"
+
+    def has_active_reindex_worker(self) -> bool:
+        return self._reindex_lock.locked()
+
+    def mark_reindex_pending(self) -> None:
+        self.last_index_error = ""
+        self._set_reindex_status(
+            state="running",
+            phase="queued",
+            message="A iniciar reindexação...",
+            progress_pct=1.0,
+            started_at=self._timestamp(),
+            finished_at=None,
+            eta_seconds=None,
+            error="",
+        )
+
+    def _document_manifest(self) -> Dict:
+        manifest = {}
+        if not os.path.isdir(self.knowledge_dir):
+            return manifest
+        for name in sorted(os.listdir(self.knowledge_dir)):
+            if os.path.splitext(name)[1].lower() not in self.allowed_extensions:
+                continue
+            path = os.path.join(self.knowledge_dir, name)
+            stat = os.stat(path)
+            digest = hashlib.sha256()
+            with open(path, "rb") as handle:
+                for chunk in iter(lambda: handle.read(65536), b""):
+                    digest.update(chunk)
+            manifest[name] = {
+                "mtime_ns": int(stat.st_mtime_ns),
+                "size": stat.st_size,
+                "sha256": digest.hexdigest(),
+            }
+        return manifest
+
+    def _extract_vector(self, embedding) -> List[float]:
+        if isinstance(embedding, dict):
+            return list(embedding.get("values", []))
+        if hasattr(embedding, "values"):
+            return list(embedding.values)
+        return list(getattr(embedding, "embedding", []))
+
+    def _current_pacific_date(self) -> str:
+        return datetime.now(timezone.utc).astimezone(PACIFIC_TZ).date().isoformat()
+
+    def _sync_embedding_day_locked(self) -> None:
+        current_day = self._current_pacific_date()
+        if current_day != self._embedding_request_day:
+            self._embedding_request_day = current_day
+            self._embedding_request_count_today = 0
+
+    def _clear_embedding_quota_block_if_due_locked(self) -> None:
+        if (
+            self._embedding_quota_blocked_until is not None
+            and datetime.now(timezone.utc) >= self._embedding_quota_blocked_until
+        ):
+            self._embedding_quota_blocked_until = None
+            self._embedding_quota_block_reason = ""
+
+    def _mark_embedding_quota_exhausted(self, reason: str) -> None:
+        with self._embedding_rate_lock:
+            self._embedding_quota_blocked_until = next_gemini_quota_reset_utc()
+            self._embedding_quota_block_reason = reason
+
+    def _embedding_quota_guard_message(self, marker: str = "") -> str:
+        base = (
+            "Quota de embeddings Gemini esgotada; índice guardado com cobertura semântica parcial. "
+            "Verifica plano/faturação ou aguarda renovação da quota."
+        )
+        return f"{base} {marker}".strip()
+
+    def _acquire_embedding_request_slot(self, throttle_callback=None) -> None:
+        while True:
+            wait_seconds = 0.0
+            with self._embedding_rate_lock:
+                self._clear_embedding_quota_block_if_due_locked()
+                self._sync_embedding_day_locked()
+
+                if (
+                    self._embedding_quota_blocked_until is not None
+                    and datetime.now(timezone.utc) < self._embedding_quota_blocked_until
+                ):
+                    raise RuntimeError(self._embedding_quota_block_reason)
+
+                if (
+                    self.embedding_requests_per_day > 0
+                    and self._embedding_request_count_today >= self.embedding_requests_per_day
+                ):
+                    reason = self._embedding_quota_guard_message("LOCAL DAILY LIMIT.")
+                    self._embedding_quota_blocked_until = next_gemini_quota_reset_utc()
+                    self._embedding_quota_block_reason = reason
+                    raise RuntimeError(reason)
+
+                if self.embedding_requests_per_minute > 0:
+                    now = time.monotonic()
+                    cutoff = now - 60.0
+                    while self._embedding_request_timestamps and self._embedding_request_timestamps[0] <= cutoff:
+                        self._embedding_request_timestamps.popleft()
+                    if len(self._embedding_request_timestamps) >= self.embedding_requests_per_minute:
+                        wait_seconds = max(self._embedding_request_timestamps[0] + 60.0 - now, 0.0)
+                    else:
+                        self._embedding_request_timestamps.append(now)
+                        self._embedding_request_count_today += 1
+                        return
+                else:
+                    self._embedding_request_count_today += 1
+                    return
+
+            if throttle_callback:
+                throttle_callback(wait_seconds)
+            time.sleep(min(max(wait_seconds, 0.05), 1.0))
+
+    def _is_rate_limit_error(self, exc: Exception | str) -> bool:
+        message = str(exc)
+        upper_message = message.upper()
+        return "RESOURCE_EXHAUSTED" in upper_message or "429" in upper_message
+
+    def _is_permanent_quota_error(self, exc: Exception | str) -> bool:
+        upper_message = str(exc).upper()
+        permanent_markers = (
+            "EXCEEDED YOUR CURRENT QUOTA",
+            "CHECK YOUR PLAN AND BILLING DETAILS",
+            "QUOTA EXCEEDED FOR METRIC",
+            "FREE_TIER",
+            "PERDAY",
+            "PER_DAY",
+            "BILLING",
+            "LOCAL DAILY LIMIT",
+        )
+        return any(marker in upper_message for marker in permanent_markers)
+
+    def is_embedding_quota_exhausted(self, message: str | None = None) -> bool:
+        candidate = self.last_index_error if message is None else message
+        return self._is_permanent_quota_error(candidate)
+
+    def _format_embedding_error(self, exc: Exception) -> str:
+        if self._is_permanent_quota_error(exc):
+            return self._embedding_quota_guard_message()
+        return str(exc)
+
+    def _should_retry_embedding_error(self, exc: Exception) -> bool:
+        if self._is_permanent_quota_error(exc):
+            return False
+
+        if self._is_rate_limit_error(exc):
+            return True
+
+        if isinstance(exc, (ConnectionError, TimeoutError)):
+            return True
+
+        upper_message = str(exc).upper()
+        transient_markers = (
+            "UNAVAILABLE",
+            "DEADLINE_EXCEEDED",
+            "INTERNAL",
+            "500",
+            "502",
+            "503",
+            "504",
+            "TIMEOUT",
+            "TIMED OUT",
+            "CONNECTION RESET",
+            "SERVER DISCONNECTED",
+        )
+        return any(marker in upper_message for marker in transient_markers)
+
+    def _retry_delay_seconds(self, exc: Exception, attempt: int) -> float:
+        message = str(exc)
+        patterns = [
+            r"retry in (\d+(?:\.\d+)?)s",
+            r"'retryDelay': '(\d+)s'",
+            r'"retryDelay":\s*"(\d+)s"',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, message, flags=re.IGNORECASE)
+            if match:
+                delay = float(match.group(1)) + self.embedding_retry_padding_seconds
+                return min(delay, self.embedding_max_retry_delay_seconds)
+        if self._is_rate_limit_error(exc):
+            delay = min(60.0, (2 ** min(attempt, 5))) + self.embedding_retry_padding_seconds
+            return min(delay, self.embedding_max_retry_delay_seconds)
+        delay = min(30.0, (2 ** min(attempt, 4))) + self.embedding_retry_padding_seconds
+        return min(delay, self.embedding_max_retry_delay_seconds)
+
+    def _embed_batch(self, batch: List[str], retry_callback=None, throttle_callback=None) -> List[List[float]]:
+        last_exc: Exception | None = None
+        started_at = time.monotonic()
+        for attempt in range(1, self.embedding_max_retries + 1):
+            try:
+                self._acquire_embedding_request_slot(throttle_callback=throttle_callback)
+                result = self.client.models.embed_content(
+                    model=self.embedding_model,
+                    contents=batch,
+                )
+                embeddings = getattr(result, "embeddings", result)
+                return [self._extract_vector(item) for item in embeddings]
+            except Exception as exc:
+                last_exc = exc
+                if self._is_permanent_quota_error(exc):
+                    self._mark_embedding_quota_exhausted(self._format_embedding_error(exc))
+                retryable = self._should_retry_embedding_error(exc)
+                if not retryable or attempt >= self.embedding_max_retries:
+                    raise
+                delay = self._retry_delay_seconds(exc, attempt)
+                elapsed = max(time.monotonic() - started_at, 0.0)
+                if (
+                    self.embedding_retry_window_seconds > 0
+                    and elapsed + delay > self.embedding_retry_window_seconds
+                ):
+                    raise
+                if retry_callback:
+                    retry_callback(attempt, self.embedding_max_retries, delay, exc)
+                time.sleep(delay)
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("Falha inesperada ao gerar embeddings.")
+
+    def _embed_many(
+        self,
+        texts: List[str],
+        progress_callback=None,
+        retry_callback=None,
+        throttle_callback=None,
+        batch_callback=None,
+    ) -> List[List[float]]:
+        if not self.client:
+            raise RuntimeError("GEMINI_API_KEY nao configurada.")
+        vectors = []
+        batch_size = self.embedding_batch_size
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start : start + batch_size]
+            batch_vectors = self._embed_batch(
+                batch,
+                retry_callback=retry_callback,
+                throttle_callback=throttle_callback,
+            )
+            vectors.extend(batch_vectors)
+            if batch_callback:
+                batch_callback(start, batch_vectors, len(vectors), len(texts))
+            if progress_callback:
+                progress_callback(len(vectors), len(texts))
+        return vectors
+
+    def has_pending_reindex(self) -> bool:
+        manifest = self._document_manifest()
+        current_index = self.index_store.load_index()
+        previous_manifest = current_index.get("manifest") or {}
+        if manifest != previous_manifest:
+            return True
+        return bool(self.client) and self.index_has_missing_embeddings()
+
+    def get_sync_status_summary(self) -> Dict:
+        manifest = self._document_manifest()
+        current_index = self.index_store.load_index()
+        previous_manifest = current_index.get("manifest") or {}
+        diff = self._manifest_diff(manifest, previous_manifest)
+        chunks = current_index.get("chunks", [])
+        embedded_chunks = self._count_embedded_chunks(chunks)
+        missing_embedding_chunks = max(len(chunks) - embedded_chunks, 0)
+
+        chunk_stats_by_document = {}
+        for item in chunks:
+            name = item.get("document") or ""
+            if not name:
+                continue
+            stats = chunk_stats_by_document.setdefault(
+                name,
+                {"total_chunks": 0, "embedded_chunks": 0},
+            )
+            stats["total_chunks"] += 1
+            if self._has_embedding_payload(item.get("embedding")):
+                stats["embedded_chunks"] += 1
+
+        docs_missing_embeddings = sorted(
+            name
+            for name, stats in chunk_stats_by_document.items()
+            if stats["embedded_chunks"] < stats["total_chunks"]
+        )
+
+        pending_entries = []
+        document_sync_rows = []
+        all_document_names = sorted(set(manifest) | set(previous_manifest) | set(chunk_stats_by_document))
+        for name in sorted(manifest):
+            if name not in previous_manifest:
+                pending_entries.append(f"{name} (novo)")
+            elif previous_manifest.get(name) != manifest.get(name):
+                pending_entries.append(f"{name} (alterado)")
+            elif name in docs_missing_embeddings:
+                stats = chunk_stats_by_document.get(name) or {}
+                pending_entries.append(
+                    f"{name} ({stats.get('embedded_chunks', 0)}/{stats.get('total_chunks', 0)} chunks com embedding)"
+                )
+        for name in sorted(previous_manifest):
+            if name not in manifest:
+                pending_entries.append(f"{name} (removido do knowledge)")
+
+        for name in all_document_names:
+            stats = chunk_stats_by_document.get(name) or {"total_chunks": 0, "embedded_chunks": 0}
+            total_chunks = stats["total_chunks"]
+            embedded_count = stats["embedded_chunks"]
+            missing_chunks = max(total_chunks - embedded_count, 0)
+            in_knowledge = name in manifest
+            in_index = name in previous_manifest
+            if not in_knowledge and in_index:
+                status = "removed"
+            elif in_knowledge and not in_index:
+                status = "new"
+            elif in_knowledge and in_index and previous_manifest.get(name) != manifest.get(name):
+                status = "changed"
+            elif missing_chunks > 0:
+                status = "embedding_pending"
+            else:
+                status = "synced"
+
+            if total_chunks > 0:
+                coverage_pct = round((embedded_count / total_chunks) * 100)
+            else:
+                coverage_pct = 100 if status == "removed" else 0
+
+            document_sync_rows.append(
+                {
+                    "name": name,
+                    "status": status,
+                    "total_chunks": total_chunks,
+                    "embedded_chunks": embedded_count,
+                    "missing_chunks": missing_chunks,
+                    "coverage_pct": coverage_pct,
+                }
+            )
+
+        status_priority = {
+            "changed": 0,
+            "new": 1,
+            "embedding_pending": 2,
+            "removed": 3,
+            "synced": 4,
+        }
+        document_sync_rows.sort(key=lambda item: (status_priority.get(item["status"], 9), item["name"]))
+        fully_embedded_documents = sum(1 for item in document_sync_rows if item["status"] == "synced")
+        partially_embedded_documents = sum(
+            1 for item in document_sync_rows if item["status"] == "embedding_pending"
+        )
+        semantic_chunk_coverage_pct = round((embedded_chunks / len(chunks)) * 100) if chunks else 0
+
+        sync_summary = (
+            f"knowledge {len(manifest)} docs | "
+            f"indice {len(previous_manifest)} docs | "
+            f"embeddings {embedded_chunks}/{len(chunks)} chunks"
+        )
+        if pending_entries:
+            pending_summary = "Pendentes: " + " | ".join(pending_entries[:5])
+            if len(pending_entries) > 5:
+                pending_summary += f" | +{len(pending_entries) - 5} documento(s)"
+        else:
+            pending_summary = "knowledge e embeddings alinhados."
+
+        return {
+            **diff,
+            "knowledge_documents": len(manifest),
+            "indexed_documents": len(previous_manifest),
+            "total_chunks": len(chunks),
+            "embedded_chunks": embedded_chunks,
+            "missing_embedding_chunks": missing_embedding_chunks,
+            "semantic_chunk_coverage_pct": semantic_chunk_coverage_pct,
+            "fully_embedded_documents": fully_embedded_documents,
+            "partially_embedded_documents": partially_embedded_documents,
+            "documents_with_missing_embeddings": len(docs_missing_embeddings),
+            "pending_documents_total": len(pending_entries),
+            "sync_summary": sync_summary,
+            "pending_summary": pending_summary,
+            "pending_documents_preview": pending_entries[:5],
+            "document_sync_rows": document_sync_rows,
+        }
+
+    def index_has_missing_embeddings(self) -> bool:
+        current_index = self.index_store.load_index()
+        chunks = current_index.get("chunks", [])
+        if not chunks:
+            return False
+        return self._count_embedded_chunks(chunks) < len(chunks)
+
+    def rebuild_index(self, force: bool = False) -> None:
+        manifest = self._document_manifest()
+        current_index = self.index_store.load_index()
+        previous_manifest = current_index.get("manifest") or {}
+        manifest_diff = self._manifest_diff(manifest, previous_manifest)
+        missing_embeddings = self._count_embedded_chunks(current_index.get("chunks", [])) < len(
+            current_index.get("chunks", [])
+        )
+        if not force and manifest == previous_manifest and not missing_embeddings:
+            self.last_index_error = ""
+            self._set_ready_status(manifest, current_index.get("chunks", []), manifest_diff)
+            return
+
+        if not self._reindex_lock.acquire(blocking=False):
+            return
+        self._reindex_started_monotonic = time.monotonic()
+        total_documents = len(manifest)
+        self._set_reindex_status(
+            state="running",
+            phase="preparing",
+            message="A preparar reindexação...",
+            progress_pct=2.0,
+            started_at=self._timestamp(),
+            finished_at=None,
+            total_documents=total_documents,
+            processed_documents=0,
+            total_chunks=0,
+            embedded_chunks=0,
+            **manifest_diff,
+            error="",
+        )
+
+        try:
+            previous_chunks_by_document = {}
+            for item in current_index.get("chunks", []):
+                previous_chunks_by_document.setdefault(item.get("document"), []).append(item)
+            for items in previous_chunks_by_document.values():
+                items.sort(key=lambda item: item.get("chunk_id", 0))
+
+            chunks = []
+            extraction_errors = []
+            chunks_missing_embedding = []
+            for index, name in enumerate(manifest, start=1):
+                self._set_reindex_status(
+                    phase="extracting",
+                    message=f"A extrair {name}...",
+                    progress_pct=(20.0 * (index - 1) / max(total_documents, 1)) if total_documents else 20.0,
+                    processed_documents=index - 1,
+                    total_chunks=len(chunks),
+                )
+                if not force and previous_manifest.get(name) == manifest.get(name):
+                    reused_chunks = [
+                        {
+                            key: value
+                            for key, value in item.items()
+                            if key not in {"score", "retrieval_mode", "has_embedding"}
+                        }
+                        for item in previous_chunks_by_document.get(name, [])
+                    ]
+                    chunks.extend(reused_chunks)
+                    for item in reused_chunks:
+                        if not self._has_embedding_payload(item.get("embedding")):
+                            chunks_missing_embedding.append(item)
+                    self._set_reindex_status(
+                        phase="reusing",
+                        message=f"A reutilizar {name} sem alterações...",
+                        processed_documents=index,
+                        total_chunks=len(chunks),
+                        progress_pct=(20.0 * index / max(total_documents, 1)) if total_documents else 20.0,
+                    )
+                    continue
+                path = os.path.join(self.knowledge_dir, name)
+                try:
+                    text = extract_text_from_path(path)
+                except Exception as exc:
+                    extraction_errors.append(f"{name}: {exc}")
+                    self._set_reindex_status(
+                        processed_documents=index,
+                        progress_pct=(20.0 * index / max(total_documents, 1)) if total_documents else 20.0,
+                    )
+                    continue
+                for chunk_id, chunk in enumerate(chunk_text(text), start=1):
+                    item = {
+                        "id": f"{name}:{chunk_id}",
+                        "document": name,
+                        "chunk_id": chunk_id,
+                        "text": chunk,
+                    }
+                    chunks.append(item)
+                    chunks_missing_embedding.append(item)
+                self._set_reindex_status(
+                    processed_documents=index,
+                    total_chunks=len(chunks),
+                    progress_pct=(20.0 * index / max(total_documents, 1)) if total_documents else 20.0,
+                )
+
+            if chunks_missing_embedding and self.client:
+                try:
+                    embedding_progress = {
+                        "done": 0,
+                        "total": len(chunks_missing_embedding),
+                    }
+
+                    def progress_callback(done: int, total: int) -> None:
+                        embedding_progress["done"] = done
+                        progress = 20.0 + (75.0 * done / max(total, 1))
+                        self._set_reindex_status(
+                            phase="embedding",
+                            message=f"A gerar embeddings ({done}/{total} chunks)...",
+                            progress_pct=progress,
+                            total_chunks=total,
+                            embedded_chunks=done,
+                        )
+
+                    def retry_callback(attempt: int, total_attempts: int, delay: float, exc: Exception) -> None:
+                        done = embedding_progress["done"]
+                        total = embedding_progress["total"]
+                        progress = 20.0 + (75.0 * done / max(total, 1))
+                        self._set_reindex_status(
+                            phase="embedding_retry",
+                            message=(
+                                "Falha temporária nos embeddings. "
+                                f"Nova tentativa em {int(round(delay))}s "
+                                f"({attempt}/{total_attempts})."
+                            ),
+                            progress_pct=progress,
+                            total_chunks=total,
+                            embedded_chunks=done,
+                            error=str(exc),
+                        )
+
+                    def throttle_callback(delay: float) -> None:
+                        done = embedding_progress["done"]
+                        total = embedding_progress["total"]
+                        progress = 20.0 + (75.0 * done / max(total, 1))
+                        self._set_reindex_status(
+                            phase="embedding_throttle",
+                            message=(
+                                "A respeitar o limite local de embeddings. "
+                                f"Retoma em {int(round(delay))}s."
+                            ),
+                            progress_pct=progress,
+                            total_chunks=total,
+                            embedded_chunks=done,
+                            error="",
+                        )
+
+                    def batch_callback(start: int, batch_vectors: List[List[float]], _done: int, _total: int) -> None:
+                        for offset, vector in enumerate(batch_vectors):
+                            chunks_missing_embedding[start + offset]["embedding"] = vector
+
+                    self._embed_many(
+                        [item["text"] for item in chunks_missing_embedding],
+                        progress_callback=progress_callback,
+                        retry_callback=retry_callback,
+                        throttle_callback=throttle_callback,
+                        batch_callback=batch_callback,
+                    )
+                    self.last_index_error = ""
+                except Exception as exc:
+                    self.last_index_error = self._format_embedding_error(exc)
+            elif chunks_missing_embedding and not self.client:
+                self.last_index_error = "GEMINI_API_KEY nao configurada."
+            else:
+                self.last_index_error = ""
+
+            if extraction_errors:
+                extraction_note = "Documentos ignorados na indexação: " + " | ".join(extraction_errors[:5])
+                if self.last_index_error:
+                    self.last_index_error = f"{self.last_index_error} | {extraction_note}"
+                else:
+                    self.last_index_error = extraction_note
+
+            embedded_chunks = self._count_embedded_chunks(chunks)
+            self._set_reindex_status(
+                phase="saving",
+                message="A guardar índice...",
+                progress_pct=96.0,
+                total_chunks=len(chunks),
+                embedded_chunks=embedded_chunks,
+                **manifest_diff,
+                error=self.last_index_error,
+            )
+            self.index_store.replace_index(manifest=manifest, chunks=chunks)
+            self._set_reindex_status(
+                state="completed",
+                phase="completed",
+                message=(
+                    "Reindexação concluída com embeddings atualizados."
+                    if not self.last_index_error
+                    else "Reindexação concluída com cobertura semântica parcial."
+                ),
+                progress_pct=100.0,
+                processed_documents=total_documents,
+                total_chunks=len(chunks),
+                embedded_chunks=embedded_chunks,
+                **manifest_diff,
+                error=self.last_index_error,
+            )
+        except Exception as exc:
+            self.last_index_error = str(exc)
+            self._set_reindex_status(
+                state="error",
+                phase="error",
+                message="A reindexação falhou.",
+                progress_pct=self.get_reindex_status().get("progress_pct", 0.0),
+                **manifest_diff,
+                error=self.last_index_error,
+            )
+            raise
+        finally:
+            self._reindex_started_monotonic = None
+            self._reindex_lock.release()
+
+    def retrieve(self, question: str, top_k: int = 4) -> List[Dict]:
+        self.rebuild_index()
+        index = self.index_store.load_index()
+        chunks = index.get("chunks", [])
+        if not chunks:
+            return []
+
+        if not self.client:
+            raise RuntimeError("Pesquisa semântica Gemini indisponível: GEMINI_API_KEY em falta.")
+
+        try:
+            query_vector = self._embed_many([question])[0]
+            results = self.index_store.semantic_search(query_vector, top_k)
+            if results:
+                return [item for item in results if item.get("score", 0) > 0]
+        except Exception as exc:
+            self.last_index_error = self._format_embedding_error(exc)
+            raise RuntimeError(
+                "Pesquisa semântica Gemini indisponível neste momento. "
+                f"Detalhe técnico: {self.last_index_error}"
+            ) from exc
+
+        return []
+
+    def index_summary(self) -> Dict:
+        self.rebuild_index()
+        index = self.index_store.load_index()
+        chunks = index.get("chunks", [])
+        documents = index.get("manifest", {})
+        embedded_chunks = self._count_embedded_chunks(chunks)
+        return {
+            "document_count": len(documents),
+            "chunk_count": len(chunks),
+            "embedded_chunks": embedded_chunks,
+            "index_backend": getattr(self.index_store, "backend_name", "unknown"),
+            "index_error": self.last_index_error,
+        }
+
+    def _build_source_payload(self, contexts: List[Dict]) -> List[Dict]:
+        sources = []
+        for index, item in enumerate(contexts, start=1):
+            sources.append(
+                {
+                    "source_id": f"S{index}",
+                    "document": item["document"],
+                    "chunk_id": item["chunk_id"],
+                    "score": round(item["score"], 3),
+                    "retrieval_mode": item.get("retrieval_mode", "semantic"),
+                    "snippet": item["text"][:260],
+                }
+            )
+        return sources
+
+    def _build_fallback_answer(self, sources: List[Dict], error_message: str) -> str:
+        if not sources:
+            return (
+                "Não consegui contactar o modelo e também não encontrei contexto documental "
+                "suficiente para responder com segurança."
+            )
+
+        return (
+            "Não consegui contactar o modelo neste momento. "
+            "Existem dados de suporte disponíveis, mas a resposta automática falhou. "
+            f"Detalhe técnico: {error_message}"
+        )
+
+    def answer(
+        self,
+        question: str,
+        role: str,
+        history: List[Dict],
+        supplemental_sources: List[Dict] | None = None,
+        trusted_answers: List[Dict] | None = None,
+    ) -> Dict:
+        try:
+            contexts = self.retrieve(question)
+        except Exception as exc:
+            return {
+                "answer": (
+                    "A pesquisa documental semântica do Gemini não está disponível neste momento. "
+                    "O bot não responde em modo lexical local. "
+                    f"Detalhe: {exc}"
+                ),
+                "sources": supplemental_sources or [],
+                "retrieval_error": str(exc),
+            }
+        sources = self._build_source_payload(contexts)
+        if supplemental_sources:
+            sources.extend(supplemental_sources)
+
+        trusted_answers = trusted_answers or []
+        trusted_block = "\n\n".join(
+            (
+                f"Pergunta validada: {item['question']}\n"
+                f"Resposta aprovada: {item['answer']}\n"
+                f"Nota do operador: {item.get('feedback_note') or 'Sem nota.'}\n"
+                f"Semelhança: {item.get('similarity', 0)}"
+            )
+            for item in trusted_answers[:3]
+        )
+
+        history_block = "\n".join(
+            f"{entry['role']}: {entry['content']}" for entry in history[-10:]
+        )
+        context_block = "\n\n".join(
+            f"[{source['source_id']}] Documento: {source['document']} | chunk {source['chunk_id']} | score {source['score']} | modo {source['retrieval_mode']}\nExcerto: {source['snippet']}"
+            for source in sources
+        )
+
+        prompt = f"""
+És um assistente operacional para um portal marítimo com perfis admin, agente e piloto.
+Perfil do utilizador atual: {role}
+
+Regras:
+- Responde em português europeu.
+- Usa primeiro o contexto recuperado.
+- As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
+- Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte e preserva a formulação quando fizer sentido.
+- Se o contexto for insuficiente, diz claramente o que falta.
+- Sê objetivo e útil.
+- Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
+- Integra a informação de forma natural, como resposta operacional fluida.
+
+Histórico recente:
+{history_block or "Sem histórico anterior."}
+
+Fontes disponíveis:
+{context_block or "Sem contexto recuperado."}
+
+Memória operacional validada por feedback:
+{trusted_block or "Sem respostas aprovadas semelhantes."}
+
+Pergunta:
+{question}
+""".strip()
+
+        if not self.client:
+            raise RuntimeError("Define GEMINI_API_KEY antes de usar o chatbot.")
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.generation_model,
+                contents=prompt,
+            )
+            answer_text = getattr(response, "text", "") or "Sem resposta do modelo."
+        except Exception as exc:
+            answer_text = self._build_fallback_answer(sources, str(exc))
+
+        return {
+            "answer": answer_text,
+            "sources": sources,
+        }

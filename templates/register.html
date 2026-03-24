@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="auth-layout">
+  <section class="hero-card compact">
+    <p class="eyebrow">Registo</p>
+    <h1>Criar acesso à plataforma.</h1>
+    <p class="lead">
+      O registo cria utilizadores operacionais com perfis `piloto` ou `agente`. O perfil `admin` é atribuído separadamente.
+    </p>
+  </section>
+
+  <section class="panel auth-panel">
+    <h2>Registar</h2>
+    <form method="post" class="stack auth-form-pro">
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>Perfil operacional</h3>
+          <p>Escolhe primeiro o tipo de utilizador que vai entrar na plataforma.</p>
+        </div>
+        <div class="role-choice-grid">
+          <label class="role-choice-card">
+            <input type="radio" name="role" value="piloto" {% if not form_data or form_data.role != 'agente' %}checked{% endif %}>
+            <span class="role-choice-copy">
+              <strong>Piloto</strong>
+              <small>Aprova, acompanha e fecha manobras.</small>
+            </span>
+          </label>
+          <label class="role-choice-card">
+            <input type="radio" name="role" value="agente" {% if form_data and form_data.role == 'agente' %}checked{% endif %}>
+            <span class="role-choice-copy">
+              <strong>Agente</strong>
+              <small>Regista pedidos, planeamento e contactos operacionais.</small>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>Acesso</h3>
+          <p>Define as credenciais de entrada.</p>
+        </div>
+        <div class="auth-form-grid">
+          <label>
+            Email
+            <input type="email" name="email" value="{{ form_data.email if form_data else '' }}" placeholder="operador@porto.pt" required>
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" required>
+          </label>
+        </div>
+        <p class="form-note">O email da conta é também o contacto operacional usado nos registos.</p>
+      </section>
+
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>Contacto profissional</h3>
+          <p>Estes dados ficam associados aos registos operacionais.</p>
+        </div>
+        <div class="auth-form-grid">
+          <label>
+            Nome completo
+            <input type="text" name="full_name" value="{{ form_data.full_name if form_data else '' }}" required>
+          </label>
+          <label>
+            Entidade / agência
+            <input type="text" name="organization" value="{{ form_data.organization if form_data else '' }}" placeholder="Ex.: APSS, agência marítima, pilotagem" required>
+          </label>
+          <label>
+            Telefone
+            <input type="text" name="phone" value="{{ form_data.phone if form_data else '' }}" required>
+          </label>
+        </div>
+      </section>
+      <button type="submit">Criar conta</button>
+    </form>
+    <p class="link-line"><a href="{{ url_for('login') }}">Voltar ao login</a></p>
+  </section>
+</main>
+{% endblock %}

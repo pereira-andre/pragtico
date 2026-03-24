@@ -1,0 +1,17 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.pyo
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+.pytest_cache/
+.coverage
+.venv/
+venv/
+
+data/
+contas.txt
