@@ -28,6 +28,15 @@ from chat_actions import (
     resolve_port_call,
     visible_port_calls_from_activity,
 )
+from cost_engine import (
+    ManoeuvreInput,
+    ManoeuvreType,
+    SurchargeType,
+    ReductionType,
+    calculate_scale_cost,
+    format_cost_summary,
+    quick_estimate,
+)
 from dotenv import load_dotenv
 from migration_service import get_database_runtime_status, migrate_local_json_to_postgres
 from reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
@@ -117,6 +126,10 @@ CONSTRAINT_OPTIONS = get_constraint_options()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", "64")) * 1024 * 1024
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV", "production") == "production"
+app.config["PERMANENT_SESSION_LIFETIME"] = 28800  # 8 hours
 
 store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR)
 auth_service = create_auth_service(store)
@@ -3698,6 +3711,119 @@ def api_chat():
             "pending_action": answer.get("pending_action"),
         }
     )
+
+
+@app.route("/api/cost/estimate", methods=["POST"])
+@login_required
+def api_cost_estimate():
+    """API endpoint for pilotage cost estimation.
+
+    Accepts JSON with vessel GT and manoeuvre details,
+    returns a detailed cost breakdown.
+    """
+    payload = request.get_json(silent=True) or {}
+    gt = payload.get("gt", 0)
+    try:
+        gt = float(gt)
+    except (TypeError, ValueError):
+        return jsonify({"error": "GT inválido."}), 400
+
+    if gt <= 0:
+        return jsonify({"error": "GT tem de ser positivo."}), 400
+
+    vessel_name = (payload.get("vessel_name") or "Navio").strip()
+    stay_days = max(float(payload.get("stay_days", 1)), 0.5)
+    include_tup = payload.get("include_tup", True)
+
+    raw_manoeuvres = payload.get("manoeuvres", [])
+    if not raw_manoeuvres:
+        raw_manoeuvres = [{"type": "entry"}, {"type": "departure"}]
+
+    type_map = {
+        "entry": ManoeuvreType.ENTRY,
+        "entrada": ManoeuvreType.ENTRY,
+        "departure": ManoeuvreType.DEPARTURE,
+        "saida": ManoeuvreType.DEPARTURE,
+        "shift": ManoeuvreType.SHIFT,
+        "mudanca": ManoeuvreType.SHIFT,
+        "anchoring": ManoeuvreType.ANCHORING,
+        "standby": ManoeuvreType.STANDBY,
+        "trials": ManoeuvreType.TRIALS,
+    }
+    surcharge_map = {
+        "no_propulsion": SurchargeType.NO_PROPULSION,
+        "special_assistance": SurchargeType.SPECIAL_ASSISTANCE,
+    }
+    reduction_map = {
+        "regular_line": ReductionType.REGULAR_LINE,
+        "cabotage": ReductionType.CABOTAGE,
+        "technical_call": ReductionType.TECHNICAL_CALL,
+    }
+
+    manoeuvre_inputs = []
+    for raw in raw_manoeuvres:
+        m_type = type_map.get((raw.get("type") or "entry").lower().strip(), ManoeuvreType.ENTRY)
+        surcharges = [surcharge_map[s] for s in (raw.get("surcharges") or []) if s in surcharge_map]
+        reductions = [reduction_map[r] for r in (raw.get("reductions") or []) if r in reduction_map]
+        manoeuvre_inputs.append(ManoeuvreInput(
+            manoeuvre_type=m_type,
+            gt=gt,
+            surcharges=surcharges,
+            reductions=reductions,
+            standby_hours=float(raw.get("standby_hours", 0)),
+        ))
+
+    estimate = calculate_scale_cost(
+        vessel_name=vessel_name,
+        gt=gt,
+        manoeuvres=manoeuvre_inputs,
+        stay_days=stay_days,
+        include_tup=include_tup,
+    )
+
+    return jsonify({
+        "vessel_name": estimate.vessel_name,
+        "gt": estimate.gt,
+        "pilotage_total": estimate.pilotage_total,
+        "tup_estimate": estimate.tup_estimate,
+        "stay_days": estimate.stay_days,
+        "grand_total": estimate.grand_total,
+        "manoeuvres": [
+            {
+                "type": m.manoeuvre_type,
+                "base_cost": m.base_cost,
+                "surcharge": m.surcharge_amount,
+                "reduction": m.reduction_amount,
+                "standby": m.standby_cost,
+                "total": m.total_cost,
+                "breakdown": m.breakdown,
+            }
+            for m in estimate.manoeuvres
+        ],
+        "notes": estimate.notes,
+        "summary": format_cost_summary(estimate),
+        "currency": "EUR",
+        "tariff_year": 2024,
+    })
+
+
+@app.route("/api/cost/quick", methods=["GET"])
+@login_required
+def api_cost_quick():
+    """Quick cost estimate for a single manoeuvre.
+
+    Query parameters: gt (required), type (optional, default 'entry').
+    """
+    try:
+        gt = float(request.args.get("gt", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "GT inválido."}), 400
+
+    if gt <= 0:
+        return jsonify({"error": "GT tem de ser positivo."}), 400
+
+    m_type = request.args.get("type", "entry").strip()
+    return jsonify(quick_estimate(gt, m_type))
 
 
 if __name__ == "__main__":
