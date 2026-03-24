@@ -305,9 +305,23 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
     berthed_map = {}
     for item in in_port:
         berthed_map.setdefault(item.get("berth_label") or "Sem cais atribuído", []).append(item)
+
+    # Sort berths by geographic order (Secil → Teporset) matching BERTH_OPTIONS
+    _berth_order = {name: idx for idx, name in enumerate(BERTH_OPTIONS)}
+
+    def _berth_sort_key(pair):
+        berth_name = pair[0]
+        # Try exact match first, then partial match for parent terminal
+        if berth_name in _berth_order:
+            return _berth_order[berth_name]
+        for option_name, order in _berth_order.items():
+            if option_name in berth_name or berth_name in option_name:
+                return order
+        return 9999
+
     berthed = [
         {"berth": berth, "count": len(vessels), "vessels": vessels}
-        for berth, vessels in sorted(berthed_map.items(), key=lambda pair: pair[0])
+        for berth, vessels in sorted(berthed_map.items(), key=_berth_sort_key)
     ]
 
     planned_groups_map = {}
@@ -928,14 +942,92 @@ def build_scale_registry_source(question: str, port_activity: dict, max_rows: in
     }
 
 
+def _looks_like_cost_question(question: str) -> bool:
+    """Detect if a question is about pilotage costs, billing, or tariffs."""
+    clean = (question or "").lower()
+    cost_keywords = {
+        "custo", "custos", "preço", "preco", "precos", "preços",
+        "tarifa", "tarifas", "fatura", "faturação", "faturacao",
+        "pilotagem", "taxa", "taxas", "up", "cobrar", "cobrado",
+        "pagar", "pagamento", "valor", "estimativa", "orçamento",
+        "orcamento", "simulação", "simulacao", "simular",
+    }
+    return any(kw in clean for kw in cost_keywords)
+
+
+def build_cost_context_source(question: str, port_activity: dict) -> dict | None:
+    """Build a RAG context source with cost information when relevant.
+
+    Parameters:
+        question: The user's question.
+        port_activity: Current port activity snapshot.
+
+    Returns:
+        Context source dict or None if costs not relevant.
+    """
+    if not _looks_like_cost_question(question):
+        return None
+
+    from cost_engine import UP_NORMAL, UP_SHIFT_ALONG, format_cost_summary, calculate_scale_cost, ManoeuvreInput, ManoeuvreType
+
+    lines = [
+        "Motor de cálculo de custos de pilotagem do Porto de Setúbal (tarifário 2024):",
+        f"- UP serviços normais (entrada, saída, atracar): {UP_NORMAL} €/GT",
+        f"- UP mudança ao longo do cais: {UP_SHIFT_ALONG} €/GT",
+        "- Fórmula: Taxa = UP × GT (arqueação bruta)",
+        "- Agravamento +25%: navio sem propulsão ou assistência especial",
+        "- Redução -25% linha regular, -10% cabotagem, -30% escala técnica",
+        "- Pilotagem à ordem: 74.64 €/hora + 25% da taxa base",
+        "- Cancelamentos: 0% (>24h) a 100% (no-show)",
+        "- TUP estimada: 0.1144 €/GT/dia",
+        "- Não inclui rebocadores (privados), amarração, lanchas ou resíduos.",
+        "",
+    ]
+
+    # Add cost examples from current vessels in port
+    in_port = port_activity.get("in_port", [])[:3]
+    for vessel in in_port:
+        gt_str = vessel.get("vessel_gt_t") or vessel.get("vessel_gt") or ""
+        gt_clean = gt_str.replace(".", "").replace(",", ".").strip()
+        try:
+            gt = float(gt_clean)
+        except (ValueError, TypeError):
+            continue
+        if gt <= 0:
+            continue
+        name = vessel.get("vessel_name", "Navio")
+        cost_entry = round(UP_NORMAL * gt, 2)
+        cost_departure = round(UP_NORMAL * gt, 2)
+        lines.append(
+            f"- Exemplo {name} (GT {gt:.0f}): entrada ~{cost_entry:.2f}€, "
+            f"saída ~{cost_departure:.2f}€, total ~{cost_entry + cost_departure:.2f}€"
+        )
+
+    lines.append("")
+    lines.append("O utilizador pode pedir estimativas ao bot. Usa a API /api/cost/estimate ou /api/cost/quick para cálculos detalhados.")
+
+    return {
+        "source_id": "COST1",
+        "document": "motor_custos_pilotagem",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "cost_engine",
+        "snippet": "\n".join(lines),
+    }
+
+
 def build_operational_chat_sources(question: str) -> list[dict]:
     recent_port_activity = store.get_port_activity_snapshot(window_days=30)
     historical_port_activity = store.get_port_activity_snapshot(window_days=3650)
-    return [
+    sources = [
         build_operational_snapshot_source(recent_port_activity),
         build_maneuver_archive_source(question, historical_port_activity),
         build_scale_registry_source(question, historical_port_activity),
     ]
+    cost_source = build_cost_context_source(question, recent_port_activity)
+    if cost_source:
+        sources.append(cost_source)
+    return sources
 
 
 def pending_action_state_key(username: str, conversation_id: str) -> str:

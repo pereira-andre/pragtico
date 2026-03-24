@@ -1652,13 +1652,30 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
     for item in in_port:
         berth_map.setdefault(item["berth_label"], []).append(item)
 
+    # Geographic berth order: Secil → Teporset (matching operational sequence)
+    _BERTH_GEO_ORDER = [
+        "Secil", "Fundeadouro Norte", "Cais Palmeiras",
+        "TMS 1", "TMS 2", "Autoeuropa", "Cais 10", "Cais 11",
+        "Praias do Sado", "Pirites", "SAPEC",
+        "ALSTOM", "PAN", "Tróia", "Fundeadouro Sul",
+        "Tanquisado", "Eco-Oil",
+        "Lisnave", "Teporset",
+    ]
+
+    def _berth_geo_sort_key(pair):
+        name = pair[0]
+        for idx, prefix in enumerate(_BERTH_GEO_ORDER):
+            if prefix.lower() in name.lower():
+                return idx
+        return 9999
+
     berthed = [
         {
             "berth": berth,
             "count": len(vessels),
             "vessels": vessels,
         }
-        for berth, vessels in sorted(berth_map.items(), key=lambda pair: pair[0])
+        for berth, vessels in sorted(berth_map.items(), key=_berth_geo_sort_key)
     ]
 
     for item in in_port:

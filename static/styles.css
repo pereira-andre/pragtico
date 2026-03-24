@@ -3965,3 +3965,185 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   DARK THEME FIXES — remnant light-theme colors
+   ══════════════════════════════════════════════════════════ */
+
+/* Status chips that had dark-on-light colors */
+.planned-status-completed {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.status-chip-ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.status-chip-off {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.mini-card-status.is-ok {
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.mini-card-status.is-missing {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Override old green tones used in wind levels */
+.wind-ok .meteo-metrics span { color: var(--text); }
+.wind-ok-strong .meteo-metrics span { color: var(--text); }
+
+/* Conversation strip */
+.conversation-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 0;
+}
+
+.conversation-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  background: rgba(26, 159, 255, 0.08);
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.conversation-chip.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Admin panels dark theme */
+.admin-users-kpi {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  background: rgba(26, 159, 255, 0.08);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+
+.status-box {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-box.ok {
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--success);
+}
+
+.status-box.off {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--alert);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Profile page */
+.profile-form label {
+  color: var(--muted);
+}
+
+/* Scale detail panels */
+.inset-panel {
+  background: rgba(255,255,255,0.03);
+  border-color: var(--line);
+}
+
+.scale-meta-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.scale-meta-card strong {
+  color: var(--text-strong);
+}
+
+.scale-fact-row {
+  border-bottom-color: var(--line);
+}
+
+.scale-timeline-dot {
+  background: var(--accent);
+}
+
+.scale-maneuver-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+/* Details/summary dark theme */
+details summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.planning-optional-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+}
+
+/* Link line on auth pages */
+.link-line {
+  text-align: center;
+  color: var(--muted);
+}
+
+.link-line a {
+  color: var(--accent);
+}
+
+/* Small note */
+.small-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* Secondary link on admin sidebar */
+.secondary-link {
+  color: var(--accent);
+  text-decoration: none;
+  display: block;
+  padding: 4px 0;
+}
+
+.outline-link {
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  display: inline-block;
+}
+
+.outline-link:hover {
+  background: var(--accent);
+  color: #fff;
+}
