@@ -6,73 +6,102 @@
       <div>
         <p class="eyebrow">Arquivo</p>
         <h1>Manobras concluídas</h1>
-        <p class="lead">Consulta histórica das entradas, saídas e mudanças já realizadas.</p>
+        <p class="lead">Consulta histórica, estimativa de custos e exportação para faturação.</p>
       </div>
       <div class="hero-actions">
         <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        {% if current_role in ["admin", "agente"] %}
+          <a class="hero-link" href="{{ url_for('port_call_register') }}">Registar escala</a>
+        {% endif %}
       </div>
     </div>
-    <div class="hero-footer">
-      <p><strong>Total em arquivo:</strong> {{ port_activity.stats.archive_count }}</p>
-      <p><strong>Janela:</strong> últimos {{ port_activity.window_days }} dias</p>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Total em arquivo</span>
+        <strong>{{ port_activity.stats.archive_count }}</strong>
+        <small>manobras concluídas</small>
+      </article>
+      <article class="hero-stat">
+        <span>Janela</span>
+        <strong>{{ port_activity.window_days }}d</strong>
+        <small>últimos dias</small>
+      </article>
+      <article class="hero-stat">
+        <span>Custo estimado visível</span>
+        <strong id="archive-total-cost">--</strong>
+        <small>pilotagem (€)</small>
+      </article>
     </div>
   </section>
 
   <section class="panel planned-panel">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Histórico</p>
+        <p class="eyebrow">Histórico &amp; Faturação</p>
         <h2>Arquivo operacional</h2>
       </div>
       <div class="archive-toolbar">
         <label class="archive-search-field">
-          <span class="mini-label">Buscar no arquivo</span>
-          <input id="archive-search" type="search" placeholder="Escala, navio, agente, piloto, destino...">
+          <span class="mini-label">Filtrar</span>
+          <input id="archive-search" type="search" placeholder="Escala, navio, agente, piloto...">
         </label>
-        <a class="hero-link" href="{{ url_for('maneuver_archive_export') }}">Exportar CSV</a>
+        <div class="archive-actions">
+          <a class="mini-button secondary-button" href="{{ url_for('maneuver_archive_export') }}">Exportar CSV</a>
+          <button type="button" class="mini-button" id="archive-calc-costs">Estimar custos</button>
+        </div>
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.archive_count }}</span>
       </div>
     </div>
 
-    <div class="planned-table-wrap">
-      <table class="planned-table">
+    <div class="planned-table-wrap archive-table-wrap">
+      <table class="planned-table archive-table" id="archive-table">
         <thead>
           <tr>
+            <th class="archive-th-narrow">#</th>
             <th>Data</th>
-            <th>Tipo Navio</th>
-            <th>Escala/Navio</th>
+            <th>Escala</th>
+            <th>Navio</th>
+            <th>GT</th>
             <th>Hora</th>
-            <th>Situação</th>
             <th>Manobra</th>
             <th>Origem</th>
             <th>Destino</th>
             <th>Restrições</th>
             <th>Agente</th>
-            <th>Validado por</th>
-            <th>Executado por</th>
-            <th>Observações</th>
+            <th>Validado</th>
+            <th>Executado</th>
+            <th>Custo Est. (€)</th>
+            <th>Obs.</th>
           </tr>
         </thead>
         <tbody id="archive-body">
           {% for item in port_activity.archived_maneuvers %}
             {% set archive_search = (item.date_label ~ ' ' ~ item.reference_code ~ ' ' ~ item.vessel_name ~ ' ' ~ item.vessel_type ~ ' ' ~ item.maneuver_label ~ ' ' ~ item.local_origin ~ ' ' ~ item.local_destination ~ ' ' ~ item.agent_label ~ ' ' ~ item.validated_by_label ~ ' ' ~ item.executed_by_label ~ ' ' ~ (item.detail_note or ''))|lower %}
-            <tr class="planned-row planned-row-{{ item.situation_class }}" data-archive-row data-search="{{ archive_search }}">
+            <tr class="planned-row planned-row-{{ item.situation_class }}"
+                data-archive-row
+                data-search="{{ archive_search }}"
+                data-gt="{{ item.vessel_gt or '' }}"
+                data-manoeuvre-type="{{ item.maneuver_label }}"
+                data-reference="{{ item.reference_code }}">
+              <td class="archive-td-narrow">{{ loop.index }}</td>
               <td>{{ item.date_label }}</td>
               <td>
-                <div class="planned-vessel-type">
-                  {% if item.vessel_type_icon %}
-                    <img src="{{ url_for('image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
-                  {% endif %}
-                  <span>{{ item.vessel_type }}</span>
-                </div>
+                <a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a>
               </td>
               <td>
-                <strong><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a></strong><br>
-                {{ item.vessel_name }}
+                <div class="archive-vessel-cell">
+                  {% if item.vessel_type_icon %}
+                    <img class="archive-vessel-icon" src="{{ url_for('image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
+                  {% endif %}
+                  <span>{{ item.vessel_name }}</span>
+                </div>
               </td>
+              <td class="archive-td-num">{{ item.vessel_gt or '--' }}</td>
               <td>{{ item.execution_window_label or item.actual_label or item.planned_label }}</td>
-              <td><span class="planned-status planned-status-{{ item.situation_class }}">{{ item.situation_label }}</span></td>
-              <td>{{ item.maneuver_label }}</td>
+              <td>
+                {% set mc = "entry" if item.maneuver_label == "Entrar" else "departure" if item.maneuver_label == "Sair" else "shift" %}
+                <span class="maneuver-chip maneuver-chip-{{ mc }}">{{ item.maneuver_label }}</span>
+              </td>
               <td>{{ item.local_origin }}</td>
               <td>{{ item.local_destination }}</td>
               <td>
@@ -86,18 +115,10 @@
                   {% endfor %}
                 </div>
               </td>
-              <td>
-                <strong>{{ item.agent_label }}</strong><br>
-                <span class="muted">{{ item.agent_profile.contact_label if item.agent_profile else '--' }}</span>
-              </td>
-              <td>
-                <strong>{{ item.validated_by_label }}</strong><br>
-                <span class="muted">{{ item.validated_by_profile.contact_label if item.validated_by_profile else '--' }}</span>
-              </td>
-              <td>
-                <strong>{{ item.executed_by_label }}</strong><br>
-                <span class="muted">{{ item.executed_by_profile.contact_label if item.executed_by_profile else '--' }}</span>
-              </td>
+              <td>{{ item.agent_label }}</td>
+              <td>{{ item.validated_by_label }}</td>
+              <td>{{ item.executed_by_label }}</td>
+              <td class="archive-td-cost" data-cost-cell>--</td>
               <td class="planned-detail-cell">
                 {% if item.detail_note %}
                   <p class="planned-note">{{ item.detail_note }}</p>
@@ -108,41 +129,200 @@
             </tr>
           {% else %}
             <tr id="archive-empty-row">
-              <td colspan="13" class="planned-empty">Sem manobras concluídas no arquivo para esta janela.</td>
+              <td colspan="15" class="planned-empty">Sem manobras concluídas no arquivo.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     <p id="archive-no-results" class="muted hidden">Nenhuma manobra corresponde à pesquisa.</p>
+
+    <div class="archive-footer">
+      <p class="muted">Os custos estimados baseiam-se no tarifário de pilotagem de Setúbal 2024 (UP normal: 9.2578 €/GT, mudança: 3.3628 €/GT). Não incluem rebocadores, TUP, amarração ou outros serviços auxiliares.</p>
+    </div>
+  </section>
+
+  {# ── SIMULADOR DE CUSTOS ── #}
+  <section class="panel" id="cost-simulator-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Simulador</p>
+        <h2>Estimativa de custos de pilotagem</h2>
+      </div>
+    </div>
+    <div class="cost-simulator-grid">
+      <div class="cost-simulator-form">
+        <div class="mini-grid planned-mini-grid">
+          <label>
+            Navio (opcional)
+            <input type="text" id="sim-vessel" placeholder="Ex.: MSC Lyria">
+          </label>
+          <label>
+            GT (t)
+            <input type="number" id="sim-gt" placeholder="Ex.: 32540" min="1" required>
+          </label>
+          <label>
+            Dias em porto
+            <input type="number" id="sim-days" value="1" min="0.5" step="0.5">
+          </label>
+        </div>
+        <div class="cost-sim-manoeuvres">
+          <span class="mini-label">Manobras a simular</span>
+          <div class="cost-sim-checks">
+            <label class="constraint-option"><input type="checkbox" id="sim-entry" checked> <span>Entrada</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-departure" checked> <span>Saída</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-shift"> <span>Mudança</span></label>
+          </div>
+        </div>
+        <div class="cost-sim-modifiers">
+          <span class="mini-label">Condições</span>
+          <div class="cost-sim-checks">
+            <label class="constraint-option"><input type="checkbox" id="sim-no-prop"> <span>Sem propulsão (+25%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-special"> <span>Assistência especial (+25%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-regular"> <span>Linha regular (-25%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-cabotage"> <span>Cabotagem (-10%)</span></label>
+          </div>
+        </div>
+        <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
+      </div>
+      <div class="cost-simulator-result" id="sim-result">
+        <p class="muted">Preenche os campos e clica em calcular para ver a estimativa.</p>
+      </div>
+    </div>
   </section>
 </main>
 
 <script>
+  const UP_NORMAL = 9.2578;
+  const UP_SHIFT = 3.3628;
+
+  /* ── Search filter ── */
   const archiveSearch = document.getElementById("archive-search");
   const archiveRows = Array.from(document.querySelectorAll("[data-archive-row]"));
   const archiveEmptyRow = document.getElementById("archive-empty-row");
   const archiveNoResults = document.getElementById("archive-no-results");
 
   function filterArchiveRows() {
-    const query = (archiveSearch?.value || "").trim().toLowerCase();
+    const q = (archiveSearch?.value || "").trim().toLowerCase();
     let visible = 0;
     archiveRows.forEach((row) => {
-      const haystack = row.dataset.search || "";
-      const match = !query || haystack.includes(query);
+      const match = !q || (row.dataset.search || "").includes(q);
       row.classList.toggle("hidden", !match);
-      if (match) visible += 1;
+      if (match) visible++;
     });
-    if (archiveEmptyRow) {
-      archiveEmptyRow.classList.toggle("hidden", visible !== 0 || archiveRows.length > 0);
-    }
-    if (archiveNoResults) {
-      archiveNoResults.classList.toggle("hidden", visible !== 0 || !query || archiveRows.length === 0);
-    }
+    if (archiveEmptyRow) archiveEmptyRow.classList.toggle("hidden", visible !== 0 || archiveRows.length > 0);
+    if (archiveNoResults) archiveNoResults.classList.toggle("hidden", visible !== 0 || !q || archiveRows.length === 0);
+    updateTotalCost();
+  }
+  if (archiveSearch) archiveSearch.addEventListener("input", filterArchiveRows);
+
+  /* ── Cost estimation for archive rows ── */
+  function manoeuvreTypeToKey(label) {
+    const l = (label || "").toLowerCase();
+    if (l.includes("sair") || l.includes("departure") || l.includes("saída")) return "departure";
+    if (l.includes("mud") || l.includes("shift")) return "shift";
+    return "entry";
   }
 
-  if (archiveSearch) {
-    archiveSearch.addEventListener("input", filterArchiveRows);
+  function estimateRowCost(gt, typeLabel) {
+    if (!gt || gt <= 0) return null;
+    const key = manoeuvreTypeToKey(typeLabel);
+    const up = key === "shift" ? UP_SHIFT : UP_NORMAL;
+    return Math.round(up * gt * 100) / 100;
   }
+
+  function updateTotalCost() {
+    let total = 0;
+    let count = 0;
+    archiveRows.forEach((row) => {
+      if (row.classList.contains("hidden")) return;
+      const cell = row.querySelector("[data-cost-cell]");
+      if (cell && cell.textContent !== "--") {
+        const v = parseFloat(cell.textContent.replace(/[^\d.,]/g, "").replace(",", "."));
+        if (!isNaN(v)) { total += v; count++; }
+      }
+    });
+    const el = document.getElementById("archive-total-cost");
+    if (el) el.textContent = count > 0 ? total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) : "--";
+  }
+
+  document.getElementById("archive-calc-costs")?.addEventListener("click", () => {
+    archiveRows.forEach((row) => {
+      const gt = parseFloat(row.dataset.gt);
+      const typeLabel = row.dataset.manoeuvreType || "";
+      const cell = row.querySelector("[data-cost-cell]");
+      if (!cell) return;
+      const cost = estimateRowCost(gt, typeLabel);
+      cell.textContent = cost !== null ? cost.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + " €" : "s/ GT";
+    });
+    updateTotalCost();
+  });
+
+  /* ── Cost simulator ── */
+  document.getElementById("sim-calculate")?.addEventListener("click", async () => {
+    const gt = parseFloat(document.getElementById("sim-gt")?.value);
+    if (!gt || gt <= 0) { alert("Introduz um GT válido."); return; }
+
+    const vessel = (document.getElementById("sim-vessel")?.value || "Simulação").trim();
+    const days = parseFloat(document.getElementById("sim-days")?.value) || 1;
+    const manoeuvres = [];
+    if (document.getElementById("sim-entry")?.checked) {
+      manoeuvres.push({ type: "entry", surcharges: [], reductions: [] });
+    }
+    if (document.getElementById("sim-departure")?.checked) {
+      manoeuvres.push({ type: "departure", surcharges: [], reductions: [] });
+    }
+    if (document.getElementById("sim-shift")?.checked) {
+      manoeuvres.push({ type: "shift", surcharges: [], reductions: [] });
+    }
+    if (!manoeuvres.length) { alert("Seleciona pelo menos uma manobra."); return; }
+
+    const surcharges = [];
+    if (document.getElementById("sim-no-prop")?.checked) surcharges.push("no_propulsion");
+    if (document.getElementById("sim-special")?.checked) surcharges.push("special_assistance");
+    const reductions = [];
+    if (document.getElementById("sim-regular")?.checked) reductions.push("regular_line");
+    if (document.getElementById("sim-cabotage")?.checked) reductions.push("cabotage");
+    manoeuvres.forEach(m => { m.surcharges = surcharges; m.reductions = reductions; });
+
+    const resultDiv = document.getElementById("sim-result");
+    resultDiv.innerHTML = '<p class="muted">A calcular...</p>';
+
+    try {
+      const r = await fetch("/api/cost/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vessel_name: vessel, gt, stay_days: days, manoeuvres, include_tup: true }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Erro no cálculo.");
+
+      let html = '<div class="sim-result-card">';
+      html += '<h3>' + d.vessel_name + ' · GT ' + d.gt.toLocaleString("pt-PT") + '</h3>';
+      d.manoeuvres.forEach((m, i) => {
+        html += '<div class="sim-manoeuvre">';
+        html += '<strong>Manobra ' + (i + 1) + ': ' + m.type + '</strong>';
+        html += '<p class="sim-cost">' + m.total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</p>';
+        m.breakdown.forEach(b => { html += '<p class="sim-line">' + b + '</p>'; });
+        html += '</div>';
+      });
+      html += '<div class="sim-total">';
+      html += '<span>Total pilotagem</span><strong>' + d.pilotage_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+      html += '</div>';
+      if (d.tup_estimate > 0) {
+        html += '<div class="sim-total sim-total-secondary">';
+        html += '<span>TUP estimada (' + d.stay_days + ' dia' + (d.stay_days > 1 ? 's' : '') + ')</span><strong>' + d.tup_estimate.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+        html += '</div>';
+      }
+      html += '<div class="sim-total sim-total-grand">';
+      html += '<span>Total estimado</span><strong>' + d.grand_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+      html += '</div>';
+      d.notes.forEach(n => { html += '<p class="sim-note">• ' + n + '</p>'; });
+      html += '</div>';
+      resultDiv.innerHTML = html;
+    } catch (e) {
+      resultDiv.innerHTML = '<p class="muted">Erro: ' + e.message + '</p>';
+    }
+  });
 </script>
 {% endblock %}

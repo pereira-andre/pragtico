@@ -1436,6 +1436,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
                 "port_call_id": port_call["id"],
                 "reference_code": port_call["reference_code"],
                 "vessel_name": port_call.get("vessel_name", "Navio"),
+                "vessel_gt": port_call.get("vessel_gt_t") or "",
                 "vessel_type": port_call.get("ship_type_label") or "Navio",
                 "vessel_type_icon": port_call.get("ship_type_icon"),
                 "date_value": date_dt.isoformat(),

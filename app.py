@@ -395,11 +395,19 @@ def login_required(view):
 
 
 @app.after_request
-def apply_no_store_headers(response):
+def apply_security_headers(response):
+    # Cache control for authenticated pages
     if session.get("username") or request.endpoint in {"login", "profile"}:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+    # Security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if os.getenv("FLASK_ENV", "production") == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -2395,6 +2403,17 @@ def admin_update_user(username: str):
         full_name = request.form.get("full_name", "").strip()
         organization = request.form.get("organization", "").strip()
         phone = request.form.get("phone", "").strip()
+
+        # Enforce admin uniqueness: only 1 admin allowed
+        if updated_role == "admin" and target_username != session.get("username"):
+            existing_admins = [
+                u for u in store.list_users()
+                if (u.get("role") or "").strip().lower() == "admin"
+                and u.get("username") != target_username
+            ]
+            if existing_admins:
+                flash("Já existe um administrador no sistema. Só pode haver 1 admin.", "error")
+                return redirect(url_for("admin_users"))
 
         store.update_user_profile(
             target_username,
