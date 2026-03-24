@@ -3246,6 +3246,22 @@ def edit_maneuver_report(port_call_id: str, maneuver_id: str):
     return redirect_to_portal_target(port_call_id)
 
 
+@app.route("/conversations")
+@login_required
+def chat_archive():
+    username = session["username"]
+    current_conversation = get_current_conversation(username)
+    conversations = store.list_conversations(username)
+    messages = store.list_messages(username, current_conversation["id"])
+    return render_template(
+        "chat_archive.html",
+        conversations=conversations,
+        current_conversation=current_conversation,
+        messages=messages,
+        title="Conversas",
+    )
+
+
 @app.route("/conversations", methods=["POST"])
 @login_required
 def create_conversation():

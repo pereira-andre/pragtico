@@ -1,191 +1,133 @@
-# Portal RAG Marítimo
+# PRAGtico — Portal de Coordenação Portuária
 
-Plataforma web com:
+Sistema web de coordenação portuária para pilotagem no Porto de Setúbal,
+com chatbot RAG, gestão de escalas e manobras, estimativa de custos e
+monitorização operacional em tempo real.
 
-- autenticação com perfis `admin`, `agente`, `piloto`
-- chatbot com RAG e citações explícitas
-- base documental local com upload de ficheiros
-- indexação semântica com embeddings do Gemini e backend `pgvector`
-- conversas separadas por sessão
-- feedback operacional nas respostas, com reutilização de respostas aprovadas
-- marés locais a partir de CSV
-- meteorologia ao vivo via WeatherAPI
-- mapa AIS de Setúbal com embed publico via VesselFinder
-- frontend web simples para servir localmente
+## Funcionalidades
 
-## Como correr
+### Quadro Operacional
+- Dashboard com visão geral: navios em porto, chegadas previstas, saídas recentes
+- Meteorologia contínua (48h) com ícones de estado do tempo
+- Mapa AIS embebido (VesselFinder) com coordenadas náuticas
+- Navios por cais em ordem geográfica (Secil → Teporset)
+- Planeamento operacional com tabela de marcações/validações/fechos
+
+### Gestão de Escalas e Manobras
+- Registo de escalas com ficha completa do navio (IMO, GT, LOA, etc.)
+- Ciclo completo: registar → aprovar → concluir → registar pilotagem
+- Manobras: entrada, saída, mudança de cais, fundeadouro
+- Planeamento e edição de manobras com histórico de alterações
+- Arquivo operacional tipo Excel com pesquisa e exportação CSV
+
+### Motor de Cálculo de Custos
+- Fórmula oficial de pilotagem: T = UP × GT (tarifário Setúbal 2024)
+- UP normal: 9.2578 €/GT | mudança: 3.3628 €/GT
+- Agravamentos (+25%): sem propulsão, assistência especial
+- Reduções: -25% linha regular, -10% cabotagem, -30% escala técnica
+- TUP estimada, pilotagem à ordem, cancelamentos
+- Simulador interativo no arquivo de manobras
+- API: `POST /api/cost/estimate` e `GET /api/cost/quick`
+
+### Chatbot RAG
+- Assistente com pesquisa semântica na base documental
+- Widget flutuante disponível em todas as páginas
+- Contexto operacional automático (escalas, manobras, custos, marés, meteo)
+- Ações operacionais via chat (criar escalas, aprovar manobras)
+- Feedback operacional (aprovar/rever respostas)
+- Arquivo de conversas
+- Respeita privilégios de cada perfil (admin, agente, piloto)
+
+### Autenticação e Segurança
+- 3 perfis: admin (único), agente de navegação, piloto
+- Passwords com scrypt (Werkzeug)
+- Session cookies: HTTPOnly, SameSite=Lax, Secure em produção
+- Security headers: HSTS, X-Frame-Options, X-Content-Type-Options
+- Agente vê apenas escalas da sua agência
+- Sessão expira em 8 horas
+
+### Base Documental
+- Upload e indexação de documentos (PDF, DOCX, TXT, MD, CSV)
+- Embeddings semânticos via Gemini
+- Backend pgvector para pesquisa vetorial
+- Reindexação incremental com progresso em tempo real
+- Página admin dedicada para gestão documental
+
+## Arquitetura
+
+```
+app.py              — Flask application (routes, controllers)
+cost_engine.py      — Pilotage cost calculation engine
+rag_engine.py       — RAG engine (embeddings, retrieval, generation)
+chat_actions.py     — Chatbot operational actions (create, approve, etc.)
+storage.py          — Data storage (JSON local + PostgreSQL)
+auth_service.py     — Authentication service
+weather_service.py  — WeatherAPI integration
+tide_service.py     — Tide data from CSV
+ais_service.py      — VesselFinder AIS embed
+vector_store.py     — pgvector index store
+knowledge/          — RAG knowledge base documents
+templates/          — Jinja2 HTML templates
+static/styles.css   — Professional dark nautical theme
+```
+
+## Como Correr
+
+### Desenvolvimento local
 
 ```bash
 python3 -m pip install -r requirements.txt
 cp .env.example .env
+# Editar .env com GEMINI_API_KEY, WEATHERAPI_KEY, etc.
 python3 app.py
 ```
 
-Depois abre `http://127.0.0.1:5000`.
+Abrir `http://127.0.0.1:5000`.
 
-## Como correr com Docker Compose
+### Docker Compose (com PostgreSQL + pgvector)
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Isto sobe:
+### Deploy no Railway
 
-- `web`: Flask
-- `db`: PostgreSQL com extensão `pgvector`
+O projecto inclui `Procfile`, `railway.toml` e `Dockerfile` prontos.
 
-Depois abre `http://127.0.0.1:5000`.
+Variáveis de ambiente necessárias no Railway:
+- `FLASK_SECRET_KEY` — chave secreta (gerar com `python -c "import secrets; print(secrets.token_hex(32))"`)
+- `DATABASE_URL` — PostgreSQL connection string
+- `GEMINI_API_KEY` — Google Gemini API key
+- `WEATHERAPI_KEY` — WeatherAPI.com key (opcional)
+- `FLASK_ENV` — `production`
 
-Se a porta `5000` já estiver ocupada no macOS, define por exemplo:
-
-```bash
-WEB_PORT=5001 docker compose up --build
-```
-
-e depois abre `http://127.0.0.1:5001`.
-
-O `docker-compose.yml` usa agora `WEB_PORT` tanto no host como dentro do container, por isso os logs do Flask também passam a mostrar a mesma porta.
-
-## Comandos rápidos
+## Criar Conta Admin
 
 ```bash
-make install
-make run
-make up
-make down
-make health
+python scripts/create_admin.py
 ```
 
-## Criar acessos
+Ou via Docker:
+```bash
+docker compose exec web python scripts/create_admin.py
+```
 
-1. cria a conta no registo do portal com o email que vais usar no login
-2. inicia sessão com esse email e a password da conta
-3. para promover uma conta existente a `admin` ou alterar o perfil:
+## Alternativas ao Gemini
+
+Ver `docs/LLM_ALTERNATIVES.md` para análise detalhada de custos e
+opções de migração (DeepSeek, embeddings locais, multi-provider).
+
+## Testes
 
 ```bash
-make admin EMAIL=operador@porto.pt
-make agente EMAIL=operador@porto.pt
-make piloto EMAIL=operador@porto.pt
+python -m pytest tests/ -v
 ```
 
-4. para criar logo uma conta `admin` por linha de comando:
+## Tecnologias
 
-```bash
-make create-admin EMAIL=admin@porto.pt PASSWORD='troca-esta-password'
-```
-
-O perfil `admin` não é criado pelo registo público.
-
-## Stack atual
-
-- `Supabase Auth` para login
-- `PostgreSQL` como storage principal
-- `pgvector` como índice vetorial principal
-- `Gemini` está ligado via `google-genai`.
-- `Cerebras`, APIs de marés e meteorologia e storage documental externo ficam como extensão futura.
-
-## RAG documental
-
-- a gestão documental (`upload`, edição, remoção e reindexação) fica reservada ao utilizador com papel `admin`
-- `agente` e `piloto` podem consultar os documentos e usar o chat, mas não alteram a base RAG
-- `RAG_REINDEX_ON_START=0` por omissão para evitar reindexações automáticas no arranque
-
-## Tipos de ficheiro suportados
-
-- `.pdf`
-- `.md`
-- `.txt`
-- `.docx`
-- `.csv`
-
-A pasta `knowledge/` é a fonte principal do RAG. Qualquer ficheiro suportado que coloques lá passa a ser sincronizado automaticamente pelo portal e entra no índice RAG sem precisares de o duplicar via upload.
-
-Os ficheiros carregados no portal também são guardados em `knowledge/`. Se já existir um ficheiro com o mesmo nome, o portal substitui-o em vez de criar cópias `-1`, `-2`, ...
-
-O ficheiro `knowledge/mares.2026.201.9_setubal_troia.csv` é tratado também como fonte estruturada de marés para o dashboard e para o contexto do chat.
-
-## Meteorologia
-
-Para ativar meteorologia ao vivo:
-
-```bash
-WEATHERAPI_KEY=...
-WEATHERAPI_LOCATION=Setubal
-```
-
-O portal usa a WeatherAPI para forecast em tempo real e injeta esse contexto no chatbot.
-
-## AIS
-
-Para ativar o mapa AIS no dashboard:
-
-```bash
-AIS_MAP_CENTER=[38.459517,-8.868642]
-AIS_MAP_ZOOM=11
-AIS_VESSELFINDER_NAMES=1
-AIS_PORT_LABEL="Porto de Setubal"
-```
-
-O portal usa o embed oficial do VesselFinder centrado em Setúbal e mostra-o no dashboard logo abaixo da faixa meteorológica.
-Nao ha chave, polling nem geracao local de ficheiro AIS: o mapa e carregado diretamente a partir do script publico `https://www.vesselfinder.com/aismap.js`.
-Se quiseres reposicionar a vista, ajusta `AIS_MAP_CENTER` e `AIS_MAP_ZOOM`.
-
-Se quiseres validar a configuracao AIS isoladamente:
-
-```bash
-python3 ais/ais.py
-```
-
-## Configuração principal
-
-```bash
-APP_STORAGE_BACKEND=postgres
-RAG_INDEX_BACKEND=pgvector
-DATABASE_URL=postgresql://rag:rag@localhost:5432/rag_portal
-EMBEDDING_BATCH_SIZE=32
-EMBEDDING_REQUESTS_PER_MINUTE=90
-EMBEDDING_REQUESTS_PER_DAY=900
-```
-
-Para contas Gemini em free tier, estes valores deixam margem para perguntas normais do chat sem esgotar facilmente a quota durante uma reindexação. Se tiveres faturação ativa ou um tier superior, podes subir `EMBEDDING_REQUESTS_PER_MINUTE` e `EMBEDDING_REQUESTS_PER_DAY`.
-
-Schemas incluídos:
-
-- `sql/postgres_schema.sql`
-- `sql/pgvector_schema.sql`
-
-## Estrutura
-
-- `app.py`: rotas web, sessão e API de chat
-- `auth_service.py`: autenticação local com hashing seguro de passwords
-- `document_processing.py`: upload, sanitização e extração de texto
-- `storage.py`: persistência aplicacional
-- `vector_store.py`: índice vetorial
-- `rag_engine.py`: chunking, embeddings, retrieval e geração com citações
-- `knowledge/`: documentos para o RAG
-- `data/`: dados locais auxiliares
-- `docker-compose.yml`: stack local com `web + postgres + pgvector`
-
-## Conversas por sessão
-
-- cada conversa tem um `conversation_id`
-- o título é criado a partir da primeira pergunta do utilizador
-- o histórico fica separado por conversa e reaproveitado no prompt seguinte
-
-## Citações
-
-- o RAG gera fontes com ids `[S1]`, `[S2]`, ...
-- a interface guarda e mostra os chunks usados em cada resposta
-
-## Feedback e fiabilidade
-
-- cada resposta do assistente pode ser marcada como `Aprovar` ou `Pedir revisão`
-- podes deixar uma nota operacional para explicar quando aquela resposta deve ser reutilizada
-- se a mesma pergunta voltar a aparecer, o portal reaproveita automaticamente a resposta aprovada
-- para perguntas parecidas, o feedback aprovado entra no prompt como memória operacional validada
-
-## Página admin
-
-- `admin` passa a ter acesso a `Estado da plataforma`
-- mostra backend ativo, estado da base, `pgvector` e estado do índice RAG
+- **Backend:** Flask, gunicorn, PostgreSQL, pgvector
+- **LLM:** Google Gemini (configurável)
+- **Frontend:** HTML/CSS/JS vanilla, tema dark náutico
+- **Tipografia:** DM Serif Display + DM Sans (Google Fonts)
+- **Deploy:** Docker, Railway, Heroku-compatible

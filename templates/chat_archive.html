@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Assistente</p>
+        <h1>Conversas</h1>
+        <p class="lead">Arquivo de todas as conversas com o assistente operacional. Abre, renomeia ou elimina conversas.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        <form method="post" action="{{ url_for('create_conversation') }}" style="display:inline">
+          <button type="submit" class="mini-button">Nova conversa</button>
+        </form>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Conversas</span>
+        <strong>{{ conversations|length }}</strong>
+        <small>registadas</small>
+      </article>
+      <article class="hero-stat">
+        <span>Conversa ativa</span>
+        <strong>{{ current_conversation.title }}</strong>
+        <small>{{ current_conversation.updated_at_label }}</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Arquivo</p>
+        <h2>Todas as conversas</h2>
+      </div>
+    </div>
+
+    <div class="chat-archive-list">
+      {% for conv in conversations %}
+        <article class="chat-archive-card {{ 'chat-archive-active' if conv.id == current_conversation.id }}">
+          <div class="chat-archive-head">
+            <div>
+              <h3>{{ conv.title }}</h3>
+              <span class="muted">{{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
+            </div>
+            {% if conv.id == current_conversation.id %}
+              <span class="ops-pill ops-pill-strong">Ativa</span>
+            {% endif %}
+          </div>
+          <div class="chat-archive-actions">
+            <a class="inline-link" href="{{ url_for('dashboard', conversation_id=conv.id) }}">Abrir no quadro</a>
+            <form method="post" action="{{ url_for('rename_conversation', conversation_id=conv.id) }}" class="chat-archive-rename">
+              <input type="text" name="title" value="{{ conv.title }}" required>
+              <button type="submit" class="mini-button secondary-button">Renomear</button>
+            </form>
+            <form method="post" action="{{ url_for('clear_conversation', conversation_id=conv.id) }}">
+              <button type="submit" class="mini-button secondary-button">Limpar</button>
+            </form>
+            <form method="post" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}">
+              <button type="submit" class="mini-button danger-button">Apagar</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <article class="ops-empty">
+          <p>Sem conversas registadas.</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if messages %}
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Conversa ativa</p>
+          <h2>{{ current_conversation.title }}</h2>
+        </div>
+      </div>
+      <div class="chat-archive-messages">
+        {% for msg in messages %}
+          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}">
+            <p>{{ msg.content }}</p>
+            {% if msg.citations %}
+              <details class="chatbot-citations">
+                <summary>Fontes</summary>
+                {% for c in msg.citations %}
+                  <span class="chatbot-citation-tag">{{ c.document }}</span>
+                {% endfor %}
+              </details>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}
