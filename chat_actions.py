@@ -181,7 +181,7 @@ PENDING_UPDATE_FIELD_ALIASES = {
         "hora de marcação",
     ],
     "notes": ["notes", "nota", "observacoes", "observações"],
-    "berth": ["cais previsto", "planned_quay", "planned_berth", "quay", "berth", "pier"],
+    "berth": ["cais previsto", "cais", "planned_quay", "planned_berth", "quay", "berth", "pier"],
     "destination_berth": ["cais destino", "destination_quay", "destination_berth", "destination_pier"],
     "origin_berth": ["cais origem", "origin_quay", "origin_berth", "origin_pier"],
     "next_port": ["proximo porto", "próximo porto", "next_port", "port_of_destination"],
@@ -190,6 +190,17 @@ PENDING_UPDATE_FIELD_ALIASES = {
     "planned_departure_at_local": ["etd", "planned_departure_at_local"],
     "draft_m": ["calado", "draft_m", "draught", "draft"],
     "tug_count": ["rebocadores", "tug_count", "tugs"],
+    # Vessel data fields (for create_port_call)
+    "vessel_name": ["nome do navio", "nome navio", "vessel_name", "navio"],
+    "vessel_imo": ["imo", "vessel_imo"],
+    "vessel_call_sign": ["indicativo", "call_sign", "vessel_call_sign", "callsign"],
+    "vessel_flag": ["bandeira", "flag", "vessel_flag"],
+    "vessel_type": ["tipo de navio", "tipo navio", "vessel_type", "tipo"],
+    "vessel_loa_m": ["loa", "loa (m)", "vessel_loa_m", "comprimento"],
+    "vessel_beam_m": ["boca", "boca (m)", "beam", "vessel_beam_m", "largura"],
+    "vessel_gt_t": ["gt", "gt (t)", "vessel_gt_t", "arqueacao bruta", "arqueação bruta"],
+    "vessel_dwt_t": ["dwt", "dwt (t)", "vessel_dwt_t", "deadweight"],
+    "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "max_draft", "vessel_max_draft_m"],
 }
 FIELD_ALIASES = {
     "name": "vessel_name",

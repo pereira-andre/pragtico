@@ -1180,6 +1180,40 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
     if not clean:
         return None
 
+    # --- DETECT create_port_call (registar escala) ---
+    if re.search(r"\b(registar escala|nova escala|criar escala|register scale)\b", clean):
+        from chat_actions import (
+            _extract_labelled_values,
+            normalize_action_candidate,
+        )
+        extracted = _extract_labelled_values(question)
+        # Get vessel name from extracted or from the text
+        vessel_name = extracted.pop("vessel_name", "")
+        maneuver_type = "entry"
+        if re.search(r"\b(saida|saída|departure)\b", clean):
+            maneuver_type = "departure"
+        elif re.search(r"\b(mudanca|mudança|shift)\b", clean):
+            maneuver_type = "shift"
+
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "create_port_call",
+                "confidence": 0.99,
+                "reason": "Heurística: registo de escala com campos extraídos da mensagem.",
+                "target": {
+                    "vessel_name": vessel_name,
+                    "maneuver_type": maneuver_type,
+                },
+                "fields": extracted,
+                "missing_fields": [],
+            },
+            role,
+        )
+        if proposal and proposal.get("intent") == "action":
+            return proposal
+        return None
+
     wants_previsto = bool(re.search(r"\b(previsto|prevista|planeado|planeada)\b", clean))
 
     # Detect the intended verb (approve, abort, confirm)
