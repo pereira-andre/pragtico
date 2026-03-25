@@ -521,15 +521,15 @@ body {
   padding: 16px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ops-card-departed {
-  background: rgba(247, 241, 234, 0.86);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .ops-card-event {
-  background: rgba(248, 250, 248, 0.92);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ops-card h3,
@@ -557,7 +557,7 @@ body {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(10, 108, 102, 0.1);
+  background: rgba(26, 159, 255, 0.15);
   color: var(--accent-strong);
   font-size: 0.76rem;
   font-weight: 700;
@@ -655,7 +655,7 @@ body {
   padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .planned-day-card span {
@@ -751,7 +751,7 @@ body {
   padding: 14px;
   border-radius: 18px;
   border: 1px solid rgba(8, 67, 63, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .planning-register-row {
@@ -917,14 +917,14 @@ body {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgba(240, 235, 228, 0.96);
+  background: rgba(255, 255, 255, 0.05);
   font-size: 0.8rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .planned-row td {
-  background: rgba(255, 255, 255, 0.78);
+  background: transparent;
 }
 
 .planned-row-entry td:first-child {
@@ -940,19 +940,19 @@ body {
 }
 
 .planned-row-completed td {
-  background: rgba(236, 247, 240, 0.88);
+  background: rgba(34, 197, 94, 0.06);
 }
 
 .planned-row-approved td {
-  background: rgba(232, 243, 242, 0.9);
+  background: rgba(26, 159, 255, 0.06);
 }
 
 .planned-row-pending td {
-  background: rgba(252, 248, 238, 0.92);
+  background: rgba(245, 158, 11, 0.06);
 }
 
 .planned-row-aborted td {
-  background: rgba(255, 240, 235, 0.92);
+  background: rgba(239, 68, 68, 0.06);
 }
 
 .planned-status {
@@ -1812,7 +1812,7 @@ body {
 .reindex-meta-grid span {
   padding: 5px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(29, 44, 43, 0.08);
 }
 
@@ -1862,7 +1862,7 @@ body {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(29, 44, 43, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .reindex-doc-row-head {
@@ -1972,7 +1972,7 @@ body {
 }
 
 .admin-status-panel .section-panel {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .admin-status-panel .mini-card {
@@ -2658,7 +2658,7 @@ button:hover {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .citation-head,
@@ -2697,7 +2697,7 @@ button:hover {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(240, 235, 228, 0.72);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .feedback-head,
@@ -4571,4 +4571,68 @@ details summary {
 
 .planned-table-toolbar h3 {
   color: var(--text-strong) !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FINAL CONTRAST FIXES — ensure all text is readable
+   ══════════════════════════════════════════════════════════ */
+
+/* Day strip cards */
+.planned-day-card {
+  background: rgba(26, 159, 255, 0.08) !important;
+  border-color: rgba(26, 159, 255, 0.2) !important;
+}
+
+.planned-day-card span {
+  color: var(--muted) !important;
+}
+
+.planned-day-card strong {
+  color: var(--text-strong) !important;
+}
+
+/* Planned table: force all text white */
+.planned-table tbody td {
+  color: var(--text) !important;
+}
+
+.planned-table tbody td a {
+  color: var(--accent) !important;
+}
+
+.planned-table tbody td strong {
+  color: var(--text-strong) !important;
+}
+
+/* Vessel type text in table */
+.planned-vessel-type span {
+  color: var(--text) !important;
+}
+
+/* All inline-link must be visible */
+.inline-link {
+  color: var(--accent) !important;
+}
+
+/* All muted text */
+.muted {
+  color: var(--muted) !important;
+}
+
+/* Chatbot icons — make visible on dark */
+.chatbot-icon-btn {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.chatbot-icon-btn svg {
+  stroke: currentColor !important;
+}
+
+/* Hero footer text */
+.hero-footer p {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.hero-footer strong {
+  color: rgba(255, 255, 255, 0.9) !important;
 }

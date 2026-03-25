@@ -142,9 +142,19 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if api_key:
             try:
                 from openai import OpenAI
+
+                # OpenRouter requires extra headers for authentication
+                extra_headers = {}
+                if "openrouter" in base_url.lower():
+                    extra_headers = {
+                        "HTTP-Referer": os.getenv("OPENROUTER_REFERER", "https://pragtico.up.railway.app"),
+                        "X-Title": os.getenv("OPENROUTER_TITLE", "PRAGtico"),
+                    }
+
                 self.client = OpenAI(
                     api_key=api_key,
                     base_url=base_url,
+                    default_headers=extra_headers if extra_headers else None,
                 )
             except ImportError:
                 logger.warning(

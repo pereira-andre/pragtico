@@ -54,7 +54,12 @@ echo -e "${GREEN}✓${NC} .env presente"
 mkdir -p data knowledge
 echo -e "${GREEN}✓${NC} Directórios data/ e knowledge/ prontos"
 
-# 6) Verificar API keys
+# 6) Criar admin se não existir
+echo -e "${YELLOW}→ A verificar conta admin ...${NC}"
+python3 scripts/seed_admin.py 2>&1
+echo -e "${GREEN}✓${NC} Admin verificado"
+
+# 7) Verificar API keys
 source .env 2>/dev/null || true
 if [ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${GEMINI_API_KEY:-}" ]; then
     echo -e "${YELLOW}⚠  Sem API key LLM definida no .env${NC}"
