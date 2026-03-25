@@ -4403,3 +4403,172 @@ details summary {
     align-items: flex-start;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   CRITICAL CONTRAST FIXES — Dark Theme Readability
+   ══════════════════════════════════════════════════════════ */
+
+/* --- Planned table rows: remove light backgrounds, ensure text is readable --- */
+.planned-row td {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+.planned-row-completed td {
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+.planned-row-approved td {
+  background: rgba(26, 159, 255, 0.06) !important;
+}
+
+.planned-row-pending td {
+  background: rgba(245, 158, 11, 0.06) !important;
+}
+
+.planned-row-aborted td {
+  background: rgba(239, 68, 68, 0.06) !important;
+}
+
+.planned-row td a {
+  color: var(--accent) !important;
+}
+
+.planned-row td strong {
+  color: var(--text-strong) !important;
+}
+
+.planned-row td .muted {
+  color: var(--muted) !important;
+}
+
+/* Colored left border for manoeuvre types */
+.planned-row-entry td:first-child {
+  box-shadow: inset 4px 0 0 #22c55e !important;
+}
+
+.planned-row-departure td:first-child {
+  box-shadow: inset 4px 0 0 #ef4444 !important;
+}
+
+.planned-row-shift td:first-child {
+  box-shadow: inset 4px 0 0 #f59e0b !important;
+}
+
+/* Table header */
+.planned-table thead th {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--muted) !important;
+}
+
+/* --- Ops cards (arrivals / departures): fix invisible text --- */
+.ops-card,
+.berth-card,
+.ops-empty {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text) !important;
+}
+
+.ops-card:hover,
+.berth-card:hover {
+  background: rgba(26, 159, 255, 0.06) !important;
+}
+
+.ops-card-departed {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.ops-card h3 {
+  color: var(--text-strong) !important;
+}
+
+.ops-card h3 a,
+.ops-card h3 .inline-link {
+  color: var(--accent) !important;
+}
+
+.ops-card p {
+  color: var(--text) !important;
+}
+
+.ops-card p strong {
+  color: var(--text-strong) !important;
+}
+
+.ops-card .muted {
+  color: var(--muted) !important;
+}
+
+/* --- Traffic columns (arrivals / departures sections) --- */
+.traffic-column {
+  background: transparent !important;
+}
+
+.traffic-column-departed {
+  background: transparent !important;
+}
+
+.traffic-head {
+  color: var(--text-strong) !important;
+}
+
+.traffic-head h3 {
+  color: var(--text-strong) !important;
+}
+
+/* --- Planned note and detail cells --- */
+.planned-note {
+  color: var(--muted) !important;
+}
+
+.planned-detail-cell {
+  color: var(--text) !important;
+}
+
+.planned-detail-cell .inline-link {
+  color: var(--accent) !important;
+}
+
+.planned-empty {
+  color: var(--muted) !important;
+}
+
+/* --- Berth cards and vessels --- */
+.berth-card-wide,
+.berth-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text) !important;
+}
+
+.berth-card strong a,
+.berth-card-wide strong a {
+  color: var(--accent) !important;
+}
+
+/* --- Planned vessel type images --- */
+.planned-vessel-type img {
+  filter: brightness(1.4) !important;
+}
+
+.planned-vessel-type span {
+  color: var(--text) !important;
+}
+
+/* --- Ops tag readability --- */
+.ops-tag {
+  background: rgba(26, 159, 255, 0.15) !important;
+  color: var(--accent) !important;
+}
+
+/* --- Legend area --- */
+.planned-legend {
+  color: var(--text) !important;
+}
+
+.planned-table-toolbar {
+  color: var(--text) !important;
+}
+
+.planned-table-toolbar h3 {
+  color: var(--text-strong) !important;
+}
