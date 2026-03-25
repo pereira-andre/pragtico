@@ -8,11 +8,13 @@ from typing import Dict, List, Optional
 
 
 ACTION_SPECS = {
+    # --- Escala (port_call) ---
     "create_port_call": {
         "label": "Registar escala",
         "roles": {"admin", "agente"},
         "requires_target": False,
     },
+    # --- Entrada ---
     "approve_entry": {
         "label": "Aprovar entrada",
         "roles": {"admin", "piloto"},
@@ -23,16 +25,12 @@ ACTION_SPECS = {
         "roles": {"admin", "agente"},
         "requires_target": True,
     },
-    "complete_entry": {
-        "label": "Confirmar entrada",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
     "entry_report": {
-        "label": "Registar relatório de entrada",
+        "label": "Registar manobra de entrada",
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
+    # --- Saída ---
     "schedule_departure": {
         "label": "Planear saída",
         "roles": {"admin", "agente"},
@@ -44,20 +42,16 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_departure": {
-        "label": "Cancelar saída",
+        "label": "Abortar saída",
         "roles": {"admin", "agente"},
         "requires_target": True,
     },
-    "complete_departure": {
-        "label": "Confirmar saída",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
     "departure_report": {
-        "label": "Registar relatório de saída",
+        "label": "Registar manobra de saída",
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
+    # --- Mudança de cais ---
     "schedule_shift": {
         "label": "Planear mudança",
         "roles": {"admin", "agente"},
@@ -69,28 +63,19 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_shift": {
-        "label": "Cancelar mudança",
+        "label": "Abortar mudança",
         "roles": {"admin", "agente"},
         "requires_target": True,
     },
-    "complete_shift": {
-        "label": "Confirmar mudança",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
     "shift_report": {
-        "label": "Registar relatório de mudança",
+        "label": "Registar manobra de mudança",
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
+    # --- Edição de planeamento ---
     "edit_maneuver_plan": {
         "label": "Editar planeamento",
         "roles": {"admin", "agente", "piloto"},
-        "requires_target": True,
-    },
-    "edit_maneuver_report": {
-        "label": "Editar registo",
-        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
 }
@@ -313,7 +298,6 @@ REQUIRED_FIELDS_BY_ACTION = {
     "schedule_departure": {"planned_departure_at_local", "next_port"},
     "schedule_shift": {"planned_shift_at_local", "destination_berth"},
     "edit_maneuver_plan": {"planned_at_local", "change_reason"},
-    "edit_maneuver_report": {"change_reason"},
 }
 DISPLAY_FIELD_LABELS = {
     "vessel_name": "nome do navio",
@@ -421,8 +405,8 @@ def canonicalize_action_name(raw_action: str, maneuver_type: str = "") -> str:
         "edit_plan": "edit_maneuver_plan",
         "update_plan": "edit_maneuver_plan",
         "edit_maneuver": "edit_maneuver_plan",
-        "edit_report": "edit_maneuver_report",
-        "update_report": "edit_maneuver_report",
+        "edit_report": "edit_maneuver_plan",
+        "update_report": "edit_maneuver_plan",
     }
     if clean_action in generic_aliases:
         return generic_aliases[clean_action]
@@ -440,7 +424,7 @@ def canonicalize_action_name(raw_action: str, maneuver_type: str = "") -> str:
             if family_name == "edit_plan":
                 return "edit_maneuver_plan"
             if family_name == "edit_report":
-                return "edit_maneuver_report"
+                return "edit_maneuver_plan"
     return clean_action
 
 
@@ -475,7 +459,7 @@ def normalize_action_fields(action: str, fields: Dict) -> Dict:
     _consume(fields or {})
 
     if "reason" in normalized:
-        if action in {"edit_maneuver_plan", "edit_maneuver_report"} and not normalized.get("change_reason"):
+        if action == "edit_maneuver_plan" and not normalized.get("change_reason"):
             normalized["change_reason"] = normalized["reason"]
         elif action in {"abort_entry", "abort_departure", "abort_shift"} and not normalized.get("aborted_reason"):
             normalized["aborted_reason"] = normalized["reason"]
@@ -587,7 +571,7 @@ def merge_action_candidate(existing: Dict, updates: Dict, role: str) -> Optional
     existing_fields = existing.get("fields") or {}
     update_fields = dict(updates.get("fields") or {})
     update_reason = " ".join(str(updates.get("reason") or "").strip().split())
-    if action in {"edit_maneuver_plan", "edit_maneuver_report"} and update_reason:
+    if action == "edit_maneuver_plan" and update_reason:
         if not " ".join(str(update_fields.get("change_reason") or existing_fields.get("change_reason") or "").split()):
             update_fields["change_reason"] = update_reason
     elif action in {"abort_entry", "abort_departure", "abort_shift"} and update_reason:
@@ -736,7 +720,7 @@ Regras de saída:
 - `target.maneuver_type` deve ser entry, departure, shift ou vazio.
 - Em datas/horas operacionais, usa formato `YYYY-MM-DDTHH:MM` no fuso local.
 - Se a mensagem pedir alterar um planeamento existente, prefere `edit_maneuver_plan`.
-- Se a mensagem pedir rever um registo já concluído, prefere `edit_maneuver_report`.
+- Se a mensagem pedir rever um registo já concluído, prefere `edit_maneuver_plan`.
 - Em `fields.constraints`, devolve códigos válidos.
 
 Mensagem do utilizador:
@@ -921,16 +905,12 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str) -> Option
     if not history:
         return None
 
-    if action == "edit_maneuver_report":
-        valid_states = {"completed"}
-    elif action.endswith("_report"):
-        valid_states = {"completed"}
+    if action.endswith("_report"):
+        valid_states = {"approved", "completed"}
     elif action.startswith("approve_"):
         valid_states = {"pending"}
     elif action.startswith("abort_"):
         valid_states = {"pending", "approved"}
-    elif action.startswith("complete_"):
-        valid_states = {"approved"}
     elif action == "edit_maneuver_plan":
         valid_states = {"pending", "approved"}
     else:

@@ -1216,14 +1216,15 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
 
     wants_previsto = bool(re.search(r"\b(previsto|prevista|planeado|planeada)\b", clean))
 
-    # Detect the intended verb (approve, abort, confirm)
+    # Detect the intended verb
     action_verb = ""
     if re.search(r"\b(aprova|approve|aprovar|valida|validar|confirma|confirmar)\b", clean):
         action_verb = "approve"
     elif re.search(r"\b(aborta|abortar|cancela|cancelar|anula|anular)\b", clean):
         action_verb = "abort"
-    elif re.search(r"\b(realizada|concluida|concluído|completar|completa|fechar|fecha|concluir)\b", clean):
-        action_verb = "complete"
+    elif re.search(r"\b(regist|registar|registra|relatorio|relatório|realizada|concluida|concluído|fechar|fecha|concluir)\b", clean):
+        # "registar manobra" / "dar por realizada" → pilot report (auto-completes)
+        action_verb = "report"
     elif wants_previsto:
         action_verb = "approve"
     if not action_verb:
@@ -1239,17 +1240,22 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
         maneuver_type = "entry"
 
     # Build full action name from verb + manoeuvre type
-    # e.g. approve + departure = approve_departure, complete + shift = complete_shift
     action_suffix = maneuver_type or "entry"
-    action = f"{action_verb}_{action_suffix}"
+    if action_verb == "report":
+        # Reports use format: entry_report, departure_report, shift_report
+        action = f"{action_suffix}_report"
+    else:
+        # Other actions: approve_entry, abort_departure, etc.
+        action = f"{action_verb}_{action_suffix}"
 
-    # Map to valid ACTION_SPECS keys — some actions only exist for entry
-    # Valid: approve_entry, approve_departure, abort_entry, abort_departure,
-    #        complete_entry, complete_departure, complete_shift
+    # Validate against ACTION_SPECS
     from chat_actions import ACTION_SPECS
     if action not in ACTION_SPECS:
-        # Fallback: try with _entry suffix (most actions have entry variant)
-        action = f"{action_verb}_entry"
+        # Fallback: try with _entry suffix
+        if action_verb == "report":
+            action = "entry_report"
+        else:
+            action = f"{action_verb}_entry"
         if action not in ACTION_SPECS:
             return None
 
@@ -1529,9 +1535,6 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         "abort_entry",
         "abort_departure",
         "abort_shift",
-        "complete_entry",
-        "complete_departure",
-        "complete_shift",
         "entry_report",
         "departure_report",
         "shift_report",
@@ -1541,14 +1544,12 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
     if proposal.get("action") in {
         "approve_entry",
         "abort_entry",
-        "complete_entry",
         "entry_report",
     }:
         proposal["target"]["maneuver_type"] = "entry"
     elif proposal.get("action") in {
         "approve_departure",
         "abort_departure",
-        "complete_departure",
         "departure_report",
         "schedule_departure",
     }:
@@ -1556,15 +1557,11 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
     elif proposal.get("action") in {
         "approve_shift",
         "abort_shift",
-        "complete_shift",
         "shift_report",
         "schedule_shift",
     }:
         proposal["target"]["maneuver_type"] = "shift"
-    elif maneuver_type not in {"entry", "departure", "shift"} and proposal.get("action") in {
-        "edit_maneuver_plan",
-        "edit_maneuver_report",
-    }:
+    elif maneuver_type not in {"entry", "departure", "shift"} and proposal.get("action") == "edit_maneuver_plan":
         if inferred_type:
             proposal["target"]["maneuver_type"] = inferred_type
         else:
@@ -1579,16 +1576,13 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         "abort_entry",
         "abort_departure",
         "abort_shift",
-        "complete_entry",
-        "complete_departure",
-        "complete_shift",
         "entry_report",
         "departure_report",
         "shift_report",
     }:
         proposal["target"]["maneuver_type"] = inferred_type
 
-    if target and proposal.get("action") in {"edit_maneuver_plan", "edit_maneuver_report"}:
+    if target and proposal.get("action") in {"edit_maneuver_plan"}:
         maneuver = resolve_maneuver(
             store.get_port_call(target["id"]),
             proposal["action"],
@@ -1629,16 +1623,15 @@ def pending_action_override(question: str, pending_proposal: dict, role: str) ->
     if maneuver_type not in {"entry", "departure", "shift"}:
         return None
 
-    if re.search(r"\b(aprova|approve|aprovar)\b", clean):
+    if re.search(r"\b(aprova|approve|aprovar|confirma|confirmar)\b", clean):
         action = action_for_maneuver_type("approve_entry", maneuver_type)
     elif re.search(r"\b(aborta|cancela|anula)\b", clean):
         action = action_for_maneuver_type("abort_entry", maneuver_type)
-    elif re.search(r"\b(confirma|confirmar|concluir|conclui|fecha|fechar)\b", clean):
-        action = action_for_maneuver_type("complete_entry", maneuver_type)
     elif re.search(r"\b(previsto|prevista|planeado|planeada)\b", clean):
-        action = action_for_maneuver_type("complete_entry", maneuver_type)
-    elif re.search(r"\b(registo|registar|relatorio|relatorio|relatório)\b", clean):
-        action = action_for_maneuver_type("entry_report", maneuver_type)
+        action = action_for_maneuver_type("approve_entry", maneuver_type)
+    elif re.search(r"\b(regist|registar|relatorio|relatório|realizada|concluida|fechar|fecha|concluir)\b", clean):
+        maneuver_suffix = maneuver_type or "entry"
+        action = f"{maneuver_suffix}_report"
     else:
         return None
 
@@ -1757,6 +1750,16 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     fields = proposal.get("fields") or {}
     port_call_id = (proposal.get("port_call_id") or "").strip()
     role = (role or "").strip().lower()
+
+    # Redirect removed actions to their replacements
+    _action_redirects = {
+        "complete_entry": "approve_entry",
+        "complete_departure": "approve_departure",
+        "complete_shift": "approve_shift",
+        "edit_maneuver_report": "entry_report",
+    }
+    if action in _action_redirects:
+        action = _action_redirects[action]
 
     def apply_scope(port_call_id_value: str) -> dict:
         return action_target_port_call(port_call_id_value)
