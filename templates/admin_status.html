@@ -48,7 +48,7 @@
         </div>
       </div>
       <div class="card-grid architecture-grid">
-        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.gemini_ready else 'is-missing' }}"><h3>Gemini</h3><p>{{ "ok" if admin.config.gemini_ready else "em falta" }}</p></article>
+        <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.llm_ready else 'is-missing' }}"><h3>LLM</h3><p>{{ "ok" if admin.config.llm_ready else "em falta" }}</p></article>
         <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.weather_ready else 'is-missing' }}"><h3>WeatherAPI</h3><p>{{ "ok" if admin.config.weather_ready else "em falta" }}</p></article>
         <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.ais_ready else 'is-missing' }}"><h3>{{ admin.ais_status.provider_name }} AIS</h3><p>{{ "ok" if admin.config.ais_ready else "em falta" }}</p></article>
         <article class="mini-card mini-card-status {{ 'is-ok' if admin.config.database_url_ready else 'is-missing' }}"><h3>DATABASE_URL</h3><p>{{ "ok" if admin.config.database_url_ready else "em falta" }}</p></article>

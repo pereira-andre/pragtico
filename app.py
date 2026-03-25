@@ -592,7 +592,7 @@ def load_admin_status() -> dict:
         "storage_backend": getattr(store, "backend_name", "unknown"),
         "rag_backend": getattr(index_store, "backend_name", "unknown"),
         "config": {
-            "gemini_ready": bool(os.getenv("GEMINI_API_KEY", "").strip()),
+            "llm_ready": rag.client is not None,
             "weather_ready": bool(os.getenv("WEATHERAPI_KEY", "").strip()),
             "ais_ready": bool(ais_status.get("configured")),
             "database_url_ready": bool(database_url),
@@ -725,7 +725,7 @@ def current_reindex_status_payload() -> dict:
             if rag.is_embedding_quota_exhausted()
             else "Pesquisa semântica Gemini disponível."
             if rag.client
-            else "Pesquisa semântica indisponível: GEMINI_API_KEY em falta."
+            else "Pesquisa semântica indisponível: API key LLM em falta."
         ),
         "scheduled_retry_at": retry_status.get("scheduled_for"),
         "scheduled_retry_eta_seconds": retry_status.get("eta_seconds"),
@@ -3848,8 +3848,8 @@ def api_chat():
             },
         }
     elif answer is None:
-        if not os.getenv("GEMINI_API_KEY"):
-            return jsonify({"error": "Define a API key do LLM (GEMINI_API_KEY ou OPENROUTER_API_KEY) antes de usar o chatbot."}), 500
+        if not rag.client:
+            return jsonify({"error": "Define a API key do LLM antes de usar o chatbot."}), 500
         answer = rag.answer(
             question=question,
             role=session.get("role", "piloto"),
