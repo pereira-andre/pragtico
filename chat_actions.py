@@ -8,13 +8,13 @@ from typing import Dict, List, Optional
 
 
 ACTION_SPECS = {
-    # --- Escala (port_call) ---
+    # --- Escala (port_call) — Agente/Admin gerem ---
     "create_port_call": {
         "label": "Registar escala",
         "roles": {"admin", "agente"},
         "requires_target": False,
     },
-    # --- Entrada ---
+    # --- Entrada — Piloto/Admin operam ---
     "approve_entry": {
         "label": "Aprovar entrada",
         "roles": {"admin", "piloto"},
@@ -22,7 +22,7 @@ ACTION_SPECS = {
     },
     "abort_entry": {
         "label": "Abortar entrada",
-        "roles": {"admin", "agente"},
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "entry_report": {
@@ -30,7 +30,7 @@ ACTION_SPECS = {
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
-    # --- Saída ---
+    # --- Saída — Agente planeia, Piloto/Admin operam ---
     "schedule_departure": {
         "label": "Planear saída",
         "roles": {"admin", "agente"},
@@ -43,7 +43,7 @@ ACTION_SPECS = {
     },
     "abort_departure": {
         "label": "Abortar saída",
-        "roles": {"admin", "agente"},
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "departure_report": {
@@ -51,7 +51,7 @@ ACTION_SPECS = {
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
-    # --- Mudança de cais ---
+    # --- Mudança de cais — Agente planeia, Piloto/Admin operam ---
     "schedule_shift": {
         "label": "Planear mudança",
         "roles": {"admin", "agente"},
@@ -64,7 +64,7 @@ ACTION_SPECS = {
     },
     "abort_shift": {
         "label": "Abortar mudança",
-        "roles": {"admin", "agente"},
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "shift_report": {
@@ -72,10 +72,10 @@ ACTION_SPECS = {
         "roles": {"admin", "piloto"},
         "requires_target": True,
     },
-    # --- Edição de planeamento ---
+    # --- Edição de planeamento — Agente/Admin editam ---
     "edit_maneuver_plan": {
         "label": "Editar planeamento",
-        "roles": {"admin", "agente", "piloto"},
+        "roles": {"admin", "agente"},
         "requires_target": True,
     },
 }
@@ -84,8 +84,8 @@ GENERIC_ACTION_FAMILIES = (
     ("approve", "approve"),
     ("abort", "abort"),
     ("cancel", "abort"),
-    ("complete", "complete"),
-    ("confirm", "complete"),
+    ("complete", "approve"),
+    ("confirm", "approve"),
     ("report", "report"),
     ("edit_plan", "edit_plan"),
     ("edit_report", "edit_report"),
