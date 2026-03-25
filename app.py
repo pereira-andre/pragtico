@@ -628,30 +628,42 @@ maybe_run_startup_migration()
 
 
 def maybe_seed_admin() -> None:
-    """Create the default admin account on startup if ADMIN_EMAIL is set."""
-    admin_email = os.getenv("ADMIN_EMAIL", "").strip()
-    admin_password = os.getenv("ADMIN_PASSWORD", "").strip()
+    """Create the default admin account on startup.
+
+    Uses ADMIN_EMAIL / ADMIN_PASSWORD from environment, or defaults to
+    admin@porto.pt / 123456. Promotes existing users to admin and resets
+    password if needed.
+    """
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@porto.pt").strip().lower()
+    admin_password = os.getenv("ADMIN_PASSWORD", "123456").strip()
     if not admin_email:
         return
     try:
-        existing = store.get_user_profile(admin_email.lower())
+        existing = store.get_user_profile(admin_email)
         if existing:
+            # Ensure role is admin
             if (existing.get("role") or "").lower() != "admin":
-                store.set_user_role(admin_email.lower(), "admin")
-                app.logger.info("Admin promovido: %s", admin_email)
+                store.set_user_role(admin_email, "admin")
+                app.logger.info("[seed] Admin promovido: %s", admin_email)
+            # Always ensure password is correct
+            try:
+                store.reset_user_password(admin_email, admin_password)
+            except Exception:
+                pass
+            app.logger.info("[seed] Admin verificado: %s", admin_email)
             return
         store.create_user(
-            username=admin_email.lower(),
-            password=admin_password or "admin",
+            username=admin_email,
+            password=admin_password,
             role="admin",
             full_name="Administrador",
             organization="APSS",
-            email=admin_email.lower(),
+            email=admin_email,
             phone="",
         )
-        app.logger.info("Admin criado automaticamente: %s", admin_email)
+        app.logger.info("[seed] Admin criado: %s", admin_email)
     except Exception as exc:
-        app.logger.warning("Falha ao criar admin: %s", exc)
+        app.logger.warning("[seed] Falha ao criar admin: %s", exc)
 
 
 maybe_seed_admin()

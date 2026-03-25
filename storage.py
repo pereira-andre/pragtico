@@ -1819,6 +1819,10 @@ class BaseStore(ABC):
     def set_user_role(self, username: str, role: str) -> Dict:
         raise NotImplementedError
 
+    def reset_user_password(self, username: str, new_password: str) -> bool:
+        """Reset a user's password. Returns True if successful."""
+        raise NotImplementedError
+
     @abstractmethod
     def update_user_profile(
         self,
@@ -2487,6 +2491,18 @@ class LocalStore(BaseStore):
             raise ValueError("Utilizador não encontrado.")
         self._write_users(users)
         return {key: updated[key] for key in updated if key != "password_hash"}
+
+    def reset_user_password(self, username: str, new_password: str) -> bool:
+        username = _normalize_username(username)
+        if len(new_password) < 6:
+            raise ValueError("A password deve ter pelo menos 6 caracteres.")
+        users = self._read_users()
+        for user in users:
+            if user["username"] == username:
+                user["password_hash"] = generate_password_hash(new_password, method=PASSWORD_HASH_METHOD)
+                self._write_users(users)
+                return True
+        return False
 
     def delete_user(self, username: str) -> None:
         normalized_username = _normalize_username(username)
@@ -4238,6 +4254,19 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         if not row:
             raise ValueError("Utilizador não encontrado.")
         return _normalize_user_profile_payload(row)
+
+    def reset_user_password(self, username: str, new_password: str) -> bool:
+        username = _normalize_username(username)
+        if len(new_password) < 6:
+            raise ValueError("A password deve ter pelo menos 6 caracteres.")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE app_users SET password_hash = %s WHERE username = %s",
+                    (generate_password_hash(new_password, method=PASSWORD_HASH_METHOD), username),
+                )
+                conn.commit()
+                return cur.rowcount > 0
 
     def delete_user(self, username: str) -> None:
         normalized_username = _normalize_username(username)
