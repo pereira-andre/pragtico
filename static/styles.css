@@ -3136,6 +3136,13 @@ button:hover {
   transition: background 0.15s;
 }
 
+.chatbot-input button[type="submit"] svg {
+  stroke: #ffffff;
+  fill: none;
+  width: 18px;
+  height: 18px;
+}
+
 .chatbot-input button[type="submit"]:hover {
   background: var(--accent-strong);
 }

@@ -441,15 +441,22 @@ def session_profile_incomplete() -> bool:
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
+        is_api = request.path.startswith("/api/")
         if not session.get("username"):
+            if is_api:
+                return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
             return redirect(url_for("login"))
         if not ensure_session_user_profile():
+            if is_api:
+                return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
             flash("Sessao expirada. Inicia sessao novamente.", "error")
             return redirect(url_for("login"))
         if (
             session_profile_incomplete()
             and request.endpoint not in {"profile", "logout", "static", "image_asset"}
         ):
+            if is_api:
+                return jsonify({"error": "Completa o teu perfil antes de usar o sistema."}), 403
             return redirect(url_for("profile", next=request.full_path if request.query_string else request.path))
         return view(*args, **kwargs)
 
@@ -1818,7 +1825,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             actor_role=role,
             planned_at=parse_local_datetime_input(
                 planned_at_value or current_maneuver.get("planned_input_value") or current_maneuver.get("planned_at") or "",
-                "Hora de marcação",
             ),
             origin=require_form_text(
                 field_text("origin", current_maneuver.get("origin") or current_port_call.get("last_port", "")),
@@ -1834,7 +1840,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 
     if action == "create_port_call":
         eta = parse_local_datetime_input(field_text("eta_local"), "ETA")
-        booking_at = parse_optional_local_datetime_input(field_text("booking_local"), "Marcação")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
         draft_m = field_text("draft_m")
         tug_count = field_text("tug_count")
@@ -1858,7 +1863,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             vessel_dwt_t=require_form_text(field_text("vessel_dwt_t"), "DWT"),
             notes=build_entry_request_note(
                 {
-                    "booking_at": booking_at,
                     "draft_m": draft_m,
                     "tug_count": tug_count,
                     "constraints": constraints,
@@ -1933,7 +1937,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
-        booking_at = parse_optional_local_datetime_input(field_text("booking_local"), "Marcação")
         result = store.schedule_departure_plan(
             port_call_id=port_call_id,
             planned_departure_at=planned_departure_at,
@@ -1942,7 +1945,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             constraints=constraints,
             departure_plan_note=build_departure_plan_note(
                 {
-                    "booking_at": booking_at,
                     "draft_m": field_text("draft_m"),
                     "tug_count": field_text("tug_count"),
                     "constraints": constraints,
@@ -2008,7 +2010,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
-        booking_at = parse_optional_local_datetime_input(field_text("booking_local"), "Marcação")
         result = store.schedule_shift_plan(
             port_call_id=port_call_id,
             planned_shift_at=planned_shift_at,
@@ -2019,7 +2020,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
                 {
                     "origin_berth": field_text("origin_berth", port_call.get("berth", "")),
                     "destination_berth": field_text("destination_berth"),
-                    "booking_at": booking_at,
                     "draft_m": field_text("draft_m"),
                     "tug_count": field_text("tug_count"),
                     "constraints": constraints,
@@ -2116,7 +2116,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             actor_role=role,
             planned_at=parse_local_datetime_input(
                 field_text("planned_at_local", (maneuver or {}).get("planned_input_value", "")),
-                "Hora de marcação",
             ),
             origin=require_form_text(base_origin, "Origem"),
             destination=require_form_text(base_destination, "Destino"),
@@ -2455,7 +2454,6 @@ def build_entry_request_note(form_data: dict) -> str:
     return compact_multiline_note(
         "Registo do agente · Entrada",
         [
-            ("Marcação", format_note_datetime(form_data.get("booking_at", ""))),
             ("Calado", form_data.get("draft_m", "")),
             ("Rebocadores", form_data.get("tug_count", "")),
             ("Restrições", format_constraint_labels(form_data.get("constraints", []))),
@@ -2468,7 +2466,6 @@ def build_departure_plan_note(form_data: dict) -> str:
     return compact_multiline_note(
         "Registo do agente · Saída",
         [
-            ("Marcação", format_note_datetime(form_data.get("booking_at", ""))),
             ("Calado", form_data.get("draft_m", "")),
             ("Rebocadores", form_data.get("tug_count", "")),
             ("Restrições", format_constraint_labels(form_data.get("constraints", []))),
@@ -2483,7 +2480,6 @@ def build_shift_plan_note(form_data: dict) -> str:
         [
             ("Origem", form_data.get("origin_berth", "")),
             ("Destino", form_data.get("destination_berth", "")),
-            ("Marcação", format_note_datetime(form_data.get("booking_at", ""))),
             ("Calado", form_data.get("draft_m", "")),
             ("Rebocadores", form_data.get("tug_count", "")),
             ("Restrições", format_constraint_labels(form_data.get("constraints", []))),
@@ -2989,7 +2985,6 @@ def create_port_call():
             notes=build_entry_request_note(
                 {
                     **form_data,
-                    "booking_at": booking_at,
                     "draft_m": draft_m,
                     "tug_count": tug_count,
                 }
@@ -3067,7 +3062,6 @@ def schedule_departure_plan(port_call_id: str):
             constraints=request.form.getlist("constraints"),
             departure_plan_note=build_departure_plan_note(
                 {
-                    "booking_at": booking_at,
                     "draft_m": draft_m,
                     "constraints": request.form.getlist("constraints"),
                     "tug_count": tug_count,
@@ -3130,7 +3124,6 @@ def schedule_shift_plan(port_call_id: str):
                 {
                     "origin_berth": origin_berth,
                     "destination_berth": destination_berth,
-                    "booking_at": booking_at,
                     "draft_m": draft_m,
                     "constraints": request.form.getlist("constraints"),
                     "tug_count": tug_count,

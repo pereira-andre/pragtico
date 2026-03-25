@@ -452,11 +452,11 @@ def _maneuver_state_meta(maneuver_type: Optional[str], state: Optional[str]) -> 
     clean_type = _normalize_maneuver_type(maneuver_type)
     clean_state = (state or PORT_CALL_APPROVAL_PENDING).strip().lower()
     label = {
-        PORT_CALL_APPROVAL_PENDING: "Planeada" if clean_type != "entry" else "Pendente",
+        PORT_CALL_APPROVAL_PENDING: "Pendente",
         PORT_CALL_APPROVAL_APPROVED: "Aprovada",
         PORT_CALL_APPROVAL_ABORTED: "Abortada",
         "completed": "Realizada",
-    }.get(clean_state, "Planeada")
+    }.get(clean_state, "Pendente")
     css_class = {
         PORT_CALL_APPROVAL_PENDING: "pending",
         PORT_CALL_APPROVAL_APPROVED: "approved",
