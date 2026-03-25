@@ -536,7 +536,7 @@ def _latest_reportable_maneuver(history: List[Dict], maneuver_type: str) -> Opti
         item
         for item in history
         if _normalize_maneuver_type(item.get("type")) == clean_type
-        and item.get("state") == "completed"
+        and item.get("state") in ("completed", "approved")
         and not (item.get("report_note") or "").strip()
     ]
     if not filtered:
@@ -3268,7 +3268,11 @@ class LocalStore(BaseStore):
             current = _normalize_port_call_record(item)
             entry = _latest_reportable_maneuver(current.get("maneuver_history", []), "entry")
             if not entry:
-                raise ValueError("Só podes registar a entrada depois da manobra estar concluída.")
+                raise ValueError("Só podes registar a entrada depois da manobra estar aprovada.")
+            # Auto-complete: filing report on approved manoeuvre marks it completed
+            if entry.get("state") == "approved":
+                entry["state"] = "completed"
+                entry["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             entry["report_note"] = note
@@ -3312,7 +3316,10 @@ class LocalStore(BaseStore):
             current = _normalize_port_call_record(item)
             departure = _latest_reportable_maneuver(current.get("maneuver_history", []), "departure")
             if not departure:
-                raise ValueError("Só podes registar a saída depois da manobra estar concluída.")
+                raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
+            if departure.get("state") == "approved":
+                departure["state"] = "completed"
+                departure["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             departure["report_note"] = note
@@ -3511,7 +3518,10 @@ class LocalStore(BaseStore):
             current = _normalize_port_call_record(item)
             shift = _latest_reportable_maneuver(current.get("maneuver_history", []), "shift")
             if not shift:
-                raise ValueError("Só podes registar a mudança depois da manobra estar concluída.")
+                raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
+            if shift.get("state") == "approved":
+                shift["state"] = "completed"
+                shift["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             shift["report_note"] = note
@@ -5411,7 +5421,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         def mutator(current: Dict) -> Dict:
             shift = _latest_reportable_maneuver(current.get("maneuver_history", []), "shift")
             if not shift:
-                raise ValueError("Só podes registar a mudança depois da manobra estar concluída.")
+                raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
+            if shift.get("state") == "approved":
+                shift["state"] = "completed"
+                shift["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             shift["report_note"] = note
@@ -5563,7 +5576,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         def mutator(current: Dict) -> Dict:
             departure = _latest_reportable_maneuver(current.get("maneuver_history", []), "departure")
             if not departure:
-                raise ValueError("Só podes registar a saída depois da manobra estar concluída.")
+                raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
+            if departure.get("state") == "approved":
+                departure["state"] = "completed"
+                departure["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             departure["report_note"] = note

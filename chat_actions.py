@@ -189,7 +189,7 @@ PENDING_UPDATE_FIELD_ALIASES = {
     "eta_local": ["eta", "eta_local"],
     "planned_departure_at_local": ["etd", "planned_departure_at_local"],
     "draft_m": ["calado", "draft_m", "draught", "draft"],
-    "tug_count": ["rebocadores", "tug_count", "tugs"],
+    "tug_count": ["rebocadores", "reboques", "tug_count", "tugs", "numero de rebocadores"],
     # Vessel data fields (for create_port_call)
     "vessel_name": ["nome do navio", "nome navio", "vessel_name", "navio"],
     "vessel_imo": ["imo", "vessel_imo"],

@@ -4621,11 +4621,28 @@ details summary {
 
 /* Chatbot icons — make visible on dark */
 .chatbot-icon-btn {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.chatbot-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
 }
 
 .chatbot-icon-btn svg {
-  stroke: currentColor !important;
+  stroke: #ffffff !important;
+  fill: none !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 /* Hero footer text */

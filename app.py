@@ -1218,14 +1218,14 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
 
     # Detect the intended verb (approve, abort, confirm)
     action_verb = ""
-    if re.search(r"\b(aprova|approve|aprovar|valida|validar)\b", clean):
+    if re.search(r"\b(aprova|approve|aprovar|valida|validar|confirma|confirmar)\b", clean):
         action_verb = "approve"
     elif re.search(r"\b(aborta|abortar|cancela|cancelar|anula|anular)\b", clean):
         action_verb = "abort"
-    elif re.search(r"\b(confirma|confirmar|fechar|fecha|completa|completar|realizada|concluida)\b", clean):
+    elif re.search(r"\b(realizada|concluida|concluído|completar|completa|fechar|fecha|concluir)\b", clean):
         action_verb = "complete"
     elif wants_previsto:
-        action_verb = "complete"
+        action_verb = "approve"
     if not action_verb:
         return None
 
