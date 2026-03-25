@@ -139,7 +139,7 @@ body {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .auth-form-head {
@@ -188,7 +188,7 @@ body {
   padding: 16px;
   border: 1px solid rgba(8, 67, 63, 0.12);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
 }
 
@@ -316,7 +316,7 @@ body {
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ais-map-frame {
@@ -343,7 +343,7 @@ body {
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ais-ship-card span {
@@ -430,11 +430,11 @@ body {
   padding: 18px;
   border-radius: 20px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .traffic-column-departed {
-  background: linear-gradient(180deg, rgba(179, 66, 42, 0.05), rgba(255, 255, 255, 0.7));
+  background: rgba(179, 66, 42, 0.04);
 }
 
 .traffic-head {
@@ -498,7 +498,7 @@ body {
   margin-top: 4px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
@@ -593,7 +593,7 @@ body {
   padding: 12px 16px;
   border-radius: 20px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .berth-list-wide {
@@ -603,7 +603,7 @@ body {
 
 .berth-card-wide {
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.05);
   gap: 6px;
 }
 
@@ -684,7 +684,7 @@ body {
 }
 
 .planned-side-stack > .ops-form-card {
-  background: rgba(245, 241, 234, 0.96);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(29, 44, 43, 0.1);
 }
 
@@ -701,7 +701,7 @@ body {
   border-radius: 20px;
   border: 1px solid var(--line);
   background:
-    linear-gradient(135deg, rgba(10, 108, 102, 0.1), rgba(255, 255, 255, 0.55));
+    linear-gradient(135deg, rgba(10, 108, 102, 0.1), rgba(255, 255, 255, 0.04));
 }
 
 .planned-table-copy {
@@ -733,7 +733,7 @@ body {
   gap: 18px;
   padding: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(243, 238, 230, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
 }
 
 .planning-register-grid {
@@ -772,7 +772,7 @@ body {
 }
 
 .planning-register-empty {
-  background: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .planning-scale-link,
@@ -796,7 +796,7 @@ body {
 }
 
 .planning-candidate-card {
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.05);
   gap: 14px;
 }
 
@@ -847,7 +847,7 @@ body {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
 }
 
@@ -867,7 +867,7 @@ body {
 .planning-optional-box {
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
@@ -887,7 +887,7 @@ body {
   overflow: auto;
   border-radius: 20px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .archive-search-field {
@@ -1048,7 +1048,7 @@ body {
   height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(8, 67, 63, 0.12);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .planned-note {
@@ -1150,7 +1150,7 @@ body {
 
 .scale-actions-panel {
   background:
-    linear-gradient(180deg, rgba(10, 108, 102, 0.06), rgba(255, 255, 255, 0.78));
+    rgba(10, 108, 102, 0.04);
 }
 
 .scale-actions-grid {
@@ -1161,7 +1161,7 @@ body {
 
 .scale-action-card {
   align-content: start;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .scale-action-card strong {
@@ -1177,7 +1177,7 @@ body {
 .scale-summary-panel,
 .scale-maneuvers-panel {
   background:
-    linear-gradient(180deg, rgba(10, 108, 102, 0.04), rgba(255, 255, 255, 0.68));
+    linear-gradient(180deg, rgba(10, 108, 102, 0.04), rgba(255, 255, 255, 0.04));
 }
 
 .scale-summary-grid {
@@ -1206,7 +1206,7 @@ body {
   padding: 18px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .scale-maneuver-top,
@@ -1265,7 +1265,7 @@ body {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .scale-fact-row span {
@@ -1339,7 +1339,7 @@ body {
   border: 1px solid var(--line);
   text-decoration: none;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .conversation-chip span {
@@ -1477,13 +1477,13 @@ body {
 
 .weather-head-cell,
 .weather-neutral {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .weather-dir-cell {
   display: grid;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .weather-dir-cell small {
@@ -1501,7 +1501,7 @@ body {
   margin-top: 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
@@ -1528,7 +1528,7 @@ body {
   padding: 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .weather-hour-card span {
@@ -1595,7 +1595,7 @@ body {
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .mini-card-status {
@@ -1612,7 +1612,7 @@ body {
 }
 
 .mini-card-status.is-ok {
-  background: linear-gradient(160deg, rgba(230, 247, 236, 0.95), rgba(255, 255, 255, 0.88));
+  background: rgba(34, 197, 94, 0.06);
   border-color: rgba(44, 138, 87, 0.2);
 }
 
@@ -1621,7 +1621,7 @@ body {
 }
 
 .mini-card-status.is-missing {
-  background: linear-gradient(160deg, rgba(255, 239, 232, 0.96), rgba(255, 255, 255, 0.88));
+  background: rgba(239, 68, 68, 0.06);
   border-color: rgba(179, 66, 42, 0.2);
 }
 
@@ -1667,7 +1667,7 @@ body {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .doc-card p,
@@ -1729,7 +1729,7 @@ body {
   margin-bottom: 14px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .reindex-status-card.is-running {
@@ -1928,7 +1928,7 @@ body {
 .doc-card-compact {
   padding: 12px 14px;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .doc-card-compact p {
@@ -1977,7 +1977,7 @@ body {
 
 .admin-status-panel .mini-card {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 243, 237, 0.88));
+    rgba(255, 255, 255, 0.04);
   border-color: rgba(29, 44, 43, 0.08);
   box-shadow: 0 14px 32px rgba(29, 44, 43, 0.05);
 }
@@ -2006,7 +2006,7 @@ body {
   display: block;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(29, 44, 43, 0.06);
   color: var(--text);
 }
@@ -2032,7 +2032,7 @@ body {
   padding: 7px 11px;
   border-radius: 999px;
   border: 1px solid rgba(29, 44, 43, 0.08);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -2046,7 +2046,7 @@ body {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(29, 44, 43, 0.08);
 }
 
@@ -2065,7 +2065,7 @@ body {
   border: 1px solid rgba(29, 44, 43, 0.08);
   background:
     radial-gradient(circle at top right, rgba(10, 108, 102, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 246, 240, 0.92));
+    rgba(255, 255, 255, 0.04);
   box-shadow: 0 18px 42px rgba(29, 44, 43, 0.08);
 }
 
@@ -2108,9 +2108,9 @@ body {
   margin-top: 6px;
   border-radius: 16px;
   border: 1px solid rgba(29, 44, 43, 0.1);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.06);
   padding: 12px 14px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   min-width: min(420px, 100%);
 }
 
@@ -2183,7 +2183,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.05);
   color: inherit;
   font-size: 1rem;
   line-height: 1;
@@ -2249,10 +2249,10 @@ body {
 .admin-user-grid select {
   border-radius: 16px;
   border: 1px solid rgba(29, 44, 43, 0.12);
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.06);
   padding: 12px 14px;
   color: var(--text);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .admin-user-grid input:disabled,
@@ -2376,7 +2376,7 @@ select {
   border: 1px solid rgba(8, 67, 63, 0.18);
   border-radius: 14px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
 }
 
@@ -2474,7 +2474,7 @@ button:hover {
 }
 
 .bubble-assistant {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .bubble-role {
@@ -2499,7 +2499,7 @@ button:hover {
   padding: 16px 18px;
   border-radius: 18px;
   border: 1px solid rgba(10, 108, 102, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(239, 247, 245, 0.95));
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .pending-action-head,
@@ -2576,7 +2576,7 @@ button:hover {
 }
 
 .conversation-form input {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 10px 12px;
 }
@@ -2731,7 +2731,7 @@ button:hover {
 .feedback-note {
   min-height: 64px;
   resize: vertical;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .user-row {
@@ -2742,7 +2742,7 @@ button:hover {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .status-box {
@@ -3029,7 +3029,7 @@ button:hover {
 
 .chatbot-bubble-assistant {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--line);
   border-bottom-left-radius: 4px;
 }
@@ -3160,7 +3160,7 @@ button:hover {
 }
 
 .berth-group-compact {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -4405,251 +4405,58 @@ details summary {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CRITICAL CONTRAST FIXES — Dark Theme Readability
-   ══════════════════════════════════════════════════════════ */
-
-/* --- Planned table rows: remove light backgrounds, ensure text is readable --- */
-.planned-row td {
-  background: transparent !important;
-  color: var(--text) !important;
-}
-
-.planned-row-completed td {
-  background: rgba(34, 197, 94, 0.06) !important;
-}
-
-.planned-row-approved td {
-  background: rgba(26, 159, 255, 0.06) !important;
-}
-
-.planned-row-pending td {
-  background: rgba(245, 158, 11, 0.06) !important;
-}
-
-.planned-row-aborted td {
-  background: rgba(239, 68, 68, 0.06) !important;
-}
-
-.planned-row td a {
-  color: var(--accent) !important;
-}
-
-.planned-row td strong {
-  color: var(--text-strong) !important;
-}
-
-.planned-row td .muted {
-  color: var(--muted) !important;
-}
-
-/* Colored left border for manoeuvre types */
-.planned-row-entry td:first-child {
-  box-shadow: inset 4px 0 0 #22c55e !important;
-}
-
-.planned-row-departure td:first-child {
-  box-shadow: inset 4px 0 0 #ef4444 !important;
-}
-
-.planned-row-shift td:first-child {
-  box-shadow: inset 4px 0 0 #f59e0b !important;
-}
-
-/* Table header */
-.planned-table thead th {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--muted) !important;
-}
-
-/* --- Ops cards (arrivals / departures): fix invisible text --- */
-.ops-card,
-.berth-card,
-.ops-empty {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: var(--text) !important;
-}
-
-.ops-card:hover,
-.berth-card:hover {
-  background: rgba(26, 159, 255, 0.06) !important;
-}
-
-.ops-card-departed {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-.ops-card h3 {
-  color: var(--text-strong) !important;
-}
-
-.ops-card h3 a,
-.ops-card h3 .inline-link {
-  color: var(--accent) !important;
-}
-
-.ops-card p {
-  color: var(--text) !important;
-}
-
-.ops-card p strong {
-  color: var(--text-strong) !important;
-}
-
-.ops-card .muted {
-  color: var(--muted) !important;
-}
-
-/* --- Traffic columns (arrivals / departures sections) --- */
-.traffic-column {
-  background: transparent !important;
-}
-
-.traffic-column-departed {
-  background: transparent !important;
-}
-
-.traffic-head {
-  color: var(--text-strong) !important;
-}
-
-.traffic-head h3 {
-  color: var(--text-strong) !important;
-}
-
-/* --- Planned note and detail cells --- */
-.planned-note {
-  color: var(--muted) !important;
-}
-
-.planned-detail-cell {
-  color: var(--text) !important;
-}
-
-.planned-detail-cell .inline-link {
-  color: var(--accent) !important;
-}
-
-.planned-empty {
-  color: var(--muted) !important;
-}
-
-/* --- Berth cards and vessels --- */
-.berth-card-wide,
-.berth-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: var(--text) !important;
-}
-
-.berth-card strong a,
-.berth-card-wide strong a {
-  color: var(--accent) !important;
-}
-
-/* --- Planned vessel type images --- */
-.planned-vessel-type img {
-  filter: brightness(1.4) !important;
-}
-
-.planned-vessel-type span {
-  color: var(--text) !important;
-}
-
-/* --- Ops tag readability --- */
-.ops-tag {
-  background: rgba(26, 159, 255, 0.15) !important;
-  color: var(--accent) !important;
-}
-
-/* --- Legend area --- */
-.planned-legend {
-  color: var(--text) !important;
-}
-
-.planned-table-toolbar {
-  color: var(--text) !important;
-}
-
-.planned-table-toolbar h3 {
-  color: var(--text-strong) !important;
-}
 
 /* ══════════════════════════════════════════════════════════
-   FINAL CONTRAST FIXES — ensure all text is readable
+   DARK THEME — Text & Icon Overrides (essential only)
    ══════════════════════════════════════════════════════════ */
 
-/* Day strip cards */
-.planned-day-card {
-  background: rgba(26, 159, 255, 0.08) !important;
-  border-color: rgba(26, 159, 255, 0.2) !important;
+/* Force all table text readable */
+.planned-table tbody td { color: var(--text); }
+.planned-table tbody td a { color: var(--accent); }
+.planned-table tbody td strong { color: var(--text-strong); }
+.planned-table thead th { color: var(--muted); background: rgba(255,255,255,0.04); }
+
+/* Force card text readable */
+.ops-card h3 a, .berth-card strong a { color: var(--accent); }
+.ops-card p strong { color: var(--text-strong); }
+
+/* All links must be visible */
+.inline-link { color: var(--accent); }
+
+/* Chatbot FAB and icons */
+.chatbot-fab {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(26, 159, 255, 0.35);
 }
 
-.planned-day-card span {
-  color: var(--muted) !important;
+.chatbot-fab svg {
+  stroke: #fff;
+  width: 24px;
+  height: 24px;
 }
 
-.planned-day-card strong {
-  color: var(--text-strong) !important;
-}
-
-/* Planned table: force all text white */
-.planned-table tbody td {
-  color: var(--text) !important;
-}
-
-.planned-table tbody td a {
-  color: var(--accent) !important;
-}
-
-.planned-table tbody td strong {
-  color: var(--text-strong) !important;
-}
-
-/* Vessel type text in table */
-.planned-vessel-type span {
-  color: var(--text) !important;
-}
-
-/* All inline-link must be visible */
-.inline-link {
-  color: var(--accent) !important;
-}
-
-/* All muted text */
-.muted {
-  color: var(--muted) !important;
-}
-
-/* Chatbot icons — make visible on dark */
 .chatbot-icon-btn {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.15) !important;
-  border: none !important;
-  border-radius: 8px !important;
-  width: 32px !important;
-  height: 32px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .chatbot-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .chatbot-icon-btn svg {
-  stroke: #ffffff !important;
-  fill: none !important;
-  width: 16px !important;
-  height: 16px !important;
-}
-
-/* Hero footer text */
-.hero-footer p {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.hero-footer strong {
-  color: rgba(255, 255, 255, 0.9) !important;
+  stroke: #ffffff;
+  fill: none;
+  width: 16px;
+  height: 16px;
 }
