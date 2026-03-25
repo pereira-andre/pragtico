@@ -1181,25 +1181,43 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
         return None
 
     wants_previsto = bool(re.search(r"\b(previsto|prevista|planeado|planeada)\b", clean))
-    action = ""
-    if re.search(r"\b(aprova|approve|aprovar)\b", clean):
-        action = "approve_entry"
-    elif re.search(r"\b(aborta|aborta|cancela|anula)\b", clean):
-        action = "abort_entry"
-    elif re.search(r"\b(confirma|confirma|fechar|fecha)\b", clean):
-        action = "complete_entry"
+
+    # Detect the intended verb (approve, abort, confirm)
+    action_verb = ""
+    if re.search(r"\b(aprova|approve|aprovar|valida|validar)\b", clean):
+        action_verb = "approve"
+    elif re.search(r"\b(aborta|abortar|cancela|cancelar|anula|anular)\b", clean):
+        action_verb = "abort"
+    elif re.search(r"\b(confirma|confirmar|fechar|fecha|completa|completar|realizada|concluida)\b", clean):
+        action_verb = "complete"
     elif wants_previsto:
-        action = "complete_entry"
-    if not action:
+        action_verb = "complete"
+    if not action_verb:
         return None
 
+    # Detect manoeuvre type
     maneuver_type = ""
-    if re.search(r"\b(saida|saida|departure)\b", clean):
+    if re.search(r"\b(saida|saída|departure|sair)\b", clean):
         maneuver_type = "departure"
-    elif re.search(r"\b(mudanca|mudanca|shift)\b", clean):
+    elif re.search(r"\b(mudanca|mudança|shift|mudar)\b", clean):
         maneuver_type = "shift"
-    elif re.search(r"\b(entrada|entry)\b", clean):
+    elif re.search(r"\b(entrada|entry|entrar)\b", clean):
         maneuver_type = "entry"
+
+    # Build full action name from verb + manoeuvre type
+    # e.g. approve + departure = approve_departure, complete + shift = complete_shift
+    action_suffix = maneuver_type or "entry"
+    action = f"{action_verb}_{action_suffix}"
+
+    # Map to valid ACTION_SPECS keys — some actions only exist for entry
+    # Valid: approve_entry, approve_departure, abort_entry, abort_departure,
+    #        complete_entry, complete_departure, complete_shift
+    from chat_actions import ACTION_SPECS
+    if action not in ACTION_SPECS:
+        # Fallback: try with _entry suffix (most actions have entry variant)
+        action = f"{action_verb}_entry"
+        if action not in ACTION_SPECS:
+            return None
 
     matched_port_call = None
     clean_question = f" {clean} "
