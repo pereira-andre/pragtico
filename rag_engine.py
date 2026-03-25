@@ -441,7 +441,7 @@ class SimpleRAGEngine:
         batch_callback=None,
     ) -> List[List[float]]:
         if not self.client:
-            raise RuntimeError("GEMINI_API_KEY nao configurada.")
+            raise RuntimeError("API key do LLM não configurada (define OPENROUTER_API_KEY ou GEMINI_API_KEY).")
         vectors = []
         batch_size = self.embedding_batch_size
         for start in range(0, len(texts), batch_size):
@@ -758,7 +758,7 @@ class SimpleRAGEngine:
                 except Exception as exc:
                     self.last_index_error = self._format_embedding_error(exc)
             elif chunks_missing_embedding and not self.client:
-                self.last_index_error = "GEMINI_API_KEY nao configurada."
+                self.last_index_error = "API key do LLM não configurada (define OPENROUTER_API_KEY ou GEMINI_API_KEY)."
             else:
                 self.last_index_error = ""
 
@@ -818,7 +818,7 @@ class SimpleRAGEngine:
             return []
 
         if not self.client:
-            raise RuntimeError("Pesquisa semântica Gemini indisponível: GEMINI_API_KEY em falta.")
+            raise RuntimeError("Pesquisa semântica indisponível: API key LLM em falta.")
 
         try:
             query_vector = self._embed_many([question])[0]
@@ -828,7 +828,7 @@ class SimpleRAGEngine:
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
             raise RuntimeError(
-                "Pesquisa semântica Gemini indisponível neste momento. "
+                "Pesquisa semântica indisponível neste momento. "
                 f"Detalhe técnico: {self.last_index_error}"
             ) from exc
 
@@ -889,8 +889,8 @@ class SimpleRAGEngine:
         except Exception as exc:
             return {
                 "answer": (
-                    "A pesquisa documental semântica do Gemini não está disponível neste momento. "
-                    "O bot não responde em modo lexical local. "
+                    "A pesquisa documental semântica não está disponível neste momento. "
+                    "Verifica a configuração da API key do LLM. "
                     f"Detalhe: {exc}"
                 ),
                 "sources": supplemental_sources or [],

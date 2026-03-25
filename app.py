@@ -613,6 +613,36 @@ def load_admin_status() -> dict:
 maybe_run_startup_migration()
 
 
+def maybe_seed_admin() -> None:
+    """Create the default admin account on startup if ADMIN_EMAIL is set."""
+    admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+    admin_password = os.getenv("ADMIN_PASSWORD", "").strip()
+    if not admin_email:
+        return
+    try:
+        existing = store.get_user_profile(admin_email.lower())
+        if existing:
+            if (existing.get("role") or "").lower() != "admin":
+                store.set_user_role(admin_email.lower(), "admin")
+                app.logger.info("Admin promovido: %s", admin_email)
+            return
+        store.create_user(
+            username=admin_email.lower(),
+            password=admin_password or "admin",
+            role="admin",
+            full_name="Administrador",
+            organization="APSS",
+            email=admin_email.lower(),
+            phone="",
+        )
+        app.logger.info("Admin criado automaticamente: %s", admin_email)
+    except Exception as exc:
+        app.logger.warning("Falha ao criar admin: %s", exc)
+
+
+maybe_seed_admin()
+
+
 def safe_rebuild_index(force: bool = False) -> bool:
     try:
         rag.rebuild_index(force=force)
@@ -722,9 +752,9 @@ def current_reindex_status_payload() -> dict:
             else "disabled"
         ),
         "query_embedding_summary": (
-            "Pesquisa semântica Gemini bloqueada até renovar quota; o bot não usa fallback lexical local."
+            "Pesquisa semântica bloqueada até renovar quota."
             if rag.is_embedding_quota_exhausted()
-            else "Pesquisa semântica Gemini disponível."
+            else "Pesquisa semântica disponível."
             if rag.client
             else "Pesquisa semântica indisponível: API key LLM em falta."
         ),

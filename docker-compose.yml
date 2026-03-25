@@ -50,6 +50,8 @@ services:
       AIS_VESSELFINDER_NAMES: ${AIS_VESSELFINDER_NAMES:-1}
       AIS_PORT_LABEL: ${AIS_PORT_LABEL:-Porto de Setubal}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-64}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@porto.pt}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123456}
     ports:
       - "${WEB_PORT:-5000}:${WEB_PORT:-5000}"
     volumes:
