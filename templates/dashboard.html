@@ -4,11 +4,9 @@
   <section class="hero-card pragtico-hero">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Coordenação Portuária</p>
+        <p class="eyebrow">Coordenação Portuária · Porto de Setúbal</p>
         <h1>PRAGtico</h1>
-        <p class="lead">
-          Quadro operacional para acompanhamento de chegadas, navios em porto, saídas recentes e contexto meteorológico contínuo.
-        </p>
+        <p class="lead">Quadro operacional de pilotagem — chegadas, movimentos em porto, planeamento de manobras e contexto meteorológico contínuo.</p>
       </div>
       <div class="hero-actions">
         {% if current_role in ["admin", "agente"] %}
@@ -18,7 +16,6 @@
         {% if current_role == "admin" %}
           <a class="hero-link" href="{{ url_for('admin_documents') }}">Documentos</a>
           <a class="hero-link" href="{{ url_for('admin_status') }}">Estado</a>
-          <a class="hero-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
         {% endif %}
         <a class="hero-link" href="{{ url_for('profile') }}">Perfil</a>
         <a class="hero-link" href="{{ url_for('logout') }}">Sair</a>
@@ -47,30 +44,98 @@
         <small>últimos {{ port_activity.window_days }} dias</small>
       </article>
     </div>
+  </section>
 
-    <div class="hero-footer">
-      <p><strong>Atualizado:</strong> {{ port_activity.generated_at_label }}</p>
-      <p><strong>Marés:</strong> {{ tides_today.summary }}</p>
+  {# ── MARÉS — ribbon para hoje e amanhã ── #}
+  <section class="panel tides-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Marés · {{ tides_today.location }}</p>
+        <h2>Previsão de marés</h2>
+      </div>
+      {% if weather_data and weather_data.forecast_days %}
+        {% set today_astro = weather_data.forecast_days[0] %}
+        <div class="sector-info">
+          <span class="sector-day" title="Sector diurno">☀️ {{ today_astro.sunrise or '--' }} – {{ today_astro.sunset or '--' }}</span>
+          <span class="sector-night" title="Sector nocturno">🌙 Noite até {{ today_astro.sunrise or '--' }} e após {{ today_astro.sunset or '--' }}</span>
+          {% if today_astro.moon_phase %}
+            <span class="sector-moon" title="Fase lunar">{{ today_astro.moon_phase }} ({{ today_astro.moon_illumination or '--' }}%)</span>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="tides-ribbon">
+      {# Hoje #}
+      <div class="tides-day">
+        <div class="tides-day-label">
+          <strong>Hoje</strong>
+          <span>{{ tides_today.date }}</span>
+        </div>
+        <div class="tides-events">
+          {% for ev in tides_today.events %}
+            <article class="tide-card {{ 'tide-high' if ev.type == 'preia-mar' else 'tide-low' }}">
+              <span class="tide-time">{{ ev.time }}</span>
+              <span class="tide-height">{{ ev.height_m }} m</span>
+              <span class="tide-type">{{ '▲' if ev.type == 'preia-mar' else '▼' }} {{ ev.type }}</span>
+            </article>
+          {% else %}
+            <p class="muted">Sem dados de marés para hoje.</p>
+          {% endfor %}
+        </div>
+      </div>
+      {# Amanhã #}
+      <div class="tides-day">
+        <div class="tides-day-label">
+          <strong>Amanhã</strong>
+          <span>{{ tides_tomorrow.date }}</span>
+        </div>
+        <div class="tides-events">
+          {% for ev in tides_tomorrow.events %}
+            <article class="tide-card {{ 'tide-high' if ev.type == 'preia-mar' else 'tide-low' }}">
+              <span class="tide-time">{{ ev.time }}</span>
+              <span class="tide-height">{{ ev.height_m }} m</span>
+              <span class="tide-type">{{ '▲' if ev.type == 'preia-mar' else '▼' }} {{ ev.type }}</span>
+            </article>
+          {% else %}
+            <p class="muted">Sem dados de marés para amanhã.</p>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </section>
 
-  {# ── METEOROLOGIA com ícones ── #}
+  {# ── METEOROLOGIA com dia/noite ── #}
   <section class="panel meteo-ribbon-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Meteorologia</p>
-        <h2>Horizonte contínuo de 48 horas</h2>
+        <h2>Previsão horária — 48 horas</h2>
       </div>
       {% if weather_data %}
         <p class="muted">{{ weather_data.location.name }} · {{ weather_data.location.localtime }}</p>
       {% endif %}
     </div>
 
+    {% if weather_data and weather_data.forecast_days %}
+      <div class="meteo-day-summary">
+        {% for day in weather_data.forecast_days %}
+          <article class="meteo-day-card {{ day.wind_level }}">
+            <strong>{{ day.date }}</strong>
+            <span>{{ day.condition }}</span>
+            <span>{{ day.min_temp_c }}–{{ day.max_temp_c }} °C</span>
+            <span>vento máx {{ day.max_wind_kts }} kts</span>
+            <span class="meteo-astro">☀️ {{ day.sunrise }} → {{ day.sunset }}{% if day.moon_phase %} · 🌙 {{ day.moon_phase }}{% endif %}</span>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     {% if weather_timeline %}
       <div class="meteo-ribbon">
         {% for slot in weather_timeline %}
           {% set show_day = loop.first or weather_timeline[loop.index0 - 1].date != slot.date %}
-          <article class="meteo-card {{ slot.wind_level }}">
+          <article class="meteo-card {{ slot.wind_level }} {{ 'meteo-night' if slot.is_night else 'meteo-daytime' }}">
             <div class="meteo-card-head">
               {% if show_day %}
                 <span class="meteo-date">{{ slot.date }}</span>
@@ -78,23 +143,46 @@
                 <span class="meteo-date meteo-date-muted">·</span>
               {% endif %}
               <strong>{{ slot.time }}</strong>
+              {% if slot.is_night %}
+                <span class="meteo-sector-badge meteo-sector-night" title="Sector nocturno">🌙</span>
+              {% else %}
+                <span class="meteo-sector-badge meteo-sector-day" title="Sector diurno">☀️</span>
+              {% endif %}
             </div>
             <div class="meteo-icon">
               {% set cond_lower = slot.condition|lower %}
-              {% if 'sol' in cond_lower or 'céu limpo' in cond_lower or 'clear' in cond_lower or 'sunny' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">☀️</span>
-              {% elif 'parcial' in cond_lower or 'nublado' in cond_lower or 'nuvens' in cond_lower or 'cloud' in cond_lower or 'overcast' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">⛅</span>
-              {% elif 'chuva' in cond_lower or 'chuvisco' in cond_lower or 'rain' in cond_lower or 'drizzle' in cond_lower or 'shower' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">🌧️</span>
-              {% elif 'trovoada' in cond_lower or 'thunder' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">⛈️</span>
-              {% elif 'neve' in cond_lower or 'snow' in cond_lower or 'sleet' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">🌨️</span>
-              {% elif 'nevoeiro' in cond_lower or 'fog' in cond_lower or 'mist' in cond_lower %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">🌫️</span>
+              {% if slot.is_night %}
+                {# Night icons #}
+                {% if 'chuva' in cond_lower or 'rain' in cond_lower or 'drizzle' in cond_lower or 'shower' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌧️</span>
+                {% elif 'trovoada' in cond_lower or 'thunder' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">⛈️</span>
+                {% elif 'neve' in cond_lower or 'snow' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌨️</span>
+                {% elif 'nevoeiro' in cond_lower or 'fog' in cond_lower or 'mist' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌫️</span>
+                {% elif 'nublado' in cond_lower or 'nuvens' in cond_lower or 'cloud' in cond_lower or 'overcast' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">☁️</span>
+                {% else %}
+                  <span class="meteo-emoji" title="{{ slot.condition }} (noite)">🌙</span>
+                {% endif %}
               {% else %}
-                <span class="meteo-emoji" title="{{ slot.condition }}">🌤️</span>
+                {# Day icons #}
+                {% if 'sol' in cond_lower or 'céu limpo' in cond_lower or 'clear' in cond_lower or 'sunny' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">☀️</span>
+                {% elif 'parcial' in cond_lower or 'nublado' in cond_lower or 'nuvens' in cond_lower or 'cloud' in cond_lower or 'overcast' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">⛅</span>
+                {% elif 'chuva' in cond_lower or 'chuvisco' in cond_lower or 'rain' in cond_lower or 'drizzle' in cond_lower or 'shower' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌧️</span>
+                {% elif 'trovoada' in cond_lower or 'thunder' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">⛈️</span>
+                {% elif 'neve' in cond_lower or 'snow' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌨️</span>
+                {% elif 'nevoeiro' in cond_lower or 'fog' in cond_lower or 'mist' in cond_lower %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌫️</span>
+                {% else %}
+                  <span class="meteo-emoji" title="{{ slot.condition }}">🌤️</span>
+                {% endif %}
               {% endif %}
               {% if slot.wind_kts and slot.wind_kts >= 20 %}
                 <span class="meteo-emoji meteo-wind-icon" title="Vento forte {{ slot.wind_kts }} kts">💨</span>
@@ -107,7 +195,7 @@
               <span>raj. {{ slot.gust_kts }} kts</span>
               <span>chuva {{ slot.chance_of_rain }}%</span>
               {% if slot.wave_m is not none %}
-                <span>ond. {{ slot.wave_m }} m{% if slot.wave_dir %} · {{ slot.wave_dir }}{% endif %}</span>
+                <span>ond. {{ slot.wave_m }} m</span>
               {% endif %}
             </div>
           </article>
@@ -116,7 +204,7 @@
     {% elif weather_error %}
       <p class="muted">Erro ao obter meteorologia: {{ weather_error }}</p>
     {% else %}
-      <p class="muted">Define `WEATHERAPI_KEY` para preencher a faixa meteorológica.</p>
+      <p class="muted">Define WEATHERAPI_KEY para preencher a faixa meteorológica.</p>
     {% endif %}
   </section>
 
@@ -124,12 +212,11 @@
   <section class="panel ais-panel">
     <div class="section-head">
       <div>
-        <p class="eyebrow">AIS</p>
-        <h2>Mapa AIS local do porto de Setúbal</h2>
+        <p class="eyebrow">Mapa AIS</p>
+        <h2>Tráfego marítimo em tempo real</h2>
       </div>
       <div class="ais-status-line">
         <span class="ops-pill ops-pill-strong">{{ ais.provider_name }}</span>
-        <span class="muted">{{ ais.status_label }}</span>
       </div>
     </div>
 
@@ -142,8 +229,7 @@
     {% endif %}
 
     <div class="ais-footnote">
-      <p class="muted">Mapa servido por embed oficial do VesselFinder, sem API nem sincronização local.</p>
-      <p class="muted">Porto de Setúbal: {{ ais.embed.latitude_dm }} / {{ ais.embed.longitude_dm }} · zoom {{ ais.embed.zoom }}</p>
+      <p class="muted">Porto de Setúbal: {{ ais.embed.latitude_dm }} / {{ ais.embed.longitude_dm }}</p>
     </div>
   </section>
 
@@ -151,12 +237,11 @@
   <section class="panel traffic-panel">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Movimento</p>
+        <p class="eyebrow">Movimento portuário</p>
         <h2>Chegadas previstas e saídas recentes</h2>
       </div>
       <span class="ops-pill">{{ port_activity.stats.scheduled_count + port_activity.stats.departed_count }}</span>
     </div>
-
     <div class="traffic-grid">
       <section class="traffic-column">
         <div class="traffic-head">
@@ -177,7 +262,6 @@
           {% endfor %}
         </div>
       </section>
-
       <section class="traffic-column traffic-column-departed">
         <div class="traffic-head">
           <h3>Saídas recentes</h3>
@@ -200,11 +284,11 @@
     </div>
   </section>
 
-  {# ── NAVIOS POR CAIS (compacto: nome + localização + ETD) ── #}
+  {# ── NAVIOS POR CAIS ── #}
   <section class="panel berth-panel">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Em porto</p>
+        <p class="eyebrow">Ocupação portuária</p>
         <h2>Navios por cais</h2>
       </div>
       <div class="berth-panel-meta">
@@ -212,7 +296,6 @@
         <span class="ops-pill">{{ berth_options|length - port_activity.stats.berth_count }} livres</span>
       </div>
     </div>
-
     <div class="berth-compact-grid">
       {% for berth in port_activity.berthed %}
         <section class="berth-group-compact">
@@ -237,13 +320,13 @@
   <section class="panel planned-panel">
     <div class="section-head planned-head">
       <div>
-        <p class="eyebrow">Planeamento</p>
-        <h2>Planeamento operacional</h2>
+        <p class="eyebrow">Planeamento operacional</p>
+        <h2>Marcações e validações</h2>
       </div>
       <div class="planned-head-meta">
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.planned_count }}</span>
-        <span class="muted">{{ port_activity.stats.pending_count }} pendentes</span>
-        <a class="hero-link planned-archive-link" href="{{ url_for('maneuver_archive') }}">Arquivo</a>
+        <span class="muted">{{ port_activity.stats.pending_count }} pendentes de validação</span>
+        <a class="hero-link planned-archive-link" href="{{ url_for('maneuver_archive') }}">Consultar arquivo</a>
       </div>
     </div>
 
@@ -260,7 +343,6 @@
 
     <div class="planned-table-stage">
       <div class="planned-table-toolbar">
-        <h3>Marcações, validações e fechos</h3>
         <div class="planned-legend">
           <span class="maneuver-chip maneuver-chip-entry">Entrar</span>
           <span class="maneuver-chip maneuver-chip-departure">Sair</span>
@@ -276,7 +358,7 @@
             <tr>
               <th>Data</th>
               <th>Tipo</th>
-              <th>Escala/Navio</th>
+              <th>Escala / Navio</th>
               <th>Hora</th>
               <th>Situação</th>
               <th>Manobra</th>
@@ -338,7 +420,7 @@
                 </td>
               </tr>
             {% else %}
-              <tr><td colspan="16" class="planned-empty">Sem manobras planeadas.</td></tr>
+              <tr><td colspan="16" class="planned-empty">Sem manobras planeadas para a janela operacional atual.</td></tr>
             {% endfor %}
           </tbody>
         </table>

@@ -12,6 +12,7 @@ from typing import Dict, List
 from google import genai
 
 from document_processing import extract_text_from_path
+from llm_provider import BaseLLMProvider, create_llm_provider
 from reindex_scheduler import PACIFIC_TZ, next_gemini_quota_reset_utc
 from vector_store import BaseIndexStore
 
@@ -49,13 +50,24 @@ class SimpleRAGEngine:
         index_store: BaseIndexStore,
         generation_model: str,
         embedding_model: str,
+        llm_provider: BaseLLMProvider | None = None,
     ) -> None:
         self.api_key = api_key
         self.knowledge_dir = knowledge_dir
         self.index_store = index_store
         self.generation_model = generation_model
         self.embedding_model = embedding_model
-        self.client = genai.Client(api_key=api_key) if api_key else None
+
+        # LLM provider: use injected provider, or create from environment/api_key
+        if llm_provider is not None:
+            self.provider = llm_provider
+        else:
+            self.provider = create_llm_provider(api_key=api_key if api_key else None)
+
+        # Backward compatibility: self.client is truthy when provider is available
+        self.client = self.provider if self.provider.is_available else None
+        self.provider_name = self.provider.provider_name
+
         self.allowed_extensions = {".md", ".txt", ".pdf", ".docx", ".csv"}
         self.last_index_error = ""
         self.embedding_batch_size = max(int(os.getenv("EMBEDDING_BATCH_SIZE", "32")), 1)
@@ -394,12 +406,11 @@ class SimpleRAGEngine:
         for attempt in range(1, self.embedding_max_retries + 1):
             try:
                 self._acquire_embedding_request_slot(throttle_callback=throttle_callback)
-                result = self.client.models.embed_content(
+                embed_result = self.provider.embed(
+                    texts=batch,
                     model=self.embedding_model,
-                    contents=batch,
                 )
-                embeddings = getattr(result, "embeddings", result)
-                return [self._extract_vector(item) for item in embeddings]
+                return embed_result.vectors
             except Exception as exc:
                 last_exc = exc
                 if self._is_permanent_quota_error(exc):
@@ -936,14 +947,14 @@ Pergunta:
 """.strip()
 
         if not self.client:
-            raise RuntimeError("Define GEMINI_API_KEY antes de usar o chatbot.")
+            raise RuntimeError("Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot.")
 
         try:
-            response = self.client.models.generate_content(
+            gen_result = self.provider.generate(
+                prompt=prompt,
                 model=self.generation_model,
-                contents=prompt,
             )
-            answer_text = getattr(response, "text", "") or "Sem resposta do modelo."
+            answer_text = gen_result.text or "Sem resposta do modelo."
         except Exception as exc:
             answer_text = self._build_fallback_answer(sources, str(exc))
 

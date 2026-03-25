@@ -134,12 +134,47 @@ app.config["PERMANENT_SESSION_LIFETIME"] = 28800  # 8 hours
 store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR)
 auth_service = create_auth_service(store)
 index_store = create_index_store(data_dir=DATA_DIR)
+
+# LLM provider: supports Gemini, OpenRouter, OpenAI, DeepSeek
+# Configured via LLM_PROVIDER env var (default: auto-detect from available keys)
+from llm_provider import create_llm_provider
+
+_llm_provider_name = os.getenv("LLM_PROVIDER", "").strip().lower()
+if not _llm_provider_name:
+    # Auto-detect: prefer OpenRouter if key exists, fallback to Gemini
+    if os.getenv("OPENROUTER_API_KEY", "").strip():
+        _llm_provider_name = "openrouter"
+    elif os.getenv("GEMINI_API_KEY", "").strip():
+        _llm_provider_name = "gemini"
+    else:
+        _llm_provider_name = "gemini"
+
+_llm_api_key = (
+    os.getenv("OPENROUTER_API_KEY", "").strip()
+    if _llm_provider_name == "openrouter"
+    else os.getenv("GEMINI_API_KEY", "").strip()
+)
+_llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
+
+# Model defaults per provider
+_default_gen_models = {
+    "gemini": "gemini-2.5-flash",
+    "openrouter": "google/gemini-2.5-flash",
+}
+_default_emb_models = {
+    "gemini": "gemini-embedding-001",
+    "openrouter": "google/gemini-embedding-001",
+}
+_gen_model = os.getenv("LLM_MODEL", os.getenv("GEMINI_MODEL", _default_gen_models.get(_llm_provider_name, "google/gemini-2.5-flash")))
+_emb_model = os.getenv("EMBEDDING_MODEL", os.getenv("GEMINI_EMBEDDING_MODEL", _default_emb_models.get(_llm_provider_name, "google/gemini-embedding-001")))
+
 rag = SimpleRAGEngine(
-    api_key=os.getenv("GEMINI_API_KEY", ""),
+    api_key=_llm_api_key,
     knowledge_dir=KNOWLEDGE_DIR,
     index_store=index_store,
-    generation_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-    embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
+    generation_model=_gen_model,
+    embedding_model=_emb_model,
+    llm_provider=_llm_provider,
 )
 tide_service = TideService(
     csv_path=os.path.join(KNOWLEDGE_DIR, "mares.2026.201.9_setubal_troia.csv")
@@ -484,7 +519,7 @@ def inject_globals():
     return {
         "current_user": username,
         "current_role": session.get("role"),
-        "provider": "Gemini",
+        "provider": rag.provider_name.title(),
         "auth_backend": getattr(auth_service, "backend_name", "unknown"),
         "storage_backend": getattr(store, "backend_name", "unknown"),
         "rag_backend": getattr(index_store, "backend_name", "unknown"),
@@ -1307,7 +1342,7 @@ def propose_operational_action(question: str, role: str) -> dict | None:
             "intent": "unsupported",
             "action": "",
             "confidence": 0.0,
-            "reason": "O bot operador precisa de GEMINI_API_KEY para interpretar ações operacionais.",
+            "reason": "O bot operador precisa de uma API key LLM para interpretar ações operacionais.",
             "target": {},
             "fields": {},
             "missing_fields": [],
@@ -1323,9 +1358,9 @@ def propose_operational_action(question: str, role: str) -> dict | None:
         constraint_options=CONSTRAINT_OPTIONS,
     )
     try:
-        response = rag.client.models.generate_content(
+        gen_result = rag.provider.generate(
+            prompt=prompt,
             model=rag.generation_model,
-            contents=prompt,
         )
     except Exception as exc:
         return {
@@ -1338,7 +1373,7 @@ def propose_operational_action(question: str, role: str) -> dict | None:
             "missing_fields": [],
         }
 
-    candidate = extract_json_object(getattr(response, "text", "") or "")
+    candidate = extract_json_object(gen_result.text or "")
     proposal = normalize_action_candidate(candidate or {}, role)
     if proposal and proposal.get("intent") == "unsupported":
         heuristic_proposal = heuristic_operational_proposal(question, role, resolvable_port_calls)
@@ -1551,7 +1586,7 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
     if not rag.client:
         return {
             "intent": "unsupported",
-            "reason": "O bot operador precisa de GEMINI_API_KEY para atualizar propostas pendentes.",
+            "reason": "O bot operador precisa de uma API key LLM para atualizar propostas pendentes.",
         }
 
     prompt = build_pending_action_update_prompt(
@@ -1562,9 +1597,9 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
         constraint_options=CONSTRAINT_OPTIONS,
     )
     try:
-        response = rag.client.models.generate_content(
+        gen_result = rag.provider.generate(
+            prompt=prompt,
             model=rag.generation_model,
-            contents=prompt,
         )
     except Exception as exc:
         return {
@@ -1572,7 +1607,7 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
             "reason": f"Falha a atualizar a proposta pendente: {exc}",
         }
 
-    candidate = extract_json_object(getattr(response, "text", "") or "") or {}
+    candidate = extract_json_object(gen_result.text or "") or {}
     intent = (candidate.get("intent") or "").strip().lower()
     if intent in {"cancel", "question", "unsupported"}:
         return {
@@ -2587,7 +2622,14 @@ def dashboard():
     refresh_knowledge_state(force_reindex=False)
     port_activity = store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
-    tides_today = tide_service.summary_for_date(tide_service.resolve_query_dates("hoje")[0])
+
+    # Tides for today + tomorrow
+    from datetime import date, timedelta
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    tides_today = tide_service.summary_for_date(today)
+    tides_tomorrow = tide_service.summary_for_date(tomorrow)
+
     weather_data = None
     weather_error = ""
     weather_timeline = []
@@ -2602,6 +2644,7 @@ def dashboard():
         "dashboard.html",
         port_activity=port_activity,
         tides_today=tides_today,
+        tides_tomorrow=tides_tomorrow,
         weather_data=weather_data,
         weather_timeline=weather_timeline,
         weather_error=weather_error,
@@ -3806,7 +3849,7 @@ def api_chat():
         }
     elif answer is None:
         if not os.getenv("GEMINI_API_KEY"):
-            return jsonify({"error": "Define GEMINI_API_KEY antes de usar o chatbot."}), 500
+            return jsonify({"error": "Define a API key do LLM (GEMINI_API_KEY ou OPENROUTER_API_KEY) antes de usar o chatbot."}), 500
         answer = rag.answer(
             question=question,
             role=session.get("role", "piloto"),

@@ -4215,3 +4215,191 @@ details summary {
   overflow-y: auto;
   padding: 12px 0;
 }
+
+/* ══════════════════════════════════════════════════════════
+   TIDES RIBBON (2 days)
+   ══════════════════════════════════════════════════════════ */
+
+.tides-panel .section-head {
+  flex-wrap: wrap;
+}
+
+.tides-ribbon {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.tides-day {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.tides-day-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tides-day-label strong {
+  color: var(--text-strong);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.tides-day-label span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.tides-events {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tide-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  min-width: 80px;
+  text-align: center;
+}
+
+.tide-high {
+  background: rgba(26, 159, 255, 0.1);
+  border: 1px solid rgba(26, 159, 255, 0.25);
+}
+
+.tide-low {
+  background: rgba(130, 160, 195, 0.08);
+  border: 1px solid var(--line);
+}
+
+.tide-time {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.tide-height {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tide-type {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tide-high .tide-height {
+  color: var(--accent);
+}
+
+.tide-low .tide-height {
+  color: var(--muted);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SECTOR INFO (sunrise/sunset/moon)
+   ══════════════════════════════════════════════════════════ */
+
+.sector-info {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sector-day, .sector-night, .sector-moon {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.sector-day {
+  background: rgba(250, 204, 21, 0.1);
+  color: #fbbf24;
+}
+
+.sector-night {
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+}
+
+.sector-moon {
+  background: rgba(130, 160, 195, 0.08);
+  color: var(--muted);
+}
+
+/* ══════════════════════════════════════════════════════════
+   METEO DAY SUMMARY CARDS
+   ══════════════════════════════════════════════════════════ */
+
+.meteo-day-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.meteo-day-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: grid;
+  gap: 3px;
+  font-size: 0.82rem;
+}
+
+.meteo-day-card strong {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--text-strong);
+}
+
+.meteo-astro {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ══════════════════════════════════════════════════════════
+   METEO NIGHT CARDS
+   ══════════════════════════════════════════════════════════ */
+
+.meteo-night {
+  background: rgba(30, 27, 75, 0.4) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.meteo-daytime {
+  background: rgba(255,255,255,0.04);
+}
+
+.meteo-sector-badge {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .tides-ribbon {
+    grid-template-columns: 1fr;
+  }
+  .sector-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
