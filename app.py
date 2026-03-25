@@ -138,7 +138,7 @@ index_store = create_index_store(data_dir=DATA_DIR)
 
 # LLM provider: supports Gemini, OpenRouter, OpenAI, DeepSeek
 # Configured via LLM_PROVIDER env var (default: auto-detect from available keys)
-from llm_provider import create_llm_provider
+from llm_provider import create_llm_provider, create_embedding_provider
 
 _llm_provider_name = os.getenv("LLM_PROVIDER", "").strip().lower()
 if not _llm_provider_name:
@@ -157,17 +157,28 @@ _llm_api_key = (
 )
 _llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
 
+# Local embedding provider (sentence-transformers — zero API cost, no limits)
+_embedding_provider = create_embedding_provider()
+if _embedding_provider:
+    app.logger.info("Embeddings locais activos: %s (%d dim)",
+                    _embedding_provider.model_name, _embedding_provider.dimensions)
+else:
+    app.logger.warning(
+        "Embeddings locais indisponíveis (sentence-transformers não instalado). "
+        "Os embeddings serão feitos via API, consumindo quota."
+    )
+
 # Model defaults per provider
 _default_gen_models = {
     "gemini": "gemini-2.5-flash",
-    "openrouter": "google/gemini-2.5-flash",
+    "openrouter": "openrouter/free",
 }
 _default_emb_models = {
     "gemini": "gemini-embedding-001",
-    "openrouter": "google/gemini-embedding-001",
+    "openrouter": "baai/bge-m3",
 }
-_gen_model = os.getenv("LLM_MODEL", os.getenv("GEMINI_MODEL", _default_gen_models.get(_llm_provider_name, "google/gemini-2.5-flash")))
-_emb_model = os.getenv("EMBEDDING_MODEL", os.getenv("GEMINI_EMBEDDING_MODEL", _default_emb_models.get(_llm_provider_name, "google/gemini-embedding-001")))
+_gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openrouter/free"))
+_emb_model = os.getenv("EMBEDDING_MODEL", _default_emb_models.get(_llm_provider_name, "baai/bge-m3"))
 
 rag = SimpleRAGEngine(
     api_key=_llm_api_key,
@@ -176,6 +187,7 @@ rag = SimpleRAGEngine(
     generation_model=_gen_model,
     embedding_model=_emb_model,
     llm_provider=_llm_provider,
+    embedding_provider=_embedding_provider,
 )
 tide_service = TideService(
     csv_path=os.path.join(KNOWLEDGE_DIR, "mares.2026.201.9_setubal_troia.csv")
@@ -594,6 +606,8 @@ def load_admin_status() -> dict:
         "rag_backend": getattr(index_store, "backend_name", "unknown"),
         "config": {
             "llm_ready": rag.client is not None,
+            "embeddings_local": rag._use_local_embeddings,
+            "embedding_model": rag.embedding_model if not rag._use_local_embeddings else (rag.embedding_provider.model_name if rag.embedding_provider else "N/A"),
             "weather_ready": bool(os.getenv("WEATHERAPI_KEY", "").strip()),
             "ais_ready": bool(ais_status.get("configured")),
             "database_url_ready": bool(database_url),

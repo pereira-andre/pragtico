@@ -34,8 +34,16 @@ echo -e "${GREEN}✓${NC} Ambiente virtual activado"
 
 # 3) Instalar dependências
 echo -e "${YELLOW}→ A instalar dependências ...${NC}"
-pip install -q -r requirements.txt 2>&1 | tail -1
+pip install -q -r requirements.txt 2>&1 | tail -3
 echo -e "${GREEN}✓${NC} Dependências instaladas"
+
+# 3b) Verificar sentence-transformers (embeddings locais)
+if python3 -c "import sentence_transformers" 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} Embeddings locais disponíveis (sentence-transformers)"
+else
+    echo -e "${YELLOW}⚠  sentence-transformers não instalado — embeddings via API (gasta quota)${NC}"
+    echo -e "${YELLOW}   pip install sentence-transformers${NC}"
+fi
 
 # 4) Copiar .env se não existir
 if [ ! -f ".env" ]; then

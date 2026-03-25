@@ -51,6 +51,7 @@ class SimpleRAGEngine:
         generation_model: str,
         embedding_model: str,
         llm_provider: BaseLLMProvider | None = None,
+        embedding_provider=None,
     ) -> None:
         self.api_key = api_key
         self.knowledge_dir = knowledge_dir
@@ -63,6 +64,12 @@ class SimpleRAGEngine:
             self.provider = llm_provider
         else:
             self.provider = create_llm_provider(api_key=api_key if api_key else None)
+
+        # Embedding provider: local (sentence-transformers) or API-based
+        self.embedding_provider = embedding_provider
+        self._use_local_embeddings = (
+            embedding_provider is not None and embedding_provider.is_available
+        )
 
         # Backward compatibility: self.client is truthy when provider is available
         self.client = self.provider if self.provider.is_available else None
@@ -401,6 +408,12 @@ class SimpleRAGEngine:
         return min(delay, self.embedding_max_retry_delay_seconds)
 
     def _embed_batch(self, batch: List[str], retry_callback=None, throttle_callback=None) -> List[List[float]]:
+        # LOCAL EMBEDDINGS: use sentence-transformers directly, no API, no quota
+        if self._use_local_embeddings:
+            embed_result = self.embedding_provider.embed(texts=batch)
+            return embed_result.vectors
+
+        # API EMBEDDINGS: use LLM provider with retry/throttle logic
         last_exc: Exception | None = None
         started_at = time.monotonic()
         for attempt in range(1, self.embedding_max_retries + 1):
@@ -440,8 +453,8 @@ class SimpleRAGEngine:
         throttle_callback=None,
         batch_callback=None,
     ) -> List[List[float]]:
-        if not self.client:
-            raise RuntimeError("API key do LLM não configurada (define OPENROUTER_API_KEY ou GEMINI_API_KEY).")
+        if not self._use_local_embeddings and not self.client:
+            raise RuntimeError("Embeddings não disponíveis: instala sentence-transformers para embeddings locais, ou configura uma API key.")
         vectors = []
         batch_size = self.embedding_batch_size
         for start in range(0, len(texts), batch_size):
@@ -464,7 +477,7 @@ class SimpleRAGEngine:
         previous_manifest = current_index.get("manifest") or {}
         if manifest != previous_manifest:
             return True
-        return bool(self.client) and self.index_has_missing_embeddings()
+        return (self._use_local_embeddings or bool(self.client)) and self.index_has_missing_embeddings()
 
     def get_sync_status_summary(self) -> Dict:
         manifest = self._document_manifest()
@@ -692,7 +705,7 @@ class SimpleRAGEngine:
                     progress_pct=(20.0 * index / max(total_documents, 1)) if total_documents else 20.0,
                 )
 
-            if chunks_missing_embedding and self.client:
+            if chunks_missing_embedding and (self._use_local_embeddings or self.client):
                 try:
                     embedding_progress = {
                         "done": 0,
@@ -757,7 +770,7 @@ class SimpleRAGEngine:
                     self.last_index_error = ""
                 except Exception as exc:
                     self.last_index_error = self._format_embedding_error(exc)
-            elif chunks_missing_embedding and not self.client:
+            elif chunks_missing_embedding and not self._use_local_embeddings and not self.client:
                 self.last_index_error = "API key do LLM não configurada (define OPENROUTER_API_KEY ou GEMINI_API_KEY)."
             else:
                 self.last_index_error = ""
@@ -817,8 +830,8 @@ class SimpleRAGEngine:
         if not chunks:
             return []
 
-        if not self.client:
-            raise RuntimeError("Pesquisa semântica indisponível: API key LLM em falta.")
+        if not self._use_local_embeddings and not self.client:
+            raise RuntimeError("Pesquisa semântica indisponível: configura embeddings locais ou API key.")
 
         try:
             query_vector = self._embed_many([question])[0]

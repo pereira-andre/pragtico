@@ -248,3 +248,75 @@ def create_llm_provider(
         base_url=base_url,
         provider_label=provider.title(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Local Embedding Provider (sentence-transformers — runs on CPU, zero API cost)
+# ---------------------------------------------------------------------------
+
+class LocalEmbeddingProvider:
+    """Local embedding provider using sentence-transformers.
+
+    Runs entirely on CPU/GPU. No API calls, no quota limits.
+    Supports any HuggingFace model, default: BAAI/bge-m3 (1024 dim, 100+ languages).
+    """
+
+    def __init__(self, model_name: str = "BAAI/bge-m3") -> None:
+        self.model_name = model_name
+        self.model = None
+        self._dim = None
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Loading local embedding model: %s (may take a minute on first run)...", model_name)
+            self.model = SentenceTransformer(model_name)
+            self._dim = self.model.get_sentence_embedding_dimension()
+            logger.info("Local embedding model loaded: %s (%d dimensions)", model_name, self._dim)
+        except ImportError:
+            logger.warning(
+                "sentence-transformers not installed. Install with: "
+                "pip install sentence-transformers"
+            )
+        except Exception as exc:
+            logger.warning("Failed to load local embedding model %s: %s", model_name, exc)
+
+    @property
+    def is_available(self) -> bool:
+        return self.model is not None
+
+    @property
+    def dimensions(self) -> int:
+        return self._dim or 1024
+
+    def embed(self, texts: List[str], **kwargs) -> EmbeddingResult:
+        """Generate embeddings locally. No API calls."""
+        if not self.model:
+            raise RuntimeError(
+                f"Local embedding model {self.model_name} not loaded. "
+                "Install: pip install sentence-transformers"
+            )
+        vectors = self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        ).tolist()
+        return EmbeddingResult(vectors=vectors, model=self.model_name)
+
+
+def create_embedding_provider(
+    model_name: Optional[str] = None,
+) -> Optional[LocalEmbeddingProvider]:
+    """Create a local embedding provider if sentence-transformers is available.
+
+    Parameters:
+        model_name: HuggingFace model name. Defaults to EMBEDDING_LOCAL_MODEL env var,
+                    then "BAAI/bge-m3".
+
+    Returns:
+        LocalEmbeddingProvider or None if not available.
+    """
+    model = model_name or os.getenv("EMBEDDING_LOCAL_MODEL", "BAAI/bge-m3")
+    provider = LocalEmbeddingProvider(model_name=model)
+    if provider.is_available:
+        return provider
+    return None
+
