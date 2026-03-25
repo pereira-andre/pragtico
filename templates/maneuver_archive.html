@@ -138,7 +138,7 @@
     <p id="archive-no-results" class="muted hidden">Nenhuma manobra corresponde à pesquisa.</p>
 
     <div class="archive-footer">
-      <p class="muted">Os custos estimados baseiam-se no tarifário de pilotagem de Setúbal 2024 (UP normal: 9.2578 €/GT, mudança: 3.3628 €/GT). Não incluem rebocadores, TUP, amarração ou outros serviços auxiliares.</p>
+      <p class="muted">Os custos estimados baseiam-se no tarifário de pilotagem de Setúbal 2024 (T = UP × √GT — UP normal: 9.2578 €/√GT, mudança: 3.3628 €/√GT). Não incluem rebocadores, TUP, amarração ou outros serviços auxiliares.</p>
     </div>
   </section>
 
@@ -228,7 +228,7 @@
     if (!gt || gt <= 0) return null;
     const key = manoeuvreTypeToKey(typeLabel);
     const up = key === "shift" ? UP_SHIFT : UP_NORMAL;
-    return Math.round(up * gt * 100) / 100;
+    return Math.round(up * Math.sqrt(gt) * 100) / 100;
   }
 
   function updateTotalCost() {

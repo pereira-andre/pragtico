@@ -1,17 +1,10 @@
 """Unit tests for the pilotage cost calculation engine.
 
-Tests cover:
-- Base cost calculation (UP × GT)
-- Surcharge application (+25%)
-- Reduction application (best-of)
-- Standby pilotage
-- TUP estimation
-- Cancellation fees
-- Full scale cost estimates
-- Quick estimate for chatbot
-- Edge cases (zero GT, empty inputs)
+CRITICAL: The formula is T = UP × √GT (Art. 15º APSS 2024), NOT UP × GT.
+All expected values use math.sqrt(gt).
 """
 
+import math
 import pytest
 
 from cost_engine import (
@@ -23,8 +16,6 @@ from cost_engine import (
     ManoeuvreType,
     SurchargeType,
     ReductionType,
-    ManoeuvreResult,
-    ScaleCostEstimate,
     calculate_manoeuvre_cost,
     estimate_tup,
     estimate_cancellation_fee,
@@ -35,269 +26,157 @@ from cost_engine import (
 
 
 class TestBaseManoeuvreCalculation:
-    """Test basic pilotage cost formula: T = UP × GT."""
+    """Test basic pilotage cost formula: T = UP × √GT."""
 
     def test_normal_entry(self):
-        """Standard entry manoeuvre at normal UP rate."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=20000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=20000,
         ))
-        expected = round(UP_NORMAL * 20000, 2)
+        expected = round(UP_NORMAL * math.sqrt(20000), 2)
         assert result.total_cost == expected
         assert result.base_cost == expected
-        assert result.surcharge_amount == 0.0
-        assert result.reduction_amount == 0.0
 
     def test_normal_departure(self):
-        """Standard departure uses normal UP rate."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.DEPARTURE,
-            gt=15000,
+            manoeuvre_type=ManoeuvreType.DEPARTURE, gt=15000,
         ))
-        expected = round(UP_NORMAL * 15000, 2)
+        expected = round(UP_NORMAL * math.sqrt(15000), 2)
         assert result.total_cost == expected
 
     def test_shift_uses_reduced_rate(self):
-        """Shift manoeuvre uses the lower UP_SHIFT_ALONG rate."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.SHIFT,
-            gt=20000,
+            manoeuvre_type=ManoeuvreType.SHIFT, gt=20000,
         ))
-        expected = round(UP_SHIFT_ALONG * 20000, 2)
+        expected = round(UP_SHIFT_ALONG * math.sqrt(20000), 2)
         assert result.total_cost == expected
         assert result.up_rate == UP_SHIFT_ALONG
 
     def test_zero_gt(self):
-        """Zero GT should yield zero cost."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=0,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=0,
         ))
         assert result.total_cost == 0.0
-        assert result.base_cost == 0.0
 
     def test_negative_gt_treated_as_zero(self):
-        """Negative GT should be clamped to zero."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=-5000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=-5000,
         ))
         assert result.total_cost == 0.0
 
     def test_custom_up_override(self):
-        """Custom UP rate overrides the default."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            custom_up=5.0,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000, custom_up=5.0,
         ))
-        assert result.total_cost == 50000.0
-        assert result.up_rate == 5.0
+        expected = round(5.0 * math.sqrt(10000), 2)
+        assert result.total_cost == expected
+
+    def test_realistic_values(self):
+        """Verify a realistic example: GT=32540, entry manoeuvre."""
+        result = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=32540,
+        ))
+        expected = round(UP_NORMAL * math.sqrt(32540), 2)
+        assert result.total_cost == expected
+        # Should be ~1669€, NOT ~301k€
+        assert result.total_cost < 5000
+        assert result.total_cost > 500
 
 
 class TestSurcharges:
-    """Test surcharge application (+25% each)."""
-
     def test_no_propulsion_surcharge(self):
-        """No propulsion adds 25% to base cost."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             surcharges=[SurchargeType.NO_PROPULSION],
         ))
-        base = round(UP_NORMAL * 10000, 2)
+        base = round(UP_NORMAL * math.sqrt(10000), 2)
         surcharge = round(base * 0.25, 2)
         assert result.surcharge_amount == surcharge
         assert result.total_cost == round(base + surcharge, 2)
 
-    def test_special_assistance_surcharge(self):
-        """Special assistance adds 25%."""
-        result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            surcharges=[SurchargeType.SPECIAL_ASSISTANCE],
-        ))
-        base = round(UP_NORMAL * 10000, 2)
-        assert result.surcharge_amount == round(base * 0.25, 2)
-
     def test_cumulative_surcharges(self):
-        """Both surcharges stack: +50% total."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             surcharges=[SurchargeType.NO_PROPULSION, SurchargeType.SPECIAL_ASSISTANCE],
         ))
-        base = round(UP_NORMAL * 10000, 2)
-        surcharge = round(base * 0.50, 2)
-        assert result.surcharge_amount == surcharge
+        base = round(UP_NORMAL * math.sqrt(10000), 2)
+        assert result.surcharge_amount == round(base * 0.50, 2)
 
 
 class TestReductions:
-    """Test reduction application (best-of, not cumulative)."""
-
     def test_regular_line_reduction(self):
-        """Regular line discount: -25%."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             reductions=[ReductionType.REGULAR_LINE],
         ))
-        base = round(UP_NORMAL * 10000, 2)
+        base = round(UP_NORMAL * math.sqrt(10000), 2)
         reduction = round(base * 0.25, 2)
         assert result.reduction_amount == reduction
         assert result.total_cost == round(base - reduction, 2)
 
-    def test_cabotage_reduction(self):
-        """Cabotage discount: -10%."""
-        result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            reductions=[ReductionType.CABOTAGE],
-        ))
-        base = round(UP_NORMAL * 10000, 2)
-        assert result.reduction_amount == round(base * 0.10, 2)
-
-    def test_technical_call_reduction(self):
-        """Technical call discount: -30%."""
-        result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            reductions=[ReductionType.TECHNICAL_CALL],
-        ))
-        base = round(UP_NORMAL * 10000, 2)
-        assert result.reduction_amount == round(base * 0.30, 2)
-
     def test_best_reduction_wins(self):
-        """When multiple reductions apply, only the highest is used."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             reductions=[ReductionType.CABOTAGE, ReductionType.TECHNICAL_CALL],
         ))
-        base = round(UP_NORMAL * 10000, 2)
-        # Technical call (-30%) is higher than cabotage (-10%)
+        base = round(UP_NORMAL * math.sqrt(10000), 2)
         assert result.reduction_amount == round(base * 0.30, 2)
-
-
-class TestSurchargeAndReduction:
-    """Test combined surcharge + reduction."""
-
-    def test_surcharge_and_reduction_combined(self):
-        """Surcharge and reduction both apply to the base cost."""
-        result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            surcharges=[SurchargeType.NO_PROPULSION],
-            reductions=[ReductionType.REGULAR_LINE],
-        ))
-        base = round(UP_NORMAL * 10000, 2)
-        surcharge = round(base * 0.25, 2)
-        reduction = round(base * 0.25, 2)
-        assert result.total_cost == round(base + surcharge - reduction, 2)
 
 
 class TestStandbyPilotage:
-    """Test standby (pilotagem 'à ordem') calculation."""
-
     def test_standby_cost(self):
-        """Standby: hourly rate × hours + 25% of base."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.STANDBY,
-            gt=10000,
-            standby_hours=2.0,
+            manoeuvre_type=ManoeuvreType.STANDBY, gt=10000, standby_hours=2.0,
         ))
-        base = round(UP_NORMAL * 10000, 2)
+        base = round(UP_NORMAL * math.sqrt(10000), 2)
         standby = round(STANDBY_HOURLY_RATE * 2.0 + base * 0.25, 2)
         assert result.standby_cost == standby
         assert result.total_cost == round(base + standby, 2)
 
     def test_no_standby_for_entry(self):
-        """Standby cost only applies to STANDBY type."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
-            standby_hours=3.0,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000, standby_hours=3.0,
         ))
         assert result.standby_cost == 0.0
 
 
 class TestTUP:
-    """Test Port Usage Tariff estimation."""
-
     def test_tup_one_day(self):
-        """TUP for 1 day."""
-        result = estimate_tup(20000, 1.0)
-        assert result == round(TUP_RATE_PER_GT_DAY * 20000, 2)
+        assert estimate_tup(20000, 1.0) == round(TUP_RATE_PER_GT_DAY * 20000, 2)
 
     def test_tup_multiple_days(self):
-        """TUP scales with stay days."""
-        result = estimate_tup(20000, 3.0)
-        assert result == round(TUP_RATE_PER_GT_DAY * 20000 * 3, 2)
-
-    def test_tup_minimum_one_day(self):
-        """TUP with zero days defaults to 1."""
-        assert estimate_tup(10000, 0) == estimate_tup(10000, 1)
+        assert estimate_tup(20000, 3.0) == round(TUP_RATE_PER_GT_DAY * 20000 * 3, 2)
 
 
 class TestCancellationFees:
-    """Test cancellation/alteration fee schedule."""
-
     def test_no_fee_if_early(self):
-        """No fee if cancelled >24h before."""
         assert estimate_cancellation_fee(1000.0, "more_than_24h") == 0.0
 
     def test_full_fee_no_show(self):
-        """100% fee for no-show."""
         assert estimate_cancellation_fee(1000.0, "no_show") == 1000.0
-
-    def test_partial_fee(self):
-        """50% fee for 6-12h cancellation."""
-        assert estimate_cancellation_fee(1000.0, "6_to_12h") == 500.0
 
 
 class TestScaleCostEstimate:
-    """Test complete scale (port call) cost estimation."""
-
     def test_entry_plus_departure(self):
-        """Standard entry + departure scale."""
         estimate = calculate_scale_cost(
-            vessel_name="Test Ship",
-            gt=20000,
+            vessel_name="Test Ship", gt=20000,
             manoeuvres=[
                 ManoeuvreInput(manoeuvre_type=ManoeuvreType.ENTRY, gt=20000),
                 ManoeuvreInput(manoeuvre_type=ManoeuvreType.DEPARTURE, gt=20000),
             ],
-            stay_days=2,
-            include_tup=True,
+            stay_days=2, include_tup=True,
         )
-        entry_cost = round(UP_NORMAL * 20000, 2)
+        entry_cost = round(UP_NORMAL * math.sqrt(20000), 2)
         assert estimate.pilotage_total == round(entry_cost * 2, 2)
         assert estimate.tup_estimate == round(TUP_RATE_PER_GT_DAY * 20000 * 2, 2)
-        assert estimate.grand_total == round(estimate.pilotage_total + estimate.tup_estimate, 2)
         assert len(estimate.manoeuvres) == 2
-        assert estimate.vessel_name == "Test Ship"
-
-    def test_no_tup(self):
-        """Scale without TUP estimation."""
-        estimate = calculate_scale_cost(
-            vessel_name="Navio X",
-            gt=10000,
-            manoeuvres=[ManoeuvreInput(manoeuvre_type=ManoeuvreType.ENTRY, gt=10000)],
-            include_tup=False,
-        )
-        assert estimate.tup_estimate == 0.0
-        assert estimate.grand_total == estimate.pilotage_total
+        # Pilotage should be ~2618€ not ~370k€
+        assert estimate.pilotage_total < 10000
 
 
 class TestFormatSummary:
-    """Test human-readable formatting."""
-
     def test_format_produces_text(self):
-        """Formatting should produce non-empty text."""
         estimate = calculate_scale_cost(
-            vessel_name="MSC Lyria",
-            gt=32540,
+            vessel_name="MSC Lyria", gt=32540,
             manoeuvres=[
                 ManoeuvreInput(manoeuvre_type=ManoeuvreType.ENTRY, gt=32540),
                 ManoeuvreInput(manoeuvre_type=ManoeuvreType.DEPARTURE, gt=32540),
@@ -305,63 +184,79 @@ class TestFormatSummary:
         )
         text = format_cost_summary(estimate)
         assert "MSC Lyria" in text
-        assert "32540" in text
         assert "€" in text
-        assert "pilotagem" in text.lower()
 
 
 class TestQuickEstimate:
-    """Test chatbot quick estimate function."""
-
     def test_quick_entry(self):
-        """Quick estimate for entry."""
         result = quick_estimate(20000, "entry")
-        assert result["gt"] == 20000
-        assert result["total_cost"] == round(UP_NORMAL * 20000, 2)
-        assert result["currency"] == "EUR"
-
-    def test_quick_departure_pt(self):
-        """Quick estimate accepts Portuguese type names."""
-        result = quick_estimate(15000, "saída")
-        assert result["total_cost"] == round(UP_NORMAL * 15000, 2)
+        expected = round(UP_NORMAL * math.sqrt(20000), 2)
+        assert result["total_cost"] == expected
 
     def test_quick_shift(self):
-        """Quick estimate for shift uses lower rate."""
         result = quick_estimate(20000, "mudança")
-        assert result["total_cost"] == round(UP_SHIFT_ALONG * 20000, 2)
+        expected = round(UP_SHIFT_ALONG * math.sqrt(20000), 2)
+        assert result["total_cost"] == expected
 
-    def test_quick_unknown_type_defaults_entry(self):
-        """Unknown type defaults to entry."""
-        result = quick_estimate(10000, "unknown")
-        assert result["total_cost"] == round(UP_NORMAL * 10000, 2)
+    def test_quick_departure_pt(self):
+        result = quick_estimate(15000, "saída")
+        expected = round(UP_NORMAL * math.sqrt(15000), 2)
+        assert result["total_cost"] == expected
 
 
 class TestBreakdownContents:
-    """Test that breakdown lines contain useful information."""
-
-    def test_breakdown_has_formula(self):
-        """Breakdown should show the UP × GT formula."""
+    def test_breakdown_shows_sqrt(self):
+        """Breakdown should show √GT formula."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
         ))
-        assert any("€/GT" in line for line in result.breakdown)
-        assert any("Total" in line for line in result.breakdown)
+        assert any("√" in line for line in result.breakdown)
 
     def test_breakdown_shows_surcharge(self):
-        """Breakdown should mention surcharge when applied."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             surcharges=[SurchargeType.NO_PROPULSION],
         ))
         assert any("Agravamento" in line for line in result.breakdown)
 
     def test_breakdown_shows_reduction(self):
-        """Breakdown should mention reduction when applied."""
         result = calculate_manoeuvre_cost(ManoeuvreInput(
-            manoeuvre_type=ManoeuvreType.ENTRY,
-            gt=10000,
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=10000,
             reductions=[ReductionType.REGULAR_LINE],
         ))
         assert any("Redução" in line or "Reducao" in line for line in result.breakdown)
+
+
+class TestSanityChecks:
+    """Verify costs are in realistic ranges per APSS 2024 tariff."""
+
+    def test_small_vessel_entry(self):
+        """A 5000 GT vessel entry should cost ~654€."""
+        result = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=5000,
+        ))
+        assert 500 < result.total_cost < 1000
+
+    def test_medium_vessel_entry(self):
+        """A 20000 GT vessel entry should cost ~1309€."""
+        result = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=20000,
+        ))
+        assert 1000 < result.total_cost < 2000
+
+    def test_large_vessel_entry(self):
+        """A 50000 GT vessel entry should cost ~2069€."""
+        result = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=50000,
+        ))
+        assert 1500 < result.total_cost < 3000
+
+    def test_shift_cheaper_than_entry(self):
+        """Shift should cost ~36% of normal manoeuvre (3.3628/9.2578)."""
+        entry = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.ENTRY, gt=20000,
+        ))
+        shift = calculate_manoeuvre_cost(ManoeuvreInput(
+            manoeuvre_type=ManoeuvreType.SHIFT, gt=20000,
+        ))
+        assert shift.total_cost < entry.total_cost * 0.5

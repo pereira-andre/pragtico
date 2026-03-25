@@ -1,21 +1,23 @@
 """Pilotage cost calculation engine for the Port of Setúbal.
 
 Implements the tariff structure defined in the Port Pilotage Regulation
-(Regulamento de Pilotagem - Art. 13º, 15º) with support for:
-- Base pilotage fee (UP × GT)
+(Regulamento de Tarifas da APSS 2024 - Art. 15º) with support for:
+- Base pilotage fee: T = UP × √GT (Art. 15º, nº 1)
 - Multiple manoeuvre types (entry, departure, shift, anchoring)
-- Surcharges (+25% for special conditions)
-- Reductions (regular line, cabotage, technical calls)
-- Standby pilotage ('à ordem')
-- Cancellation fees
-- TUP (Port Usage Tariff) estimation
+- Surcharges (+25% for special conditions, Art. 15º nº 3)
+- Reductions (regular line, cabotage, technical calls, Art. 16º)
+- Standby pilotage 'à ordem' (Art. 15º nº 4)
+- Cancellation fees (Art. 15º nº 7)
+- TUP estimation (Art. 9º)
 - Complete cost breakdown with formatted output
 
-Reference values: Setúbal 2024 tariff schedule.
+CRITICAL: The formula is T = UP × √GT (square root of GT), NOT UP × GT.
+Reference: Projeto de Regulamento de Tarifas da APSS para 2024, Art. 15º.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
@@ -218,8 +220,8 @@ def calculate_manoeuvre_cost(manoeuvre: ManoeuvreInput) -> ManoeuvreResult:
     """
     gt = max(manoeuvre.gt, 0.0)
     up_rate = _get_up_rate(manoeuvre.manoeuvre_type, manoeuvre.custom_up)
-    base_cost = up_rate * gt
-    breakdown = [f"Base: {up_rate:.4f} €/GT × {gt:.0f} GT = {base_cost:.2f} €"]
+    base_cost = up_rate * math.sqrt(gt)
+    breakdown = [f"Base: {up_rate:.4f} €/√GT × √{gt:.0f} (={math.sqrt(gt):.2f}) = {base_cost:.2f} €"]
 
     # Surcharges
     surcharge_pct = _surcharge_factor(manoeuvre.surcharges)

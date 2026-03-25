@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import math
 import os
 import re
 import threading
@@ -1007,9 +1008,9 @@ def build_cost_context_source(question: str, port_activity: dict) -> dict | None
 
     lines = [
         "Motor de cálculo de custos de pilotagem do Porto de Setúbal (tarifário 2024):",
-        f"- UP serviços normais (entrada, saída, atracar): {UP_NORMAL} €/GT",
-        f"- UP mudança ao longo do cais: {UP_SHIFT_ALONG} €/GT",
-        "- Fórmula: Taxa = UP × GT (arqueação bruta)",
+        f"- UP serviços normais (entrada, saída, atracar): {UP_NORMAL} €/√GT",
+        f"- UP mudança ao longo do cais: {UP_SHIFT_ALONG} €/√GT",
+        "- Fórmula: Taxa = UP × √GT (raiz quadrada da arqueação bruta, Art. 15º)",
         "- Agravamento +25%: navio sem propulsão ou assistência especial",
         "- Redução -25% linha regular, -10% cabotagem, -30% escala técnica",
         "- Pilotagem à ordem: 74.64 €/hora + 25% da taxa base",
@@ -1031,8 +1032,8 @@ def build_cost_context_source(question: str, port_activity: dict) -> dict | None
         if gt <= 0:
             continue
         name = vessel.get("vessel_name", "Navio")
-        cost_entry = round(UP_NORMAL * gt, 2)
-        cost_departure = round(UP_NORMAL * gt, 2)
+        cost_entry = round(UP_NORMAL * math.sqrt(gt), 2)
+        cost_departure = round(UP_NORMAL * math.sqrt(gt), 2)
         lines.append(
             f"- Exemplo {name} (GT {gt:.0f}): entrada ~{cost_entry:.2f}€, "
             f"saída ~{cost_departure:.2f}€, total ~{cost_entry + cost_departure:.2f}€"
