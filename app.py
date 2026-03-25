@@ -1056,10 +1056,12 @@ def build_cost_context_source(question: str, port_activity: dict) -> dict | None
         f"- UP mudança ao longo do cais: {UP_SHIFT_ALONG} €/√GT",
         "- Fórmula: Taxa = UP × √GT (raiz quadrada da arqueação bruta, Art. 15º)",
         "- Agravamento +25%: navio sem propulsão ou assistência especial",
-        "- Redução -25% linha regular, -10% cabotagem, -30% escala técnica",
+        "- Reduções linha regular (Art. 16º): 6-24 escalas -10%, 25-52 -15%, 53-100 -20%, >100 -25%",
+        "- Redução -10% cabotagem, -30% escala técnica (só a melhor aplica)",
         "- Pilotagem à ordem: 74.64 €/hora + 25% da taxa base",
-        "- Cancelamentos: 0% (>24h) a 100% (no-show)",
-        "- TUP estimada: 0.1144 €/GT/dia",
+        "- Cancelamentos: 30% (2h antes), 50% (1h depois), 100% (no-show), 25% (meteo c/ piloto)",
+        "- TUP por tipo: contentores 0.1144/0.0263, RoRo 0.1186/0.0274, passag. 0.0620/0.0263, "
+        "tanque/restantes 0.1459/0.0274 (€/GT, 1ºdia/restantes)",
         "- Não inclui rebocadores (privados), amarração, lanchas ou resíduos.",
         "",
     ]
@@ -3947,6 +3949,7 @@ def api_cost_estimate():
         return jsonify({"error": "GT tem de ser positivo."}), 400
 
     vessel_name = (payload.get("vessel_name") or "Navio").strip()
+    vessel_type = (payload.get("vessel_type") or "restantes").strip().lower()
     stay_days = max(float(payload.get("stay_days", 1)), 0.5)
     include_tup = payload.get("include_tup", True)
 
@@ -3986,11 +3989,13 @@ def api_cost_estimate():
             surcharges=surcharges,
             reductions=reductions,
             standby_hours=float(raw.get("standby_hours", 0)),
+            regular_line_calls=raw.get("regular_line_calls"),
         ))
 
     estimate = calculate_scale_cost(
         vessel_name=vessel_name,
         gt=gt,
+        vessel_type=vessel_type,
         manoeuvres=manoeuvre_inputs,
         stay_days=stay_days,
         include_tup=include_tup,
@@ -3999,6 +4004,7 @@ def api_cost_estimate():
     return jsonify({
         "vessel_name": estimate.vessel_name,
         "gt": estimate.gt,
+        "vessel_type": estimate.vessel_type,
         "pilotage_total": estimate.pilotage_total,
         "tup_estimate": estimate.tup_estimate,
         "stay_days": estimate.stay_days,
