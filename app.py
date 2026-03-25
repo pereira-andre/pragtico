@@ -1883,13 +1883,22 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Entrada aprovada para {result['vessel_name']}."
     if action == "abort_entry":
+        # Validate: agente cancels pending (antecedência), piloto aborts approved (a bordo)
+        from chat_actions import resolve_maneuver
+        target_maneuver = resolve_maneuver(port_call, action, "entry")
+        maneuver_state = (target_maneuver or {}).get("state", "pending")
+        if role == "agente" and maneuver_state == "approved":
+            raise ValueError("Só o piloto/admin pode abortar uma manobra já aprovada (piloto a bordo).")
+        if role == "piloto" and maneuver_state == "pending":
+            raise ValueError("Manobra ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
         result = store.abort_port_call(
             port_call_id=port_call_id,
             decided_by=username,
-            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo do aborto"),
+            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"),
             approval_note=field_text("approval_note"),
         )
-        return result, f"Entrada abortada para {result['vessel_name']}."
+        label = "cancelada" if maneuver_state == "pending" else "abortada (piloto a bordo)"
+        return result, f"Entrada {label} para {result['vessel_name']}."
     if action == "complete_entry":
         arrived_at_value = field_text("arrived_at_local", field_text("maneuver_finished_local"))
         result = store.mark_port_call_arrived(
@@ -1951,12 +1960,20 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Saída aprovada para {result['vessel_name']}."
     if action == "abort_departure":
+        from chat_actions import resolve_maneuver as _resolve
+        target_m = _resolve(port_call, action, "departure")
+        m_state = (target_m or {}).get("state", "pending")
+        if role == "agente" and m_state == "approved":
+            raise ValueError("Só o piloto/admin pode abortar uma saída já aprovada.")
+        if role == "piloto" and m_state == "pending":
+            raise ValueError("Saída ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
         result = store.abort_departure_plan(
             port_call_id=port_call_id,
             updated_by=username,
-            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo do cancelamento"),
+            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"),
         )
-        return result, f"Saída cancelada para {result['vessel_name']}."
+        label = "cancelada" if m_state == "pending" else "abortada (piloto a bordo)"
+        return result, f"Saída {label} para {result['vessel_name']}."
     if action == "complete_departure":
         departed_at_value = field_text("departed_at_local", field_text("maneuver_finished_local"))
         result = store.mark_port_call_departed(
@@ -2020,12 +2037,20 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Mudança aprovada para {result['vessel_name']}."
     if action == "abort_shift":
+        from chat_actions import resolve_maneuver as _resolve_s
+        target_ms = _resolve_s(port_call, action, "shift")
+        ms_state = (target_ms or {}).get("state", "pending")
+        if role == "agente" and ms_state == "approved":
+            raise ValueError("Só o piloto/admin pode abortar uma mudança já aprovada.")
+        if role == "piloto" and ms_state == "pending":
+            raise ValueError("Mudança ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
         result = store.abort_shift_plan(
             port_call_id=port_call_id,
             updated_by=username,
-            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo do cancelamento"),
+            aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"),
         )
-        return result, f"Mudança cancelada para {result['vessel_name']}."
+        label = "cancelada" if ms_state == "pending" else "abortada (piloto a bordo)"
+        return result, f"Mudança {label} para {result['vessel_name']}."
     if action == "complete_shift":
         shifted_at_value = field_text("shifted_at_local", field_text("maneuver_finished_local"))
         result = store.mark_shift_completed(

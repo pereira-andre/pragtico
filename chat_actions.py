@@ -21,8 +21,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_entry": {
-        "label": "Abortar entrada",
-        "roles": {"admin", "piloto"},
+        "label": "Cancelar/Abortar entrada",
+        "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
     "entry_report": {
@@ -42,8 +42,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_departure": {
-        "label": "Abortar saída",
-        "roles": {"admin", "piloto"},
+        "label": "Cancelar/Abortar saída",
+        "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
     "departure_report": {
@@ -63,8 +63,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_shift": {
-        "label": "Abortar mudança",
-        "roles": {"admin", "piloto"},
+        "label": "Cancelar/Abortar mudança",
+        "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
     "shift_report": {
