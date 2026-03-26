@@ -95,6 +95,8 @@ def api_message_feedback(message_id: str):
     feedback_note = (payload.get("feedback_note") or "").strip()
     if not conversation_id:
         return jsonify({"error": "conversation_id em falta."}), 400
+    if feedback_status not in {"approved", "review"}:
+        return jsonify({"error": "Estado de feedback inválido."}), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,

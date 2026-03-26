@@ -213,6 +213,22 @@ def _validate_required_vessel_profile(record: Dict[str, str]) -> None:
     missing = [label for field, label in required_fields if not _clean_text(record.get(field, ""))]
     if missing:
         raise ValueError(f"Faltam dados obrigatórios do navio: {', '.join(missing)}.")
+    numeric_fields = (
+        ("vessel_loa_m", "LOA"),
+        ("vessel_beam_m", "boca"),
+        ("vessel_gt_t", "GT"),
+        ("vessel_max_draft_m", "calado"),
+        ("vessel_dwt_t", "DWT"),
+    )
+    for field, label in numeric_fields:
+        value = _clean_text(record.get(field, "")).replace(",", ".")
+        if value:
+            try:
+                number = float(value)
+            except ValueError:
+                raise ValueError(f"{label} deve ser um número válido.")
+            if number <= 0:
+                raise ValueError(f"{label} deve ser positivo.")
 
 
 def _validate_required_operational_profile(record: Dict[str, str], fields: tuple[tuple[str, str], ...]) -> None:

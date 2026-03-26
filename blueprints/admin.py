@@ -6,6 +6,7 @@ import os
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 import services
+from validators import validate_phone, validate_required_text, validate_role
 from helpers import (
     current_reindex_status_payload,
     load_admin_status,
@@ -43,10 +44,10 @@ def admin_users():
 def admin_update_user(username: str):
     target_username = username.strip().lower()
     try:
-        updated_role = request.form.get("role", "").strip().lower()
-        full_name = request.form.get("full_name", "").strip()
-        organization = request.form.get("organization", "").strip()
-        phone = request.form.get("phone", "").strip()
+        updated_role = validate_role(request.form.get("role", ""))
+        full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
+        organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
+        phone = validate_phone(request.form.get("phone", ""))
 
         if updated_role == "admin" and target_username != session.get("username"):
             existing_admins = [
@@ -144,10 +145,11 @@ def admin_documents():
 @login_required
 @role_required("admin")
 def add_document():
-    title = request.form.get("title", "").strip()
-    content = request.form.get("content", "").strip()
-    if not title or not content:
-        flash("Titulo e conteudo sao obrigatorios.", "error")
+    try:
+        title = validate_required_text(request.form.get("title", ""), "Título", max_length=200)
+        content = validate_required_text(request.form.get("content", ""), "Conteúdo", max_length=50000)
+    except ValueError as exc:
+        flash(str(exc), "error")
         return redirect(url_for("dashboard_bp.dashboard"))
     filename = services.store.save_document(title, content, created_by=session["username"])
     if safe_rebuild_index(force=False):

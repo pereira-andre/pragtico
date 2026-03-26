@@ -20,6 +20,15 @@ from helpers import (
     role_required,
 )
 from storage import normalize_constraint_codes
+from validators import (
+    validate_datetime_range,
+    validate_imo,
+    validate_optional_text,
+    validate_positive_number,
+    validate_required_text,
+    validate_tug_count,
+    validate_vessel_dimensions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +104,11 @@ def create_port_call():
         berth = require_form_text(form_data["berth"], "Cais previsto")
         last_port = require_form_text(form_data["last_port"], "Porto anterior")
         next_port = require_form_text(form_data["next_port"], "Próximo destino")
-        draft_m = require_form_text(form_data["draft_m"], "Calado")
-        tug_count = require_form_text(form_data["tug_count"], "Rebocadores")
+        draft_m = validate_positive_number(form_data["draft_m"], "Calado (m)", max_value=30.0)
+        tug_count = validate_tug_count(form_data["tug_count"])
+        validate_imo(form_data["vessel_imo"])
+        validated_dims = validate_vessel_dimensions(form_data)
+        form_data.update(validated_dims)
         port_call = services.store.create_port_call(
             vessel_name=form_data["vessel_name"], eta=eta,
             created_by=session["username"], constraints=form_data["constraints"],
@@ -147,10 +159,11 @@ def approve_port_call(port_call_id: str):
 @port_call_scope_required
 def abort_port_call(port_call_id: str):
     try:
+        aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_port_call(
             port_call_id=port_call_id, decided_by=session["username"],
-            aborted_reason=request.form.get("aborted_reason", "").strip(),
-            approval_note=request.form.get("approval_note", "").strip(),
+            aborted_reason=aborted_reason,
+            approval_note=validate_optional_text(request.form.get("approval_note", "")),
         )
     except ValueError as exc:
         flash(str(exc), "error")
@@ -168,8 +181,8 @@ def schedule_departure_plan(port_call_id: str):
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
         next_port = require_form_text(request.form.get("next_port", "").strip(), "Próximo destino")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
-        tug_count = require_form_text(request.form.get("tug_count", "").strip(), "Rebocadores")
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
+        tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
         port_call = services.store.schedule_departure_plan(
             port_call_id=port_call_id, planned_departure_at=planned_departure_at,
             updated_by=session["username"], next_port=next_port,
@@ -192,9 +205,10 @@ def schedule_departure_plan(port_call_id: str):
 @port_call_scope_required
 def abort_departure_plan(port_call_id: str):
     try:
+        aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_departure_plan(
             port_call_id=port_call_id, updated_by=session["username"],
-            aborted_reason=request.form.get("aborted_reason", "").strip(),
+            aborted_reason=aborted_reason,
         )
     except ValueError as exc:
         flash(str(exc), "error")
@@ -213,8 +227,8 @@ def schedule_shift_plan(port_call_id: str):
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
         origin_berth = require_form_text(request.form.get("origin_berth", "").strip(), "Cais origem")
         destination_berth = require_form_text(request.form.get("destination_berth", "").strip(), "Cais destino")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
-        tug_count = require_form_text(request.form.get("tug_count", "").strip(), "Rebocadores")
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
+        tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
         port_call = services.store.schedule_shift_plan(
             port_call_id=port_call_id, planned_shift_at=planned_shift_at,
             updated_by=session["username"], destination_berth=destination_berth,
@@ -254,9 +268,10 @@ def approve_shift_plan(port_call_id: str):
 @port_call_scope_required
 def abort_shift_plan(port_call_id: str):
     try:
+        aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_shift_plan(
             port_call_id=port_call_id, updated_by=session["username"],
-            aborted_reason=request.form.get("aborted_reason", "").strip(),
+            aborted_reason=aborted_reason,
         )
     except ValueError as exc:
         flash(str(exc), "error")
@@ -325,7 +340,8 @@ def attach_entry_report(port_call_id: str):
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
+        validate_datetime_range(maneuver_started_at, maneuver_finished_at)
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Entrada")
         port_call = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
@@ -342,7 +358,8 @@ def attach_departure_report(port_call_id: str):
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
+        validate_datetime_range(maneuver_started_at, maneuver_finished_at)
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Saída")
         port_call = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
@@ -359,7 +376,8 @@ def attach_shift_report(port_call_id: str):
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
+        validate_datetime_range(maneuver_started_at, maneuver_finished_at)
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Mudança")
         port_call = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
@@ -381,8 +399,8 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
             planned_at=parse_local_datetime_input(request.form.get("planned_at_local", "").strip(), "Hora de marcação"),
             origin=require_form_text(request.form.get("origin", "").strip(), "Origem"),
             destination=require_form_text(request.form.get("destination", "").strip(), "Destino"),
-            draft_m=require_form_text(request.form.get("draft_m", "").strip(), "Calado"),
-            tug_count=require_form_text(request.form.get("tug_count", "").strip(), "Rebocadores"),
+            draft_m=validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0),
+            tug_count=validate_tug_count(request.form.get("tug_count", "").strip()),
             constraints=request.form.getlist("constraints"),
             plan_note=request.form.get("plan_observations", "").strip(),
             change_reason=require_form_text(request.form.get("change_reason", "").strip(), "Motivo da alteração"),
@@ -405,7 +423,8 @@ def edit_maneuver_report(port_call_id: str, maneuver_id: str):
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
-        draft_m = require_form_text(request.form.get("draft_m", "").strip(), "Calado")
+        validate_datetime_range(maneuver_started_at, maneuver_finished_at)
+        draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         port_call = services.store.edit_maneuver_report(
             port_call_id=port_call_id, maneuver_id=maneuver_id,
             updated_by=session["username"],

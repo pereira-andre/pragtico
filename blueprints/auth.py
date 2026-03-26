@@ -9,6 +9,7 @@ from helpers import (
     session_profile_incomplete,
 )
 from storage import is_user_profile_complete
+from validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role
 
 bp = Blueprint("auth", __name__)
 
@@ -19,8 +20,12 @@ def login():
         return redirect(url_for("dashboard_bp.dashboard"))
 
     if request.method == "POST":
-        username = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+        try:
+            username = validate_email(request.form.get("email", ""))
+            password = validate_password(request.form.get("password", ""))
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return render_template("login.html")
         try:
             user = services.auth_service.authenticate(username, password)
         except ValueError as exc:
@@ -44,9 +49,18 @@ def login():
 @bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        username = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
-        role = request.form.get("role", "piloto")
+        try:
+            username = validate_email(request.form.get("email", ""))
+            password = validate_password(request.form.get("password", ""))
+            role = validate_role(request.form.get("role", "piloto"))
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return render_template("register.html", form_data={
+                "role": request.form.get("role", "piloto"),
+                "full_name": request.form.get("full_name", "").strip(),
+                "organization": request.form.get("organization", "").strip(),
+                "phone": request.form.get("phone", "").strip(),
+            })
         profile_data = {
             "full_name": request.form.get("full_name", "").strip(),
             "organization": request.form.get("organization", "").strip(),
@@ -60,7 +74,7 @@ def register():
             )
         except ValueError as exc:
             flash(str(exc), "error")
-            return render_template("register.html", form_data={"role": role, **profile_data})
+            return render_template("register.html", form_data={"role": role, "full_name": profile_data["full_name"], "organization": profile_data["organization"], "phone": profile_data["phone"]})
 
         flash("Conta criada. Ja podes iniciar sessao.", "success")
         return redirect(url_for("auth.login"))
@@ -74,12 +88,15 @@ def profile():
     existing_profile = current_user_profile() or {"username": session["username"], "role": session.get("role", "piloto")}
     if request.method == "POST":
         try:
+            full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
+            organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
+            phone = validate_phone(request.form.get("phone", ""))
             updated_profile = services.store.update_user_profile(
                 session["username"],
-                full_name=request.form.get("full_name", "").strip(),
-                organization=request.form.get("organization", "").strip(),
+                full_name=full_name,
+                organization=organization,
                 email=session["username"],
-                phone=request.form.get("phone", "").strip(),
+                phone=phone,
             )
             if not is_user_profile_complete(updated_profile):
                 raise ValueError("Nome, agência/entidade, email e telefone são obrigatórios.")
