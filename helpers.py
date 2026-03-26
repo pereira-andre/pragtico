@@ -55,6 +55,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def ensure_session_user_profile() -> bool:
+    """Sync the session role with the stored user profile, clearing the session if user is gone."""
     username = session.get("username", "").strip().lower()
     if not username:
         return False
@@ -75,6 +76,7 @@ def ensure_session_user_profile() -> bool:
 
 
 def current_user_profile() -> dict | None:
+    """Return the profile dict for the currently authenticated session user, or None."""
     username = session.get("username", "").strip().lower()
     if not username:
         return None
@@ -82,6 +84,7 @@ def current_user_profile() -> dict | None:
 
 
 def session_profile_incomplete() -> bool:
+    """Return True if the current session user has an incomplete profile."""
     profile = current_user_profile()
     if not profile:
         return False
@@ -123,6 +126,7 @@ def _current_agent_scope_key() -> str | None:
 
 
 def ensure_port_call_scope_access(port_call_id: str) -> None:
+    """Raise PermissionError if the current agent session has no access to the given port call."""
     scope_key = _current_agent_scope_key()
     if scope_key is None:
         return
@@ -134,6 +138,7 @@ def ensure_port_call_scope_access(port_call_id: str) -> None:
 
 
 def filter_port_activity_for_session(port_activity: dict) -> dict:
+    """Filter port activity down to entries visible to the current session's agency scope."""
     scope_key = _current_agent_scope_key()
     if scope_key is None:
         return port_activity
@@ -229,6 +234,7 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def login_required(view):
+    """Decorator that redirects unauthenticated requests to the login page."""
     @wraps(view)
     def wrapped(*args, **kwargs):
         is_api = request.path.startswith("/api/")
@@ -253,6 +259,7 @@ def login_required(view):
 
 
 def role_required(*roles):
+    """Decorator factory that restricts a view to users with one of the given roles."""
     def decorator(view):
         @wraps(view)
         def wrapped(*args, **kwargs):
@@ -265,6 +272,7 @@ def role_required(*roles):
 
 
 def redirect_to_portal_target(port_call_id: str):
+    """Redirect to the scale detail, registration, or dashboard based on the form's redirect_to field."""
     target = request.form.get("redirect_to", "").strip().lower()
     if target == "scale":
         return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
@@ -274,6 +282,7 @@ def redirect_to_portal_target(port_call_id: str):
 
 
 def port_call_scope_required(view):
+    """Decorator that enforces agency-scope access control for port call views."""
     @wraps(view)
     def wrapped(*args, **kwargs):
         port_call_id = kwargs.get("port_call_id")
@@ -293,6 +302,7 @@ def port_call_scope_required(view):
 # ---------------------------------------------------------------------------
 
 def safe_rebuild_index(force: bool = False) -> bool:
+    """Rebuild the RAG index, returning True on success and storing any error message."""
     try:
         services.rag.rebuild_index(force=force)
         return True
@@ -305,6 +315,7 @@ def safe_rebuild_index(force: bool = False) -> bool:
 
 
 def start_reindex_job(force: bool = False) -> bool:
+    """Start a background reindex thread if none is running, returning True if one was started."""
     with services.reindex_thread_lock:
         if services.reindex_thread and services.reindex_thread.is_alive():
             return False
@@ -323,6 +334,7 @@ def start_reindex_job(force: bool = False) -> bool:
 
 
 def sync_reindex_retry_schedule() -> None:
+    """Update the retry scheduler based on missing embeddings and quota state."""
     if services.reindex_retry_scheduler is None:
         return
     if services.rag.has_active_reindex_worker():
@@ -347,6 +359,7 @@ def sync_reindex_retry_schedule() -> None:
 
 
 def refresh_knowledge_state(force_reindex: bool = False, rebuild_index: bool = True) -> bool:
+    """Sync knowledge documents and optionally trigger a reindex, returning True on success."""
     try:
         services.store.list_documents()
     except Exception as exc:
@@ -371,6 +384,7 @@ def refresh_knowledge_state(force_reindex: bool = False, rebuild_index: bool = T
 
 
 def current_reindex_status_payload() -> dict:
+    """Return a combined reindex status payload including sync summary and retry schedule."""
     status_payload = services.rag.get_reindex_status()
     try:
         sync_summary = services.rag.get_sync_status_summary()
@@ -446,6 +460,7 @@ def current_reindex_status_payload() -> dict:
 
 
 def load_admin_status() -> dict:
+    """Collect and return a comprehensive status payload for the admin dashboard."""
     ais_status = services.ais_service.dashboard_context()
     local_counts = {
         "users": len(services.store.list_users()),
@@ -511,6 +526,7 @@ def load_admin_status() -> dict:
 # ---------------------------------------------------------------------------
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
+    """Flatten hourly weather groups into a single ordered timeline list up to max_hours entries."""
     if not weather_data:
         return []
     timeline = []
@@ -528,6 +544,7 @@ def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> li
 
 
 def build_operational_snapshot_source(port_activity: dict, max_rows: int = 12) -> dict:
+    """Build a chat supplemental source summarizing the current planned maneuvers."""
     lines = [
         "Resumo operacional das manobras planeadas e referências do quadro:",
         (
@@ -581,6 +598,7 @@ def _constraint_labels_from_badges(item: dict) -> str:
 
 
 def build_maneuver_archive_source(question: str, port_activity: dict, max_rows: int = 12) -> dict:
+    """Build a chat supplemental source from archived maneuvers ranked by relevance to the question."""
     archive_rows = port_activity.get("archived_maneuvers", [])
     scored_rows = []
     for index, item in enumerate(archive_rows):
@@ -621,6 +639,7 @@ def build_maneuver_archive_source(question: str, port_activity: dict, max_rows: 
 
 
 def build_scale_registry_source(question: str, port_activity: dict, max_rows: int = 12) -> dict:
+    """Build a chat supplemental source from the port call registry ranked by relevance to the question."""
     scale_rows = []
     for group_name in ("arrivals", "in_port", "departed", "aborted"):
         for item in port_activity.get(group_name, []):
@@ -693,6 +712,7 @@ def _looks_like_cost_question(question: str) -> bool:
 
 
 def build_cost_context_source(question: str, port_activity: dict) -> dict | None:
+    """Build a pilotage cost context source if the question appears cost-related, else return None."""
     if not _looks_like_cost_question(question):
         return None
     lines = [
@@ -737,6 +757,7 @@ def build_cost_context_source(question: str, port_activity: dict) -> dict | None
 
 
 def build_operational_chat_sources(question: str) -> list[dict]:
+    """Assemble supplemental operational context sources for the chat RAG pipeline."""
     recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
     historical_port_activity = services.store.get_port_activity_snapshot(window_days=3650)
     sources = [
@@ -761,10 +782,12 @@ def _operational_lookup_key(value: str | None) -> str:
 
 
 def pending_action_state_key(username: str, conversation_id: str) -> str:
+    """Return the runtime state key for a user's pending chat action in a given conversation."""
     return f"chat_pending_action:{username}:{conversation_id}"
 
 
 def looks_like_pending_confirmation(question: str) -> bool:
+    """Return True if the question is a simple confirmation phrase like 'sim' or 'ok'."""
     clean = _operational_lookup_key(question)
     return clean in {
         "ok", "okay", "okey", "sim", "confirma", "confirmar",
@@ -773,6 +796,7 @@ def looks_like_pending_confirmation(question: str) -> bool:
 
 
 def refresh_proposal_missing_fields(proposal: dict) -> dict:
+    """Recompute and update the missing_fields list on a proposal dict in-place."""
     proposal["missing_fields"] = display_missing_field_labels(
         required_missing_fields(proposal.get("action", ""), proposal.get("fields") or {})
     )
@@ -780,16 +804,19 @@ def refresh_proposal_missing_fields(proposal: dict) -> dict:
 
 
 def current_visible_port_calls(window_days: int = 120) -> list[dict]:
+    """Return port calls visible to the current session filtered by the given window."""
     port_activity = services.store.get_port_activity_snapshot(window_days=window_days)
     port_activity = filter_port_activity_for_session(port_activity)
     return visible_port_calls_from_activity(port_activity)
 
 
 def current_resolvable_port_calls() -> list[dict]:
+    """Return all port calls visible to the session over a 10-year window for action resolution."""
     return current_visible_port_calls(window_days=3650)
 
 
 def action_target_port_call(port_call_id: str) -> dict:
+    """Fetch a port call and enforce agent scope access, returning the decorated record."""
     port_call = services.store.get_port_call(port_call_id)
     if (session.get("role") or "").strip().lower() == "agente":
         ensure_port_call_scope_access(port_call_id)
@@ -797,6 +824,7 @@ def action_target_port_call(port_call_id: str) -> dict:
 
 
 def heuristic_operational_proposal(question: str, role: str, port_calls: list[dict]) -> dict | None:
+    """Apply deterministic pattern matching to derive an operational action proposal from the question."""
     clean = _operational_lookup_key(question)
     if not clean:
         return None
@@ -914,6 +942,7 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
 
 
 def build_tracked_scales(port_activity: dict) -> list[dict]:
+    """Build a flat list of tracked scale summaries for vessels currently in port or with planned maneuvers."""
     tracked = []
     seen_ids: set[str] = set()
     for item in port_activity.get("in_port", []) or []:
@@ -948,6 +977,7 @@ def build_tracked_scales(port_activity: dict) -> list[dict]:
 
 
 def load_pending_chat_action(username: str, conversation_id: str) -> dict | None:
+    """Load and normalize the pending chat action for a conversation, or return None."""
     payload = services.store.get_runtime_state(pending_action_state_key(username, conversation_id))
     if not payload:
         return None
@@ -988,6 +1018,7 @@ def load_pending_chat_action(username: str, conversation_id: str) -> dict | None
 
 
 def save_pending_chat_action(username: str, conversation_id: str, proposal: dict, question: str) -> dict:
+    """Persist a pending action proposal to runtime state and return the stored payload."""
     port_call = None
     if proposal.get("port_call_id"):
         try:
@@ -1005,10 +1036,12 @@ def save_pending_chat_action(username: str, conversation_id: str, proposal: dict
 
 
 def clear_pending_chat_action(username: str, conversation_id: str) -> None:
+    """Delete the pending chat action for the given user and conversation from runtime state."""
     services.store.delete_runtime_state(pending_action_state_key(username, conversation_id))
 
 
 def propose_operational_action(question: str, role: str) -> dict | None:
+    """Attempt to derive an operational action proposal from the question using heuristics or LLM."""
     if not looks_like_operational_command(question):
         return None
     resolvable_port_calls = current_resolvable_port_calls()
@@ -1045,6 +1078,7 @@ def propose_operational_action(question: str, role: str) -> dict | None:
 
 
 def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] | None = None) -> dict | None:
+    """Resolve the target port call and maneuver for an action proposal and refresh missing fields."""
     if not proposal or proposal.get("intent") != "action":
         return proposal
     target = None
@@ -1135,6 +1169,7 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
 
 
 def pending_action_override(question: str, pending_proposal: dict, role: str) -> dict | None:
+    """Check if the question replaces the pending action with a different verb, returning the replacement or None."""
     clean = _operational_lookup_key(question)
     if not clean:
         return None
@@ -1175,6 +1210,7 @@ def pending_action_override(question: str, pending_proposal: dict, role: str) ->
 
 
 def refine_pending_operational_action(question: str, pending_proposal: dict, role: str) -> dict | None:
+    """Update, replace, cancel, or reject a pending proposal based on the user's follow-up question."""
     replacement = pending_action_override(question, pending_proposal, role)
     if replacement and replacement.get("intent") == "action":
         return {"intent": "replace", "proposal": replacement}
@@ -1232,6 +1268,7 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
 
 
 def execute_pending_operational_action(proposal: dict, username: str, role: str) -> tuple[dict, str]:
+    """Execute an approved operational action proposal against the store and return the result and message."""
     action = proposal.get("action") or ""
     target = proposal.get("target") or {}
     fields = proposal.get("fields") or {}
@@ -1462,6 +1499,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 # ---------------------------------------------------------------------------
 
 def build_scale_context(port_call: dict) -> dict:
+    """Build the rich context dict for the port call detail page including maneuvers and actions."""
     current_role = (session.get("role") or "").strip().lower()
 
     def _hours_between(start_value: str | None, end_value: str | None) -> str:
@@ -1639,6 +1677,7 @@ def build_scale_context(port_call: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def parse_local_datetime_input(value: str, label: str = "ETA") -> str:
+    """Parse a local datetime string from a form input and return it as a timezone-aware ISO string."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         raise ValueError(f"{label} é obrigatória.")
@@ -1653,6 +1692,7 @@ def parse_local_datetime_input(value: str, label: str = "ETA") -> str:
 
 
 def parse_optional_local_datetime_input(value: str, label: str = "Data e hora") -> str:
+    """Parse an optional local datetime string, returning an empty string if the value is blank."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         return ""
@@ -1660,6 +1700,7 @@ def parse_optional_local_datetime_input(value: str, label: str = "Data e hora") 
 
 
 def require_form_text(value: str, label: str) -> str:
+    """Return a cleaned form text value, raising ValueError if it is empty."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         raise ValueError(f"{label} é obrigatório.")
@@ -1667,6 +1708,7 @@ def require_form_text(value: str, label: str) -> str:
 
 
 def format_note_datetime(value: str) -> str:
+    """Format an ISO datetime string as a local dd/mm/yyyy HH:MM label for display in notes."""
     if not value:
         return ""
     try:
@@ -1694,6 +1736,7 @@ def _iso_to_datetime_local_value(value: str | None) -> str:
 
 
 def compact_multiline_note(title: str, fields: list[tuple[str, str]]) -> str:
+    """Build a multiline note string from a title and a list of (label, value) pairs, omitting blank values."""
     lines = [title]
     for label, value in fields:
         clean = " ".join((value or "").strip().split())
@@ -1703,6 +1746,7 @@ def compact_multiline_note(title: str, fields: list[tuple[str, str]]) -> str:
 
 
 def build_entry_request_note(form_data: dict) -> str:
+    """Build the agent entry request note from form data fields."""
     return compact_multiline_note("Registo do agente · Entrada", [
         ("Calado", form_data.get("draft_m", "")),
         ("Rebocadores", form_data.get("tug_count", "")),
@@ -1712,6 +1756,7 @@ def build_entry_request_note(form_data: dict) -> str:
 
 
 def build_departure_plan_note(form_data: dict) -> str:
+    """Build the agent departure plan note from form data fields."""
     return compact_multiline_note("Registo do agente · Saída", [
         ("Calado", form_data.get("draft_m", "")),
         ("Rebocadores", form_data.get("tug_count", "")),
@@ -1721,6 +1766,7 @@ def build_departure_plan_note(form_data: dict) -> str:
 
 
 def build_shift_plan_note(form_data: dict) -> str:
+    """Build the agent berth-shift plan note from form data fields."""
     return compact_multiline_note("Registo do agente · Mudança", [
         ("Origem", form_data.get("origin_berth", "")),
         ("Destino", form_data.get("destination_berth", "")),
@@ -1732,6 +1778,7 @@ def build_shift_plan_note(form_data: dict) -> str:
 
 
 def build_pilot_report_note(form_data: dict, maneuver_label: str, existing_note: str = "") -> str:
+    """Build the pilot operational report note, optionally appending to an existing note."""
     report = compact_multiline_note(f"Registo simplificado de pilotagem · {maneuver_label}", [
         ("Início da manobra", format_note_datetime(form_data.get("maneuver_started_at", ""))),
         ("Fim da manobra", format_note_datetime(form_data.get("maneuver_finished_at", ""))),
@@ -1744,5 +1791,6 @@ def build_pilot_report_note(form_data: dict, maneuver_label: str, existing_note:
 
 
 def get_current_conversation(username: str):
+    """Return the current conversation for the user based on the request's conversation_id parameter."""
     requested_id = request.args.get("conversation_id", "").strip() or None
     return services.store.ensure_conversation(username=username, conversation_id=requested_id)

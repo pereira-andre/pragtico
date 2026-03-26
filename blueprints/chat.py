@@ -28,6 +28,7 @@ bp = Blueprint("chat", __name__)
 @bp.route("/conversations")
 @login_required
 def chat_archive():
+    """Página de arquivo de conversas do utilizador atual."""
     username = session["username"]
     current_conversation = get_current_conversation(username)
     conversations = services.store.list_conversations(username)
@@ -44,6 +45,7 @@ def chat_archive():
 @bp.route("/conversations", methods=["POST"])
 @login_required
 def create_conversation():
+    """Criar uma nova conversa e redirecionar para o dashboard."""
     conversation = services.store.create_conversation(session["username"])
     flash("Nova conversa criada.", "success")
     return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation["id"]))
@@ -52,6 +54,7 @@ def create_conversation():
 @bp.route("/conversations/<conversation_id>/rename", methods=["POST"])
 @login_required
 def rename_conversation(conversation_id: str):
+    """Renomear uma conversa e redirecionar para o dashboard."""
     title = request.form.get("title", "")
     try:
         conversation = services.store.rename_conversation(session["username"], conversation_id, title)
@@ -65,6 +68,7 @@ def rename_conversation(conversation_id: str):
 @bp.route("/conversations/<conversation_id>/clear", methods=["POST"])
 @login_required
 def clear_conversation(conversation_id: str):
+    """Apagar todas as mensagens de uma conversa sem a eliminar."""
     try:
         services.store.clear_conversation(session["username"], conversation_id)
         flash("Mensagens da conversa removidas.", "success")
@@ -76,6 +80,7 @@ def clear_conversation(conversation_id: str):
 @bp.route("/conversations/<conversation_id>/delete", methods=["POST"])
 @login_required
 def delete_conversation(conversation_id: str):
+    """Eliminar uma conversa e redirecionar para a próxima disponível."""
     try:
         next_conversation_id = services.store.delete_conversation(session["username"], conversation_id)
         flash("Conversa eliminada.", "success")
@@ -90,6 +95,7 @@ def delete_conversation(conversation_id: str):
 @bp.route("/api/messages/<message_id>/feedback", methods=["POST"])
 @login_required
 def api_message_feedback(message_id: str):
+    """API para submeter feedback de aprovação ou revisão numa mensagem do assistente."""
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     feedback_status = (payload.get("feedback_status") or "").strip().lower()
@@ -111,6 +117,7 @@ def api_message_feedback(message_id: str):
 @bp.route("/api/chat/pending-action")
 @login_required
 def api_pending_chat_action():
+    """API que retorna a ação operacional pendente para uma conversa."""
     conversation_id = (request.args.get("conversation_id") or "").strip()
     if not conversation_id:
         return jsonify({"pending_action": None})
@@ -121,6 +128,7 @@ def api_pending_chat_action():
 @bp.route("/api/chat/pending-action/cancel", methods=["POST"])
 @login_required
 def api_cancel_pending_chat_action():
+    """API para cancelar a ação operacional pendente numa conversa."""
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     if not conversation_id:
@@ -139,6 +147,7 @@ def api_cancel_pending_chat_action():
 @bp.route("/api/chat/pending-action/confirm", methods=["POST"])
 @login_required
 def api_confirm_pending_chat_action():
+    """API para confirmar e executar a ação operacional pendente numa conversa."""
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     if not conversation_id:
@@ -178,6 +187,7 @@ def api_confirm_pending_chat_action():
 @login_required
 @rate_limit(api_limiter)
 def api_chat():
+    """API principal do chat que processa perguntas e ações operacionais do utilizador."""
     refresh_knowledge_state(force_reindex=False)
     payload = request.get_json(silent=True) or {}
     question = (payload.get("question") or "").strip()

@@ -357,6 +357,7 @@ class LocalStore(BaseStore):
         self._write_conversations(conversations)
 
     def list_users(self) -> List[Dict]:
+        """Return all registered users as a list of profile dicts."""
         return self._read_users()
 
     def create_user(
@@ -369,6 +370,7 @@ class LocalStore(BaseStore):
         email: str = "",
         phone: str = "",
     ) -> Dict:
+        """Create a new user record in the local JSON store and return it without the password hash."""
         username = _normalize_username(username)
         if len(username) < 3:
             raise ValueError("O email deve ter pelo menos 3 caracteres.")
@@ -395,6 +397,7 @@ class LocalStore(BaseStore):
         return {key: user[key] for key in user if key != "password_hash"}
 
     def authenticate(self, username: str, password: str) -> Optional[Dict]:
+        """Verify credentials against the local store and return the profile dict or None."""
         users = self._read_users()
         for user in users:
             if user["username"] == _normalize_username(username) and check_password_hash(
@@ -404,6 +407,7 @@ class LocalStore(BaseStore):
         return None
 
     def get_user_profile(self, username: str) -> Optional[Dict]:
+        """Return the profile dict for the given username without the password hash, or None."""
         users = self._read_users()
         for user in users:
             if user["username"] == _normalize_username(username):
@@ -411,6 +415,7 @@ class LocalStore(BaseStore):
         return None
 
     def set_user_role(self, username: str, role: str) -> Dict:
+        """Update the role for the given user and return the updated profile."""
         username = _normalize_username(username)
         if role not in {"admin", "agente", "piloto"}:
             raise ValueError("Role invalido.")
@@ -429,6 +434,7 @@ class LocalStore(BaseStore):
         return {key: updated[key] for key in updated if key != "password_hash"}
 
     def reset_user_password(self, username: str, new_password: str) -> bool:
+        """Reset the user's password hash and return True if the user was found."""
         username = _normalize_username(username)
         if len(new_password) < 6:
             raise ValueError("A password deve ter pelo menos 6 caracteres.")
@@ -441,6 +447,7 @@ class LocalStore(BaseStore):
         return False
 
     def delete_user(self, username: str) -> None:
+        """Remove the user and all their conversations and messages from the local store."""
         normalized_username = _normalize_username(username)
         users = self._read_users()
         target = next((user for user in users if user["username"] == normalized_username), None)
@@ -471,6 +478,7 @@ class LocalStore(BaseStore):
         email: str,
         phone: str,
     ) -> Dict:
+        """Update profile contact fields for the user and return the updated record."""
         users = self._read_users()
         updated = None
         for user in users:
@@ -489,6 +497,7 @@ class LocalStore(BaseStore):
         return {key: updated[key] for key in updated if key != "password_hash"}
 
     def save_document(self, title: str, content: str, created_by: str = "manual") -> str:
+        """Save a text document to the knowledge directory and register its metadata record."""
         filename = ensure_unique_filename(self.knowledge_dir, f"{slugify(title)}.md")
         path = os.path.join(self.knowledge_dir, filename)
         with open(path, "w", encoding="utf-8") as handle:
@@ -513,6 +522,7 @@ class LocalStore(BaseStore):
         return filename
 
     def save_uploaded_document(self, uploaded_file: FileStorage, created_by: str) -> str:
+        """Validate, store, and register an uploaded file in the knowledge directory."""
         filename = sanitize_upload_filename(uploaded_file.filename or "")
         if not is_allowed_document(filename):
             raise ValueError("Formato não suportado. Usa .pdf, .md, .txt, .docx ou .csv.")
@@ -553,10 +563,12 @@ class LocalStore(BaseStore):
         return filename
 
     def list_documents(self) -> List[Dict]:
+        """Sync metadata with the knowledge directory and return all document records."""
         self._sync_document_records()
         return self._read_document_records()
 
     def get_document(self, name: str) -> Optional[Dict]:
+        """Return the metadata record for a document by filename, or None if not found."""
         self._sync_document_records()
         for record in self._read_document_records():
             if record["name"] == name:
@@ -564,6 +576,7 @@ class LocalStore(BaseStore):
         return None
 
     def get_document_text(self, name: str) -> str:
+        """Extract and return the text content of a document from the knowledge directory."""
         record = self.get_document(name)
         if not record:
             raise ValueError("Documento não encontrado.")
@@ -571,12 +584,14 @@ class LocalStore(BaseStore):
         return extract_text_from_path(path)
 
     def get_document_file_path(self, name: str) -> str:
+        """Return the absolute path of the document file in the knowledge directory."""
         record = self.get_document(name)
         if not record:
             raise ValueError("Documento não encontrado.")
         return os.path.join(self.knowledge_dir, record["name"])
 
     def update_document_text(self, name: str, content: str, updated_by: str) -> Dict:
+        """Overwrite the text content of an editable document and update its metadata record."""
         if not content.strip():
             raise ValueError("O conteúdo não pode estar vazio.")
         record = self.get_document(name)
@@ -604,6 +619,7 @@ class LocalStore(BaseStore):
         return updated
 
     def delete_document(self, name: str) -> None:
+        """Remove a document file and its metadata record from the knowledge store."""
         record = self.get_document(name)
         if not record:
             raise ValueError("Documento não encontrado.")
@@ -614,6 +630,7 @@ class LocalStore(BaseStore):
         self._write_document_records(records)
 
     def list_conversations(self, username: str) -> List[Dict]:
+        """Return all conversations for the user sorted by most recently updated."""
         conversations = [item for item in self._read_conversations() if item["username"] == username]
         conversations.sort(key=lambda item: item["updated_at"], reverse=True)
         return [
@@ -625,6 +642,7 @@ class LocalStore(BaseStore):
         ]
 
     def create_conversation(self, username: str, title: str = DEFAULT_CONVERSATION_TITLE) -> Dict:
+        """Create a new conversation for the user and return it."""
         conversations = self._read_conversations()
         conversation = self._build_conversation_record(username=username, title=title)
         conversations.append(conversation)
@@ -635,6 +653,7 @@ class LocalStore(BaseStore):
         }
 
     def rename_conversation(self, username: str, conversation_id: str, title: str) -> Dict:
+        """Rename a conversation and return the updated record."""
         clean_title = " ".join(title.strip().split())
         if not clean_title:
             raise ValueError("O título da conversa não pode ficar vazio.")
@@ -658,6 +677,7 @@ class LocalStore(BaseStore):
         }
 
     def clear_conversation(self, username: str, conversation_id: str) -> None:
+        """Delete all messages in a conversation without removing the conversation record."""
         conversation = self._conversation_owned_by_user(username, conversation_id)
         if not conversation:
             raise ValueError("Conversa não encontrada.")
@@ -668,6 +688,7 @@ class LocalStore(BaseStore):
         self._touch_conversation(conversation_id)
 
     def delete_conversation(self, username: str, conversation_id: str) -> Optional[str]:
+        """Delete a conversation and its messages, returning the ID of the next conversation if any."""
         conversation = self._conversation_owned_by_user(username, conversation_id)
         if not conversation:
             raise ValueError("Conversa não encontrada.")
@@ -687,6 +708,7 @@ class LocalStore(BaseStore):
         return remaining[0]["id"] if remaining else None
 
     def ensure_conversation(self, username: str, conversation_id: Optional[str] = None) -> Dict:
+        """Return an existing conversation by ID or the most recent one, creating one if needed."""
         if conversation_id:
             existing = self._conversation_owned_by_user(username, conversation_id)
             if existing:
@@ -700,6 +722,7 @@ class LocalStore(BaseStore):
         return self.create_conversation(username)
 
     def list_messages(self, username: str, conversation_id: str) -> List[Dict]:
+        """Return all messages in a conversation sorted by creation time."""
         conversation = self._conversation_owned_by_user(username, conversation_id)
         if not conversation:
             return []
@@ -724,6 +747,7 @@ class LocalStore(BaseStore):
         content: str,
         citations: Optional[List[Dict]] = None,
     ) -> Dict:
+        """Append a chat message to the conversation and return the saved record."""
         if not self._conversation_owned_by_user(username, conversation_id):
             raise ValueError("Conversa inválida para este utilizador.")
 
@@ -743,17 +767,20 @@ class LocalStore(BaseStore):
         return message
 
     def get_runtime_state(self, key: str) -> Optional[Dict]:
+        """Return the runtime state dict stored under the given key, or None."""
         payload = self._read_runtime_state()
         value = payload.get(key)
         return value if isinstance(value, dict) else None
 
     def set_runtime_state(self, key: str, value: Dict) -> Dict:
+        """Persist a runtime state dict under the given key and return it."""
         payload = self._read_runtime_state()
         payload[key] = value
         self._write_runtime_state(payload)
         return value
 
     def delete_runtime_state(self, key: str) -> None:
+        """Remove the runtime state entry for the given key if it exists."""
         payload = self._read_runtime_state()
         if key in payload:
             payload.pop(key, None)
@@ -767,6 +794,7 @@ class LocalStore(BaseStore):
         feedback_status: str,
         feedback_note: str = "",
     ) -> Dict:
+        """Update feedback status and note for a chat message and return the updated record."""
         if feedback_status not in ALLOWED_FEEDBACK_STATUSES:
             raise ValueError("Estado de feedback inválido.")
         if not self._message_owned_by_user(username, conversation_id, message_id):
@@ -793,6 +821,7 @@ class LocalStore(BaseStore):
         return updated
 
     def find_feedback_matches(self, username: str, question: str, limit: int = 3) -> List[Dict]:
+        """Return previously approved messages whose question best matches the given text."""
         conversations = {
             item["id"]: item
             for item in self._read_conversations()
@@ -846,9 +875,11 @@ class LocalStore(BaseStore):
         return matches[:limit]
 
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
+        """Return a decorated port activity snapshot covering the specified number of days."""
         return _build_port_activity_snapshot(self._read_port_calls(), window_days=window_days)
 
     def get_port_call(self, port_call_id: str) -> Dict:
+        """Return the decorated port call record for the given ID, raising ValueError if not found."""
         for item in self._read_port_calls():
             if item["id"] == port_call_id:
                 return _decorate_port_call(item)
@@ -875,6 +906,7 @@ class LocalStore(BaseStore):
         vessel_max_draft_m: str = "",
         vessel_dwt_t: str = "",
     ) -> Dict:
+        """Create a new port call record with an initial entry maneuver and return the decorated result."""
         clean_name = _clean_text(vessel_name)
         creator_username = _normalize_username(created_by) or "system"
         creator_profile = self.get_user_profile(creator_username)
@@ -981,6 +1013,7 @@ class LocalStore(BaseStore):
         berth: str = "",
         notes: str = "",
     ) -> Dict:
+        """Record the vessel's arrival and transition the entry maneuver to completed."""
         if not arrived_at.strip():
             raise ValueError("A hora real de chegada é obrigatória.")
         records = self._read_port_calls()
@@ -1021,6 +1054,7 @@ class LocalStore(BaseStore):
         constraints: Optional[List[str]] = None,
         departure_plan_note: str = "",
     ) -> Dict:
+        """Add a pending departure maneuver to the port call and return the updated record."""
         if not planned_departure_at.strip():
             raise ValueError("A hora prevista de saída é obrigatória.")
         destination = " ".join(next_port.strip().split())
@@ -1077,6 +1111,7 @@ class LocalStore(BaseStore):
         updated_by: str,
         aborted_reason: str,
     ) -> Dict:
+        """Abort the active departure plan and return the updated port call."""
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de aborto da saída é obrigatório.")
@@ -1116,6 +1151,7 @@ class LocalStore(BaseStore):
         next_port: str = "",
         notes: str = "",
     ) -> Dict:
+        """Record the vessel's departure and transition the departure maneuver to completed."""
         if not departed_at.strip():
             raise ValueError("A hora de saída é obrigatória.")
         records = self._read_port_calls()
@@ -1146,6 +1182,7 @@ class LocalStore(BaseStore):
         return _decorate_port_call(updated)
 
     def approve_port_call(self, port_call_id: str, decided_by: str, approval_note: str = "") -> Dict:
+        """Approve the pending entry or departure maneuver for a port call."""
         actor_username = _normalize_username(decided_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
@@ -1188,6 +1225,7 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot entry report to the entry maneuver and return the updated port call."""
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
             raise ValueError("O início e o fim da manobra são obrigatórios.")
@@ -1235,6 +1273,7 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot departure report to the departure maneuver and return the updated port call."""
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
             raise ValueError("O início e o fim da manobra são obrigatórios.")
@@ -1282,6 +1321,7 @@ class LocalStore(BaseStore):
         constraints: Optional[List[str]] = None,
         shift_plan_note: str = "",
     ) -> Dict:
+        """Add a pending berth-shift maneuver to the port call and return the updated record."""
         if not planned_shift_at.strip():
             raise ValueError("A hora prevista da mudança é obrigatória.")
         destination = " ".join(destination_berth.strip().split())
@@ -1332,6 +1372,7 @@ class LocalStore(BaseStore):
         return _decorate_port_call(updated)
 
     def approve_shift_plan(self, port_call_id: str, decided_by: str, approval_note: str = "") -> Dict:
+        """Approve a pending berth-shift plan and return the updated port call."""
         actor_username = _normalize_username(decided_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
@@ -1365,6 +1406,7 @@ class LocalStore(BaseStore):
         updated_by: str,
         aborted_reason: str,
     ) -> Dict:
+        """Abort an active berth-shift plan and return the updated port call."""
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de aborto da mudança é obrigatório.")
@@ -1402,6 +1444,7 @@ class LocalStore(BaseStore):
         shifted_at: str,
         updated_by: str,
     ) -> Dict:
+        """Mark a berth-shift maneuver as completed and update the current berth."""
         if not shifted_at.strip():
             raise ValueError("A hora real da mudança é obrigatória.")
         records = self._read_port_calls()
@@ -1436,6 +1479,7 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot shift report to the shift maneuver and return the updated port call."""
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
             raise ValueError("O início e o fim da manobra são obrigatórios.")
@@ -1490,6 +1534,7 @@ class LocalStore(BaseStore):
         plan_note: str = "",
         change_reason: str,
     ) -> Dict:
+        """Edit the plan fields of a maneuver, log the change, and return the updated port call."""
         actor_username = _normalize_username(updated_by) or "system"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
@@ -1550,6 +1595,7 @@ class LocalStore(BaseStore):
         notes: str,
         change_reason: str,
     ) -> Dict:
+        """Edit the report fields of a completed maneuver, log the change, and return the updated port call."""
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
@@ -1594,6 +1640,7 @@ class LocalStore(BaseStore):
         aborted_reason: str,
         approval_note: str = "",
     ) -> Dict:
+        """Abort the port call's entry maneuver and return the updated record."""
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de manobra abortada é obrigatório.")

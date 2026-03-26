@@ -18,6 +18,7 @@ bp = Blueprint("auth", __name__)
 @bp.route("/login", methods=["GET", "POST"])
 @rate_limit(login_limiter)
 def login():
+    """Página de autenticação."""
     if session.get("username"):
         return redirect(url_for("dashboard_bp.dashboard"))
 
@@ -51,6 +52,7 @@ def login():
 @bp.route("/register", methods=["GET", "POST"])
 @rate_limit(login_limiter)
 def register():
+    """Página de criação de conta."""
     if request.method == "POST":
         try:
             username = validate_email(request.form.get("email", ""))
@@ -88,6 +90,7 @@ def register():
 @bp.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
+    """Página de edição do perfil operacional do utilizador."""
     existing_profile = current_user_profile() or {"username": session["username"], "role": session.get("role", "piloto")}
     if request.method == "POST":
         try:
@@ -117,6 +120,7 @@ def profile():
 
 @bp.route("/logout")
 def logout():
+    """Terminar sessão e redirecionar para a página de login."""
     session.clear()
     flash("Sessao terminada.", "success")
     return redirect(url_for("auth.login"))
@@ -124,5 +128,6 @@ def logout():
 
 @bp.route("/logout-beacon", methods=["POST"])
 def logout_beacon():
+    """Endpoint de beacon para terminar sessão silenciosamente ao fechar a janela."""
     session.clear()
     return ("", 204)

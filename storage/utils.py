@@ -118,6 +118,7 @@ def _normalize_user_profile_payload(
 
 
 def is_user_profile_complete(profile: Optional[Dict]) -> bool:
+    """Return True if all required profile fields are filled for the user's role."""
     payload = profile or {}
     role = (payload.get("role") or "").strip().lower()
     if role not in USER_PROFILE_REQUIRED_ROLES:
@@ -166,6 +167,7 @@ def _split_text_values(value) -> List[str]:
 
 
 def normalize_constraint_codes(value) -> List[str]:
+    """Normalize a list or delimited string of constraint codes to canonical codes."""
     codes: List[str] = []
     for item in _split_text_values(value):
         meta = CONSTRAINT_LOOKUP.get(_lookup_key(item))
@@ -194,6 +196,7 @@ def _constraint_badges(codes: List[str]) -> List[Dict]:
 
 
 def format_constraint_labels(value) -> str:
+    """Return a comma-separated string of human-readable constraint labels."""
     labels = [item["label"] for item in _constraint_badges(normalize_constraint_codes(value))]
     return ", ".join(labels)
 

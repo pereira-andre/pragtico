@@ -22,6 +22,7 @@ bp = Blueprint("dashboard_bp", __name__)
 
 @bp.route("/")
 def home():
+    """Redirecionar para o dashboard ou para o login consoante o estado da sessão."""
     if session.get("username"):
         return redirect(url_for("dashboard_bp.dashboard"))
     return redirect(url_for("auth.login"))
@@ -29,11 +30,13 @@ def home():
 
 @bp.route("/img/<path:asset_path>")
 def image_asset(asset_path: str):
+    """Servir ficheiros de imagem estáticos a partir da pasta img."""
     return send_from_directory(os.path.join(services.BASE_DIR, "img"), asset_path)
 
 
 @bp.route("/healthz")
 def healthz():
+    """Endpoint de health check que retorna o estado dos backends de armazenamento e RAG."""
     return jsonify({
         "ok": True,
         "auth_backend": getattr(services.auth_service, "backend_name", "unknown"),
@@ -45,6 +48,7 @@ def healthz():
 
 @bp.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_exc):
+    """Mostrar mensagem de erro amigável quando o ficheiro excede o tamanho máximo permitido."""
     from flask import current_app, flash
     flash(
         "Ficheiro demasiado grande para este rascunho local. "
@@ -57,6 +61,7 @@ def handle_file_too_large(_exc):
 @bp.route("/dashboard")
 @login_required
 def dashboard():
+    """Painel principal com atividade portuária, marés e condições meteorológicas."""
     refresh_knowledge_state(force_reindex=False)
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
@@ -92,6 +97,7 @@ def dashboard():
 @bp.route("/embed/vesselfinder/setubal")
 @login_required
 def vesselfinder_embed_setubal():
+    """Página com o mapa AIS embebido do VesselFinder para o Porto de Setúbal."""
     return render_template(
         "vesselfinder_embed.html",
         embed=services.ais_service.embed_context(),
@@ -102,6 +108,7 @@ def vesselfinder_embed_setubal():
 @bp.route("/maneuvers/archive")
 @login_required
 def maneuver_archive():
+    """Página de arquivo histórico de manobras concluídas."""
     refresh_knowledge_state(force_reindex=False)
     port_activity = services.store.get_port_activity_snapshot(window_days=30)
     port_activity = filter_port_activity_for_session(port_activity)
@@ -115,6 +122,7 @@ def maneuver_archive():
 @bp.route("/maneuvers/archive/export.csv")
 @login_required
 def maneuver_archive_export():
+    """Exportar o arquivo de manobras para um ficheiro CSV."""
     port_activity = services.store.get_port_activity_snapshot(window_days=3650)
     port_activity = filter_port_activity_for_session(port_activity)
     buffer = StringIO()

@@ -15,6 +15,7 @@ class BaseStore(ABC):
 
     @abstractmethod
     def list_users(self) -> List[Dict]:
+        """Return all registered users as a list of profile dicts."""
         raise NotImplementedError
 
     @abstractmethod
@@ -28,18 +29,22 @@ class BaseStore(ABC):
         email: str = "",
         phone: str = "",
     ) -> Dict:
+        """Create a new user with the given credentials and profile data."""
         raise NotImplementedError
 
     @abstractmethod
     def authenticate(self, username: str, password: str) -> Optional[Dict]:
+        """Authenticate a user by username and password, returning their profile or None."""
         raise NotImplementedError
 
     @abstractmethod
     def get_user_profile(self, username: str) -> Optional[Dict]:
+        """Return the profile dict for the given username, or None if not found."""
         raise NotImplementedError
 
     @abstractmethod
     def set_user_role(self, username: str, role: str) -> Dict:
+        """Update the role for the given user and return the updated profile."""
         raise NotImplementedError
 
     def reset_user_password(self, username: str, new_password: str) -> bool:
@@ -56,70 +61,87 @@ class BaseStore(ABC):
         email: str,
         phone: str,
     ) -> Dict:
+        """Update profile fields for the given user and return the updated profile."""
         raise NotImplementedError
 
     @abstractmethod
     def delete_user(self, username: str) -> None:
+        """Delete the user account and all associated data."""
         raise NotImplementedError
 
     @abstractmethod
     def save_document(self, title: str, content: str, created_by: str = "manual") -> str:
+        """Save a new text document to the knowledge base and return its filename."""
         raise NotImplementedError
 
     @abstractmethod
     def save_uploaded_document(self, uploaded_file: FileStorage, created_by: str) -> str:
+        """Store an uploaded file in the knowledge base and return its filename."""
         raise NotImplementedError
 
     @abstractmethod
     def list_documents(self) -> List[Dict]:
+        """Return metadata records for all documents in the knowledge base."""
         raise NotImplementedError
 
     @abstractmethod
     def get_document(self, name: str) -> Optional[Dict]:
+        """Return the metadata record for a document by name, or None if not found."""
         raise NotImplementedError
 
     @abstractmethod
     def get_document_text(self, name: str) -> str:
+        """Return the extracted text content of a document."""
         raise NotImplementedError
 
     @abstractmethod
     def get_document_file_path(self, name: str) -> str:
+        """Return the absolute filesystem path for a document file."""
         raise NotImplementedError
 
     @abstractmethod
     def update_document_text(self, name: str, content: str, updated_by: str) -> Dict:
+        """Overwrite the text content of an editable document and return its updated record."""
         raise NotImplementedError
 
     @abstractmethod
     def delete_document(self, name: str) -> None:
+        """Remove a document from the knowledge base and its metadata record."""
         raise NotImplementedError
 
     @abstractmethod
     def list_conversations(self, username: str) -> List[Dict]:
+        """Return all conversations for a user, sorted by most recently updated."""
         raise NotImplementedError
 
     @abstractmethod
     def create_conversation(self, username: str, title: str = DEFAULT_CONVERSATION_TITLE) -> Dict:
+        """Create a new conversation for the user and return it."""
         raise NotImplementedError
 
     @abstractmethod
     def rename_conversation(self, username: str, conversation_id: str, title: str) -> Dict:
+        """Rename a conversation and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
     def clear_conversation(self, username: str, conversation_id: str) -> None:
+        """Delete all messages in a conversation without removing the conversation itself."""
         raise NotImplementedError
 
     @abstractmethod
     def delete_conversation(self, username: str, conversation_id: str) -> Optional[str]:
+        """Delete a conversation and return the ID of the next conversation to show, if any."""
         raise NotImplementedError
 
     @abstractmethod
     def ensure_conversation(self, username: str, conversation_id: Optional[str] = None) -> Dict:
+        """Return an existing conversation by ID, or create and return a new one."""
         raise NotImplementedError
 
     @abstractmethod
     def list_messages(self, username: str, conversation_id: str) -> List[Dict]:
+        """Return all messages for a given conversation."""
         raise NotImplementedError
 
     @abstractmethod
@@ -131,18 +153,22 @@ class BaseStore(ABC):
         content: str,
         citations: Optional[List[Dict]] = None,
     ) -> Dict:
+        """Append a message to a conversation and return the saved message record."""
         raise NotImplementedError
 
     @abstractmethod
     def get_runtime_state(self, key: str) -> Optional[Dict]:
+        """Return the runtime state dict stored under the given key, or None."""
         raise NotImplementedError
 
     @abstractmethod
     def set_runtime_state(self, key: str, value: Dict) -> Dict:
+        """Persist a runtime state dict under the given key and return it."""
         raise NotImplementedError
 
     @abstractmethod
     def delete_runtime_state(self, key: str) -> None:
+        """Remove the runtime state entry for the given key."""
         raise NotImplementedError
 
     @abstractmethod
@@ -154,18 +180,22 @@ class BaseStore(ABC):
         feedback_status: str,
         feedback_note: str = "",
     ) -> Dict:
+        """Update feedback status and note for a chat message and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
     def find_feedback_matches(self, username: str, question: str, limit: int = 3) -> List[Dict]:
+        """Return previously approved messages whose question closely matches the given text."""
         raise NotImplementedError
 
     @abstractmethod
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
+        """Return a snapshot of port activity covering the specified number of days."""
         raise NotImplementedError
 
     @abstractmethod
     def get_port_call(self, port_call_id: str) -> Dict:
+        """Return the decorated port call record for the given ID."""
         raise NotImplementedError
 
     @abstractmethod
@@ -190,6 +220,7 @@ class BaseStore(ABC):
         vessel_max_draft_m: str = "",
         vessel_dwt_t: str = "",
     ) -> Dict:
+        """Create a new port call record and return it."""
         raise NotImplementedError
 
     @abstractmethod
@@ -201,6 +232,7 @@ class BaseStore(ABC):
         berth: str = "",
         notes: str = "",
     ) -> Dict:
+        """Record the vessel's arrival and transition the port call to in-port status."""
         raise NotImplementedError
 
     @abstractmethod
@@ -212,10 +244,12 @@ class BaseStore(ABC):
         next_port: str = "",
         notes: str = "",
     ) -> Dict:
+        """Record the vessel's departure and transition the port call to departed status."""
         raise NotImplementedError
 
     @abstractmethod
     def approve_port_call(self, port_call_id: str, decided_by: str, approval_note: str = "") -> Dict:
+        """Approve the pending maneuver for a port call and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
@@ -228,6 +262,7 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot entry report to the port call's entry maneuver."""
         raise NotImplementedError
 
     @abstractmethod
@@ -240,6 +275,7 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot departure report to the port call's departure maneuver."""
         raise NotImplementedError
 
     @abstractmethod
@@ -252,10 +288,12 @@ class BaseStore(ABC):
         constraints: Optional[List[str]] = None,
         shift_plan_note: str = "",
     ) -> Dict:
+        """Schedule a berth-shift maneuver plan for a port call."""
         raise NotImplementedError
 
     @abstractmethod
     def approve_shift_plan(self, port_call_id: str, decided_by: str, approval_note: str = "") -> Dict:
+        """Approve a pending berth-shift plan and return the updated port call."""
         raise NotImplementedError
 
     @abstractmethod
@@ -265,6 +303,7 @@ class BaseStore(ABC):
         updated_by: str,
         aborted_reason: str,
     ) -> Dict:
+        """Abort an active berth-shift plan and return the updated port call."""
         raise NotImplementedError
 
     @abstractmethod
@@ -274,6 +313,7 @@ class BaseStore(ABC):
         shifted_at: str,
         updated_by: str,
     ) -> Dict:
+        """Mark a berth-shift maneuver as completed and return the updated port call."""
         raise NotImplementedError
 
     @abstractmethod
@@ -286,6 +326,7 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
     ) -> Dict:
+        """Attach a pilot shift report to the port call's shift maneuver."""
         raise NotImplementedError
 
     @abstractmethod
@@ -305,6 +346,7 @@ class BaseStore(ABC):
         plan_note: str = "",
         change_reason: str,
     ) -> Dict:
+        """Edit the plan fields of an existing maneuver and log the change."""
         raise NotImplementedError
 
     @abstractmethod
@@ -320,6 +362,7 @@ class BaseStore(ABC):
         notes: str,
         change_reason: str,
     ) -> Dict:
+        """Edit the report fields of a completed maneuver and log the change."""
         raise NotImplementedError
 
     @abstractmethod
@@ -330,6 +373,7 @@ class BaseStore(ABC):
         aborted_reason: str,
         approval_note: str = "",
     ) -> Dict:
+        """Abort the entire port call and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
@@ -342,6 +386,7 @@ class BaseStore(ABC):
         constraints: Optional[List[str]] = None,
         departure_plan_note: str = "",
     ) -> Dict:
+        """Schedule a departure plan for a port call and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
@@ -351,4 +396,5 @@ class BaseStore(ABC):
         updated_by: str,
         aborted_reason: str,
     ) -> Dict:
+        """Abort the scheduled departure plan and return the updated port call."""
         raise NotImplementedError

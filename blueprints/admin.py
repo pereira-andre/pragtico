@@ -27,6 +27,7 @@ bp = Blueprint("admin", __name__)
 @login_required
 @role_required("admin")
 def admin_status():
+    """Painel de estado do sistema para administradores."""
     refresh_knowledge_state(force_reindex=False)
     return render_template("admin_status.html", admin=load_admin_status())
 
@@ -35,6 +36,7 @@ def admin_status():
 @login_required
 @role_required("admin")
 def admin_users():
+    """Página de gestão de utilizadores do sistema."""
     return render_template("admin_users.html", users=services.store.list_users(), title="Utilizadores")
 
 
@@ -42,6 +44,7 @@ def admin_users():
 @login_required
 @role_required("admin")
 def admin_update_user(username: str):
+    """Atualizar o role e os dados de perfil de um utilizador."""
     target_username = username.strip().lower()
     try:
         updated_role = validate_role(request.form.get("role", ""))
@@ -78,6 +81,7 @@ def admin_update_user(username: str):
 @login_required
 @role_required("admin")
 def admin_delete_user(username: str):
+    """Apagar a conta de um utilizador do sistema."""
     target_username = username.strip().lower()
     if session.get("username") == target_username:
         flash("Não podes apagar a tua própria conta enquanto estás autenticado.", "error")
@@ -100,6 +104,7 @@ def admin_delete_user(username: str):
 @login_required
 @role_required("admin")
 def admin_migrate_local_data():
+    """Migrar dados do armazenamento local JSON para o backend PostgreSQL."""
     if getattr(services.store, "backend_name", "") != "postgres":
         flash("A migração local -> Postgres só faz sentido com APP_STORAGE_BACKEND=postgres.", "error")
         return redirect(url_for("admin.admin_status"))
@@ -127,6 +132,7 @@ def admin_migrate_local_data():
 @login_required
 @role_required("admin")
 def admin_documents():
+    """Página de gestão de documentos da base de conhecimento."""
     refresh_knowledge_state(force_reindex=False)
     docs = services.store.list_documents()
     try:
@@ -145,6 +151,7 @@ def admin_documents():
 @login_required
 @role_required("admin")
 def add_document():
+    """Guardar um novo documento de texto na base de conhecimento e reindexar."""
     try:
         title = validate_required_text(request.form.get("title", ""), "Título", max_length=200)
         content = validate_required_text(request.form.get("content", ""), "Conteúdo", max_length=50000)
@@ -163,6 +170,7 @@ def add_document():
 @login_required
 @role_required("admin")
 def upload_documents():
+    """Fazer upload de um ou mais ficheiros para a base de conhecimento e reindexar."""
     uploaded_files = [item for item in request.files.getlist("files") if item and item.filename]
     if not uploaded_files:
         flash("Seleciona pelo menos um ficheiro.", "error")
@@ -189,6 +197,7 @@ def upload_documents():
 @login_required
 @role_required("admin")
 def reindex_knowledge():
+    """Iniciar uma reindexação incremental da base de conhecimento."""
     started = start_reindex_job(force=False)
     status_payload = current_reindex_status_payload()
     wants_json = (
@@ -215,12 +224,14 @@ def reindex_knowledge():
 @bp.route("/api/knowledge/reindex-status")
 @login_required
 def reindex_status():
+    """API que retorna o estado atual da reindexação do conhecimento."""
     return jsonify(current_reindex_status_payload())
 
 
 @bp.route("/documents/<name>")
 @login_required
 def document_detail(name: str):
+    """Página de detalhe de um documento da base de conhecimento."""
     refresh_knowledge_state(force_reindex=False)
     document = services.store.get_document(name)
     if not document:
@@ -235,6 +246,7 @@ def document_detail(name: str):
 @bp.route("/documents/<name>/download")
 @login_required
 def download_document(name: str):
+    """Descarregar o ficheiro original de um documento da base de conhecimento."""
     refresh_knowledge_state(force_reindex=False)
     try:
         file_path = services.store.get_document_file_path(name)
@@ -247,6 +259,7 @@ def download_document(name: str):
 @login_required
 @role_required("admin")
 def edit_document(name: str):
+    """Guardar o conteúdo editado de um documento de texto e reindexar."""
     content = request.form.get("content", "").strip()
     try:
         services.store.update_document_text(name=name, content=content, updated_by=session["username"])
@@ -263,6 +276,7 @@ def edit_document(name: str):
 @login_required
 @role_required("admin")
 def delete_document(name: str):
+    """Remover um documento da base de conhecimento e reindexar."""
     try:
         services.store.delete_document(name)
         if safe_rebuild_index(force=False):

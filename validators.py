@@ -12,6 +12,7 @@ from typing import List, Optional
 # ---------------------------------------------------------------------------
 
 def validate_required_text(value: Optional[str], label: str, *, max_length: int = 500) -> str:
+    """Validate that a text field is non-empty and within the maximum length."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         raise ValueError(f"{label} é obrigatório(a).")
@@ -21,6 +22,7 @@ def validate_required_text(value: Optional[str], label: str, *, max_length: int 
 
 
 def validate_optional_text(value: Optional[str], *, max_length: int = 2000) -> str:
+    """Validate and clean an optional text field, enforcing the maximum length."""
     clean = " ".join(str(value or "").strip().split())
     if len(clean) > max_length:
         raise ValueError(f"O texto não pode exceder {max_length} caracteres.")
@@ -39,6 +41,7 @@ def validate_positive_number(
     min_value: float = 0.0,
     max_value: float = 999999.0,
 ) -> str:
+    """Validate that a numeric string represents a positive number within the allowed range."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         if required:
@@ -62,10 +65,12 @@ def validate_optional_positive_number(
     *,
     max_value: float = 999999.0,
 ) -> str:
+    """Validate an optional positive number, returning an empty string if absent."""
     return validate_positive_number(value, label, required=False, max_value=max_value)
 
 
 def validate_tug_count(value: Optional[str]) -> str:
+    """Validate that the tug count is an integer between 0 and 10."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         return ""
@@ -89,6 +94,7 @@ def validate_datetime_range(
     started_label: str = "Início",
     finished_label: str = "Fim",
 ) -> None:
+    """Raise ValueError if the finished datetime is not strictly after the started datetime."""
     if not started or not finished:
         return
     try:
@@ -108,6 +114,7 @@ _EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$
 
 
 def validate_email(value: Optional[str], *, required: bool = True) -> str:
+    """Validate and normalize an email address."""
     clean = " ".join(str(value or "").strip().split()).lower()
     if not clean:
         if required:
@@ -124,6 +131,7 @@ _PHONE_PATTERN = re.compile(r"^[\d\s\+\-\(\)\.]{7,20}$")
 
 
 def validate_phone(value: Optional[str], *, required: bool = True) -> str:
+    """Validate a phone number string against an allowed character pattern."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         if required:
@@ -145,6 +153,7 @@ def validate_choice(
     *,
     required: bool = True,
 ) -> str:
+    """Validate that a value belongs to the set of allowed choices."""
     clean = " ".join(str(value or "").strip().split()).lower()
     if not clean:
         if required:
@@ -159,6 +168,7 @@ ALLOWED_ROLES = {"admin", "agente", "piloto"}
 
 
 def validate_role(value: Optional[str]) -> str:
+    """Validate that the given value is an allowed user role."""
     return validate_choice(value, ALLOWED_ROLES, "Role")
 
 
@@ -166,6 +176,7 @@ ALLOWED_FEEDBACK_STATUSES = {"approved", "review"}
 
 
 def validate_feedback_status(value: Optional[str]) -> str:
+    """Validate that the given value is an allowed feedback status."""
     return validate_choice(value, ALLOWED_FEEDBACK_STATUSES, "Estado de feedback")
 
 
@@ -174,6 +185,7 @@ def validate_feedback_status(value: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 
 def validate_password(value: Optional[str], *, min_length: int = 6) -> str:
+    """Validate that the password meets the minimum length requirement."""
     clean = (value or "").strip()
     if len(clean) < min_length:
         raise ValueError(f"A password deve ter pelo menos {min_length} caracteres.")
@@ -185,6 +197,7 @@ def validate_password(value: Optional[str], *, min_length: int = 6) -> str:
 # ---------------------------------------------------------------------------
 
 def validate_imo(value: Optional[str], *, required: bool = True) -> str:
+    """Validate that the IMO number is exactly 7 digits."""
     clean = " ".join(str(value or "").strip().split())
     if not clean:
         if required:
@@ -201,6 +214,7 @@ def validate_imo(value: Optional[str], *, required: bool = True) -> str:
 # ---------------------------------------------------------------------------
 
 def validate_vessel_dimensions(record: dict) -> dict:
+    """Validate all standard vessel dimension fields from a form record dict."""
     return {
         "vessel_loa_m": validate_positive_number(
             record.get("vessel_loa_m"), "LOA (m)", max_value=500.0

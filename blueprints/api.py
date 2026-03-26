@@ -20,6 +20,7 @@ bp = Blueprint("api", __name__)
 @bp.route("/api/cost/estimate", methods=["POST"])
 @login_required
 def api_cost_estimate():
+    """API que calcula a estimativa detalhada de custos de pilotagem para uma escala."""
     payload = request.get_json(silent=True) or {}
     gt = payload.get("gt", 0)
     try:
@@ -85,6 +86,7 @@ def api_cost_estimate():
 @bp.route("/api/cost/quick", methods=["GET"])
 @login_required
 def api_cost_quick():
+    """API que retorna uma estimativa rápida do custo de uma manobra a partir do GT."""
     try:
         gt = float(request.args.get("gt", 0))
     except (TypeError, ValueError):

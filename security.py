@@ -96,6 +96,7 @@ class RateLimiter:
         bucket.timestamps = [t for t in bucket.timestamps if t > cutoff]
 
     def is_allowed(self, key: str) -> bool:
+        """Return True and record the call if the key is within the rate limit, False otherwise."""
         now = time.monotonic()
         with self._lock:
             bucket = self._buckets[key]
@@ -106,6 +107,7 @@ class RateLimiter:
             return True
 
     def remaining(self, key: str) -> int:
+        """Return the number of remaining allowed calls in the current window for the given key."""
         now = time.monotonic()
         with self._lock:
             bucket = self._buckets[key]

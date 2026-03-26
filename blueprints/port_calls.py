@@ -39,6 +39,7 @@ bp = Blueprint("port_calls", __name__)
 @login_required
 @role_required("admin", "agente")
 def port_call_register():
+    """Página de registo de nova escala portuária."""
     from helpers import build_tracked_scales, filter_port_activity_for_session
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
@@ -54,6 +55,7 @@ def port_call_register():
 @login_required
 @port_call_scope_required
 def port_call_detail(port_call_id: str):
+    """Página de detalhe de uma escala portuária."""
     try:
         port_call = services.store.get_port_call(port_call_id)
     except ValueError as exc:
@@ -75,6 +77,7 @@ def port_call_detail(port_call_id: str):
 @login_required
 @role_required("admin", "agente")
 def create_port_call():
+    """Criar uma nova escala portuária a partir do formulário de registo."""
     form_data = {
         "vessel_name": request.form.get("vessel_name", "").strip(),
         "vessel_short_name": "",
@@ -141,6 +144,7 @@ def create_port_call():
 @login_required
 @role_required("admin", "piloto")
 def approve_port_call(port_call_id: str):
+    """Aprovar a manobra de entrada ou saída pendente de uma escala."""
     try:
         port_call = services.store.approve_port_call(
             port_call_id=port_call_id, decided_by=session["username"],
@@ -158,6 +162,7 @@ def approve_port_call(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def abort_port_call(port_call_id: str):
+    """Abortar a escala portuária e registar o motivo."""
     try:
         aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_port_call(
@@ -177,6 +182,7 @@ def abort_port_call(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def schedule_departure_plan(port_call_id: str):
+    """Planear a manobra de saída de um navio em porto."""
     try:
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
@@ -204,6 +210,7 @@ def schedule_departure_plan(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def abort_departure_plan(port_call_id: str):
+    """Cancelar o planeamento de saída de um navio em porto."""
     try:
         aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_departure_plan(
@@ -222,6 +229,7 @@ def abort_departure_plan(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def schedule_shift_plan(port_call_id: str):
+    """Planear uma mudança de cais para um navio em porto."""
     try:
         planned_shift_at = parse_local_datetime_input(request.form.get("planned_shift_at_local", "").strip(), "Hora prevista da mudança")
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
@@ -250,6 +258,7 @@ def schedule_shift_plan(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def approve_shift_plan(port_call_id: str):
+    """Aprovar o planeamento de mudança de cais pendente."""
     try:
         port_call = services.store.approve_shift_plan(
             port_call_id=port_call_id, decided_by=session["username"],
@@ -267,6 +276,7 @@ def approve_shift_plan(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def abort_shift_plan(port_call_id: str):
+    """Cancelar o planeamento de mudança de cais de um navio em porto."""
     try:
         aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_shift_plan(
@@ -284,6 +294,7 @@ def abort_shift_plan(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def mark_shift_completed(port_call_id: str):
+    """Confirmar a conclusão da mudança de cais e atualizar a localização do navio."""
     try:
         port_call = services.store.mark_shift_completed(
             port_call_id=port_call_id,
@@ -301,6 +312,7 @@ def mark_shift_completed(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def mark_port_call_arrived(port_call_id: str):
+    """Registar a chegada do navio ao porto e confirmar a manobra de entrada."""
     try:
         port_call = services.store.mark_port_call_arrived(
             port_call_id=port_call_id,
@@ -319,6 +331,7 @@ def mark_port_call_arrived(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def mark_port_call_departed(port_call_id: str):
+    """Registar a saída do navio do porto e encerrar a manobra de saída."""
     try:
         port_call = services.store.mark_port_call_departed(
             port_call_id=port_call_id,
@@ -337,6 +350,7 @@ def mark_port_call_departed(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def attach_entry_report(port_call_id: str):
+    """Guardar o registo de pilotagem da manobra de entrada."""
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
@@ -355,6 +369,7 @@ def attach_entry_report(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def attach_departure_report(port_call_id: str):
+    """Guardar o registo de pilotagem da manobra de saída."""
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
@@ -373,6 +388,7 @@ def attach_departure_report(port_call_id: str):
 @login_required
 @role_required("admin", "piloto")
 def attach_shift_report(port_call_id: str):
+    """Guardar o registo de pilotagem da manobra de mudança de cais."""
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
@@ -392,6 +408,7 @@ def attach_shift_report(port_call_id: str):
 @role_required("admin", "agente", "piloto")
 @port_call_scope_required
 def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
+    """Editar o planeamento de uma manobra existente e registar o motivo da alteração."""
     try:
         port_call = services.store.edit_maneuver_plan(
             port_call_id=port_call_id, maneuver_id=maneuver_id,
@@ -420,6 +437,7 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
 @login_required
 @role_required("admin", "piloto")
 def edit_maneuver_report(port_call_id: str, maneuver_id: str):
+    """Rever o registo operacional de uma manobra concluída e registar o motivo da alteração."""
     try:
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
