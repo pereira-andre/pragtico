@@ -17,14 +17,14 @@
         <strong>admin · agente · piloto</strong>
       </div>
     </div>
-    <a class="secondary-link" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
-    <a class="secondary-link" href="{{ url_for('admin_status') }}">Estado admin</a>
+    <a class="secondary-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao portal</a>
+    <a class="secondary-link" href="{{ url_for('admin.admin_status') }}">Estado admin</a>
   </aside>
 
   <section class="main-column">
     <section class="panel section-panel admin-users-panel">
       <div class="admin-users-topbar">
-        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
+        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao portal</a>
         <div class="admin-users-kpis">
           <span class="admin-users-kpi">{{ users|length }} contas</span>
           <span class="admin-users-kpi">Gestão local</span>
@@ -50,7 +50,7 @@
           {% set profile_ok = user.full_name and user.organization and user.email and user.phone %}
           {% set search_text = (user.username ~ ' ' ~ (user.full_name or '') ~ ' ' ~ (user.organization or '') ~ ' ' ~ (user.phone or '') ~ ' ' ~ (user.role or ''))|lower %}
           <article class="admin-user-card admin-user-edit-card" data-user-card data-search="{{ search_text }}">
-            <form method="post" action="{{ url_for('admin_update_user', username=user.username) }}" class="admin-user-form">
+            <form method="post" action="{{ url_for('admin.admin_update_user', username=user.username) }}" class="admin-user-form">
               <div class="admin-user-form-head">
                 <div>
                   <p class="mini-label">Email de acesso</p>
@@ -102,7 +102,7 @@
                   <button
                     type="submit"
                     class="mini-button danger-button"
-                    formaction="{{ url_for('admin_delete_user', username=user.username) }}"
+                    formaction="{{ url_for('admin.admin_delete_user', username=user.username) }}"
                     formmethod="post"
                     onclick="return confirm('Apagar o utilizador {{ user.username }}? Esta ação remove também o histórico de conversas dessa conta.')"
                   >

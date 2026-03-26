@@ -14,7 +14,7 @@
         </div>
       </div>
       <div class="hero-actions">
-        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
       </div>
     </div>
 
@@ -95,7 +95,7 @@
           <div class="scale-actions-grid">
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_entry %}
-              <form method="post" action="{{ url_for('attach_entry_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <form method="post" action="{{ url_for('port_calls.attach_entry_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da entrada</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -123,7 +123,7 @@
             {% endif %}
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_departure %}
-              <form method="post" action="{{ url_for('attach_departure_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <form method="post" action="{{ url_for('port_calls.attach_departure_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da saída</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -151,7 +151,7 @@
             {% endif %}
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_shift %}
-              <form method="post" action="{{ url_for('attach_shift_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <form method="post" action="{{ url_for('port_calls.attach_shift_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da mudança</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -257,7 +257,7 @@
                   <div class="constraint-badge-list">
                     {% for constraint in item.constraints %}
                       <span class="constraint-badge" title="{{ constraint.label }}">
-                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
                       </span>
                     {% endfor %}
                   </div>
@@ -296,7 +296,7 @@
                 {% if item.can_edit_plan %}
                   <details class="planning-optional-box">
                     <summary>Editar planeamento</summary>
-                    <form method="post" action="{{ url_for('edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+                    <form method="post" action="{{ url_for('port_calls.edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
                       <div class="mini-grid planned-mini-grid">
                         <label>
                           Hora
@@ -325,7 +325,7 @@
                           {% for constraint in constraint_options %}
                             <label class="constraint-option">
                               <input type="checkbox" name="constraints" value="{{ constraint.code }}" {% if constraint.code in item.constraint_codes %}checked{% endif %}>
-                              <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                              <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
                               <span>{{ constraint.label }}</span>
                             </label>
                           {% endfor %}
@@ -346,7 +346,7 @@
                 {% if item.can_edit_report %}
                   <details class="planning-optional-box">
                     <summary>{% if item.executed_by_profile.label != '--' %}Editar registo{% else %}Preencher registo{% endif %}</summary>
-                    <form method="post" action="{{ url_for('edit_maneuver_report', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+                    <form method="post" action="{{ url_for('port_calls.edit_maneuver_report', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
                       <input type="hidden" name="maneuver_label" value="{{ item.title }}">
                       <div class="mini-grid planned-mini-grid">
                         <label>
@@ -454,7 +454,7 @@
             <span>Tipo de navio</span>
             <strong class="scale-inline-meta">
               {% if scale.ship_profile.type_icon %}
-                <img src="{{ url_for('image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
+                <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
               {% endif %}
               <span>{{ scale.ship_profile.type }}</span>
             </strong>

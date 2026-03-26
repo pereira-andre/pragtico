@@ -22,14 +22,14 @@
         <strong>{{ admin.rag_backend }}</strong>
       </div>
     </div>
-    <a class="secondary-link" href="{{ url_for('dashboard') }}">Portal</a>
-    <a class="secondary-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
+    <a class="secondary-link" href="{{ url_for('dashboard_bp.dashboard') }}">Portal</a>
+    <a class="secondary-link" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
   </aside>
 
   <section class="main-column">
     <section class="panel section-panel admin-users-panel admin-status-panel">
       <div class="admin-users-topbar">
-        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard') }}">Voltar ao portal</a>
+        <a class="outline-link admin-users-backlink" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao portal</a>
         <div class="admin-users-kpis">
           <span class="admin-users-kpi">Auth {{ admin.auth_backend }} · {{ admin.auth_method_label }}</span>
           <span class="admin-users-kpi">Store {{ admin.storage_backend }}</span>
@@ -44,7 +44,7 @@
           <p class="muted admin-users-intro">Visão técnica dos serviços ativos, base de dados, AIS e índice documental da plataforma.</p>
         </div>
         <div class="admin-users-tools">
-          <a class="outline-link admin-users-backlink" href="{{ url_for('admin_users') }}">Ir para utilizadores</a>
+          <a class="outline-link admin-users-backlink" href="{{ url_for('admin.admin_users') }}">Ir para utilizadores</a>
         </div>
       </div>
       <div class="card-grid architecture-grid">

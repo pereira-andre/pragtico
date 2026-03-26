@@ -10,15 +10,15 @@
       </div>
       <div class="hero-actions">
         {% if current_role in ["admin", "agente"] %}
-          <a class="hero-link" href="{{ url_for('port_call_register') }}">Registar escala</a>
+          <a class="hero-link" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
         {% endif %}
-        <a class="hero-link" href="{{ url_for('maneuver_archive') }}">Arquivo</a>
+        <a class="hero-link" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
         {% if current_role == "admin" %}
-          <a class="hero-link" href="{{ url_for('admin_documents') }}">Documentos</a>
-          <a class="hero-link" href="{{ url_for('admin_status') }}">Estado</a>
+          <a class="hero-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
+          <a class="hero-link" href="{{ url_for('admin.admin_status') }}">Estado</a>
         {% endif %}
-        <a class="hero-link" href="{{ url_for('profile') }}">Perfil</a>
-        <a class="hero-link" href="{{ url_for('logout') }}">Sair</a>
+        <a class="hero-link" href="{{ url_for('auth.profile') }}">Perfil</a>
+        <a class="hero-link" href="{{ url_for('auth.logout') }}">Sair</a>
       </div>
     </div>
 
@@ -252,7 +252,7 @@
           {% for item in port_activity.arrivals %}
             <article class="ops-card">
               <div class="ops-card-head">
-                <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
                 <span class="ops-tag">ETA {{ item.eta_label }}</span>
               </div>
               <p>Cais <strong>{{ item.berth_label }}</strong></p>
@@ -271,7 +271,7 @@
           {% for item in port_activity.departed %}
             <article class="ops-card ops-card-departed">
               <div class="ops-card-head">
-                <h3><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
                 <span class="ops-tag">ATD {{ item.departure_label }}</span>
               </div>
               <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
@@ -304,7 +304,7 @@
             <span>{{ berth.count }}</span>
           </div>
           {% for vessel in berth.vessels %}
-            <a class="berth-vessel-compact" href="{{ url_for('port_call_detail', port_call_id=vessel.id) }}">
+            <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
               <strong>{{ vessel.vessel_name }}</strong>
               <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
             </a>
@@ -326,7 +326,7 @@
       <div class="planned-head-meta">
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.planned_count }}</span>
         <span class="muted">{{ port_activity.stats.pending_count }} pendentes de validação</span>
-        <a class="hero-link planned-archive-link" href="{{ url_for('maneuver_archive') }}">Consultar arquivo</a>
+        <a class="hero-link planned-archive-link" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Consultar arquivo</a>
       </div>
     </div>
 
@@ -382,13 +382,13 @@
                 <td>
                   <div class="planned-vessel-type">
                     {% if item.vessel_type_icon %}
-                      <img src="{{ url_for('image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
+                      <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
                     {% endif %}
                     <span>{{ item.vessel_type }}</span>
                   </div>
                 </td>
                 <td>
-                  <strong><a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a></strong><br>
+                  <strong><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a></strong><br>
                   {{ item.vessel_name }}
                 </td>
                 <td>{{ item.planned_label }}</td>
@@ -404,7 +404,7 @@
                   <div class="constraint-badge-list">
                     {% for c in item.constraint_badges %}
                       <span class="constraint-badge" title="{{ c.label }}">
-                        <img src="{{ url_for('image_asset', asset_path='constrains/' ~ c.icon) }}" alt="{{ c.label }}">
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ c.icon) }}" alt="{{ c.label }}">
                       </span>
                     {% else %}
                       <span class="muted">--</span>
@@ -416,7 +416,7 @@
                 <td class="planned-detail-cell">
                   {% if item.has_changes %}<span class="doc-badge">{{ item.change_count }}x</span>{% endif %}
                   {% if item.detail_note %}<p class="planned-note">{{ item.detail_note }}</p>{% else %}<span class="muted">--</span>{% endif %}
-                  <a class="inline-link planned-open-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">Abrir</a>
+                  <a class="inline-link planned-open-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir</a>
                 </td>
               </tr>
             {% else %}

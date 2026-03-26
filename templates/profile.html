@@ -54,9 +54,9 @@
     const sendLogout = () => {
       if (skipAutoLogout) return;
       try {
-        navigator.sendBeacon('{{ url_for("logout_beacon") }}');
+        navigator.sendBeacon('{{ url_for("auth.logout_beacon") }}');
       } catch (error) {
-        fetch('{{ url_for("logout_beacon") }}', { method: 'POST', keepalive: true }).catch(() => {});
+        fetch('{{ url_for("auth.logout_beacon") }}', { method: 'POST', keepalive: true }).catch(() => {});
       }
     };
     window.addEventListener('pagehide', sendLogout);

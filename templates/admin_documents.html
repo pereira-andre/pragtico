@@ -9,9 +9,9 @@
         <p class="lead">Gestão da base de conhecimento do chatbot. Indexação, upload, edição e monitorização do estado semântico.</p>
       </div>
       <div class="hero-actions">
-        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
-        <a class="hero-link" href="{{ url_for('admin_status') }}">Estado da plataforma</a>
-        <a class="hero-link" href="{{ url_for('admin_users') }}">Utilizadores</a>
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('admin.admin_status') }}">Estado da plataforma</a>
+        <a class="hero-link" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
       </div>
     </div>
     <div class="hero-meta-grid">
@@ -39,7 +39,7 @@
         <p class="eyebrow">Indexação</p>
         <h2>Estado do índice documental</h2>
       </div>
-      <form id="reindex-form" method="post" action="{{ url_for('reindex_knowledge') }}">
+      <form id="reindex-form" method="post" action="{{ url_for('admin.reindex_knowledge') }}">
         <button type="submit" class="mini-button">Reindexar incremental</button>
       </form>
     </div>
@@ -134,9 +134,9 @@
             <span>{{ doc.uploaded_by }}</span>
           </div>
           <div class="doc-actions">
-            <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">Ver</a>
-            <a class="inline-link" href="{{ url_for('download_document', name=doc.name) }}">Download</a>
-            <a class="inline-link" href="{{ url_for('document_detail', name=doc.name) }}">
+            <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">Ver</a>
+            <a class="inline-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
+            <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">
               {% if doc.editable %}Editar{% else %}Gerir{% endif %}
             </a>
           </div>
@@ -157,7 +157,7 @@
           <h2>Adicionar ficheiros</h2>
         </div>
       </div>
-      <form method="post" action="{{ url_for('upload_documents') }}" enctype="multipart/form-data" class="stack">
+      <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="stack">
         <label>
           Ficheiros documentais
           <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
@@ -174,7 +174,7 @@
           <h2>Novo documento manual</h2>
         </div>
       </div>
-      <form method="post" action="{{ url_for('add_document') }}" class="stack">
+      <form method="post" action="{{ url_for('admin.add_document') }}" class="stack">
         <label>
           Título
           <input type="text" name="title" placeholder="Procedimento de Entrada" required>
@@ -227,7 +227,7 @@
   }
 
   async function fetchReindexStatus() {
-    const r = await fetch("{{ url_for('reindex_status') }}");
+    const r = await fetch("{{ url_for('admin.reindex_status') }}");
     if (!r.ok) return null;
     const p = await r.json();
     renderReindexStatus(p);

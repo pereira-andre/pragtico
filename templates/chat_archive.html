@@ -9,8 +9,8 @@
         <p class="lead">Arquivo de todas as conversas com o assistente operacional. Abre, renomeia ou elimina conversas.</p>
       </div>
       <div class="hero-actions">
-        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
-        <form method="post" action="{{ url_for('create_conversation') }}" style="display:inline">
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+        <form method="post" action="{{ url_for('chat.create_conversation') }}" style="display:inline">
           <button type="submit" class="mini-button">Nova conversa</button>
         </form>
       </div>
@@ -50,15 +50,15 @@
             {% endif %}
           </div>
           <div class="chat-archive-actions">
-            <a class="inline-link" href="{{ url_for('dashboard', conversation_id=conv.id) }}">Abrir no quadro</a>
-            <form method="post" action="{{ url_for('rename_conversation', conversation_id=conv.id) }}" class="chat-archive-rename">
+            <a class="inline-link" href="{{ url_for('dashboard_bp.dashboard', conversation_id=conv.id) }}">Abrir no quadro</a>
+            <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-archive-rename">
               <input type="text" name="title" value="{{ conv.title }}" required>
               <button type="submit" class="mini-button secondary-button">Renomear</button>
             </form>
-            <form method="post" action="{{ url_for('clear_conversation', conversation_id=conv.id) }}">
+            <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
               <button type="submit" class="mini-button secondary-button">Limpar</button>
             </form>
-            <form method="post" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}">
+            <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
               <button type="submit" class="mini-button danger-button">Apagar</button>
             </form>
           </div>

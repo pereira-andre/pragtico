@@ -7,6 +7,7 @@ os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
 
 import app
+import services
 from chat_actions import normalize_action_candidate
 from flask import session
 from storage import LocalStore
@@ -17,11 +18,11 @@ class OperationalFlowTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         base = Path(self.temp_dir.name)
         self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
-        self.original_store = app.store
-        app.store = self.store
+        self.original_store = services.store
+        services.store = self.store
 
     def tearDown(self) -> None:
-        app.store = self.original_store
+        services.store = self.original_store
         self.temp_dir.cleanup()
 
     def _create_entry(self, *, notes: str) -> dict:

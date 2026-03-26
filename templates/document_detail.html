@@ -11,10 +11,10 @@
         </p>
       </div>
       <div class="detail-actions">
-        <a class="outline-link" href="{{ url_for('dashboard') }}">Voltar</a>
-        <a class="outline-link" href="{{ url_for('download_document', name=document.name) }}">Download</a>
+        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar</a>
+        <a class="outline-link" href="{{ url_for('admin.download_document', name=document.name) }}">Download</a>
         {% if current_role == "admin" %}
-          <form method="post" action="{{ url_for('reindex_knowledge') }}">
+          <form method="post" action="{{ url_for('admin.reindex_knowledge') }}">
             <button type="submit" class="secondary-button">Reindexar incremental</button>
           </form>
         {% endif %}
@@ -48,7 +48,7 @@
               <h2>Atualizar texto</h2>
             </div>
           </div>
-          <form method="post" action="{{ url_for('edit_document', name=document.name) }}" class="stack">
+          <form method="post" action="{{ url_for('admin.edit_document', name=document.name) }}" class="stack">
             <label>
               Conteúdo
               <textarea name="content" rows="18" required>{{ document_text }}</textarea>
@@ -80,7 +80,7 @@
         <p class="muted">
           Ao remover este ficheiro, o conteúdo deixa de ser usado no RAG após reindexação.
         </p>
-        <form method="post" action="{{ url_for('delete_document', name=document.name) }}">
+        <form method="post" action="{{ url_for('admin.delete_document', name=document.name) }}">
           <button type="submit" class="danger-button">Apagar documento</button>
         </form>
       </section>

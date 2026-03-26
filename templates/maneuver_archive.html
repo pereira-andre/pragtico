@@ -9,9 +9,9 @@
         <p class="lead">Consulta histórica, estimativa de custos e exportação para faturação.</p>
       </div>
       <div class="hero-actions">
-        <a class="hero-link" href="{{ url_for('dashboard') }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
         {% if current_role in ["admin", "agente"] %}
-          <a class="hero-link" href="{{ url_for('port_call_register') }}">Registar escala</a>
+          <a class="hero-link" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
         {% endif %}
       </div>
     </div>
@@ -46,7 +46,7 @@
           <input id="archive-search" type="search" placeholder="Escala, navio, agente, piloto...">
         </label>
         <div class="archive-actions">
-          <a class="mini-button secondary-button" href="{{ url_for('maneuver_archive_export') }}">Exportar CSV</a>
+          <a class="mini-button secondary-button" href="{{ url_for('dashboard_bp.maneuver_archive_export') }}">Exportar CSV</a>
           <button type="button" class="mini-button" id="archive-calc-costs">Estimar custos</button>
         </div>
         <span class="ops-pill ops-pill-strong">{{ port_activity.stats.archive_count }}</span>
@@ -86,12 +86,12 @@
               <td class="archive-td-narrow">{{ loop.index }}</td>
               <td>{{ item.date_label }}</td>
               <td>
-                <a class="inline-link" href="{{ url_for('port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a>
+                <a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a>
               </td>
               <td>
                 <div class="archive-vessel-cell">
                   {% if item.vessel_type_icon %}
-                    <img class="archive-vessel-icon" src="{{ url_for('image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
+                    <img class="archive-vessel-icon" src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.vessel_type_icon) }}" alt="{{ item.vessel_type }}">
                   {% endif %}
                   <span>{{ item.vessel_name }}</span>
                 </div>
@@ -108,7 +108,7 @@
                 <div class="constraint-badge-list">
                   {% for constraint in item.constraint_badges %}
                     <span class="constraint-badge" title="{{ constraint.label }}">
-                      <img src="{{ url_for('image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+                      <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
                     </span>
                   {% else %}
                     <span class="muted">--</span>
