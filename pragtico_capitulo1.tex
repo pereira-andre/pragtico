@@ -192,14 +192,14 @@ A Tabela~\ref{tab:tecnologias} sintetiza as tecnologias ou categorias tecnológi
 \toprule
 \textbf{Componente} & \textbf{Tecnologias previstas / orientação} \\
 \midrule
-Interface Web & Aplicação Web simples, orientada a formulários, listas de manobras, autenticação e páginas de administração \\
-Autenticação & Supabase Auth, com perfis diferenciados de administrador, agente e piloto \\
-Backend aplicacional & Serviço responsável pela lógica de negócio, gestão de estados, checklist e mediação entre interface, base de dados, documentação e assistente \\
-Base de dados operacional & PostgreSQL para armazenamento estruturado de navios, manobras, estados, histórico, recursos, utilizadores e configurações \\
-Pesquisa vetorial / RAG & pgvector para indexação semântica de documentação e suporte à recuperação de contexto relevante \\
-Assistente inteligente & LLM acedido por API, com Gemini como opção principal e Cerebras como alternativa de teste e comparação \\
-Armazenamento documental & Repositório de documentação operacional, normativa e administrativa acessível ao assistente e ao administrador \\
-Fontes externas & Tabelas oficiais de marés, versão estruturada em CSV e dados meteorológicos via API \\
+Interface Web & Flask com templates Jinja2, HTML semântico, CSS modular (6 módulos temáticos) e JavaScript vanilla \\
+Autenticação & Sessões Flask com bcrypt, perfis diferenciados de administrador, agente e piloto, proteção CSRF e rate limiting \\
+Backend aplicacional & Flask com Blueprints, camada de serviços e validação centralizada, responsável pela lógica de negócio e gestão de estados \\
+Base de dados operacional & Abstração de armazenamento com dois backends: ficheiros JSON locais (desenvolvimento) e PostgreSQL com psycopg (produção) \\
+Pesquisa vetorial / RAG & Embeddings locais com sentence-transformers (all-MiniLM-L6-v2) e índice vetorial local, com fallback para embeddings via API \\
+Assistente inteligente & LLM acedido por API, com Gemini como opção principal e OpenRouter como alternativa multi-modelo \\
+Armazenamento documental & Repositório de documentação operacional, normativa e administrativa, com extração de texto e indexação automática \\
+Fontes externas & Tabelas oficiais de marés em CSV, dados meteorológicos via WeatherAPI e dados AIS de navios \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -477,20 +477,23 @@ Pereira, A. (2026). \textit{Portuguese Ports Tides 2024}. Kaggle. Disponível em
 \bibitem{weatherapi}
 WeatherAPI. (s.d.). \textit{Weather API for Weather Data}. Disponível em: \url{https://www.weatherapi.com/}. Consultado em março de 2026.
 
-\bibitem{supabase}
-Supabase. (s.d.). \textit{Supabase Documentation}. Disponível em: \url{https://supabase.com/}. Consultado em março de 2026.
+\bibitem{flask}
+Pallets Projects. (s.d.). \textit{Flask -- Web development, one drop at a time}. Disponível em: \url{https://flask.palletsprojects.com/}. Consultado em março de 2026.
 
 \bibitem{gemini}
 Google AI for Developers. (s.d.). \textit{Gemini API Documentation}. Disponível em: \url{https://ai.google.dev/}. Consultado em março de 2026.
 
-\bibitem{cerebras}
-Cerebras. (s.d.). \textit{Cerebras Cloud}. Disponível em: \url{https://cloud.cerebras.ai/}. Consultado em março de 2026.
+\bibitem{openrouter}
+OpenRouter. (s.d.). \textit{OpenRouter -- A unified interface for LLMs}. Disponível em: \url{https://openrouter.ai/}. Consultado em março de 2026.
+
+\bibitem{sbert}
+Reimers, N. \& Gurevych, I. (2019). \textit{Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks}. Proceedings of EMNLP-IJCNLP 2019, 3982--3992.
 
 \bibitem{rag}
 Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., K{\"u}ttler, H., Lewis, M., Yih, W.-t., Rockt{\"a}schel, T., Riedel, S., \& Kiela, D. (2020). \textit{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}. Advances in Neural Information Processing Systems, 33, 9459--9474.
 
-\bibitem{pgvector}
-pgvector. (s.d.). \textit{Open-source vector similarity search for Postgres}. Disponível em: \url{https://github.com/pgvector/pgvector}. Consultado em março de 2026.
+\bibitem{psycopg}
+psycopg. (s.d.). \textit{psycopg -- PostgreSQL database adapter for Python}. Disponível em: \url{https://www.psycopg.org/}. Consultado em março de 2026.
 
 \bibitem{dss}
 Power, D. J. (2002). \textit{Decision Support Systems: Concepts and Resources for Managers}. Westport: Quorum Books.
