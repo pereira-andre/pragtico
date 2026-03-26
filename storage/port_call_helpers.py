@@ -1,0 +1,1343 @@
+"""Port call normalization, decoration, activity snapshot, and maneuver helpers."""
+
+from __future__ import annotations
+
+import re
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
+
+from document_processing import iso_now
+
+from .constants import (
+    ALLOWED_PORT_CALL_APPROVAL_STATUSES,
+    PORT_CALL_APPROVAL_ABORTED,
+    PORT_CALL_APPROVAL_APPROVED,
+    PORT_CALL_APPROVAL_PENDING,
+    PORT_CALL_STATUS_DEPARTED,
+    PORT_CALL_STATUS_IN_PORT,
+    PORT_CALL_STATUS_SCHEDULED,
+)
+from .utils import (
+    _actor_meta,
+    _build_actor_snapshot,
+    _clean_text,
+    _constraint_badges,
+    _iso_to_datetime_local_value,
+    _local_date_label,
+    _local_iso_to_label,
+    _local_time_label,
+    _maneuver_action_label,
+    _maneuver_state_meta,
+    _maneuver_type_label,
+    _normalize_actor_label,
+    _normalize_maneuver_type,
+    _normalize_username,
+    _parse_iso_datetime,
+    _resolve_vessel_type_meta,
+    normalize_constraint_codes,
+)
+
+
+def _normalize_maneuver_record(record: Dict, fallback_created_by: str = "system") -> Dict:
+    maneuver_type = _normalize_maneuver_type(record.get("type"))
+    state = (record.get("state") or PORT_CALL_APPROVAL_PENDING).strip().lower()
+    if state not in ALLOWED_PORT_CALL_APPROVAL_STATUSES | {"completed"}:
+        state = PORT_CALL_APPROVAL_PENDING
+    created_by = _normalize_username(record.get("created_by") or fallback_created_by or "system")
+    decided_by = _normalize_username(record.get("decided_by"))
+    reported_by = _normalize_username(record.get("reported_by"))
+    created_at = record.get("created_at") or iso_now()
+    updated_at = record.get("updated_at") or created_at
+    return {
+        "id": record.get("id") or str(uuid.uuid4()),
+        "type": maneuver_type,
+        "state": state,
+        "planned_at": record.get("planned_at"),
+        "completed_at": record.get("completed_at"),
+        "execution_started_at": record.get("execution_started_at"),
+        "execution_finished_at": record.get("execution_finished_at"),
+        "planned_draft_m": record.get("planned_draft_m", "") or _extract_compact_note_value(record.get("plan_note", ""), "Calado"),
+        "tug_count": record.get("tug_count", "") or _extract_compact_note_value(record.get("plan_note", ""), "Rebocadores"),
+        "plan_observations": record.get("plan_observations", "") or _extract_compact_note_value(record.get("plan_note", ""), "Observações"),
+        "reported_draft_m": record.get("reported_draft_m", "") or "",
+        "origin": " ".join((record.get("origin") or "").strip().split()),
+        "destination": " ".join((record.get("destination") or "").strip().split()),
+        "plan_note": record.get("plan_note", "") or "",
+        "approval_note": record.get("approval_note", "") or "",
+        "aborted_reason": record.get("aborted_reason", "") or "",
+        "constraints": normalize_constraint_codes(record.get("constraints")),
+        "decided_by": decided_by or None,
+        "decided_by_profile": _build_actor_snapshot(record.get("decided_by_profile"), username=decided_by),
+        "decided_at": record.get("decided_at"),
+        "report_note": record.get("report_note", "") or "",
+        "reported_by": reported_by or None,
+        "reported_by_profile": _build_actor_snapshot(record.get("reported_by_profile"), username=reported_by),
+        "reported_at": record.get("reported_at"),
+        "change_log": list(record.get("change_log") or []),
+        "created_by": created_by,
+        "created_by_profile": _build_actor_snapshot(record.get("created_by_profile"), username=created_by),
+        "created_at": created_at,
+        "updated_at": updated_at,
+    }
+
+
+def _maneuver_sort_key(record: Dict) -> tuple[float, str]:
+    dt = (
+        _parse_iso_datetime(record.get("planned_at"))
+        or _parse_iso_datetime(record.get("completed_at"))
+        or _parse_iso_datetime(record.get("created_at"))
+        or datetime.min.replace(tzinfo=timezone.utc)
+    )
+    return (dt.timestamp(), record.get("id", ""))
+
+
+def _latest_maneuver(history: List[Dict], maneuver_type: str, states: Optional[set[str]] = None) -> Optional[Dict]:
+    clean_type = _normalize_maneuver_type(maneuver_type)
+    filtered = [item for item in history if _normalize_maneuver_type(item.get("type")) == clean_type]
+    if states is not None:
+        filtered = [item for item in filtered if item.get("state") in states]
+    if not filtered:
+        return None
+    filtered.sort(key=_maneuver_sort_key)
+    return filtered[-1]
+
+
+def _latest_reportable_maneuver(history: List[Dict], maneuver_type: str) -> Optional[Dict]:
+    clean_type = _normalize_maneuver_type(maneuver_type)
+    filtered = [
+        item
+        for item in history
+        if _normalize_maneuver_type(item.get("type")) == clean_type
+        and item.get("state") in ("completed", "approved")
+        and not (item.get("report_note") or "").strip()
+    ]
+    if not filtered:
+        return None
+    filtered.sort(key=_maneuver_sort_key)
+    return filtered[-1]
+
+
+def _build_maneuver_change_log_entry(
+    *,
+    actor_username: str,
+    actor_profile: Optional[Dict],
+    reason: str,
+    summary: str,
+) -> Dict:
+    return {
+        "changed_at": iso_now(),
+        "changed_by": _normalize_username(actor_username),
+        "changed_by_profile": _build_actor_snapshot(actor_profile, username=actor_username),
+        "reason": " ".join((reason or "").strip().split()),
+        "summary": " ".join((summary or "").strip().split()),
+    }
+
+
+def _append_maneuver_change_log(
+    maneuver: Dict,
+    *,
+    actor_username: str,
+    actor_profile: Optional[Dict],
+    reason: str,
+    summary: str,
+) -> None:
+    if not " ".join((reason or "").strip().split()):
+        raise ValueError("O motivo da alteração é obrigatório.")
+    maneuver.setdefault("change_log", [])
+    maneuver["change_log"].append(
+        _build_maneuver_change_log_entry(
+            actor_username=actor_username,
+            actor_profile=actor_profile,
+            reason=reason,
+            summary=summary,
+        )
+    )
+
+
+def _extract_compact_note_value(note: str, label: str) -> str:
+    prefix = f"{label.strip()}:".casefold()
+    for raw_line in (note or "").splitlines():
+        line = raw_line.strip()
+        if line.casefold().startswith(prefix):
+            return line[len(prefix):].strip()
+    return ""
+
+
+def _effective_maneuver_time(record: Dict) -> Optional[str]:
+    return record.get("execution_finished_at") or record.get("completed_at") or record.get("planned_at")
+
+
+def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
+    clean_role = (actor_role or "").strip().lower()
+    if clean_role == "admin":
+        return True
+    if clean_role == "piloto":
+        return True
+    if clean_role == "agente":
+        return maneuver.get("state") == PORT_CALL_APPROVAL_PENDING
+    return False
+
+
+def _extract_labeled_report(note: str, label: str) -> str:
+    clean = (note or "").strip()
+    marker = f"Registo simplificado de pilotagem · {label}"
+    index = clean.find(marker)
+    if index >= 0:
+        return clean[index:].strip()
+    if label == "Entrada":
+        legacy_marker = "Registo simplificado de pilotagem"
+        index = clean.find(legacy_marker)
+        if index >= 0 and "· Saída" not in clean[index:index + 40] and "· Mudança" not in clean[index:index + 40]:
+            return clean[index:].strip()
+    return ""
+
+
+def _compose_abort_note(base_note: str, prefix: str, reason: str) -> str:
+    clean_note = (base_note or "").strip()
+    clean_reason = " ".join((reason or "").strip().split())
+    if not clean_reason:
+        return clean_note
+    return f"{clean_note} | {prefix}: {clean_reason}".strip(" |")
+
+
+def _build_legacy_maneuver_history(record: Dict) -> List[Dict]:
+    history: List[Dict] = []
+    created_at = record.get("created_at") or iso_now()
+    created_by = record.get("created_by", "system") or "system"
+
+    if record.get("eta") or record.get("ata") or record.get("approval_note") or record.get("aborted_reason"):
+        entry_state = PORT_CALL_APPROVAL_PENDING
+        if record.get("ata"):
+            entry_state = "completed"
+        elif record.get("approval_status") == PORT_CALL_APPROVAL_ABORTED:
+            entry_state = PORT_CALL_APPROVAL_ABORTED
+        elif record.get("approval_status") == PORT_CALL_APPROVAL_APPROVED:
+            entry_state = PORT_CALL_APPROVAL_APPROVED
+        history.append(
+            _normalize_maneuver_record(
+                {
+                    "type": "entry",
+                    "state": entry_state,
+                    "planned_at": record.get("eta"),
+                    "completed_at": record.get("ata"),
+                    "origin": record.get("last_port", ""),
+                    "destination": record.get("berth", ""),
+                    "plan_note": record.get("notes", ""),
+                    "approval_note": record.get("approval_note", ""),
+                    "aborted_reason": record.get("aborted_reason", ""),
+                    "decided_by": record.get("decided_by"),
+                    "decided_at": record.get("decided_at"),
+                    "report_note": _extract_labeled_report(record.get("notes", ""), "Entrada"),
+                    "created_by": created_by,
+                    "created_at": created_at,
+                    "updated_at": record.get("updated_at") or created_at,
+                },
+                fallback_created_by=created_by,
+            )
+        )
+
+    departure_abort_reason = _extract_departure_abort_reason(record.get("departure_plan_note"))
+    if record.get("planned_departure_at") or record.get("departure_at") or record.get("departure_plan_note"):
+        departure_state = PORT_CALL_APPROVAL_PENDING
+        if record.get("departure_at"):
+            departure_state = "completed"
+        elif departure_abort_reason:
+            departure_state = PORT_CALL_APPROVAL_ABORTED
+        elif record.get("planned_departure_at") and record.get("approval_status") == PORT_CALL_APPROVAL_APPROVED:
+            departure_state = PORT_CALL_APPROVAL_APPROVED
+        history.append(
+            _normalize_maneuver_record(
+                {
+                    "type": "departure",
+                    "state": departure_state,
+                    "planned_at": record.get("planned_departure_at"),
+                    "completed_at": record.get("departure_at"),
+                    "origin": record.get("berth", ""),
+                    "destination": record.get("next_port", ""),
+                    "plan_note": record.get("departure_plan_note", ""),
+                    "approval_note": record.get("approval_note", "") if record.get("planned_departure_at") else "",
+                    "aborted_reason": departure_abort_reason,
+                    "decided_by": record.get("decided_by") if record.get("planned_departure_at") else None,
+                    "decided_at": record.get("decided_at") if record.get("planned_departure_at") else None,
+                    "report_note": _extract_labeled_report(record.get("notes", ""), "Saída"),
+                    "created_by": created_by,
+                    "created_at": record.get("updated_at") or created_at,
+                    "updated_at": record.get("updated_at") or created_at,
+                },
+                fallback_created_by=created_by,
+            )
+        )
+
+    shift_abort_reason = _extract_shift_abort_reason(record.get("shift_plan_note"))
+    if record.get("planned_shift_at") or record.get("shift_at") or record.get("shift_plan_note"):
+        shift_state = PORT_CALL_APPROVAL_PENDING
+        if record.get("shift_at"):
+            shift_state = "completed"
+        elif shift_abort_reason:
+            shift_state = PORT_CALL_APPROVAL_ABORTED
+        elif record.get("shift_approval_status") == PORT_CALL_APPROVAL_APPROVED:
+            shift_state = PORT_CALL_APPROVAL_APPROVED
+        history.append(
+            _normalize_maneuver_record(
+                {
+                    "type": "shift",
+                    "state": shift_state,
+                    "planned_at": record.get("planned_shift_at"),
+                    "completed_at": record.get("shift_at"),
+                    "origin": record.get("shift_origin_berth", "") or record.get("berth", ""),
+                    "destination": record.get("shift_destination_berth", ""),
+                    "plan_note": record.get("shift_plan_note", ""),
+                    "approval_note": record.get("shift_approval_note", ""),
+                    "aborted_reason": shift_abort_reason or record.get("shift_aborted_reason", ""),
+                    "decided_by": record.get("shift_decided_by"),
+                    "decided_at": record.get("shift_decided_at"),
+                    "report_note": _extract_labeled_report(record.get("notes", ""), "Mudança"),
+                    "created_by": created_by,
+                    "created_at": record.get("updated_at") or created_at,
+                    "updated_at": record.get("updated_at") or created_at,
+                },
+                fallback_created_by=created_by,
+            )
+        )
+
+    history.sort(key=_maneuver_sort_key)
+    return history
+
+
+def _sync_port_call_from_history(record: Dict) -> Dict:
+    synced = dict(record)
+    history = [_normalize_maneuver_record(item, fallback_created_by=synced.get("created_by", "system")) for item in synced.get("maneuver_history", [])]
+    history.sort(key=_maneuver_sort_key)
+    synced["maneuver_history"] = history
+
+    entry = _latest_maneuver(history, "entry")
+    active_departure = _latest_maneuver(history, "departure", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
+    latest_departure = _latest_maneuver(history, "departure")
+    completed_departure = _latest_maneuver(history, "departure", {"completed"})
+    active_shift = _latest_maneuver(history, "shift", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
+    latest_shift = _latest_maneuver(history, "shift")
+    completed_shift = _latest_maneuver(history, "shift", {"completed"})
+
+    if entry:
+        synced["eta"] = entry.get("planned_at")
+        synced["ata"] = entry.get("completed_at") if entry.get("state") == "completed" else None
+        synced["approval_status"] = (
+            entry.get("state")
+            if entry.get("state") in ALLOWED_PORT_CALL_APPROVAL_STATUSES
+            else PORT_CALL_APPROVAL_APPROVED if entry.get("state") == "completed" else PORT_CALL_APPROVAL_PENDING
+        )
+        synced["approval_note"] = entry.get("approval_note", "")
+        synced["aborted_reason"] = entry.get("aborted_reason", "")
+        synced["decided_by"] = entry.get("decided_by")
+        synced["decided_by_profile"] = entry.get("decided_by_profile") or _build_actor_snapshot(
+            None,
+            username=entry.get("decided_by"),
+        )
+        synced["decided_at"] = entry.get("decided_at")
+        synced["created_by"] = entry.get("created_by") or synced.get("created_by", "system")
+        synced["created_by_profile"] = entry.get("created_by_profile") or _build_actor_snapshot(
+            None,
+            username=synced.get("created_by"),
+        )
+        if entry.get("origin"):
+            synced["last_port"] = entry["origin"]
+    else:
+        synced["eta"] = synced.get("eta")
+
+    current_berth = synced.get("berth", "")
+    if completed_shift and completed_shift.get("destination"):
+        current_berth = completed_shift["destination"]
+    elif entry and entry.get("destination"):
+        current_berth = entry["destination"]
+    synced["berth"] = current_berth
+
+    current_departure = active_departure or latest_departure
+    synced["planned_departure_at"] = active_departure.get("planned_at") if active_departure else None
+    synced["departure_at"] = completed_departure.get("completed_at") if completed_departure else None
+    if current_departure:
+        synced["departure_plan_note"] = _compose_abort_note(
+            current_departure.get("plan_note", ""),
+            "Saída abortada",
+            current_departure.get("aborted_reason", ""),
+        )
+        if current_departure.get("destination"):
+            synced["next_port"] = current_departure["destination"]
+    else:
+        synced["departure_plan_note"] = ""
+
+    current_shift = active_shift or latest_shift
+    synced["planned_shift_at"] = active_shift.get("planned_at") if active_shift else None
+    synced["shift_at"] = completed_shift.get("completed_at") if completed_shift else None
+    if current_shift:
+        synced["shift_plan_note"] = _compose_abort_note(
+            current_shift.get("plan_note", ""),
+            "Mudança abortada",
+            current_shift.get("aborted_reason", ""),
+        )
+        synced["shift_origin_berth"] = current_shift.get("origin", "")
+        synced["shift_destination_berth"] = current_shift.get("destination", "")
+        synced["shift_approval_status"] = (
+            current_shift.get("state")
+            if current_shift.get("state") in ALLOWED_PORT_CALL_APPROVAL_STATUSES
+            else PORT_CALL_APPROVAL_APPROVED if current_shift.get("state") == "completed" else PORT_CALL_APPROVAL_PENDING
+        )
+        synced["shift_approval_note"] = current_shift.get("approval_note", "")
+        synced["shift_aborted_reason"] = current_shift.get("aborted_reason", "")
+        synced["shift_decided_by"] = current_shift.get("decided_by")
+        synced["shift_decided_by_profile"] = current_shift.get("decided_by_profile") or _build_actor_snapshot(
+            None,
+            username=current_shift.get("decided_by"),
+        )
+        synced["shift_decided_at"] = current_shift.get("decided_at")
+    else:
+        synced["shift_plan_note"] = ""
+        synced["shift_origin_berth"] = ""
+        synced["shift_destination_berth"] = ""
+        synced["shift_approval_status"] = PORT_CALL_APPROVAL_PENDING
+        synced["shift_approval_note"] = ""
+        synced["shift_aborted_reason"] = ""
+        synced["shift_decided_by"] = None
+        synced["shift_decided_by_profile"] = _build_actor_snapshot(None)
+        synced["shift_decided_at"] = None
+
+    if completed_departure:
+        synced["status"] = PORT_CALL_STATUS_DEPARTED
+    elif entry and entry.get("state") == "completed":
+        synced["status"] = PORT_CALL_STATUS_IN_PORT
+    else:
+        synced["status"] = PORT_CALL_STATUS_SCHEDULED
+    return synced
+
+
+def _normalize_port_call_record(record: Dict) -> Dict:
+    created_at = record.get("created_at") or iso_now()
+    updated_at = record.get("updated_at") or created_at
+    approval_status = record.get("approval_status") or PORT_CALL_APPROVAL_PENDING
+    status = record.get("status") or PORT_CALL_STATUS_SCHEDULED
+    if (
+        "approval_status" not in record
+        and status in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}
+    ):
+        approval_status = PORT_CALL_APPROVAL_APPROVED
+    if approval_status not in ALLOWED_PORT_CALL_APPROVAL_STATUSES:
+        approval_status = PORT_CALL_APPROVAL_PENDING
+    shift_approval_status = record.get("shift_approval_status") or PORT_CALL_APPROVAL_PENDING
+    if shift_approval_status not in ALLOWED_PORT_CALL_APPROVAL_STATUSES:
+        shift_approval_status = PORT_CALL_APPROVAL_PENDING
+    normalized = {
+        "id": record.get("id") or str(uuid.uuid4()),
+        "vessel_name": record.get("vessel_name") or "Navio",
+        "vessel_short_name": record.get("vessel_short_name", "") or "",
+        "vessel_imo": record.get("vessel_imo", "") or "",
+        "vessel_call_sign": record.get("vessel_call_sign", "") or "",
+        "vessel_flag": record.get("vessel_flag", "") or "",
+        "vessel_type": record.get("vessel_type", "") or "",
+        "vessel_loa_m": record.get("vessel_loa_m", "") or "",
+        "vessel_beam_m": record.get("vessel_beam_m", "") or "",
+        "vessel_gt_t": record.get("vessel_gt_t", "") or "",
+        "vessel_max_draft_m": record.get("vessel_max_draft_m", "") or "",
+        "vessel_dwt_t": record.get("vessel_dwt_t", "") or "",
+        "status": status,
+        "approval_status": approval_status,
+        "approval_note": record.get("approval_note", "") or "",
+        "aborted_reason": record.get("aborted_reason", "") or "",
+        "decided_by": _normalize_username(record.get("decided_by")),
+        "decided_by_profile": _build_actor_snapshot(
+            record.get("decided_by_profile"),
+            username=record.get("decided_by"),
+        ),
+        "decided_at": record.get("decided_at"),
+        "eta": record.get("eta"),
+        "ata": record.get("ata"),
+        "planned_departure_at": record.get("planned_departure_at"),
+        "departure_plan_note": record.get("departure_plan_note", "") or "",
+        "departure_at": record.get("departure_at"),
+        "planned_shift_at": record.get("planned_shift_at"),
+        "shift_plan_note": record.get("shift_plan_note", "") or "",
+        "shift_at": record.get("shift_at"),
+        "shift_origin_berth": record.get("shift_origin_berth", "") or "",
+        "shift_destination_berth": record.get("shift_destination_berth", "") or "",
+        "shift_approval_status": shift_approval_status,
+        "shift_approval_note": record.get("shift_approval_note", "") or "",
+        "shift_aborted_reason": record.get("shift_aborted_reason", "") or "",
+        "shift_decided_by": _normalize_username(record.get("shift_decided_by")),
+        "shift_decided_by_profile": _build_actor_snapshot(
+            record.get("shift_decided_by_profile"),
+            username=record.get("shift_decided_by"),
+        ),
+        "shift_decided_at": record.get("shift_decided_at"),
+        "berth": record.get("berth", "") or "",
+        "last_port": record.get("last_port", "") or "",
+        "next_port": record.get("next_port", "") or "",
+        "created_by": _normalize_username(record.get("created_by", "system") or "system"),
+        "created_by_profile": _build_actor_snapshot(
+            record.get("created_by_profile"),
+            username=record.get("created_by", "system") or "system",
+        ),
+        "notes": record.get("notes", "") or "",
+        "created_at": created_at,
+        "updated_at": updated_at,
+    }
+    raw_history = record.get("maneuver_history")
+    if isinstance(raw_history, list) and raw_history:
+        normalized["maneuver_history"] = [
+            _normalize_maneuver_record(item, fallback_created_by=normalized["created_by"])
+            for item in raw_history
+        ]
+    else:
+        normalized["maneuver_history"] = _build_legacy_maneuver_history({**record, **normalized})
+    return _sync_port_call_from_history(normalized)
+
+
+def _can_abort_port_call(record: Dict) -> bool:
+    eta_dt = _parse_iso_datetime(record.get("eta"))
+    if not eta_dt:
+        return False
+    return datetime.now(timezone.utc) <= eta_dt - timedelta(hours=2)
+
+
+def _can_abort_departure_plan(record: Dict) -> bool:
+    planned_dt = _parse_iso_datetime(record.get("planned_departure_at"))
+    if not planned_dt:
+        return False
+    return datetime.now(timezone.utc) <= planned_dt - timedelta(hours=1)
+
+
+def _can_abort_shift_plan(record: Dict) -> bool:
+    planned_dt = _parse_iso_datetime(record.get("planned_shift_at"))
+    if not planned_dt:
+        return False
+    return datetime.now(timezone.utc) <= planned_dt - timedelta(hours=1)
+
+
+def _extract_departure_abort_reason(note: Optional[str]) -> str:
+    if not note:
+        return ""
+    match = re.search(r"Saída abortada:\s*([^|]+)", note, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    return " ".join(match.group(1).strip().split())
+
+
+def _extract_shift_abort_reason(note: Optional[str]) -> str:
+    if not note:
+        return ""
+    match = re.search(r"Mudança abortada:\s*([^|]+)", note, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    return " ".join(match.group(1).strip().split())
+
+
+def _build_maneuver_event(
+    *,
+    event_type: str,
+    title: str,
+    when_value: str,
+    vessel_name: str,
+    summary: str,
+    detail: str = "",
+    berth_label: str = "",
+) -> Dict:
+    return {
+        "event_type": event_type,
+        "title": title,
+        "when": when_value,
+        "when_label": _local_iso_to_label(when_value),
+        "vessel_name": vessel_name,
+        "summary": summary,
+        "detail": detail,
+        "berth_label": berth_label or "Sem cais atribuído",
+    }
+
+
+def _build_port_call_reference(record: Dict) -> str:
+    custom_reference = " ".join((record.get("reference_code") or "").strip().split())
+    if custom_reference:
+        return custom_reference
+    created_dt = _parse_iso_datetime(record.get("created_at")) or datetime.now(timezone.utc)
+    year_code = created_dt.astimezone().strftime("%y")
+    vessel_code = re.sub(r"[^A-Z0-9]", "", (record.get("vessel_name") or "").upper())[:4] or "NAV"
+    unique_code = re.sub(r"[^A-Z0-9]", "", (record.get("id") or "").upper())[:6] or "000000"
+    return f"PTSET{year_code}{vessel_code}{unique_code}"
+
+
+def _default_port_calls() -> List[Dict]:
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    return [
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Atlantic Navigator",
+            "vessel_short_name": "ATL NAV",
+            "vessel_imo": "9723345",
+            "vessel_call_sign": "CQAN7",
+            "vessel_flag": "Madeira",
+            "vessel_type": "Graneleiro",
+            "vessel_loa_m": "189.9",
+            "vessel_beam_m": "32.2",
+            "vessel_gt_t": "32.540",
+            "vessel_max_draft_m": "11.8",
+            "vessel_dwt_t": "38.600",
+            "status": PORT_CALL_STATUS_SCHEDULED,
+            "approval_status": PORT_CALL_APPROVAL_PENDING,
+            "approval_note": "",
+            "aborted_reason": "",
+            "decided_by": None,
+            "decided_at": None,
+            "eta": (now + timedelta(hours=3)).isoformat(),
+            "ata": None,
+            "planned_departure_at": None,
+            "departure_plan_note": "",
+            "departure_at": None,
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "Secil W",
+            "last_port": "Sines",
+            "next_port": "Setubal",
+            "created_by": "system",
+            "notes": "Entrada prevista pela barra com destino a Secil W.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Setubal Carrier",
+            "vessel_short_name": "SET CAR",
+            "vessel_imo": "9812456",
+            "vessel_call_sign": "CSBD9",
+            "vessel_flag": "Portugal",
+            "vessel_type": "Carga geral",
+            "vessel_loa_m": "143.2",
+            "vessel_beam_m": "22.4",
+            "vessel_gt_t": "11.860",
+            "vessel_max_draft_m": "8.4",
+            "vessel_dwt_t": "12.100",
+            "status": PORT_CALL_STATUS_SCHEDULED,
+            "approval_status": PORT_CALL_APPROVAL_PENDING,
+            "approval_note": "",
+            "aborted_reason": "",
+            "decided_by": None,
+            "decided_at": None,
+            "eta": (now + timedelta(hours=11)).isoformat(),
+            "ata": None,
+            "planned_departure_at": None,
+            "departure_plan_note": "",
+            "departure_at": None,
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "TMS 1 - Cais 5",
+            "last_port": "Huelva",
+            "next_port": "Setubal",
+            "created_by": "system",
+            "notes": "Escala prevista no TMS 1 com janela de maré favorável.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Lusitano Tanker",
+            "vessel_short_name": "LUS TANK",
+            "vessel_imo": "9567812",
+            "vessel_call_sign": "CQUZ3",
+            "vessel_flag": "Malta",
+            "vessel_type": "Petroleiro",
+            "vessel_loa_m": "228.4",
+            "vessel_beam_m": "36.0",
+            "vessel_gt_t": "48.220",
+            "vessel_max_draft_m": "12.6",
+            "vessel_dwt_t": "74.800",
+            "status": PORT_CALL_STATUS_SCHEDULED,
+            "approval_status": PORT_CALL_APPROVAL_PENDING,
+            "approval_note": "",
+            "aborted_reason": "",
+            "decided_by": None,
+            "decided_at": None,
+            "eta": (now + timedelta(days=1, hours=5)).isoformat(),
+            "ata": None,
+            "planned_departure_at": None,
+            "departure_plan_note": "",
+            "departure_at": None,
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "Tanquisado (lado jusante)",
+            "last_port": "Cartagena",
+            "next_port": "Setubal",
+            "created_by": "system",
+            "notes": "Navio tanque previsto para Tanquisado, sujeito a reponto de maré.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Yard Supporter",
+            "vessel_short_name": "Y SUPPORT",
+            "vessel_imo": "9675523",
+            "vessel_call_sign": "CQYS4",
+            "vessel_flag": "Bahamas",
+            "vessel_type": "Offshore / Apoio",
+            "vessel_loa_m": "121.0",
+            "vessel_beam_m": "22.0",
+            "vessel_gt_t": "9.870",
+            "vessel_max_draft_m": "6.9",
+            "vessel_dwt_t": "8.450",
+            "status": PORT_CALL_STATUS_IN_PORT,
+            "approval_status": PORT_CALL_APPROVAL_APPROVED,
+            "approval_note": "Aprovada para operação em cais.",
+            "aborted_reason": "",
+            "decided_by": "piloto",
+            "decided_at": (now - timedelta(hours=8)).isoformat(),
+            "eta": (now - timedelta(hours=9)).isoformat(),
+            "ata": (now - timedelta(hours=7, minutes=30)).isoformat(),
+            "planned_departure_at": (now + timedelta(hours=9)).isoformat(),
+            "departure_plan_note": "Saída prevista após conclusão da operação de carga.",
+            "departure_at": None,
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "Lisnave - Doca 21",
+            "last_port": "Leixões",
+            "next_port": "Valência",
+            "created_by": "system",
+            "notes": "Escala de estaleiro em curso na Lisnave.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Sado Mineral",
+            "vessel_short_name": "S MINERAL",
+            "vessel_imo": "9641188",
+            "vessel_call_sign": "CQSM8",
+            "vessel_flag": "Liberia",
+            "vessel_type": "Graneleiro",
+            "vessel_loa_m": "199.8",
+            "vessel_beam_m": "32.2",
+            "vessel_gt_t": "35.410",
+            "vessel_max_draft_m": "11.2",
+            "vessel_dwt_t": "39.900",
+            "status": PORT_CALL_STATUS_IN_PORT,
+            "approval_status": PORT_CALL_APPROVAL_APPROVED,
+            "approval_note": "Aprovada com acompanhamento de rebocador.",
+            "aborted_reason": "",
+            "decided_by": "piloto",
+            "decided_at": (now - timedelta(hours=15)).isoformat(),
+            "eta": (now - timedelta(hours=16)).isoformat(),
+            "ata": (now - timedelta(hours=15, minutes=10)).isoformat(),
+            "planned_departure_at": None,
+            "departure_plan_note": "",
+            "departure_at": None,
+            "planned_shift_at": (now + timedelta(hours=2)).isoformat(),
+            "shift_plan_note": "Mudança prevista de TMS 1 - Cais 8 para TMS 2 após libertação do posto.",
+            "shift_at": None,
+            "shift_origin_berth": "TMS 1 - Cais 8",
+            "shift_destination_berth": "TMS 2",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "TMS 1 - Cais 8",
+            "last_port": "Casablanca",
+            "next_port": "Bilbau",
+            "created_by": "system",
+            "notes": "Aguarda mudança interna entre TMS 1 e TMS 2.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Auto Carrier One",
+            "vessel_short_name": "AUTO ONE",
+            "vessel_imo": "9774012",
+            "vessel_call_sign": "3EAX9",
+            "vessel_flag": "Panama",
+            "vessel_type": "Ro-Ro / PCC",
+            "vessel_loa_m": "199.9",
+            "vessel_beam_m": "32.3",
+            "vessel_gt_t": "58.600",
+            "vessel_max_draft_m": "9.7",
+            "vessel_dwt_t": "18.400",
+            "status": PORT_CALL_STATUS_IN_PORT,
+            "approval_status": PORT_CALL_APPROVAL_APPROVED,
+            "approval_note": "Aprovada para escala curta.",
+            "aborted_reason": "",
+            "decided_by": "piloto",
+            "decided_at": (now - timedelta(days=1, hours=2)).isoformat(),
+            "eta": (now - timedelta(days=1, hours=1)).isoformat(),
+            "ata": (now - timedelta(days=1)).isoformat(),
+            "planned_departure_at": (now + timedelta(hours=4)).isoformat(),
+            "departure_plan_note": "Saída planeada em janela curta.",
+            "departure_at": None,
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "Cais 10 / Autoeuropa",
+            "last_port": "Tânger",
+            "next_port": "Setubal",
+            "created_by": "system",
+            "notes": "Operação automóvel em curso no cais 10 / Autoeuropa.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Pirites Trader",
+            "vessel_short_name": "PIR TRDR",
+            "vessel_imo": "9586648",
+            "vessel_call_sign": "CQPT2",
+            "vessel_flag": "Cyprus",
+            "vessel_type": "Carga geral",
+            "vessel_loa_m": "154.7",
+            "vessel_beam_m": "24.8",
+            "vessel_gt_t": "16.420",
+            "vessel_max_draft_m": "8.8",
+            "vessel_dwt_t": "21.300",
+            "status": PORT_CALL_STATUS_DEPARTED,
+            "approval_status": PORT_CALL_APPROVAL_APPROVED,
+            "approval_note": "Aprovada e concluída.",
+            "aborted_reason": "",
+            "decided_by": "piloto",
+            "decided_at": (now - timedelta(days=1, hours=8)).isoformat(),
+            "eta": (now - timedelta(days=1, hours=8)).isoformat(),
+            "ata": (now - timedelta(days=1, hours=7)).isoformat(),
+            "planned_departure_at": (now - timedelta(hours=6)).isoformat(),
+            "departure_plan_note": "Planeamento concluído.",
+            "departure_at": (now - timedelta(hours=5)).isoformat(),
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "Praias do Sado / Pirites Alentejanas",
+            "last_port": "Setubal",
+            "next_port": "Vigo",
+            "created_by": "system",
+            "notes": "Saída concluída do terminal de Praias do Sado / Pirites Alentejanas.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "vessel_name": "Sado Bulk",
+            "vessel_short_name": "S BULK",
+            "vessel_imo": "9657804",
+            "vessel_call_sign": "CQSB6",
+            "vessel_flag": "Marshall Islands",
+            "vessel_type": "Graneleiro",
+            "vessel_loa_m": "181.5",
+            "vessel_beam_m": "30.0",
+            "vessel_gt_t": "28.930",
+            "vessel_max_draft_m": "10.6",
+            "vessel_dwt_t": "34.750",
+            "status": PORT_CALL_STATUS_DEPARTED,
+            "approval_status": PORT_CALL_APPROVAL_APPROVED,
+            "approval_note": "Aprovada e concluída.",
+            "aborted_reason": "",
+            "decided_by": "piloto",
+            "decided_at": (now - timedelta(days=2, hours=6)).isoformat(),
+            "eta": (now - timedelta(days=2, hours=6)).isoformat(),
+            "ata": (now - timedelta(days=2, hours=5, minutes=30)).isoformat(),
+            "planned_departure_at": (now - timedelta(days=1, hours=4)).isoformat(),
+            "departure_plan_note": "Planeamento concluído.",
+            "departure_at": (now - timedelta(days=1, hours=3)).isoformat(),
+            "planned_shift_at": None,
+            "shift_plan_note": "",
+            "shift_at": None,
+            "shift_origin_berth": "",
+            "shift_destination_berth": "",
+            "shift_approval_status": PORT_CALL_APPROVAL_PENDING,
+            "shift_approval_note": "",
+            "shift_aborted_reason": "",
+            "shift_decided_by": None,
+            "shift_decided_at": None,
+            "berth": "SAPEC Sólidos",
+            "last_port": "Setubal",
+            "next_port": "Antuérpia",
+            "created_by": "system",
+            "notes": "Operação encerrada no terminal SAPEC Sólidos.",
+            "created_at": iso_now(),
+            "updated_at": iso_now(),
+        },
+    ]
+
+
+def _decorate_port_call(record: Dict) -> Dict:
+    normalized = _normalize_port_call_record(record)
+    decorated_history = []
+    for maneuver in normalized.get("maneuver_history", []):
+        state_label, state_class = _maneuver_state_meta(maneuver.get("type"), maneuver.get("state"))
+        agent_profile = _actor_meta(maneuver.get("created_by"), maneuver.get("created_by_profile"))
+        pilot_profile = _actor_meta(maneuver.get("decided_by"), maneuver.get("decided_by_profile"))
+        reported_by_profile = _actor_meta(maneuver.get("reported_by"), maneuver.get("reported_by_profile"))
+        decorated_history.append(
+            {
+                **maneuver,
+                "type_label": _maneuver_type_label(maneuver.get("type")),
+                "action_label": _maneuver_action_label(maneuver.get("type")),
+                "state_label": state_label,
+                "state_class": state_class,
+                "planned_label": _local_iso_to_label(maneuver.get("planned_at")),
+                "planned_input_value": _iso_to_datetime_local_value(maneuver.get("planned_at")),
+                "completed_label": _local_iso_to_label(maneuver.get("completed_at")),
+                "execution_started_label": _local_iso_to_label(maneuver.get("execution_started_at")),
+                "execution_started_input_value": _iso_to_datetime_local_value(maneuver.get("execution_started_at")),
+                "execution_finished_label": _local_iso_to_label(maneuver.get("execution_finished_at")),
+                "execution_finished_input_value": _iso_to_datetime_local_value(maneuver.get("execution_finished_at")),
+                "effective_time_label": _local_iso_to_label(_effective_maneuver_time(maneuver)),
+                "reported_draft_m": maneuver.get("reported_draft_m", "") or "",
+                "decided_label": _local_iso_to_label(maneuver.get("decided_at")),
+                "reported_label": _local_iso_to_label(maneuver.get("reported_at")),
+                "agent_profile": agent_profile,
+                "pilot_profile": pilot_profile,
+                "reported_by_profile": reported_by_profile,
+                "agent_label": agent_profile["label"],
+                "pilot_label": pilot_profile["label"],
+                "reported_by_label": reported_by_profile["label"],
+                "constraint_badges": _constraint_badges(maneuver.get("constraints", [])),
+                "change_count": len(maneuver.get("change_log") or []),
+                "has_changes": bool(maneuver.get("change_log")),
+            }
+        )
+    agent_profile = _actor_meta(normalized.get("created_by"), normalized.get("created_by_profile"))
+    pilot_profile = _actor_meta(normalized.get("decided_by"), normalized.get("decided_by_profile"))
+    shift_pilot_profile = _actor_meta(normalized.get("shift_decided_by"), normalized.get("shift_decided_by_profile"))
+    ship_type_meta = _resolve_vessel_type_meta(normalized.get("vessel_type"))
+    return {
+        **normalized,
+        "maneuver_history": decorated_history,
+        "eta_label": _local_iso_to_label(normalized.get("eta")),
+        "ata_label": _local_iso_to_label(normalized.get("ata")),
+        "planned_departure_label": _local_iso_to_label(normalized.get("planned_departure_at")),
+        "departure_label": _local_iso_to_label(normalized.get("departure_at")),
+        "planned_shift_label": _local_iso_to_label(normalized.get("planned_shift_at")),
+        "shift_label": _local_iso_to_label(normalized.get("shift_at")),
+        "decided_at_label": _local_iso_to_label(normalized.get("decided_at")),
+        "shift_decided_at_label": _local_iso_to_label(normalized.get("shift_decided_at")),
+        "berth_label": normalized.get("berth") or "Sem cais atribuído",
+        "reference_code": _build_port_call_reference(normalized),
+        "agent_profile": agent_profile,
+        "pilot_profile": pilot_profile,
+        "shift_pilot_profile": shift_pilot_profile,
+        "agent_label": agent_profile["label"],
+        "pilot_label": pilot_profile["label"],
+        "shift_pilot_label": shift_pilot_profile["label"],
+        "shift_origin_label": normalized.get("shift_origin_berth") or normalized.get("berth") or "Sem cais atribuído",
+        "shift_destination_label": normalized.get("shift_destination_berth") or "Sem cais atribuído",
+        "ship_short_name_label": normalized.get("vessel_short_name") or normalized.get("vessel_name") or "Navio",
+        "ship_imo_label": normalized.get("vessel_imo") or "--",
+        "ship_call_sign_label": normalized.get("vessel_call_sign") or "--",
+        "ship_flag_label": normalized.get("vessel_flag") or "--",
+        "ship_type_label": ship_type_meta["label"],
+        "ship_type_icon": ship_type_meta["icon"],
+        "ship_loa_label": normalized.get("vessel_loa_m") or "--",
+        "ship_beam_label": normalized.get("vessel_beam_m") or "--",
+        "ship_gt_label": normalized.get("vessel_gt_t") or "--",
+        "ship_max_draft_label": normalized.get("vessel_max_draft_m") or "--",
+        "ship_dwt_label": normalized.get("vessel_dwt_t") or "--",
+        "can_abort": _can_abort_port_call(normalized),
+        "can_abort_departure_plan": _can_abort_departure_plan(normalized),
+        "can_abort_shift_plan": _can_abort_shift_plan(normalized),
+    }
+
+
+def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> Dict:
+    now = datetime.now(timezone.utc)
+    future_limit = now + timedelta(days=window_days)
+    past_limit = now - timedelta(days=window_days)
+
+    arrivals = []
+    in_port = []
+    departed = []
+    aborted = []
+    maneuvers = []
+    planned_rows = []
+    departure_candidates = []
+
+    def add_planned_row(
+        *,
+        row_id: str,
+        port_call: Dict,
+        maneuver: Dict,
+        maneuver_label: str,
+        situation_label: str,
+        situation_class: str,
+        date_value: Optional[str],
+        planned_value: Optional[str],
+        actual_value: Optional[str],
+        local_origin: str,
+        local_destination: str,
+        detail_note: str = "",
+    ) -> None:
+        date_dt = _parse_iso_datetime(date_value)
+        if not date_dt:
+            return
+        planned_rows.append(
+            {
+                "id": row_id,
+                "port_call_id": port_call["id"],
+                "reference_code": port_call["reference_code"],
+                "vessel_name": port_call.get("vessel_name", "Navio"),
+                "vessel_gt": port_call.get("vessel_gt_t") or "",
+                "vessel_type": port_call.get("ship_type_label") or "Navio",
+                "vessel_type_icon": port_call.get("ship_type_icon"),
+                "date_value": date_dt.isoformat(),
+                "date_key": date_dt.astimezone().strftime("%Y-%m-%d"),
+                "date_label": _local_date_label(date_dt.isoformat()),
+                "planned_value": planned_value,
+                "planned_label": _local_time_label(planned_value),
+                "actual_value": actual_value,
+                "actual_label": _local_time_label(actual_value),
+                "execution_started_label": maneuver.get("execution_started_label", "Sem hora"),
+                "execution_finished_label": maneuver.get("execution_finished_label", "Sem hora"),
+                "execution_window_label": (
+                    f"{_local_time_label(maneuver.get('execution_started_at'))} -> {_local_time_label(maneuver.get('execution_finished_at'))}"
+                    if maneuver.get("execution_started_at") and maneuver.get("execution_finished_at")
+                    else ""
+                ),
+                "situation_label": situation_label,
+                "situation_class": situation_class,
+                "maneuver_label": maneuver_label,
+                "local_origin": local_origin or "--",
+                "origin_cabin_label": "--- | ---",
+                "local_destination": local_destination or "--",
+                "destination_cabin_label": "--- | ---",
+                "loa_label": port_call.get("ship_loa_label") or "--",
+                "beam_label": port_call.get("ship_beam_label") or "--",
+                "draft_label": maneuver.get("reported_draft_m") or maneuver.get("planned_draft_m") or port_call.get("ship_max_draft_label") or "--",
+                "tug_count_label": maneuver.get("tug_count") or "--",
+                "agent_label": maneuver.get("agent_label") or port_call["agent_label"],
+                "agent_profile": maneuver.get("agent_profile") or port_call.get("agent_profile"),
+                "pilot_label": maneuver.get("pilot_label") or port_call["pilot_label"],
+                "pilot_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
+                "validated_by_label": maneuver.get("pilot_label") or port_call["pilot_label"],
+                "validated_by_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
+                "reported_by_label": maneuver.get("reported_by_label", "--"),
+                "reported_by_profile": maneuver.get("reported_by_profile"),
+                "executed_by_label": maneuver.get("reported_by_label", "--"),
+                "executed_by_profile": maneuver.get("reported_by_profile"),
+                "report_completed": bool((maneuver.get("report_note") or "").strip()),
+                "constraint_badges": maneuver.get("constraint_badges", []),
+                "change_count": maneuver.get("change_count", 0),
+                "has_changes": maneuver.get("has_changes", False),
+                "detail_note": detail_note,
+                "approval_note": port_call.get("approval_note", ""),
+                "aborted_reason": port_call.get("aborted_reason", ""),
+                "show_approve": (
+                    maneuver_label == "Entrar"
+                    and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
+                    and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
+                )
+                or (
+                    maneuver_label == "Sair"
+                    and port_call["status"] == PORT_CALL_STATUS_IN_PORT
+                    and bool(port_call.get("planned_departure_at"))
+                    and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
+                ),
+                "show_abort_entry": maneuver_label == "Entrar"
+                and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
+                and port_call.get("approval_status") != PORT_CALL_APPROVAL_ABORTED
+                and port_call.get("can_abort"),
+                "show_mark_arrived": maneuver_label == "Entrar"
+                and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
+                and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
+                "show_abort_departure": maneuver_label == "Sair"
+                and port_call["status"] == PORT_CALL_STATUS_IN_PORT
+                and bool(port_call.get("planned_departure_at"))
+                and port_call.get("can_abort_departure_plan"),
+                "show_mark_departed": maneuver_label == "Sair"
+                and port_call["status"] == PORT_CALL_STATUS_IN_PORT
+                and bool(port_call.get("planned_departure_at"))
+                and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
+            }
+        )
+
+    for raw in records:
+        item = _decorate_port_call(raw)
+        eta_dt = _parse_iso_datetime(item.get("eta"))
+        departure_dt = _parse_iso_datetime(item.get("departure_at"))
+        decided_dt = _parse_iso_datetime(item.get("decided_at"))
+        status = item.get("status")
+        approval_status = item.get("approval_status", PORT_CALL_APPROVAL_PENDING)
+        if (
+            status == PORT_CALL_STATUS_SCHEDULED
+            and approval_status != PORT_CALL_APPROVAL_ABORTED
+            and eta_dt
+            and now <= eta_dt <= future_limit
+        ):
+            arrivals.append(item)
+        elif status == PORT_CALL_STATUS_IN_PORT:
+            in_port.append(item)
+        elif status == PORT_CALL_STATUS_DEPARTED and departure_dt and past_limit <= departure_dt <= now:
+            departed.append(item)
+        elif (
+            approval_status == PORT_CALL_APPROVAL_ABORTED
+            and decided_dt
+            and past_limit <= decided_dt <= now
+        ):
+            aborted.append(item)
+        for maneuver in item.get("maneuver_history", []):
+            maneuver_type = _normalize_maneuver_type(maneuver.get("type"))
+            maneuver_label = maneuver.get("action_label") or _maneuver_action_label(maneuver_type)
+            planned_dt = _parse_iso_datetime(maneuver.get("planned_at"))
+            completed_dt = _parse_iso_datetime(maneuver.get("completed_at"))
+            maneuver_decided_dt = _parse_iso_datetime(maneuver.get("decided_at"))
+            state = maneuver.get("state")
+            detail_note = (
+                maneuver.get("report_note")
+                or maneuver.get("plan_note")
+                or maneuver.get("approval_note")
+                or maneuver.get("aborted_reason")
+                or ""
+            )
+            summary = f"{maneuver.get('origin') or '--'} -> {maneuver.get('destination') or '--'}"
+
+            if planned_dt and state in {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED} and now <= planned_dt <= future_limit:
+                maneuvers.append(
+                    _build_maneuver_event(
+                        event_type=f"{maneuver_type}-planned",
+                        title=f"{maneuver_label} planeada",
+                        when_value=maneuver["planned_at"],
+                        vessel_name=item.get("vessel_name", "Navio"),
+                        summary=summary,
+                        detail=detail_note,
+                        berth_label=maneuver.get("destination") or item["berth_label"],
+                    )
+                )
+
+            if state == PORT_CALL_APPROVAL_ABORTED and maneuver_decided_dt and past_limit <= maneuver_decided_dt <= now:
+                maneuvers.append(
+                    _build_maneuver_event(
+                        event_type=f"{maneuver_type}-aborted",
+                        title=f"{maneuver_label} abortada",
+                        when_value=maneuver["decided_at"],
+                        vessel_name=item.get("vessel_name", "Navio"),
+                        summary=summary,
+                        detail=detail_note,
+                        berth_label=maneuver.get("origin") or item["berth_label"],
+                    )
+                )
+
+            if completed_dt and past_limit <= completed_dt <= now:
+                maneuvers.append(
+                    _build_maneuver_event(
+                        event_type=f"{maneuver_type}-completed",
+                        title=f"{maneuver_label} concluída",
+                        when_value=_effective_maneuver_time(maneuver),
+                        vessel_name=item.get("vessel_name", "Navio"),
+                        summary=summary,
+                        detail=detail_note,
+                        berth_label=maneuver.get("destination") or item["berth_label"],
+                    )
+                )
+
+            effective_completed_dt = _parse_iso_datetime(_effective_maneuver_time(maneuver))
+            if state == "completed":
+                reference_dt = effective_completed_dt
+            else:
+                reference_dt = planned_dt or maneuver_decided_dt
+            if not reference_dt or not (past_limit <= reference_dt <= future_limit):
+                continue
+            situation_label, situation_class = _maneuver_state_meta(maneuver_type, state)
+            actual_value = (
+                _effective_maneuver_time(maneuver)
+                if state == "completed"
+                else maneuver.get("decided_at") if state == PORT_CALL_APPROVAL_ABORTED else None
+            )
+            add_planned_row(
+                row_id=f"{maneuver_type}-{item['id']}-{maneuver.get('id')}",
+                port_call={
+                    **item,
+                    "pilot_label": _normalize_actor_label(maneuver.get("decided_by"), item["pilot_label"]),
+                    "approval_note": maneuver.get("approval_note", ""),
+                    "aborted_reason": maneuver.get("aborted_reason", ""),
+                },
+                maneuver=maneuver,
+                maneuver_label=maneuver_label,
+                situation_label=situation_label,
+                situation_class=situation_class,
+                date_value=reference_dt.isoformat(),
+                planned_value=maneuver.get("planned_at"),
+                actual_value=actual_value,
+                local_origin=maneuver.get("origin") or "--",
+                local_destination=maneuver.get("destination") or "--",
+                detail_note=detail_note,
+            )
+
+    arrivals.sort(
+        key=lambda item: _parse_iso_datetime(item.get("eta")) or datetime.max.replace(tzinfo=timezone.utc)
+    )
+    in_port.sort(
+        key=lambda item: (
+            item.get("berth_label", ""),
+            _parse_iso_datetime(item.get("ata")) or datetime.max.replace(tzinfo=timezone.utc),
+        )
+    )
+    departed.sort(
+        key=lambda item: _parse_iso_datetime(item.get("departure_at")) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    aborted.sort(
+        key=lambda item: _parse_iso_datetime(item.get("decided_at")) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    def _snapshot_maneuver_sort_key(item: Dict) -> tuple[int, float]:
+        when_dt = _parse_iso_datetime(item.get("when")) or now
+        timestamp = when_dt.timestamp()
+        if when_dt >= now:
+            return (0, timestamp)
+        return (1, -timestamp)
+
+    maneuvers.sort(key=_snapshot_maneuver_sort_key)
+
+    berth_map: Dict[str, List[Dict]] = {}
+    for item in in_port:
+        berth_map.setdefault(item["berth_label"], []).append(item)
+
+    _BERTH_GEO_ORDER = [
+        "Secil", "Fundeadouro Norte", "Cais Palmeiras",
+        "TMS 1", "TMS 2", "Autoeuropa", "Cais 10", "Cais 11",
+        "Praias do Sado", "Pirites", "SAPEC",
+        "ALSTOM", "PAN", "Tróia", "Fundeadouro Sul",
+        "Tanquisado", "Eco-Oil",
+        "Lisnave", "Teporset",
+    ]
+
+    def _berth_geo_sort_key(pair):
+        name = pair[0]
+        for idx, prefix in enumerate(_BERTH_GEO_ORDER):
+            if prefix.lower() in name.lower():
+                return idx
+        return 9999
+
+    berthed = [
+        {
+            "berth": berth,
+            "count": len(vessels),
+            "vessels": vessels,
+        }
+        for berth, vessels in sorted(berth_map.items(), key=_berth_geo_sort_key)
+    ]
+
+    for item in in_port:
+        active_departure = _latest_maneuver(
+            item.get("maneuver_history", []),
+            "departure",
+            {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED},
+        )
+        if active_departure:
+            continue
+        departure_candidates.append(
+            {
+                "id": item["id"],
+                "vessel_name": item["vessel_name"],
+                "berth_label": item["berth_label"],
+                "next_port": item.get("next_port", ""),
+                "notes": item.get("notes", ""),
+                "agent_label": item["agent_label"],
+            }
+        )
+
+    planned_rows.sort(
+        key=lambda item: (
+            _parse_iso_datetime(item.get("planned_value") or item.get("actual_value") or item.get("date_value"))
+            or datetime.max.replace(tzinfo=timezone.utc),
+            item.get("maneuver_label", ""),
+            item.get("vessel_name", ""),
+        )
+    )
+    archived_rows = [
+        item
+        for item in planned_rows
+        if item.get("situation_class") == "completed" and item.get("report_completed")
+    ]
+    active_planned_rows = [
+        item
+        for item in planned_rows
+        if item.get("situation_class") != "completed" or not item.get("report_completed")
+    ]
+    planned_groups_map: Dict[str, Dict] = {}
+    for item in active_planned_rows:
+        group = planned_groups_map.setdefault(
+            item["date_key"],
+            {
+                "date_key": item["date_key"],
+                "date_label": item["date_label"],
+                "total": 0,
+            },
+        )
+        group["total"] += 1
+    planned_groups = [
+        planned_groups_map[key]
+        for key in sorted(planned_groups_map.keys())
+    ]
+
+    return {
+        "arrivals": arrivals,
+        "in_port": in_port,
+        "berthed": berthed,
+        "departed": departed,
+        "aborted": aborted,
+        "maneuvers": maneuvers,
+        "planned_maneuvers": active_planned_rows,
+        "archived_maneuvers": archived_rows,
+        "planned_groups": planned_groups,
+        "departure_candidates": departure_candidates,
+        "stats": {
+            "scheduled_count": len(arrivals),
+            "in_port_count": len(in_port),
+            "departed_count": len(departed),
+            "berth_count": len(berthed),
+            "aborted_count": len(aborted),
+            "maneuver_count": len(maneuvers),
+            "planned_count": len(active_planned_rows),
+            "archive_count": len(archived_rows),
+            "pending_count": sum(
+                1 for item in active_planned_rows if item.get("situation_class") == "pending"
+            ),
+        },
+        "generated_at_label": _local_iso_to_label(now.isoformat()),
+        "window_days": window_days,
+    }

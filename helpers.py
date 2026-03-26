@@ -1239,8 +1239,12 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     role = (role or "").strip().lower()
 
     _action_redirects = {
-        "complete_entry": "approve_entry", "complete_departure": "approve_departure",
-        "complete_shift": "approve_shift", "edit_maneuver_report": "entry_report",
+        "edit_maneuver_report": "entry_report",
+    }
+    _conditional_approve_redirects = {
+        "complete_entry": ("approve_entry", "entry"),
+        "complete_departure": ("approve_departure", "departure"),
+        "complete_shift": ("approve_shift", "shift"),
     }
     if action in _action_redirects:
         action = _action_redirects[action]
@@ -1314,6 +1318,12 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 
     port_call = apply_scope(port_call_id)
     maneuver_type = target.get("maneuver_type", "")
+
+    if action in _conditional_approve_redirects:
+        approve_action, m_type = _conditional_approve_redirects[action]
+        target_maneuver = resolve_maneuver(port_call, action, m_type)
+        if target_maneuver and target_maneuver.get("state") == "pending":
+            action = approve_action
 
     if action == "approve_entry":
         apply_plan_updates_before_approval(port_call, "entry")

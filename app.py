@@ -14,8 +14,12 @@ from auth_service import create_auth_service
 from helpers import (
     current_reindex_status_payload,
     current_user_profile,
+    execute_pending_operational_action,
+    finalize_operational_proposal,
+    propose_operational_action,
     refresh_knowledge_state,
     safe_rebuild_index,
+    save_pending_chat_action,
     start_reindex_job,
 )
 from llm_provider import create_embedding_provider, create_llm_provider

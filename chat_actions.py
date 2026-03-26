@@ -25,6 +25,11 @@ ACTION_SPECS = {
         "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
+    "complete_entry": {
+        "label": "Confirmar entrada",
+        "roles": {"admin", "piloto"},
+        "requires_target": True,
+    },
     "entry_report": {
         "label": "Registar manobra de entrada",
         "roles": {"admin", "piloto"},
@@ -46,6 +51,11 @@ ACTION_SPECS = {
         "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
+    "complete_departure": {
+        "label": "Confirmar saída",
+        "roles": {"admin", "piloto"},
+        "requires_target": True,
+    },
     "departure_report": {
         "label": "Registar manobra de saída",
         "roles": {"admin", "piloto"},
@@ -65,6 +75,11 @@ ACTION_SPECS = {
     "abort_shift": {
         "label": "Cancelar/Abortar mudança",
         "roles": {"admin", "agente", "piloto"},
+        "requires_target": True,
+    },
+    "complete_shift": {
+        "label": "Confirmar mudança",
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "shift_report": {
