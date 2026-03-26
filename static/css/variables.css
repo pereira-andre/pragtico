@@ -1,0 +1,30 @@
+/* CSS Custom Properties & Typography */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  --bg: #0c1b2a;
+  --bg-strong: #132236;
+  --panel: rgba(16, 30, 48, 0.92);
+  --panel-strong: rgba(20, 36, 56, 0.96);
+  --text: #e4e9f0;
+  --text-strong: #ffffff;
+  --muted: #7e93a8;
+  --line: rgba(130, 160, 195, 0.15);
+  --accent: #1a9fff;
+  --accent-strong: #0077d4;
+  --accent-soft: rgba(26, 159, 255, 0.12);
+  --success: #22c55e;
+  --alert: #ef4444;
+  --warning: #f59e0b;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --glow: 0 0 20px rgba(26, 159, 255, 0.15);
+  --radius-xl: 20px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  --font-display: "DM Serif Display", "Georgia", serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
