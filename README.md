@@ -41,34 +41,58 @@ monitorização operacional em tempo real.
 ### Autenticação e Segurança
 - 3 perfis: admin (único), agente de navegação, piloto
 - Passwords com scrypt (Werkzeug)
+- Proteção CSRF em todos os formulários POST
+- Rate limiting em login (10 req/min) e API chat (30 req/min)
 - Session cookies: HTTPOnly, SameSite=Lax, Secure em produção
 - Security headers: HSTS, X-Frame-Options, X-Content-Type-Options
-- Agente vê apenas escalas da sua agência
+- Validação centralizada de inputs (validators.py)
 - Sessão expira em 8 horas
 
 ### Base Documental
 - Upload e indexação de documentos (PDF, DOCX, TXT, MD, CSV)
-- Embeddings semânticos via Gemini
-- Backend pgvector para pesquisa vetorial
+- Embeddings locais com sentence-transformers (all-MiniLM-L6-v2)
+- Fallback para embeddings via API (Gemini)
 - Reindexação incremental com progresso em tempo real
 - Página admin dedicada para gestão documental
 
 ## Arquitetura
 
 ```
-app.py              — Flask application (routes, controllers)
-cost_engine.py      — Pilotage cost calculation engine
-rag_engine.py       — RAG engine (embeddings, retrieval, generation)
-chat_actions.py     — Chatbot operational actions (create, approve, etc.)
-storage.py          — Data storage (JSON local + PostgreSQL)
-auth_service.py     — Authentication service
-weather_service.py  — WeatherAPI integration
-tide_service.py     — Tide data from CSV
-ais_service.py      — VesselFinder AIS embed
-vector_store.py     — pgvector index store
-knowledge/          — RAG knowledge base documents
-templates/          — Jinja2 HTML templates
-static/styles.css   — Professional dark nautical theme
+app.py                — Flask application factory + service registry
+security.py           — CSRF protection + rate limiting
+validators.py         — Centralized input validation (13 validators)
+
+blueprints/
+  auth.py             — Login, register, profile, logout
+  dashboard.py        — Operational dashboard + archive
+  port_calls.py       — Port call lifecycle (create → depart)
+  admin.py            — Users, documents, status, migration
+  chat.py             — Chat API, conversations, feedback
+  api.py              — Cost estimation API
+
+storage/
+  base.py             — BaseStore ABC (storage interface)
+  local.py            — LocalStore (JSON files)
+  postgres.py         — PostgresStore (psycopg)
+  constants.py        — Shared constants, vessel types, constraints
+  utils.py            — Parsing, normalization, text helpers
+  port_call_helpers.py — Port call state machine logic
+
+helpers.py            — Route decorators, chat actions, reindex jobs
+cost_engine.py        — Pilotage cost calculation engine
+rag_engine.py         — RAG engine (embeddings, retrieval, generation)
+chat_actions.py       — Chatbot operational action specs
+auth_service.py       — Authentication service
+weather_service.py    — WeatherAPI integration
+tide_service.py       — Tide data from CSV
+ais_service.py        — VesselFinder AIS embed
+vector_store.py       — Vector index store
+
+knowledge/            — RAG knowledge base documents
+templates/            — Jinja2 HTML templates
+static/css/           — CSS modules (variables, base, dashboard,
+                        pages, chat, dark-theme)
+tests/                — Unit + integration tests (103+ tests)
 ```
 
 ## Como Correr
@@ -84,7 +108,7 @@ python3 app.py
 
 Abrir `http://127.0.0.1:5000`.
 
-### Docker Compose (com PostgreSQL + pgvector)
+### Docker Compose (com PostgreSQL)
 
 ```bash
 cp .env.example .env
@@ -121,13 +145,17 @@ opções de migração (DeepSeek, embeddings locais, multi-provider).
 ## Testes
 
 ```bash
-python -m pytest tests/ -v
+python3 -m unittest discover tests/ -v
 ```
+
+103+ testes cobrindo validação de inputs, storage CRUD, CSRF e rate limiting.
 
 ## Tecnologias
 
-- **Backend:** Flask, gunicorn, PostgreSQL, pgvector
-- **LLM:** Google Gemini (configurável)
+- **Backend:** Flask (Blueprints), gunicorn, PostgreSQL (psycopg)
+- **LLM:** Google Gemini / OpenRouter (configurável)
+- **Embeddings:** sentence-transformers local (all-MiniLM-L6-v2)
 - **Frontend:** HTML/CSS/JS vanilla, tema dark náutico
+- **Segurança:** CSRF, rate limiting, bcrypt, validação centralizada
 - **Tipografia:** DM Serif Display + DM Sans (Google Fonts)
 - **Deploy:** Docker, Railway, Heroku-compatible
