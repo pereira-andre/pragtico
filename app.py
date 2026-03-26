@@ -5,7 +5,7 @@ import os
 import threading
 
 from dotenv import load_dotenv
-from flask import Flask, session
+from flask import Flask, request, session
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import services
