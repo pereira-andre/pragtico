@@ -30,6 +30,7 @@
   <section class="panel auth-panel">
     <h2>Entrar</h2>
     <form method="post" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
         Email
         <input type="email" name="email" placeholder="operador@porto.pt" required>

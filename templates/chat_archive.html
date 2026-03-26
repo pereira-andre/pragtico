@@ -11,6 +11,7 @@
       <div class="hero-actions">
         <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
         <form method="post" action="{{ url_for('chat.create_conversation') }}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="mini-button">Nova conversa</button>
         </form>
       </div>
@@ -52,13 +53,16 @@
           <div class="chat-archive-actions">
             <a class="inline-link" href="{{ url_for('dashboard_bp.dashboard', conversation_id=conv.id) }}">Abrir no quadro</a>
             <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-archive-rename">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="text" name="title" value="{{ conv.title }}" required>
               <button type="submit" class="mini-button secondary-button">Renomear</button>
             </form>
             <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="mini-button secondary-button">Limpar</button>
             </form>
             <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="mini-button danger-button">Apagar</button>
             </form>
           </div>

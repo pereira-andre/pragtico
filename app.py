@@ -26,6 +26,7 @@ from llm_provider import create_embedding_provider, create_llm_provider
 from migration_service import migrate_local_json_to_postgres
 from rag_engine import SimpleRAGEngine
 from reindex_scheduler import DeferredTaskScheduler
+from security import init_csrf
 from storage import (
     PASSWORD_HASH_METHOD,
     create_store,
@@ -188,6 +189,8 @@ from blueprints.port_calls import bp as port_calls_bp
 from blueprints.admin import bp as admin_bp
 from blueprints.chat import bp as chat_bp
 from blueprints.api import bp as api_bp
+
+init_csrf(app)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)

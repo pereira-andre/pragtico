@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 import services
+from security import api_limiter, rate_limit
 from helpers import (
     build_operational_chat_sources,
     clear_pending_chat_action,
@@ -175,6 +176,7 @@ def api_confirm_pending_chat_action():
 
 @bp.route("/api/chat", methods=["POST"])
 @login_required
+@rate_limit(api_limiter)
 def api_chat():
     refresh_knowledge_state(force_reindex=False)
     payload = request.get_json(silent=True) or {}

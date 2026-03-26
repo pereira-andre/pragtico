@@ -51,6 +51,7 @@
           {% set search_text = (user.username ~ ' ' ~ (user.full_name or '') ~ ' ' ~ (user.organization or '') ~ ' ' ~ (user.phone or '') ~ ' ' ~ (user.role or ''))|lower %}
           <article class="admin-user-card admin-user-edit-card" data-user-card data-search="{{ search_text }}">
             <form method="post" action="{{ url_for('admin.admin_update_user', username=user.username) }}" class="admin-user-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <div class="admin-user-form-head">
                 <div>
                   <p class="mini-label">Email de acesso</p>

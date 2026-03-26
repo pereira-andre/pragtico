@@ -96,6 +96,7 @@
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_entry %}
               <form method="post" action="{{ url_for('port_calls.attach_entry_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da entrada</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -124,6 +125,7 @@
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_departure %}
               <form method="post" action="{{ url_for('port_calls.attach_departure_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da saída</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -152,6 +154,7 @@
 
             {% if current_role in ["admin", "piloto"] and scale.actions.can_register_shift %}
               <form method="post" action="{{ url_for('port_calls.attach_shift_report', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="redirect_to" value="scale">
                 <strong>Registo da mudança</strong>
                 <div class="mini-grid planned-mini-grid">
@@ -297,6 +300,7 @@
                   <details class="planning-optional-box">
                     <summary>Editar planeamento</summary>
                     <form method="post" action="{{ url_for('port_calls.edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <div class="mini-grid planned-mini-grid">
                         <label>
                           Hora
@@ -347,6 +351,7 @@
                   <details class="planning-optional-box">
                     <summary>{% if item.executed_by_profile.label != '--' %}Editar registo{% else %}Preencher registo{% endif %}</summary>
                     <form method="post" action="{{ url_for('port_calls.edit_maneuver_report', port_call_id=port_call.id, maneuver_id=item.id) }}" class="stack planning-optional-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="maneuver_label" value="{{ item.title }}">
                       <div class="mini-grid planned-mini-grid">
                         <label>

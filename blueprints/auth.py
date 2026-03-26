@@ -9,12 +9,14 @@ from helpers import (
     session_profile_incomplete,
 )
 from storage import is_user_profile_complete
+from security import login_limiter, rate_limit
 from validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role
 
 bp = Blueprint("auth", __name__)
 
 
 @bp.route("/login", methods=["GET", "POST"])
+@rate_limit(login_limiter)
 def login():
     if session.get("username"):
         return redirect(url_for("dashboard_bp.dashboard"))
@@ -47,6 +49,7 @@ def login():
 
 
 @bp.route("/register", methods=["GET", "POST"])
+@rate_limit(login_limiter)
 def register():
     if request.method == "POST":
         try:

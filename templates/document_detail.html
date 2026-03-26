@@ -15,6 +15,7 @@
         <a class="outline-link" href="{{ url_for('admin.download_document', name=document.name) }}">Download</a>
         {% if current_role == "admin" %}
           <form method="post" action="{{ url_for('admin.reindex_knowledge') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="secondary-button">Reindexar incremental</button>
           </form>
         {% endif %}
@@ -49,6 +50,7 @@
             </div>
           </div>
           <form method="post" action="{{ url_for('admin.edit_document', name=document.name) }}" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label>
               Conteúdo
               <textarea name="content" rows="18" required>{{ document_text }}</textarea>
@@ -81,6 +83,7 @@
           Ao remover este ficheiro, o conteúdo deixa de ser usado no RAG após reindexação.
         </p>
         <form method="post" action="{{ url_for('admin.delete_document', name=document.name) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="danger-button">Apagar documento</button>
         </form>
       </section>

@@ -12,6 +12,7 @@
   <section class="panel auth-panel">
     <h2>Registar</h2>
     <form method="post" class="stack auth-form-pro">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <section class="auth-form-section">
         <div class="auth-form-head">
           <h3>Perfil operacional</h3>

@@ -43,6 +43,7 @@
         <p class="planning-block-lead">Regista a escala e a ETA. A validação e o fecho continuam concentrados na tabela de planeamento.</p>
       </div>
       <form method="post" action="{{ url_for('port_calls.create_port_call') }}" class="stack planning-form planning-register-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="redirect_to" value="register">
         <div class="planning-register-table">
           <div class="planning-register-row planning-register-row-primary">

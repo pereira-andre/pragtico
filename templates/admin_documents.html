@@ -40,6 +40,7 @@
         <h2>Estado do índice documental</h2>
       </div>
       <form id="reindex-form" method="post" action="{{ url_for('admin.reindex_knowledge') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="mini-button">Reindexar incremental</button>
       </form>
     </div>
@@ -158,6 +159,7 @@
         </div>
       </div>
       <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>
           Ficheiros documentais
           <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
@@ -175,6 +177,7 @@
         </div>
       </div>
       <form method="post" action="{{ url_for('admin.add_document') }}" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>
           Título
           <input type="text" name="title" placeholder="Procedimento de Entrada" required>
