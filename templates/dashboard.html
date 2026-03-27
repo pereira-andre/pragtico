@@ -487,7 +487,7 @@
                   {% if item.has_changes %}<span class="doc-badge">{{ item.change_count }}x</span>{% endif %}
                   {% if item.detail_note %}<p class="planned-note">{{ item.detail_note }}</p>{% else %}<span class="muted">--</span>{% endif %}
                   <div class="inline-link-row">
-                    <a class="inline-link planned-open-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                    <a class="inline-link planned-open-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir manobra</a>
                     <a class="inline-link planned-open-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
                   </div>
                 </td>

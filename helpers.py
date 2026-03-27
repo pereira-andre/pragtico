@@ -22,6 +22,8 @@ from chat_actions import (
     extract_pending_field_updates,
     format_action_summary,
     infer_maneuver_type,
+    looks_like_abort_payload,
+    looks_like_maneuver_report_payload,
     looks_like_port_call_payload,
     looks_like_operational_command,
     merge_action_candidate,
@@ -838,7 +840,15 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
 
     extracted = _extract_labelled_values(question)
 
-    if re.search(r"\b(regist\w*(?::|\s)|nova escala|cria\w*\s+escala|register scale)\b", clean) or looks_like_port_call_payload(question):
+    explicit_scale_request = bool(
+        re.search(r"\b(regist\w*\s+(esta\s+)?escala|nova escala|cria\w*\s+escala|register scale)\b", clean)
+    )
+    if (
+        (explicit_scale_request or looks_like_port_call_payload(question))
+        and "manobra" not in clean
+        and not looks_like_maneuver_report_payload(question)
+        and not looks_like_abort_payload(question)
+    ):
         vessel_name = extracted.pop("vessel_name", "")
         maneuver_type = "entry"
         if re.search(r"\b(saida|saída|departure)\b", clean):

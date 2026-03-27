@@ -7,8 +7,11 @@ from flask import Blueprint, Response, flash, jsonify, redirect, render_template
 
 import services
 from chat_actions import (
+    build_abort_reply_template,
     build_port_call_reply_template,
     build_maneuver_report_reply_template,
+    looks_like_abort_payload,
+    looks_like_maneuver_report_payload,
     looks_like_port_call_registration_request,
     looks_like_operational_command,
 )
@@ -325,11 +328,16 @@ def api_chat():
                     "answer_origin": "operational_template",
                 }
             elif looks_like_operational_command(question):
+                template = (
+                    build_abort_reply_template()
+                    if looks_like_abort_payload(question) or "aborta" in question.lower() or "cancela" in question.lower() or "anula" in question.lower()
+                    else build_maneuver_report_reply_template()
+                )
                 answer = {
                     "answer": (
                         "Percebi que o pedido é operacional, mas a proposta automática não ficou suficientemente segura para execução.\n\n"
                         "Responde neste formato para eu completar o registo sem consultar regras documentais:\n"
-                        + build_maneuver_report_reply_template()
+                        + template
                     ),
                     "sources": [],
                     "answer_origin": "operational_clarification",
@@ -346,11 +354,18 @@ def api_chat():
                 "answer_origin": "operational_template",
             }
         elif looks_like_operational_command(question):
+            template = (
+                build_abort_reply_template()
+                if looks_like_abort_payload(question) or "aborta" in question.lower() or "cancela" in question.lower() or "anula" in question.lower()
+                else build_maneuver_report_reply_template()
+                if looks_like_maneuver_report_payload(question) or "manobra" in question.lower()
+                else build_maneuver_report_reply_template()
+            )
             answer = {
                 "answer": (
                     "Percebi que o pedido é operacional, mas não consegui identificar a escala/manobra com segurança.\n\n"
                     "Indica o navio ou o número de escala e, se for registo de manobra, responde neste formato:\n"
-                    + build_maneuver_report_reply_template()
+                    + template
                 ),
                 "sources": [],
                 "answer_origin": "operational_clarification",

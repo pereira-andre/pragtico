@@ -679,6 +679,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         planned_rows.append(
             {
                 "id": row_id,
+                "maneuver_id": maneuver.get("id") or "",
                 "port_call_id": port_call["id"],
                 "reference_code": port_call["reference_code"],
                 "vessel_name": port_call.get("vessel_name", "Navio"),

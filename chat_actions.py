@@ -460,6 +460,17 @@ PORT_CALL_FIELD_HINTS = {
     "notes",
 }
 
+MANEUVER_REPORT_FIELD_HINTS = {
+    "maneuver_started_local",
+    "maneuver_finished_local",
+    "draft_m",
+    "notes",
+}
+
+ABORT_FIELD_HINTS = {
+    "aborted_reason",
+}
+
 
 def looks_like_port_call_payload(question: str) -> bool:
     extracted = _extract_labelled_values(question)
@@ -482,6 +493,25 @@ def looks_like_port_call_payload(question: str) -> bool:
         "vessel_call_sign",
     }.intersection(extracted.keys())
     return len(hits) >= 5 and len(strong_hits) >= 3 and bool(vessel_identity)
+
+
+def looks_like_maneuver_report_payload(question: str) -> bool:
+    extracted = _extract_labelled_values(question)
+    if not extracted:
+        return False
+    report_hits = MANEUVER_REPORT_FIELD_HINTS.intersection(extracted.keys())
+    has_window = {
+        "maneuver_started_local",
+        "maneuver_finished_local",
+    }.issubset(extracted.keys())
+    return bool(has_window and len(report_hits) >= 3)
+
+
+def looks_like_abort_payload(question: str) -> bool:
+    extracted = _extract_labelled_values(question)
+    if not extracted:
+        return False
+    return bool(ABORT_FIELD_HINTS.intersection(extracted.keys()))
 
 
 def extract_json_object(text: str) -> Optional[Dict]:
@@ -597,6 +627,11 @@ def normalize_action_fields(action: str, fields: Dict) -> Dict:
         elif action in {"abort_entry", "abort_departure", "abort_shift"} and not normalized.get("aborted_reason"):
             normalized["aborted_reason"] = normalized["reason"]
         normalized.pop("reason", None)
+
+    if action in {"abort_entry", "abort_departure", "abort_shift"}:
+        if normalized.get("change_reason") and not normalized.get("aborted_reason"):
+            normalized["aborted_reason"] = normalized["change_reason"]
+        normalized.pop("change_reason", None)
 
     if action == "edit_maneuver_plan" and normalized.get("eta_local") and not normalized.get("planned_at_local"):
         normalized["planned_at_local"] = normalized["eta_local"]
@@ -1136,6 +1171,9 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
         elif action in {"entry_report", "departure_report", "shift_report"}:
             lines.append("")
             lines.append(build_maneuver_report_reply_template(missing_fields))
+        elif action in {"abort_entry", "abort_departure", "abort_shift"}:
+            lines.append("")
+            lines.append(build_abort_reply_template(missing_fields))
         lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
     else:
         lines.append("Confirma para aplicar a alteração no portal.")
@@ -1146,7 +1184,11 @@ def looks_like_port_call_registration_request(question: str) -> bool:
     clean = _lookup_key(question)
     if not clean:
         return False
-    if re.search(r"\b(regist\w*(?::|\s)|nova escala|cria\w*\s+escala|register scale)\b", clean):
+    if "manobra" in clean:
+        return False
+    if looks_like_maneuver_report_payload(question) or looks_like_abort_payload(question):
+        return False
+    if re.search(r"\b(regist\w*\s+(esta\s+)?escala|nova escala|cria\w*\s+escala|register scale)\b", clean):
         return True
     return looks_like_port_call_payload(question)
 
@@ -1180,11 +1222,24 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
 
 def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = None) -> str:
     lines = [
-        "Se preferires, responde já neste formato e eu trato do registo da manobra:",
-        "Início da manobra: DD/MM/AAAA, HH:MM",
-        "Fim da manobra: DD/MM/AAAA, HH:MM",
-        "Calado: ",
-        "Observações: ",
+        "Registar manobra",
+        "Início da manobra",
+        "dd/mm/aaaa, --:--",
+        "Fim da manobra",
+        "dd/mm/aaaa, --:--",
+        "Calado",
+        "Observações",
+    ]
+    missing = [item for item in (missing_fields or []) if item]
+    if missing:
+        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
+    return "\n".join(lines)
+
+
+def build_abort_reply_template(missing_fields: Optional[List[str]] = None) -> str:
+    lines = [
+        "Abortar manobra",
+        "Motivo:",
     ]
     missing = [item for item in (missing_fields or []) if item]
     if missing:
