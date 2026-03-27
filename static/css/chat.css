@@ -23,6 +23,11 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.chatbot-fab .chatbot-glyph {
+  width: 24px;
+  height: 24px;
+}
+
 .chatbot-fab:hover {
   transform: scale(1.08);
   box-shadow: 0 8px 32px rgba(10, 108, 102, 0.45);
@@ -111,16 +116,91 @@
   border-radius: 8px;
   width: 32px;
   height: 32px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   cursor: pointer;
   transition: background 0.15s;
+  flex-shrink: 0;
+  text-decoration: none;
 }
 
 .chatbot-icon-btn:hover {
   background: rgba(255,255,255,0.25);
+}
+
+.chatbot-glyph {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+.chatbot-glyph::before,
+.chatbot-glyph::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.chatbot-glyph-window::before {
+  inset: 1px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.chatbot-glyph-window::after {
+  left: 4px;
+  right: 4px;
+  top: 5px;
+  height: 2px;
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor;
+}
+
+.chatbot-glyph-new::before {
+  left: 7px;
+  top: 2px;
+  width: 2px;
+  height: 12px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.chatbot-glyph-new::after {
+  left: 2px;
+  top: 7px;
+  width: 12px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.chatbot-glyph-minimize::before {
+  left: 2px;
+  right: 2px;
+  top: 7px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.chatbot-glyph-expand::before {
+  inset: 2px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.chatbot-glyph-expand::after {
+  inset: 0;
+  background:
+    linear-gradient(currentColor, currentColor) left top / 6px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) left top / 2px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) right bottom / 6px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) right bottom / 2px 6px no-repeat;
 }
 
 .chatbot-conversations {
@@ -175,6 +255,12 @@
 
 .chatbot-bubble p {
   margin: 0;
+}
+
+.chatbot-bubble-meta {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 .chatbot-bubble-user {
@@ -311,6 +397,128 @@
   color: var(--muted);
   text-align: center;
   flex-shrink: 0;
+}
+
+.chat-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.chat-sidebar-panel,
+.chat-main-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.chat-sidebar-panel {
+  align-content: start;
+}
+
+.chat-sidebar-head,
+.chat-main-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.chat-sidebar-actions,
+.chat-main-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.chat-sidebar-list {
+  display: grid;
+  gap: 12px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.chat-sidebar-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chat-sidebar-card.is-active {
+  border-color: rgba(10, 108, 102, 0.26);
+  background: rgba(10, 108, 102, 0.08);
+}
+
+.chat-sidebar-link {
+  display: grid;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.chat-sidebar-link span,
+.chat-sidebar-link small {
+  color: var(--muted);
+}
+
+.chat-sidebar-card-actions,
+.chat-sidebar-inline-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-sidebar-inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.chat-page-log {
+  min-height: 52vh;
+  max-height: 68vh;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chat-page-input {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-page-input textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.chat-page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 980px) {
+  .chat-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-sidebar-head,
+  .chat-main-head,
+  .chat-page-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════

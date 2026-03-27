@@ -34,6 +34,48 @@
     </div>
   </section>
 
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Escalas</p>
+        <h2>Arquivo por escala</h2>
+      </div>
+    </div>
+    <div class="archive-scale-groups">
+      {% for group in port_activity.archived_maneuvers|groupby('reference_code') %}
+        {% set first = group.list[0] %}
+        <details class="archive-scale-card">
+          <summary>
+            <div>
+              <strong>{{ group.grouper }}</strong>
+              <span>{{ first.vessel_name }} · {{ group.list|length }} manobra(s)</span>
+            </div>
+            <span class="ops-pill">{{ first.date_label }}</span>
+          </summary>
+          <div class="archive-scale-list">
+            {% for item in group.list %}
+              {% set mc = "entry" if item.maneuver_label == "Entrar" else "departure" if item.maneuver_label == "Sair" else "shift" %}
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <h3>{{ item.maneuver_label }}</h3>
+                  <span class="maneuver-chip maneuver-chip-{{ mc }}">{{ item.execution_window_label or item.actual_label or item.planned_label }}</span>
+                </div>
+                <p>{{ item.local_origin }} → {{ item.local_destination }}</p>
+                <p class="muted">{{ item.detail_note or 'Sem observações adicionais.' }}</p>
+                <div class="inline-link-row">
+                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                  <a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </details>
+      {% else %}
+        <article class="ops-empty"><p>Sem escalas arquivadas.</p></article>
+      {% endfor %}
+    </div>
+  </section>
+
   <section class="panel planned-panel">
     <div class="section-head">
       <div>
@@ -125,6 +167,10 @@
                 {% else %}
                   <span class="muted">--</span>
                 {% endif %}
+                <div class="inline-link-row">
+                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                  <a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
+                </div>
               </td>
             </tr>
           {% else %}
@@ -158,6 +204,16 @@
             <input type="text" id="sim-vessel" placeholder="Ex.: MSC Lyria">
           </label>
           <label>
+            Tipo de navio
+            <select id="sim-vessel-type">
+              <option value="restantes">Restantes</option>
+              <option value="contentores">Contentores</option>
+              <option value="roll-on_roll-off">Ro-Ro / PCC</option>
+              <option value="passageiros">Passageiros</option>
+              <option value="tanque">Tanque</option>
+            </select>
+          </label>
+          <label>
             GT (t)
             <input type="number" id="sim-gt" placeholder="Ex.: 32540" min="1" required>
           </label>
@@ -172,15 +228,30 @@
             <label class="constraint-option"><input type="checkbox" id="sim-entry" checked> <span>Entrada</span></label>
             <label class="constraint-option"><input type="checkbox" id="sim-departure" checked> <span>Saída</span></label>
             <label class="constraint-option"><input type="checkbox" id="sim-shift"> <span>Mudança</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-anchoring"> <span>Fundeadouro</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-trials"> <span>Experiências</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-standby"> <span>Pilotagem à ordem</span></label>
           </div>
+        </div>
+        <div class="mini-grid planned-mini-grid">
+          <label>
+            Horas à ordem
+            <input type="number" id="sim-standby-hours" value="1" min="0" step="0.5">
+          </label>
+          <label>
+            Escalas linha regular (365d)
+            <input type="number" id="sim-regular-line-calls" value="6" min="0" step="1">
+          </label>
         </div>
         <div class="cost-sim-modifiers">
           <span class="mini-label">Condições</span>
           <div class="cost-sim-checks">
             <label class="constraint-option"><input type="checkbox" id="sim-no-prop"> <span>Sem propulsão (+25%)</span></label>
-            <label class="constraint-option"><input type="checkbox" id="sim-special"> <span>Assistência especial (+25%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-special"> <span>Agulhas / assistência especial (+25%)</span></label>
             <label class="constraint-option"><input type="checkbox" id="sim-regular"> <span>Linha regular (-25%)</span></label>
             <label class="constraint-option"><input type="checkbox" id="sim-cabotage"> <span>Cabotagem (-10%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-technical"> <span>Escala técnica (-30%)</span></label>
+            <label class="constraint-option"><input type="checkbox" id="sim-include-tup" checked> <span>Incluir TUP</span></label>
           </div>
         </div>
         <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
@@ -264,6 +335,7 @@
     if (!gt || gt <= 0) { alert("Introduz um GT válido."); return; }
 
     const vessel = (document.getElementById("sim-vessel")?.value || "Simulação").trim();
+    const vesselType = (document.getElementById("sim-vessel-type")?.value || "restantes").trim();
     const days = parseFloat(document.getElementById("sim-days")?.value) || 1;
     const manoeuvres = [];
     if (document.getElementById("sim-entry")?.checked) {
@@ -275,15 +347,35 @@
     if (document.getElementById("sim-shift")?.checked) {
       manoeuvres.push({ type: "shift", surcharges: [], reductions: [] });
     }
+    if (document.getElementById("sim-anchoring")?.checked) {
+      manoeuvres.push({ type: "anchoring", surcharges: [], reductions: [] });
+    }
+    if (document.getElementById("sim-trials")?.checked) {
+      manoeuvres.push({ type: "trials", surcharges: [], reductions: [] });
+    }
+    if (document.getElementById("sim-standby")?.checked) {
+      manoeuvres.push({
+        type: "standby",
+        surcharges: [],
+        reductions: [],
+        standby_hours: parseFloat(document.getElementById("sim-standby-hours")?.value || "0") || 0,
+      });
+    }
     if (!manoeuvres.length) { alert("Seleciona pelo menos uma manobra."); return; }
 
     const surcharges = [];
     if (document.getElementById("sim-no-prop")?.checked) surcharges.push("no_propulsion");
     if (document.getElementById("sim-special")?.checked) surcharges.push("special_assistance");
     const reductions = [];
+    const regularLineCalls = parseInt(document.getElementById("sim-regular-line-calls")?.value || "0", 10);
     if (document.getElementById("sim-regular")?.checked) reductions.push("regular_line");
     if (document.getElementById("sim-cabotage")?.checked) reductions.push("cabotage");
-    manoeuvres.forEach(m => { m.surcharges = surcharges; m.reductions = reductions; });
+    if (document.getElementById("sim-technical")?.checked) reductions.push("technical_call");
+    manoeuvres.forEach(m => {
+      m.surcharges = surcharges;
+      m.reductions = reductions;
+      if (regularLineCalls > 0) m.regular_line_calls = regularLineCalls;
+    });
 
     const resultDiv = document.getElementById("sim-result");
     resultDiv.innerHTML = '<p class="muted">A calcular...</p>';
@@ -292,7 +384,14 @@
       const r = await fetch("/api/cost/estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vessel_name: vessel, gt, stay_days: days, manoeuvres, include_tup: true }),
+        body: JSON.stringify({
+          vessel_name: vessel,
+          vessel_type: vesselType,
+          gt,
+          stay_days: days,
+          manoeuvres,
+          include_tup: !!document.getElementById("sim-include-tup")?.checked,
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Erro no cálculo.");

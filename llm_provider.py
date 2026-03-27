@@ -83,11 +83,14 @@ class GeminiProvider(BaseLLMProvider):
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.client = None
+        self.unavailable_reason = "Gemini API key not configured."
         if api_key:
             try:
                 from google import genai
                 self.client = genai.Client(api_key=api_key)
+                self.unavailable_reason = ""
             except Exception as exc:
+                self.unavailable_reason = f"Failed to initialize Gemini client: {exc}"
                 logger.warning("Failed to initialize Gemini client: %s", exc)
 
     @property
@@ -96,7 +99,7 @@ class GeminiProvider(BaseLLMProvider):
 
     def generate(self, prompt: str, model: str, **kwargs) -> GenerationResult:
         if not self.client:
-            raise RuntimeError("Gemini API key not configured.")
+            raise RuntimeError(self.unavailable_reason or "Gemini API key not configured.")
         response = self.client.models.generate_content(
             model=model,
             contents=prompt,
@@ -106,7 +109,7 @@ class GeminiProvider(BaseLLMProvider):
 
     def embed(self, texts: List[str], model: str, **kwargs) -> EmbeddingResult:
         if not self.client:
-            raise RuntimeError("Gemini API key not configured.")
+            raise RuntimeError(self.unavailable_reason or "Gemini API key not configured.")
         result = self.client.models.embed_content(
             model=model,
             contents=texts,
@@ -139,6 +142,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         self.provider_label = provider_label
         self.provider_name = provider_label.lower().replace(" ", "_")
         self.client = None
+        self.unavailable_reason = f"{provider_label} API key not configured."
         if api_key:
             try:
                 from openai import OpenAI
@@ -156,11 +160,16 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     base_url=base_url,
                     default_headers=extra_headers if extra_headers else None,
                 )
+                self.unavailable_reason = ""
             except ImportError:
+                self.unavailable_reason = (
+                    f"{provider_label} SDK unavailable: openai package not installed."
+                )
                 logger.warning(
                     "openai package not installed. Install with: pip install openai"
                 )
             except Exception as exc:
+                self.unavailable_reason = f"Failed to initialize {provider_label} client: {exc}"
                 logger.warning("Failed to initialize %s client: %s", provider_label, exc)
 
     @property
@@ -169,7 +178,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     def generate(self, prompt: str, model: str, **kwargs) -> GenerationResult:
         if not self.client:
-            raise RuntimeError(f"{self.provider_label} API key not configured.")
+            raise RuntimeError(
+                self.unavailable_reason or f"{self.provider_label} API key not configured."
+            )
         response = self.client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
@@ -188,7 +199,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     def embed(self, texts: List[str], model: str, **kwargs) -> EmbeddingResult:
         if not self.client:
-            raise RuntimeError(f"{self.provider_label} API key not configured.")
+            raise RuntimeError(
+                self.unavailable_reason or f"{self.provider_label} API key not configured."
+            )
         response = self.client.embeddings.create(
             model=model,
             input=texts,
@@ -319,4 +332,3 @@ def create_embedding_provider(
     if provider.is_available:
         return provider
     return None
-

@@ -70,6 +70,7 @@ def dashboard():
     tomorrow = today + timedelta(days=1)
     tides_today = services.tide_service.summary_for_date(today)
     tides_tomorrow = services.tide_service.summary_for_date(tomorrow)
+    tide_window = services.tide_service.window_summary(today - timedelta(days=1), days=4)
 
     weather_data = None
     weather_error = ""
@@ -86,6 +87,7 @@ def dashboard():
         port_activity=port_activity,
         tides_today=tides_today,
         tides_tomorrow=tides_tomorrow,
+        tide_window=tide_window,
         weather_data=weather_data,
         weather_timeline=weather_timeline,
         weather_error=weather_error,

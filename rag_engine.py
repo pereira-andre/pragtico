@@ -831,7 +831,7 @@ class SimpleRAGEngine:
             return []
 
         if not self._use_local_embeddings and not self.client:
-            raise RuntimeError("Pesquisa semântica indisponível: configura embeddings locais ou API key.")
+            return self._lexical_search(question, chunks, top_k)
 
         try:
             query_vector = self._embed_many([question])[0]
@@ -840,12 +840,19 @@ class SimpleRAGEngine:
                 return [item for item in results if item.get("score", 0) > 0]
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
-            raise RuntimeError(
-                "Pesquisa semântica indisponível neste momento. "
-                f"Detalhe técnico: {self.last_index_error}"
-            ) from exc
+            return self._lexical_search(question, chunks, top_k)
 
         return []
+
+    def _lexical_search(self, question: str, chunks: List[Dict], top_k: int) -> List[Dict]:
+        scored = []
+        for item in chunks:
+            score = lexical_score(question, item.get("text", ""))
+            if score <= 0:
+                continue
+            scored.append({**item, "score": score, "retrieval_mode": "lexical"})
+        scored.sort(key=lambda item: item.get("score", 0), reverse=True)
+        return scored[:top_k]
 
     def index_summary(self) -> Dict:
         self.rebuild_index()
@@ -902,8 +909,7 @@ class SimpleRAGEngine:
         except Exception as exc:
             return {
                 "answer": (
-                    "A pesquisa documental semântica não está disponível neste momento. "
-                    "Verifica a configuração da API key do LLM. "
+                    "A pesquisa documental não está disponível neste momento. "
                     f"Detalhe: {exc}"
                 ),
                 "sources": supplemental_sources or [],

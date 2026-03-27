@@ -112,6 +112,136 @@
   gap: 20px;
 }
 
+.ops-expand {
+  margin-top: 12px;
+}
+
+.ops-expand summary {
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.ops-list-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 12px;
+  padding-right: 6px;
+}
+
+.tide-visual-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tide-window-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tide-window-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tide-visual-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tide-visual-meta-wide {
+  flex-wrap: wrap;
+}
+
+.tide-visual-chart {
+  width: 100%;
+  height: 90px;
+}
+
+.tide-visual-chart-wide {
+  height: auto;
+  min-height: 220px;
+}
+
+.tide-visual-chart line {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1.5;
+}
+
+.tide-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tide-grid-line {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+}
+
+.tide-grid-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.tide-grid-label-today {
+  fill: var(--accent-strong);
+  font-weight: 700;
+}
+
+.tide-now-line {
+  stroke: rgba(40, 157, 246, 0.78);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.tide-now-label {
+  fill: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tide-point {
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 1.5;
+}
+
+.tide-point-high {
+  fill: #38bdf8;
+}
+
+.tide-point-low {
+  fill: #f59e0b;
+}
+
+.tides-ribbon-wide {
+  grid-auto-columns: minmax(220px, 280px);
+}
+
+.berth-horizontal-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
 .planned-panel {
   display: grid;
   gap: 18px;

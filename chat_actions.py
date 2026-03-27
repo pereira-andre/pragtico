@@ -114,6 +114,7 @@ ACTION_KEYWORDS = (
     "anula",
     "regista",
     "registar",
+    "registo",
     "cria",
     "criar",
     "marca",
@@ -162,7 +163,7 @@ QUERY_HINTS = (
 MANEUVER_TYPES = {"entry", "departure", "shift"}
 JSON_BLOCK_RE = re.compile(r"\{.*\}", flags=re.DOTALL)
 TIME_OR_STATUS_HINT_RE = re.compile(
-    r"\b(\d{1,2}:\d{2}|hoje|amanha|amanhã|mesmo dia|previst\w*|pendente|aprovad\w*|abortad\w*)\b"
+    r"\b(\d{1,2}(?::|\s)\d{2}|hoje|amanha|amanhã|mesmo dia|previst\w*|pendente|aprovad\w*|abortad\w*)\b"
 )
 OPERATIONAL_OBJECT_HINTS = ("navio", "escala", "manobra", "entrada", "saida", "saída", "mudanca", "mudança")
 TIME_ONLY_RE = re.compile(r"^\d{1,2}:\d{2}$")
@@ -179,31 +180,63 @@ PENDING_UPDATE_FIELD_ALIASES = {
         "nova hora prevista",
         "hora de marcacao",
         "hora de marcação",
+        "marcacao",
+        "marcação",
     ],
-    "notes": ["notes", "nota", "observacoes", "observações"],
+    "notes": ["notes", "nota", "observacoes", "observações", "obs"],
     "berth": ["cais previsto", "cais", "planned_quay", "planned_berth", "quay", "berth", "pier"],
     "destination_berth": ["cais destino", "destination_quay", "destination_berth", "destination_pier"],
     "origin_berth": ["cais origem", "origin_quay", "origin_berth", "origin_pier"],
-    "next_port": ["proximo porto", "próximo porto", "next_port", "port_of_destination"],
+    "next_port": ["proximo porto", "próximo porto", "próximo destino", "proximo destino", "next_port", "port_of_destination"],
     "last_port": ["ultimo porto", "último porto", "last_port", "port_of_origin"],
-    "eta_local": ["eta", "eta_local"],
+    "eta_local": ["eta de chegada", "eta chegada", "eta", "eta_local"],
     "planned_departure_at_local": ["etd", "planned_departure_at_local"],
-    "draft_m": ["calado", "draft_m", "draught", "draft"],
+    "maneuver_started_local": [
+        "inicio da manobra",
+        "início da manobra",
+        "inicio",
+        "início",
+        "hora de inicio",
+        "hora de início",
+        "start_time",
+        "maneuver_started_local",
+        "maneuver_started_at",
+    ],
+    "maneuver_finished_local": [
+        "fim da manobra",
+        "fim",
+        "hora de fim",
+        "end_time",
+        "maneuver_finished_local",
+        "maneuver_finished_at",
+    ],
+    "draft_m": [
+        "calado operacional",
+        "calado (operacional)",
+        "draft_operational",
+        "draft_operacional",
+        "calado_operacional",
+        "draft_m",
+        "draught",
+        "draft",
+        "calado",
+    ],
     "tug_count": ["rebocadores", "reboques", "tug_count", "tugs", "numero de rebocadores"],
     # Vessel data fields (for create_port_call)
-    "vessel_name": ["nome do navio", "nome navio", "vessel_name", "navio"],
+    "vessel_name": ["nome do navio", "nome navio", "nome", "vessel_name"],
     "vessel_imo": ["imo", "vessel_imo"],
-    "vessel_call_sign": ["indicativo", "call_sign", "vessel_call_sign", "callsign"],
+    "vessel_call_sign": ["indicativo", "call_sign", "vessel_call_sign", "callsign", "indicative"],
     "vessel_flag": ["bandeira", "flag", "vessel_flag"],
     "vessel_type": ["tipo de navio", "tipo navio", "vessel_type", "tipo"],
     "vessel_loa_m": ["loa", "loa (m)", "vessel_loa_m", "comprimento"],
     "vessel_beam_m": ["boca", "boca (m)", "beam", "vessel_beam_m", "largura"],
     "vessel_gt_t": ["gt", "gt (t)", "vessel_gt_t", "arqueacao bruta", "arqueação bruta"],
     "vessel_dwt_t": ["dwt", "dwt (t)", "vessel_dwt_t", "deadweight"],
-    "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "max_draft", "vessel_max_draft_m"],
+    "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "calado (m)", "max_draft", "vessel_max_draft_m"],
 }
 FIELD_ALIASES = {
     "name": "vessel_name",
+    "nome": "vessel_name",
     "vessel": "vessel_name",
     "ship": "vessel_name",
     "ship_name": "vessel_name",
@@ -212,6 +245,7 @@ FIELD_ALIASES = {
     "call_sign": "vessel_call_sign",
     "callsign": "vessel_call_sign",
     "indicativo": "vessel_call_sign",
+    "indicative": "vessel_call_sign",
     "flag": "vessel_flag",
     "bandeira": "vessel_flag",
     "loa": "vessel_loa_m",
@@ -233,6 +267,10 @@ FIELD_ALIASES = {
     "vessel_draft": "draft_m",
     "max_draft": "vessel_max_draft_m",
     "eta": "eta_local",
+    "port": "berth",
+    "ship_type": "vessel_type",
+    "marking": "planned_at_local",
+    "operational_draft": "draft_m",
     "arrival_eta": "eta_local",
     "arrival_time": "eta_local",
     "estimated_arrival": "eta_local",
@@ -278,6 +316,11 @@ FIELD_ALIASES = {
     "observation": "notes",
     "observations": "notes",
     "note": "notes",
+    "docking_depth": "draft_m",
+    "calado_operacional": "draft_m",
+    "draft_operational": "draft_m",
+    "draft_operacional": "draft_m",
+    "expected_berth": "berth",
 }
 NESTED_FIELD_GROUPS = {
     "port_call_data",
@@ -329,6 +372,7 @@ DISPLAY_FIELD_LABELS = {
     "berth": "cais previsto",
     "last_port": "último porto",
     "next_port": "próximo porto",
+    "planned_at_local": "marcação",
     "planned_departure_at_local": "hora prevista de saída",
     "planned_shift_at_local": "hora prevista da mudança",
     "destination_berth": "cais destino",
@@ -336,6 +380,8 @@ DISPLAY_FIELD_LABELS = {
     "maneuver_started_local": "início da manobra",
     "maneuver_finished_local": "fim da manobra",
     "draft_m": "calado",
+    "tug_count": "rebocadores",
+    "notes": "observações",
     "change_reason": "motivo da alteração",
 }
 
@@ -351,6 +397,34 @@ def _normalized_ascii_text(value: Optional[str]) -> str:
     return normalized.encode("ascii", "ignore").decode("ascii")
 
 
+def _extract_constraint_flags(question: str) -> List[str]:
+    text = " ".join((question or "").strip().split())
+    if not text:
+        return []
+    lowered = text.lower()
+    flags: List[str] = []
+    specs = (
+        ("daylight", ("day-light", "day light", "daylight")),
+        ("gas", ("gás / carga perigosa", "gas / carga perigosa", "gás", "gas", "carga perigosa")),
+        ("estrategico", ("estratégico", "estrategico")),
+    )
+    for code, aliases in specs:
+        for alias in aliases:
+            match = re.search(
+                rf"{re.escape(alias)}\s*(?:=|:|\beh\b|\be\b)\s*(.{0,24})",
+                lowered,
+                flags=re.IGNORECASE,
+            )
+            if not match:
+                continue
+            segment = match.group(1)
+            if any(marker in segment for marker in ("✅", "sim", "yes", "true")):
+                if code not in flags:
+                    flags.append(code)
+                break
+    return flags
+
+
 def looks_like_operational_command(question: str) -> bool:
     clean = _lookup_key(question)
     if not clean:
@@ -364,6 +438,50 @@ def looks_like_operational_command(question: str) -> bool:
     if any(clean.startswith(token) for token in QUERY_HINTS):
         return False
     return bool(re.search(r"\b(ata|atd|eta|etd)\b", clean))
+
+
+PORT_CALL_FIELD_HINTS = {
+    "vessel_name",
+    "vessel_imo",
+    "vessel_call_sign",
+    "vessel_flag",
+    "vessel_type",
+    "vessel_loa_m",
+    "vessel_beam_m",
+    "vessel_gt_t",
+    "vessel_dwt_t",
+    "vessel_max_draft_m",
+    "eta_local",
+    "berth",
+    "last_port",
+    "next_port",
+    "draft_m",
+    "tug_count",
+    "notes",
+}
+
+
+def looks_like_port_call_payload(question: str) -> bool:
+    extracted = _extract_labelled_values(question)
+    if not extracted:
+        return False
+    hits = PORT_CALL_FIELD_HINTS.intersection(extracted.keys())
+    strong_hits = {
+        "eta_local",
+        "berth",
+        "last_port",
+        "next_port",
+        "vessel_imo",
+        "vessel_type",
+        "vessel_loa_m",
+        "vessel_beam_m",
+    }.intersection(extracted.keys())
+    vessel_identity = {
+        "vessel_name",
+        "vessel_imo",
+        "vessel_call_sign",
+    }.intersection(extracted.keys())
+    return len(hits) >= 5 and len(strong_hits) >= 3 and bool(vessel_identity)
 
 
 def extract_json_object(text: str) -> Optional[Dict]:
@@ -511,20 +629,39 @@ def display_missing_field_labels(fields: List[str]) -> List[str]:
     return [DISPLAY_FIELD_LABELS.get(field, field) for field in fields]
 
 
-def _extract_labelled_values(question: str) -> Dict[str, str]:
+def _clean_extracted_value(canonical: str, raw_value: str) -> str:
+    clean = " ".join(str(raw_value or "").strip().split())
+    if not clean:
+        return ""
+    clean = re.split(
+        r"\bFicha do Navio\b|\bDados Operacionais\b|\bRestri[cç][õo]es?\b",
+        clean,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip(" ,;.:-")
+    if canonical == "tug_count":
+        match = re.search(r"\d+", clean)
+        return match.group(0) if match else clean
+    if canonical in {"vessel_loa_m", "vessel_beam_m", "vessel_gt_t", "vessel_dwt_t", "vessel_max_draft_m", "draft_m"}:
+        match = re.search(r"\d+(?:[.,]\d+)*", clean)
+        return match.group(0) if match else clean
+    return clean
+
+
+def _extract_labelled_values(question: str) -> Dict[str, object]:
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
-    normalized_text = _normalized_ascii_text(text)
+    search_text = text.lower()
     hits = []
     for canonical, aliases in PENDING_UPDATE_FIELD_ALIASES.items():
         for alias in aliases:
-            needle = _normalized_ascii_text(alias).strip()
+            needle = alias.lower().strip()
             pattern = re.compile(
                 rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b)\s*",
                 flags=re.IGNORECASE,
             )
-            match = pattern.search(normalized_text)
+            match = pattern.search(search_text)
             if not match:
                 continue
             hits.append((match.start(), match.end(), canonical, needle))
@@ -532,13 +669,16 @@ def _extract_labelled_values(question: str) -> Dict[str, str]:
     if not hits:
         return {}
     hits.sort(key=lambda item: item[0])
-    extracted = {}
+    extracted: Dict[str, object] = {}
     for index, (_start, value_start, canonical, needle) in enumerate(hits):
-        end = hits[index + 1][0] if index + 1 < len(hits) else len(normalized_text)
-        raw_value = normalized_text[value_start:end]
-        raw_value = raw_value.strip(" ,;.:-")
-        if raw_value:
-            extracted[canonical] = raw_value
+        end = hits[index + 1][0] if index + 1 < len(hits) else len(text)
+        raw_value = text[value_start:end]
+        clean_value = _clean_extracted_value(canonical, raw_value)
+        if clean_value:
+            extracted[canonical] = clean_value
+    constraint_flags = _extract_constraint_flags(question)
+    if constraint_flags:
+        extracted["constraints"] = constraint_flags
     return extracted
 
 
@@ -990,5 +1130,63 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     missing_fields = proposal.get("missing_fields") or []
     if missing_fields:
         lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")
-    lines.append("Confirma para aplicar a alteração no portal.")
+        if action == "create_port_call":
+            lines.append("")
+            lines.append(build_port_call_reply_template(missing_fields))
+        elif action in {"entry_report", "departure_report", "shift_report"}:
+            lines.append("")
+            lines.append(build_maneuver_report_reply_template(missing_fields))
+        lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
+    else:
+        lines.append("Confirma para aplicar a alteração no portal.")
+    return "\n".join(lines)
+
+
+def looks_like_port_call_registration_request(question: str) -> bool:
+    clean = _lookup_key(question)
+    if not clean:
+        return False
+    if re.search(r"\b(regist\w*(?::|\s)|nova escala|cria\w*\s+escala|register scale)\b", clean):
+        return True
+    return looks_like_port_call_payload(question)
+
+
+def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -> str:
+    lines = [
+        "Se preferires, responde já neste formato e eu trato do registo:",
+        "Nome: ",
+        "ETA de chegada: DD/MM/AAAA, HH:MM",
+        "Cais previsto: ",
+        "Último porto: ",
+        "Próximo destino: ",
+        "IMO: ",
+        "Indicativo: ",
+        "Bandeira: ",
+        "Tipo de navio: ",
+        "LOA (m): ",
+        "Boca (m): ",
+        "GT (t): ",
+        "DWT (t): ",
+        "Calado (m): ",
+        "Calado (operacional): ",
+        "Rebocadores: ",
+        "Observações: ",
+    ]
+    missing = [item for item in (missing_fields or []) if item]
+    if missing:
+        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
+    return "\n".join(lines)
+
+
+def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = None) -> str:
+    lines = [
+        "Se preferires, responde já neste formato e eu trato do registo da manobra:",
+        "Início da manobra: DD/MM/AAAA, HH:MM",
+        "Fim da manobra: DD/MM/AAAA, HH:MM",
+        "Calado: ",
+        "Observações: ",
+    ]
+    missing = [item for item in (missing_fields or []) if item]
+    if missing:
+        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
     return "\n".join(lines)

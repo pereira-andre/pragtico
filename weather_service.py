@@ -10,7 +10,8 @@ Integrates WeatherAPI.com forecast data with operational context:
 from __future__ import annotations
 
 import os
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
 import requests
@@ -74,6 +75,94 @@ class WeatherService:
             except ValueError:
                 continue
         return clean
+
+    def _format_date_label(self, date_str: str) -> str:
+        if not date_str:
+            return ""
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except ValueError:
+            return date_str
+
+    def _resolve_query_dates(self, question: str, reference_date: date) -> List[str]:
+        question_lower = (question or "").lower()
+        resolved: List[str] = []
+
+        def add_day(value: date) -> None:
+            iso = value.isoformat()
+            if iso not in resolved:
+                resolved.append(iso)
+
+        for match in re.finditer(r"\b(20\d{2}-\d{2}-\d{2})\b", question_lower):
+            add_day(datetime.strptime(match.group(1), "%Y-%m-%d").date())
+
+        for match in re.finditer(r"\b(\d{2})/(\d{2})/(20\d{2})\b", question_lower):
+            add_day(date(int(match.group(3)), int(match.group(2)), int(match.group(1))))
+
+        month_lookup = {
+            "janeiro": 1,
+            "fevereiro": 2,
+            "marco": 3,
+            "março": 3,
+            "abril": 4,
+            "maio": 5,
+            "junho": 6,
+            "julho": 7,
+            "agosto": 8,
+            "setembro": 9,
+            "outubro": 10,
+            "novembro": 11,
+            "dezembro": 12,
+        }
+        for match in re.finditer(
+            r"\b(\d{1,2})\s+de\s+"
+            r"(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)"
+            r"(?:\s+de\s+(20\d{2}))?\b",
+            question_lower,
+        ):
+            month = month_lookup.get(match.group(2), reference_date.month)
+            year = int(match.group(3)) if match.group(3) else reference_date.year
+            add_day(date(year, month, int(match.group(1))))
+
+        if "hoje" in question_lower:
+            add_day(reference_date)
+        if "amanhã" in question_lower or "amanha" in question_lower:
+            add_day(reference_date + timedelta(days=1))
+        if "ontem" in question_lower:
+            add_day(reference_date - timedelta(days=1))
+
+        return resolved
+
+    def _resolve_query_times(self, question: str) -> List[str]:
+        times: List[str] = []
+        for match in re.finditer(r"\b(\d{1,2}:\d{2})\b", question or ""):
+            try:
+                normalized = datetime.strptime(match.group(1), "%H:%M").strftime("%H:%M")
+            except ValueError:
+                continue
+            if normalized not in times:
+                times.append(normalized)
+        return times
+
+    def _closest_hour(self, hours: List[Dict], target_time: str) -> Optional[Dict]:
+        if not hours:
+            return None
+        try:
+            target_dt = datetime.strptime(target_time, "%H:%M")
+        except ValueError:
+            return None
+        best_hour = None
+        best_delta = None
+        for hour in hours:
+            try:
+                current_dt = datetime.strptime(hour.get("time", ""), "%H:%M")
+            except ValueError:
+                continue
+            delta = abs((current_dt - target_dt).total_seconds())
+            if best_delta is None or delta < best_delta:
+                best_hour = hour
+                best_delta = delta
+        return best_hour
 
     def _is_night_hour(self, hour_str: str, sunrise: str, sunset: str) -> bool:
         """Determine if an hour falls in the night sector."""
@@ -182,6 +271,7 @@ class WeatherService:
 
             day_summary = {
                 "date": day_date,
+                "date_label": self._format_date_label(day_date),
                 "condition": day_data.get("condition", {}).get("text", ""),
                 "max_temp_c": day_data.get("maxtemp_c"),
                 "min_temp_c": day_data.get("mintemp_c"),
@@ -198,7 +288,7 @@ class WeatherService:
                 "wind_level": self._wind_level(max_wind_kts, max_gust_kts),
             }
             days_summary.append(day_summary)
-            hourly_groups.append({"date": day_date, "hours": hours, **day_summary})
+            hourly_groups.append({"date": day_date, "date_label": self._format_date_label(day_date), "hours": hours, **day_summary})
 
         current_wind_kts = self._kph_to_kts(current.get("wind_kph"))
         current_gust_kts = self._kph_to_kts(current.get("gust_kph"))
@@ -280,4 +370,75 @@ class WeatherService:
             "retrieval_mode": "live_api",
             "snippet": full_snippet,
             "text": full_snippet,
+        }
+
+    def context_for_question(self, question: str) -> Optional[Dict]:
+        """Return weather context focused on the dates and hours requested by the user."""
+        forecast = self.get_forecast()
+        if not forecast:
+            return None
+
+        try:
+            reference_date = datetime.strptime(
+                forecast.get("location", {}).get("localtime", ""),
+                "%Y-%m-%d %H:%M",
+            ).date()
+        except ValueError:
+            reference_date = datetime.now().date()
+
+        target_dates = self._resolve_query_dates(question, reference_date)
+        target_times = self._resolve_query_times(question)
+        groups = forecast.get("hourly_groups", [])
+
+        if not target_dates and not target_times:
+            return self.context_source()
+
+        selected_groups = [group for group in groups if group.get("date") in target_dates] if target_dates else groups[:1]
+        if not selected_groups:
+            summary = (
+                f"A previsão integrada disponível só cobre {len(groups)} dia(s). "
+                "A data pedida não está no horizonte atual."
+            )
+            return {
+                "source_id": "W1",
+                "document": f"WeatherAPI {forecast['location']['name']}",
+                "chunk_id": 0,
+                "score": 1.0,
+                "retrieval_mode": "live_api",
+                "snippet": summary,
+                "text": summary,
+            }
+
+        lines = [f"Previsão meteorológica detalhada para {forecast['location']['name']}:"]
+        for group in selected_groups:
+            lines.append(
+                f"- {group.get('date_label') or group.get('date')}: {group.get('condition')}, "
+                f"{group.get('min_temp_c')}–{group.get('max_temp_c')} °C, vento máx {group.get('max_wind_kts')} kts."
+            )
+            if target_times:
+                for target_time in target_times:
+                    closest = self._closest_hour(group.get("hours", []), target_time)
+                    if not closest:
+                        continue
+                    lines.append(
+                        f"  {target_time} -> {closest.get('time')} | {closest.get('condition')} | "
+                        f"{closest.get('temp_c')} °C | vento {closest.get('wind_kts')} kts {closest.get('wind_dir')} | "
+                        f"rajadas {closest.get('gust_kts')} kts | chuva {closest.get('chance_of_rain')}%."
+                    )
+            else:
+                for hour in group.get("hours", [])[:8]:
+                    lines.append(
+                        f"  {hour.get('time')} | {hour.get('condition')} | {hour.get('temp_c')} °C | "
+                        f"vento {hour.get('wind_kts')} kts {hour.get('wind_dir')} | chuva {hour.get('chance_of_rain')}%."
+                    )
+
+        text = "\n".join(lines)
+        return {
+            "source_id": "W1",
+            "document": f"WeatherAPI {forecast['location']['name']}",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "live_api",
+            "snippet": text,
+            "text": text,
         }

@@ -12,6 +12,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-theme.css') }}">
   </head>
   <body>
+    <div class="site-loader" id="site-loader" aria-hidden="true">
+      <div class="site-loader-card">
+        <img src="{{ url_for('static', filename='img/loading_JUL.svg') }}" alt="" class="site-loader-wave">
+        <p>A preparar o portal operacional...</p>
+      </div>
+    </div>
     <div class="page-shell">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -40,5 +46,20 @@
       {% endfor %}
     </datalist>
     {% include "chatbot_widget.html" ignore missing %}
+    <script>
+    (function() {
+      const loader = document.getElementById("site-loader");
+      if (!loader) return;
+      const hideLoader = () => {
+        loader.classList.add("is-hidden");
+        window.setTimeout(() => loader.remove(), 320);
+      };
+      if (document.readyState === "complete") {
+        window.setTimeout(hideLoader, 220);
+      } else {
+        window.addEventListener("load", () => window.setTimeout(hideLoader, 220), { once: true });
+      }
+    })();
+    </script>
   </body>
 </html>

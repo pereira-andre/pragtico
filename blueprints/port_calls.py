@@ -9,6 +9,7 @@ import services
 from helpers import (
     build_departure_plan_note,
     build_entry_request_note,
+    build_maneuver_context,
     build_pilot_report_note,
     build_scale_context,
     build_shift_plan_note,
@@ -70,6 +71,30 @@ def port_call_detail(port_call_id: str):
         port_call=port_call,
         scale=build_scale_context(port_call),
         title=f"Escala {port_call['vessel_name']}",
+    )
+
+
+@bp.route("/port-calls/<port_call_id>/maneuvers/<maneuver_id>")
+@login_required
+@port_call_scope_required
+def maneuver_detail(port_call_id: str, maneuver_id: str):
+    """Página dedicada ao detalhe operacional de uma manobra."""
+    try:
+        port_call = services.store.get_port_call(port_call_id)
+        maneuver_context = build_maneuver_context(port_call, maneuver_id)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+    except Exception:
+        logger.exception("Falha inesperada ao abrir a manobra %s/%s.", port_call_id, maneuver_id)
+        flash("Falha inesperada ao abrir a manobra.", "error")
+        return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+    return render_template(
+        "maneuver_detail.html",
+        port_call=port_call,
+        scale=maneuver_context["scale"],
+        maneuver_view=maneuver_context,
+        title=f"Manobra {maneuver_context['maneuver']['title']} · {port_call['vessel_name']}",
     )
 
 

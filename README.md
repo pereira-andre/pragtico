@@ -8,6 +8,7 @@ monitorização operacional em tempo real.
 
 ### Quadro Operacional
 - Dashboard com visão geral: navios em porto, chegadas previstas, saídas recentes
+- Janela contínua de marés em 96h com curva suave e marcador do período atual
 - Meteorologia contínua (48h) com ícones de estado do tempo
 - Mapa AIS embebido (VesselFinder) com coordenadas náuticas
 - Navios por cais em ordem geográfica (Secil → Teporset)
@@ -15,7 +16,8 @@ monitorização operacional em tempo real.
 
 ### Gestão de Escalas e Manobras
 - Registo de escalas com ficha completa do navio (IMO, GT, LOA, etc.)
-- Ciclo completo: registar → aprovar → concluir → registar pilotagem
+- Escala como agregador do navio e respetivas manobras em porto
+- Página própria por manobra: planeamento → validação → registo do piloto
 - Manobras: entrada, saída, mudança de cais, fundeadouro
 - Planeamento e edição de manobras com histórico de alterações
 - Arquivo operacional tipo Excel com pesquisa e exportação CSV
@@ -33,7 +35,7 @@ monitorização operacional em tempo real.
 - Assistente com pesquisa semântica na base documental
 - Widget flutuante disponível em todas as páginas
 - Contexto operacional automático (escalas, manobras, custos, marés, meteo)
-- Ações operacionais via chat (criar escalas, aprovar manobras)
+- Ações operacionais via chat com confirmação/cancelamento e export JSON das conversas
 - Feedback operacional (aprovar/rever respostas)
 - Arquivo de conversas
 - Respeita privilégios de cada perfil (admin, agente, piloto)
@@ -106,7 +108,7 @@ cp .env.example .env
 python3 app.py
 ```
 
-Abrir `http://127.0.0.1:5000`.
+Abrir `http://127.0.0.1:5050` se `FLASK_PORT=5050` no `.env`, ou a porta definida no ambiente.
 
 ### Docker Compose (com PostgreSQL)
 
@@ -114,6 +116,8 @@ Abrir `http://127.0.0.1:5000`.
 cp .env.example .env
 docker compose up --build
 ```
+
+Abrir `http://127.0.0.1:5050`.
 
 ### Deploy no Railway
 
@@ -136,11 +140,6 @@ Ou via Docker:
 ```bash
 docker compose exec web python scripts/create_admin.py
 ```
-
-## Alternativas ao Gemini
-
-Ver `docs/LLM_ALTERNATIVES.md` para análise detalhada de custos e
-opções de migração (DeepSeek, embeddings locais, multi-provider).
 
 ## Testes
 

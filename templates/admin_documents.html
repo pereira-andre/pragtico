@@ -114,42 +114,6 @@
     </article>
   </section>
 
-  <section class="panel section-panel">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h2>Documentos indexados</h2>
-      </div>
-      <span class="ops-pill ops-pill-strong">{{ docs|length }}</span>
-    </div>
-    <div class="document-list">
-      {% for doc in docs %}
-        <article class="doc-card">
-          <div class="doc-head">
-            <h3>{{ doc.original_name }}</h3>
-            <span class="doc-badge">{{ doc.doc_type }}</span>
-          </div>
-          <p>{{ doc.preview }}</p>
-          <div class="doc-meta">
-            <span>{{ doc.size_label }}</span>
-            <span>{{ doc.uploaded_by }}</span>
-          </div>
-          <div class="doc-actions">
-            <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">Ver</a>
-            <a class="inline-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
-            <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">
-              {% if doc.editable %}Editar{% else %}Gerir{% endif %}
-            </a>
-          </div>
-        </article>
-      {% else %}
-        <article class="ops-empty">
-          <p>Sem documentos na base de conhecimento.</p>
-        </article>
-      {% endfor %}
-    </div>
-  </section>
-
   <div class="knowledge-admin-grid">
     <section class="panel section-panel compact-ingest-panel">
       <div class="section-head">
@@ -190,6 +154,61 @@
       </form>
     </section>
   </div>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Catálogo</p>
+        <h2>Documentos indexados</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ docs|length }}</span>
+    </div>
+    <div class="document-window-table">
+      <table class="planned-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Tamanho</th>
+            <th>Atualizado</th>
+            <th>Por</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in docs %}
+            <tr>
+              <td>
+                <strong>{{ doc.original_name }}</strong>
+                <p class="document-window-preview">{{ doc.preview }}</p>
+              </td>
+              <td><span class="doc-badge">{{ doc.doc_type }}</span></td>
+              <td>{{ doc.size_label }}</td>
+              <td>{{ doc.updated_at_label }}</td>
+              <td>{{ doc.uploaded_by }}</td>
+              <td>
+                <div class="doc-actions">
+                  <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">Abrir</a>
+                  <a class="inline-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
+                  <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">
+                    {% if doc.editable %}Editar{% else %}Ver{% endif %}
+                  </a>
+                  <form method="post" action="{{ url_for('admin.delete_document', name=doc.name) }}" onsubmit="return confirm('Apagar {{ doc.original_name }}?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="inline-link danger-link">Apagar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="planned-empty">Sem documentos na base de conhecimento.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <script>

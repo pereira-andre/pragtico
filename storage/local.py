@@ -636,6 +636,7 @@ class LocalStore(BaseStore):
         return [
             {
                 **item,
+                "created_at_label": _utc_iso_to_label(item["created_at"]),
                 "updated_at_label": _utc_iso_to_label(item["updated_at"]),
             }
             for item in conversations
@@ -649,6 +650,7 @@ class LocalStore(BaseStore):
         self._write_conversations(conversations)
         return {
             **conversation,
+            "created_at_label": _utc_iso_to_label(conversation["created_at"]),
             "updated_at_label": _utc_iso_to_label(conversation["updated_at"]),
         }
 
@@ -673,6 +675,7 @@ class LocalStore(BaseStore):
         self._write_conversations(conversations)
         return {
             **updated,
+            "created_at_label": _utc_iso_to_label(updated["created_at"]),
             "updated_at_label": _utc_iso_to_label(updated["updated_at"]),
         }
 
@@ -714,6 +717,7 @@ class LocalStore(BaseStore):
             if existing:
                 return {
                     **existing,
+                    "created_at_label": _utc_iso_to_label(existing["created_at"]),
                     "updated_at_label": _utc_iso_to_label(existing["updated_at"]),
                 }
         conversations = self.list_conversations(username)
@@ -737,6 +741,11 @@ class LocalStore(BaseStore):
             message.setdefault("feedback_status", None)
             message.setdefault("feedback_note", "")
             message.setdefault("feedback_updated_at", None)
+            message["created_at_label"] = _utc_iso_to_label(message["created_at"])
+            message["feedback_updated_at_label"] = (
+                _utc_iso_to_label(message["feedback_updated_at"])
+                if message.get("feedback_updated_at") else ""
+            )
         return messages
 
     def append_chat_message(

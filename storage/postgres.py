@@ -906,6 +906,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                 **row,
                 "updated_at": row["updated_at"].isoformat(),
                 "created_at": row["created_at"].isoformat(),
+                "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
                 "updated_at_label": _utc_iso_to_label(row["updated_at"].isoformat()),
             }
             for row in rows
@@ -929,6 +930,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             **row,
             "updated_at": row["updated_at"].isoformat(),
             "created_at": row["created_at"].isoformat(),
+            "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
             "updated_at_label": _utc_iso_to_label(row["updated_at"].isoformat()),
         }
 
@@ -955,6 +957,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             **row,
             "updated_at": row["updated_at"].isoformat(),
             "created_at": row["created_at"].isoformat(),
+            "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
             "updated_at_label": _utc_iso_to_label(row["updated_at"].isoformat()),
         }
 
@@ -1006,6 +1009,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                     **row,
                     "updated_at": row["updated_at"].isoformat(),
                     "created_at": row["created_at"].isoformat(),
+                    "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
                     "updated_at_label": _utc_iso_to_label(row["updated_at"].isoformat()),
                 }
 
@@ -1043,8 +1047,13 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             {
                 **row,
                 "created_at": row["created_at"].isoformat(),
+                "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
                 "feedback_updated_at": (
                     row["feedback_updated_at"].isoformat() if row["feedback_updated_at"] else None
+                ),
+                "feedback_updated_at_label": (
+                    _utc_iso_to_label(row["feedback_updated_at"].isoformat())
+                    if row["feedback_updated_at"] else ""
                 ),
             }
             for row in rows
@@ -1118,8 +1127,13 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         return {
             **row,
             "created_at": row["created_at"].isoformat(),
+            "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
             "feedback_updated_at": (
                 row["feedback_updated_at"].isoformat() if row["feedback_updated_at"] else None
+            ),
+            "feedback_updated_at_label": (
+                _utc_iso_to_label(row["feedback_updated_at"].isoformat())
+                if row["feedback_updated_at"] else ""
             ),
         }
 
@@ -1731,6 +1745,9 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             entry = _latest_reportable_maneuver(current.get("maneuver_history", []), "entry")
             if not entry:
                 raise ValueError("Só podes registar a entrada depois da manobra estar concluída.")
+            if entry.get("state") == "approved":
+                entry["state"] = "completed"
+                entry["completed_at"] = maneuver_finished_at
             existing = current.get("notes", "").strip()
             current["notes"] = f"{existing}\n\n{note}".strip()
             entry["report_note"] = note

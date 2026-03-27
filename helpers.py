@@ -22,6 +22,7 @@ from chat_actions import (
     extract_pending_field_updates,
     format_action_summary,
     infer_maneuver_type,
+    looks_like_port_call_payload,
     looks_like_operational_command,
     merge_action_candidate,
     normalize_action_candidate,
@@ -274,6 +275,9 @@ def role_required(*roles):
 def redirect_to_portal_target(port_call_id: str):
     """Redirect to the scale detail, registration, or dashboard based on the form's redirect_to field."""
     target = request.form.get("redirect_to", "").strip().lower()
+    maneuver_id = request.form.get("redirect_maneuver_id", "").strip()
+    if target == "maneuver" and maneuver_id:
+        return redirect(url_for("port_calls.maneuver_detail", port_call_id=port_call_id, maneuver_id=maneuver_id))
     if target == "scale":
         return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
     if target == "register":
@@ -419,7 +423,7 @@ def current_reindex_status_payload() -> dict:
             if services.rag.is_embedding_quota_exhausted()
             else "Pesquisa semântica disponível."
             if services.rag.client
-            else "Pesquisa semântica indisponível: API key LLM em falta."
+            else "Pesquisa semântica em modo lexical: embeddings locais indisponíveis."
         ),
         "scheduled_retry_at": retry_status.get("scheduled_for"),
         "scheduled_retry_eta_seconds": retry_status.get("eta_seconds"),
@@ -535,6 +539,7 @@ def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> li
             timeline.append({
                 **hour,
                 "date": group.get("date", ""),
+                "date_label": group.get("date_label") or group.get("date", ""),
                 "day_label": group.get("date", ""),
                 "slot_label": f"{group.get('date', '')} {hour.get('time', '')}".strip(),
             })
@@ -825,13 +830,15 @@ def action_target_port_call(port_call_id: str) -> dict:
 
 def heuristic_operational_proposal(question: str, role: str, port_calls: list[dict]) -> dict | None:
     """Apply deterministic pattern matching to derive an operational action proposal from the question."""
+    from chat_actions import _extract_labelled_values
+
     clean = _operational_lookup_key(question)
     if not clean:
         return None
 
-    if re.search(r"\b(registar escala|nova escala|criar escala|register scale)\b", clean):
-        from chat_actions import _extract_labelled_values
-        extracted = _extract_labelled_values(question)
+    extracted = _extract_labelled_values(question)
+
+    if re.search(r"\b(regist\w*(?::|\s)|nova escala|cria\w*\s+escala|register scale)\b", clean) or looks_like_port_call_payload(question):
         vessel_name = extracted.pop("vessel_name", "")
         maneuver_type = "entry"
         if re.search(r"\b(saida|saída|departure)\b", clean):
@@ -919,6 +926,7 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
                 "target": {}, "fields": {}, "missing_fields": [],
             }
 
+    extracted_fields = _extract_labelled_values(question)
     proposal = normalize_action_candidate(
         {
             "intent": "action", "action": action, "confidence": 0.99,
@@ -932,7 +940,7 @@ def heuristic_operational_proposal(question: str, role: str, port_calls: list[di
                 "vessel_name": matched_port_call.get("vessel_name", ""),
                 "maneuver_type": maneuver_type,
             },
-            "fields": {}, "missing_fields": [],
+            "fields": extracted_fields, "missing_fields": [],
         },
         role,
     )
@@ -1049,9 +1057,12 @@ def propose_operational_action(question: str, role: str) -> dict | None:
     if heuristic_proposal:
         return finalize_operational_proposal(heuristic_proposal, resolvable_port_calls)
     if not services.rag.client:
+        unavailable_reason = getattr(services.rag.provider, "unavailable_reason", "") or (
+            "LLM provider unavailable."
+        )
         return {
             "intent": "unsupported", "action": "", "confidence": 0.0,
-            "reason": "O bot operador precisa de uma API key LLM para interpretar ações operacionais.",
+            "reason": f"O bot operador está indisponível: {unavailable_reason}",
             "target": {}, "fields": {}, "missing_fields": [],
         }
     port_calls = current_visible_port_calls()
@@ -1093,6 +1104,40 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         target = resolve_port_call(visible_port_calls, proposal.get("target", {}))
     if not target and proposal.get("action") != "create_port_call":
         target = resolve_port_call(current_resolvable_port_calls(), proposal.get("target", {}))
+
+    fields = proposal.setdefault("fields", {})
+    if fields.get("docking_depth") and not fields.get("draft_m"):
+        fields["draft_m"] = fields.pop("docking_depth")
+
+    if proposal.get("action") == "create_port_call":
+        has_scale_context = any(
+            " ".join(str(fields.get(key) or "").split())
+            for key in (
+                "eta_local",
+                "berth",
+                "last_port",
+                "next_port",
+                "vessel_imo",
+                "vessel_call_sign",
+                "vessel_flag",
+                "vessel_type",
+                "vessel_loa_m",
+                "vessel_beam_m",
+                "vessel_gt_t",
+                "vessel_dwt_t",
+                "vessel_max_draft_m",
+            )
+        )
+        has_report_fields = any(
+            " ".join(str(fields.get(key) or "").split())
+            for key in ("maneuver_started_local", "maneuver_finished_local", "draft_m")
+        )
+        if has_scale_context or not has_report_fields:
+            proposal["port_call_id"] = ""
+            proposal["target"]["reference_code"] = ""
+            proposal["target"]["maneuver_type"] = ""
+            return refresh_proposal_missing_fields(proposal)
+
     if proposal.get("action") != "create_port_call" and not target:
         proposal["intent"] = "unsupported"
         proposal["action"] = ""
@@ -1103,6 +1148,22 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         proposal["port_call_id"] = target.get("id", "")
         proposal["target"]["reference_code"] = target.get("reference_code", "")
         proposal["target"]["vessel_name"] = target.get("vessel_name", "")
+
+    if target and proposal.get("action") == "create_port_call":
+        report_like_fields = any(
+            " ".join(str(fields.get(key) or "").split())
+            for key in ("maneuver_started_local", "maneuver_finished_local", "draft_m")
+        )
+        if report_like_fields:
+            resolved_target = services.store.get_port_call(target["id"])
+            inferred_existing_type = (
+                (proposal.get("target", {}).get("maneuver_type") or "").strip().lower()
+                or infer_maneuver_type(resolved_target, "entry_report")
+                or "entry"
+            )
+            if inferred_existing_type in {"entry", "departure", "shift"}:
+                proposal["action"] = f"{inferred_existing_type}_report"
+                proposal["target"]["maneuver_type"] = inferred_existing_type
 
     maneuver_type = (proposal.get("target", {}).get("maneuver_type") or "").strip().lower()
     resolved_port_call = services.store.get_port_call(target["id"]) if target else None
@@ -1232,7 +1293,13 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
         return {"intent": "update", "proposal": finalize_operational_proposal(merged)}
 
     if not services.rag.client:
-        return {"intent": "unsupported", "reason": "O bot operador precisa de uma API key LLM para atualizar propostas pendentes."}
+        unavailable_reason = getattr(services.rag.provider, "unavailable_reason", "") or (
+            "LLM provider unavailable."
+        )
+        return {
+            "intent": "unsupported",
+            "reason": f"O bot operador está indisponível: {unavailable_reason}",
+        }
 
     prompt = build_pending_action_update_prompt(
         question=question, role=role, proposal=pending_proposal,
@@ -1525,7 +1592,7 @@ def build_scale_context(port_call: dict) -> dict:
     def _latest_reportable(history: list[dict], maneuver_type: str) -> dict | None:
         items = [
             item for item in history
-            if item.get("type") == maneuver_type and item.get("state") == "completed"
+            if item.get("type") == maneuver_type and item.get("state") in {"approved", "completed"}
             and not (item.get("report_note") or "").strip()
         ]
         if not items:
@@ -1559,8 +1626,15 @@ def build_scale_context(port_call: dict) -> dict:
     for item in history:
         maneuvers.append({
             "id": item.get("id"), "type": item.get("type"),
+            "status_key": item.get("state", ""),
             "title": item.get("type_label", item.get("type", "")),
             "status": item.get("state_label", item.get("state", "")),
+            "status_class": (
+                "completed" if item.get("state") == "completed"
+                else "approved" if item.get("state") == "approved"
+                else "aborted" if item.get("state") == "aborted"
+                else "pending"
+            ),
             "when_label": item.get("effective_time_label") if item.get("state") == "completed" else item.get("planned_label"),
             "planned_label": item.get("planned_label"),
             "planned_input_value": item.get("planned_input_value", ""),
@@ -1583,6 +1657,7 @@ def build_scale_context(port_call: dict) -> dict:
             "constraint_codes": item.get("constraints", []),
             "change_count": item.get("change_count", 0),
             "has_changes": item.get("has_changes", False),
+            "report_completed": bool((item.get("report_note") or "").strip()),
             "can_edit_plan": (
                 (item.get("state") != "completed" and current_role in {"admin", "piloto"})
                 or (current_role == "agente" and item.get("state") == "pending")
@@ -1642,22 +1717,22 @@ def build_scale_context(port_call: dict) -> dict:
     actions = {
         "can_approve_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") == "pending",
         "can_abort_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") != "aborted" and port_call.get("can_abort"),
-        "can_complete_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "approved",
+        "can_complete_entry": False,
         "can_plan_departure": port_call.get("status") == "in_port" and not active_departure and not completed_departure,
         "can_approve_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
         "can_abort_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") in {"pending", "approved"},
-        "can_complete_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "approved",
+        "can_complete_departure": False,
         "can_register_entry": bool(reportable_entry),
         "can_register_departure": bool(reportable_departure),
         "can_plan_shift": port_call.get("status") == "in_port" and not active_shift,
         "can_approve_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "pending",
         "can_abort_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") in {"pending", "approved"},
-        "can_complete_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "approved",
+        "can_complete_shift": False,
         "can_register_shift": bool(reportable_shift),
-        "must_complete_label": (
-            "Concluir entrada" if port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "approved"
-            else "Concluir saída" if port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "approved"
-            else "Concluir mudança" if port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "approved"
+        "must_report_label": (
+            "Registar entrada" if bool(reportable_entry)
+            else "Registar saída" if bool(reportable_departure)
+            else "Registar mudança" if bool(reportable_shift)
             else ""
         ),
         "entry_report_exists": entry_report_exists,
@@ -1665,10 +1740,55 @@ def build_scale_context(port_call: dict) -> dict:
         "shift_report_exists": shift_report_exists,
     }
     return {
-        "ship_profile": ship_profile, "summary": summary,
+        "ship_profile": ship_profile,
+        "summary": summary,
         "maneuvers": maneuvers,
         "change_log_rows": sorted(change_log_rows, key=lambda item: item.get("changed_at") or "", reverse=True),
         "actions": actions,
+    }
+
+
+def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
+    """Build a dedicated maneuver detail context from a port call and maneuver id."""
+    scale = build_scale_context(port_call)
+    maneuver = next((item for item in scale["maneuvers"] if item.get("id") == maneuver_id), None)
+    if not maneuver:
+        raise ValueError("Manobra não encontrada.")
+
+    state_key = (maneuver.get("status_key") or "").strip().lower()
+    plan_status = "done" if maneuver.get("planned_label") and maneuver.get("planned_label") != "Sem hora" else "current"
+    if state_key == "aborted":
+        validation_status = "muted"
+        report_status = "muted"
+    else:
+        validation_status = "done" if state_key in {"approved", "completed"} else "current" if state_key == "pending" else "muted"
+        report_status = "done" if maneuver.get("report_completed") else "current" if state_key in {"approved", "completed"} else "muted"
+    report_detail = (
+        maneuver.get("execution_finished_label")
+        if maneuver.get("report_completed")
+        else "Registo do piloto em falta"
+        if state_key in {"approved", "completed"}
+        else "Manobra abortada"
+        if state_key == "aborted"
+        else "Aguarda validação"
+    )
+    validation_detail = (
+        "Manobra abortada"
+        if state_key == "aborted"
+        else maneuver.get("validated_by_profile", {}).get("label")
+        or "--"
+        if state_key in {"approved", "completed"}
+        else "Aguarda confirmação"
+    )
+    timeline = [
+        {"label": "Planeamento", "status": plan_status, "detail": maneuver.get("planned_label") or "Sem hora"},
+        {"label": "Validação", "status": validation_status, "detail": validation_detail},
+        {"label": "Registo do piloto", "status": report_status, "detail": report_detail},
+    ]
+    return {
+        "scale": scale,
+        "maneuver": maneuver,
+        "timeline": timeline,
     }
 
 
@@ -1684,7 +1804,16 @@ def parse_local_datetime_input(value: str, label: str = "ETA") -> str:
     try:
         dt = datetime.fromisoformat(clean)
     except ValueError as exc:
-        raise ValueError(f"{label} inválida. Usa data e hora válidas.") from exc
+        dt = None
+        relaxed = clean.replace(", ", " ").replace(",", " ")
+        for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
+            try:
+                dt = datetime.strptime(relaxed, fmt)
+                break
+            except ValueError:
+                continue
+        if dt is None:
+            raise ValueError(f"{label} inválida. Usa data e hora válidas.") from exc
     if dt.tzinfo is None:
         local_tz = datetime.now().astimezone().tzinfo
         dt = dt.replace(tzinfo=local_tz)

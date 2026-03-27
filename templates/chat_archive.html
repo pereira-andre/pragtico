@@ -1,92 +1,83 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell">
-  <section class="hero-card compact">
-    <div class="hero-topline">
+<main class="chat-workspace">
+  <aside class="panel chat-sidebar-panel">
+    <div class="chat-sidebar-head">
       <div>
         <p class="eyebrow">Assistente</p>
         <h1>Conversas</h1>
-        <p class="lead">Arquivo de todas as conversas com o assistente operacional. Abre, renomeia ou elimina conversas.</p>
+        <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
       </div>
-      <div class="hero-actions">
-        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
-        <form method="post" action="{{ url_for('chat.create_conversation') }}" style="display:inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="chat-sidebar-actions">
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard', conversation_id=current_conversation.id) }}">Voltar ao quadro</a>
+        <a class="hero-link" href="{{ url_for('chat.export_conversation_json', conversation_id=current_conversation.id) }}">Exportar JSON</a>
+        <form method="post" action="{{ url_for('chat.create_conversation') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="mini-button">Nova conversa</button>
         </form>
       </div>
     </div>
-    <div class="hero-meta-grid">
-      <article class="hero-stat">
-        <span>Conversas</span>
-        <strong>{{ conversations|length }}</strong>
-        <small>registadas</small>
-      </article>
-      <article class="hero-stat">
-        <span>Conversa ativa</span>
-        <strong>{{ current_conversation.title }}</strong>
-        <small>{{ current_conversation.updated_at_label }}</small>
-      </article>
-    </div>
-  </section>
 
-  <section class="panel">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Arquivo</p>
-        <h2>Todas as conversas</h2>
-      </div>
-    </div>
+    <label class="admin-search-field">
+      <span class="mini-label">Filtrar conversas</span>
+      <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
+    </label>
 
-    <div class="chat-archive-list">
+    <div class="chat-sidebar-list" id="chat-sidebar-list">
       {% for conv in conversations %}
-        <article class="chat-archive-card {{ 'chat-archive-active' if conv.id == current_conversation.id }}">
-          <div class="chat-archive-head">
-            <div>
-              <h3>{{ conv.title }}</h3>
-              <span class="muted">{{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
-            </div>
-            {% if conv.id == current_conversation.id %}
-              <span class="ops-pill ops-pill-strong">Ativa</span>
-            {% endif %}
-          </div>
-          <div class="chat-archive-actions">
-            <a class="inline-link" href="{{ url_for('dashboard_bp.dashboard', conversation_id=conv.id) }}">Abrir no quadro</a>
-            <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-archive-rename">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% set search_text = (conv.title ~ ' ' ~ conv.updated_at_label)|lower %}
+        <article class="chat-sidebar-card {{ 'is-active' if conv.id == current_conversation.id }}" data-chat-conversation data-search="{{ search_text }}">
+          <a class="chat-sidebar-link" href="{{ url_for('chat.chat_archive', conversation_id=conv.id) }}">
+            <strong>{{ conv.title }}</strong>
+            <span>Criada {{ conv.created_at_label }}</span>
+            <small>Atualizada {{ conv.updated_at_label }}</small>
+            <small>{{ conv.message_count|default(0) }} mensagens</small>
+          </a>
+          <div class="chat-sidebar-card-actions">
+            <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-sidebar-inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="text" name="title" value="{{ conv.title }}" required>
               <button type="submit" class="mini-button secondary-button">Renomear</button>
             </form>
-            <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="mini-button secondary-button">Limpar</button>
-            </form>
-            <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="mini-button danger-button">Apagar</button>
-            </form>
+            <div class="chat-sidebar-inline-actions">
+              <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mini-button secondary-button">Limpar</button>
+              </form>
+              <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mini-button danger-button">Apagar</button>
+              </form>
+            </div>
           </div>
         </article>
       {% else %}
-        <article class="ops-empty">
-          <p>Sem conversas registadas.</p>
-        </article>
+        <article class="ops-empty"><p>Sem conversas registadas.</p></article>
       {% endfor %}
     </div>
-  </section>
+    <p id="chat-sidebar-empty" class="muted hidden">Nenhuma conversa corresponde ao filtro.</p>
+  </aside>
 
-  {% if messages %}
-    <section class="panel">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Conversa ativa</p>
-          <h2>{{ current_conversation.title }}</h2>
-        </div>
+  <section class="panel chat-main-panel">
+    <div class="chat-main-head">
+      <div>
+        <p class="eyebrow">Conversa ativa</p>
+        <h2 id="chat-page-title">{{ current_conversation.title }}</h2>
       </div>
-      <div class="chat-archive-messages">
+      <div class="chat-main-kpis">
+        <span class="ops-pill ops-pill-strong">{{ conversations|length }} conversas</span>
+        <span class="ops-pill">{{ messages|length }} mensagens</span>
+      </div>
+    </div>
+
+    <div class="chat-page-log" id="chat-page-log">
+      {% if messages %}
         {% for msg in messages %}
-          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}">
+          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}"{% endif %}>
             <p>{{ msg.content }}</p>
+            <div class="chatbot-bubble-meta">
+              <span>{{ msg.created_at_label }}</span>
+            </div>
             {% if msg.citations %}
               <details class="chatbot-citations">
                 <summary>Fontes</summary>
@@ -97,8 +88,186 @@
             {% endif %}
           </article>
         {% endfor %}
+      {% else %}
+        <article class="chatbot-bubble chatbot-bubble-assistant">
+          <p>Abre uma conversa ou começa já a pedir estado operacional, marés, meteorologia ou registo de manobras.</p>
+        </article>
+      {% endif %}
+    </div>
+
+    <article class="chatbot-pending hidden" id="chat-page-pending">
+      <div class="chatbot-pending-head">
+        <strong id="chat-page-pending-title">Ação pendente</strong>
+        <span class="ops-pill" id="chat-page-pending-target"></span>
       </div>
-    </section>
-  {% endif %}
+      <p id="chat-page-pending-summary"></p>
+      <p class="chatbot-pending-missing hidden" id="chat-page-pending-missing"></p>
+      <div class="chatbot-pending-actions">
+        <button type="button" class="mini-button" id="chat-page-pending-confirm">Confirmar</button>
+        <button type="button" class="mini-button secondary-button" id="chat-page-pending-cancel">Cancelar</button>
+      </div>
+    </article>
+
+    <form class="chat-page-input" id="chat-page-form">
+      <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
+      <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
+      <div class="chat-page-toolbar">
+        <p class="chatbot-status" id="chat-page-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
+        <button type="submit" class="mini-button">Enviar</button>
+      </div>
+    </form>
+  </section>
 </main>
+
+<script>
+  const conversationSearch = document.getElementById("chat-conversation-search");
+  const conversationCards = Array.from(document.querySelectorAll("[data-chat-conversation]"));
+  const conversationEmpty = document.getElementById("chat-sidebar-empty");
+  const chatLog = document.getElementById("chat-page-log");
+  const chatForm = document.getElementById("chat-page-form");
+  const chatQuestion = document.getElementById("chat-page-question");
+  const chatStatus = document.getElementById("chat-page-status");
+  const conversationIdField = document.getElementById("chat-page-conversation-id");
+  const pendingPanel = document.getElementById("chat-page-pending");
+  const pendingTarget = document.getElementById("chat-page-pending-target");
+  const pendingSummary = document.getElementById("chat-page-pending-summary");
+  const pendingMissing = document.getElementById("chat-page-pending-missing");
+  const pendingConfirm = document.getElementById("chat-page-pending-confirm");
+  const pendingCancel = document.getElementById("chat-page-pending-cancel");
+
+  function filterConversations() {
+    const query = (conversationSearch?.value || "").trim().toLowerCase();
+    let visible = 0;
+    conversationCards.forEach((card) => {
+      const match = !query || (card.dataset.search || "").includes(query);
+      card.classList.toggle("hidden", !match);
+      if (match) visible += 1;
+    });
+    conversationEmpty.classList.toggle("hidden", visible !== 0);
+  }
+
+  function appendBubble(role, content, citations, messageId, timestampLabel) {
+    const article = document.createElement("article");
+    article.className = "chatbot-bubble chatbot-bubble-" + role;
+    if (messageId) article.dataset.messageId = messageId;
+    const p = document.createElement("p");
+    p.textContent = content;
+    article.appendChild(p);
+    const meta = document.createElement("div");
+    meta.className = "chatbot-bubble-meta";
+    const stamp = document.createElement("span");
+    stamp.textContent = timestampLabel || new Date().toLocaleString("pt-PT");
+    meta.appendChild(stamp);
+    article.appendChild(meta);
+    if (citations && citations.length) {
+      const details = document.createElement("details");
+      details.className = "chatbot-citations";
+      const summary = document.createElement("summary");
+      summary.textContent = "Fontes";
+      details.appendChild(summary);
+      citations.forEach((citation) => {
+        const tag = document.createElement("span");
+        tag.className = "chatbot-citation-tag";
+        tag.textContent = citation.document;
+        details.appendChild(tag);
+      });
+      article.appendChild(details);
+    }
+    chatLog.appendChild(article);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function renderPending(action) {
+    if (!action) {
+      pendingPanel.classList.add("hidden");
+      return;
+    }
+    pendingPanel.classList.remove("hidden");
+    pendingTarget.textContent = action.target_reference
+      ? action.target_reference + " · " + (action.target_vessel_name || "--")
+      : "Nova escala";
+    pendingSummary.textContent = action.summary || "Ação pronta para confirmar.";
+    const missing = action.proposal && Array.isArray(action.proposal.missing_fields)
+      ? action.proposal.missing_fields.filter(Boolean)
+      : [];
+    if (missing.length) {
+      pendingMissing.textContent = "Faltam: " + missing.join(", ") + ".";
+      pendingMissing.classList.remove("hidden");
+    } else {
+      pendingMissing.textContent = "";
+      pendingMissing.classList.add("hidden");
+    }
+    pendingConfirm.disabled = !action.can_confirm;
+  }
+
+  async function fetchPending() {
+    try {
+      const response = await fetch("/api/chat/pending-action?conversation_id=" + encodeURIComponent(conversationIdField.value));
+      const payload = await response.json();
+      renderPending(payload.pending_action || null);
+    } catch (error) {
+      renderPending(null);
+    }
+  }
+
+  async function submitPending(endpoint) {
+    pendingConfirm.disabled = true;
+    pendingCancel.disabled = true;
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: conversationIdField.value }),
+      });
+      const payload = await response.json();
+      if (payload.answer) appendBubble("assistant", payload.answer, payload.sources || [], payload.message_id || "", payload.created_at_label || "");
+      renderPending(payload.pending_action || null);
+      chatStatus.textContent = response.ok ? "Operação concluída." : "Erro: " + (payload.error || "Falha.");
+    } catch (error) {
+      chatStatus.textContent = "Erro: " + error.message;
+    } finally {
+      pendingConfirm.disabled = false;
+      pendingCancel.disabled = false;
+    }
+  }
+
+  if (conversationSearch) conversationSearch.addEventListener("input", filterConversations);
+
+  chatForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = (chatQuestion.value || "").trim();
+    if (!question) return;
+    appendBubble("user", question, [], "", new Date().toLocaleString("pt-PT"));
+    chatQuestion.value = "";
+    chatStatus.textContent = "A consultar...";
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, conversation_id: conversationIdField.value }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Falha no assistente.");
+      appendBubble("assistant", payload.answer, payload.sources || [], payload.message_id || "", payload.created_at_label || "");
+      renderPending(payload.pending_action || null);
+      chatStatus.textContent = "Resposta recebida.";
+    } catch (error) {
+      appendBubble("assistant", "Erro: " + error.message, [], "", new Date().toLocaleString("pt-PT"));
+      chatStatus.textContent = "Erro.";
+    }
+  });
+
+  chatQuestion.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      chatForm.dispatchEvent(new Event("submit"));
+    }
+  });
+
+  pendingConfirm.addEventListener("click", () => submitPending("/api/chat/pending-action/confirm"));
+  pendingCancel.addEventListener("click", () => submitPending("/api/chat/pending-action/cancel"));
+
+  chatLog.scrollTop = chatLog.scrollHeight;
+  fetchPending();
+</script>
 {% endblock %}

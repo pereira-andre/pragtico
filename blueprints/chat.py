@@ -1,10 +1,17 @@
 """Chat blueprint — API chat, conversations, feedback, pending actions."""
 
 import logging
+import json
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 import services
+from chat_actions import (
+    build_port_call_reply_template,
+    build_maneuver_report_reply_template,
+    looks_like_port_call_registration_request,
+    looks_like_operational_command,
+)
 from security import api_limiter, rate_limit
 from helpers import (
     build_operational_chat_sources,
@@ -49,6 +56,27 @@ def create_conversation():
     conversation = services.store.create_conversation(session["username"])
     flash("Nova conversa criada.", "success")
     return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation["id"]))
+
+
+@bp.route("/conversations/<conversation_id>/export.json")
+@login_required
+def export_conversation_json(conversation_id: str):
+    """Exportar uma conversa e respetivas mensagens em JSON."""
+    conversation = services.store.ensure_conversation(session["username"], conversation_id)
+    if conversation["id"] != conversation_id:
+        flash("Conversa não encontrada.", "error")
+        return redirect(url_for("chat.chat_archive"))
+    messages = services.store.list_messages(session["username"], conversation_id)
+    payload = {
+        "conversation": conversation,
+        "messages": messages,
+    }
+    filename = f"conversa_{conversation_id}.json"
+    return Response(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @bp.route("/conversations/<conversation_id>/rename", methods=["POST"])
@@ -141,7 +169,13 @@ def api_cancel_pending_chat_action():
         username=session["username"], conversation_id=conversation_id,
         role="assistant", content="Ação operacional cancelada. O portal não foi alterado.",
     )
-    return jsonify({"answer": assistant_message["content"], "message_id": assistant_message["id"], "pending_action": None, "conversation_id": conversation_id})
+    return jsonify({
+        "answer": assistant_message["content"],
+        "message_id": assistant_message["id"],
+        "created_at_label": assistant_message.get("created_at_label", ""),
+        "pending_action": None,
+        "conversation_id": conversation_id,
+    })
 
 
 @bp.route("/api/chat/pending-action/confirm", methods=["POST"])
@@ -167,12 +201,26 @@ def api_confirm_pending_chat_action():
     except (PermissionError, ValueError) as exc:
         clear_pending_chat_action(username, conversation_id)
         assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=f"Não consegui aplicar a ação operacional. Motivo: {exc}")
-        return jsonify({"error": str(exc), "answer": assistant_message["content"], "message_id": assistant_message["id"], "pending_action": None, "conversation_id": conversation_id}), 400
+        return jsonify({
+            "error": str(exc),
+            "answer": assistant_message["content"],
+            "message_id": assistant_message["id"],
+            "created_at_label": assistant_message.get("created_at_label", ""),
+            "pending_action": None,
+            "conversation_id": conversation_id,
+        }), 400
     except Exception as exc:
         logger.exception("Falha inesperada na execução da ação operacional do chat.")
         clear_pending_chat_action(username, conversation_id)
         assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content="Falha inesperada ao aplicar a ação operacional no portal.")
-        return jsonify({"error": str(exc), "answer": assistant_message["content"], "message_id": assistant_message["id"], "pending_action": None, "conversation_id": conversation_id}), 500
+        return jsonify({
+            "error": str(exc),
+            "answer": assistant_message["content"],
+            "message_id": assistant_message["id"],
+            "created_at_label": assistant_message.get("created_at_label", ""),
+            "pending_action": None,
+            "conversation_id": conversation_id,
+        }), 500
 
     clear_pending_chat_action(username, conversation_id)
     current_port_call = result if isinstance(result, dict) else None
@@ -180,7 +228,16 @@ def api_confirm_pending_chat_action():
     if current_port_call and current_port_call.get("reference_code"):
         citations.append({"document": current_port_call.get("vessel_name", "Escala"), "source_id": current_port_call.get("reference_code", ""), "retrieval_mode": "operational_action", "snippet": message})
     assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=message, citations=citations)
-    return jsonify({"answer": assistant_message["content"], "message_id": assistant_message["id"], "pending_action": None, "conversation_id": conversation_id, "sources": citations})
+    return jsonify({
+        "answer": assistant_message["content"],
+        "message_id": assistant_message["id"],
+        "created_at_label": assistant_message.get("created_at_label", ""),
+        "pending_action": None,
+        "conversation_id": conversation_id,
+        "sources": citations,
+        "refresh_required": True,
+        "port_call_id": current_port_call.get("id", "") if current_port_call else "",
+    })
 
 
 @bp.route("/api/chat", methods=["POST"])
@@ -205,7 +262,7 @@ def api_chat():
     supplemental_sources.append(services.tide_service.context_for_question(question))
     if services.weather_service.enabled:
         try:
-            weather_context = services.weather_service.context_source()
+            weather_context = services.weather_service.context_for_question(question)
             if weather_context:
                 supplemental_sources.append(weather_context)
         except Exception:
@@ -258,7 +315,46 @@ def api_chat():
         elif action_proposal and action_proposal.get("intent") == "unsupported":
             answer = {"answer": action_proposal.get("reason") or "Essa ação não pode ser executada pelo bot nesta conta.", "sources": [], "answer_origin": "operational_rejected"}
         elif action_proposal and action_proposal.get("intent") == "question":
-            answer = None
+            if looks_like_port_call_registration_request(question):
+                answer = {
+                    "answer": (
+                        "Preciso dos dados operacionais num formato mais explícito para criar a escala.\n\n"
+                        + build_port_call_reply_template()
+                    ),
+                    "sources": [],
+                    "answer_origin": "operational_template",
+                }
+            elif looks_like_operational_command(question):
+                answer = {
+                    "answer": (
+                        "Percebi que o pedido é operacional, mas a proposta automática não ficou suficientemente segura para execução.\n\n"
+                        "Responde neste formato para eu completar o registo sem consultar regras documentais:\n"
+                        + build_maneuver_report_reply_template()
+                    ),
+                    "sources": [],
+                    "answer_origin": "operational_clarification",
+                }
+            else:
+                answer = None
+        elif looks_like_port_call_registration_request(question):
+            answer = {
+                "answer": (
+                    "Não consegui interpretar com segurança os dados da nova escala.\n\n"
+                    + build_port_call_reply_template()
+                ),
+                "sources": [],
+                "answer_origin": "operational_template",
+            }
+        elif looks_like_operational_command(question):
+            answer = {
+                "answer": (
+                    "Percebi que o pedido é operacional, mas não consegui identificar a escala/manobra com segurança.\n\n"
+                    "Indica o navio ou o número de escala e, se for registo de manobra, responde neste formato:\n"
+                    + build_maneuver_report_reply_template()
+                ),
+                "sources": [],
+                "answer_origin": "operational_clarification",
+            }
         else:
             answer = None
 
@@ -282,4 +378,10 @@ def api_chat():
             answer["feedback_match"] = {"similarity": trusted_answers[0]["similarity"], "message_id": trusted_answers[0]["message_id"], "question": trusted_answers[0]["question"], "feedback_note": trusted_answers[0].get("feedback_note", "")}
 
     assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation["id"], role="assistant", content=answer["answer"], citations=answer.get("sources", []))
-    return jsonify({**answer, "conversation_id": conversation["id"], "message_id": assistant_message["id"], "pending_action": answer.get("pending_action")})
+    return jsonify({
+        **answer,
+        "conversation_id": conversation["id"],
+        "message_id": assistant_message["id"],
+        "created_at_label": assistant_message.get("created_at_label", ""),
+        "pending_action": answer.get("pending_action"),
+    })

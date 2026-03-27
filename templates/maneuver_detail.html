@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block content %}
+{% set maneuver = maneuver_view.maneuver %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Manobra</p>
+        <h1>{{ maneuver.title }} · {{ scale.ship_profile.name }}</h1>
+        <p class="lead">{{ scale.summary.scale_reference }} · {{ maneuver.origin }} → {{ maneuver.destination }}</p>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=port_call.id) }}">Abrir escala</a>
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Estado</span>
+        <strong>{{ maneuver.status }}</strong>
+        <small>{{ maneuver.when_label or maneuver.planned_label }}</small>
+      </article>
+      <article class="hero-stat">
+        <span>Calado</span>
+        <strong>{{ maneuver.draft }}</strong>
+        <small>m</small>
+      </article>
+      <article class="hero-stat">
+        <span>Rebocadores</span>
+        <strong>{{ maneuver.tug_count or '--' }}</strong>
+        <small>apoio previsto</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="detail-layout scale-detail-layout">
+    <section class="panel detail-main">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Fluxo</p>
+          <h2>Passo a passo da manobra</h2>
+        </div>
+      </div>
+      <div class="maneuver-timeline">
+        {% for step in maneuver_view.timeline %}
+          <article class="maneuver-step maneuver-step-{{ step.status }}">
+            <span class="maneuver-step-index">{{ loop.index }}</span>
+            <div>
+              <strong>{{ step.label }}</strong>
+              <p>{{ step.detail }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+      <section class="panel inset-panel">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Dados</p>
+            <h3>Resumo da manobra</h3>
+          </div>
+        </div>
+        <div class="scale-overview-grid">
+          <article class="scale-fact-row"><span>Planeada</span><strong>{{ maneuver.planned_label }}</strong></article>
+          <article class="scale-fact-row"><span>Início</span><strong>{{ maneuver.execution_started_label }}</strong></article>
+          <article class="scale-fact-row"><span>Fim</span><strong>{{ maneuver.execution_finished_label }}</strong></article>
+          <article class="scale-fact-row"><span>Agente</span><strong>{{ maneuver.agent_profile.label or '--' }}</strong></article>
+          <article class="scale-fact-row"><span>Validado por</span><strong>{{ maneuver.validated_by_profile.label or '--' }}</strong></article>
+          <article class="scale-fact-row"><span>Executado por</span><strong>{{ maneuver.executed_by_profile.label or '--' }}</strong></article>
+        </div>
+        {% if maneuver.notes %}
+          <p class="muted scale-maneuver-note">{{ maneuver.notes }}</p>
+        {% endif %}
+      </section>
+
+      <section class="panel inset-panel scale-actions-panel">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Ações</p>
+            <h3>Operar esta manobra</h3>
+          </div>
+        </div>
+        <div class="scale-actions-grid">
+          {% if maneuver.type == "entry" and current_role in ["admin", "piloto"] and maneuver.status == "Pendente" %}
+            <form method="post" action="{{ url_for('port_calls.approve_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Aprovar entrada</strong>
+              <label><textarea name="approval_note" rows="2" placeholder="Nota de validação..."></textarea></label>
+              <button type="submit" class="mini-button">Aprovar</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.type == "entry" and current_role in ["admin", "agente"] and maneuver.status in ["Pendente", "Aprovada"] %}
+            <form method="post" action="{{ url_for('port_calls.abort_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Abortar entrada</strong>
+              <label><textarea name="aborted_reason" rows="2" placeholder="Motivo" required></textarea></label>
+              <button type="submit" class="mini-button danger-button">Abortar</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.type == "departure" and current_role in ["admin", "piloto"] and maneuver.status == "Pendente" %}
+            <form method="post" action="{{ url_for('port_calls.approve_port_call', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Aprovar saída</strong>
+              <label><textarea name="approval_note" rows="2" placeholder="Nota de validação..."></textarea></label>
+              <button type="submit" class="mini-button">Aprovar</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.type == "departure" and current_role in ["admin", "agente"] and maneuver.status in ["Pendente", "Aprovada"] %}
+            <form method="post" action="{{ url_for('port_calls.abort_departure_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Abortar saída</strong>
+              <label><textarea name="aborted_reason" rows="2" placeholder="Motivo" required></textarea></label>
+              <button type="submit" class="mini-button danger-button">Abortar</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.type == "shift" and current_role in ["admin", "piloto"] and maneuver.status == "Pendente" %}
+            <form method="post" action="{{ url_for('port_calls.approve_shift_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Aprovar mudança</strong>
+              <label><textarea name="approval_note" rows="2" placeholder="Nota de validação..."></textarea></label>
+              <button type="submit" class="mini-button">Aprovar</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.type == "shift" and current_role in ["admin", "agente"] and maneuver.status in ["Pendente", "Aprovada"] %}
+            <form method="post" action="{{ url_for('port_calls.abort_shift_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              <strong>Abortar mudança</strong>
+              <label><textarea name="aborted_reason" rows="2" placeholder="Motivo" required></textarea></label>
+              <button type="submit" class="mini-button danger-button">Abortar</button>
+            </form>
+          {% endif %}
+
+          {% if current_role in ["admin", "piloto"] and maneuver.status_key in ["approved", "completed"] %}
+            <form method="post" action="{% if maneuver.report_completed %}{{ url_for('port_calls.edit_maneuver_report', port_call_id=port_call.id, maneuver_id=maneuver.id) }}{% elif maneuver.type == 'entry' %}{{ url_for('port_calls.attach_entry_report', port_call_id=port_call.id) }}{% elif maneuver.type == 'departure' %}{{ url_for('port_calls.attach_departure_report', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.attach_shift_report', port_call_id=port_call.id) }}{% endif %}" class="ops-form-card scale-action-card">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="redirect_to" value="maneuver">
+              <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+              {% if maneuver.report_completed %}
+                <input type="hidden" name="maneuver_label" value="{{ maneuver.title }}">
+              {% endif %}
+              <strong>{% if maneuver.report_completed %}Editar registo{% else %}Registar manobra{% endif %}</strong>
+              <div class="mini-grid planned-mini-grid">
+                <label>
+                  Início da manobra
+                  <input type="datetime-local" name="maneuver_started_local" value="{{ maneuver.execution_started_input_value }}" required>
+                </label>
+                <label>
+                  Fim da manobra
+                  <input type="datetime-local" name="maneuver_finished_local" value="{{ maneuver.execution_finished_input_value }}" required>
+                </label>
+                <label>
+                  Calado
+                  <input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required>
+                </label>
+              </div>
+              <label>
+                Observações
+                <textarea name="notes" rows="2">{{ maneuver.report_note }}</textarea>
+              </label>
+              {% if maneuver.report_completed %}
+                <label>
+                  Motivo da alteração
+                  <textarea name="change_reason" rows="2" placeholder="Ex.: correção de hora, lapso no registo..." required></textarea>
+                </label>
+              {% endif %}
+              <button type="submit" class="mini-button">Guardar registo</button>
+            </form>
+          {% endif %}
+
+          {% if maneuver.can_edit_plan %}
+            <details class="planning-optional-box">
+              <summary>Editar planeamento</summary>
+              <form method="post" action="{{ url_for('port_calls.edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" class="stack planning-optional-body">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="redirect_to" value="maneuver">
+                <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+                <div class="mini-grid planned-mini-grid">
+                  <label><input type="datetime-local" name="planned_at_local" value="{{ maneuver.planned_input_value }}" required></label>
+                  <label><input type="text" name="origin" value="{{ maneuver.origin if maneuver.origin != '--' else '' }}" required></label>
+                  <label><input type="text" name="destination" value="{{ maneuver.destination if maneuver.destination != '--' else '' }}" required></label>
+                  <label><input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required></label>
+                  <label><input type="number" min="0" name="tug_count" value="{{ maneuver.tug_count }}" required></label>
+                </div>
+                <label><textarea name="plan_observations" rows="2">{{ maneuver.plan_observations }}</textarea></label>
+                <label><textarea name="change_reason" rows="2" placeholder="Motivo da alteração" required></textarea></label>
+                <button type="submit" class="mini-button">Guardar alteração</button>
+              </form>
+            </details>
+          {% endif %}
+        </div>
+      </section>
+    </section>
+
+    <aside class="detail-side">
+      <section class="panel inset-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Escala</p>
+            <h2>Contexto do navio</h2>
+          </div>
+        </div>
+        <div class="scale-fact-sheet">
+          <article class="scale-fact-row"><span>Número de escala</span><strong>{{ scale.ship_profile.scale_reference }}</strong></article>
+          <article class="scale-fact-row"><span>IMO</span><strong>{{ scale.ship_profile.imo }}</strong></article>
+          <article class="scale-fact-row"><span>Bandeira</span><strong>{{ scale.ship_profile.flag }}</strong></article>
+          <article class="scale-fact-row"><span>Tipo</span><strong>{{ scale.ship_profile.type }}</strong></article>
+          <article class="scale-fact-row"><span>LOA</span><strong>{{ scale.ship_profile.loa }} m</strong></article>
+          <article class="scale-fact-row"><span>Boca</span><strong>{{ scale.ship_profile.beam }} m</strong></article>
+          <article class="scale-fact-row"><span>GT</span><strong>{{ scale.ship_profile.gt }} t</strong></article>
+          <article class="scale-fact-row"><span>DWT</span><strong>{{ scale.ship_profile.dwt }} t</strong></article>
+        </div>
+      </section>
+    </aside>
+  </section>
+</main>
+{% endblock %}

@@ -39,6 +39,11 @@
         <small>próximos {{ port_activity.window_days }} dias</small>
       </article>
       <article class="hero-stat">
+        <span>Manobras planeadas</span>
+        <strong>{{ port_activity.stats.planned_count }}</strong>
+        <small>{{ port_activity.stats.pending_count }} pendentes</small>
+      </article>
+      <article class="hero-stat">
         <span>Saídas recentes</span>
         <strong>{{ port_activity.stats.departed_count }}</strong>
         <small>últimos {{ port_activity.window_days }} dias</small>
@@ -50,8 +55,12 @@
   <section class="panel tides-panel">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Marés · {{ tides_today.location }}</p>
-        <h2>Previsão de marés</h2>
+        <p class="eyebrow">Marés · {{ tide_window.location }}</p>
+        <h2>Janela contínua de marés</h2>
+      </div>
+      <div class="tide-window-meta">
+        <span class="ops-pill ops-pill-strong">96h</span>
+        <span class="muted">{{ tide_window.chart.range_label }}</span>
       </div>
       {% if weather_data and weather_data.forecast_days %}
         {% set today_astro = weather_data.forecast_days[0] %}
@@ -65,43 +74,51 @@
       {% endif %}
     </div>
 
-    <div class="tides-ribbon">
-      {# Hoje #}
-      <div class="tides-day">
-        <div class="tides-day-label">
-          <strong>Hoje</strong>
-          <span>{{ tides_today.date }}</span>
-        </div>
-        <div class="tides-events">
-          {% for ev in tides_today.events %}
-            <article class="tide-card {{ 'tide-high' if ev.type == 'preia-mar' else 'tide-low' }}">
-              <span class="tide-time">{{ ev.time }}</span>
-              <span class="tide-height">{{ ev.height_m }} m</span>
-              <span class="tide-type">{{ '▲' if ev.type == 'preia-mar' else '▼' }} {{ ev.type }}</span>
-            </article>
-          {% else %}
-            <p class="muted">Sem dados de marés para hoje.</p>
-          {% endfor %}
-        </div>
+    <div class="tide-window-card">
+      <div class="tide-visual-meta tide-visual-meta-wide">
+        <span>Amplitude da janela</span>
+        <strong>{{ tide_window.chart.amplitude_m }} m</strong>
+        <small>{{ tide_window.chart.min_height_m }} m → {{ tide_window.chart.max_height_m }} m</small>
       </div>
-      {# Amanhã #}
-      <div class="tides-day">
-        <div class="tides-day-label">
-          <strong>Amanhã</strong>
-          <span>{{ tides_tomorrow.date }}</span>
+      <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em 96 horas">
+        <line x1="24" y1="{{ tide_window.chart.height - 28 }}" x2="{{ tide_window.chart.width - 24 }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+        {% for divider in tide_window.chart.day_dividers %}
+          <line class="tide-grid-line" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+          <text class="tide-grid-label {{ 'tide-grid-label-today' if divider.is_today }}" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+        {% endfor %}
+        {% if tide_window.chart.now_marker_x %}
+          <line class="tide-now-line" x1="{{ tide_window.chart.now_marker_x }}" y1="14" x2="{{ tide_window.chart.now_marker_x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+          <text class="tide-now-label" x="{{ tide_window.chart.now_marker_x + 6 }}" y="{{ tide_window.chart.height - 34 }}">Agora</text>
+        {% endif %}
+        <path class="tide-curve" d="{{ tide_window.chart.path_d }}"></path>
+        {% for point in tide_window.chart.points %}
+          <circle class="tide-point {{ 'tide-point-high' if point.type == 'preia-mar' else 'tide-point-low' }}" cx="{{ point.x }}" cy="{{ point.y }}" r="4">
+            <title>{{ point.label }}</title>
+          </circle>
+        {% endfor %}
+      </svg>
+    </div>
+
+    <div class="tides-ribbon tides-ribbon-wide">
+      {% for tide_day in tide_window.days %}
+        <div class="tides-day">
+          <div class="tides-day-label">
+            <strong>{{ tide_day.date_label }}</strong>
+            <span>{{ tide_day.location }}</span>
+          </div>
+          <div class="tides-events">
+            {% for ev in tide_day.events %}
+              <article class="tide-card {{ 'tide-high' if ev.type == 'preia-mar' else 'tide-low' }}">
+                <span class="tide-time">{{ ev.time }}</span>
+                <span class="tide-height">{{ ev.height_m }} m</span>
+                <span class="tide-type">{{ '▲' if ev.type == 'preia-mar' else '▼' }} {{ ev.type }}</span>
+              </article>
+            {% else %}
+              <p class="muted">Sem dados de marés para este dia.</p>
+            {% endfor %}
+          </div>
         </div>
-        <div class="tides-events">
-          {% for ev in tides_tomorrow.events %}
-            <article class="tide-card {{ 'tide-high' if ev.type == 'preia-mar' else 'tide-low' }}">
-              <span class="tide-time">{{ ev.time }}</span>
-              <span class="tide-height">{{ ev.height_m }} m</span>
-              <span class="tide-type">{{ '▲' if ev.type == 'preia-mar' else '▼' }} {{ ev.type }}</span>
-            </article>
-          {% else %}
-            <p class="muted">Sem dados de marés para amanhã.</p>
-          {% endfor %}
-        </div>
-      </div>
+      {% endfor %}
     </div>
   </section>
 
@@ -121,7 +138,7 @@
       <div class="meteo-day-summary">
         {% for day in weather_data.forecast_days %}
           <article class="meteo-day-card {{ day.wind_level }}">
-            <strong>{{ day.date }}</strong>
+            <strong>{{ day.date_label }}</strong>
             <span>{{ day.condition }}</span>
             <span>{{ day.min_temp_c }}–{{ day.max_temp_c }} °C</span>
             <span>vento máx {{ day.max_wind_kts }} kts</span>
@@ -138,7 +155,7 @@
           <article class="meteo-card {{ slot.wind_level }} {{ 'meteo-night' if slot.is_night else 'meteo-daytime' }}">
             <div class="meteo-card-head">
               {% if show_day %}
-                <span class="meteo-date">{{ slot.date }}</span>
+                <span class="meteo-date">{{ slot.date_label }}</span>
               {% else %}
                 <span class="meteo-date meteo-date-muted">·</span>
               {% endif %}
@@ -249,7 +266,7 @@
           <span class="ops-pill">{{ port_activity.stats.scheduled_count }}</span>
         </div>
         <div class="ops-list">
-          {% for item in port_activity.arrivals %}
+          {% for item in port_activity.arrivals[:2] %}
             <article class="ops-card">
               <div class="ops-card-head">
                 <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
@@ -261,6 +278,22 @@
             <article class="ops-empty"><p>Sem chegadas previstas.</p></article>
           {% endfor %}
         </div>
+        {% if port_activity.arrivals|length > 2 %}
+          <details class="ops-expand">
+            <summary>Ver próximas 48h</summary>
+            <div class="ops-list ops-list-scroll">
+              {% for item in port_activity.arrivals[2:] %}
+                <article class="ops-card">
+                  <div class="ops-card-head">
+                    <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    <span class="ops-tag">ETA {{ item.eta_label }}</span>
+                  </div>
+                  <p>Cais <strong>{{ item.berth_label }}</strong></p>
+                </article>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
       </section>
       <section class="traffic-column traffic-column-departed">
         <div class="traffic-head">
@@ -268,7 +301,7 @@
           <span class="ops-pill">{{ port_activity.stats.departed_count }}</span>
         </div>
         <div class="ops-list">
-          {% for item in port_activity.departed %}
+          {% for item in port_activity.departed[:2] %}
             <article class="ops-card ops-card-departed">
               <div class="ops-card-head">
                 <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
@@ -280,6 +313,22 @@
             <article class="ops-empty"><p>Sem saídas registadas.</p></article>
           {% endfor %}
         </div>
+        {% if port_activity.departed|length > 2 %}
+          <details class="ops-expand">
+            <summary>Ver histórico recente</summary>
+            <div class="ops-list ops-list-scroll">
+              {% for item in port_activity.departed[2:] %}
+                <article class="ops-card ops-card-departed">
+                  <div class="ops-card-head">
+                    <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    <span class="ops-tag">ATD {{ item.departure_label }}</span>
+                  </div>
+                  <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
+                </article>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
       </section>
     </div>
   </section>
@@ -296,8 +345,8 @@
         <span class="ops-pill">{{ berth_options|length - port_activity.stats.berth_count }} livres</span>
       </div>
     </div>
-    <div class="berth-compact-grid">
-      {% for berth in port_activity.berthed %}
+    <div class="berth-horizontal-strip">
+      {% for berth in port_activity.berthed[:4] %}
         <section class="berth-group-compact">
           <div class="berth-head-compact">
             <h3>{{ berth.berth }}</h3>
@@ -314,6 +363,27 @@
         <article class="ops-empty"><p>Sem navios em porto.</p></article>
       {% endfor %}
     </div>
+    {% if port_activity.berthed|length > 4 %}
+      <details class="ops-expand">
+        <summary>Ver todos os cais ocupados</summary>
+        <div class="berth-compact-grid">
+          {% for berth in port_activity.berthed %}
+            <section class="berth-group-compact">
+              <div class="berth-head-compact">
+                <h3>{{ berth.berth }}</h3>
+                <span>{{ berth.count }}</span>
+              </div>
+              {% for vessel in berth.vessels %}
+                <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
+                  <strong>{{ vessel.vessel_name }}</strong>
+                  <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
+                </a>
+              {% endfor %}
+            </section>
+          {% endfor %}
+        </div>
+      </details>
+    {% endif %}
   </section>
 
   {# ── PLANEAMENTO ── #}
@@ -416,7 +486,10 @@
                 <td class="planned-detail-cell">
                   {% if item.has_changes %}<span class="doc-badge">{{ item.change_count }}x</span>{% endif %}
                   {% if item.detail_note %}<p class="planned-note">{{ item.detail_note }}</p>{% else %}<span class="muted">--</span>{% endif %}
-                  <a class="inline-link planned-open-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir</a>
+                  <div class="inline-link-row">
+                    <a class="inline-link planned-open-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                    <a class="inline-link planned-open-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
+                  </div>
                 </td>
               </tr>
             {% else %}

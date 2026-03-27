@@ -16,6 +16,50 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(26, 159, 255, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(8, 23, 44, 0.96), rgba(11, 31, 56, 0.92));
+  transition: opacity 0.24s ease, visibility 0.24s ease;
+}
+
+.site-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.site-loader-card {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  min-width: min(320px, calc(100vw - 48px));
+  padding: 24px 28px;
+  border-radius: 22px;
+  background: rgba(10, 31, 57, 0.78);
+  border: 1px solid rgba(88, 189, 218, 0.24);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.site-loader-wave {
+  width: min(148px, 42vw);
+  height: auto;
+  display: block;
+}
+
+.site-loader-card p {
+  margin: 0;
+  color: rgba(247, 244, 239, 0.88);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
 .page-shell {
   width: min(1380px, calc(100vw - 32px));
   margin: 0 auto;
@@ -28,6 +72,12 @@ body {
   grid-template-columns: 1.15fr 0.85fr;
   gap: 20px;
   align-items: stretch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-loader {
+    transition: none;
+  }
 }
 
 .hero-card,
@@ -101,6 +151,33 @@ body {
 
 .auth-panel {
   align-self: center;
+}
+
+.auth-hero-card {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-hero-card h1 {
+  max-width: none;
+}
+
+.auth-hero-copy {
+  display: grid;
+  gap: 6px;
+  color: rgba(247, 244, 239, 0.84);
+}
+
+.auth-hero-copy p {
+  margin: 0;
+}
+
+.auth-hero-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-hero-mini-card {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-form-pro {
