@@ -5,7 +5,7 @@
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Arquivo</p>
-        <h1>Manobras concluídas</h1>
+        <h1>Manobras arquivadas</h1>
         <p class="lead">Consulta histórica, estimativa de custos e exportação para faturação.</p>
       </div>
       <div class="hero-actions">
@@ -19,7 +19,7 @@
       <article class="hero-stat">
         <span>Total em arquivo</span>
         <strong>{{ port_activity.stats.archive_count }}</strong>
-        <small>manobras concluídas</small>
+        <small>manobras arquivadas</small>
       </article>
       <article class="hero-stat">
         <span>Janela</span>
@@ -175,7 +175,7 @@
             </tr>
           {% else %}
             <tr id="archive-empty-row">
-              <td colspan="15" class="planned-empty">Sem manobras concluídas no arquivo.</td>
+              <td colspan="15" class="planned-empty">Sem manobras arquivadas.</td>
             </tr>
           {% endfor %}
         </tbody>

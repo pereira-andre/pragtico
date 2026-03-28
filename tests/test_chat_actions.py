@@ -2,9 +2,11 @@ import unittest
 
 from chat_actions import (
     action_for_maneuver_type,
+    build_port_call_reply_template,
     canonicalize_action_name,
     extract_pending_field_updates,
     extract_json_object,
+    format_action_summary,
     infer_maneuver_type,
     looks_like_operational_command,
     merge_action_candidate,
@@ -173,6 +175,42 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(candidate["fields"]["berth"], "TMS 2")
         self.assertEqual(candidate["fields"]["next_port"], "Barcelona")
         self.assertEqual(candidate["missing_fields"], [])
+
+    def test_normalize_action_fields_moves_numeric_vessel_name_to_imo(self) -> None:
+        fields = normalize_action_fields(
+            "create_port_call",
+            {
+                "nome do navio": "9627814",
+                "eta": "2026-03-24T05:30",
+                "planned_quay": "TMS 2",
+                "last_port_of_call": "Leixões",
+                "next_port_of_call": "Barcelona",
+            },
+        )
+
+        self.assertEqual(fields["vessel_imo"], "9627814")
+        self.assertEqual(fields["vessel_name"], "")
+
+    def test_format_action_summary_does_not_duplicate_missing_prompt_block(self) -> None:
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "create_port_call",
+                "target": {},
+                "fields": {
+                    "vessel_name": "BELITAKI",
+                    "eta": "2026-03-24T05:30",
+                },
+                "missing_fields": [],
+            },
+            "agente",
+        )
+
+        summary = format_action_summary(proposal)
+
+        self.assertEqual(summary.count("Dados ainda em falta:"), 1)
+        self.assertEqual(summary.count("Se preferires, responde já neste formato e eu trato do registo:"), 1)
+        self.assertNotIn("Faltam estes campos:", summary)
 
     def test_normalize_action_candidate_validates_schedule_departure_fields(self) -> None:
         candidate = normalize_action_candidate(
@@ -421,6 +459,12 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["id"], "1")
         self.assertEqual(rows[0]["vessel_name"], "BELITAKI")
+
+    def test_build_port_call_reply_template_has_no_missing_prefix(self) -> None:
+        template = build_port_call_reply_template(["ETA", "cais previsto"])
+
+        self.assertNotIn("Faltam estes campos:", template)
+        self.assertIn("Nome: ", template)
 
     def test_infer_maneuver_type_returns_unique_matching_type(self) -> None:
         port_call = {

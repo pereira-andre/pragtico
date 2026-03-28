@@ -194,6 +194,11 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def clear_port_calls(self) -> int:
+        """Delete all port calls and maneuver history, returning the number of removed records."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_port_call(self, port_call_id: str) -> Dict:
         """Return the decorated port call record for the given ID."""
         raise NotImplementedError

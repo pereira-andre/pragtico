@@ -266,6 +266,14 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertIn("planned_maneuvers", snapshot)
         self.assertIn("archived_maneuvers", snapshot)
 
+    def test_clear_port_calls(self) -> None:
+        self._create_entry()
+        removed = self.store.clear_port_calls()
+        snapshot = self.store.get_port_activity_snapshot(window_days=30)
+        self.assertEqual(removed, 1)
+        self.assertEqual(snapshot["planned_maneuvers"], [])
+        self.assertEqual(snapshot["archived_maneuvers"], [])
+
     def test_runtime_state_crud(self) -> None:
         self.store.set_runtime_state("test_key", {"value": 42})
         state = self.store.get_runtime_state("test_key")

@@ -1291,6 +1291,15 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         records = [self._row_to_port_call_record(row) for row in rows]
         return _build_port_activity_snapshot(records, window_days=window_days)
 
+    def clear_port_calls(self) -> int:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total FROM port_calls")
+                removed = int(cur.fetchone()["total"])
+                cur.execute("DELETE FROM port_calls")
+            conn.commit()
+        return removed
+
     def get_port_call(self, port_call_id: str) -> Dict:
         with self._connect() as conn:
             payload = self._fetch_port_call_record(conn, port_call_id)

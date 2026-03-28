@@ -30,6 +30,7 @@ from .constants import (
     DEFAULT_CONVERSATION_TITLE,
     FEEDBACK_APPROVED,
     PASSWORD_HASH_METHOD,
+    PORT_CALL_APPROVAL_ABORTED,
     PORT_CALL_APPROVAL_APPROVED,
     PORT_CALL_APPROVAL_PENDING,
     PORT_CALL_STATUS_IN_PORT,
@@ -886,6 +887,11 @@ class LocalStore(BaseStore):
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
         """Return a decorated port activity snapshot covering the specified number of days."""
         return _build_port_activity_snapshot(self._read_port_calls(), window_days=window_days)
+
+    def clear_port_calls(self) -> int:
+        removed = len(self._read_port_calls())
+        self._write_port_calls(_default_port_calls())
+        return removed
 
     def get_port_call(self, port_call_id: str) -> Dict:
         """Return the decorated port call record for the given ID, raising ValueError if not found."""

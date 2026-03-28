@@ -951,15 +951,19 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
             item.get("vessel_name", ""),
         )
     )
+
+    def _is_archived_row(item: Dict) -> bool:
+        return item.get("situation_class") == "aborted" or bool(item.get("report_completed"))
+
     archived_rows = [
         item
         for item in planned_rows
-        if item.get("situation_class") == "completed" and item.get("report_completed")
+        if _is_archived_row(item)
     ]
     active_planned_rows = [
         item
         for item in planned_rows
-        if item.get("situation_class") != "completed" or not item.get("report_completed")
+        if not _is_archived_row(item)
     ]
     planned_groups_map: Dict[str, Dict] = {}
     for item in active_planned_rows:

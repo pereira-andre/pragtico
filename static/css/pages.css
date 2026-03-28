@@ -1366,7 +1366,7 @@
 
 .detail-layout {
   display: grid;
-  grid-template-columns: 1.35fr 0.8fr;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 420px);
   gap: 20px;
 }
 
@@ -1381,6 +1381,7 @@
 .detail-side {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 .inset-panel {

@@ -25,10 +25,10 @@ class OperationalFlowTests(unittest.TestCase):
         services.store = self.original_store
         self.temp_dir.cleanup()
 
-    def _create_entry(self, *, notes: str) -> dict:
+    def _create_entry(self, *, notes: str, eta: str = "2026-03-24T05:30:00+00:00") -> dict:
         return self.store.create_port_call(
             vessel_name="BELITAKI",
-            eta="2026-03-24T05:30:00+00:00",
+            eta=eta,
             created_by="admin",
             berth="TMS 2",
             last_port="Leixoes",
@@ -143,7 +143,37 @@ class OperationalFlowTests(unittest.TestCase):
 
         snapshot_with_report = self.store.get_port_activity_snapshot(window_days=3650)
         archived_ids = {item["port_call_id"] for item in snapshot_with_report["archived_maneuvers"]}
+        planned_ids = {item["port_call_id"] for item in snapshot_with_report["planned_maneuvers"]}
         self.assertIn(port_call["id"], archived_ids)
+        self.assertNotIn(port_call["id"], planned_ids)
+
+    def test_aborted_maneuver_moves_to_archive_and_leaves_planning(self) -> None:
+        port_call = self._create_entry(
+            notes="Registo do agente · Entrada\nCalado: 9.94",
+            eta="2026-04-02T05:30:00+00:00",
+        )
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            app.execute_pending_operational_action(
+                {
+                    "action": "abort_entry",
+                    "port_call_id": port_call["id"],
+                    "target": {"maneuver_type": "entry"},
+                    "fields": {
+                        "aborted_reason": "Cancelada pelo agente.",
+                    },
+                },
+                username="admin",
+                role="admin",
+            )
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        archived_ids = {item["port_call_id"] for item in snapshot["archived_maneuvers"]}
+        planned_ids = {item["port_call_id"] for item in snapshot["planned_maneuvers"]}
+
+        self.assertIn(port_call["id"], archived_ids)
+        self.assertNotIn(port_call["id"], planned_ids)
 
     def test_chat_ok_confirms_pending_action(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")

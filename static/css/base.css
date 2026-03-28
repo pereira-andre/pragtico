@@ -61,7 +61,7 @@ body {
 }
 
 .page-shell {
-  width: min(1380px, calc(100vw - 32px));
+  width: min(var(--page-max-width), calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0 32px;
 }
@@ -264,6 +264,10 @@ body {
 .ops-shell {
   display: grid;
   gap: 20px;
+}
+
+.ops-shell > * {
+  min-width: 0;
 }
 
 .pragtico-hero {

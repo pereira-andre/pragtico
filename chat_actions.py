@@ -237,6 +237,7 @@ PENDING_UPDATE_FIELD_ALIASES = {
 FIELD_ALIASES = {
     "name": "vessel_name",
     "nome": "vessel_name",
+    "nome_do_navio": "vessel_name",
     "vessel": "vessel_name",
     "ship": "vessel_name",
     "ship_name": "vessel_name",
@@ -248,7 +249,9 @@ FIELD_ALIASES = {
     "indicative": "vessel_call_sign",
     "flag": "vessel_flag",
     "bandeira": "vessel_flag",
+    "tipo_de_navio": "vessel_type",
     "loa": "vessel_loa_m",
+    "loa_m": "vessel_loa_m",
     "vessel_loa": "vessel_loa_m",
     "length_overall": "vessel_loa_m",
     "length": "vessel_loa_m",
@@ -256,10 +259,13 @@ FIELD_ALIASES = {
     "beam": "vessel_beam_m",
     "vessel_beam": "vessel_beam_m",
     "boca": "vessel_beam_m",
+    "boca_m": "vessel_beam_m",
     "gt": "vessel_gt_t",
+    "gt_t": "vessel_gt_t",
     "vessel_gt": "vessel_gt_t",
     "gross_tonnage": "vessel_gt_t",
     "dwt": "vessel_dwt_t",
+    "dwt_t": "vessel_dwt_t",
     "vessel_dwt": "vessel_dwt_t",
     "deadweight": "vessel_dwt_t",
     "draft": "draft_m",
@@ -276,9 +282,11 @@ FIELD_ALIASES = {
     "estimated_arrival": "eta_local",
     "estimated_time_of_arrival": "eta_local",
     "eta_setubal": "eta_local",
+    "eta_de_chegada": "eta_local",
     "berth": "berth",
     "pier": "berth",
     "quay": "berth",
+    "cais_previsto": "berth",
     "planned_quay": "berth",
     "planned_berth": "berth",
     "quay_planned": "berth",
@@ -296,9 +304,12 @@ FIELD_ALIASES = {
     "maneuver_started_at": "maneuver_started_local",
     "maneuver_finished_at": "maneuver_finished_local",
     "last_port_of_call": "last_port",
+    "ultimo_porto": "last_port",
     "port_of_origin": "last_port",
     "previous_port": "last_port",
     "next_port_of_call": "next_port",
+    "proximo_porto": "next_port",
+    "proximo_destino": "next_port",
     "port_of_destination": "next_port",
     "destination_port": "next_port",
     "next_destination": "next_port",
@@ -321,6 +332,8 @@ FIELD_ALIASES = {
     "draft_operational": "draft_m",
     "draft_operacional": "draft_m",
     "expected_berth": "berth",
+    "calado_maximo": "vessel_max_draft_m",
+    "calado_maximo_m": "vessel_max_draft_m",
 }
 NESTED_FIELD_GROUPS = {
     "port_call_data",
@@ -641,6 +654,12 @@ def normalize_action_fields(action: str, fields: Dict) -> Dict:
             normalized["vessel_max_draft_m"] = normalized["draft_m"]
         if normalized.get("vessel_max_draft_m") and not normalized.get("draft_m"):
             normalized["draft_m"] = normalized["vessel_max_draft_m"]
+        vessel_name = " ".join(str(normalized.get("vessel_name") or "").split())
+        vessel_imo = " ".join(str(normalized.get("vessel_imo") or "").split())
+        if re.fullmatch(r"\d{7}", vessel_name):
+            if not vessel_imo:
+                normalized["vessel_imo"] = vessel_name
+            normalized["vessel_name"] = ""
     if normalized.get("notes") is None:
         normalized["notes"] = ""
     return normalized
@@ -1167,13 +1186,13 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
         lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")
         if action == "create_port_call":
             lines.append("")
-            lines.append(build_port_call_reply_template(missing_fields))
+            lines.append(build_port_call_reply_template())
         elif action in {"entry_report", "departure_report", "shift_report"}:
             lines.append("")
-            lines.append(build_maneuver_report_reply_template(missing_fields))
+            lines.append(build_maneuver_report_reply_template())
         elif action in {"abort_entry", "abort_departure", "abort_shift"}:
             lines.append("")
-            lines.append(build_abort_reply_template(missing_fields))
+            lines.append(build_abort_reply_template())
         lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
     else:
         lines.append("Confirma para aplicar a alteração no portal.")
@@ -1214,9 +1233,6 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
         "Rebocadores: ",
         "Observações: ",
     ]
-    missing = [item for item in (missing_fields or []) if item]
-    if missing:
-        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
     return "\n".join(lines)
 
 
@@ -1230,9 +1246,6 @@ def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = N
         "Calado",
         "Observações",
     ]
-    missing = [item for item in (missing_fields or []) if item]
-    if missing:
-        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
     return "\n".join(lines)
 
 
@@ -1241,7 +1254,4 @@ def build_abort_reply_template(missing_fields: Optional[List[str]] = None) -> st
         "Abortar manobra",
         "Motivo:",
     ]
-    missing = [item for item in (missing_fields or []) if item]
-    if missing:
-        lines.insert(0, "Faltam estes campos: " + ", ".join(missing) + ".")
     return "\n".join(lines)
