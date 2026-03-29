@@ -206,6 +206,7 @@ OPERATIONAL_OBJECT_HINTS = ("navio", "escala", "manobra", "entrada", "saida", "s
 TIME_ONLY_RE = re.compile(r"^\d{1,2}:\d{2}$")
 PENDING_UPDATE_FIELD_ALIASES = {
     "maneuver_id": [
+        "id",
         "id da manobra",
         "id manobra",
         "manobra id",
@@ -321,6 +322,7 @@ SLASH_COMMAND_ALIASES = {
 }
 SLASH_COMMAND_FIELD_ALIASES = {
     "maneuver_id": [
+        "id",
         "id da manobra",
         "id manobra",
         "manobra id",
@@ -940,6 +942,34 @@ def _normalize_maneuver_id(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9-]", "", clean).lower()
 
 
+def _extract_positional_slash_target(body: str) -> Dict[str, str]:
+    if ":" in (body or "") or "=" in (body or ""):
+        return {}
+    tokens = [token.strip() for token in re.split(r"[\s,;]+", body or "") if token.strip()]
+    if not tokens:
+        return {}
+
+    identifier_tokens: List[str] = []
+    maneuver_type = ""
+    for token in tokens:
+        normalized_type = _normalize_maneuver_type_label(token)
+        if normalized_type and not maneuver_type:
+            maneuver_type = normalized_type
+            continue
+        if re.fullmatch(r"[A-Za-z0-9-]{6,}", token):
+            identifier_tokens.append(token)
+
+    positional_target: Dict[str, str] = {}
+    if maneuver_type:
+        positional_target["maneuver_type"] = maneuver_type
+    if len(identifier_tokens) == 1:
+        positional_target["reference_code"] = identifier_tokens[0]
+        positional_target["maneuver_id"] = _normalize_maneuver_id(identifier_tokens[0])
+    elif len(identifier_tokens) > 1:
+        positional_target["reference_code"] = identifier_tokens[-1]
+    return positional_target
+
+
 def _extract_slash_maneuver_type(value: str) -> str:
     match = re.search(
         r"\btipo\s+de\s+manobra\s*(?:=|:|\beh\b|\be\b)\s*(entrada|saida|saída|mudanca|mudança|entry|departure|shift)\b",
@@ -1027,7 +1057,7 @@ def build_edit_maneuver_plan_reply_template() -> str:
 def build_delete_maneuver_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para apagar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1038,7 +1068,7 @@ def build_delete_maneuver_reply_template() -> str:
 def build_approval_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para aprovar a manobra (usa ID da manobra ou Ref + Tipo):",
+            "Responde neste formato para aprovar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1050,7 +1080,7 @@ def build_approval_reply_template() -> str:
 def build_command_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para registar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para registar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1065,7 +1095,7 @@ def build_command_report_reply_template() -> str:
 def build_edit_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para editar o registo da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para editar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1081,7 +1111,7 @@ def build_edit_report_reply_template() -> str:
 def build_command_abort_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para abortar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para abortar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1093,7 +1123,7 @@ def build_command_abort_reply_template() -> str:
 def build_delete_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar o registo da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para apagar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1115,13 +1145,13 @@ def build_action_reply_template(action: str, missing_fields: Optional[List[str]]
     if action in {"approve_entry", "approve_departure", "approve_shift"}:
         return build_approval_reply_template()
     if action in {"entry_report", "departure_report", "shift_report"}:
-        return build_maneuver_report_reply_template()
+        return build_command_report_reply_template()
     if action == "edit_maneuver_report":
         return build_edit_report_reply_template()
     if action in {"delete_maneuver_report"}:
         return build_delete_report_reply_template()
     if action in {"abort_entry", "abort_departure", "abort_shift"}:
-        return build_abort_reply_template()
+        return build_command_abort_reply_template()
     if action in {"delete_maneuver"}:
         return build_delete_maneuver_reply_template()
     return ""
@@ -1169,9 +1199,9 @@ def build_slash_help(role: str) -> str:
                 "/criar-manobra",
                 "  cria uma saída ou mudança; o ID da manobra é automático",
                 "/editar-manobra",
-                "  altera o planeamento; usa o ID da manobra para evitar mexer na errada",
+                "  altera o planeamento; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
                 "/apagar-manobra",
-                "  remove a manobra planeada; usa o ID da manobra para evitar ambiguidades",
+                "  remove a manobra planeada; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
     if clean_role in {"admin", "piloto"}:
@@ -1180,18 +1210,18 @@ def build_slash_help(role: str) -> str:
                 "/aprovar",
                 "  aprova a manobra pendente; usa ID da manobra ou Ref + Tipo",
                 "/registar-manobra",
-                "  regista início, fim e calado; usa o ID da manobra para evitar ambiguidades",
+                "  regista início, fim e calado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
                 "/editar-registo-manobra",
-                "  revê um registo executado; usa o ID da manobra para evitar ambiguidades",
+                "  revê um registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
                 "/abortar",
-                "  cancela/aborta a manobra; usa o ID da manobra para evitar ambiguidades",
+                "  cancela/aborta a manobra; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
     if clean_role == "admin":
         lines.extend(
             [
                 "/apagar-registo-manobra",
-                "  apaga o registo executado; usa o ID da manobra para evitar ambiguidades",
+                "  apaga o registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
     lines.extend(
@@ -1199,7 +1229,8 @@ def build_slash_help(role: str) -> str:
             "",
             "Notas:",
             "  Ref identifica a escala. Se só tiveres o ID curto da escala, o bot também tenta resolvê-lo.",
-            "  Ao criar manobra não precisas de indicar ID; para gerir uma manobra já existente, o ID é a forma mais segura.",
+            "  Ao criar manobra não precisas de indicar ID; para manobra existente podes usar ID da manobra ou Ref + Tipo.",
+            "  Se houver mais do que uma manobra elegível do mesmo tipo, o bot exige o ID da manobra.",
             "  Se o comando vier incompleto, o bot devolve o template certo para preencher.",
         ]
     )
@@ -1236,12 +1267,19 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
 
     command_aliases = _extract_values_from_alias_map(body, SLASH_COMMAND_FIELD_ALIASES) if body else {}
     extracted_fields = _extract_labelled_values(body)
+    positional_target = _extract_positional_slash_target(body) if body else {}
     target = {
         "maneuver_id": _normalize_maneuver_id(command_aliases.get("maneuver_id", "")),
         "reference_code": " ".join(str(command_aliases.get("reference_code") or "").split()),
         "vessel_name": " ".join(str(extracted_fields.get("vessel_name") or "").split()),
         "maneuver_type": _extract_slash_maneuver_type(body) or _normalize_maneuver_type_label(command_aliases.get("maneuver_type", "")),
     }
+    if not target["maneuver_id"] and positional_target.get("maneuver_id"):
+        target["maneuver_id"] = positional_target["maneuver_id"]
+    if not target["reference_code"] and positional_target.get("reference_code"):
+        target["reference_code"] = positional_target["reference_code"]
+    if not target["maneuver_type"] and positional_target.get("maneuver_type"):
+        target["maneuver_type"] = positional_target["maneuver_type"]
     for target_only_field in ("reference_code", "maneuver_id", "maneuver_type"):
         extracted_fields.pop(target_only_field, None)
 
@@ -1686,7 +1724,7 @@ Regras de saída:
 - `target.maneuver_type` deve ser entry, departure, shift ou vazio.
 - Em datas/horas operacionais, usa formato `YYYY-MM-DDTHH:MM` no fuso local.
 - Se a mensagem pedir alterar um planeamento existente, prefere `edit_maneuver_plan`.
-- Se a mensagem pedir rever um registo já concluído, prefere `edit_maneuver_plan`.
+- Se a mensagem pedir rever um registo já concluído, prefere `edit_maneuver_report`.
 - Em `fields.constraints`, devolve códigos válidos.
 
 Mensagem do utilizador:
@@ -2080,21 +2118,8 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
 
 
 def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = None) -> str:
-    lines = [
-        "Registar manobra",
-        "Início da manobra",
-        "dd/mm/aaaa, --:--",
-        "Fim da manobra",
-        "dd/mm/aaaa, --:--",
-        "Calado",
-        "Observações",
-    ]
-    return "\n".join(lines)
+    return build_command_report_reply_template()
 
 
 def build_abort_reply_template(missing_fields: Optional[List[str]] = None) -> str:
-    lines = [
-        "Abortar manobra",
-        "Motivo:",
-    ]
-    return "\n".join(lines)
+    return build_command_abort_reply_template()

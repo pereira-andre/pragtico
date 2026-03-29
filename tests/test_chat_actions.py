@@ -2,6 +2,7 @@ import unittest
 
 from chat_actions import (
     action_for_maneuver_type,
+    build_action_reply_template,
     build_port_call_reply_template,
     build_slash_help,
     canonicalize_action_name,
@@ -70,6 +71,40 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["proposal"]["action"], "create_port_call")
         self.assertEqual(parsed["proposal"]["fields"]["vessel_name"], "BELITAKI")
         self.assertEqual(parsed["proposal"]["fields"]["berth"], "TMS 2")
+        self.assertEqual(parsed["proposal"]["fields"]["next_port"], "Barcelona")
+        self.assertNotIn("destination", parsed["proposal"]["fields"])
+
+    def test_parse_slash_create_maneuver_template_does_not_request_maneuver_id(self) -> None:
+        parsed = parse_slash_command("/criar-manobra", "agente")
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertNotIn("ID da manobra", parsed["answer"])
+        self.assertIn("ID é gerado automaticamente", parsed["answer"])
+
+    def test_parse_slash_edit_maneuver_with_ref_requests_change_reason(self) -> None:
+        parsed = parse_slash_command(
+            "/editar-manobra Ref: BF757B7F Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00 Origem: Casablanca Destino: Cais 8 Calado: 11 Rebocadores: 5 Restrições: daylight Observações: Pedir 2 lanchas amarração",
+            "agente",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
+        self.assertNotIn("reference_code", parsed["proposal"]["fields"])
+        self.assertNotIn("maneuver_type", parsed["proposal"]["fields"])
+        self.assertEqual(parsed["proposal"]["missing_fields"], ["motivo da alteração"])
+
+    def test_parse_slash_edit_maneuver_template_mentions_change_reason(self) -> None:
+        parsed = parse_slash_command("/editar-manobra", "agente")
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertIn("Motivo da alteração", parsed["answer"])
+
+    def test_parse_slash_edit_report_template_mentions_change_reason(self) -> None:
+        parsed = parse_slash_command("/editar-registo-manobra", "admin")
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertIn("Motivo da alteração", parsed["answer"])
 
     def test_parse_slash_approve_without_target_returns_template(self) -> None:
         parsed = parse_slash_command("/aprovar", "piloto")
@@ -77,6 +112,34 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "template")
         self.assertIn("Tipo de manobra", parsed["answer"])
         self.assertIn("Ref:", parsed["answer"])
+
+    def test_parse_slash_approve_accepts_positional_ref_and_type(self) -> None:
+        parsed = parse_slash_command("/aprovar BF757B7F entrada", "piloto")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "approve_entry")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
+
+    def test_parse_slash_approve_prefers_last_positional_identifier_as_reference(self) -> None:
+        parsed = parse_slash_command("/aprovar BF757B7F PTSET26OCEA1C3808 entrada", "piloto")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "approve_entry")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "PTSET26OCEA1C3808")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
+
+    def test_parse_slash_approve_accepts_maneuver_id_only(self) -> None:
+        parsed = parse_slash_command("/aprovar 7f3c2a91", "piloto")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "approve_entry")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
+
+    def test_extract_pending_target_updates_accepts_plain_id_label(self) -> None:
+        target = extract_pending_target_updates("ID: 7f3c2a91")
+
+        self.assertEqual(target["maneuver_id"], "7f3c2a91")
 
     def test_parse_slash_register_report_without_ref_returns_template_with_proposal(self) -> None:
         parsed = parse_slash_command(
@@ -124,6 +187,38 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertIn("/registar-escala", help_text)
         self.assertNotIn("/apagar-escala", help_text)
+        self.assertIn("ID da manobra é automático", help_text)
+
+    def test_build_action_reply_template_for_report_mentions_id_and_ref_plus_type(self) -> None:
+        template = build_action_reply_template("entry_report")
+
+        self.assertIn("ID da manobra", template)
+        self.assertIn("Ref: ", template)
+        self.assertIn("Tipo de manobra", template)
+
+    def test_build_action_reply_template_for_abort_mentions_id_and_ref_plus_type(self) -> None:
+        template = build_action_reply_template("abort_entry")
+
+        self.assertIn("ID da manobra", template)
+        self.assertIn("Motivo: ", template)
+
+    def test_parse_slash_edit_scale_with_maneuver_payload_redirects_to_correct_command(self) -> None:
+        parsed = parse_slash_command(
+            "/editar-escala Ref: BF757B7F Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00 Origem: Casablanca Destino: Cais 8",
+            "admin",
+        )
+
+        self.assertEqual(parsed["intent"], "unsupported")
+        self.assertIn("/editar-manobra", parsed["answer"])
+
+    def test_parse_slash_create_maneuver_entry_redirects_to_edit(self) -> None:
+        parsed = parse_slash_command(
+            "/criar-manobra Ref: SET-221 Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00",
+            "agente",
+        )
+
+        self.assertEqual(parsed["intent"], "unsupported")
+        self.assertIn("/editar-manobra", parsed["answer"])
 
     def test_extract_json_object_accepts_fenced_or_plain_json(self) -> None:
         plain = extract_json_object('{"intent":"action","action":"approve_entry"}')
@@ -500,6 +595,16 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(by_reference["id"], "1")
         self.assertEqual(by_name["id"], "2")
+
+    def test_resolve_port_call_accepts_id_prefix_in_reference_field(self) -> None:
+        port_calls = [
+            {"id": "bf757b7f-aaaa-bbbb-cccc-111111111111", "reference_code": "SET-001", "vessel_name": "MSC Lyria"},
+            {"id": "91d44e00-aaaa-bbbb-cccc-222222222222", "reference_code": "SET-002", "vessel_name": "Atlantic Trader"},
+        ]
+
+        resolved = resolve_port_call(port_calls, {"reference_code": "BF757B7F"})
+
+        self.assertEqual(resolved["reference_code"], "SET-001")
 
     def test_resolve_maneuver_prefers_latest_matching_state(self) -> None:
         port_call = {

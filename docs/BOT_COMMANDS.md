@@ -5,9 +5,11 @@ Este documento descreve os comandos suportados pelo bot no chat, o alvo que cada
 ## Regras Base
 
 - `Ref` identifica a escala.
-- `ID` identifica uma manobra concreta.
+- `ID da manobra` identifica uma manobra concreta.
 - Ao criar uma manobra nova, não indiques `ID da manobra`; esse ID é gerado automaticamente.
 - A entrada inicial nasce com a escala. Não se cria uma nova entrada com `/criar-manobra`.
+- Para uma manobra já existente, podes usar `ID da manobra` ou `Ref + Tipo de manobra`.
+- Se existir mais do que uma manobra elegível do mesmo tipo nessa escala, o bot passa a exigir `ID da manobra`.
 - Quando faltar informação, o bot devolve um template para completar e depois pede confirmação.
 
 ## Fluxo Operacional
@@ -48,7 +50,7 @@ Exemplo:
 ```text
 /editar-manobra
 Ref: PTSET26OCEA123456
-ID: 7f3c2a91
+ID da manobra: 7f3c2a91
 Tipo de manobra: entrada
 Hora prevista: 29/03/2026, 20:00
 Origem: Casablanca
@@ -115,6 +117,12 @@ ID da manobra: 7f3c2a91
 Observações: Piloto a bordo confirmado
 ```
 
+Ou, em forma curta:
+
+```text
+/aprovar 7f3c2a91
+```
+
 ### 5. Registo da Execução
 
 Quando a manobra estiver concluída, usa `/registar-manobra`.
@@ -124,7 +132,7 @@ Exemplo:
 ```text
 /registar-manobra
 Ref: PTSET26OCEA123456
-ID: 7f3c2a91
+ID da manobra: 7f3c2a91
 Tipo de manobra: saída
 Início da manobra: 30/03/2026, 08:12
 Fim da manobra: 30/03/2026, 08:54
@@ -156,7 +164,7 @@ Exemplo:
 
 ```text
 /abortar
-ID: 7f3c2a91
+ID da manobra: 7f3c2a91
 Motivo: Janela operacional fechada
 ```
 
@@ -209,13 +217,13 @@ Ref: PTSET26OCEA123456
 ### Manobras
 
 - `/criar-manobra` cria `saída` ou `mudança`.
-- `/editar-manobra` altera o planeamento de uma manobra existente.
-- `/apagar-manobra` remove uma manobra planeada.
-- `/aprovar` aprova uma manobra pendente.
-- `/registar-manobra` regista início, fim e calado da manobra executada.
-- `/editar-registo-manobra` altera um registo já executado.
-- `/abortar` cancela ou aborta a manobra.
-- `/apagar-registo-manobra` remove o registo operacional executado.
+- `/editar-manobra` altera o planeamento de uma manobra existente; usa `ID da manobra` ou `Ref + Tipo`.
+- `/apagar-manobra` remove uma manobra planeada; usa `ID da manobra` ou `Ref + Tipo`.
+- `/aprovar` aprova uma manobra pendente; usa `ID da manobra` ou `Ref + Tipo`.
+- `/registar-manobra` regista início, fim e calado da manobra executada; usa `ID da manobra` ou `Ref + Tipo`.
+- `/editar-registo-manobra` altera um registo já executado; usa `ID da manobra` ou `Ref + Tipo`.
+- `/abortar` cancela ou aborta a manobra; usa `ID da manobra` ou `Ref + Tipo`.
+- `/apagar-registo-manobra` remove o registo operacional executado; usa `ID da manobra` ou `Ref + Tipo`.
 
 ## O Que Usar em Cada Caso
 
@@ -242,4 +250,5 @@ Ref: PTSET26OCEA123456
 
 - Se enviares `/editar-escala` com campos de manobra, o bot redireciona para `/editar-manobra`.
 - Se tentares `/criar-manobra` com `Tipo de manobra: entrada`, o bot recusa e explica que a entrada inicial já pertence à escala.
+- Se usares `ID da manobra`, não precisas de repetir `Ref` nem `Tipo de manobra`.
 - O arquivo operacional passa a refletir as manobras depois de concluídas e registadas, ou quando ficam abortadas.

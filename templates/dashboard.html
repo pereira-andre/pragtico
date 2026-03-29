@@ -317,9 +317,6 @@
 
     {% if wave_conditions %}
       <article class="wave-card">
-        <div class="wave-card-head">
-          <span class="ops-pill">{{ wave_conditions.last_reading_label }}</span>
-        </div>
         <div class="wave-metric-grid">
           {% for metric in wave_conditions.metrics %}
             <article class="wave-metric">
