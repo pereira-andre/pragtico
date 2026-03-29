@@ -255,6 +255,7 @@
 
 .chatbot-bubble p {
   margin: 0;
+  white-space: pre-wrap;
 }
 
 .chatbot-bubble-meta {

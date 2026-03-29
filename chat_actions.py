@@ -186,6 +186,18 @@ QUERY_HINTS = (
 )
 
 MANEUVER_TYPES = {"entry", "departure", "shift"}
+MANEUVER_ID_SENSITIVE_ACTIONS = {
+    "edit_maneuver_plan",
+    "delete_maneuver",
+    "entry_report",
+    "departure_report",
+    "shift_report",
+    "edit_maneuver_report",
+    "delete_maneuver_report",
+    "abort_entry",
+    "abort_departure",
+    "abort_shift",
+}
 JSON_BLOCK_RE = re.compile(r"\{.*\}", flags=re.DOTALL)
 TIME_OR_STATUS_HINT_RE = re.compile(
     r"\b(\d{1,2}(?::|\s)\d{2}|hoje|amanha|amanhã|mesmo dia|previst\w*|pendente|aprovad\w*|abortad\w*)\b"
@@ -317,6 +329,10 @@ SLASH_COMMAND_FIELD_ALIASES = {
     ],
     "reference_code": [
         "ref",
+        "id da escala",
+        "id escala",
+        "scale id",
+        "port_call_id",
         "referencia",
         "referência",
         "numero de escala",
@@ -488,6 +504,9 @@ DISPLAY_FIELD_LABELS = {
     "planned_departure_at_local": "hora prevista de saída",
     "planned_shift_at_local": "hora prevista da mudança",
     "destination_berth": "cais destino",
+    "origin": "origem",
+    "destination": "destino",
+    "origin_berth": "cais origem",
     "aborted_reason": "motivo",
     "maneuver_started_local": "início da manobra",
     "maneuver_finished_local": "fim da manobra",
@@ -855,11 +874,11 @@ def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
-    search_text = text.lower()
-    hits = []
+    search_text = _normalized_ascii_text(text)
+    raw_hits = []
     for canonical, aliases in alias_map.items():
         for alias in aliases:
-            needle = alias.lower().strip()
+            needle = _normalized_ascii_text(alias).strip()
             pattern = re.compile(
                 rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b|\bé\b)\s*",
                 flags=re.IGNORECASE,
@@ -867,11 +886,16 @@ def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]
             match = pattern.search(search_text)
             if not match:
                 continue
-            hits.append((match.start(), match.end(), canonical, needle))
+            raw_hits.append((match.start(), match.end(), canonical, needle))
             break
-    if not hits:
+    if not raw_hits:
         return {}
-    hits.sort(key=lambda item: item[0])
+    raw_hits.sort(key=lambda item: (item[0], -(item[1] - item[0])))
+    hits = []
+    for hit in raw_hits:
+        if hits and hit[0] < hits[-1][1]:
+            continue
+        hits.append(hit)
     extracted: Dict[str, object] = {}
     for index, (_start, value_start, canonical, needle) in enumerate(hits):
         end = hits[index + 1][0] if index + 1 < len(hits) else len(text)
@@ -934,7 +958,7 @@ def looks_like_slash_command(question: str) -> bool:
 def build_scale_edit_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato e eu atualizo a escala:",
+            "Responde neste formato para editar a escala (usa a Ref da escala):",
             "Ref: ",
             "Nome do navio: ",
             "ETA de chegada: DD/MM/AAAA, HH:MM",
@@ -958,19 +982,18 @@ def build_scale_edit_reply_template() -> str:
 def build_delete_scale_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a escala:",
+            "Responde neste formato para apagar a escala (usa a Ref da escala):",
             "Ref: ",
         ]
     )
 
 
-def build_maneuver_plan_reply_template() -> str:
+def build_create_maneuver_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para criar ou editar a manobra:",
-            "ID da manobra: ",
+            "Responde neste formato para criar a manobra (o ID é gerado automaticamente):",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
+            "Tipo de manobra: saída | mudança",
             "Hora prevista: DD/MM/AAAA, HH:MM",
             "Origem: ",
             "Destino: ",
@@ -982,10 +1005,29 @@ def build_maneuver_plan_reply_template() -> str:
     )
 
 
+def build_edit_maneuver_plan_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para editar o planeamento da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Hora prevista: DD/MM/AAAA, HH:MM",
+            "Origem: ",
+            "Destino: ",
+            "Calado: ",
+            "Rebocadores: ",
+            "Restrições: daylight, gas, estrategico",
+            "Observações: ",
+            "Motivo da alteração: ",
+        ]
+    )
+
+
 def build_delete_maneuver_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a manobra:",
+            "Responde neste formato para apagar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -996,7 +1038,7 @@ def build_delete_maneuver_reply_template() -> str:
 def build_approval_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para aprovar a manobra:",
+            "Responde neste formato para aprovar a manobra (usa ID da manobra ou Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1008,7 +1050,7 @@ def build_approval_reply_template() -> str:
 def build_command_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para registar ou editar o registo da manobra:",
+            "Responde neste formato para registar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1020,10 +1062,26 @@ def build_command_report_reply_template() -> str:
     )
 
 
+def build_edit_report_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para editar o registo da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Início da manobra: DD/MM/AAAA, HH:MM",
+            "Fim da manobra: DD/MM/AAAA, HH:MM",
+            "Calado: ",
+            "Observações: ",
+            "Motivo da alteração: ",
+        ]
+    )
+
+
 def build_command_abort_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para abortar a manobra:",
+            "Responde neste formato para abortar a manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1035,7 +1093,7 @@ def build_command_abort_reply_template() -> str:
 def build_delete_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar o registo da manobra:",
+            "Responde neste formato para apagar o registo da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -1050,12 +1108,16 @@ def build_action_reply_template(action: str, missing_fields: Optional[List[str]]
         return build_scale_edit_reply_template()
     if action == "delete_port_call":
         return build_delete_scale_reply_template()
-    if action in {"schedule_departure", "schedule_shift", "edit_maneuver_plan"}:
-        return build_maneuver_plan_reply_template()
+    if action in {"schedule_departure", "schedule_shift"}:
+        return build_create_maneuver_reply_template()
+    if action == "edit_maneuver_plan":
+        return build_edit_maneuver_plan_reply_template()
     if action in {"approve_entry", "approve_departure", "approve_shift"}:
         return build_approval_reply_template()
-    if action in {"entry_report", "departure_report", "shift_report", "edit_maneuver_report"}:
+    if action in {"entry_report", "departure_report", "shift_report"}:
         return build_maneuver_report_reply_template()
+    if action == "edit_maneuver_report":
+        return build_edit_report_reply_template()
     if action in {"delete_maneuver_report"}:
         return build_delete_report_reply_template()
     if action in {"abort_entry", "abort_departure", "abort_shift"}:
@@ -1070,11 +1132,17 @@ def build_slash_help(role: str) -> str:
     lines = [
         "Comandos disponíveis:",
         "/help",
+        "  mostra esta ajuda",
         "/avisos-locais",
+        "  lista os avisos locais em vigor",
         "/ondulacao",
+        "  mostra a leitura costeira atual",
         "/mares hoje",
+        "  mostra marés por dia ou data pedida",
         "/meteorologia hoje",
+        "  mostra a previsão meteorológica",
         "/regra 015",
+        "  consulta uma regra/instrução por código",
         "",
         "Escalas:",
     ]
@@ -1082,16 +1150,16 @@ def build_slash_help(role: str) -> str:
         lines.extend(
             [
                 "/registar-escala",
-                "  cria uma nova escala com dados operacionais e do navio",
+                "  cria uma nova escala; a entrada inicial fica associada à escala",
             ]
         )
     if clean_role == "admin":
         lines.extend(
             [
                 "/editar-escala",
-                "  atualiza os dados de uma escala existente",
+                "  atualiza os dados da escala; usa a Ref da escala",
                 "/apagar-escala",
-                "  remove a escala",
+                "  remove a escala; usa a Ref da escala",
             ]
         )
     lines.extend(["", "Manobras:"])
@@ -1099,25 +1167,40 @@ def build_slash_help(role: str) -> str:
         lines.extend(
             [
                 "/criar-manobra",
+                "  cria uma saída ou mudança; o ID da manobra é automático",
                 "/editar-manobra",
+                "  altera o planeamento; usa o ID da manobra para evitar mexer na errada",
                 "/apagar-manobra",
+                "  remove a manobra planeada; usa o ID da manobra para evitar ambiguidades",
             ]
         )
     if clean_role in {"admin", "piloto"}:
         lines.extend(
             [
                 "/aprovar",
+                "  aprova a manobra pendente; usa ID da manobra ou Ref + Tipo",
                 "/registar-manobra",
+                "  regista início, fim e calado; usa o ID da manobra para evitar ambiguidades",
                 "/editar-registo-manobra",
+                "  revê um registo executado; usa o ID da manobra para evitar ambiguidades",
                 "/abortar",
+                "  cancela/aborta a manobra; usa o ID da manobra para evitar ambiguidades",
             ]
         )
     if clean_role == "admin":
-        lines.append("/apagar-registo-manobra")
+        lines.extend(
+            [
+                "/apagar-registo-manobra",
+                "  apaga o registo executado; usa o ID da manobra para evitar ambiguidades",
+            ]
+        )
     lines.extend(
         [
             "",
-            "Se o comando vier incompleto, o bot devolve o template certo para preencher.",
+            "Notas:",
+            "  Ref identifica a escala. Se só tiveres o ID curto da escala, o bot também tenta resolvê-lo.",
+            "  Ao criar manobra não precisas de indicar ID; para gerir uma manobra já existente, o ID é a forma mais segura.",
+            "  Se o comando vier incompleto, o bot devolve o template certo para preencher.",
         ]
     )
     return "\n".join(lines)
@@ -1159,6 +1242,24 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         "vessel_name": " ".join(str(extracted_fields.get("vessel_name") or "").split()),
         "maneuver_type": _extract_slash_maneuver_type(body) or _normalize_maneuver_type_label(command_aliases.get("maneuver_type", "")),
     }
+    for target_only_field in ("reference_code", "maneuver_id", "maneuver_type"):
+        extracted_fields.pop(target_only_field, None)
+
+    maneuver_payload_fields = {
+        "planned_at_local",
+        "planned_departure_at_local",
+        "planned_shift_at_local",
+        "origin",
+        "destination",
+        "origin_berth",
+        "destination_berth",
+        "draft_m",
+        "tug_count",
+        "maneuver_started_local",
+        "maneuver_finished_local",
+        "aborted_reason",
+        "change_reason",
+    }
 
     action = ""
     template = ""
@@ -1168,6 +1269,11 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
     elif command == "edit_scale":
         action = "edit_port_call"
         template = build_action_reply_template(action)
+        if any(field in extracted_fields for field in maneuver_payload_fields):
+            return {
+                "intent": "unsupported",
+                "answer": "Este comando edita a escala, não a manobra. Para alterar planeamento usa /editar-manobra.\n\n" + build_edit_maneuver_plan_reply_template(),
+            }
         if not (target["reference_code"] or target["vessel_name"]):
             proposal = normalize_action_candidate(
                 {
@@ -1190,6 +1296,11 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
     elif command == "delete_scale":
         action = "delete_port_call"
         template = build_action_reply_template(action)
+        if any(field in extracted_fields for field in maneuver_payload_fields):
+            return {
+                "intent": "unsupported",
+                "answer": "Este comando apaga a escala, não a manobra. Para remover uma manobra usa /apagar-manobra.\n\n" + build_delete_maneuver_reply_template(),
+            }
         if not (target["reference_code"] or target["vessel_name"]):
             proposal = normalize_action_candidate(
                 {
@@ -1210,9 +1321,13 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
                 return {"intent": "unsupported", "answer": proposal.get("reason") or "A ação pedida não está autorizada para este perfil."}
             return {"intent": "template", "answer": template}
     else:
+        if command == "create_maneuver" and target["maneuver_type"] == "entry":
+            return {
+                "intent": "unsupported",
+                "answer": "A entrada inicial já fica criada quando registas a escala. Para alterar essa entrada usa /editar-manobra.\n\n" + build_edit_maneuver_plan_reply_template(),
+            }
         maneuver_action_map = {
             "create_maneuver": {
-                "entry": "edit_maneuver_plan",
                 "departure": "schedule_departure",
                 "shift": "schedule_shift",
             },
@@ -1253,12 +1368,12 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
             },
         }
         template_map = {
-            "create_maneuver": build_maneuver_plan_reply_template(),
-            "edit_maneuver": build_maneuver_plan_reply_template(),
+            "create_maneuver": build_create_maneuver_reply_template(),
+            "edit_maneuver": build_edit_maneuver_plan_reply_template(),
             "delete_maneuver": build_delete_maneuver_reply_template(),
             "approve_maneuver": build_approval_reply_template(),
             "create_report": build_command_report_reply_template(),
-            "edit_report": build_command_report_reply_template(),
+            "edit_report": build_edit_report_reply_template(),
             "delete_report": build_delete_report_reply_template(),
             "abort_maneuver": build_command_abort_reply_template(),
         }
@@ -1728,6 +1843,20 @@ def resolve_port_call(port_calls: List[Dict], target: Dict) -> Optional[Dict]:
         for item in port_calls:
             if _lookup_key(item.get("reference_code")) == target_reference:
                 return item
+        id_exact = [
+            item
+            for item in port_calls
+            if _lookup_key(item.get("id")) == target_reference
+        ]
+        if len(id_exact) == 1:
+            return id_exact[0]
+        id_prefix = [
+            item
+            for item in port_calls
+            if _lookup_key(item.get("id")).startswith(target_reference)
+        ]
+        if len(id_prefix) == 1:
+            return id_prefix[0]
 
     if target_vessel:
         exact = [
@@ -1771,6 +1900,7 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str, maneuver_
         if len(direct_matches) > 1:
             direct_matches.sort(key=_maneuver_sort_key)
             return direct_matches[-1]
+        return None
     clean_type = (maneuver_type or "").strip().lower()
     if clean_type not in MANEUVER_TYPES:
         return None
@@ -1806,6 +1936,45 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str, maneuver_
         candidates = history
     candidates.sort(key=_maneuver_sort_key)
     return candidates[-1]
+
+
+def candidate_maneuvers_for_action(port_call: Dict, action: str, maneuver_type: str) -> List[Dict]:
+    clean_type = (maneuver_type or "").strip().lower()
+    if clean_type not in MANEUVER_TYPES:
+        return []
+    history = [
+        item
+        for item in port_call.get("maneuver_history", []) or []
+        if (item.get("type") or "").strip().lower() == clean_type
+    ]
+    if not history:
+        return []
+    if action in {"edit_maneuver_report", "delete_maneuver_report"}:
+        valid_states = {"approved", "completed"}
+    elif action.endswith("_report"):
+        valid_states = {"approved", "completed"}
+    elif action.startswith("approve_"):
+        valid_states = {"pending"}
+    elif action.startswith("abort_"):
+        valid_states = {"pending", "approved"}
+    elif action == "delete_maneuver":
+        valid_states = {"pending", "approved", "completed", "aborted"}
+    elif action == "edit_maneuver_plan":
+        valid_states = {"pending", "approved"}
+    else:
+        valid_states = {"pending", "approved", "completed"}
+    candidates = [item for item in history if (item.get("state") or "").strip().lower() in valid_states]
+    if action in {"edit_maneuver_report", "delete_maneuver_report"}:
+        completed_candidates = [item for item in candidates if (item.get("state") or "").strip().lower() == "completed"]
+        if completed_candidates:
+            candidates = completed_candidates
+    if not candidates:
+        candidates = history
+    return sorted(candidates, key=_maneuver_sort_key)
+
+
+def action_prefers_explicit_maneuver_id(action: str) -> bool:
+    return action in MANEUVER_ID_SENSITIVE_ACTIONS
 
 
 def infer_maneuver_type(port_call: Dict, action: str) -> str:

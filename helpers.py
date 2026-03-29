@@ -15,10 +15,12 @@ import services
 from chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
+    action_prefers_explicit_maneuver_id,
     build_action_reply_template,
     build_operational_action_prompt,
     build_pending_action_update_prompt,
     build_slash_help,
+    candidate_maneuvers_for_action,
     display_missing_field_labels,
     extract_json_object,
     extract_pending_field_updates,
@@ -1256,7 +1258,7 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
     if proposal.get("action") != "create_port_call" and not target:
         proposal["intent"] = "unsupported"
         proposal["action"] = ""
-        proposal["reason"] = "Não consegui identificar uma escala correspondente para executar a ação."
+        proposal["reason"] = "Não consegui identificar uma escala correspondente para executar a ação. Usa a Ref da escala, o nome do navio ou o ID da manobra."
         return proposal
 
     if target:
@@ -1331,6 +1333,28 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         "entry_report", "departure_report", "shift_report",
     }:
         proposal["target"]["maneuver_type"] = inferred_type
+
+    maneuver_type = (proposal.get("target", {}).get("maneuver_type") or "").strip().lower()
+    if (
+        target
+        and action_prefers_explicit_maneuver_id(proposal.get("action", ""))
+        and not ((proposal.get("maneuver_id") or proposal.get("target", {}).get("maneuver_id", "")).strip())
+        and maneuver_type in {"entry", "departure", "shift"}
+    ):
+        matching_maneuvers = candidate_maneuvers_for_action(
+            services.store.get_port_call(target["id"]),
+            proposal["action"],
+            maneuver_type,
+        )
+        if len(matching_maneuvers) > 1:
+            proposal["missing_fields"] = proposal_missing_field_labels(
+                proposal.get("action", ""),
+                proposal.get("fields") or {},
+                {**(proposal.get("target") or {}), "maneuver_id": ""},
+            )
+            if "ID da manobra" not in proposal["missing_fields"]:
+                proposal["missing_fields"].append("ID da manobra")
+            return proposal
 
     if target and proposal.get("action") in {"edit_maneuver_plan", "edit_maneuver_report", "delete_maneuver", "delete_maneuver_report"}:
         maneuver = resolve_maneuver(
@@ -1504,6 +1528,15 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             raw = fallback
         return " ".join(str(raw or "").strip().split())
 
+    def resolve_target_maneuver(current_port_call: dict, current_action: str, current_maneuver_type: str) -> dict | None:
+        explicit_maneuver_id = (proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip()
+        if explicit_maneuver_id:
+            return resolve_maneuver(current_port_call, current_action, current_maneuver_type, explicit_maneuver_id)
+        candidates = candidate_maneuvers_for_action(current_port_call, current_action, current_maneuver_type)
+        if action_prefers_explicit_maneuver_id(current_action) and len(candidates) > 1:
+            raise ValueError("Há várias manobras deste tipo nesta escala. Indica o ID da manobra para evitar alterar a errada.")
+        return candidates[-1] if candidates else None
+
     def apply_plan_updates_before_approval(current_port_call: dict, current_maneuver_type: str) -> None:
         current_maneuver = resolve_maneuver(current_port_call, "edit_maneuver_plan", current_maneuver_type)
         if not current_maneuver:
@@ -1602,7 +1635,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Entrada aprovada para {result['vessel_name']}."
     if action == "abort_entry":
-        target_maneuver = resolve_maneuver(port_call, action, "entry", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
+        target_maneuver = resolve_target_maneuver(port_call, action, "entry")
         maneuver_state = (target_maneuver or {}).get("state", "pending")
         if role == "agente" and maneuver_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma manobra já aprovada (piloto a bordo).")
@@ -1616,11 +1649,14 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.mark_port_call_arrived(port_call_id=port_call_id, arrived_at=parse_optional_local_datetime_input(arrived_at_value, "ATA") or datetime.now().astimezone().isoformat(), updated_by=username, berth=field_text("berth", port_call.get("berth")))
         return result, f"Entrada confirmada para {result['vessel_name']} às {result['ata_label']}. Já podes preencher o registo operacional."
     if action == "entry_report":
+        target_maneuver = resolve_target_maneuver(port_call, action, "entry")
+        if not target_maneuver:
+            raise ValueError("A proposta não identifica a manobra a registar.")
         started_at = parse_local_datetime_input(field_text("maneuver_started_local"), "Início da manobra")
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Entrada")
-        result = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
+        result = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
         return result, f"Registo de entrada guardado para {result['vessel_name']}."
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
@@ -1632,7 +1668,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Saída aprovada para {result['vessel_name']}."
     if action == "abort_departure":
-        target_m = resolve_maneuver(port_call, action, "departure", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
+        target_m = resolve_target_maneuver(port_call, action, "departure")
         m_state = (target_m or {}).get("state", "pending")
         if role == "agente" and m_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma saída já aprovada.")
@@ -1646,11 +1682,14 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.mark_port_call_departed(port_call_id=port_call_id, departed_at=parse_optional_local_datetime_input(departed_at_value, "ATD") or datetime.now().astimezone().isoformat(), updated_by=username, next_port=field_text("next_port", port_call.get("next_port")))
         return result, f"Saída confirmada para {result['vessel_name']} às {result['departure_label']}. Já podes preencher o registo operacional."
     if action == "departure_report":
+        target_maneuver = resolve_target_maneuver(port_call, action, "departure")
+        if not target_maneuver:
+            raise ValueError("A proposta não identifica a manobra a registar.")
         started_at = parse_local_datetime_input(field_text("maneuver_started_local"), "Início da manobra")
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Saída")
-        result = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
+        result = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
         return result, f"Registo de saída guardado para {result['vessel_name']}."
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
@@ -1662,7 +1701,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_shift_plan(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Mudança aprovada para {result['vessel_name']}."
     if action == "abort_shift":
-        target_ms = resolve_maneuver(port_call, action, "shift", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
+        target_ms = resolve_target_maneuver(port_call, action, "shift")
         ms_state = (target_ms or {}).get("state", "pending")
         if role == "agente" and ms_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma mudança já aprovada.")
@@ -1676,19 +1715,19 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.mark_shift_completed(port_call_id=port_call_id, shifted_at=parse_optional_local_datetime_input(shifted_at_value, "Hora da mudança") or datetime.now().astimezone().isoformat(), updated_by=username)
         return result, f"Mudança concluída para {result['vessel_name']} às {result['shift_label']}. Já podes preencher o registo operacional."
     if action == "shift_report":
+        target_maneuver = resolve_target_maneuver(port_call, action, "shift")
+        if not target_maneuver:
+            raise ValueError("A proposta não identifica a manobra a registar.")
         started_at = parse_local_datetime_input(field_text("maneuver_started_local"), "Início da manobra")
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Mudança")
-        result = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
+        result = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
         return result, f"Registo de mudança guardado para {result['vessel_name']}."
     if action == "edit_maneuver_plan":
-        maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
-        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
-        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
-            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
-        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        maneuver = resolve_target_maneuver(current_port_call, action, maneuver_type)
+        maneuver_id = (maneuver or {}).get("id", "")
         if not maneuver_id:
             raise ValueError("A proposta não identifica a manobra a editar.")
         base_origin = field_text("origin", (maneuver or {}).get("origin") or current_port_call.get("last_port", ""))
@@ -1711,12 +1750,9 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Planeamento atualizado para {result['vessel_name']}."
     if action == "edit_maneuver_report":
-        maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
-        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
-        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
-            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
-        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        maneuver = resolve_target_maneuver(current_port_call, action, maneuver_type)
+        maneuver_id = (maneuver or {}).get("id", "")
         if not maneuver_id:
             raise ValueError("A proposta não identifica a manobra a editar.")
         started_at = parse_local_datetime_input(field_text("maneuver_started_local", (maneuver or {}).get("execution_started_input_value", "")), "Início da manobra")
@@ -1730,12 +1766,9 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Registo operacional revisto para {result['vessel_name']}."
     if action == "delete_maneuver":
-        maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
-        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
-        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
-            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
-        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        maneuver = resolve_target_maneuver(current_port_call, action, maneuver_type)
+        maneuver_id = (maneuver or {}).get("id", "")
         if not maneuver_id:
             raise ValueError("A proposta não identifica a manobra a apagar.")
         removed_or_updated = services.store.delete_maneuver(
@@ -1745,12 +1778,9 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return removed_or_updated, f"Manobra apagada para {removed_or_updated['vessel_name']}."
     if action == "delete_maneuver_report":
-        maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
-        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
-        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
-            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
-        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        maneuver = resolve_target_maneuver(current_port_call, action, maneuver_type)
+        maneuver_id = (maneuver or {}).get("id", "")
         if not maneuver_id:
             raise ValueError("A proposta não identifica o registo a apagar.")
         result = services.store.delete_maneuver_report(

@@ -74,7 +74,7 @@
       {% if messages %}
         {% for msg in messages %}
           <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}"{% endif %}>
-            <p>{{ msg.content }}</p>
+            <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
             <div class="chatbot-bubble-meta">
               <span>{{ msg.created_at_label }}</span>
             </div>
@@ -147,11 +147,26 @@
   }
 
   function appendBubble(role, content, citations, messageId, timestampLabel) {
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function renderChatMarkdown(value) {
+      let html = escapeHtml(value);
+      html = html.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/(^|[^*])\*(?=\S)([\s\S]*?\S)\*(?!\*)/g, "$1<em>$2</em>");
+      return html;
+    }
+
     const article = document.createElement("article");
     article.className = "chatbot-bubble chatbot-bubble-" + role;
     if (messageId) article.dataset.messageId = messageId;
     const p = document.createElement("p");
-    p.textContent = content;
+    if (role === "assistant") p.innerHTML = renderChatMarkdown(content);
+    else p.textContent = content;
     article.appendChild(p);
     const meta = document.createElement("div");
     meta.className = "chatbot-bubble-meta";

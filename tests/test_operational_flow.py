@@ -45,6 +45,14 @@ class OperationalFlowTests(unittest.TestCase):
             vessel_dwt_t="22330",
         )
 
+    def _move_port_call_in_port(self, port_call_id: str) -> dict:
+        self.store.approve_port_call(port_call_id, decided_by="admin")
+        return self.store.mark_port_call_arrived(
+            port_call_id,
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+
     def test_complete_entry_with_real_times_only_confirms_maneuver(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         self.store.approve_port_call(port_call["id"], decided_by="admin")
@@ -277,6 +285,32 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(finalized["fields"]["planned_at_local"], "2026-03-24T05:30")
         self.assertEqual(finalized["fields"]["destination"], "Tanquisado (lado jusante)")
 
+    def test_finalize_edit_plan_accepts_scale_id_prefix_in_reference_field(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "edit_maneuver_plan",
+                "target": {
+                    "reference_code": port_call["id"][:8],
+                    "maneuver_type": "entry",
+                },
+                "fields": {
+                    "planned_at_local": "2026-03-24T06:00",
+                    "change_reason": "ajuste de janela",
+                },
+                "missing_fields": [],
+            },
+            "admin",
+        )
+
+        finalized = app.finalize_operational_proposal(proposal, [self.store.get_port_call(port_call["id"])])
+
+        self.assertEqual(finalized["intent"], "action")
+        self.assertEqual(finalized["port_call_id"], port_call["id"])
+        self.assertEqual(finalized["target"]["reference_code"], port_call["reference_code"])
+
     def test_pending_approve_replaces_previous_edit_plan(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
 
@@ -323,35 +357,107 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["pending_action"]["proposal"]["action"], "approve_entry")
         self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
 
-    def test_edit_plan_confirmation_recovers_from_stale_maneuver_id(self) -> None:
+    def test_edit_plan_confirmation_rejects_stale_maneuver_id(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         current = self.store.get_port_call(port_call["id"])
         entry = next(item for item in current["maneuver_history"] if item["type"] == "entry")
 
         with app.app.test_request_context("/"):
             session["role"] = "admin"
-            result, message = app.execute_pending_operational_action(
-                {
-                    "action": "edit_maneuver_plan",
-                    "port_call_id": port_call["id"],
-                    "maneuver_id": "stale-id",
-                    "target": {"maneuver_type": "entry"},
-                    "fields": {
-                        "planned_at_local": entry["planned_at"][:16],
-                        "change_reason": "piloto disponivel",
-                        "berth": "Tanquisado (lado jusante)",
+            with self.assertRaisesRegex(ValueError, "não identifica a manobra a editar"):
+                app.execute_pending_operational_action(
+                    {
+                        "action": "edit_maneuver_plan",
+                        "port_call_id": port_call["id"],
+                        "maneuver_id": "stale-id",
+                        "target": {"maneuver_type": "entry"},
+                        "fields": {
+                            "planned_at_local": entry["planned_at"][:16],
+                            "change_reason": "piloto disponivel",
+                            "berth": "Tanquisado (lado jusante)",
+                        },
                     },
-                },
-                username="admin",
-                role="admin",
-            )
+                    username="admin",
+                    role="admin",
+                )
 
-        self.assertIn("planeamento atualizado", message.lower())
-        updated = self.store.get_port_call(port_call["id"])
-        refreshed_entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
-        self.assertEqual(result["berth"], "Tanquisado (lado jusante)")
-        self.assertEqual(refreshed_entry["id"], entry["id"])
-        self.assertEqual(refreshed_entry["destination"], "Tanquisado (lado jusante)")
+    def test_finalize_shift_report_requires_maneuver_id_when_multiple_shifts_match(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-24T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+        self.store.mark_shift_completed(port_call["id"], shifted_at="2026-03-24T08:20:00+00:00", updated_by="admin")
+
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-24T12:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 2",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "shift_report",
+                "target": {
+                    "reference_code": port_call["reference_code"],
+                    "maneuver_type": "shift",
+                },
+                "fields": {
+                    "maneuver_started_local": "2026-03-24T08:05",
+                    "maneuver_finished_local": "2026-03-24T08:20",
+                    "draft_m": "9.94",
+                },
+                "missing_fields": [],
+            },
+            "admin",
+        )
+
+        finalized = app.finalize_operational_proposal(proposal, [self.store.get_port_call(port_call["id"])])
+
+        self.assertIn("ID da manobra", finalized["missing_fields"])
+
+    def test_delete_shift_without_id_is_blocked_when_multiple_shifts_match(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-24T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+        self.store.mark_shift_completed(port_call["id"], shifted_at="2026-03-24T08:20:00+00:00", updated_by="admin")
+
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-24T12:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 2",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            with self.assertRaisesRegex(ValueError, "Indica o ID da manobra"):
+                app.execute_pending_operational_action(
+                    {
+                        "action": "delete_maneuver",
+                        "port_call_id": port_call["id"],
+                        "target": {"maneuver_type": "shift"},
+                        "fields": {},
+                    },
+                    username="admin",
+                    role="admin",
+                )
 
     def test_passa_a_previsto_reports_already_pending_when_it_is_already_planned(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")

@@ -3,9 +3,12 @@
 import logging
 import os
 import threading
+import re
+from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask, request, session
+from markupsafe import Markup, escape
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import services
@@ -183,7 +186,18 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", "64")) * 1024 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV", "production") == "production"
-app.config["PERMANENT_SESSION_LIFETIME"] = 28800  # 8 hours
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=int(os.getenv("SESSION_IDLE_MINUTES", "45")))
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
+
+def render_chat_markdown(text: str) -> Markup:
+    escaped = str(escape(text or ""))
+    escaped = re.sub(r"\*\*(?=\S)(.+?)(?<=\S)\*\*", r"<strong>\1</strong>", escaped, flags=re.DOTALL)
+    escaped = re.sub(r"(?<!\*)\*(?=\S)(.+?)(?<=\S)\*(?!\*)", r"<em>\1</em>", escaped, flags=re.DOTALL)
+    return Markup(escaped)
+
+
+app.jinja_env.filters["chat_markdown"] = render_chat_markdown
 
 if _embedding_provider:
     app.logger.info(
@@ -208,6 +222,15 @@ from blueprints.chat import bp as chat_bp
 from blueprints.api import bp as api_bp
 
 init_csrf(app)
+
+
+@app.before_request
+def refresh_authenticated_session():
+    if not session.get("username"):
+        return None
+    session.permanent = True
+    session.modified = True
+    return None
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
