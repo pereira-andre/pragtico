@@ -136,6 +136,22 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["proposal"]["action"], "approve_entry")
         self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
 
+    def test_parse_slash_register_report_accepts_positional_target_with_multiline_fields(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-manobra PTSET26OCEA1C3808 BF757B7F\n"
+            "Tipo de manobra: entrada\n"
+            "Início da manobra: 29/03/2026, 16:20\n"
+            "Fim da manobra: 29/03/2026, 17:35\n"
+            "Calado: 10,8\n"
+            "Observações: Sem incidentes.",
+            "piloto",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "entry_report")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
+
     def test_extract_pending_target_updates_accepts_plain_id_label(self) -> None:
         target = extract_pending_target_updates("ID: 7f3c2a91")
 

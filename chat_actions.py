@@ -1267,7 +1267,7 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
 
     command_aliases = _extract_values_from_alias_map(body, SLASH_COMMAND_FIELD_ALIASES) if body else {}
     extracted_fields = _extract_labelled_values(body)
-    positional_target = _extract_positional_slash_target(body) if body else {}
+    positional_target = _extract_positional_slash_target(tail.strip()) if tail.strip() else {}
     target = {
         "maneuver_id": _normalize_maneuver_id(command_aliases.get("maneuver_id", "")),
         "reference_code": " ".join(str(command_aliases.get("reference_code") or "").split()),
