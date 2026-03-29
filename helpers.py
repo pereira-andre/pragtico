@@ -808,6 +808,82 @@ def build_operational_chat_sources(question: str) -> list[dict]:
     return sources
 
 
+def answer_direct_operational_query(question: str) -> dict | None:
+    """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
+    clean_question = _operational_lookup_key(question)
+    if not re.search(r"\b(id|identificador)\b", clean_question) or "manobra" not in clean_question:
+        return None
+
+    port_calls = current_resolvable_port_calls()
+    matched_port_call = None
+    padded_question = f" {clean_question} "
+    by_reference = [
+        item for item in port_calls
+        if item.get("reference_code") and f" {_operational_lookup_key(item.get('reference_code'))} " in padded_question
+    ]
+    if len(by_reference) == 1:
+        matched_port_call = by_reference[0]
+    else:
+        by_name = []
+        for item in port_calls:
+            vessel_key = _operational_lookup_key(item.get("vessel_name"))
+            if vessel_key and f" {vessel_key} " in padded_question:
+                by_name.append(item)
+        if len(by_name) == 1:
+            matched_port_call = by_name[0]
+    if not matched_port_call:
+        return None
+
+    maneuver_type = ""
+    maneuver_label = "manobra"
+    if re.search(r"\b(entrada|entry)\b", clean_question):
+        maneuver_type = "entry"
+        maneuver_label = "manobra de entrada"
+    elif re.search(r"\b(saida|saida|departure)\b", clean_question):
+        maneuver_type = "departure"
+        maneuver_label = "manobra de saída"
+    elif re.search(r"\b(mudanca|mudança|shift)\b", clean_question):
+        maneuver_type = "shift"
+        maneuver_label = "manobra de mudança"
+
+    resolved_port_call = services.store.get_port_call(matched_port_call["id"])
+    maneuvers = list(resolved_port_call.get("maneuver_history", []) or [])
+    if maneuver_type:
+        maneuvers = [item for item in maneuvers if (item.get("type") or "").strip().lower() == maneuver_type]
+    if not maneuvers:
+        answer = f"Não encontrei {maneuver_label} para {resolved_port_call.get('vessel_name', 'este navio')}."
+        return {"answer": answer, "sources": [], "answer_origin": "operational_lookup"}
+
+    maneuvers.sort(
+        key=lambda item: (
+            item.get("planned_at") or "",
+            item.get("completed_at") or "",
+            item.get("updated_at") or "",
+            item.get("created_at") or "",
+        )
+    )
+    maneuver = maneuvers[-1]
+    maneuver_id = maneuver.get("id", "")
+    short_id = maneuver_id[:8].upper() if maneuver_id else "--"
+    type_label = maneuver_label if maneuver_type else f"manobra {((maneuver.get('type') or '').strip().lower() or '--')}"
+    answer = (
+        f"O ID da {type_label} de {resolved_port_call.get('vessel_name', 'este navio')} "
+        f"é {short_id} (completo: {maneuver_id})."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": resolved_port_call.get("vessel_name", "Manobra"),
+                "source_id": resolved_port_call.get("reference_code", ""),
+                "retrieval_mode": "operational_lookup",
+                "snippet": answer,
+            }
+        ],
+        "answer_origin": "operational_lookup",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Chat operational action helpers
 # ---------------------------------------------------------------------------
@@ -1209,6 +1285,7 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
     """Resolve the target port call and maneuver for an action proposal and refresh missing fields."""
     if not proposal or proposal.get("intent") != "action":
         return proposal
+    proposal_target = proposal.setdefault("target", {})
     target = None
     existing_port_call_id = (proposal.get("port_call_id") or "").strip()
     if existing_port_call_id:
@@ -1218,9 +1295,76 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
             target = None
     visible_port_calls = port_calls if port_calls is not None else current_visible_port_calls()
     if not target:
-        target = resolve_port_call(visible_port_calls, proposal.get("target", {}))
+        target = resolve_port_call(visible_port_calls, proposal_target)
+    if (
+        not target
+        and proposal.get("action") != "create_port_call"
+        and proposal_target.get("reference_code")
+        and not proposal_target.get("maneuver_id")
+    ):
+        maneuver_reference = " ".join(str(proposal_target.get("reference_code") or "").split())
+        if maneuver_reference:
+            maneuver_id_target = {
+                **proposal_target,
+                "maneuver_id": maneuver_reference,
+                "reference_code": "",
+            }
+            target = resolve_port_call(visible_port_calls, maneuver_id_target)
+            if target:
+                proposal_target["maneuver_id"] = maneuver_id_target["maneuver_id"]
+                proposal_target["reference_code"] = target.get("reference_code", "")
+    if (
+        not target
+        and proposal.get("action") != "create_port_call"
+        and proposal_target.get("maneuver_id")
+        and not proposal_target.get("reference_code")
+        and not proposal_target.get("vessel_name")
+    ):
+        legacy_reference_target = {
+            **proposal_target,
+            "reference_code": proposal_target.get("maneuver_id", ""),
+            "maneuver_id": "",
+        }
+        target = resolve_port_call(visible_port_calls, legacy_reference_target)
+        if target:
+            proposal_target["reference_code"] = target.get("reference_code", "") or legacy_reference_target["reference_code"]
+            proposal_target["maneuver_id"] = ""
+            proposal["maneuver_id"] = ""
     if not target and proposal.get("action") != "create_port_call":
-        target = resolve_port_call(current_resolvable_port_calls(), proposal.get("target", {}))
+        resolvable_port_calls = current_resolvable_port_calls()
+        target = resolve_port_call(resolvable_port_calls, proposal_target)
+        if (
+            not target
+            and proposal_target.get("reference_code")
+            and not proposal_target.get("maneuver_id")
+        ):
+            maneuver_reference = " ".join(str(proposal_target.get("reference_code") or "").split())
+            if maneuver_reference:
+                maneuver_id_target = {
+                    **proposal_target,
+                    "maneuver_id": maneuver_reference,
+                    "reference_code": "",
+                }
+                target = resolve_port_call(resolvable_port_calls, maneuver_id_target)
+                if target:
+                    proposal_target["maneuver_id"] = maneuver_id_target["maneuver_id"]
+                    proposal_target["reference_code"] = target.get("reference_code", "")
+        if (
+            not target
+            and proposal_target.get("maneuver_id")
+            and not proposal_target.get("reference_code")
+            and not proposal_target.get("vessel_name")
+        ):
+            legacy_reference_target = {
+                **proposal_target,
+                "reference_code": proposal_target.get("maneuver_id", ""),
+                "maneuver_id": "",
+            }
+            target = resolve_port_call(resolvable_port_calls, legacy_reference_target)
+            if target:
+                proposal_target["reference_code"] = target.get("reference_code", "") or legacy_reference_target["reference_code"]
+                proposal_target["maneuver_id"] = ""
+                proposal["maneuver_id"] = ""
 
     fields = proposal.setdefault("fields", {})
     if fields.get("docking_depth") and not fields.get("draft_m"):

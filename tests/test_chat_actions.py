@@ -127,6 +127,7 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "action")
         self.assertEqual(parsed["proposal"]["action"], "approve_entry")
         self.assertEqual(parsed["proposal"]["target"]["reference_code"], "PTSET26OCEA1C3808")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "bf757b7f")
         self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
 
     def test_parse_slash_approve_accepts_maneuver_id_only(self) -> None:
@@ -149,7 +150,8 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(parsed["intent"], "action")
         self.assertEqual(parsed["proposal"]["action"], "entry_report")
-        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "PTSET26OCEA1C3808")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "bf757b7f")
         self.assertEqual(parsed["proposal"]["target"]["maneuver_type"], "entry")
 
     def test_extract_pending_target_updates_accepts_plain_id_label(self) -> None:
@@ -689,6 +691,22 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["id"], "1")
         self.assertEqual(rows[0]["vessel_name"], "BELITAKI")
+
+    def test_resolve_port_call_accepts_short_maneuver_id_from_planned_rows(self) -> None:
+        port_calls = [
+            {
+                "id": "pc1",
+                "port_call_id": "pc1",
+                "reference_code": "PTSET26OCEA1C3808",
+                "vessel_name": "OCEA",
+                "maneuver_id": "bf757b7f-1234-5678-9999-aaaaaaaaaaaa",
+            }
+        ]
+
+        resolved = resolve_port_call(port_calls, {"maneuver_id": "BF757B7F"})
+
+        self.assertIsNotNone(resolved)
+        self.assertEqual(resolved["id"], "pc1")
 
     def test_build_port_call_reply_template_has_no_missing_prefix(self) -> None:
         template = build_port_call_reply_template(["ETA", "cais previsto"])

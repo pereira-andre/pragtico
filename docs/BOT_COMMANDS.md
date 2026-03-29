@@ -6,6 +6,7 @@ Este documento descreve os comandos suportados pelo bot no chat, o alvo que cada
 
 - `Ref` identifica a escala.
 - `ID da manobra` identifica uma manobra concreta.
+- Se por engano escreveres o `ID da manobra` no campo `Ref`, o bot tenta resolver, mas a forma recomendada continua a ser usar `ID da manobra`.
 - Ao criar uma manobra nova, não indiques `ID da manobra`; esse ID é gerado automaticamente.
 - A entrada inicial nasce com a escala. Não se cria uma nova entrada com `/criar-manobra`.
 - Para uma manobra já existente, podes usar `ID da manobra` ou `Ref + Tipo de manobra`.

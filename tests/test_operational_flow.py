@@ -10,6 +10,7 @@ import app
 import services
 from chat_actions import normalize_action_candidate
 from flask import session
+from helpers import answer_direct_operational_query
 from storage import LocalStore
 
 
@@ -108,6 +109,107 @@ class OperationalFlowTests(unittest.TestCase):
         finalized = app.finalize_operational_proposal(proposal, [self.store.get_port_call(port_call["id"])])
 
         self.assertEqual(finalized["missing_fields"], [])
+
+    def test_entry_report_accepts_scale_reference_passed_in_id_field(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "entry_report",
+                "target": {
+                    "maneuver_id": port_call["reference_code"],
+                    "maneuver_type": "entry",
+                },
+                "fields": {
+                    "maneuver_started_local": "2026-03-24T10:00",
+                    "maneuver_finished_local": "2026-03-24T12:00",
+                    "draft_m": "9.94",
+                },
+                "missing_fields": [],
+            },
+            "admin",
+        )
+
+        finalized = app.finalize_operational_proposal(proposal, [self.store.get_port_call(port_call["id"])])
+
+        self.assertEqual(finalized["port_call_id"], port_call["id"])
+        self.assertEqual(finalized["target"]["reference_code"], port_call["reference_code"])
+        self.assertEqual(finalized["target"]["maneuver_id"], "")
+        self.assertEqual(finalized["missing_fields"], [])
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            result, message = app.execute_pending_operational_action(
+                finalized,
+                username="admin",
+                role="admin",
+            )
+
+        self.assertIn("registo de entrada guardado", message.lower())
+        self.assertEqual(result["status"], "in_port")
+
+    def test_entry_report_accepts_maneuver_id_passed_in_reference_field(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        entry = next(item for item in self.store.get_port_call(port_call["id"])["maneuver_history"] if item["type"] == "entry")
+
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "entry_report",
+                "target": {
+                    "reference_code": entry["id"][:8].upper(),
+                    "maneuver_type": "entry",
+                },
+                "fields": {
+                    "maneuver_started_local": "2026-03-24T10:00",
+                    "maneuver_finished_local": "2026-03-24T12:00",
+                    "draft_m": "9.94",
+                },
+                "missing_fields": [],
+            },
+            "admin",
+        )
+
+        finalized = app.finalize_operational_proposal(proposal, [self.store.get_port_call(port_call["id"])])
+
+        self.assertEqual(finalized["port_call_id"], port_call["id"])
+        self.assertEqual(finalized["target"]["reference_code"], port_call["reference_code"])
+        self.assertEqual(finalized["target"]["maneuver_id"], entry["id"])
+        self.assertEqual(finalized["missing_fields"], [])
+
+    def test_direct_operational_query_returns_real_maneuver_id_not_scale_reference(self) -> None:
+        port_call = self.store.create_port_call(
+            vessel_name="OCEAN BULKER",
+            eta="2026-03-29T15:10:00+00:00",
+            created_by="admin",
+            berth="Teporset",
+            last_port="Casablanca",
+            next_port="Setubal",
+            notes="Registo do agente · Entrada\nCalado: 10.8",
+            vessel_imo="9999999",
+            vessel_call_sign="CQ1234",
+            vessel_flag="Malta",
+            vessel_type="Graneleiro",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="10.8",
+            vessel_dwt_t="22330",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        refreshed = self.store.get_port_call(port_call["id"])
+        entry = next(item for item in refreshed["maneuver_history"] if item["type"] == "entry")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "piloto"
+            answer = answer_direct_operational_query("qual o id da manobra de entrada do OCEAN BULKER?")
+
+        self.assertIsNotNone(answer)
+        self.assertIn(entry["id"][:8].upper(), answer["answer"])
+        self.assertNotIn(port_call["reference_code"], answer["answer"])
 
     def test_completed_maneuver_only_moves_to_archive_after_report(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")

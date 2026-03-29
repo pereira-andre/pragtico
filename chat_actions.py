@@ -942,6 +942,19 @@ def _normalize_maneuver_id(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9-]", "", clean).lower()
 
 
+def _looks_like_scale_reference(value: str) -> bool:
+    clean = re.sub(r"[^A-Za-z0-9]", "", str(value or "")).upper()
+    return clean.startswith("PTSET")
+
+
+def _looks_like_maneuver_id_token(value: str) -> bool:
+    clean = _normalize_maneuver_id(value)
+    return bool(
+        re.fullmatch(r"[a-f0-9]{8}", clean)
+        or re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4,})+", clean)
+    )
+
+
 def _extract_positional_slash_target(body: str) -> Dict[str, str]:
     if ":" in (body or "") or "=" in (body or ""):
         return {}
@@ -966,7 +979,12 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
         positional_target["reference_code"] = identifier_tokens[0]
         positional_target["maneuver_id"] = _normalize_maneuver_id(identifier_tokens[0])
     elif len(identifier_tokens) > 1:
-        positional_target["reference_code"] = identifier_tokens[-1]
+        reference_token = next((token for token in identifier_tokens if _looks_like_scale_reference(token)), identifier_tokens[-1])
+        positional_target["reference_code"] = reference_token
+        remaining_tokens = [token for token in identifier_tokens if token != reference_token]
+        if remaining_tokens:
+            maneuver_token = next((token for token in remaining_tokens if _looks_like_maneuver_id_token(token)), remaining_tokens[0])
+            positional_target["maneuver_id"] = _normalize_maneuver_id(maneuver_token)
     return positional_target
 
 
@@ -1867,6 +1885,13 @@ def resolve_port_call(port_calls: List[Dict], target: Dict) -> Optional[Dict]:
     if target_maneuver_id:
         matches = []
         for item in port_calls:
+            row_maneuver_id = _normalize_maneuver_id(item.get("maneuver_id", ""))
+            if row_maneuver_id and (
+                row_maneuver_id == target_maneuver_id
+                or row_maneuver_id.startswith(target_maneuver_id)
+            ):
+                matches.append(item)
+                continue
             for maneuver in item.get("maneuver_history", []) or []:
                 current_id = _normalize_maneuver_id(maneuver.get("id", ""))
                 if current_id == target_maneuver_id or current_id.startswith(target_maneuver_id):
