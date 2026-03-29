@@ -1411,10 +1411,14 @@ def merge_action_candidate(existing: Dict, updates: Dict, role: str) -> Optional
         return existing
 
     action = (updates.get("action") or existing.get("action") or "").strip()
-    target = {
-        **(existing.get("target") or {}),
-        **(updates.get("target") or {}),
-    }
+    target = dict(existing.get("target") or {})
+    for key, value in (updates.get("target") or {}).items():
+        if isinstance(value, str):
+            if " ".join(value.split()):
+                target[key] = value
+            continue
+        if value not in (None, [], {}):
+            target[key] = value
     existing_fields = existing.get("fields") or {}
     update_fields = dict(updates.get("fields") or {})
     update_reason = " ".join(str(updates.get("reason") or "").strip().split())
@@ -1676,29 +1680,30 @@ def normalize_action_candidate(candidate: Dict, role: str) -> Optional[Dict]:
         if not normalized_fields.get("vessel_name"):
             normalized_fields["vessel_name"] = " ".join((target.get("vessel_name") or "").strip().split())
         target["maneuver_type"] = ""
+    normalized_target = {
+        "maneuver_id": _normalize_maneuver_id(target.get("maneuver_id", "")),
+        "reference_code": " ".join((target.get("reference_code") or "").strip().split()),
+        "vessel_name": " ".join((target.get("vessel_name") or "").strip().split()),
+        "maneuver_type": maneuver_type,
+    }
     constraints = normalized_fields.get("constraints")
     if not isinstance(constraints, list):
         constraints = []
-    missing_fields = required_missing_fields(action, normalized_fields)
+    missing_fields = proposal_missing_field_labels(action, normalized_fields, normalized_target)
 
     return {
         "intent": "action",
         "action": action,
         "confidence": max(0.0, min(float(candidate.get("confidence") or 0.0), 1.0)),
         "reason": " ".join((candidate.get("reason") or "").strip().split()),
-        "target": {
-            "maneuver_id": _normalize_maneuver_id(target.get("maneuver_id", "")),
-            "reference_code": " ".join((target.get("reference_code") or "").strip().split()),
-            "vessel_name": " ".join((target.get("vessel_name") or "").strip().split()),
-            "maneuver_type": maneuver_type,
-        },
+        "target": normalized_target,
         "fields": {
             key: value
             for key, value in normalized_fields.items()
             if key != "constraints"
         }
         | {"constraints": [str(item).strip() for item in constraints if str(item).strip()]},
-        "missing_fields": display_missing_field_labels(missing_fields),
+        "missing_fields": missing_fields,
     }
 
 

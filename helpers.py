@@ -1120,6 +1120,7 @@ def load_pending_chat_action(username: str, conversation_id: str) -> dict | None
     )
     if normalized and normalized.get("intent") == "action":
         proposal = {**proposal, **normalized, "port_call_id": proposal.get("port_call_id", ""), "maneuver_id": proposal.get("maneuver_id", "")}
+        proposal = refresh_proposal_missing_fields(proposal)
         payload = {**payload, "proposal": proposal}
         services.store.set_runtime_state(pending_action_state_key(username, conversation_id), payload)
     target_port_call = None

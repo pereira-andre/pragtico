@@ -216,6 +216,40 @@ class OperationalFlowTests(unittest.TestCase):
         entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
         self.assertEqual(entry["state"], "completed")
 
+    def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "/registar-manobra Tipo de manobra: Entrada Início da manobra: 29/03/2026, 07:45 Fim da manobra: 29/03/2026, 08:30 Calado: 9,8 m Observações: 2 rebocadores",
+                },
+            )
+
+            first_payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(first_payload["answer_origin"], "slash_template")
+            self.assertIn("ref ou nome do navio", first_payload["pending_action"]["proposal"]["missing_fields"])
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "ok",
+                },
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["answer_origin"], "pending_action_block")
+        self.assertIn("Ainda faltam dados obrigatórios", payload["answer"])
+        self.assertIsNotNone(payload["pending_action"])
+
     def test_finalize_edit_plan_reuses_existing_planned_time(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
 

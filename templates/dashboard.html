@@ -628,7 +628,8 @@
                 </td>
                 <td>
                   <strong><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">{{ item.reference_code }}</a></strong><br>
-                  {{ item.vessel_name }}
+                  {{ item.vessel_name }}<br>
+                  <span class="muted">ID {{ item.maneuver_id[:8]|upper }}</span>
                 </td>
                 <td>{{ item.planned_label }}</td>
                 <td><span class="planned-status planned-status-{{ item.situation_class }}">{{ item.situation_label }}</span></td>
