@@ -14,6 +14,16 @@ ACTION_SPECS = {
         "roles": {"admin", "agente"},
         "requires_target": False,
     },
+    "edit_port_call": {
+        "label": "Editar escala",
+        "roles": {"admin"},
+        "requires_target": True,
+    },
+    "delete_port_call": {
+        "label": "Apagar escala",
+        "roles": {"admin"},
+        "requires_target": True,
+    },
     # --- Entrada — Piloto/Admin operam ---
     "approve_entry": {
         "label": "Aprovar entrada",
@@ -33,6 +43,16 @@ ACTION_SPECS = {
     "entry_report": {
         "label": "Registar manobra de entrada",
         "roles": {"admin", "piloto"},
+        "requires_target": True,
+    },
+    "edit_maneuver_report": {
+        "label": "Editar registo de manobra",
+        "roles": {"admin", "piloto"},
+        "requires_target": True,
+    },
+    "delete_maneuver_report": {
+        "label": "Apagar registo de manobra",
+        "roles": {"admin"},
         "requires_target": True,
     },
     # --- Saída — Agente planeia, Piloto/Admin operam ---
@@ -90,6 +110,11 @@ ACTION_SPECS = {
     # --- Edição de planeamento — Agente/Admin editam ---
     "edit_maneuver_plan": {
         "label": "Editar planeamento",
+        "roles": {"admin", "agente"},
+        "requires_target": True,
+    },
+    "delete_maneuver": {
+        "label": "Apagar manobra",
         "roles": {"admin", "agente"},
         "requires_target": True,
     },
@@ -168,6 +193,29 @@ TIME_OR_STATUS_HINT_RE = re.compile(
 OPERATIONAL_OBJECT_HINTS = ("navio", "escala", "manobra", "entrada", "saida", "saída", "mudanca", "mudança")
 TIME_ONLY_RE = re.compile(r"^\d{1,2}:\d{2}$")
 PENDING_UPDATE_FIELD_ALIASES = {
+    "maneuver_id": [
+        "id da manobra",
+        "id manobra",
+        "manobra id",
+        "maneuver id",
+        "maneuver_id",
+    ],
+    "reference_code": [
+        "ref",
+        "referencia",
+        "referência",
+        "numero de escala",
+        "número de escala",
+        "codigo de escala",
+        "código de escala",
+        "reference_code",
+    ],
+    "vessel_name": ["nome do navio", "nome navio", "navio", "vessel_name"],
+    "maneuver_type": [
+        "tipo de manobra",
+        "tipo manobra",
+        "manobra",
+    ],
     "change_reason": [
         "motivo da alteracao",
         "motivo da alteração",
@@ -184,9 +232,12 @@ PENDING_UPDATE_FIELD_ALIASES = {
         "marcação",
     ],
     "notes": ["notes", "nota", "observacoes", "observações", "obs"],
+    "constraints": ["restricoes", "restrições", "constraints"],
     "berth": ["cais previsto", "cais", "planned_quay", "planned_berth", "quay", "berth", "pier"],
     "destination_berth": ["cais destino", "destination_quay", "destination_berth", "destination_pier"],
     "origin_berth": ["cais origem", "origin_quay", "origin_berth", "origin_pier"],
+    "origin": ["origem"],
+    "destination": ["destino"],
     "next_port": ["proximo porto", "próximo porto", "próximo destino", "proximo destino", "next_port", "port_of_destination"],
     "last_port": ["ultimo porto", "último porto", "last_port", "port_of_origin"],
     "eta_local": ["eta de chegada", "eta chegada", "eta", "eta_local"],
@@ -233,6 +284,51 @@ PENDING_UPDATE_FIELD_ALIASES = {
     "vessel_gt_t": ["gt", "gt (t)", "vessel_gt_t", "arqueacao bruta", "arqueação bruta"],
     "vessel_dwt_t": ["dwt", "dwt (t)", "vessel_dwt_t", "deadweight"],
     "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "calado (m)", "max_draft", "vessel_max_draft_m"],
+}
+SLASH_COMMAND_ALIASES = {
+    "help": "help",
+    "avisos-locais": "local_warnings",
+    "ondulacao": "wave",
+    "ondulação": "wave",
+    "leitura-costeira": "wave",
+    "registar-escala": "register_scale",
+    "nova-escala": "register_scale",
+    "editar-escala": "edit_scale",
+    "apagar-escala": "delete_scale",
+    "criar-manobra": "create_maneuver",
+    "editar-manobra": "edit_maneuver",
+    "apagar-manobra": "delete_maneuver",
+    "aprovar": "approve_maneuver",
+    "registar-manobra": "create_report",
+    "editar-registo-manobra": "edit_report",
+    "apagar-registo-manobra": "delete_report",
+    "abortar": "abort_maneuver",
+    "mares": "tides",
+    "meteorologia": "weather",
+    "regra": "rule",
+}
+SLASH_COMMAND_FIELD_ALIASES = {
+    "maneuver_id": [
+        "id da manobra",
+        "id manobra",
+        "manobra id",
+        "maneuver id",
+        "maneuver_id",
+    ],
+    "reference_code": [
+        "ref",
+        "referencia",
+        "referência",
+        "numero de escala",
+        "número de escala",
+        "codigo de escala",
+        "código de escala",
+        "reference_code",
+    ],
+    "maneuver_type": [
+        "tipo de manobra",
+        "tipo manobra",
+    ],
 }
 FIELD_ALIASES = {
     "name": "vessel_name",
@@ -366,11 +462,14 @@ REQUIRED_FIELDS_BY_ACTION = {
     "entry_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
     "departure_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
     "shift_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
+    "edit_maneuver_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m", "change_reason"},
     "schedule_departure": {"planned_departure_at_local", "next_port"},
     "schedule_shift": {"planned_shift_at_local", "destination_berth"},
     "edit_maneuver_plan": {"planned_at_local", "change_reason"},
 }
 DISPLAY_FIELD_LABELS = {
+    "maneuver_id": "ID da manobra",
+    "target_port_call": "ref ou nome do navio",
     "vessel_name": "nome do navio",
     "vessel_imo": "IMO",
     "vessel_call_sign": "indicativo",
@@ -634,8 +733,14 @@ def normalize_action_fields(action: str, fields: Dict) -> Dict:
 
     _consume(fields or {})
 
+    if "constraints" in normalized and isinstance(normalized.get("constraints"), str):
+        normalized["constraints"] = [
+            item.strip()
+            for item in re.split(r"[,\s]+", normalized["constraints"])
+            if item.strip()
+        ]
     if "reason" in normalized:
-        if action == "edit_maneuver_plan" and not normalized.get("change_reason"):
+        if action in {"edit_maneuver_plan", "edit_maneuver_report"} and not normalized.get("change_reason"):
             normalized["change_reason"] = normalized["reason"]
         elif action in {"abort_entry", "abort_departure", "abort_shift"} and not normalized.get("aborted_reason"):
             normalized["aborted_reason"] = normalized["reason"]
@@ -683,6 +788,47 @@ def display_missing_field_labels(fields: List[str]) -> List[str]:
     return [DISPLAY_FIELD_LABELS.get(field, field) for field in fields]
 
 
+def required_target_missing_fields(action: str, target: Dict) -> List[str]:
+    if action == "create_port_call":
+        return []
+
+    missing = []
+    maneuver_id = _normalize_maneuver_id((target or {}).get("maneuver_id", ""))
+    if not maneuver_id and not (
+        " ".join(str((target or {}).get("reference_code") or "").split())
+        or " ".join(str((target or {}).get("vessel_name") or "").split())
+    ):
+        missing.append("target_port_call")
+
+    maneuver_actions = {
+        "edit_maneuver_plan",
+        "delete_maneuver",
+        "approve_entry",
+        "approve_departure",
+        "approve_shift",
+        "entry_report",
+        "departure_report",
+        "shift_report",
+        "edit_maneuver_report",
+        "delete_maneuver_report",
+        "abort_entry",
+        "abort_departure",
+        "abort_shift",
+    }
+    if action in maneuver_actions and not maneuver_id and (target or {}).get("maneuver_type", "") not in MANEUVER_TYPES:
+        missing.append("maneuver_type")
+    return missing
+
+
+def proposal_missing_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
+    missing = required_missing_fields(action, fields) + required_target_missing_fields(action, target)
+    deduped = []
+    for item in missing:
+        if item not in deduped:
+            deduped.append(item)
+    return display_missing_field_labels(deduped)
+
+
 def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     clean = " ".join(str(raw_value or "").strip().split())
     if not clean:
@@ -696,23 +842,26 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     if canonical == "tug_count":
         match = re.search(r"\d+", clean)
         return match.group(0) if match else clean
+    if canonical == "maneuver_id":
+        match = re.search(r"[A-Za-z0-9-]+", clean)
+        return match.group(0) if match else clean
     if canonical in {"vessel_loa_m", "vessel_beam_m", "vessel_gt_t", "vessel_dwt_t", "vessel_max_draft_m", "draft_m"}:
         match = re.search(r"\d+(?:[.,]\d+)*", clean)
         return match.group(0) if match else clean
     return clean
 
 
-def _extract_labelled_values(question: str) -> Dict[str, object]:
+def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]]) -> Dict[str, object]:
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
     search_text = text.lower()
     hits = []
-    for canonical, aliases in PENDING_UPDATE_FIELD_ALIASES.items():
+    for canonical, aliases in alias_map.items():
         for alias in aliases:
             needle = alias.lower().strip()
             pattern = re.compile(
-                rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b)\s*",
+                rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b|\bé\b)\s*",
                 flags=re.IGNORECASE,
             )
             match = pattern.search(search_text)
@@ -730,10 +879,475 @@ def _extract_labelled_values(question: str) -> Dict[str, object]:
         clean_value = _clean_extracted_value(canonical, raw_value)
         if clean_value:
             extracted[canonical] = clean_value
+    return extracted
+
+
+def _extract_labelled_values(question: str) -> Dict[str, object]:
+    extracted = _extract_values_from_alias_map(question, PENDING_UPDATE_FIELD_ALIASES)
     constraint_flags = _extract_constraint_flags(question)
     if constraint_flags:
         extracted["constraints"] = constraint_flags
     return extracted
+
+
+def _normalize_command_name(value: str) -> str:
+    return _lookup_key(value).replace(" ", "-")
+
+
+def _normalize_maneuver_type_label(value: str) -> str:
+    clean = _lookup_key(value)
+    mapping = {
+        "entrada": "entry",
+        "entry": "entry",
+        "saida": "departure",
+        "saida do navio": "departure",
+        "departure": "departure",
+        "mudanca": "shift",
+        "mudanca de cais": "shift",
+        "shift": "shift",
+    }
+    return mapping.get(clean, "")
+
+
+def _normalize_maneuver_id(value: str) -> str:
+    clean = " ".join(str(value or "").strip().split())
+    if not clean:
+        return ""
+    return re.sub(r"[^A-Za-z0-9-]", "", clean).lower()
+
+
+def _extract_slash_maneuver_type(value: str) -> str:
+    match = re.search(
+        r"\btipo\s+de\s+manobra\s*(?:=|:|\beh\b|\be\b)\s*(entrada|saida|saída|mudanca|mudança|entry|departure|shift)\b",
+        value or "",
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return ""
+    return _normalize_maneuver_type_label(match.group(1))
+
+
+def looks_like_slash_command(question: str) -> bool:
+    return bool((question or "").strip().startswith("/"))
+
+
+def build_scale_edit_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato e eu atualizo a escala:",
+            "Ref: ",
+            "Nome do navio: ",
+            "ETA de chegada: DD/MM/AAAA, HH:MM",
+            "Cais previsto: ",
+            "Último porto: ",
+            "Próximo destino: ",
+            "IMO: ",
+            "Indicativo: ",
+            "Bandeira: ",
+            "Tipo de navio: ",
+            "LOA (m): ",
+            "Boca (m): ",
+            "GT (t): ",
+            "DWT (t): ",
+            "Calado máximo (m): ",
+            "Observações: ",
+        ]
+    )
+
+
+def build_delete_scale_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para apagar a escala:",
+            "Ref: ",
+        ]
+    )
+
+
+def build_maneuver_plan_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para criar ou editar a manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Hora prevista: DD/MM/AAAA, HH:MM",
+            "Origem: ",
+            "Destino: ",
+            "Calado: ",
+            "Rebocadores: ",
+            "Restrições: daylight, gas, estrategico",
+            "Observações: ",
+        ]
+    )
+
+
+def build_delete_maneuver_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para apagar a manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+        ]
+    )
+
+
+def build_approval_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para aprovar a manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Observações: ",
+        ]
+    )
+
+
+def build_command_report_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para registar ou editar o registo da manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Início da manobra: DD/MM/AAAA, HH:MM",
+            "Fim da manobra: DD/MM/AAAA, HH:MM",
+            "Calado: ",
+            "Observações: ",
+        ]
+    )
+
+
+def build_command_abort_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para abortar a manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+            "Motivo: ",
+        ]
+    )
+
+
+def build_delete_report_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para apagar o registo da manobra:",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+        ]
+    )
+
+
+def build_action_reply_template(action: str, missing_fields: Optional[List[str]] = None) -> str:
+    if action == "create_port_call":
+        return build_port_call_reply_template()
+    if action == "edit_port_call":
+        return build_scale_edit_reply_template()
+    if action == "delete_port_call":
+        return build_delete_scale_reply_template()
+    if action in {"schedule_departure", "schedule_shift", "edit_maneuver_plan"}:
+        return build_maneuver_plan_reply_template()
+    if action in {"approve_entry", "approve_departure", "approve_shift"}:
+        return build_approval_reply_template()
+    if action in {"entry_report", "departure_report", "shift_report", "edit_maneuver_report"}:
+        return build_maneuver_report_reply_template()
+    if action in {"delete_maneuver_report"}:
+        return build_delete_report_reply_template()
+    if action in {"abort_entry", "abort_departure", "abort_shift"}:
+        return build_abort_reply_template()
+    if action in {"delete_maneuver"}:
+        return build_delete_maneuver_reply_template()
+    return ""
+
+
+def build_slash_help(role: str) -> str:
+    clean_role = (role or "").strip().lower()
+    lines = [
+        "Comandos disponíveis:",
+        "/help",
+        "/avisos-locais",
+        "/ondulacao",
+        "/mares hoje",
+        "/meteorologia hoje",
+        "/regra 015",
+        "",
+        "Escalas:",
+    ]
+    if clean_role in {"admin", "agente"}:
+        lines.extend(
+            [
+                "/registar-escala",
+                "  cria uma nova escala com dados operacionais e do navio",
+            ]
+        )
+    if clean_role == "admin":
+        lines.extend(
+            [
+                "/editar-escala",
+                "  atualiza os dados de uma escala existente",
+                "/apagar-escala",
+                "  remove a escala",
+            ]
+        )
+    lines.extend(["", "Manobras:"])
+    if clean_role in {"admin", "agente"}:
+        lines.extend(
+            [
+                "/criar-manobra",
+                "/editar-manobra",
+                "/apagar-manobra",
+            ]
+        )
+    if clean_role in {"admin", "piloto"}:
+        lines.extend(
+            [
+                "/aprovar",
+                "/registar-manobra",
+                "/editar-registo-manobra",
+                "/abortar",
+            ]
+        )
+    if clean_role == "admin":
+        lines.append("/apagar-registo-manobra")
+    lines.extend(
+        [
+            "",
+            "Se o comando vier incompleto, o bot devolve o template certo para preencher.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def parse_slash_command(question: str, role: str) -> Optional[Dict]:
+    raw = (question or "").strip()
+    if not raw.startswith("/"):
+        return None
+    first_line, _, remainder = raw.partition("\n")
+    first_line = first_line.strip()
+    head, _, tail = first_line.partition(" ")
+    command_name = _normalize_command_name(head.lstrip("/"))
+    command = SLASH_COMMAND_ALIASES.get(command_name)
+    body = "\n".join(part for part in [tail.strip(), remainder.strip()] if part).strip()
+    if not command:
+        return {
+            "intent": "help",
+            "answer": "Comando não reconhecido.\n\n" + build_slash_help(role),
+        }
+    if command == "help":
+        return {"intent": "help", "answer": build_slash_help(role)}
+    if command == "local_warnings":
+        return {"intent": "query", "command": "local_warnings", "argument": body}
+    if command == "wave":
+        return {"intent": "query", "command": "wave", "argument": body}
+    if command == "tides":
+        return {"intent": "query", "command": "tides", "argument": body}
+    if command == "weather":
+        return {"intent": "query", "command": "weather", "argument": body}
+    if command == "rule":
+        return {"intent": "query", "command": "rule", "argument": body or tail.strip()}
+
+    command_aliases = _extract_values_from_alias_map(body, SLASH_COMMAND_FIELD_ALIASES) if body else {}
+    extracted_fields = _extract_labelled_values(body)
+    target = {
+        "maneuver_id": _normalize_maneuver_id(command_aliases.get("maneuver_id", "")),
+        "reference_code": " ".join(str(command_aliases.get("reference_code") or "").split()),
+        "vessel_name": " ".join(str(extracted_fields.get("vessel_name") or "").split()),
+        "maneuver_type": _extract_slash_maneuver_type(body) or _normalize_maneuver_type_label(command_aliases.get("maneuver_type", "")),
+    }
+
+    action = ""
+    template = ""
+    if command == "register_scale":
+        action = "create_port_call"
+        template = build_action_reply_template(action)
+    elif command == "edit_scale":
+        action = "edit_port_call"
+        template = build_action_reply_template(action)
+        if not (target["reference_code"] or target["vessel_name"]):
+            proposal = normalize_action_candidate(
+                {
+                    "intent": "action",
+                    "action": action,
+                    "confidence": 1.0,
+                    "reason": f"Comando explícito /{command_name}.",
+                    "target": target,
+                    "fields": extracted_fields,
+                    "missing_fields": [],
+                },
+                role,
+            )
+            if proposal and proposal.get("intent") == "action":
+                proposal["missing_fields"] = proposal_missing_field_labels(action, proposal.get("fields") or {}, proposal.get("target") or {})
+                return {"intent": "template", "answer": template, "proposal": proposal}
+            if proposal and proposal.get("intent") == "unsupported":
+                return {"intent": "unsupported", "answer": proposal.get("reason") or "A ação pedida não está autorizada para este perfil."}
+            return {"intent": "template", "answer": template}
+    elif command == "delete_scale":
+        action = "delete_port_call"
+        template = build_action_reply_template(action)
+        if not (target["reference_code"] or target["vessel_name"]):
+            proposal = normalize_action_candidate(
+                {
+                    "intent": "action",
+                    "action": action,
+                    "confidence": 1.0,
+                    "reason": f"Comando explícito /{command_name}.",
+                    "target": target,
+                    "fields": extracted_fields,
+                    "missing_fields": [],
+                },
+                role,
+            )
+            if proposal and proposal.get("intent") == "action":
+                proposal["missing_fields"] = proposal_missing_field_labels(action, proposal.get("fields") or {}, proposal.get("target") or {})
+                return {"intent": "template", "answer": template, "proposal": proposal}
+            if proposal and proposal.get("intent") == "unsupported":
+                return {"intent": "unsupported", "answer": proposal.get("reason") or "A ação pedida não está autorizada para este perfil."}
+            return {"intent": "template", "answer": template}
+    else:
+        maneuver_action_map = {
+            "create_maneuver": {
+                "entry": "edit_maneuver_plan",
+                "departure": "schedule_departure",
+                "shift": "schedule_shift",
+            },
+            "edit_maneuver": {
+                "entry": "edit_maneuver_plan",
+                "departure": "edit_maneuver_plan",
+                "shift": "edit_maneuver_plan",
+            },
+            "delete_maneuver": {
+                "entry": "delete_maneuver",
+                "departure": "delete_maneuver",
+                "shift": "delete_maneuver",
+            },
+            "approve_maneuver": {
+                "entry": "approve_entry",
+                "departure": "approve_departure",
+                "shift": "approve_shift",
+            },
+            "create_report": {
+                "entry": "entry_report",
+                "departure": "departure_report",
+                "shift": "shift_report",
+            },
+            "edit_report": {
+                "entry": "edit_maneuver_report",
+                "departure": "edit_maneuver_report",
+                "shift": "edit_maneuver_report",
+            },
+            "delete_report": {
+                "entry": "delete_maneuver_report",
+                "departure": "delete_maneuver_report",
+                "shift": "delete_maneuver_report",
+            },
+            "abort_maneuver": {
+                "entry": "abort_entry",
+                "departure": "abort_departure",
+                "shift": "abort_shift",
+            },
+        }
+        template_map = {
+            "create_maneuver": build_maneuver_plan_reply_template(),
+            "edit_maneuver": build_maneuver_plan_reply_template(),
+            "delete_maneuver": build_delete_maneuver_reply_template(),
+            "approve_maneuver": build_approval_reply_template(),
+            "create_report": build_command_report_reply_template(),
+            "edit_report": build_command_report_reply_template(),
+            "delete_report": build_delete_report_reply_template(),
+            "abort_maneuver": build_command_abort_reply_template(),
+        }
+        template = template_map.get(command, "")
+        has_maneuver_target = bool(target["maneuver_id"])
+        if (not has_maneuver_target and not (target["reference_code"] or target["vessel_name"])) or (not has_maneuver_target and not target["maneuver_type"]):
+            preview_action = ""
+            if command == "edit_maneuver":
+                preview_action = "edit_maneuver_plan"
+            elif command == "delete_maneuver":
+                preview_action = "delete_maneuver"
+            elif target["maneuver_type"]:
+                preview_action = maneuver_action_map.get(command, {}).get(target["maneuver_type"], "")
+            elif has_maneuver_target and command == "create_report":
+                preview_action = "entry_report"
+            elif has_maneuver_target and command == "approve_maneuver":
+                preview_action = "approve_entry"
+            elif has_maneuver_target and command == "edit_report":
+                preview_action = "edit_maneuver_report"
+            elif has_maneuver_target and command == "delete_report":
+                preview_action = "delete_maneuver_report"
+            elif has_maneuver_target and command == "abort_maneuver":
+                preview_action = "abort_entry"
+            if preview_action:
+                proposal = normalize_action_candidate(
+                    {
+                        "intent": "action",
+                        "action": preview_action,
+                        "confidence": 1.0,
+                        "reason": f"Comando explícito /{command_name}.",
+                        "target": target,
+                        "fields": extracted_fields,
+                        "missing_fields": [],
+                    },
+                    role,
+                )
+                if proposal and proposal.get("intent") == "action":
+                    proposal["missing_fields"] = proposal_missing_field_labels(preview_action, proposal.get("fields") or {}, proposal.get("target") or {})
+                    return {"intent": "template", "answer": template, "proposal": proposal}
+                if proposal and proposal.get("intent") == "unsupported":
+                    return {"intent": "unsupported", "answer": proposal.get("reason") or "A ação pedida não está autorizada para este perfil."}
+            return {"intent": "template", "answer": template}
+        action = maneuver_action_map.get(command, {}).get(target["maneuver_type"], "")
+        if not action and target["maneuver_id"]:
+            fallback_by_command = {
+                "create_report": "entry_report",
+                "approve_maneuver": "approve_entry",
+                "edit_report": "edit_maneuver_report",
+                "delete_report": "delete_maneuver_report",
+                "abort_maneuver": "abort_entry",
+                "edit_maneuver": "edit_maneuver_plan",
+                "delete_maneuver": "delete_maneuver",
+            }
+            action = fallback_by_command.get(command, "")
+        if not action:
+            return {"intent": "template", "answer": template}
+
+    proposal = normalize_action_candidate(
+        {
+            "intent": "action",
+            "action": action,
+            "confidence": 1.0,
+            "reason": f"Comando explícito /{command_name}.",
+            "target": target,
+            "fields": extracted_fields,
+            "missing_fields": [],
+        },
+        role,
+    )
+    if proposal and proposal.get("intent") == "action":
+        fields = proposal.setdefault("fields", {})
+        if action == "schedule_departure":
+            if fields.get("planned_at_local") and not fields.get("planned_departure_at_local"):
+                fields["planned_departure_at_local"] = fields["planned_at_local"]
+            if fields.get("destination") and not fields.get("next_port"):
+                fields["next_port"] = fields["destination"]
+        elif action == "schedule_shift":
+            if fields.get("planned_at_local") and not fields.get("planned_shift_at_local"):
+                fields["planned_shift_at_local"] = fields["planned_at_local"]
+            if fields.get("destination") and not fields.get("destination_berth"):
+                fields["destination_berth"] = fields["destination"]
+            if fields.get("origin") and not fields.get("origin_berth"):
+                fields["origin_berth"] = fields["origin"]
+    if not proposal or proposal.get("intent") != "action":
+        answer = proposal.get("reason") if proposal else "Comando inválido."
+        if template:
+            answer = f"{answer}\n\n{template}"
+        return {"intent": "unsupported", "answer": answer}
+    return {"intent": "action", "proposal": proposal}
 
 
 def _normalize_time_only(value: str, fallback: str) -> str:
@@ -764,6 +1378,30 @@ def extract_pending_field_updates(question: str, proposal: Dict) -> Dict[str, st
         fallback = fields.get("planned_shift_at_local") or ""
         extracted["planned_shift_at_local"] = _normalize_time_only(extracted["planned_shift_at_local"], fallback)
     return extracted
+
+
+def extract_pending_target_updates(question: str) -> Dict[str, str]:
+    extracted = _extract_values_from_alias_map(
+        question,
+        {
+            "maneuver_id": SLASH_COMMAND_FIELD_ALIASES["maneuver_id"],
+            "reference_code": SLASH_COMMAND_FIELD_ALIASES["reference_code"],
+            "vessel_name": PENDING_UPDATE_FIELD_ALIASES["vessel_name"],
+            "maneuver_type": SLASH_COMMAND_FIELD_ALIASES["maneuver_type"],
+        },
+    )
+    target = {}
+    if extracted.get("maneuver_id"):
+        target["maneuver_id"] = _normalize_maneuver_id(str(extracted["maneuver_id"]))
+    if extracted.get("reference_code"):
+        target["reference_code"] = " ".join(str(extracted["reference_code"]).split())
+    if extracted.get("vessel_name"):
+        target["vessel_name"] = " ".join(str(extracted["vessel_name"]).split())
+    if extracted.get("maneuver_type"):
+        maneuver_type = _normalize_maneuver_type_label(str(extracted["maneuver_type"]))
+        if maneuver_type:
+            target["maneuver_type"] = maneuver_type
+    return target
 
 
 def merge_action_candidate(existing: Dict, updates: Dict, role: str) -> Optional[Dict]:
@@ -1049,6 +1687,7 @@ def normalize_action_candidate(candidate: Dict, role: str) -> Optional[Dict]:
         "confidence": max(0.0, min(float(candidate.get("confidence") or 0.0), 1.0)),
         "reason": " ".join((candidate.get("reason") or "").strip().split()),
         "target": {
+            "maneuver_id": _normalize_maneuver_id(target.get("maneuver_id", "")),
             "reference_code": " ".join((target.get("reference_code") or "").strip().split()),
             "vessel_name": " ".join((target.get("vessel_name") or "").strip().split()),
             "maneuver_type": maneuver_type,
@@ -1066,6 +1705,17 @@ def normalize_action_candidate(candidate: Dict, role: str) -> Optional[Dict]:
 def resolve_port_call(port_calls: List[Dict], target: Dict) -> Optional[Dict]:
     if not port_calls:
         return None
+    target_maneuver_id = _normalize_maneuver_id(target.get("maneuver_id"))
+    if target_maneuver_id:
+        matches = []
+        for item in port_calls:
+            for maneuver in item.get("maneuver_history", []) or []:
+                current_id = _normalize_maneuver_id(maneuver.get("id", ""))
+                if current_id == target_maneuver_id or current_id.startswith(target_maneuver_id):
+                    matches.append(item)
+                    break
+        if len(matches) == 1:
+            return matches[0]
     target_reference = _lookup_key(target.get("reference_code"))
     target_vessel = _lookup_key(target.get("vessel_name"))
 
@@ -1102,7 +1752,20 @@ def _maneuver_sort_key(item: Dict) -> tuple:
     )
 
 
-def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str) -> Optional[Dict]:
+def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str, maneuver_id: str = "") -> Optional[Dict]:
+    clean_maneuver_id = _normalize_maneuver_id(maneuver_id)
+    history_all = list(port_call.get("maneuver_history", []) or [])
+    if clean_maneuver_id:
+        direct_matches = []
+        for item in history_all:
+            current_id = _normalize_maneuver_id(item.get("id", ""))
+            if current_id == clean_maneuver_id or current_id.startswith(clean_maneuver_id):
+                direct_matches.append(item)
+        if len(direct_matches) == 1:
+            return direct_matches[0]
+        if len(direct_matches) > 1:
+            direct_matches.sort(key=_maneuver_sort_key)
+            return direct_matches[-1]
     clean_type = (maneuver_type or "").strip().lower()
     if clean_type not in MANEUVER_TYPES:
         return None
@@ -1114,18 +1777,26 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str) -> Option
     if not history:
         return None
 
-    if action.endswith("_report"):
+    if action in {"edit_maneuver_report", "delete_maneuver_report"}:
+        valid_states = {"approved", "completed"}
+    elif action.endswith("_report"):
         valid_states = {"approved", "completed"}
     elif action.startswith("approve_"):
         valid_states = {"pending"}
     elif action.startswith("abort_"):
         valid_states = {"pending", "approved"}
+    elif action == "delete_maneuver":
+        valid_states = {"pending", "approved", "completed", "aborted"}
     elif action == "edit_maneuver_plan":
         valid_states = {"pending", "approved"}
     else:
         valid_states = {"pending", "approved", "completed"}
 
     candidates = [item for item in history if (item.get("state") or "").strip().lower() in valid_states]
+    if action in {"edit_maneuver_report", "delete_maneuver_report"}:
+        completed_candidates = [item for item in candidates if (item.get("state") or "").strip().lower() == "completed"]
+        if completed_candidates:
+            candidates = completed_candidates
     if not candidates:
         candidates = history
     candidates.sort(key=_maneuver_sort_key)
@@ -1163,12 +1834,15 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     spec = ACTION_SPECS.get(action, {})
     label = spec.get("label") or action or "Ação"
     target = port_call or {}
+    proposal_target = proposal.get("target", {}) or {}
     fields = proposal.get("fields") or {}
     lines = [f"Proposta pronta para confirmar: {label}."]
-    if target:
+    if target or proposal_target.get("reference_code") or proposal_target.get("vessel_name"):
         lines.append(
-            f"Escala: {target.get('reference_code') or '--'} · {target.get('vessel_name') or '--'}."
+            f"Escala: {(target.get('reference_code') if target else proposal_target.get('reference_code')) or '--'} · {(target.get('vessel_name') if target else proposal_target.get('vessel_name')) or '--'}."
         )
+    if proposal_target.get("maneuver_id") or proposal.get("maneuver_id"):
+        lines.append(f"ID da manobra: {proposal_target.get('maneuver_id') or proposal.get('maneuver_id')}.")
     if proposal.get("target", {}).get("maneuver_type"):
         lines.append(f"Manobra: {proposal['target']['maneuver_type']}.")
     for key, value in fields.items():
@@ -1184,15 +1858,10 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     missing_fields = proposal.get("missing_fields") or []
     if missing_fields:
         lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")
-        if action == "create_port_call":
+        template = build_action_reply_template(action, missing_fields)
+        if template:
             lines.append("")
-            lines.append(build_port_call_reply_template())
-        elif action in {"entry_report", "departure_report", "shift_report"}:
-            lines.append("")
-            lines.append(build_maneuver_report_reply_template())
-        elif action in {"abort_entry", "abort_departure", "abort_shift"}:
-            lines.append("")
-            lines.append(build_abort_reply_template())
+            lines.append(template)
         lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
     else:
         lines.append("Confirma para aplicar a alteração no portal.")

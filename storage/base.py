@@ -204,6 +204,38 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def edit_port_call(
+        self,
+        port_call_id: str,
+        *,
+        updated_by: str,
+        vessel_name: Optional[str] = None,
+        eta: Optional[str] = None,
+        berth: Optional[str] = None,
+        last_port: Optional[str] = None,
+        next_port: Optional[str] = None,
+        notes: Optional[str] = None,
+        constraints: Optional[List[str]] = None,
+        vessel_short_name: Optional[str] = None,
+        vessel_imo: Optional[str] = None,
+        vessel_call_sign: Optional[str] = None,
+        vessel_flag: Optional[str] = None,
+        vessel_type: Optional[str] = None,
+        vessel_loa_m: Optional[str] = None,
+        vessel_beam_m: Optional[str] = None,
+        vessel_gt_t: Optional[str] = None,
+        vessel_max_draft_m: Optional[str] = None,
+        vessel_dwt_t: Optional[str] = None,
+    ) -> Dict:
+        """Edit the scale and vessel data for an existing port call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_port_call(self, port_call_id: str) -> Dict:
+        """Delete a port call and return the removed decorated record."""
+        raise NotImplementedError
+
+    @abstractmethod
     def create_port_call(
         self,
         vessel_name: str,
@@ -266,6 +298,7 @@ class BaseStore(ABC):
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot entry report to the port call's entry maneuver."""
         raise NotImplementedError
@@ -279,6 +312,7 @@ class BaseStore(ABC):
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot departure report to the port call's departure maneuver."""
         raise NotImplementedError
@@ -330,6 +364,7 @@ class BaseStore(ABC):
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot shift report to the port call's shift maneuver."""
         raise NotImplementedError
@@ -368,6 +403,28 @@ class BaseStore(ABC):
         change_reason: str,
     ) -> Dict:
         """Edit the report fields of a completed maneuver and log the change."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_maneuver(
+        self,
+        port_call_id: str,
+        maneuver_id: str,
+        *,
+        updated_by: str,
+    ) -> Dict:
+        """Delete a maneuver from a port call and return the updated or removed record."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_maneuver_report(
+        self,
+        port_call_id: str,
+        maneuver_id: str,
+        *,
+        updated_by: str,
+    ) -> Dict:
+        """Delete the report fields from an existing maneuver and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod

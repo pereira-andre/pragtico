@@ -93,3 +93,34 @@ class WaveService:
                 if self._cache:
                     return self._cache
                 raise
+
+    def summary_text(self) -> str:
+        conditions = self.get_current_conditions()
+        if not conditions:
+            return "Sem leitura costeira atual disponível."
+        return "\n".join(
+            [
+                "Leitura costeira atual:",
+                f"- Última leitura: {conditions.get('last_reading_label', '--')}",
+                f"- Altura significativa: {conditions.get('significant_height_label', '--')}",
+                f"- Altura máxima: {conditions.get('max_height_label', '--')}",
+                f"- Período médio: {conditions.get('mean_period_label', '--')}",
+                f"- Período máx. obs.: {conditions.get('max_observed_period_label', '--')}",
+                f"- Direção da ondulação: {conditions.get('direction', '--')}",
+                f"- Temperatura da água: {conditions.get('water_temp_label', '--')}",
+            ]
+        )
+
+    def context_source(self) -> Optional[Dict[str, Any]]:
+        if not self.enabled:
+            return None
+        summary = self.summary_text()
+        return {
+            "source_id": "WV1",
+            "document": "Leitura costeira atual",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "live_api",
+            "snippet": summary,
+            "text": summary,
+        }

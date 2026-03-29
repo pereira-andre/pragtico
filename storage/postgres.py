@@ -1307,6 +1307,102 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             raise ValueError("Escala não encontrada.")
         return _decorate_port_call(payload)
 
+    def edit_port_call(
+        self,
+        port_call_id: str,
+        *,
+        updated_by: str,
+        vessel_name: Optional[str] = None,
+        eta: Optional[str] = None,
+        berth: Optional[str] = None,
+        last_port: Optional[str] = None,
+        next_port: Optional[str] = None,
+        notes: Optional[str] = None,
+        constraints: Optional[List[str]] = None,
+        vessel_short_name: Optional[str] = None,
+        vessel_imo: Optional[str] = None,
+        vessel_call_sign: Optional[str] = None,
+        vessel_flag: Optional[str] = None,
+        vessel_type: Optional[str] = None,
+        vessel_loa_m: Optional[str] = None,
+        vessel_beam_m: Optional[str] = None,
+        vessel_gt_t: Optional[str] = None,
+        vessel_max_draft_m: Optional[str] = None,
+        vessel_dwt_t: Optional[str] = None,
+    ) -> Dict:
+        def mutator(current: Dict) -> Dict:
+            entry = _latest_maneuver(current.get("maneuver_history", []), "entry")
+            if not entry:
+                raise ValueError("Escala sem manobra de entrada associada.")
+
+            updated_vessel_name = _clean_text(vessel_name) if vessel_name is not None else current.get("vessel_name", "")
+            if len(updated_vessel_name) < 2:
+                raise ValueError("Indica o nome do navio.")
+            updated_berth = _clean_text(berth) if berth is not None else current.get("berth", "")
+            updated_last_port = _clean_text(last_port) if last_port is not None else current.get("last_port", "")
+            updated_next_port = _clean_text(next_port) if next_port is not None else current.get("next_port", "")
+            updated_eta = eta.strip() if eta is not None else (entry.get("planned_at") or current.get("eta") or "")
+            if not updated_eta:
+                raise ValueError("O ETA é obrigatório.")
+
+            vessel_profile = {
+                "vessel_short_name": _clean_text(vessel_short_name) if vessel_short_name is not None else current.get("vessel_short_name", ""),
+                "vessel_imo": _clean_text(vessel_imo) if vessel_imo is not None else current.get("vessel_imo", ""),
+                "vessel_call_sign": _clean_text(vessel_call_sign) if vessel_call_sign is not None else current.get("vessel_call_sign", ""),
+                "vessel_flag": _clean_text(vessel_flag) if vessel_flag is not None else current.get("vessel_flag", ""),
+                "vessel_type": _clean_text(vessel_type) if vessel_type is not None else current.get("vessel_type", ""),
+                "vessel_loa_m": _clean_text(vessel_loa_m) if vessel_loa_m is not None else current.get("vessel_loa_m", ""),
+                "vessel_beam_m": _clean_text(vessel_beam_m) if vessel_beam_m is not None else current.get("vessel_beam_m", ""),
+                "vessel_gt_t": _clean_text(vessel_gt_t) if vessel_gt_t is not None else current.get("vessel_gt_t", ""),
+                "vessel_max_draft_m": _clean_text(vessel_max_draft_m) if vessel_max_draft_m is not None else current.get("vessel_max_draft_m", ""),
+                "vessel_dwt_t": _clean_text(vessel_dwt_t) if vessel_dwt_t is not None else current.get("vessel_dwt_t", ""),
+            }
+            _validate_required_vessel_profile(vessel_profile)
+            _validate_required_operational_profile(
+                {
+                    "berth": updated_berth,
+                    "last_port": updated_last_port,
+                    "next_port": updated_next_port,
+                },
+                (
+                    ("berth", "cais previsto"),
+                    ("last_port", "porto anterior"),
+                    ("next_port", "próximo destino"),
+                ),
+            )
+
+            current.update(
+                {
+                    "vessel_name": updated_vessel_name,
+                    **vessel_profile,
+                    "berth": updated_berth,
+                    "last_port": updated_last_port,
+                    "next_port": updated_next_port,
+                }
+            )
+            if notes is not None:
+                current["notes"] = notes.strip()
+                entry["plan_note"] = notes.strip()
+            entry["planned_at"] = updated_eta
+            entry["origin"] = updated_last_port
+            entry["destination"] = updated_berth
+            if constraints is not None:
+                entry["constraints"] = normalize_constraint_codes(constraints)
+            entry["updated_at"] = iso_now()
+            return current
+
+        return self._mutate_port_call(port_call_id, mutator)
+
+    def delete_port_call(self, port_call_id: str) -> Dict:
+        with self._connect() as conn:
+            current = self._fetch_port_call_record(conn, port_call_id, for_update=True)
+            if not current:
+                raise ValueError("Escala não encontrada.")
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM port_calls WHERE id = %s", (port_call_id,))
+            conn.commit()
+        return _decorate_port_call(current)
+
     def create_port_call(
         self,
         vessel_name: str,
@@ -1604,6 +1700,54 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
 
         return self._mutate_port_call(port_call_id, mutator)
 
+    def delete_maneuver(
+        self,
+        port_call_id: str,
+        maneuver_id: str,
+        *,
+        updated_by: str,
+    ) -> Dict:
+        with self._connect() as conn:
+            current = self._fetch_port_call_record(conn, port_call_id, for_update=True)
+            if not current:
+                raise ValueError("Escala não encontrada.")
+            target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
+            if not target:
+                raise ValueError("Manobra não encontrada.")
+            if target.get("type") == "entry":
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM port_calls WHERE id = %s", (port_call_id,))
+                conn.commit()
+                return _decorate_port_call(current)
+            current["maneuver_history"] = [m for m in current.get("maneuver_history", []) if m.get("id") != maneuver_id]
+            current["updated_at"] = iso_now()
+            saved = self._save_port_call_record(conn, current)
+            conn.commit()
+        return _decorate_port_call(saved)
+
+    def delete_maneuver_report(
+        self,
+        port_call_id: str,
+        maneuver_id: str,
+        *,
+        updated_by: str,
+    ) -> Dict:
+        def mutator(current: Dict) -> Dict:
+            target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
+            if not target:
+                raise ValueError("Manobra não encontrada.")
+            target["report_note"] = ""
+            target["execution_started_at"] = None
+            target["execution_finished_at"] = None
+            target["reported_draft_m"] = ""
+            target["reported_by"] = None
+            target["reported_by_profile"] = _build_actor_snapshot(None)
+            target["reported_at"] = None
+            target["updated_at"] = iso_now()
+            return current
+
+        return self._mutate_port_call(port_call_id, mutator)
+
     def schedule_departure_plan(
         self,
         port_call_id: str,
@@ -1743,6 +1887,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -1752,9 +1897,19 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
-            entry = _latest_reportable_maneuver(current.get("maneuver_history", []), "entry")
+            entry = (
+                next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
+                if maneuver_id else
+                _latest_reportable_maneuver(current.get("maneuver_history", []), "entry")
+            )
             if not entry:
                 raise ValueError("Só podes registar a entrada depois da manobra estar concluída.")
+            if maneuver_id and entry.get("type") != "entry":
+                raise ValueError("O ID indicado não corresponde a uma manobra de entrada.")
+            if maneuver_id and entry.get("state") not in {"approved", "completed"}:
+                raise ValueError("Só podes registar a entrada depois da manobra estar concluída.")
+            if maneuver_id and (entry.get("report_note") or "").strip():
+                raise ValueError("Essa manobra já tem registo. Usa editar registo.")
             if entry.get("state") == "approved":
                 entry["state"] = "completed"
                 entry["completed_at"] = maneuver_finished_at
@@ -1780,6 +1935,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -1789,9 +1945,19 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
-            departure = _latest_reportable_maneuver(current.get("maneuver_history", []), "departure")
+            departure = (
+                next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
+                if maneuver_id else
+                _latest_reportable_maneuver(current.get("maneuver_history", []), "departure")
+            )
             if not departure:
                 raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
+            if maneuver_id and departure.get("type") != "departure":
+                raise ValueError("O ID indicado não corresponde a uma manobra de saída.")
+            if maneuver_id and departure.get("state") not in {"approved", "completed"}:
+                raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
+            if maneuver_id and (departure.get("report_note") or "").strip():
+                raise ValueError("Essa manobra já tem registo. Usa editar registo.")
             if departure.get("state") == "approved":
                 departure["state"] = "completed"
                 departure["completed_at"] = maneuver_finished_at
@@ -1931,6 +2097,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         maneuver_finished_at: str,
         draft_m: str,
         notes: str,
+        maneuver_id: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -1940,9 +2107,19 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
-            shift = _latest_reportable_maneuver(current.get("maneuver_history", []), "shift")
+            shift = (
+                next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
+                if maneuver_id else
+                _latest_reportable_maneuver(current.get("maneuver_history", []), "shift")
+            )
             if not shift:
                 raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
+            if maneuver_id and shift.get("type") != "shift":
+                raise ValueError("O ID indicado não corresponde a uma manobra de mudança.")
+            if maneuver_id and shift.get("state") not in {"approved", "completed"}:
+                raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
+            if maneuver_id and (shift.get("report_note") or "").strip():
+                raise ValueError("Essa manobra já tem registo. Usa editar registo.")
             if shift.get("state") == "approved":
                 shift["state"] = "completed"
                 shift["completed_at"] = maneuver_finished_at

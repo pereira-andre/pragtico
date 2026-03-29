@@ -15,8 +15,10 @@ import services
 from chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
+    build_action_reply_template,
     build_operational_action_prompt,
     build_pending_action_update_prompt,
+    build_slash_help,
     display_missing_field_labels,
     extract_json_object,
     extract_pending_field_updates,
@@ -26,11 +28,15 @@ from chat_actions import (
     looks_like_maneuver_report_payload,
     looks_like_port_call_payload,
     looks_like_operational_command,
+    looks_like_slash_command,
     merge_action_candidate,
     normalize_action_candidate,
+    parse_slash_command,
+    proposal_missing_field_labels,
     required_missing_fields,
     resolve_maneuver,
     resolve_port_call,
+    extract_pending_target_updates,
     visible_port_calls_from_activity,
 )
 from cost_engine import (
@@ -51,6 +57,28 @@ from storage import (
 )
 
 logger = logging.getLogger(__name__)
+RULE_CODE_TITLES = {
+    "005": "IT-005 Multiusos Z1",
+    "006": "IT-006 Multiusos Z2",
+    "007": "IT-007 Autoeuropa",
+    "008": "IT-008 Ecooil",
+    "009": "IT-009 Secil",
+    "010": "IT-010 Tanquisado",
+    "011": "IT-011 Termitrena",
+    "012": "IT-012 Praias do Sado",
+    "013": "IT-013 Uralada",
+    "014": "IT-014 Lisnave",
+    "015": "IT-015 Fundeadouros",
+    "016": "IT-016 Rebocadores",
+    "017": "IT-017 Pilotagem Assistida",
+    "018": "IT-018 Normas Especiais",
+    "029": "IT-029 Cais da SAPEC",
+    "036": "IT-036 Regulação de Agulhas",
+    "038": "IT-038 Cais Alstom",
+    "041": "IT-041 Entrada e Saída de Navios",
+    "042": "IT-042 Recomendações Navios Canal Norte",
+    "062": "IT-062 Cais da Teporset",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -804,8 +832,10 @@ def looks_like_pending_confirmation(question: str) -> bool:
 
 def refresh_proposal_missing_fields(proposal: dict) -> dict:
     """Recompute and update the missing_fields list on a proposal dict in-place."""
-    proposal["missing_fields"] = display_missing_field_labels(
-        required_missing_fields(proposal.get("action", ""), proposal.get("fields") or {})
+    proposal["missing_fields"] = proposal_missing_field_labels(
+        proposal.get("action", ""),
+        proposal.get("fields") or {},
+        proposal.get("target") or {},
     )
     return proposal
 
@@ -820,6 +850,80 @@ def current_visible_port_calls(window_days: int = 120) -> list[dict]:
 def current_resolvable_port_calls() -> list[dict]:
     """Return all port calls visible to the session over a 10-year window for action resolution."""
     return current_visible_port_calls(window_days=3650)
+
+
+def answer_slash_query(command: str, argument: str, role: str) -> dict:
+    """Answer direct slash-query commands without entering the operational proposal flow."""
+    clean_argument = " ".join((argument or "").strip().split())
+    if command == "help":
+        return {"answer": build_slash_help(role), "sources": [], "answer_origin": "slash_help"}
+    if command == "local_warnings":
+        if not getattr(services, "local_warning_service", None) or not services.local_warning_service.enabled:
+            return {"answer": "Os avisos locais não estão configurados neste ambiente.", "sources": [], "answer_origin": "slash_local_warnings"}
+        try:
+            return {
+                "answer": services.local_warning_service.codes_summary_text(),
+                "sources": [],
+                "answer_origin": "slash_local_warnings",
+            }
+        except Exception as exc:
+            return {"answer": f"Falha ao obter avisos locais: {exc}", "sources": [], "answer_origin": "slash_local_warnings"}
+    if command == "wave":
+        if not getattr(services, "wave_service", None) or not services.wave_service.enabled:
+            return {"answer": "A leitura costeira não está configurada neste ambiente.", "sources": [], "answer_origin": "slash_wave"}
+        try:
+            return {
+                "answer": services.wave_service.summary_text(),
+                "sources": [],
+                "answer_origin": "slash_wave",
+            }
+        except Exception as exc:
+            return {"answer": f"Falha ao obter leitura costeira: {exc}", "sources": [], "answer_origin": "slash_wave"}
+    if command == "tides":
+        dates = services.tide_service.resolve_query_dates(clean_argument or "hoje")
+        parts = []
+        for target_date in dates[:2]:
+            summary = services.tide_service.summary_for_date(target_date)
+            parts.append(summary.get("summary", "Sem dados de maré."))
+        return {"answer": "\n\n".join(parts), "sources": [], "answer_origin": "slash_tides"}
+    if command == "weather":
+        if not services.weather_service.enabled:
+            return {"answer": "A meteorologia não está configurada neste ambiente.", "sources": [], "answer_origin": "slash_weather"}
+        try:
+            forecast = services.weather_service.get_forecast(days=3)
+        except Exception as exc:
+            return {"answer": f"Falha ao obter meteorologia: {exc}", "sources": [], "answer_origin": "slash_weather"}
+        question = clean_argument or "hoje"
+        context = services.weather_service.context_for_question(question)
+        if context:
+            return {"answer": context.get("text") or context.get("snippet", "Sem previsão disponível."), "sources": [], "answer_origin": "slash_weather"}
+        return {"answer": f"Sem previsão disponível para {question}.", "sources": [], "answer_origin": "slash_weather"}
+    if command == "rule":
+        code_match = re.search(r"\b(\d{3})\b", clean_argument)
+        if not code_match:
+            return {
+                "answer": "Usa o comando neste formato:\n/regra 015",
+                "sources": [],
+                "answer_origin": "slash_rule",
+            }
+        code = code_match.group(1)
+        title = RULE_CODE_TITLES.get(code, f"IT-{code}")
+        if not services.rag.client:
+            return {
+                "answer": f"Pedido da regra {title} recebido, mas o LLM está indisponível neste ambiente.",
+                "sources": [],
+                "answer_origin": "slash_rule",
+            }
+        answer = services.rag.answer(
+            question=f"Resume a regra {title} e destaca os pontos operacionais mais importantes.",
+            role=role,
+            history=[],
+            supplemental_sources=[],
+            trusted_answers=[],
+        )
+        answer["answer_origin"] = "slash_rule"
+        return answer
+    return {"answer": "Comando não suportado.", "sources": [], "answer_origin": "slash_unknown"}
 
 
 def action_target_port_call(port_call_id: str) -> dict:
@@ -1175,9 +1279,30 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
                 proposal["action"] = f"{inferred_existing_type}_report"
                 proposal["target"]["maneuver_type"] = inferred_existing_type
 
+    target_maneuver_id = " ".join(str((proposal.get("target", {}) or {}).get("maneuver_id") or proposal.get("maneuver_id") or "").split())
     maneuver_type = (proposal.get("target", {}).get("maneuver_type") or "").strip().lower()
     resolved_port_call = services.store.get_port_call(target["id"]) if target else None
-    inferred_type = infer_maneuver_type(resolved_port_call or {}, proposal.get("action", "")) if resolved_port_call else ""
+    resolved_maneuver = (
+        resolve_maneuver(
+            resolved_port_call or {},
+            proposal.get("action", ""),
+            maneuver_type,
+            target_maneuver_id,
+        )
+        if resolved_port_call and target_maneuver_id
+        else None
+    )
+    if resolved_maneuver:
+        proposal["maneuver_id"] = resolved_maneuver.get("id", "")
+        proposal["target"]["maneuver_id"] = resolved_maneuver.get("id", "")
+        if resolved_maneuver.get("type") in {"entry", "departure", "shift"}:
+            proposal["target"]["maneuver_type"] = resolved_maneuver.get("type", "")
+    maneuver_type = (proposal.get("target", {}).get("maneuver_type") or "").strip().lower()
+    inferred_type = (
+        resolved_maneuver.get("type", "")
+        if resolved_maneuver
+        else infer_maneuver_type(resolved_port_call or {}, proposal.get("action", "")) if resolved_port_call else ""
+    )
     if inferred_type and proposal.get("action") in {
         "approve_entry", "approve_departure", "approve_shift",
         "abort_entry", "abort_departure", "abort_shift",
@@ -1206,11 +1331,12 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
     }:
         proposal["target"]["maneuver_type"] = inferred_type
 
-    if target and proposal.get("action") in {"edit_maneuver_plan"}:
+    if target and proposal.get("action") in {"edit_maneuver_plan", "edit_maneuver_report", "delete_maneuver", "delete_maneuver_report"}:
         maneuver = resolve_maneuver(
             services.store.get_port_call(target["id"]),
             proposal["action"],
             proposal["target"].get("maneuver_type", ""),
+            proposal.get("maneuver_id") or proposal.get("target", {}).get("maneuver_id", ""),
         )
         if not maneuver:
             proposal["intent"] = "unsupported"
@@ -1218,6 +1344,7 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
             proposal["reason"] = "Não encontrei a manobra certa para editar nesta escala."
             return proposal
         proposal["maneuver_id"] = maneuver.get("id", "")
+        proposal["target"]["maneuver_id"] = maneuver.get("id", "")
         if proposal.get("action") == "edit_maneuver_plan":
             fields = proposal.setdefault("fields", {})
             planned_value = " ".join(str(fields.get("planned_at_local") or "").split())
@@ -1287,14 +1414,18 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
         return {"intent": "replace", "proposal": replacement}
 
     direct_updates = extract_pending_field_updates(question, pending_proposal)
-    if direct_updates:
+    target_updates = extract_pending_target_updates(question)
+    if direct_updates or target_updates:
         updates = normalize_action_candidate(
             {
                 "intent": "action",
                 "action": pending_proposal.get("action", ""),
                 "confidence": pending_proposal.get("confidence", 0.0),
                 "reason": pending_proposal.get("reason", ""),
-                "target": pending_proposal.get("target", {}),
+                "target": {
+                    **(pending_proposal.get("target", {}) or {}),
+                    **target_updates,
+                },
                 "fields": direct_updates, "missing_fields": [],
             },
             role,
@@ -1426,6 +1557,32 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             notes=build_entry_request_note({"draft_m": draft_m, "tug_count": tug_count, "constraints": constraints, "notes": fields.get("notes", "")}),
         )
         return port_call, f"Escala criada para {port_call['vessel_name']} com ETA {port_call['eta_label']}."
+    if action == "edit_port_call":
+        result = services.store.edit_port_call(
+            port_call_id=port_call_id,
+            updated_by=username,
+            vessel_name=fields.get("vessel_name"),
+            eta=parse_optional_local_datetime_input(field_text("eta_local"), "ETA") if field_text("eta_local") else None,
+            berth=fields.get("berth"),
+            last_port=fields.get("last_port"),
+            next_port=fields.get("next_port"),
+            notes=fields.get("notes"),
+            constraints=normalize_constraint_codes(fields.get("constraints")) if "constraints" in fields else None,
+            vessel_short_name=fields.get("vessel_short_name"),
+            vessel_imo=fields.get("vessel_imo"),
+            vessel_call_sign=fields.get("vessel_call_sign"),
+            vessel_flag=fields.get("vessel_flag"),
+            vessel_type=fields.get("vessel_type"),
+            vessel_loa_m=fields.get("vessel_loa_m"),
+            vessel_beam_m=fields.get("vessel_beam_m"),
+            vessel_gt_t=fields.get("vessel_gt_t"),
+            vessel_max_draft_m=fields.get("vessel_max_draft_m"),
+            vessel_dwt_t=fields.get("vessel_dwt_t"),
+        )
+        return result, f"Escala atualizada para {result['vessel_name']}."
+    if action == "delete_port_call":
+        removed = services.store.delete_port_call(port_call_id)
+        return removed, f"Escala apagada: {removed['reference_code']} · {removed['vessel_name']}."
 
     if not port_call_id:
         raise ValueError("A proposta não tem escala associada.")
@@ -1444,7 +1601,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Entrada aprovada para {result['vessel_name']}."
     if action == "abort_entry":
-        target_maneuver = resolve_maneuver(port_call, action, "entry")
+        target_maneuver = resolve_maneuver(port_call, action, "entry", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
         maneuver_state = (target_maneuver or {}).get("state", "pending")
         if role == "agente" and maneuver_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma manobra já aprovada (piloto a bordo).")
@@ -1462,7 +1619,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Entrada")
-        result = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note)
+        result = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
         return result, f"Registo de entrada guardado para {result['vessel_name']}."
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
@@ -1474,7 +1631,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Saída aprovada para {result['vessel_name']}."
     if action == "abort_departure":
-        target_m = resolve_maneuver(port_call, action, "departure")
+        target_m = resolve_maneuver(port_call, action, "departure", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
         m_state = (target_m or {}).get("state", "pending")
         if role == "agente" and m_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma saída já aprovada.")
@@ -1492,7 +1649,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Saída")
-        result = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note)
+        result = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
         return result, f"Registo de saída guardado para {result['vessel_name']}."
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
@@ -1504,7 +1661,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         result = services.store.approve_shift_plan(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Mudança aprovada para {result['vessel_name']}."
     if action == "abort_shift":
-        target_ms = resolve_maneuver(port_call, action, "shift")
+        target_ms = resolve_maneuver(port_call, action, "shift", proposal.get("maneuver_id") or target.get("maneuver_id", ""))
         ms_state = (target_ms or {}).get("state", "pending")
         if role == "agente" and ms_state == "approved":
             raise ValueError("Só o piloto/admin pode abortar uma mudança já aprovada.")
@@ -1522,12 +1679,14 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Mudança")
-        result = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note)
+        result = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=(proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip() or None)
         return result, f"Registo de mudança guardado para {result['vessel_name']}."
     if action == "edit_maneuver_plan":
         maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
         maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
+        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
+            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
         maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
         if not maneuver_id:
             raise ValueError("A proposta não identifica a manobra a editar.")
@@ -1554,6 +1713,8 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         maneuver_id = (proposal.get("maneuver_id") or "").strip()
         current_port_call = services.store.get_port_call(port_call_id)
         maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
+        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
+            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
         maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
         if not maneuver_id:
             raise ValueError("A proposta não identifica a manobra a editar.")
@@ -1567,6 +1728,36 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             change_reason=require_form_text(field_text("change_reason"), "Motivo da alteração"),
         )
         return result, f"Registo operacional revisto para {result['vessel_name']}."
+    if action == "delete_maneuver":
+        maneuver_id = (proposal.get("maneuver_id") or "").strip()
+        current_port_call = services.store.get_port_call(port_call_id)
+        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
+        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
+            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
+        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        if not maneuver_id:
+            raise ValueError("A proposta não identifica a manobra a apagar.")
+        removed_or_updated = services.store.delete_maneuver(
+            port_call_id=port_call_id,
+            maneuver_id=maneuver_id,
+            updated_by=username,
+        )
+        return removed_or_updated, f"Manobra apagada para {removed_or_updated['vessel_name']}."
+    if action == "delete_maneuver_report":
+        maneuver_id = (proposal.get("maneuver_id") or "").strip()
+        current_port_call = services.store.get_port_call(port_call_id)
+        maneuver = resolve_maneuver(current_port_call, action, maneuver_type)
+        if proposal.get("maneuver_id") or target.get("maneuver_id", ""):
+            maneuver = resolve_maneuver(current_port_call, action, maneuver_type, proposal.get("maneuver_id") or target.get("maneuver_id", ""))
+        maneuver_id = (maneuver or {}).get("id", "") or maneuver_id
+        if not maneuver_id:
+            raise ValueError("A proposta não identifica o registo a apagar.")
+        result = services.store.delete_maneuver_report(
+            port_call_id=port_call_id,
+            maneuver_id=maneuver_id,
+            updated_by=username,
+        )
+        return result, f"Registo da manobra removido para {result['vessel_name']}."
 
     raise ValueError("Ação operacional não suportada.")
 

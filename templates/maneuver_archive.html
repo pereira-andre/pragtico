@@ -57,13 +57,16 @@
               {% set mc = "entry" if item.maneuver_label == "Entrar" else "departure" if item.maneuver_label == "Sair" else "shift" %}
               <article class="ops-card">
                 <div class="ops-card-head">
-                  <h3>{{ item.maneuver_label }}</h3>
+                  <div>
+                    <h3>{{ item.maneuver_label }}</h3>
+                    <p class="muted">ID {{ (item.maneuver_id or item.id)[:8]|upper }}</p>
+                  </div>
                   <span class="maneuver-chip maneuver-chip-{{ mc }}">{{ item.execution_window_label or item.actual_label or item.planned_label }}</span>
                 </div>
                 <p>{{ item.local_origin }} → {{ item.local_destination }}</p>
                 <p class="muted">{{ item.detail_note or 'Sem observações adicionais.' }}</p>
                 <div class="inline-link-row">
-                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id or item.id) }}">Abrir manobra</a>
                   <a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
                 </div>
               </article>
@@ -168,7 +171,7 @@
                   <span class="muted">--</span>
                 {% endif %}
                 <div class="inline-link-row">
-                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.id) }}">Abrir manobra</a>
+                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id or item.id) }}">Abrir manobra</a>
                   <a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.port_call_id) }}">Abrir escala</a>
                 </div>
               </td>

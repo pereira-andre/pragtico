@@ -170,3 +170,43 @@ class LocalWarningService:
             if item.get("id") == warning_id:
                 return item
         return None
+
+    def summary_text(self, limit: int = 12) -> str:
+        warnings = self.list_warnings()
+        if not warnings:
+            return "Sem avisos locais em vigor."
+        lines = ["Avisos locais em vigor:"]
+        for item in warnings[:limit]:
+            lines.append(
+                f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+            )
+        remaining = len(warnings) - limit
+        if remaining > 0:
+            lines.append(f"- +{remaining} aviso(s) adicionais em vigor.")
+        return "\n".join(lines)
+
+    def codes_summary_text(self, limit: int = 20) -> str:
+        warnings = self.list_warnings()
+        if not warnings:
+            return "Sem avisos locais em vigor."
+        lines = ["Avisos locais em vigor:"]
+        for item in warnings[:limit]:
+            lines.append(f"- {item.get('display_code', '--')}")
+        remaining = len(warnings) - limit
+        if remaining > 0:
+            lines.append(f"- +{remaining} aviso(s) adicionais.")
+        return "\n".join(lines)
+
+    def context_source(self, limit: int = 12) -> Optional[Dict[str, Any]]:
+        if not self.enabled:
+            return None
+        summary = self.summary_text(limit=limit)
+        return {
+            "source_id": "LW1",
+            "document": "Avisos locais em vigor",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "live_api",
+            "snippet": summary,
+            "text": summary,
+        }

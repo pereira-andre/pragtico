@@ -244,6 +244,7 @@ class TideService:
                 "day_dividers": day_dividers,
                 "now_marker_x": now_marker_x,
                 "range_label": f"{start_date.strftime('%d/%m')} → {(end_date - timedelta(days=1)).strftime('%d/%m')}",
+                "hours_label": f"{days * 24}h",
                 "amplitude_m": round(max_height - min_height, 2),
                 "min_height_m": round(min_height, 2),
                 "max_height_m": round(max_height, 2),

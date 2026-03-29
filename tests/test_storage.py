@@ -266,6 +266,112 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertIn("planned_maneuvers", snapshot)
         self.assertIn("archived_maneuvers", snapshot)
 
+    def test_edit_port_call_updates_vessel_and_operational_fields(self) -> None:
+        pc = self._create_entry()
+        updated = self.store.edit_port_call(
+            pc["id"],
+            updated_by="admin",
+            vessel_name="BELITAKI II",
+            berth="TMS 1 - Cais 3",
+            last_port="Sines",
+            next_port="Valencia",
+        )
+
+        self.assertEqual(updated["vessel_name"], "BELITAKI II")
+        self.assertEqual(updated["berth"], "TMS 1 - Cais 3")
+        entry = next(m for m in updated["maneuver_history"] if m["type"] == "entry")
+        self.assertEqual(entry["origin"], "Sines")
+        self.assertEqual(entry["destination"], "TMS 1 - Cais 3")
+
+    def test_delete_port_call_removes_scale(self) -> None:
+        pc = self._create_entry()
+        removed = self.store.delete_port_call(pc["id"])
+
+        self.assertEqual(removed["id"], pc["id"])
+        with self.assertRaises(ValueError):
+            self.store.get_port_call(pc["id"])
+
+    def test_delete_maneuver_removes_departure_plan(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin")
+        updated = self.store.schedule_departure_plan(
+            pc["id"],
+            planned_departure_at="2026-03-25T10:00:00+00:00",
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        departure = next(m for m in updated["maneuver_history"] if m["type"] == "departure")
+
+        result = self.store.delete_maneuver(pc["id"], departure["id"], updated_by="admin")
+
+        self.assertFalse(any(m["type"] == "departure" for m in result["maneuver_history"]))
+
+    def test_delete_maneuver_report_clears_report_fields(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin")
+        reported = self.store.attach_entry_report(
+            pc["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:35:00+00:00",
+            maneuver_finished_at="2026-03-24T06:00:00+00:00",
+            draft_m="9.94",
+            notes="Sem incidentes.",
+        )
+        entry = next(m for m in reported["maneuver_history"] if m["type"] == "entry")
+
+        cleared = self.store.delete_maneuver_report(pc["id"], entry["id"], updated_by="admin")
+        updated_entry = next(m for m in cleared["maneuver_history"] if m["type"] == "entry")
+
+        self.assertEqual(updated_entry["report_note"], "")
+        self.assertEqual(updated_entry["reported_draft_m"], "")
+        self.assertFalse(updated_entry["execution_started_at"])
+        self.assertFalse(updated_entry["execution_finished_at"])
+
+    def test_attach_shift_report_can_target_specific_maneuver_id(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin")
+
+        first_shift = self.store.schedule_shift_plan(
+            pc["id"],
+            planned_shift_at="2026-03-24T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        first_shift_id = next(m for m in first_shift["maneuver_history"] if m["type"] == "shift")["id"]
+        self.store.approve_shift_plan(pc["id"], decided_by="admin")
+        self.store.mark_shift_completed(pc["id"], shifted_at="2026-03-24T08:20:00+00:00", updated_by="admin")
+
+        second_shift = self.store.schedule_shift_plan(
+            pc["id"],
+            planned_shift_at="2026-03-24T12:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 2",
+        )
+        second_shift_id = [
+            m["id"]
+            for m in second_shift["maneuver_history"]
+            if m["type"] == "shift"
+        ][-1]
+        self.store.approve_shift_plan(pc["id"], decided_by="admin")
+
+        reported = self.store.attach_shift_report(
+            pc["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T08:05:00+00:00",
+            maneuver_finished_at="2026-03-24T08:20:00+00:00",
+            draft_m="9.94",
+            notes="Registo da primeira mudança.",
+            maneuver_id=first_shift_id,
+        )
+
+        first = next(m for m in reported["maneuver_history"] if m["id"] == first_shift_id)
+        second = next(m for m in reported["maneuver_history"] if m["id"] == second_shift_id)
+        self.assertEqual(first["report_note"], "Registo da primeira mudança.")
+        self.assertEqual(second["report_note"], "")
+
     def test_clear_port_calls(self) -> None:
         self._create_entry()
         removed = self.store.clear_port_calls()

@@ -2,11 +2,13 @@
 
 import logging
 import json
+import re
 
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 import services
 from chat_actions import (
+    build_action_reply_template,
     build_abort_reply_template,
     build_port_call_reply_template,
     build_maneuver_report_reply_template,
@@ -14,16 +16,21 @@ from chat_actions import (
     looks_like_maneuver_report_payload,
     looks_like_port_call_registration_request,
     looks_like_operational_command,
+    looks_like_slash_command,
+    parse_slash_command,
 )
 from security import api_limiter, rate_limit
 from helpers import (
+    answer_slash_query,
     build_operational_chat_sources,
     clear_pending_chat_action,
+    current_resolvable_port_calls,
     execute_pending_operational_action,
     get_current_conversation,
     load_pending_chat_action,
     login_required,
     looks_like_pending_confirmation,
+    finalize_operational_proposal,
     propose_operational_action,
     refresh_knowledge_state,
     refine_pending_operational_action,
@@ -270,10 +277,50 @@ def api_chat():
                 supplemental_sources.append(weather_context)
         except Exception:
             pass
+    if re.search(r"\b(aviso|avisos|anav|capitania)\b", question, flags=re.IGNORECASE):
+        try:
+            warnings_context = services.local_warning_service.context_source() if getattr(services, "local_warning_service", None) else None
+            if warnings_context:
+                supplemental_sources.append(warnings_context)
+        except Exception:
+            pass
+    if re.search(r"\b(ondulacao|ondulação|leitura costeira|altura significativa|periodo medio|período médio|temp\.? agua|temperatura da agua|temperatura da água)\b", question, flags=re.IGNORECASE):
+        try:
+            wave_context = services.wave_service.context_source() if getattr(services, "wave_service", None) else None
+            if wave_context:
+                supplemental_sources.append(wave_context)
+        except Exception:
+            pass
     user_message = services.store.append_chat_message(username=username, conversation_id=conversation["id"], role="user", content=question)
 
     answer = None
-    if existing_pending:
+    slash_command = parse_slash_command(question, session.get("role", "piloto")) if looks_like_slash_command(question) else None
+    if slash_command and slash_command.get("intent") == "help":
+        answer = {"answer": slash_command["answer"], "sources": [], "answer_origin": "slash_help"}
+    elif slash_command and slash_command.get("intent") == "query":
+        answer = answer_slash_query(slash_command.get("command", ""), slash_command.get("argument", ""), session.get("role", "piloto"))
+    elif slash_command and slash_command.get("intent") == "template":
+        proposal = slash_command.get("proposal") or {}
+        if proposal.get("intent") == "action" and proposal.get("action"):
+            pending_action = save_pending_chat_action(username=username, conversation_id=conversation["id"], proposal=proposal, question=question)
+            answer = {"answer": pending_action["summary"], "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "slash_template"}
+        else:
+            answer = {"answer": slash_command["answer"], "sources": [], "answer_origin": "slash_template"}
+    elif slash_command and slash_command.get("intent") == "unsupported":
+        answer = {"answer": slash_command["answer"], "sources": [], "answer_origin": "slash_rejected"}
+    elif slash_command and slash_command.get("intent") == "action":
+        action_proposal = finalize_operational_proposal(slash_command.get("proposal"), current_resolvable_port_calls())
+        if action_proposal and action_proposal.get("intent") == "action":
+            pending_action = save_pending_chat_action(username=username, conversation_id=conversation["id"], proposal=action_proposal, question=question)
+            answer = {"answer": pending_action["summary"], "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "slash_proposal"}
+        else:
+            proposal = slash_command.get("proposal") or {}
+            template = build_action_reply_template(proposal.get("action", ""), proposal.get("missing_fields", []))
+            reason = (action_proposal or {}).get("reason") or "Não consegui interpretar o comando com segurança."
+            if template:
+                reason = f"{reason}\n\n{template}"
+            answer = {"answer": reason, "sources": [], "answer_origin": "slash_rejected"}
+    elif existing_pending:
         if looks_like_pending_confirmation(question):
             proposal = existing_pending.get("proposal", {})
             if proposal.get("missing_fields"):
@@ -309,7 +356,12 @@ def api_chat():
             elif pending_update and pending_update.get("intent") == "question":
                 answer = None
             else:
-                answer = {"answer": (pending_update.get("reason") if pending_update and pending_update.get("reason") else "Não consegui atualizar a ação pendente com essa resposta."), "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "pending_action_block"}
+                proposal = existing_pending.get("proposal", {})
+                template = build_action_reply_template(proposal.get("action", ""), proposal.get("missing_fields", [])) if proposal.get("missing_fields") else ""
+                block_message = pending_update.get("reason") if pending_update and pending_update.get("reason") else "Não consegui atualizar a ação pendente com essa resposta."
+                if template:
+                    block_message = f"{block_message}\n\n{template}"
+                answer = {"answer": block_message, "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "pending_action_block"}
     else:
         action_proposal = propose_operational_action(question, session.get("role", "piloto"))
         if action_proposal and action_proposal.get("intent") == "action":

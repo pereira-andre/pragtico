@@ -61,6 +61,7 @@
           </div>
         </div>
         <div class="scale-overview-grid">
+          <article class="scale-fact-row"><span>ID da manobra</span><strong>{{ maneuver.id[:8]|upper }}</strong></article>
           <article class="scale-fact-row"><span>Planeada</span><strong>{{ maneuver.planned_label }}</strong></article>
           <article class="scale-fact-row"><span>Início</span><strong>{{ maneuver.execution_started_label }}</strong></article>
           <article class="scale-fact-row"><span>Fim</span><strong>{{ maneuver.execution_finished_label }}</strong></article>
@@ -68,6 +69,7 @@
           <article class="scale-fact-row"><span>Validado por</span><strong>{{ maneuver.validated_by_profile.label or '--' }}</strong></article>
           <article class="scale-fact-row"><span>Executado por</span><strong>{{ maneuver.executed_by_profile.label or '--' }}</strong></article>
         </div>
+        <p class="muted scale-maneuver-note">Usa este ID no bot para operar sem ambiguidade: {{ maneuver.id }}</p>
         {% if maneuver.notes %}
           <p class="muted scale-maneuver-note">{{ maneuver.notes }}</p>
         {% endif %}

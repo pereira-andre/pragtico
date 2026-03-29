@@ -3,15 +3,19 @@ import unittest
 from chat_actions import (
     action_for_maneuver_type,
     build_port_call_reply_template,
+    build_slash_help,
     canonicalize_action_name,
     extract_pending_field_updates,
+    extract_pending_target_updates,
     extract_json_object,
     format_action_summary,
     infer_maneuver_type,
     looks_like_operational_command,
+    looks_like_slash_command,
     merge_action_candidate,
     normalize_action_candidate,
     normalize_action_fields,
+    parse_slash_command,
     resolve_maneuver,
     resolve_port_call,
     visible_port_calls_from_activity,
@@ -27,6 +31,99 @@ class ChatActionsTests(unittest.TestCase):
         )
         self.assertFalse(looks_like_operational_command("Qual é a regra de reboques no cais?"))
         self.assertFalse(looks_like_operational_command("Mostra o arquivo de manobras do mês passado."))
+        self.assertTrue(looks_like_slash_command("/help"))
+
+    def test_parse_slash_help_returns_help_intent(self) -> None:
+        parsed = parse_slash_command("/help", "admin")
+
+        self.assertEqual(parsed["intent"], "help")
+        self.assertIn("/registar-escala", parsed["answer"])
+        self.assertIn("/avisos-locais", parsed["answer"])
+        self.assertIn("/ondulacao", parsed["answer"])
+
+    def test_parse_slash_local_warnings_returns_query_intent(self) -> None:
+        parsed = parse_slash_command("/avisos-locais", "piloto")
+
+        self.assertEqual(parsed["intent"], "query")
+        self.assertEqual(parsed["command"], "local_warnings")
+
+    def test_parse_slash_wave_returns_query_intent(self) -> None:
+        parsed = parse_slash_command("/ondulacao", "piloto")
+
+        self.assertEqual(parsed["intent"], "query")
+        self.assertEqual(parsed["command"], "wave")
+
+    def test_parse_slash_rule_returns_query_intent(self) -> None:
+        parsed = parse_slash_command("/regra 015", "piloto")
+
+        self.assertEqual(parsed["intent"], "query")
+        self.assertEqual(parsed["command"], "rule")
+        self.assertIn("015", parsed["argument"])
+
+    def test_parse_slash_register_scale_builds_action_proposal(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-escala\nNome do navio: BELITAKI\nETA de chegada: 2026-03-24T05:30\nCais previsto: TMS 2\nÚltimo porto: Leixões\nPróximo destino: Barcelona\nIMO: 9152923\nIndicativo: D5OC2\nBandeira: Libéria\nTipo de navio: Porta-contentores\nLOA (m): 179.23\nBoca (m): 25.3\nGT (t): 16281\nDWT (t): 22330\nCalado máximo (m): 9.94",
+            "agente",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "create_port_call")
+        self.assertEqual(parsed["proposal"]["fields"]["vessel_name"], "BELITAKI")
+        self.assertEqual(parsed["proposal"]["fields"]["berth"], "TMS 2")
+
+    def test_parse_slash_approve_without_target_returns_template(self) -> None:
+        parsed = parse_slash_command("/aprovar", "piloto")
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertIn("Tipo de manobra", parsed["answer"])
+        self.assertIn("Ref:", parsed["answer"])
+
+    def test_parse_slash_register_report_without_ref_returns_template_with_proposal(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-manobra Tipo de manobra: Entrada Início da manobra: 29/03/2026, 07:45 Fim da manobra: 29/03/2026, 08:30 Calado: 9,8 m Observações: 2 rebocadores",
+            "piloto",
+        )
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertEqual(parsed["proposal"]["action"], "entry_report")
+        self.assertIn("ref ou nome do navio", parsed["proposal"]["missing_fields"])
+        self.assertEqual(parsed["proposal"]["fields"]["maneuver_started_local"], "29/03/2026, 07:45")
+        self.assertEqual(parsed["proposal"]["fields"]["maneuver_finished_local"], "29/03/2026, 08:30")
+
+    def test_extract_pending_target_updates_parses_ref_and_maneuver_type(self) -> None:
+        target = extract_pending_target_updates("Ref: SET-221\nTipo de manobra: saída")
+
+        self.assertEqual(target["reference_code"], "SET-221")
+        self.assertEqual(target["maneuver_type"], "departure")
+
+    def test_extract_pending_target_updates_parses_maneuver_id(self) -> None:
+        target = extract_pending_target_updates("ID da manobra: 7f3c2a91")
+
+        self.assertEqual(target["maneuver_id"], "7f3c2a91")
+
+    def test_parse_slash_register_report_as_agent_is_rejected_explicitly(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-manobra Tipo de manobra: Entrada Início da manobra: 29/03/2026, 07:45 Fim da manobra: 29/03/2026, 08:30 Calado: 9,8 m Observações: 2 rebocadores",
+            "agente",
+        )
+
+        self.assertEqual(parsed["intent"], "unsupported")
+        self.assertIn("não está autorizada", parsed["answer"].lower())
+
+    def test_parse_slash_register_report_with_maneuver_id_does_not_require_ref_or_type(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-manobra ID da manobra: 7f3c2a91 Início da manobra: 29/03/2026, 07:45 Fim da manobra: 29/03/2026, 08:30 Calado: 9,8 m",
+            "piloto",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
+
+    def test_build_slash_help_respects_role(self) -> None:
+        help_text = build_slash_help("agente")
+
+        self.assertIn("/registar-escala", help_text)
+        self.assertNotIn("/apagar-escala", help_text)
 
     def test_extract_json_object_accepts_fenced_or_plain_json(self) -> None:
         plain = extract_json_object('{"intent":"action","action":"approve_entry"}')
@@ -67,6 +164,18 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(candidate["intent"], "action")
         self.assertEqual(candidate["action"], "approve_entry")
+
+    def test_resolve_maneuver_accepts_unique_id_prefix(self) -> None:
+        port_call = {
+            "maneuver_history": [
+                {"id": "7f3c2a91-aaaa-bbbb-cccc-111111111111", "type": "entry", "state": "completed"},
+                {"id": "91d44e00-aaaa-bbbb-cccc-222222222222", "type": "entry", "state": "approved"},
+            ]
+        }
+
+        maneuver = resolve_maneuver(port_call, "edit_maneuver_report", "entry", "7f3c2a91")
+
+        self.assertEqual(maneuver["id"], "7f3c2a91-aaaa-bbbb-cccc-111111111111")
 
     def test_normalize_action_fields_maps_llm_aliases_for_create_port_call(self) -> None:
         fields = normalize_action_fields(
@@ -341,7 +450,7 @@ class ChatActionsTests(unittest.TestCase):
             proposal,
         )
 
-        self.assertEqual(updates["change_reason"], "piloto disponivel")
+        self.assertEqual(updates["change_reason"], "piloto disponível")
 
     def test_normalize_action_fields_maps_reason_and_planned_datetime_for_edit_plan(self) -> None:
         fields = normalize_action_fields(

@@ -67,7 +67,7 @@ def dashboard():
     port_activity = filter_port_activity_for_session(port_activity)
 
     today = date.today()
-    tide_window = services.tide_service.window_summary(today - timedelta(days=1), days=3)
+    tide_window = services.tide_service.window_summary(today - timedelta(days=2), days=5)
 
     weather_data = None
     weather_error = ""

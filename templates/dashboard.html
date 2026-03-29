@@ -44,17 +44,9 @@
         <small>{{ port_activity.stats.pending_count }} pendentes</small>
       </article>
       <article class="hero-stat">
-        <span>Ondulação atual</span>
-        {% if wave_conditions %}
-          <strong>{{ wave_conditions.significant_height_label }}</strong>
-          <small>{{ wave_conditions.direction }} · {{ wave_conditions.mean_period_label }} · água {{ wave_conditions.water_temp_label }}</small>
-        {% elif wave_error %}
-          <strong>--</strong>
-          <small>ondulação indisponível</small>
-        {% else %}
-          <strong>--</strong>
-          <small>sem leitura</small>
-        {% endif %}
+        <span>Avisos em vigor</span>
+        <strong>{{ local_warnings|length }}</strong>
+        <small>capitania do porto</small>
       </article>
       <article class="hero-stat">
         <span>Saídas recentes</span>
@@ -72,7 +64,7 @@
         <h2>Janela contínua de marés</h2>
       </div>
       <div class="tide-window-meta">
-        <span class="ops-pill ops-pill-strong">72h</span>
+        <span class="ops-pill ops-pill-strong">{{ tide_window.chart.hours_label }}</span>
         <span class="muted">{{ tide_window.chart.range_label }}</span>
       </div>
       {% if weather_data and weather_data.forecast_days %}
@@ -94,7 +86,7 @@
         <small>{{ tide_window.chart.min_height_m }} m → {{ tide_window.chart.max_height_m }} m</small>
       </div>
       <div class="ops-hover-chart js-hover-chart" data-chart-mode="tide" data-samples='{{ tide_window.chart.samples|tojson }}'>
-        <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em 72 horas">
+        <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em vários dias">
           <line x1="24" y1="{{ tide_window.chart.height - 28 }}" x2="{{ tide_window.chart.width - 24 }}" y2="{{ tide_window.chart.height - 28 }}"></line>
           {% for divider in tide_window.chart.day_dividers %}
             <line class="tide-grid-line" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
@@ -118,7 +110,7 @@
     </div>
 
     <div class="tides-ribbon tides-ribbon-wide">
-      {% for tide_day in tide_window.days %}
+      {% for tide_day in tide_window.days[1:4] %}
         <div class="tides-day {{ 'is-current' if tide_day.relative_label == 'Hoje' else '' }}">
           <div class="tides-day-label">
             <strong>{{ tide_day.relative_label or tide_day.date_label }}</strong>
@@ -321,18 +313,11 @@
         <p class="eyebrow">Ondulação</p>
         <h2>Leitura costeira atual</h2>
       </div>
-      {% if wave_conditions %}
-        <span class="ops-pill ops-pill-strong">{{ wave_conditions.station_name }}</span>
-      {% endif %}
     </div>
 
     {% if wave_conditions %}
       <article class="wave-card">
         <div class="wave-card-head">
-          <div>
-            <h3>{{ wave_conditions.station_name }}</h3>
-            <p class="muted">Dados reduzidos da última leitura disponível</p>
-          </div>
           <span class="ops-pill">{{ wave_conditions.last_reading_label }}</span>
         </div>
         <div class="wave-metric-grid">
@@ -364,7 +349,7 @@
 
     {% if local_warnings %}
       <div class="warning-preview-grid">
-        {% for warning in local_warnings[:6] %}
+        {% for warning in local_warnings[:3] %}
           <article class="warning-card">
             <div class="warning-card-head">
               <div>
@@ -385,6 +370,23 @@
           </article>
         {% endfor %}
       </div>
+      {% if local_warnings|length > 3 %}
+        <details class="warning-overflow-box">
+          <summary>Ver mais {{ local_warnings|length - 3 }} avisos</summary>
+          <div class="warning-overflow-list">
+            {% for warning in local_warnings[3:] %}
+              <article class="warning-overflow-item">
+                <div>
+                  <p class="warning-code">{{ warning.display_code }}</p>
+                  <strong>{{ warning.subject }}</strong>
+                  <p class="warning-location">{{ warning.location }}</p>
+                </div>
+                <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir</a>
+              </article>
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
     {% elif local_warnings_error %}
       <p class="muted">Erro ao obter avisos locais: {{ local_warnings_error }}</p>
     {% else %}
