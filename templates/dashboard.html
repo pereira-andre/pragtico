@@ -44,6 +44,19 @@
         <small>{{ port_activity.stats.pending_count }} pendentes</small>
       </article>
       <article class="hero-stat">
+        <span>Ondulação atual</span>
+        {% if wave_conditions %}
+          <strong>{{ wave_conditions.significant_height_label }}</strong>
+          <small>{{ wave_conditions.direction }} · {{ wave_conditions.mean_period_label }} · água {{ wave_conditions.water_temp_label }}</small>
+        {% elif wave_error %}
+          <strong>--</strong>
+          <small>ondulação indisponível</small>
+        {% else %}
+          <strong>--</strong>
+          <small>sem leitura</small>
+        {% endif %}
+      </article>
+      <article class="hero-stat">
         <span>Saídas recentes</span>
         <strong>{{ port_activity.stats.departed_count }}</strong>
         <small>últimos {{ port_activity.window_days }} dias</small>
@@ -51,7 +64,7 @@
     </div>
   </section>
 
-  {# ── MARÉS — ribbon para hoje e amanhã ── #}
+  {# ── MARÉS — ontem / hoje / amanhã ── #}
   <section class="panel tides-panel">
     <div class="section-head">
       <div>
@@ -59,7 +72,7 @@
         <h2>Janela contínua de marés</h2>
       </div>
       <div class="tide-window-meta">
-        <span class="ops-pill ops-pill-strong">96h</span>
+        <span class="ops-pill ops-pill-strong">72h</span>
         <span class="muted">{{ tide_window.chart.range_label }}</span>
       </div>
       {% if weather_data and weather_data.forecast_days %}
@@ -80,31 +93,36 @@
         <strong>{{ tide_window.chart.amplitude_m }} m</strong>
         <small>{{ tide_window.chart.min_height_m }} m → {{ tide_window.chart.max_height_m }} m</small>
       </div>
-      <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em 96 horas">
-        <line x1="24" y1="{{ tide_window.chart.height - 28 }}" x2="{{ tide_window.chart.width - 24 }}" y2="{{ tide_window.chart.height - 28 }}"></line>
-        {% for divider in tide_window.chart.day_dividers %}
-          <line class="tide-grid-line" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
-          <text class="tide-grid-label {{ 'tide-grid-label-today' if divider.is_today }}" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
-        {% endfor %}
-        {% if tide_window.chart.now_marker_x %}
-          <line class="tide-now-line" x1="{{ tide_window.chart.now_marker_x }}" y1="14" x2="{{ tide_window.chart.now_marker_x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
-          <text class="tide-now-label" x="{{ tide_window.chart.now_marker_x + 6 }}" y="{{ tide_window.chart.height - 34 }}">Agora</text>
-        {% endif %}
-        <path class="tide-curve" d="{{ tide_window.chart.path_d }}"></path>
-        {% for point in tide_window.chart.points %}
-          <circle class="tide-point {{ 'tide-point-high' if point.type == 'preia-mar' else 'tide-point-low' }}" cx="{{ point.x }}" cy="{{ point.y }}" r="4">
-            <title>{{ point.label }}</title>
-          </circle>
-        {% endfor %}
-      </svg>
+      <div class="ops-hover-chart js-hover-chart" data-chart-mode="tide" data-samples='{{ tide_window.chart.samples|tojson }}'>
+        <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em 72 horas">
+          <line x1="24" y1="{{ tide_window.chart.height - 28 }}" x2="{{ tide_window.chart.width - 24 }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+          {% for divider in tide_window.chart.day_dividers %}
+            <line class="tide-grid-line" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+            <text class="tide-grid-label {{ 'tide-grid-label-today' if divider.is_today }}" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+          {% endfor %}
+          {% if tide_window.chart.now_marker_x %}
+            <line class="tide-now-line" x1="{{ tide_window.chart.now_marker_x }}" y1="14" x2="{{ tide_window.chart.now_marker_x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+            <text class="tide-now-label" x="{{ tide_window.chart.now_marker_x + 6 }}" y="{{ tide_window.chart.height - 34 }}">Agora</text>
+          {% endif %}
+          <path class="tide-curve" d="{{ tide_window.chart.path_d }}"></path>
+          {% for point in tide_window.chart.points %}
+            <circle class="tide-point {{ 'tide-point-high' if point.type == 'preia-mar' else 'tide-point-low' }}" cx="{{ point.x }}" cy="{{ point.y }}" r="4">
+              <title>{{ point.label }}</title>
+            </circle>
+          {% endfor %}
+          <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ tide_window.chart.height - 28 }}" hidden></line>
+          <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
+        </svg>
+        <div class="chart-hover-tooltip" hidden></div>
+      </div>
     </div>
 
     <div class="tides-ribbon tides-ribbon-wide">
       {% for tide_day in tide_window.days %}
-        <div class="tides-day">
+        <div class="tides-day {{ 'is-current' if tide_day.relative_label == 'Hoje' else '' }}">
           <div class="tides-day-label">
-            <strong>{{ tide_day.date_label }}</strong>
-            <span>{{ tide_day.location }}</span>
+            <strong>{{ tide_day.relative_label or tide_day.date_label }}</strong>
+            <span>{{ tide_day.date_label }} · {{ tide_day.location }}</span>
           </div>
           <div class="tides-events">
             {% for ev in tide_day.events %}
@@ -218,10 +236,159 @@
           </article>
         {% endfor %}
       </div>
+      {% if weather_charts %}
+        <div class="meteo-chart-stack">
+          <article class="meteo-chart-card">
+            <div class="meteo-chart-head">
+              <div>
+                <h3>Vento & rajada</h3>
+                <p class="muted">Leitura horária em nós</p>
+              </div>
+              <div class="meteo-chart-legend">
+                <span><i class="chart-legend-line chart-legend-wind"></i>Vento</span>
+                <span><i class="chart-legend-line chart-legend-gust"></i>Rajada</span>
+              </div>
+            </div>
+            <div class="ops-hover-chart js-hover-chart" data-chart-mode="wind" data-samples='{{ weather_charts.wind.samples|tojson }}'>
+              <svg viewBox="0 0 {{ weather_charts.width }} {{ weather_charts.height }}" class="ops-metric-chart" aria-label="Gráfico de vento e rajada">
+                <line x1="44" y1="{{ weather_charts.height - 34 }}" x2="{{ weather_charts.width - 28 }}" y2="{{ weather_charts.height - 34 }}"></line>
+                {% for tick in weather_charts.wind.y_ticks %}
+                  <line class="ops-chart-grid" x1="44" y1="{{ tick.y }}" x2="{{ weather_charts.width - 28 }}" y2="{{ tick.y }}"></line>
+                  <text class="ops-chart-axis-text" x="8" y="{{ tick.y + 4 }}">{{ tick.value }} kt</text>
+                {% endfor %}
+                {% for divider in weather_charts.wind.day_dividers %}
+                  <line class="ops-chart-divider" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ weather_charts.height - 34 }}"></line>
+                  <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+                {% endfor %}
+                <path class="ops-chart-line ops-chart-line-wind" d="{{ weather_charts.wind.wind_path_d }}"></path>
+                <path class="ops-chart-line ops-chart-line-gust" d="{{ weather_charts.wind.gust_path_d }}"></path>
+                <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ weather_charts.height - 34 }}" hidden></line>
+                <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
+                <circle class="chart-hover-dot chart-hover-dot-secondary" cx="0" cy="0" r="5" hidden></circle>
+              </svg>
+              <div class="chart-hover-tooltip" hidden></div>
+            </div>
+          </article>
+
+          <article class="meteo-chart-card">
+            <div class="meteo-chart-head">
+              <div>
+                <h3>Temperatura & precipitação</h3>
+                <p class="muted">Linha de temperatura e barras de precipitação</p>
+              </div>
+              <div class="meteo-chart-legend">
+                <span><i class="chart-legend-line chart-legend-temp"></i>Temperatura</span>
+                <span><i class="chart-legend-block chart-legend-rain"></i>Precipitação</span>
+              </div>
+            </div>
+            <div class="ops-hover-chart js-hover-chart" data-chart-mode="temp-precip" data-samples='{{ weather_charts.temp_precip.samples|tojson }}'>
+              <svg viewBox="0 0 {{ weather_charts.width }} {{ weather_charts.height }}" class="ops-metric-chart" aria-label="Gráfico de temperatura e precipitação">
+                <line x1="44" y1="{{ weather_charts.height - 34 }}" x2="{{ weather_charts.width - 28 }}" y2="{{ weather_charts.height - 34 }}"></line>
+                {% for tick in weather_charts.temp_precip.temp_ticks %}
+                  <line class="ops-chart-grid" x1="44" y1="{{ tick.y }}" x2="{{ weather_charts.width - 28 }}" y2="{{ tick.y }}"></line>
+                  <text class="ops-chart-axis-text" x="8" y="{{ tick.y + 4 }}">{{ tick.value }}°</text>
+                {% endfor %}
+                {% for tick in weather_charts.temp_precip.precip_ticks %}
+                  <text class="ops-chart-axis-text ops-chart-axis-text-right" x="{{ weather_charts.width - 20 }}" y="{{ tick.y + 4 }}">{{ tick.value }} mm</text>
+                {% endfor %}
+                {% for divider in weather_charts.temp_precip.day_dividers %}
+                  <line class="ops-chart-divider" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ weather_charts.height - 34 }}"></line>
+                  <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+                {% endfor %}
+                {% for bar in weather_charts.temp_precip.precip_bars %}
+                  <rect class="ops-chart-bar" x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}"></rect>
+                {% endfor %}
+                <path class="ops-chart-line ops-chart-line-temp" d="{{ weather_charts.temp_precip.temp_path_d }}"></path>
+                <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ weather_charts.height - 34 }}" hidden></line>
+                <rect class="chart-hover-bar" x="0" y="{{ weather_charts.height - 34 }}" width="0" height="0" hidden></rect>
+                <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
+              </svg>
+              <div class="chart-hover-tooltip" hidden></div>
+            </div>
+          </article>
+        </div>
+      {% endif %}
     {% elif weather_error %}
       <p class="muted">Erro ao obter meteorologia: {{ weather_error }}</p>
     {% else %}
       <p class="muted">Define WEATHERAPI_KEY para preencher a faixa meteorológica.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel wave-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Ondulação</p>
+        <h2>Leitura costeira atual</h2>
+      </div>
+      {% if wave_conditions %}
+        <span class="ops-pill ops-pill-strong">{{ wave_conditions.station_name }}</span>
+      {% endif %}
+    </div>
+
+    {% if wave_conditions %}
+      <article class="wave-card">
+        <div class="wave-card-head">
+          <div>
+            <h3>{{ wave_conditions.station_name }}</h3>
+            <p class="muted">Dados reduzidos da última leitura disponível</p>
+          </div>
+          <span class="ops-pill">{{ wave_conditions.last_reading_label }}</span>
+        </div>
+        <div class="wave-metric-grid">
+          {% for metric in wave_conditions.metrics %}
+            <article class="wave-metric">
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+            </article>
+          {% endfor %}
+        </div>
+      </article>
+    {% elif wave_error %}
+      <p class="muted">Erro ao obter ondulação: {{ wave_error }}</p>
+    {% else %}
+      <p class="muted">Sem leitura de ondulação disponível.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel warnings-panel" id="local-warnings">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Capitania do Porto de Setúbal</p>
+        <h2>Avisos locais em vigor</h2>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard_bp.local_warnings') }}">Abrir página de avisos</a>
+      </div>
+    </div>
+
+    {% if local_warnings %}
+      <div class="warning-preview-grid">
+        {% for warning in local_warnings[:6] %}
+          <article class="warning-card">
+            <div class="warning-card-head">
+              <div>
+                <p class="warning-code">{{ warning.display_code }}</p>
+                <h3>{{ warning.subject }}</h3>
+              </div>
+              <span class="ops-pill warning-status-pill">{{ warning.status_label }}</span>
+            </div>
+            <p class="warning-location">{{ warning.location }}</p>
+            <p class="warning-period">De {{ warning.start_date_label }} · Até {{ warning.end_date_label }}</p>
+            <p class="warning-excerpt">{{ warning.excerpt }}</p>
+            <div class="inline-link-row">
+              <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir aviso</a>
+              {% if warning.has_attachments %}
+                <span class="doc-badge">com anexos</span>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% elif local_warnings_error %}
+      <p class="muted">Erro ao obter avisos locais: {{ local_warnings_error }}</p>
+    {% else %}
+      <p class="muted">Sem avisos locais disponíveis.</p>
     {% endif %}
   </section>
 
@@ -501,4 +668,144 @@
     </div>
   </section>
 </main>
+
+<script>
+  (function() {
+    const charts = document.querySelectorAll(".js-hover-chart");
+    if (!charts.length) return;
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+    const nearestSample = (samples, targetX) => {
+      let best = samples[0];
+      let bestDelta = Math.abs((samples[0]?.x || 0) - targetX);
+      for (const sample of samples) {
+        const delta = Math.abs((sample.x || 0) - targetX);
+        if (delta < bestDelta) {
+          best = sample;
+          bestDelta = delta;
+        }
+      }
+      return best;
+    };
+
+    const tooltipHtml = (mode, sample) => {
+      if (!sample) return "";
+      if (mode === "tide") {
+        return `
+          <strong>${escapeHtml(sample.time_label)}</strong>
+          <span>Maré ${escapeHtml(sample.height_m)} m</span>
+          <span>${escapeHtml(sample.trend)}</span>
+        `;
+      }
+      if (mode === "wind") {
+        return `
+          <strong>${escapeHtml(sample.time_label)}</strong>
+          <span>Vento ${escapeHtml(sample.wind_kts)} kt ${escapeHtml(sample.wind_dir || "--")}</span>
+          <span>Rajada ${escapeHtml(sample.gust_kts)} kt</span>
+        `;
+      }
+      return `
+        <strong>${escapeHtml(sample.time_label)}</strong>
+        <span>Temperatura ${escapeHtml(sample.temp_c)} °C</span>
+        <span>Precipitação ${escapeHtml(sample.precip_mm ?? 0)} mm</span>
+        <span>Prob. chuva ${escapeHtml(sample.chance_of_rain ?? "--")}%</span>
+      `;
+    };
+
+    charts.forEach((chart) => {
+      const samples = JSON.parse(chart.dataset.samples || "[]");
+      if (!samples.length) return;
+
+      const mode = chart.dataset.chartMode || "";
+      const svg = chart.querySelector("svg");
+      const tooltip = chart.querySelector(".chart-hover-tooltip");
+      const hoverLine = chart.querySelector(".chart-hover-line");
+      const primaryDot = chart.querySelector(".chart-hover-dot-primary");
+      const secondaryDot = chart.querySelector(".chart-hover-dot-secondary");
+      const hoverBar = chart.querySelector(".chart-hover-bar");
+      const viewBox = svg?.viewBox?.baseVal;
+      if (!svg || !tooltip || !hoverLine || !viewBox) return;
+
+      const hideState = () => {
+        hoverLine.hidden = true;
+        tooltip.hidden = true;
+        if (primaryDot) primaryDot.hidden = true;
+        if (secondaryDot) secondaryDot.hidden = true;
+        if (hoverBar) hoverBar.hidden = true;
+      };
+
+      const renderAt = (clientX, clientY) => {
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width) return;
+        const relativeX = ((clientX - rect.left) / rect.width) * viewBox.width;
+        const sample = nearestSample(samples, relativeX);
+        if (!sample) return;
+
+        hoverLine.setAttribute("x1", sample.x);
+        hoverLine.setAttribute("x2", sample.x);
+        hoverLine.hidden = false;
+
+        if (primaryDot) {
+          const primaryY = mode === "wind" ? sample.wind_y : mode === "temp-precip" ? sample.temp_y : sample.y;
+          primaryDot.setAttribute("cx", sample.x);
+          primaryDot.setAttribute("cy", primaryY);
+          primaryDot.hidden = false;
+        }
+
+        if (secondaryDot) {
+          if (mode === "wind") {
+            secondaryDot.setAttribute("cx", sample.x);
+            secondaryDot.setAttribute("cy", sample.gust_y);
+            secondaryDot.hidden = false;
+          } else {
+            secondaryDot.hidden = true;
+          }
+        }
+
+        if (hoverBar) {
+          if (mode === "temp-precip") {
+            hoverBar.setAttribute("x", sample.bar_x);
+            hoverBar.setAttribute("y", sample.precip_y);
+            hoverBar.setAttribute("width", sample.bar_width);
+            hoverBar.setAttribute("height", sample.precip_height);
+            hoverBar.hidden = false;
+          } else {
+            hoverBar.hidden = true;
+          }
+        }
+
+        tooltip.innerHTML = tooltipHtml(mode, sample);
+        tooltip.hidden = false;
+
+        const hostRect = chart.getBoundingClientRect();
+        const offsetX = clientX - hostRect.left + 16;
+        const offsetY = clientY - hostRect.top + 12;
+        const tooltipWidth = tooltip.offsetWidth || 180;
+        const tooltipHeight = tooltip.offsetHeight || 90;
+        const left = Math.min(offsetX, hostRect.width - tooltipWidth - 12);
+        const top = Math.min(offsetY, hostRect.height - tooltipHeight - 12);
+        tooltip.style.left = `${Math.max(12, left)}px`;
+        tooltip.style.top = `${Math.max(12, top)}px`;
+      };
+
+      chart.addEventListener("mousemove", (event) => renderAt(event.clientX, event.clientY));
+      chart.addEventListener("mouseleave", hideState);
+      chart.addEventListener("touchstart", (event) => {
+        const touch = event.touches[0];
+        if (touch) renderAt(touch.clientX, touch.clientY);
+      }, { passive: true });
+      chart.addEventListener("touchmove", (event) => {
+        const touch = event.touches[0];
+        if (touch) renderAt(touch.clientX, touch.clientY);
+      }, { passive: true });
+      chart.addEventListener("touchend", hideState);
+    });
+  })();
+</script>
 {% endblock %}

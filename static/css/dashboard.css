@@ -230,7 +230,319 @@
 }
 
 .tides-ribbon-wide {
-  grid-auto-columns: minmax(220px, 280px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tides-day.is-current {
+  border-color: rgba(26, 159, 255, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(26, 159, 255, 0.12);
+}
+
+.ops-hover-chart {
+  position: relative;
+}
+
+.chart-hover-tooltip {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  min-width: 170px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.24);
+  background: rgba(9, 18, 31, 0.94);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.chart-hover-tooltip strong {
+  color: var(--text-strong);
+  font-size: 0.9rem;
+}
+
+.chart-hover-tooltip span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chart-hover-line {
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+}
+
+.chart-hover-dot {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.8;
+}
+
+.chart-hover-dot-primary {
+  fill: var(--accent);
+}
+
+.chart-hover-dot-secondary {
+  fill: var(--warning);
+}
+
+.chart-hover-bar {
+  fill: rgba(56, 189, 248, 0.32);
+  stroke: rgba(56, 189, 248, 0.78);
+  stroke-width: 1;
+}
+
+.meteo-chart-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.meteo-chart-card,
+.wave-card,
+.warning-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.meteo-chart-card {
+  padding: 18px;
+}
+
+.meteo-chart-head,
+.wave-card-head,
+.warning-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.meteo-chart-head h3,
+.wave-card-head h3,
+.warning-card-head h3 {
+  margin: 0;
+}
+
+.meteo-chart-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.meteo-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-legend-line,
+.chart-legend-block {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid transparent;
+  border-radius: 999px;
+}
+
+.chart-legend-block {
+  height: 10px;
+  border-top: 0;
+  border-radius: 4px;
+}
+
+.chart-legend-wind {
+  border-color: #38bdf8;
+}
+
+.chart-legend-gust {
+  border-color: #f59e0b;
+}
+
+.chart-legend-temp {
+  border-color: #fb7185;
+}
+
+.chart-legend-rain {
+  background: rgba(56, 189, 248, 0.36);
+}
+
+.ops-metric-chart {
+  width: 100%;
+  height: auto;
+  min-height: 228px;
+}
+
+.ops-metric-chart line {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.ops-chart-grid {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.ops-chart-divider {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+}
+
+.ops-chart-axis-text,
+.ops-chart-day-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.ops-chart-axis-text-right {
+  text-anchor: end;
+}
+
+.ops-chart-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ops-chart-line-wind {
+  stroke: #38bdf8;
+}
+
+.ops-chart-line-gust {
+  stroke: #f59e0b;
+}
+
+.ops-chart-line-temp {
+  stroke: #fb7185;
+}
+
+.ops-chart-bar {
+  fill: rgba(56, 189, 248, 0.24);
+  stroke: rgba(56, 189, 248, 0.56);
+  stroke-width: 1;
+}
+
+.wave-card {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.wave-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.wave-metric {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wave-metric span,
+.warning-code,
+.warning-period,
+.warning-location {
+  color: var(--muted);
+}
+
+.wave-metric strong {
+  font-size: 1.05rem;
+  color: var(--text-strong);
+}
+
+.warning-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.warning-preview-grid-full {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.warning-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.warning-code {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.warning-status-pill {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.warning-location,
+.warning-period,
+.warning-excerpt {
+  margin: 0;
+}
+
+.warning-excerpt {
+  color: var(--text);
+}
+
+.warning-detail-main {
+  grid-column: 1 / -1;
+}
+
+.warning-detail-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.warning-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.warning-detail-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.warning-detail-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.warning-detail-text {
+  margin: 0;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.warning-attachment-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .berth-horizontal-strip {
@@ -688,4 +1000,25 @@
   border-color: rgba(10, 108, 102, 0.2);
   background: rgba(10, 108, 102, 0.08);
   color: var(--accent-strong);
+}
+
+@media (max-width: 1100px) {
+  .tides-ribbon-wide,
+  .meteo-chart-stack,
+  .warning-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .tides-ribbon-wide,
+  .meteo-chart-stack,
+  .warning-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wave-metric-grid,
+  .warning-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }

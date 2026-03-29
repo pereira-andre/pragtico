@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Capitania do Porto de Setúbal</p>
+        <h1>Avisos locais</h1>
+        <p class="lead">Consulta rápida dos avisos locais em vigor, com acesso ao detalhe completo de cada aviso.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Avisos listados</span>
+        <strong>{{ warnings|length }}</strong>
+        <small>fonte oficial da capitania</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel warnings-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Em vigor</p>
+        <h2>Lista completa</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ warnings|length }}</span>
+    </div>
+
+    {% if warnings %}
+      <div class="warning-preview-grid warning-preview-grid-full">
+        {% for warning in warnings %}
+          <article class="warning-card">
+            <div class="warning-card-head">
+              <div>
+                <p class="warning-code">{{ warning.display_code }}</p>
+                <h3>{{ warning.subject }}</h3>
+              </div>
+              <span class="ops-pill warning-status-pill">{{ warning.status_label }}</span>
+            </div>
+            <p class="warning-location">{{ warning.location }}</p>
+            <p class="warning-period">De {{ warning.start_date_label }} · Até {{ warning.end_date_label }}</p>
+            <p class="warning-excerpt">{{ warning.excerpt }}</p>
+            <div class="inline-link-row">
+              <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir aviso</a>
+              {% if warning.has_attachments %}
+                <span class="doc-badge">com anexos</span>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% elif warnings_error %}
+      <p class="muted">Erro ao obter avisos locais: {{ warnings_error }}</p>
+    {% else %}
+      <p class="muted">Sem avisos locais disponíveis.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

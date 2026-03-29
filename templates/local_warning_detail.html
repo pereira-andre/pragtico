@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="detail-layout">
+  <section class="panel detail-main warning-detail-main">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">{{ warning.entity_name }}</p>
+        <h1>{{ warning.display_code }}</h1>
+        <p class="muted">{{ warning.status_label }}</p>
+      </div>
+      <div class="detail-actions">
+        <a class="outline-link" href="{{ url_for('dashboard_bp.local_warnings') }}">Todos os avisos</a>
+        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+      </div>
+    </div>
+
+    <article class="panel inset-panel warning-detail-panel">
+      <div class="warning-detail-grid">
+        <div>
+          <span class="warning-detail-label">De</span>
+          <strong>{{ warning.start_date_label }}</strong>
+        </div>
+        <div>
+          <span class="warning-detail-label">Até</span>
+          <strong>{{ warning.end_date_label }}</strong>
+        </div>
+        <div>
+          <span class="warning-detail-label">Local</span>
+          <strong>{{ warning.location }}</strong>
+        </div>
+        <div>
+          <span class="warning-detail-label">Assunto</span>
+          <strong>{{ warning.subject }}</strong>
+        </div>
+        <div>
+          <span class="warning-detail-label">Data do cancelamento</span>
+          <strong>{{ warning.cancel_date_label }}</strong>
+        </div>
+      </div>
+
+      <pre class="warning-detail-text">{{ warning.description_text }}</pre>
+
+      {% if warning.attachments %}
+        <div class="warning-attachment-list">
+          {% for attachment in warning.attachments %}
+            <a class="inline-link" href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.name }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </article>
+  </section>
+</main>
+{% endblock %}

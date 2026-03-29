@@ -5,12 +5,12 @@ import os
 from datetime import date, datetime, timedelta
 from io import StringIO
 
-from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import services
+from dashboard_data import build_weather_charts
 from helpers import (
-    build_tracked_scales,
     build_weather_timeline,
     filter_port_activity_for_session,
     login_required,
@@ -67,30 +67,49 @@ def dashboard():
     port_activity = filter_port_activity_for_session(port_activity)
 
     today = date.today()
-    tomorrow = today + timedelta(days=1)
-    tides_today = services.tide_service.summary_for_date(today)
-    tides_tomorrow = services.tide_service.summary_for_date(tomorrow)
-    tide_window = services.tide_service.window_summary(today - timedelta(days=1), days=4)
+    tide_window = services.tide_service.window_summary(today - timedelta(days=1), days=3)
 
     weather_data = None
     weather_error = ""
     weather_timeline = []
+    weather_charts = {}
     if services.weather_service.enabled:
         try:
             weather_data = services.weather_service.get_forecast(days=3)
             weather_timeline = build_weather_timeline(weather_data, max_hours=48)
+            weather_charts = build_weather_charts(weather_timeline)
         except Exception as exc:
             weather_error = str(exc)
+
+    wave_conditions = None
+    wave_error = ""
+    if getattr(services, "wave_service", None) and services.wave_service.enabled:
+        try:
+            wave_conditions = services.wave_service.get_current_conditions()
+        except Exception as exc:
+            wave_error = str(exc)
+
+    local_warnings = []
+    local_warnings_error = ""
+    if getattr(services, "local_warning_service", None) and services.local_warning_service.enabled:
+        try:
+            local_warnings = services.local_warning_service.list_warnings()
+        except Exception as exc:
+            local_warnings_error = str(exc)
+
     ais_context = services.ais_service.dashboard_context()
     return render_template(
         "dashboard.html",
         port_activity=port_activity,
-        tides_today=tides_today,
-        tides_tomorrow=tides_tomorrow,
         tide_window=tide_window,
         weather_data=weather_data,
         weather_timeline=weather_timeline,
+        weather_charts=weather_charts,
         weather_error=weather_error,
+        wave_conditions=wave_conditions,
+        wave_error=wave_error,
+        local_warnings=local_warnings,
+        local_warnings_error=local_warnings_error,
         ais=ais_context,
         title="PRAGtico",
     )
@@ -152,4 +171,40 @@ def maneuver_archive_export():
         buffer.getvalue(),
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@bp.route("/warnings/local")
+@login_required
+def local_warnings():
+    warnings = []
+    warnings_error = ""
+    if getattr(services, "local_warning_service", None) and services.local_warning_service.enabled:
+        try:
+            warnings = services.local_warning_service.list_warnings()
+        except Exception as exc:
+            warnings_error = str(exc)
+    return render_template(
+        "local_warnings.html",
+        warnings=warnings,
+        warnings_error=warnings_error,
+        title="Avisos Locais",
+    )
+
+
+@bp.route("/warnings/local/<int:warning_id>")
+@login_required
+def local_warning_detail(warning_id: int):
+    if not getattr(services, "local_warning_service", None) or not services.local_warning_service.enabled:
+        abort(404)
+    try:
+        warning = services.local_warning_service.get_warning(warning_id)
+    except Exception as exc:
+        abort(502, description=str(exc))
+    if not warning:
+        abort(404)
+    return render_template(
+        "local_warning_detail.html",
+        warning=warning,
+        title=warning.get("display_code") or "Aviso Local",
     )

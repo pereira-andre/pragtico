@@ -10,6 +10,8 @@ rag = None
 tide_service = None
 weather_service = None
 ais_service = None
+wave_service = None
+local_warning_service = None
 index_store = None
 
 # Module-level mutable state

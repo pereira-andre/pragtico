@@ -23,6 +23,7 @@ from helpers import (
     start_reindex_job,
 )
 from llm_provider import create_embedding_provider, create_llm_provider
+from local_warning_service import LocalWarningService
 from migration_service import migrate_local_json_to_postgres
 from rag_engine import SimpleRAGEngine
 from reindex_scheduler import DeferredTaskScheduler
@@ -36,6 +37,7 @@ from storage import (
 from tide_service import TideService
 from vector_store import create_index_store
 from weather_service import WeatherService
+from wave_service import WaveService
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -124,6 +126,19 @@ weather_service = WeatherService(
     language="pt",
 )
 ais_service = create_ais_service(BASE_DIR)
+wave_service = WaveService(
+    endpoint=os.getenv(
+        "WAVE_API_URL",
+        "https://www.hidrografico.pt/hmapi/ondobuoystation/?buoyID=19",
+    ),
+    station_name=os.getenv("WAVE_STATION_NAME", "Sines"),
+)
+local_warning_service = LocalWarningService(
+    endpoint=os.getenv(
+        "LOCAL_WARNING_API_URL",
+        "https://anavnetbackend.hidrografico.pt/api/v1/local-warnings?stateId=93&currentPage=1&entityId=27",
+    ),
+)
 
 # ---------------------------------------------------------------------------
 # Populate the services registry (used by helpers + blueprints)
@@ -135,6 +150,8 @@ services.rag = rag
 services.tide_service = tide_service
 services.weather_service = weather_service
 services.ais_service = ais_service
+services.wave_service = wave_service
+services.local_warning_service = local_warning_service
 services.index_store = index_store
 services.BASE_DIR = BASE_DIR
 services.DATA_DIR = DATA_DIR

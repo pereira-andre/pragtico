@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import os
 import re
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from math import cos, pi
 from typing import Dict, List, Optional
 
 
@@ -18,6 +20,13 @@ class TideEvent:
     @property
     def timestamp_label(self) -> str:
         return f"{self.date_value.isoformat()} {self.hour:02d}:{self.minute:02d}"
+
+    @property
+    def timestamp(self) -> datetime:
+        return datetime.combine(self.date_value, datetime.min.time()).replace(
+            hour=self.hour,
+            minute=self.minute,
+        )
 
     @property
     def tide_type(self) -> str:
@@ -105,6 +114,69 @@ class TideService:
             )
         return " ".join(commands)
 
+    def _relative_day_label(self, target_date: date, reference_date: Optional[date] = None) -> str:
+        ref = reference_date or datetime.now().date()
+        delta = (target_date - ref).days
+        if delta == -1:
+            return "Ontem"
+        if delta == 0:
+            return "Hoje"
+        if delta == 1:
+            return "Amanhã"
+        return ""
+
+    def _height_at_datetime(self, target_dt: datetime) -> tuple[float, str]:
+        events = self._load_events()
+        if not events:
+            return 0.0, "estável"
+        timestamps = [item.timestamp for item in events]
+        index = bisect_left(timestamps, target_dt)
+        if index <= 0:
+            return events[0].height, "a descer" if len(events) > 1 and events[1].height < events[0].height else "a subir"
+        if index >= len(events):
+            return events[-1].height, "a subir" if len(events) > 1 and events[-1].height > events[-2].height else "a descer"
+
+        previous_event = events[index - 1]
+        next_event = events[index]
+        previous_dt = previous_event.timestamp
+        next_dt = next_event.timestamp
+        total_seconds = max((next_dt - previous_dt).total_seconds(), 1.0)
+        elapsed_seconds = min(max((target_dt - previous_dt).total_seconds(), 0.0), total_seconds)
+        ratio = elapsed_seconds / total_seconds
+        easing = (1 - cos(pi * ratio)) / 2
+        height = previous_event.height + ((next_event.height - previous_event.height) * easing)
+        trend = "a subir" if next_event.height > previous_event.height else "a descer"
+        return round(height, 2), trend
+
+    def _build_window_samples(
+        self,
+        start_date: date,
+        days: int,
+        to_x,
+        to_y,
+        reference_date: date,
+        step_minutes: int = 15,
+    ) -> list[dict]:
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        end_dt = start_dt + timedelta(days=days)
+        samples = []
+        sample_count = int((days * 24 * 60) / step_minutes)
+        for index in range(sample_count + 1):
+            current_dt = start_dt + timedelta(minutes=index * step_minutes)
+            if current_dt > end_dt:
+                current_dt = end_dt
+            height_value, trend = self._height_at_datetime(current_dt)
+            samples.append({
+                "x": round(to_x(current_dt.date(), current_dt.hour, current_dt.minute), 1),
+                "y": round(to_y(height_value), 1),
+                "height_m": round(height_value, 2),
+                "trend": trend,
+                "timestamp": current_dt.isoformat(),
+                "time_label": current_dt.strftime("%d/%m/%Y %H:%M"),
+                "day_label": self._relative_day_label(current_dt.date(), reference_date),
+            })
+        return samples
+
     def window_summary(self, start_date: date, days: int = 4) -> Dict:
         width = 1180
         height = 220
@@ -133,7 +205,10 @@ class TideService:
             normalized = (height_m - min_height) / span
             return height - bottom_pad - (normalized * usable_height)
 
-        chart_points = [(to_x(item.date_value, item.hour, item.minute), to_y(item.height)) for item in events]
+        sample_reference_date = now_local.date()
+        chart_samples = self._build_window_samples(start_date, days, to_x, to_y, sample_reference_date)
+        chart_points = [(sample["x"], sample["y"]) for sample in chart_samples]
+        event_points = [(to_x(item.date_value, item.hour, item.minute), to_y(item.height)) for item in events]
         day_dividers = []
         for offset in range(days + 1):
             divider_date = start_date + timedelta(days=offset)
@@ -141,7 +216,7 @@ class TideService:
             day_dividers.append(
                 {
                     "x": round(x, 1),
-                    "label": divider_date.strftime("%d/%m"),
+                    "label": self._relative_day_label(divider_date, sample_reference_date) or divider_date.strftime("%d/%m"),
                     "is_today": divider_date == now_local.date(),
                 }
             )
@@ -156,6 +231,7 @@ class TideService:
                 "width": width,
                 "height": height,
                 "path_d": self._build_smooth_path(chart_points),
+                "samples": chart_samples,
                 "points": [
                     {
                         "x": round(x, 1),
@@ -163,7 +239,7 @@ class TideService:
                         "label": f"{events[index].timestamp_label} · {events[index].height:.1f} m",
                         "type": events[index].tide_type,
                     }
-                    for index, (x, y) in enumerate(chart_points)
+                    for index, (x, y) in enumerate(event_points)
                 ],
                 "day_dividers": day_dividers,
                 "now_marker_x": now_marker_x,
@@ -233,10 +309,12 @@ class TideService:
     def summary_for_date(self, target_date: date) -> Dict:
         events = self.events_for_date(target_date)
         date_label = self._format_date_label(target_date)
+        relative_label = self._relative_day_label(target_date)
         if not events:
             return {
                 "date": target_date.isoformat(),
                 "date_label": date_label,
+                "relative_label": relative_label,
                 "location": self.location_label,
                 "events": [],
                 "chart": self._build_chart(events),
@@ -251,6 +329,7 @@ class TideService:
         return {
             "date": target_date.isoformat(),
             "date_label": date_label,
+            "relative_label": relative_label,
             "location": self.location_label,
             "events": [
                 {
