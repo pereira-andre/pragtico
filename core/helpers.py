@@ -450,17 +450,23 @@ def current_reindex_status_payload() -> dict:
     status_payload = {
         **status_payload,
         **sync_summary,
-        "embedding_provider": "Gemini" if services.rag.client else "indisponivel",
+        "embedding_provider": (
+            services.rag.embedding_provider.model_name
+            if services.rag._use_local_embeddings and services.rag.embedding_provider
+            else services.rag.embedding_provider_label
+            if services.rag.client
+            else "indisponivel"
+        ),
         "query_embedding_status": (
             "blocked" if services.rag.is_embedding_quota_exhausted()
-            else "available" if services.rag.client
+            else "available" if services.rag._use_local_embeddings or services.rag.client
             else "disabled"
         ),
         "query_embedding_summary": (
             "Pesquisa semântica bloqueada até renovar quota."
             if services.rag.is_embedding_quota_exhausted()
             else "Pesquisa semântica disponível."
-            if services.rag.client
+            if services.rag._use_local_embeddings or services.rag.client
             else "Pesquisa semântica em modo lexical: embeddings locais indisponíveis."
         ),
         "scheduled_retry_at": retry_status.get("scheduled_for"),

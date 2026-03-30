@@ -77,7 +77,7 @@
         </span>
       </div>
       <div class="reindex-sync-grid">
-        <span id="reindex-embedding-provider">embeddings Gemini</span>
+        <span id="reindex-embedding-provider">embeddings {{ reindex_status.embedding_provider or "indisponivel" }}</span>
         <span id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}% cobertura semântica</span>
         <span id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }} docs totalmente embebidos</span>
         <span id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }} docs parciais</span>
@@ -224,7 +224,45 @@
   const reindexEta = document.getElementById("reindex-eta");
   const reindexError = document.getElementById("reindex-error");
   const reindexDocList = document.getElementById("reindex-doc-list");
+  const reindexEmbeddingProvider = document.getElementById("reindex-embedding-provider");
+  const reindexSemanticCoverage = document.getElementById("reindex-semantic-coverage");
+  const reindexFullyEmbeddedDocs = document.getElementById("reindex-fully-embedded-docs");
+  const reindexPartiallyEmbeddedDocs = document.getElementById("reindex-partially-embedded-docs");
+  const reindexKnowledgeDocs = document.getElementById("reindex-knowledge-docs");
+  const reindexIndexDocs = document.getElementById("reindex-index-docs");
+  const reindexMissingChunks = document.getElementById("reindex-missing-chunks");
+  const reindexMissingDocs = document.getElementById("reindex-missing-docs");
+  const reindexPendingDocs = document.getElementById("reindex-pending-docs");
+  const reindexQuerySummary = document.getElementById("reindex-query-summary");
+  const reindexSyncSummary = document.getElementById("reindex-sync-summary");
+  const reindexPendingSummary = document.getElementById("reindex-pending-summary");
   let reindexPollTimer = null;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function renderDocumentSyncRows(rows) {
+    if (!reindexDocList) return;
+    if (!rows || !rows.length) {
+      reindexDocList.innerHTML = '<p class="muted">Sem detalhe documental disponível.</p>';
+      return;
+    }
+    reindexDocList.innerHTML = rows.map((item) => `
+      <article class="reindex-doc-row reindex-doc-row-${item.status}">
+        <div class="reindex-doc-row-head">
+          <strong>${escapeHtml(item.name)}</strong>
+          <span class="reindex-doc-status">${escapeHtml(item.status)}</span>
+        </div>
+        <p>${item.embedded_chunks}/${item.total_chunks} chunks com embedding · ${item.coverage_pct}% · faltam ${item.missing_chunks}</p>
+      </article>
+    `).join("");
+  }
 
   function renderReindexStatus(p) {
     if (!p || !reindexCard) return;
@@ -242,6 +280,19 @@
     if (p.eta_seconds) reindexEta.textContent = "ETA " + p.eta_seconds + "s";
     else if (p.scheduled_retry_eta_seconds) reindexEta.textContent = "Nova tentativa em " + p.scheduled_retry_eta_seconds + "s";
     else reindexEta.textContent = "ETA --";
+    if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = "embeddings " + (p.embedding_provider || "indisponivel");
+    if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = (p.semantic_chunk_coverage_pct || 0) + "% cobertura semântica";
+    if (reindexFullyEmbeddedDocs) reindexFullyEmbeddedDocs.textContent = (p.fully_embedded_documents || 0) + " docs totalmente embebidos";
+    if (reindexPartiallyEmbeddedDocs) reindexPartiallyEmbeddedDocs.textContent = (p.partially_embedded_documents || 0) + " docs parciais";
+    if (reindexKnowledgeDocs) reindexKnowledgeDocs.textContent = "knowledge " + (p.knowledge_documents || 0) + " docs";
+    if (reindexIndexDocs) reindexIndexDocs.textContent = "indice " + (p.indexed_documents || 0) + " docs";
+    if (reindexMissingChunks) reindexMissingChunks.textContent = (p.missing_embedding_chunks || 0) + " chunks sem embedding";
+    if (reindexMissingDocs) reindexMissingDocs.textContent = (p.documents_with_missing_embeddings || 0) + " docs com embeddings em falta";
+    if (reindexPendingDocs) reindexPendingDocs.textContent = (p.pending_documents_total || 0) + " docs pendentes";
+    if (reindexQuerySummary) reindexQuerySummary.textContent = p.query_embedding_summary || "";
+    if (reindexSyncSummary) reindexSyncSummary.textContent = p.sync_summary || "Resumo de sincronização indisponível.";
+    if (reindexPendingSummary) reindexPendingSummary.textContent = p.pending_summary || "Sem pendências conhecidas.";
+    renderDocumentSyncRows(p.document_sync_rows || []);
     if (p.error) { reindexError.textContent = p.error; reindexError.classList.remove("hidden"); }
     else { reindexError.textContent = ""; reindexError.classList.add("hidden"); }
     const btn = reindexForm ? reindexForm.querySelector("button") : null;
@@ -275,7 +326,18 @@
       const btn = reindexForm.querySelector("button");
       if (btn) btn.disabled = true;
       try {
-        const r = await fetch(reindexForm.action, { method: "POST", headers: { Accept: "application/json", "X-Requested-With": "fetch" } });
+        const formData = new FormData(reindexForm);
+        const r = await fetch(reindexForm.action, {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json", "X-Requested-With": "fetch" },
+          credentials: "same-origin"
+        });
+        const contentType = r.headers.get("content-type") || "";
+        if (!r.ok || !contentType.includes("application/json")) {
+          const errorText = await r.text();
+          throw new Error(errorText.slice(0, 180) || ("Falha HTTP " + r.status));
+        }
         const d = await r.json();
         renderReindexStatus(d.status || {});
         if (d.started || (d.status && d.status.scheduled_retry_at)) scheduleReindexPolling();
