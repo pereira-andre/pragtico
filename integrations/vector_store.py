@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
+import time
 from abc import ABC, abstractmethod
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
@@ -97,19 +101,49 @@ class PgvectorIndexStore(BaseIndexStore):
             raise RuntimeError(
                 "Instala `psycopg[binary]` e `pgvector` para usar RAG_INDEX_BACKEND=pgvector."
             ) from exc
-        conn = psycopg.connect(self.database_url, row_factory=dict_row)
-        register_vector(conn)
-        return conn
+        max_wait_seconds = max(float(os.getenv("DATABASE_CONNECT_MAX_WAIT_SECONDS", "45")), 0.0)
+        retry_interval_seconds = max(float(os.getenv("DATABASE_CONNECT_RETRY_INTERVAL_SECONDS", "2")), 0.1)
+        started_at = time.monotonic()
+        last_exc = None
+
+        while True:
+            try:
+                conn = psycopg.connect(self.database_url, row_factory=dict_row)
+                register_vector(conn)
+                return conn
+            except Exception as exc:
+                last_exc = exc
+                elapsed = time.monotonic() - started_at
+                if elapsed >= max_wait_seconds:
+                    raise RuntimeError(
+                        "Falha ao ligar ao PostgreSQL/pgvector durante o arranque. "
+                        "Confirma DATABASE_URL e se a base Railway com pgvector já está pronta."
+                    ) from exc
+                logger.warning(
+                    "Pgvector ainda não está pronto; nova tentativa em %.1fs (%s)",
+                    retry_interval_seconds,
+                    exc,
+                )
+                time.sleep(retry_interval_seconds)
 
     def _ensure_schema(self) -> None:
         project_root = os.path.dirname(os.path.dirname(__file__))
         schema_path = os.path.join(project_root, "sql", "pgvector_schema.sql")
         with open(schema_path, "r", encoding="utf-8") as handle:
             schema_sql = handle.read()
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(schema_sql)
-            conn.commit()
+        try:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(schema_sql)
+                conn.commit()
+        except Exception as exc:
+            message = str(exc).lower()
+            if "extension" in message and "vector" in message:
+                raise RuntimeError(
+                    "A base de dados ligada ao Railway não tem a extensão pgvector disponível. "
+                    "Usa um serviço PostgreSQL com pgvector ou muda RAG_INDEX_BACKEND."
+                ) from exc
+            raise
 
     def load_index(self) -> Dict:
         with self._connect() as conn:

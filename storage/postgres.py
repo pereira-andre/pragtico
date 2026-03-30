@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 import uuid
 from typing import Dict, List, Optional
 
@@ -65,6 +67,8 @@ from .utils import (
     normalize_constraint_codes,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class PostgresStore(BaseStore):
     backend_name = "postgres"
@@ -83,7 +87,28 @@ class PostgresStore(BaseStore):
             from psycopg.rows import dict_row
         except ImportError as exc:
             raise RuntimeError("Instala `psycopg[binary]` para usar o backend postgres.") from exc
-        return psycopg.connect(self.database_url, row_factory=dict_row)
+        max_wait_seconds = max(float(os.getenv("DATABASE_CONNECT_MAX_WAIT_SECONDS", "45")), 0.0)
+        retry_interval_seconds = max(float(os.getenv("DATABASE_CONNECT_RETRY_INTERVAL_SECONDS", "2")), 0.1)
+        started_at = time.monotonic()
+        last_exc = None
+
+        while True:
+            try:
+                return psycopg.connect(self.database_url, row_factory=dict_row)
+            except Exception as exc:
+                last_exc = exc
+                elapsed = time.monotonic() - started_at
+                if elapsed >= max_wait_seconds:
+                    raise RuntimeError(
+                        "Falha ao ligar ao PostgreSQL durante o arranque. "
+                        "Confirma DATABASE_URL e se a base Railway já está pronta."
+                    ) from exc
+                logger.warning(
+                    "PostgreSQL ainda não está pronto; nova tentativa em %.1fs (%s)",
+                    retry_interval_seconds,
+                    exc,
+                )
+                time.sleep(retry_interval_seconds)
 
     def _port_call_select_clause(self) -> str:
         return """
