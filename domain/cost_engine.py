@@ -99,7 +99,9 @@ class ManoeuvreInput:
         gt: Gross tonnage of the vessel.
         surcharges: List of applicable surcharge conditions.
         reductions: List of applicable reduction conditions.
-        standby_hours: Hours of standby time (only for STANDBY type).
+        standby_hours: Hours of standby time to add to the manoeuvre total.
+                       For normal manoeuvres, this can represent the excess time
+                       billed as pilotagem à ordem after the first 3 hours.
         custom_up: Override UP rate (€/√GT) if different from default.
         regular_line_calls: Number of calls in last 365 days (for tiered reduction).
     """
@@ -239,14 +241,20 @@ def calculate_manoeuvre_cost(manoeuvre: ManoeuvreInput) -> ManoeuvreResult:
 
     # Standby component (Art. 15º, nº 4)
     standby_cost = 0.0
-    if manoeuvre.manoeuvre_type == ManoeuvreType.STANDBY and manoeuvre.standby_hours > 0:
+    if manoeuvre.standby_hours > 0:
         standby_hourly = STANDBY_HOURLY_RATE * manoeuvre.standby_hours
         standby_base = base_cost * STANDBY_BASE_SURCHARGE
         standby_cost = standby_hourly + standby_base
-        breakdown.append(
-            f"Pilotagem à ordem: {STANDBY_HOURLY_RATE:.2f} €/h × {manoeuvre.standby_hours:.1f}h "
-            f"+ 25% base ({standby_base:.2f} €) = {standby_cost:.2f} €"
-        )
+        if manoeuvre.manoeuvre_type == ManoeuvreType.STANDBY:
+            breakdown.append(
+                f"Pilotagem à ordem: {STANDBY_HOURLY_RATE:.2f} €/h × {manoeuvre.standby_hours:.1f}h "
+                f"+ 25% base ({standby_base:.2f} €) = {standby_cost:.2f} €"
+            )
+        else:
+            breakdown.append(
+                f"Horas à ordem: {STANDBY_HOURLY_RATE:.2f} €/h × {manoeuvre.standby_hours:.1f}h "
+                f"+ 25% base ({standby_base:.2f} €) = {standby_cost:.2f} €"
+            )
 
     total = base_cost + surcharge_amount - reduction_amount + standby_cost
     breakdown.append(f"Total manobra: {total:.2f} €")

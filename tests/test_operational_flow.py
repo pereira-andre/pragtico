@@ -7,10 +7,10 @@ os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
 
 import app
-import services
-from chat_actions import normalize_action_candidate
+from core import services
+from domain.chat_actions import normalize_action_candidate
 from flask import session
-from helpers import answer_direct_operational_query
+from core.helpers import answer_direct_operational_query
 from storage import LocalStore
 
 
@@ -458,6 +458,149 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["answer_origin"], "operational_replace")
         self.assertEqual(payload["pending_action"]["proposal"]["action"], "approve_entry")
         self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+    def test_piloto_edit_plan_follow_up_preserves_new_notes_and_constraints(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+        self.store.create_user(
+            "piloto-teste",
+            "secret1",
+            "piloto",
+            full_name="Piloto Teste",
+            organization="APSS",
+            email="piloto@example.com",
+            phone="+351912345678",
+        )
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-24T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        current = self.store.get_port_call(port_call["id"])
+        shift = next(item for item in current["maneuver_history"] if item["type"] == "shift")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "piloto-teste"
+                flask_session["role"] = "piloto"
+
+            conversation = self.store.ensure_conversation(username="piloto-teste")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        f"/editar-manobra\n"
+                        f"ID da manobra: {shift['id'][:8].upper()}\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        f"Tipo de manobra: mudança\n"
+                        f"Hora prevista: 24/03/2026, 08:30\n"
+                        f"Origem: TMS 2\n"
+                        f"Destino: TMS 1\n"
+                        f"Calado: 9,94\n"
+                        f"Rebocadores: 2\n"
+                        f"Restrições: daylight\n"
+                        f"Observações: Aguarda rebocador"
+                    ),
+                },
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.get_json()
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], ["motivo da alteração"])
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "Motivo da alteração: janela operacional",
+                },
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.get_json()
+            self.assertEqual(payload["answer_origin"], "operational_update")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+            self.assertEqual(payload["pending_action"]["proposal"]["fields"]["notes"], "Aguarda rebocador")
+            self.assertEqual(payload["pending_action"]["proposal"]["fields"]["constraints"], ["daylight"])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        updated = self.store.get_port_call(port_call["id"])
+        shift = next(item for item in updated["maneuver_history"] if item["type"] == "shift")
+        self.assertEqual(shift["plan_observations"], "Aguarda rebocador")
+        self.assertEqual(shift["constraints"], ["daylight"])
+        self.assertEqual(shift["planned_draft_m"], "9,94")
+        self.assertEqual(shift["tug_count"], "2")
+        self.assertEqual(shift["change_log"][-1]["reason"], "janela operacional")
+
+    def test_abort_shift_via_chat_allows_approved_maneuver_after_planned_time_and_keeps_berth(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+        self.store.create_user(
+            "piloto-aborto",
+            "secret1",
+            "piloto",
+            full_name="Piloto Aborto",
+            organization="APSS",
+            email="piloto-aborto@example.com",
+            phone="+351912345679",
+        )
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2000-01-01T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+        current = self.store.get_port_call(port_call["id"])
+        shift = next(item for item in current["maneuver_history"] if item["type"] == "shift")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "piloto-aborto"
+                flask_session["role"] = "piloto"
+
+            conversation = self.store.ensure_conversation(username="piloto-aborto")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        f"/abortar\n"
+                        f"ID da manobra: {shift['id'][:8].upper()}\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        f"Tipo de manobra: mudança\n"
+                        f"Motivo: nevoeiro"
+                    ),
+                },
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.get_json()
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        updated = self.store.get_port_call(port_call["id"])
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        archived_ids = {item["port_call_id"] for item in snapshot["archived_maneuvers"]}
+        shift = next(item for item in updated["maneuver_history"] if item["type"] == "shift")
+        self.assertEqual(shift["state"], "aborted")
+        self.assertEqual(shift["aborted_reason"], "nevoeiro")
+        self.assertEqual(updated["berth"], "TMS 2")
+        self.assertIn(port_call["id"], archived_ids)
 
     def test_edit_plan_confirmation_rejects_stale_maneuver_id(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")

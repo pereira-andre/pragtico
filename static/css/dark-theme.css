@@ -479,6 +479,23 @@ label {
   color: var(--text);
   border-color: var(--line);
 }
+.chat-command-autocomplete {
+  background: rgba(13, 20, 34, 0.96);
+  border-color: var(--line);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+}
+.chat-command-item {
+  color: var(--text);
+}
+.chat-command-item span,
+.chat-command-item small {
+  color: var(--muted);
+}
+.chat-command-item.active,
+.chat-command-item:hover {
+  background: rgba(26, 159, 255, 0.12);
+  border-color: rgba(26, 159, 255, 0.22);
+}
 .chatbot-conv-chip {
   background: rgba(26, 159, 255, 0.08);
   color: var(--text);
@@ -569,6 +586,11 @@ label {
   color: var(--accent);
 }
 
+.archive-td-cost-secondary {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .archive-vessel-cell {
   display: flex;
   align-items: center;
@@ -584,6 +606,20 @@ label {
   padding: 12px 0 0;
   border-top: 1px solid var(--line);
   margin-top: 16px;
+}
+
+.archive-scale-detail summary {
+  color: var(--accent);
+}
+
+.archive-maneuver-card {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+}
+
+.archive-maneuver-cost {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Cost simulator */
@@ -970,8 +1006,9 @@ details summary {
 
 .tides-day-label {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
@@ -989,19 +1026,19 @@ details summary {
 }
 
 .tides-events {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .tide-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 10px 16px;
+  gap: 4px;
+  padding: 12px 10px;
   border-radius: var(--radius-sm);
-  min-width: 80px;
+  min-width: 0;
   text-align: center;
 }
 
@@ -1033,6 +1070,7 @@ details summary {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .tide-high .tide-height {
@@ -1047,7 +1085,8 @@ details summary {
    SECTOR INFO (sunrise/sunset/moon)
    ══════════════════════════════════════════════════════════ */
 
-.sector-info {
+.sector-info,
+.meteo-astro-strip {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
@@ -1138,7 +1177,11 @@ details summary {
   .tides-ribbon.tides-ribbon-wide {
     grid-template-columns: 1fr;
   }
-  .sector-info {
+  .tides-events {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sector-info,
+  .meteo-astro-strip {
     flex-direction: column;
     align-items: flex-start;
   }

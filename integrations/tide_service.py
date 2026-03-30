@@ -38,6 +38,20 @@ class TideService:
         self.csv_path = csv_path
         self.location_label = self._infer_location_label(csv_path)
         self._events_cache: Optional[List[TideEvent]] = None
+        self._month_names_pt = (
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
+        )
 
     def _infer_location_label(self, path: str) -> str:
         name = os.path.basename(path)
@@ -47,6 +61,14 @@ class TideService:
 
     def _format_date_label(self, target_date: date) -> str:
         return target_date.strftime("%d/%m/%Y")
+
+    def _format_month_name(self, target_date: date) -> str:
+        return self._month_names_pt[target_date.month - 1]
+
+    def _format_range_label(self, start_date: date, end_date: date) -> str:
+        start_month = self._format_month_name(start_date)
+        end_month = self._format_month_name(end_date)
+        return f"{start_date.day} {start_month} a {end_date.day} de {end_month}"
 
     def _resolve_portuguese_date(
         self,
@@ -243,7 +265,7 @@ class TideService:
                 ],
                 "day_dividers": day_dividers,
                 "now_marker_x": now_marker_x,
-                "range_label": f"{start_date.strftime('%d/%m')} → {(end_date - timedelta(days=1)).strftime('%d/%m')}",
+                "range_label": self._format_range_label(start_date, end_date - timedelta(days=1)),
                 "hours_label": f"{days * 24}h",
                 "amplitude_m": round(max_height - min_height, 2),
                 "min_height_m": round(min_height, 2),

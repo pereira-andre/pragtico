@@ -2,7 +2,7 @@
 
 import unittest
 
-from validators import (
+from core.validators import (
     validate_choice,
     validate_datetime_range,
     validate_email,

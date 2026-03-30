@@ -6,7 +6,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from ais_service import create_ais_service
+from integrations.ais_service import create_ais_service
 
 
 if __name__ == "__main__":

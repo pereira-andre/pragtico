@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from rag_engine import SimpleRAGEngine
-from vector_store import LocalIndexStore
+from integrations.rag_engine import SimpleRAGEngine
+from integrations.vector_store import LocalIndexStore
 
 
 class _FailingModels:

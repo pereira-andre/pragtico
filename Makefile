@@ -1,13 +1,16 @@
 PYTHON ?= python3
 WEB_PORT ?= 5000
 
-.PHONY: install run up down logs restart migrate reindex health set-role admin agente piloto create-admin
+.PHONY: install run test up down logs restart migrate reindex health set-role admin agente piloto create-admin
 
 install:
 	$(PYTHON) -m pip install -r requirements.txt
 
 run:
 	$(PYTHON) app.py
+
+test:
+	$(PYTHON) -m unittest discover tests -v
 
 up:
 	docker compose up --build

@@ -102,7 +102,8 @@ class PgvectorIndexStore(BaseIndexStore):
         return conn
 
     def _ensure_schema(self) -> None:
-        schema_path = os.path.join(os.path.dirname(__file__), "sql", "pgvector_schema.sql")
+        project_root = os.path.dirname(os.path.dirname(__file__))
+        schema_path = os.path.join(project_root, "sql", "pgvector_schema.sql")
         with open(schema_path, "r", encoding="utf-8") as handle:
             schema_sql = handle.read()
         with self._connect() as conn:

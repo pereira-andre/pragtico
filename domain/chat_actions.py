@@ -110,7 +110,7 @@ ACTION_SPECS = {
     # --- Edição de planeamento — Agente/Admin editam ---
     "edit_maneuver_plan": {
         "label": "Editar planeamento",
-        "roles": {"admin", "agente"},
+        "roles": {"admin", "agente", "piloto"},
         "requires_target": True,
     },
     "delete_maneuver": {
@@ -502,13 +502,14 @@ DISPLAY_FIELD_LABELS = {
     "berth": "cais previsto",
     "last_port": "último porto",
     "next_port": "próximo porto",
-    "planned_at_local": "marcação",
+    "planned_at_local": "hora prevista",
     "planned_departure_at_local": "hora prevista de saída",
     "planned_shift_at_local": "hora prevista da mudança",
     "destination_berth": "cais destino",
     "origin": "origem",
     "destination": "destino",
     "origin_berth": "cais origem",
+    "constraints": "restrições",
     "aborted_reason": "motivo",
     "maneuver_started_local": "início da manobra",
     "maneuver_finished_local": "fim da manobra",
@@ -1216,10 +1217,15 @@ def build_slash_help(role: str) -> str:
             [
                 "/criar-manobra",
                 "  cria uma saída ou mudança; o ID da manobra é automático",
-                "/editar-manobra",
-                "  altera o planeamento; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
                 "/apagar-manobra",
                 "  remove a manobra planeada; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
+            ]
+        )
+    if clean_role in {"admin", "agente", "piloto"}:
+        lines.extend(
+            [
+                "/editar-manobra",
+                "  altera o planeamento; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
     if clean_role in {"admin", "piloto"}:
@@ -1599,13 +1605,23 @@ def merge_action_candidate(existing: Dict, updates: Dict, role: str) -> Optional
     elif action in {"abort_entry", "abort_departure", "abort_shift"} and update_reason:
         if not " ".join(str(update_fields.get("aborted_reason") or existing_fields.get("aborted_reason") or "").split()):
             update_fields["aborted_reason"] = update_reason
-    fields = normalize_action_fields(
-        action,
-        {
-            **existing_fields,
-            **update_fields,
-        },
-    )
+    merged_fields = dict(existing_fields)
+    for key, value in update_fields.items():
+        if isinstance(value, str):
+            if " ".join(value.split()):
+                merged_fields[key] = value
+            continue
+        if isinstance(value, list):
+            if value:
+                merged_fields[key] = value
+            continue
+        if isinstance(value, dict):
+            if value:
+                merged_fields[key] = value
+            continue
+        if value is not None:
+            merged_fields[key] = value
+    fields = normalize_action_fields(action, merged_fields)
     candidate = normalize_action_candidate(
         {
             "intent": "action",
@@ -2081,7 +2097,13 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     if proposal_target.get("maneuver_id") or proposal.get("maneuver_id"):
         lines.append(f"ID da manobra: {proposal_target.get('maneuver_id') or proposal.get('maneuver_id')}.")
     if proposal.get("target", {}).get("maneuver_type"):
-        lines.append(f"Manobra: {proposal['target']['maneuver_type']}.")
+        maneuver_type = proposal["target"]["maneuver_type"]
+        maneuver_label = {
+            "entry": "entrada",
+            "departure": "saída",
+            "shift": "mudança",
+        }.get(maneuver_type, maneuver_type)
+        lines.append(f"Manobra: {maneuver_label}.")
     for key, value in fields.items():
         if value in ("", None, []):
             continue
@@ -2091,7 +2113,10 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
             clean_value = str(value)
         lines.append(f"{DISPLAY_FIELD_LABELS.get(key, key)}: {clean_value}.")
     if proposal.get("reason"):
-        lines.append(f"Nota: {proposal['reason']}.")
+        clean_reason = " ".join(str(proposal["reason"]).strip().split())
+        if clean_reason:
+            suffix = "" if clean_reason[-1:] in ".!?" else "."
+            lines.append(f"Nota: {clean_reason}{suffix}")
     missing_fields = proposal.get("missing_fields") or []
     if missing_fields:
         lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")

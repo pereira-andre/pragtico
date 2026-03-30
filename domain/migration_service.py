@@ -299,7 +299,7 @@ def migrate_local_json_to_postgres(
 
 
 def main() -> None:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
     knowledge_dir = os.path.join(base_dir, "knowledge")
     database_url = os.getenv("DATABASE_URL", "").strip()

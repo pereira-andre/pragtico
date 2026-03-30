@@ -1,6 +1,6 @@
 import unittest
 
-from chat_actions import (
+from domain.chat_actions import (
     action_for_maneuver_type,
     build_action_reply_template,
     build_port_call_reply_template,
@@ -99,6 +99,15 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(parsed["intent"], "template")
         self.assertIn("Motivo da alteração", parsed["answer"])
+
+    def test_parse_slash_edit_maneuver_is_allowed_for_piloto(self) -> None:
+        parsed = parse_slash_command(
+            "/editar-manobra Ref: BF757B7F Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00 Motivo da alteração: ajuste operacional",
+            "piloto",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "edit_maneuver_plan")
 
     def test_parse_slash_edit_report_template_mentions_change_reason(self) -> None:
         parsed = parse_slash_command("/editar-registo-manobra", "admin")
@@ -206,6 +215,12 @@ class ChatActionsTests(unittest.TestCase):
         self.assertIn("/registar-escala", help_text)
         self.assertNotIn("/apagar-escala", help_text)
         self.assertIn("ID da manobra é automático", help_text)
+
+    def test_build_slash_help_for_piloto_mentions_edit_maneuver(self) -> None:
+        help_text = build_slash_help("piloto")
+
+        self.assertIn("/editar-manobra", help_text)
+        self.assertNotIn("/criar-manobra", help_text)
 
     def test_build_action_reply_template_for_report_mentions_id_and_ref_plus_type(self) -> None:
         template = build_action_reply_template("entry_report")
@@ -434,6 +449,35 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(summary.count("Se preferires, responde já neste formato e eu trato do registo:"), 1)
         self.assertNotIn("Faltam estes campos:", summary)
 
+    def test_format_action_summary_uses_portuguese_labels_for_maneuver_and_constraints(self) -> None:
+        proposal = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "edit_maneuver_plan",
+                "target": {
+                    "reference_code": "PTSET26OCEA1C3808",
+                    "vessel_name": "OCEAN BULKER",
+                    "maneuver_id": "b78cb93f",
+                    "maneuver_type": "shift",
+                },
+                "fields": {
+                    "planned_at_local": "29/03/2026, 23:10",
+                    "constraints": ["daylight"],
+                    "change_reason": "Ajuste operacional",
+                },
+                "reason": "Comando explícito /editar-manobra.",
+                "missing_fields": [],
+            },
+            "admin",
+        )
+
+        summary = format_action_summary(proposal)
+
+        self.assertIn("Manobra: mudança.", summary)
+        self.assertIn("restrições: daylight.", summary)
+        self.assertIn("Nota: Comando explícito /editar-manobra.", summary)
+        self.assertNotIn("/editar-manobra..", summary)
+
     def test_normalize_action_candidate_validates_schedule_departure_fields(self) -> None:
         candidate = normalize_action_candidate(
             {
@@ -533,6 +577,28 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(merged["fields"]["change_reason"], "piloto disponível")
         self.assertEqual(merged["missing_fields"], [])
+
+    def test_merge_action_candidate_preserves_existing_optional_fields_on_reason_only_update(self) -> None:
+        existing = parse_slash_command(
+            "/editar-manobra ID da manobra: 7f3c2a91 Tipo de manobra: mudança Hora prevista: 29/03/2026, 20:00 Origem: Teporset Destino: Fundeadouro Tróia Restrições: daylight Observações: Aguarda bom tempo",
+            "agente",
+        )["proposal"]
+        updates = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "edit_maneuver_plan",
+                "target": existing["target"],
+                "fields": extract_pending_field_updates("Motivo da alteração: janela operacional", existing),
+                "missing_fields": [],
+            },
+            "agente",
+        )
+
+        merged = merge_action_candidate(existing, updates, "agente")
+
+        self.assertEqual(merged["fields"]["change_reason"], "janela operacional")
+        self.assertEqual(merged["fields"]["notes"], "Aguarda bom tempo")
+        self.assertEqual(merged["fields"]["constraints"], ["daylight"])
 
     def test_extract_pending_field_updates_handles_time_only_for_existing_plan(self) -> None:
         proposal = {

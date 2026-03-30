@@ -71,7 +71,10 @@
   <form class="chatbot-input" id="chatbot-form">
     <input type="hidden" id="chatbot-conv-id" value="{{ chatbot_conversation.id if chatbot_conversation else '' }}">
     <input type="hidden" id="chatbot-csrf-token" value="{{ csrf_token() }}">
-    <textarea id="chatbot-question" rows="2" placeholder="Pergunta ao bot..." required></textarea>
+    <div class="chat-input-stack">
+      <textarea id="chatbot-question" rows="2" placeholder="Pergunta ao bot..." required></textarea>
+      <div class="chat-command-autocomplete hidden" id="chatbot-command-autocomplete"></div>
+    </div>
     <button type="submit" id="chatbot-send" title="Enviar">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -93,6 +96,7 @@
   const convIdField = document.getElementById("chatbot-conv-id");
   const csrfField = document.getElementById("chatbot-csrf-token");
   const statusEl = document.getElementById("chatbot-status");
+  const commandAutocomplete = document.getElementById("chatbot-command-autocomplete");
   const pendingPanel = document.getElementById("chatbot-pending");
   const pendingTitle = document.getElementById("chatbot-pending-title");
   const pendingTarget = document.getElementById("chatbot-pending-target");
@@ -103,6 +107,13 @@
   const convStrip = document.getElementById("chatbot-conversations");
   const PREF_KEY = "pragtico.chatbot.open";
   let isOpen = localStorage.getItem(PREF_KEY) === "1";
+  const autocomplete = window.PRAGticoChatCommandAutocomplete
+    ? window.PRAGticoChatCommandAutocomplete.attach({
+        textarea: questionField,
+        panel: commandAutocomplete,
+        role: "{{ current_role or '' }}",
+      })
+    : { handleKeydown() { return false; } };
 
   function syncConversationId(nextConversationId) {
     if (typeof nextConversationId !== "string") return;
@@ -280,6 +291,7 @@
 
   /* Enter to send (Shift+Enter for newline) */
   questionField.addEventListener("keydown", (e) => {
+    if (autocomplete.handleKeydown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       form.dispatchEvent(new Event("submit"));

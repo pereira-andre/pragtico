@@ -110,7 +110,10 @@
 
     <form class="chat-page-input" id="chat-page-form">
       <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
-      <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
+      <div class="chat-page-input-stack">
+        <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
+        <div class="chat-command-autocomplete hidden" id="chat-page-command-autocomplete"></div>
+      </div>
       <div class="chat-page-toolbar">
         <p class="chatbot-status" id="chat-page-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
         <button type="submit" class="mini-button">Enviar</button>
@@ -126,6 +129,7 @@
   const chatLog = document.getElementById("chat-page-log");
   const chatForm = document.getElementById("chat-page-form");
   const chatQuestion = document.getElementById("chat-page-question");
+  const chatCommandAutocomplete = document.getElementById("chat-page-command-autocomplete");
   const chatStatus = document.getElementById("chat-page-status");
   const conversationIdField = document.getElementById("chat-page-conversation-id");
   const pendingPanel = document.getElementById("chat-page-pending");
@@ -134,6 +138,13 @@
   const pendingMissing = document.getElementById("chat-page-pending-missing");
   const pendingConfirm = document.getElementById("chat-page-pending-confirm");
   const pendingCancel = document.getElementById("chat-page-pending-cancel");
+  const autocomplete = window.PRAGticoChatCommandAutocomplete
+    ? window.PRAGticoChatCommandAutocomplete.attach({
+        textarea: chatQuestion,
+        panel: chatCommandAutocomplete,
+        role: "{{ current_role or '' }}",
+      })
+    : { handleKeydown() { return false; } };
 
   function filterConversations() {
     const query = (conversationSearch?.value || "").trim().toLowerCase();
@@ -273,6 +284,7 @@
   });
 
   chatQuestion.addEventListener("keydown", (event) => {
+    if (autocomplete.handleKeydown(event)) return;
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       chatForm.dispatchEvent(new Event("submit"));

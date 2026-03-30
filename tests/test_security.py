@@ -2,7 +2,7 @@
 
 import unittest
 
-from security import RateLimiter, generate_csrf_token, init_csrf
+from core.security import RateLimiter, generate_csrf_token, init_csrf
 
 from flask import Flask
 

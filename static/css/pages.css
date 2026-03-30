@@ -452,6 +452,53 @@
   margin-top: 12px;
 }
 
+.archive-vessel-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.archive-scale-detail {
+  display: grid;
+  gap: 12px;
+  min-width: 320px;
+}
+
+.archive-scale-detail summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.archive-scale-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.archive-scale-detail-meta,
+.archive-maneuver-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.archive-maneuver-list {
+  display: grid;
+  gap: 10px;
+}
+
+.archive-maneuver-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+}
+
+.archive-maneuver-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .eyebrow,
 .mini-label {
   text-transform: uppercase;

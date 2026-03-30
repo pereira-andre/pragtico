@@ -6,8 +6,8 @@ import re
 
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
-import services
-from chat_actions import (
+from core import services
+from domain.chat_actions import (
     build_action_reply_template,
     build_abort_reply_template,
     build_port_call_reply_template,
@@ -19,8 +19,8 @@ from chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
-from security import api_limiter, rate_limit
-from helpers import (
+from core.security import api_limiter, rate_limit
+from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
     build_operational_chat_sources,

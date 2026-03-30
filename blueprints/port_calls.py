@@ -5,8 +5,8 @@ from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-import services
-from helpers import (
+from core import services
+from core.helpers import (
     build_departure_plan_note,
     build_entry_request_note,
     build_maneuver_context,
@@ -21,7 +21,7 @@ from helpers import (
     role_required,
 )
 from storage import normalize_constraint_codes
-from validators import (
+from core.validators import (
     validate_datetime_range,
     validate_imo,
     validate_optional_text,
@@ -41,7 +41,7 @@ bp = Blueprint("port_calls", __name__)
 @role_required("admin", "agente")
 def port_call_register():
     """Página de registo de nova escala portuária."""
-    from helpers import build_tracked_scales, filter_port_activity_for_session
+    from core.helpers import build_tracked_scales, filter_port_activity_for_session
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
     return render_template(

@@ -9,8 +9,9 @@ from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash, generate_password_hash
+from core.validators import validate_datetime_range
 
-from document_processing import (
+from domain.document_processing import (
     build_preview,
     ensure_unique_filename,
     extract_text_from_path,
@@ -1674,6 +1675,12 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
     ) -> Dict:
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
+        validate_datetime_range(
+            maneuver_started_at,
+            maneuver_finished_at,
+            started_label="Início da manobra",
+            finished_label="Fim da manobra",
+        )
 
         def mutator(current: Dict) -> Dict:
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
@@ -1812,7 +1819,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             departure = _latest_maneuver(current.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_IN_PORT or not departure:
                 raise ValueError("Não existe manobra de saída planeada para este navio.")
-            if not _can_abort_departure_plan({"planned_departure_at": departure.get("planned_at")}):
+            if (
+                departure.get("state") == PORT_CALL_APPROVAL_PENDING
+                and not _can_abort_departure_plan({"planned_departure_at": departure.get("planned_at")})
+            ):
                 raise ValueError("A saída só pode ser abortada com pelo menos 1 hora de antecedência.")
             departure["state"] = PORT_CALL_APPROVAL_ABORTED
             departure["aborted_reason"] = reason
@@ -1894,6 +1904,12 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             raise ValueError("O início e o fim da manobra são obrigatórios.")
         if not draft_m.strip():
             raise ValueError("O calado da manobra é obrigatório.")
+        validate_datetime_range(
+            maneuver_started_at,
+            maneuver_finished_at,
+            started_label="Início da manobra",
+            finished_label="Fim da manobra",
+        )
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
@@ -1942,6 +1958,12 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             raise ValueError("O início e o fim da manobra são obrigatórios.")
         if not draft_m.strip():
             raise ValueError("O calado da manobra é obrigatório.")
+        validate_datetime_range(
+            maneuver_started_at,
+            maneuver_finished_at,
+            started_label="Início da manobra",
+            finished_label="Fim da manobra",
+        )
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
@@ -2056,7 +2078,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             shift = _latest_maneuver(current.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_IN_PORT or not shift:
                 raise ValueError("Não existe manobra de mudança planeada para este navio.")
-            if not _can_abort_shift_plan({"planned_shift_at": shift.get("planned_at")}):
+            if (
+                shift.get("state") == PORT_CALL_APPROVAL_PENDING
+                and not _can_abort_shift_plan({"planned_shift_at": shift.get("planned_at")})
+            ):
                 raise ValueError("A mudança só pode ser abortada com pelo menos 1 hora de antecedência.")
             shift["state"] = PORT_CALL_APPROVAL_ABORTED
             shift["aborted_reason"] = reason
@@ -2104,6 +2129,12 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             raise ValueError("O início e o fim da manobra são obrigatórios.")
         if not draft_m.strip():
             raise ValueError("O calado da manobra é obrigatório.")
+        validate_datetime_range(
+            maneuver_started_at,
+            maneuver_finished_at,
+            started_label="Início da manobra",
+            finished_label="Fim da manobra",
+        )
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
@@ -2153,7 +2184,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             entry = _latest_maneuver(current.get("maneuver_history", []), "entry", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_SCHEDULED or not entry:
                 raise ValueError("Só podes abortar manobras ainda não executadas.")
-            if not _can_abort_port_call({"eta": entry.get("planned_at")}):
+            if (
+                entry.get("state") == PORT_CALL_APPROVAL_PENDING
+                and not _can_abort_port_call({"eta": entry.get("planned_at")})
+            ):
                 raise ValueError("A manobra só pode ser abortada com pelo menos 2 horas de antecedência.")
             entry["state"] = PORT_CALL_APPROVAL_ABORTED
             entry["approval_note"] = approval_note.strip()

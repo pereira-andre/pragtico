@@ -11,10 +11,10 @@ from flask import Flask, request, session
 from markupsafe import Markup, escape
 from werkzeug.exceptions import RequestEntityTooLarge
 
-import services
-from ais_service import create_ais_service
-from auth_service import create_auth_service
-from helpers import (
+from core import services
+from integrations.ais_service import create_ais_service
+from integrations.auth_service import create_auth_service
+from core.helpers import (
     current_reindex_status_payload,
     current_user_profile,
     execute_pending_operational_action,
@@ -25,22 +25,22 @@ from helpers import (
     save_pending_chat_action,
     start_reindex_job,
 )
-from llm_provider import create_embedding_provider, create_llm_provider
-from local_warning_service import LocalWarningService
-from migration_service import migrate_local_json_to_postgres
-from rag_engine import SimpleRAGEngine
-from reindex_scheduler import DeferredTaskScheduler
-from security import init_csrf
+from integrations.llm_provider import create_embedding_provider, create_llm_provider
+from integrations.local_warning_service import LocalWarningService
+from domain.migration_service import migrate_local_json_to_postgres
+from integrations.rag_engine import SimpleRAGEngine
+from core.reindex_scheduler import DeferredTaskScheduler
+from core.security import init_csrf
 from storage import (
     PASSWORD_HASH_METHOD,
     create_store,
     get_constraint_options,
     get_vessel_type_options,
 )
-from tide_service import TideService
-from vector_store import create_index_store
-from weather_service import WeatherService
-from wave_service import WaveService
+from integrations.tide_service import TideService
+from integrations.vector_store import create_index_store
+from integrations.weather_service import WeatherService
+from integrations.wave_service import WaveService
 
 load_dotenv()
 logger = logging.getLogger(__name__)

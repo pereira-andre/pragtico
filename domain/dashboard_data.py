@@ -26,6 +26,15 @@ def _build_svg_smooth_path(points: list[tuple[float, float]]) -> str:
     return " ".join(commands)
 
 
+def _build_svg_area_path(points: list[tuple[float, float]], baseline_y: float) -> str:
+    if not points:
+        return ""
+    line_path = _build_svg_smooth_path(points)
+    first_x = points[0][0]
+    last_x = points[-1][0]
+    return f"{line_path} L {last_x:.1f},{baseline_y:.1f} L {first_x:.1f},{baseline_y:.1f} Z"
+
+
 def _build_chart_day_dividers(slots: list[dict]) -> list[dict]:
     dividers = []
     seen_dates = set()
@@ -49,7 +58,7 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
         return {}
 
     width = 1180
-    height = 228
+    height = 248
     left_pad = 44
     right_pad = 28
     top_pad = 18
@@ -67,6 +76,8 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
         for value in (slot.get("wind_kts"), slot.get("gust_kts"))
         if value is not None
     ]
+    wind_only_values = [float(slot.get("wind_kts")) for slot in weather_timeline if slot.get("wind_kts") is not None]
+    gust_only_values = [float(slot.get("gust_kts")) for slot in weather_timeline if slot.get("gust_kts") is not None]
     max_wind = max(wind_values, default=10.0)
     wind_ceiling = max(10.0, math.ceil(max_wind / 5.0) * 5.0)
 
@@ -155,6 +166,12 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
         "bottom_pad": bottom_pad,
         "wind": {
             "max_kts": round(wind_ceiling, 1),
+            "summary": {
+                "avg_wind_kts": round(sum(wind_only_values) / len(wind_only_values), 1) if wind_only_values else 0.0,
+                "max_wind_kts": round(max(wind_only_values, default=0.0), 1),
+                "max_gust_kts": round(max(gust_only_values, default=0.0), 1),
+            },
+            "wind_area_d": _build_svg_area_path(wind_points, height - bottom_pad),
             "wind_path_d": _build_svg_smooth_path(wind_points),
             "gust_path_d": _build_svg_smooth_path(gust_points),
             "samples": wind_samples,
@@ -169,6 +186,12 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
             "temp_min_c": temp_min,
             "temp_max_c": temp_max,
             "precip_max_mm": round(precip_ceiling, 1),
+            "summary": {
+                "temp_span_c": round(temp_max - temp_min, 1),
+                "precip_total_mm": round(sum(precip_values), 1),
+                "wet_slots": sum(1 for value in precip_values if value > 0),
+            },
+            "temp_area_d": _build_svg_area_path(temp_points, height - bottom_pad),
             "temp_path_d": _build_svg_smooth_path(temp_points),
             "precip_bars": precip_bars,
             "samples": temp_samples,

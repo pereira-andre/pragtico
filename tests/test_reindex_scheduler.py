@@ -4,7 +4,7 @@ import time
 import unittest
 from zoneinfo import ZoneInfo
 
-from reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
+from core.reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
 
 
 class ReindexSchedulerTests(unittest.TestCase):

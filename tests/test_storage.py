@@ -1,5 +1,6 @@
 """Integration tests for the LocalStore storage backend."""
 
+import math
 import os
 import tempfile
 import unittest
@@ -8,6 +9,7 @@ from pathlib import Path
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
 
+from domain.cost_engine import UP_NORMAL, calculate_tup
 from storage import LocalStore
 
 
@@ -260,11 +262,173 @@ class LocalStorePortCallTests(unittest.TestCase):
         )
         self.assertEqual(departed["status"], "departed")
 
+    def test_abort_shift_plan_allows_approved_maneuver_after_planned_time_and_keeps_berth(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin",
+        )
+        self.store.schedule_shift_plan(
+            pc["id"],
+            planned_shift_at="2000-01-01T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(pc["id"], decided_by="admin")
+
+        aborted = self.store.abort_shift_plan(pc["id"], updated_by="piloto", aborted_reason="nevoeiro")
+        shift = next(m for m in aborted["maneuver_history"] if m["type"] == "shift")
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        archived_ids = {item["port_call_id"] for item in snapshot["archived_maneuvers"]}
+
+        self.assertEqual(shift["state"], "aborted")
+        self.assertEqual(shift["aborted_reason"], "nevoeiro")
+        self.assertEqual(aborted["berth"], "TMS 2")
+        self.assertIn(pc["id"], archived_ids)
+
+    def test_attach_entry_report_rejects_finished_before_started(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin",
+        )
+
+        with self.assertRaisesRegex(ValueError, "Fim da manobra deve ser posterior a Início da manobra."):
+            self.store.attach_entry_report(
+                pc["id"],
+                updated_by="admin",
+                maneuver_started_at="2026-03-24T06:10:00+00:00",
+                maneuver_finished_at="2026-03-24T06:00:00+00:00",
+                draft_m="9.94",
+                notes="Sem incidentes.",
+            )
+
+    def test_edit_maneuver_report_rejects_finished_before_started(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin",
+        )
+        reported = self.store.attach_entry_report(
+            pc["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:35:00+00:00",
+            maneuver_finished_at="2026-03-24T06:00:00+00:00",
+            draft_m="9.94",
+            notes="Sem incidentes.",
+        )
+        entry = next(m for m in reported["maneuver_history"] if m["type"] == "entry")
+
+        with self.assertRaisesRegex(ValueError, "Fim da manobra deve ser posterior a Início da manobra."):
+            self.store.edit_maneuver_report(
+                pc["id"],
+                entry["id"],
+                updated_by="admin",
+                maneuver_started_at="2026-03-24T06:10:00+00:00",
+                maneuver_finished_at="2026-03-24T06:00:00+00:00",
+                draft_m="9.94",
+                notes="Ajuste",
+                change_reason="correção",
+            )
+
     def test_get_port_activity_snapshot(self) -> None:
         self._create_entry()
         snapshot = self.store.get_port_activity_snapshot(window_days=30)
         self.assertIn("planned_maneuvers", snapshot)
         self.assertIn("archived_maneuvers", snapshot)
+        self.assertIn("archived_scales", snapshot)
+
+    def test_archived_scale_estimate_uses_full_gt_and_aggregates_scale_costs(self) -> None:
+        port_call = self.store.create_port_call(
+            vessel_name="OCEAN BULKER",
+            eta="2026-03-24T05:30:00+00:00",
+            created_by="admin",
+            berth="Teporset",
+            last_port="Casablanca",
+            next_port="Rotterdam",
+            notes="Escala de teste.",
+            vessel_imo="9152923",
+            vessel_call_sign="D5OC2",
+            vessel_flag="Liberia",
+            vessel_type="Graneis sólidos",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="34.860",
+            vessel_max_draft_m="10.60",
+            vessel_dwt_t="22330",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:35:00+00:00",
+            maneuver_finished_at="2026-03-24T06:00:00+00:00",
+            draft_m="10.60",
+            notes="Entrada concluída.",
+        )
+        self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at="2026-03-25T10:00:00+00:00",
+            updated_by="admin",
+            next_port="Rotterdam",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_departed(
+            port_call["id"],
+            departed_at="2026-03-25T10:30:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_departure_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-25T09:50:00+00:00",
+            maneuver_finished_at="2026-03-25T10:30:00+00:00",
+            draft_m="10.40",
+            notes="Saída concluída.",
+        )
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        scale = next(item for item in snapshot["archived_scales"] if item["port_call_id"] == port_call["id"])
+        expected_pilotage = round(2 * UP_NORMAL * math.sqrt(34860), 2)
+        expected_tup = calculate_tup(34860, "restantes", scale["stay_days"])
+
+        self.assertEqual(scale["maneuver_count"], 2)
+        self.assertAlmostEqual(scale["estimated_pilotage_total"], expected_pilotage, places=2)
+        self.assertAlmostEqual(scale["estimated_tup"], expected_tup, places=2)
+        self.assertGreater(scale["estimated_grand_total"], scale["estimated_pilotage_total"])
+        self.assertEqual([item["maneuver_type"] for item in scale["maneuvers"]], ["entry", "departure"])
+        self.assertTrue(all(item["estimated_cost"] and item["estimated_cost"] > 1000 for item in scale["maneuvers"]))
+
+    def test_archived_scale_estimate_adds_standby_after_three_hours(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:00:00+00:00",
+            maneuver_finished_at="2026-03-24T09:30:00+00:00",
+            draft_m="9.94",
+            notes="Entrada longa.",
+        )
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        scale = next(item for item in snapshot["archived_scales"] if item["port_call_id"] == port_call["id"])
+        entry = next(item for item in scale["maneuvers"] if item["maneuver_type"] == "entry")
+        base_cost = round(UP_NORMAL * math.sqrt(16281), 2)
+
+        self.assertAlmostEqual(entry["derived_standby_hours"], 1.5, places=2)
+        self.assertEqual(entry["derived_standby_hours_label"], "1,5 h")
+        self.assertGreater(entry["estimated_cost"], base_cost)
 
     def test_edit_port_call_updates_vessel_and_operational_fields(self) -> None:
         pc = self._create_entry()

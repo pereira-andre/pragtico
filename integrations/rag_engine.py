@@ -9,12 +9,10 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, List
 
-from google import genai
-
-from document_processing import extract_text_from_path
-from llm_provider import BaseLLMProvider, create_llm_provider
-from reindex_scheduler import PACIFIC_TZ, next_gemini_quota_reset_utc
-from vector_store import BaseIndexStore
+from domain.document_processing import extract_text_from_path
+from integrations.llm_provider import BaseLLMProvider, create_llm_provider
+from core.reindex_scheduler import PACIFIC_TZ, next_gemini_quota_reset_utc
+from integrations.vector_store import BaseIndexStore
 
 
 def chunk_text(text: str, chunk_size: int = 700, overlap: int = 120) -> List[str]:
@@ -265,6 +263,29 @@ class SimpleRAGEngine:
             return list(embedding.values)
         return list(getattr(embedding, "embedding", []))
 
+    def _api_embedding_vectors(self, batch: List[str]) -> List[List[float]]:
+        if not self.client:
+            raise RuntimeError(
+                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
+                "ou configura uma API key."
+            )
+        if hasattr(self.client, "embed"):
+            embed_result = self.client.embed(
+                texts=batch,
+                model=self.embedding_model,
+            )
+            return embed_result.vectors
+
+        models_api = getattr(self.client, "models", None)
+        if models_api and hasattr(models_api, "embed_content"):
+            embed_result = models_api.embed_content(
+                model=self.embedding_model,
+                contents=batch,
+            )
+            return [self._extract_vector(item) for item in getattr(embed_result, "embeddings", [])]
+
+        raise RuntimeError("O cliente de embeddings configurado não suporta embeddings.")
+
     def _current_pacific_date(self) -> str:
         return datetime.now(timezone.utc).astimezone(PACIFIC_TZ).date().isoformat()
 
@@ -355,8 +376,19 @@ class SimpleRAGEngine:
         return any(marker in upper_message for marker in permanent_markers)
 
     def is_embedding_quota_exhausted(self, message: str | None = None) -> bool:
+        with self._embedding_rate_lock:
+            self._clear_embedding_quota_block_if_due_locked()
+            if (
+                self._embedding_quota_blocked_until is not None
+                and datetime.now(timezone.utc) < self._embedding_quota_blocked_until
+            ):
+                return True
         candidate = self.last_index_error if message is None else message
-        return self._is_permanent_quota_error(candidate)
+        upper_candidate = str(candidate or "").upper()
+        return (
+            "QUOTA DE EMBEDDINGS GEMINI ESGOTADA" in upper_candidate
+            or self._is_permanent_quota_error(candidate)
+        )
 
     def _format_embedding_error(self, exc: Exception) -> str:
         if self._is_permanent_quota_error(exc):
@@ -419,11 +451,7 @@ class SimpleRAGEngine:
         for attempt in range(1, self.embedding_max_retries + 1):
             try:
                 self._acquire_embedding_request_slot(throttle_callback=throttle_callback)
-                embed_result = self.provider.embed(
-                    texts=batch,
-                    model=self.embedding_model,
-                )
-                return embed_result.vectors
+                return self._api_embedding_vectors(batch)
             except Exception as exc:
                 last_exc = exc
                 if self._is_permanent_quota_error(exc):
@@ -832,6 +860,10 @@ class SimpleRAGEngine:
 
         if not self._use_local_embeddings and not self.client:
             return self._lexical_search(question, chunks, top_k)
+        if not self._use_local_embeddings and self.is_embedding_quota_exhausted():
+            raise RuntimeError(
+                "Pesquisa semântica Gemini indisponível enquanto a quota de embeddings não renovar."
+            )
 
         try:
             query_vector = self._embed_many([question])[0]
@@ -840,6 +872,10 @@ class SimpleRAGEngine:
                 return [item for item in results if item.get("score", 0) > 0]
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
+            if self.is_embedding_quota_exhausted(self.last_index_error):
+                raise RuntimeError(
+                    "Pesquisa semântica Gemini indisponível enquanto a quota de embeddings não renovar."
+                ) from exc
             return self._lexical_search(question, chunks, top_k)
 
         return []

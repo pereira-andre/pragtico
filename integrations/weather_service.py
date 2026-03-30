@@ -84,6 +84,39 @@ class WeatherService:
         except ValueError:
             return date_str
 
+    def _duration_between(self, start_time: str, end_time: str) -> Optional[timedelta]:
+        if not start_time or not end_time:
+            return None
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+        except ValueError:
+            return None
+        if end_dt < start_dt:
+            end_dt += timedelta(days=1)
+        return end_dt - start_dt
+
+    def _format_duration_label(self, duration: Optional[timedelta]) -> str:
+        if duration is None:
+            return ""
+        total_minutes = int(duration.total_seconds() // 60)
+        hours, minutes = divmod(total_minutes, 60)
+        return f"{hours}h {minutes:02d}m"
+
+    def _moon_phase_display(self, phase: str) -> tuple[str, str]:
+        clean = (phase or "").strip()
+        phase_map = {
+            "New Moon": ("🌑", "Lua nova"),
+            "Waxing Crescent": ("🌒", "Lua crescente"),
+            "First Quarter": ("🌓", "Quarto crescente"),
+            "Waxing Gibbous": ("🌔", "Lua gibosa crescente"),
+            "Full Moon": ("🌕", "Lua cheia"),
+            "Waning Gibbous": ("🌖", "Lua gibosa minguante"),
+            "Last Quarter": ("🌗", "Quarto minguante"),
+            "Waning Crescent": ("🌘", "Lua minguante"),
+        }
+        return phase_map.get(clean, ("🌙", clean or "Lua"))
+
     def _resolve_query_dates(self, question: str, reference_date: date) -> List[str]:
         question_lower = (question or "").lower()
         resolved: List[str] = []
@@ -224,7 +257,10 @@ class WeatherService:
             moonrise = self._parse_astro_time(astro.get("moonrise", ""), day_date)
             moonset = self._parse_astro_time(astro.get("moonset", ""), day_date)
             moon_phase = astro.get("moon_phase", "")
+            moon_phase_icon, moon_phase_label = self._moon_phase_display(moon_phase)
             moon_illumination = astro.get("moon_illumination", "")
+            daylight_duration = self._duration_between(sunrise, sunset)
+            night_duration = timedelta(days=1) - daylight_duration if daylight_duration is not None else None
 
             hours = []
             for hour in day.get("hour", []):
@@ -281,9 +317,13 @@ class WeatherService:
                 "rain_mm": day_data.get("totalprecip_mm"),
                 "sunrise": sunrise,
                 "sunset": sunset,
+                "daylight_duration_label": self._format_duration_label(daylight_duration),
+                "night_duration_label": self._format_duration_label(night_duration),
                 "moonrise": moonrise,
                 "moonset": moonset,
                 "moon_phase": moon_phase,
+                "moon_phase_icon": moon_phase_icon,
+                "moon_phase_label": moon_phase_label,
                 "moon_illumination": moon_illumination,
                 "wind_level": self._wind_level(max_wind_kts, max_gust_kts),
             }

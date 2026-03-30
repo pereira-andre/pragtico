@@ -2,15 +2,15 @@
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-import services
-from helpers import (
+from core import services
+from core.helpers import (
     current_user_profile,
     login_required,
     session_profile_incomplete,
 )
 from storage import is_user_profile_complete
-from security import login_limiter, rate_limit
-from validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role
+from core.security import login_limiter, rate_limit
+from core.validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role
 
 bp = Blueprint("auth", __name__)
 
@@ -40,6 +40,7 @@ def login():
 
         session["username"] = user["username"]
         session["role"] = user["role"]
+        session.permanent = True
         flash(f"Entraste como {user['role']}.", "success")
         if session_profile_incomplete():
             flash("Completa o teu perfil operacional antes de continuar.", "error")

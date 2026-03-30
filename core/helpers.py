@@ -11,8 +11,8 @@ from functools import wraps
 
 from flask import flash, jsonify, redirect, request, session, url_for
 
-import services
-from chat_actions import (
+from core import services
+from domain.chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
     action_prefers_explicit_maneuver_id,
@@ -41,7 +41,7 @@ from chat_actions import (
     extract_pending_target_updates,
     visible_port_calls_from_activity,
 )
-from cost_engine import (
+from domain.cost_engine import (
     UP_NORMAL,
     UP_SHIFT_ALONG,
     ManoeuvreInput,
@@ -49,8 +49,8 @@ from cost_engine import (
     calculate_scale_cost,
     format_cost_summary,
 )
-from migration_service import get_database_runtime_status
-from reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
+from domain.migration_service import get_database_runtime_status
+from core.reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
 from storage import (
     PASSWORD_HASH_METHOD,
     format_constraint_labels,
@@ -188,6 +188,10 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         item for item in port_activity.get("archived_maneuvers", [])
         if _item_organization_scope_key(item) == scope_key
     ]
+    archived_scales = [
+        item for item in port_activity.get("archived_scales", [])
+        if _item_organization_scope_key(item) == scope_key
+    ]
 
     visible_port_call_ids = {
         item.get("id")
@@ -241,6 +245,7 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         "aborted": aborted,
         "planned_maneuvers": planned_maneuvers,
         "archived_maneuvers": archived_maneuvers,
+        "archived_scales": archived_scales,
         "planned_groups": planned_groups,
         "departure_candidates": [
             item for item in port_activity.get("departure_candidates", [])
@@ -257,6 +262,7 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         "aborted_count": len(aborted),
         "planned_count": len(planned_maneuvers),
         "archive_count": len(archived_maneuvers),
+        "archive_scale_count": len(archived_scales),
         "pending_count": sum(1 for item in planned_maneuvers if item.get("situation_class") == "pending"),
     }
     return filtered_activity
@@ -1014,7 +1020,7 @@ def action_target_port_call(port_call_id: str) -> dict:
 
 def heuristic_operational_proposal(question: str, role: str, port_calls: list[dict]) -> dict | None:
     """Apply deterministic pattern matching to derive an operational action proposal from the question."""
-    from chat_actions import _extract_labelled_values
+    from domain.chat_actions import _extract_labelled_values
 
     clean = _operational_lookup_key(question)
     if not clean:

@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from document_processing import iso_now
+from domain.document_processing import iso_now
 
 from .constants import (
     CONSTRAINT_LOOKUP,

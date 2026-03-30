@@ -8,9 +8,9 @@ from io import StringIO
 from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
-import services
-from dashboard_data import build_weather_charts
-from helpers import (
+from core import services
+from domain.dashboard_data import build_weather_charts
+from core.helpers import (
     build_weather_timeline,
     filter_port_activity_for_session,
     login_required,

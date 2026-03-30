@@ -1,5 +1,7 @@
 # Alternativas ao Gemini para o PRAGtico — Investigação Março 2026
 
+Nota: este documento é uma nota exploratória de março de 2026. Os preços e catálogos de modelos devem ser reconfirmados antes de qualquer decisão de compra. As referências ao código abaixo foram atualizadas para refletir a estrutura atual do projeto.
+
 ## 1. Problema Atual
 
 O PRAGtico usa a API do **Gemini** (modelo `gemini-2.5-flash`) para:
@@ -51,7 +53,7 @@ Com utilização real por múltiplos utilizadores, estes limites esgotam-se rapi
 - Qualidade comparável ao GPT-4 para tarefas de chat
 - Cache hits reduzem 90% dos custos
 
-**Embeddings:** Sentence Transformers local (`all-MiniLM-L6-v2`)
+**Embeddings:** Sentence Transformers local (`BAAI/bge-m3`)
 - Zero custo, corre no servidor
 - Bom para português com modelo multilingual
 
@@ -93,37 +95,41 @@ response = client.chat.completions.create(
 ### Opção mais simples: Mudar modelo Gemini
 Apenas alterar a variável de ambiente:
 ```bash
-GEMINI_MODEL=gemini-2.0-flash-lite   # ou gemini-2.5-flash-lite
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.0-flash-lite   # ou gemini-2.5-flash-lite
 ```
 Zero alterações no código. A API é a mesma.
 
-### Opção DeepSeek (requer refactor do rag_engine.py)
-O `rag_engine.py` usa `google.genai` diretamente. Para suportar DeepSeek/OpenAI:
+### Opção DeepSeek
+O projeto já tem abstração de provider em `integrations/llm_provider.py`, usada por `integrations/rag_engine.py`. Para suportar DeepSeek/OpenAI de forma limpa:
 
-1. Criar abstração `LLMProvider` com interface comum
-2. Implementar `GeminiProvider` (existente) e `OpenAICompatibleProvider` (DeepSeek, GPT)
+1. Implementar um provider compatível com a API OpenAI
+2. Ligar esse provider à seleção por ambiente (`LLM_PROVIDER=...`)
 3. Selecionar via variável de ambiente: `LLM_PROVIDER=deepseek`
 
-### Opção embeddings locais (requer novo módulo)
-1. Instalar `sentence-transformers` (pip)
-2. Criar `LocalEmbeddingProvider` no `vector_store.py`
-3. Gerar embeddings localmente sem API calls
-4. Elimina totalmente o custo e os limites de quota de embeddings
+### Opção embeddings locais
+Já existe `LocalEmbeddingProvider` em `integrations/llm_provider.py`.
+
+Na prática, esta opção já está implementada:
+
+1. Instalar `sentence-transformers`
+2. Opcionalmente definir `EMBEDDING_LOCAL_MODEL`
+3. Arrancar a app e deixar o RAG gerar embeddings localmente
 
 ---
 
 ## 5. Plano de Migração Recomendado
 
-### Fase imediata (sem custo, sem refactor)
-- [ ] Trocar `GEMINI_MODEL` para `gemini-2.0-flash-lite` (mais barato, free tier maior)
+### Fase imediata (sem custo, sem refactor estrutural)
+- [ ] Trocar `LLM_MODEL` para `gemini-2.0-flash-lite` (mais barato, free tier maior)
 - [ ] Aumentar `EMBEDDING_REQUESTS_PER_DAY` se a quota atual for insuficiente
 
 ### Fase curta (1–2 dias de trabalho)
-- [ ] Implementar embeddings locais com Sentence Transformers
-- [ ] Eliminar dependência de embeddings Gemini (maior fonte de limitação de quota)
+- [x] Embeddings locais com Sentence Transformers
+- [ ] Tornar explícita a preferência por embeddings locais em produção
 
 ### Fase média (3–5 dias de trabalho)
-- [ ] Criar abstração multi-provider no `rag_engine.py`
+- [x] Criar abstração multi-provider
 - [ ] Suportar DeepSeek como alternativa para geração
 - [ ] Implementar routing inteligente (simples → barato, complexo → premium)
 

@@ -1,160 +1,154 @@
 # PRAGtico — Portal de Coordenação Portuária
 
-Sistema web de coordenação portuária para pilotagem no Porto de Setúbal,
-com chatbot RAG, gestão de escalas e manobras, estimativa de custos e
-monitorização operacional em tempo real.
+Sistema web para coordenação portuária no Porto de Setúbal, com gestão de escalas e manobras, dashboard operacional, chatbot RAG e motor de estimativa de custos de pilotagem.
 
 ## Funcionalidades
 
-### Quadro Operacional
-- Dashboard com visão geral: navios em porto, chegadas previstas, saídas recentes
-- Janela contínua de marés em 96h com curva suave e marcador do período atual
-- Meteorologia contínua (48h) com ícones de estado do tempo
-- Mapa AIS embebido (VesselFinder) com coordenadas náuticas
-- Navios por cais em ordem geográfica (Secil → Teporset)
-- Planeamento operacional com tabela de marcações/validações/fechos
+### Quadro operacional
 
-### Gestão de Escalas e Manobras
-- Registo de escalas com ficha completa do navio (IMO, GT, LOA, etc.)
-- Escala como agregador do navio e respetivas manobras em porto
-- Página própria por manobra: planeamento → validação → registo do piloto
-- Manobras: entrada, saída, mudança de cais, fundeadouro
-- Planeamento e edição de manobras com histórico de alterações
-- Arquivo operacional tipo Excel com pesquisa e exportação CSV
+- Dashboard com chegadas previstas, navios em porto, saídas recentes e arquivo operacional
+- Janela contínua de marés, meteorologia horária e mapa AIS embebido
+- Avisos locais, leitura costeira e contexto operacional agregado
 
-### Motor de Cálculo de Custos
-- Fórmula oficial de pilotagem: T = UP × GT (tarifário Setúbal 2024)
-- UP normal: 9.2578 €/GT | mudança: 3.3628 €/GT
-- Agravamentos (+25%): sem propulsão, assistência especial
-- Reduções: -25% linha regular, -10% cabotagem, -30% escala técnica
-- TUP estimada, pilotagem à ordem, cancelamentos
-- Simulador interativo no arquivo de manobras
-- API: `POST /api/cost/estimate` e `GET /api/cost/quick`
+### Escalas e manobras
+
+- Registo completo de escalas com dados do navio
+- Ciclo operacional por manobra: planeamento, aprovação, registo e arquivo
+- Histórico de alterações, notas operacionais e exportação CSV
+
+### Custos
+
+- Fórmula de pilotagem baseada em `UP × √GT`
+- Cálculo de entrada, saída, mudança, horas à ordem, cancelamentos e TUP
+- API dedicada em `/api/cost/estimate` e `/api/cost/quick`
 
 ### Chatbot RAG
-- Assistente com pesquisa semântica na base documental
-- Widget flutuante disponível em todas as páginas
-- Contexto operacional automático (escalas, manobras, custos, marés, meteo)
-- Ações operacionais via chat com confirmação/cancelamento e export JSON das conversas
-- Feedback operacional (aprovar/rever respostas)
-- Arquivo de conversas
-- Respeita privilégios de cada perfil (admin, agente, piloto)
 
-### Autenticação e Segurança
-- 3 perfis: admin (único), agente de navegação, piloto
-- Passwords com scrypt (Werkzeug)
-- Proteção CSRF em todos os formulários POST
-- Rate limiting em login (10 req/min) e API chat (30 req/min)
-- Session cookies: HTTPOnly, SameSite=Lax, Secure em produção
-- Security headers: HSTS, X-Frame-Options, X-Content-Type-Options
-- Validação centralizada de inputs (validators.py)
-- Sessão expira em 8 horas
+- Pesquisa documental com contexto vivo do portal
+- Ações operacionais via chat com confirmação, cancelamento e feedback
+- Suporte multi-provider para geração LLM
+- Embeddings locais por defeito com `BAAI/bge-m3`, com fallback para API quando aplicável
 
-### Base Documental
-- Upload e indexação de documentos (PDF, DOCX, TXT, MD, CSV)
-- Embeddings locais com sentence-transformers (all-MiniLM-L6-v2)
-- Fallback para embeddings via API (Gemini)
-- Reindexação incremental com progresso em tempo real
-- Página admin dedicada para gestão documental
+### Segurança e perfis
 
-## Arquitetura
+- Perfis `admin`, `agente` e `piloto`
+- Password hashing com `scrypt`
+- CSRF, rate limiting e headers de segurança
+- Sessão com timeout idle configurável (`SESSION_IDLE_MINUTES`, por omissão `45`)
 
-```
-app.py                — Flask application factory + service registry
-security.py           — CSRF protection + rate limiting
-validators.py         — Centralized input validation (13 validators)
+## Estrutura
 
+```text
+app.py
 blueprints/
-  auth.py             — Login, register, profile, logout
-  dashboard.py        — Operational dashboard + archive
-  port_calls.py       — Port call lifecycle (create → depart)
-  admin.py            — Users, documents, status, migration
-  chat.py             — Chat API, conversations, feedback
-  api.py              — Cost estimation API
-
+core/
+domain/
+integrations/
 storage/
-  base.py             — BaseStore ABC (storage interface)
-  local.py            — LocalStore (JSON files)
-  postgres.py         — PostgresStore (psycopg)
-  constants.py        — Shared constants, vessel types, constraints
-  utils.py            — Parsing, normalization, text helpers
-  port_call_helpers.py — Port call state machine logic
-
-helpers.py            — Route decorators, chat actions, reindex jobs
-cost_engine.py        — Pilotage cost calculation engine
-rag_engine.py         — RAG engine (embeddings, retrieval, generation)
-chat_actions.py       — Chatbot operational action specs
-auth_service.py       — Authentication service
-weather_service.py    — WeatherAPI integration
-tide_service.py       — Tide data from CSV
-ais_service.py        — VesselFinder AIS embed
-vector_store.py       — Vector index store
-
-knowledge/            — RAG knowledge base documents
-templates/            — Jinja2 HTML templates
-static/css/           — CSS modules (variables, base, dashboard,
-                        pages, chat, dark-theme)
-tests/                — Unit + integration tests (103+ tests)
+templates/
+static/
+docs/
+scripts/
+sql/
+tests/
+knowledge/
+data/
 ```
 
-## Como Correr
+Resumo por pasta:
 
-### Desenvolvimento local
+- `blueprints/`: camada web Flask
+- `core/`: segurança, validação, helpers e estado partilhado
+- `domain/`: regras de negócio e parsing documental
+- `integrations/`: LLM, RAG, AIS, marés, meteo, ondulação e avisos locais
+- `storage/`: persistência local/PostgreSQL
+
+Detalhe adicional em [Estrutura do projeto](docs/PROJECT_STRUCTURE.md).
+
+## Arranque local
+
+### Desenvolvimento
 
 ```bash
 python3 -m pip install -r requirements.txt
 cp .env.example .env
-# Editar .env com GEMINI_API_KEY, WEATHERAPI_KEY, etc.
 python3 app.py
 ```
 
-Abrir `http://127.0.0.1:5050` se `FLASK_PORT=5050` no `.env`, ou a porta definida no ambiente.
+Abre `http://127.0.0.1:5000` ou a porta definida em `FLASK_PORT`.
 
-### Docker Compose (com PostgreSQL)
+### Docker Compose
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Abrir `http://127.0.0.1:5050`.
+O compose sobe a app e uma base PostgreSQL local.
 
-### Deploy no Railway
+## Railway
 
-O projecto inclui `Procfile`, `railway.toml` e `Dockerfile` prontos.
+O repositório já inclui `Dockerfile`, `Procfile` e `railway.toml`.
 
-Variáveis de ambiente necessárias no Railway:
-- `FLASK_SECRET_KEY` — chave secreta (gerar com `python -c "import secrets; print(secrets.token_hex(32))"`)
-- `DATABASE_URL` — PostgreSQL connection string
-- `GEMINI_API_KEY` — Google Gemini API key
-- `WEATHERAPI_KEY` — WeatherAPI.com key (opcional)
-- `FLASK_ENV` — `production`
+O guia completo está em [Deploy no Railway](docs/RAILWAY_DEPLOY.md).
 
-## Criar Conta Admin
+Variáveis mínimas para produção:
 
 ```bash
-python scripts/create_admin.py
+FLASK_ENV=production
+FLASK_SECRET_KEY=<chave-segura>
+APP_STORAGE_BACKEND=postgres
+DATABASE_URL=<ligação PostgreSQL>
 ```
 
-Ou via Docker:
+Se quiseres índice vetorial persistente na base de dados:
+
 ```bash
-docker compose exec web python scripts/create_admin.py
+RAG_INDEX_BACKEND=pgvector
+```
+
+## Scripts úteis
+
+Criar admin:
+
+```bash
+python3 scripts/create_admin.py admin@porto.pt password-segura
+```
+
+Alterar papel de utilizador:
+
+```bash
+python3 scripts/set_user_role.py utilizador@porto.pt admin
+```
+
+Com `make`:
+
+```bash
+make test
+make create-admin EMAIL=admin@porto.pt PASSWORD=password-segura
 ```
 
 ## Testes
 
 ```bash
-python3 -m unittest discover tests/ -v
+python3 -m unittest discover tests -v
 ```
 
-103+ testes cobrindo validação de inputs, storage CRUD, CSRF e rate limiting.
+A suite atual cobre 238 testes unitários e de integração.
+
+## Documentação
+
+- [Estrutura do projeto](docs/PROJECT_STRUCTURE.md)
+- [Deploy no Railway](docs/RAILWAY_DEPLOY.md)
+- [Comandos do bot operacional](docs/BOT_COMMANDS.md)
+- [Alternativas ao LLM atual](docs/LLM_ALTERNATIVES.md)
+  Nota: este documento é exploratório; valida preços e catálogos antes de decisões de compra.
 
 ## Tecnologias
 
-- **Backend:** Flask (Blueprints), gunicorn, PostgreSQL (psycopg)
-- **LLM:** Google Gemini / OpenRouter (configurável)
-- **Embeddings:** sentence-transformers local (all-MiniLM-L6-v2)
-- **Frontend:** HTML/CSS/JS vanilla, tema dark náutico
-- **Segurança:** CSRF, rate limiting, bcrypt, validação centralizada
-- **Tipografia:** DM Serif Display + DM Sans (Google Fonts)
-- **Deploy:** Docker, Railway, Heroku-compatible
+- Backend: Flask, gunicorn, psycopg, PostgreSQL
+- RAG: retrieval local ou `pgvector`
+- LLM: Gemini / OpenRouter, com abstração de provider
+- Embeddings locais: `sentence-transformers` com `BAAI/bge-m3`
+- Frontend: Jinja2, HTML, CSS, JavaScript vanilla
+- Deploy: Docker e Railway

@@ -2,8 +2,8 @@
 
 from flask import Blueprint, jsonify, request
 
-import services
-from cost_engine import (
+from core import services
+from domain.cost_engine import (
     ManoeuvreInput,
     ManoeuvreType,
     ReductionType,
@@ -12,9 +12,25 @@ from cost_engine import (
     format_cost_summary,
     quick_estimate,
 )
-from helpers import login_required
+from core.helpers import login_required
 
 bp = Blueprint("api", __name__)
+
+
+def _coerce_non_negative_int(value, default: int = 0) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(parsed, 0)
+
+
+def _coerce_non_negative_float(value, default: float = 0.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(parsed, 0.0)
 
 
 @bp.route("/api/cost/estimate", methods=["POST"])
@@ -32,7 +48,7 @@ def api_cost_estimate():
 
     vessel_name = (payload.get("vessel_name") or "Navio").strip()
     vessel_type = (payload.get("vessel_type") or "restantes").strip().lower()
-    stay_days = max(float(payload.get("stay_days", 1)), 0.5)
+    stay_days = max(_coerce_non_negative_float(payload.get("stay_days", 1), 1.0), 0.5)
     include_tup = payload.get("include_tup", True)
 
     raw_manoeuvres = payload.get("manoeuvres", [])
@@ -57,8 +73,8 @@ def api_cost_estimate():
         reductions = [reduction_map[r] for r in (raw.get("reductions") or []) if r in reduction_map]
         manoeuvre_inputs.append(ManoeuvreInput(
             manoeuvre_type=m_type, gt=gt, surcharges=surcharges, reductions=reductions,
-            standby_hours=float(raw.get("standby_hours", 0)),
-            regular_line_calls=raw.get("regular_line_calls"),
+            standby_hours=_coerce_non_negative_float(raw.get("standby_hours", 0), 0.0),
+            regular_line_calls=_coerce_non_negative_int(raw.get("regular_line_calls"), 0),
         ))
 
     estimate = calculate_scale_cost(

@@ -7,7 +7,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
-from document_processing import iso_now
+from domain.cost_engine import ManoeuvreInput, ManoeuvreType, calculate_scale_cost
+from domain.document_processing import iso_now
 
 from .constants import (
     ALLOWED_PORT_CALL_APPROVAL_STATUSES,
@@ -17,6 +18,7 @@ from .constants import (
     PORT_CALL_STATUS_DEPARTED,
     PORT_CALL_STATUS_IN_PORT,
     PORT_CALL_STATUS_SCHEDULED,
+    _lookup_key,
 )
 from .utils import (
     _actor_meta,
@@ -566,6 +568,188 @@ def _default_port_calls() -> List[Dict]:
     return []
 
 
+def _format_number_pt(value: float, decimals: int = 2) -> str:
+    formatted = f"{value:,.{decimals}f}"
+    return formatted.replace(",", "#").replace(".", ",").replace("#", ".")
+
+
+def _format_currency_pt(value: Optional[float]) -> str:
+    if value is None:
+        return "--"
+    return f"{_format_number_pt(value, 2)} €"
+
+
+def _format_days_pt(value: float) -> str:
+    if value <= 0:
+        return "--"
+    return f"{_format_number_pt(value, 1)} d"
+
+
+def _format_hours_pt(value: float) -> str:
+    if value <= 0:
+        return ""
+    return f"{_format_number_pt(value, 1)} h"
+
+
+def _parse_gt_for_cost(value: Optional[str]) -> float:
+    raw = (value or "").strip()
+    if not raw:
+        return 0.0
+    clean = raw.replace(" ", "").replace(".", "").replace(",", ".")
+    try:
+        return float(clean)
+    except ValueError:
+        return 0.0
+
+
+def _cost_vessel_type_key(value: Optional[str]) -> str:
+    label_key = _lookup_key(_resolve_vessel_type_meta(value).get("label"))
+    if label_key in {"contentores", "porta contentores"}:
+        return "contentores"
+    if label_key == "roll on roll off":
+        return "roll-on_roll-off"
+    if label_key in {"passageiros", "cruzeiros"}:
+        return "passageiros"
+    if label_key == "graneis liquidos":
+        return "tanque"
+    return "restantes"
+
+
+def _maneuver_type_to_cost_engine(value: Optional[str]) -> ManoeuvreType:
+    clean_type = _normalize_maneuver_type(value)
+    if clean_type == "departure":
+        return ManoeuvreType.DEPARTURE
+    if clean_type == "shift":
+        return ManoeuvreType.SHIFT
+    return ManoeuvreType.ENTRY
+
+
+def _archive_row_reference_value(item: Dict) -> Optional[str]:
+    return item.get("actual_value") or item.get("planned_value") or item.get("date_value")
+
+
+def _archive_row_reference_dt(item: Dict) -> Optional[datetime]:
+    return _parse_iso_datetime(_archive_row_reference_value(item))
+
+
+def _derive_standby_hours(started_at: Optional[str], finished_at: Optional[str]) -> float:
+    started_dt = _parse_iso_datetime(started_at)
+    finished_dt = _parse_iso_datetime(finished_at)
+    if not started_dt or not finished_dt or finished_dt <= started_dt:
+        return 0.0
+    duration_hours = (finished_dt - started_dt).total_seconds() / 3600
+    return round(max(duration_hours - 3.0, 0.0), 2)
+
+
+def _estimate_scale_stay_days(port_call: Dict, archived_rows: List[Dict], now: datetime) -> float:
+    status = port_call.get("status")
+    if status not in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}:
+        return 0.0
+
+    started_at = _parse_iso_datetime(port_call.get("ata")) or _parse_iso_datetime(port_call.get("eta"))
+    if not started_at:
+        for row in archived_rows:
+            if row.get("maneuver_type") == "entry":
+                started_at = _archive_row_reference_dt(row)
+                if started_at:
+                    break
+    if not started_at:
+        started_at = min(
+            (_archive_row_reference_dt(row) for row in archived_rows if _archive_row_reference_dt(row)),
+            default=None,
+        )
+    if not started_at:
+        return 0.5
+
+    ended_at = _parse_iso_datetime(port_call.get("departure_at"))
+    if not ended_at:
+        if status == PORT_CALL_STATUS_IN_PORT:
+            ended_at = now
+        else:
+            ended_at = max(
+                (_archive_row_reference_dt(row) for row in archived_rows if _archive_row_reference_dt(row)),
+                default=started_at,
+            )
+    if not ended_at or ended_at <= started_at:
+        return 0.5
+    return max((ended_at - started_at).total_seconds() / 86400, 0.5)
+
+
+def _build_archived_scale_summary(port_call: Dict, archived_rows: List[Dict], now: datetime) -> Dict:
+    ordered_rows = sorted(
+        archived_rows,
+        key=lambda item: _archive_row_reference_dt(item) or datetime.min.replace(tzinfo=timezone.utc),
+    )
+    gt = _parse_gt_for_cost(port_call.get("vessel_gt_t") or ordered_rows[0].get("vessel_gt"))
+    stay_days = _estimate_scale_stay_days(port_call, ordered_rows, now)
+    include_tup = gt > 0 and stay_days > 0 and port_call.get("status") in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}
+
+    estimated_rows: List[Dict] = []
+    pilotage_total = None
+    tup_estimate = None
+    grand_total = None
+    notes: List[str] = []
+
+    if gt > 0 and ordered_rows:
+        estimate = calculate_scale_cost(
+            vessel_name=port_call.get("vessel_name", "Navio"),
+            gt=gt,
+            vessel_type=_cost_vessel_type_key(port_call.get("vessel_type")),
+            manoeuvres=[
+                ManoeuvreInput(
+                    manoeuvre_type=_maneuver_type_to_cost_engine(row.get("maneuver_type")),
+                    gt=gt,
+                    standby_hours=row.get("derived_standby_hours") or 0.0,
+                )
+                for row in ordered_rows
+            ],
+            stay_days=stay_days or 1.0,
+            include_tup=include_tup,
+        )
+        pilotage_total = estimate.pilotage_total
+        tup_estimate = estimate.tup_estimate if include_tup else 0.0
+        grand_total = estimate.grand_total
+        notes = estimate.notes
+        for row, result in zip(ordered_rows, estimate.manoeuvres):
+            estimated_rows.append(
+                    {
+                        **row,
+                        "derived_standby_hours_label": _format_hours_pt(row.get("derived_standby_hours") or 0.0),
+                        "estimated_cost": result.total_cost,
+                        "estimated_cost_label": _format_currency_pt(result.total_cost),
+                    }
+            )
+    else:
+        estimated_rows = [{**row, "estimated_cost": None, "estimated_cost_label": "--"} for row in ordered_rows]
+
+    latest_row = estimated_rows[-1] if estimated_rows else {}
+    latest_value = _archive_row_reference_value(latest_row)
+    latest_dt = _archive_row_reference_dt(latest_row)
+    return {
+        "maneuvers": estimated_rows,
+        "maneuver_count": len(estimated_rows),
+        "estimated_pilotage_total": pilotage_total,
+        "estimated_pilotage_label": _format_currency_pt(pilotage_total),
+        "estimated_tup": tup_estimate,
+        "estimated_tup_label": _format_currency_pt(tup_estimate),
+        "estimated_grand_total": grand_total,
+        "estimated_grand_total_label": _format_currency_pt(grand_total),
+        "stay_days": round(stay_days, 2) if stay_days else 0.0,
+        "stay_days_label": _format_days_pt(stay_days),
+        "cost_notes": notes,
+        "latest_activity_value": latest_value or "",
+        "latest_activity_label": _local_iso_to_label(latest_value),
+        "latest_date_label": _local_date_label(latest_value) if latest_value else "Sem data",
+        "latest_execution_label": (
+            latest_row.get("execution_window_label")
+            or latest_row.get("actual_label")
+            or latest_row.get("planned_label")
+            or "--"
+        ),
+        "latest_activity_ts": latest_dt.timestamp() if latest_dt else 0.0,
+    }
+
+
 def _decorate_port_call(record: Dict) -> Dict:
     normalized = _normalize_port_call_record(record)
     decorated_history = []
@@ -656,9 +840,10 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
     aborted = []
     maneuvers = []
     planned_rows = []
+    archived_scale_sources: Dict[str, Dict] = {}
     departure_candidates = []
 
-    def add_planned_row(
+    def build_activity_row(
         *,
         row_id: str,
         port_call: Dict,
@@ -672,93 +857,100 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         local_origin: str,
         local_destination: str,
         detail_note: str = "",
-    ) -> None:
+    ) -> Optional[Dict]:
         date_dt = _parse_iso_datetime(date_value)
         if not date_dt:
-            return
-        planned_rows.append(
-            {
-                "id": row_id,
-                "maneuver_id": maneuver.get("id") or "",
-                "port_call_id": port_call["id"],
-                "reference_code": port_call["reference_code"],
-                "vessel_name": port_call.get("vessel_name", "Navio"),
-                "vessel_gt": port_call.get("vessel_gt_t") or "",
-                "vessel_type": port_call.get("ship_type_label") or "Navio",
-                "vessel_type_icon": port_call.get("ship_type_icon"),
-                "date_value": date_dt.isoformat(),
-                "date_key": date_dt.astimezone().strftime("%Y-%m-%d"),
-                "date_label": _local_date_label(date_dt.isoformat()),
-                "planned_value": planned_value,
-                "planned_label": _local_time_label(planned_value),
-                "actual_value": actual_value,
-                "actual_label": _local_time_label(actual_value),
-                "execution_started_label": maneuver.get("execution_started_label", "Sem hora"),
-                "execution_finished_label": maneuver.get("execution_finished_label", "Sem hora"),
-                "execution_window_label": (
-                    f"{_local_time_label(maneuver.get('execution_started_at'))} -> {_local_time_label(maneuver.get('execution_finished_at'))}"
-                    if maneuver.get("execution_started_at") and maneuver.get("execution_finished_at")
-                    else ""
-                ),
-                "situation_label": situation_label,
-                "situation_class": situation_class,
-                "maneuver_label": maneuver_label,
-                "local_origin": local_origin or "--",
-                "origin_cabin_label": "--- | ---",
-                "local_destination": local_destination or "--",
-                "destination_cabin_label": "--- | ---",
-                "loa_label": port_call.get("ship_loa_label") or "--",
-                "beam_label": port_call.get("ship_beam_label") or "--",
-                "draft_label": maneuver.get("reported_draft_m") or maneuver.get("planned_draft_m") or port_call.get("ship_max_draft_label") or "--",
-                "tug_count_label": maneuver.get("tug_count") or "--",
-                "agent_label": maneuver.get("agent_label") or port_call["agent_label"],
-                "agent_profile": maneuver.get("agent_profile") or port_call.get("agent_profile"),
-                "pilot_label": maneuver.get("pilot_label") or port_call["pilot_label"],
-                "pilot_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
-                "validated_by_label": maneuver.get("pilot_label") or port_call["pilot_label"],
-                "validated_by_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
-                "reported_by_label": maneuver.get("reported_by_label", "--"),
-                "reported_by_profile": maneuver.get("reported_by_profile"),
-                "executed_by_label": maneuver.get("reported_by_label", "--"),
-                "executed_by_profile": maneuver.get("reported_by_profile"),
-                "report_completed": bool((maneuver.get("report_note") or "").strip()),
-                "constraint_badges": maneuver.get("constraint_badges", []),
-                "change_count": maneuver.get("change_count", 0),
-                "has_changes": maneuver.get("has_changes", False),
-                "detail_note": detail_note,
-                "approval_note": port_call.get("approval_note", ""),
-                "aborted_reason": port_call.get("aborted_reason", ""),
-                "show_approve": (
-                    maneuver_label == "Entrar"
-                    and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
-                    and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
-                )
-                or (
-                    maneuver_label == "Sair"
-                    and port_call["status"] == PORT_CALL_STATUS_IN_PORT
-                    and bool(port_call.get("planned_departure_at"))
-                    and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
-                ),
-                "show_abort_entry": maneuver_label == "Entrar"
+            return None
+        return {
+            "id": row_id,
+            "maneuver_id": maneuver.get("id") or "",
+            "maneuver_type": _normalize_maneuver_type(maneuver.get("type")),
+            "port_call_id": port_call["id"],
+            "reference_code": port_call["reference_code"],
+            "vessel_name": port_call.get("vessel_name", "Navio"),
+            "vessel_gt": port_call.get("vessel_gt_t") or "",
+            "vessel_type": port_call.get("ship_type_label") or "Navio",
+            "vessel_type_icon": port_call.get("ship_type_icon"),
+            "date_value": date_dt.isoformat(),
+            "date_key": date_dt.astimezone().strftime("%Y-%m-%d"),
+            "date_label": _local_date_label(date_dt.isoformat()),
+            "planned_value": planned_value,
+            "planned_label": _local_time_label(planned_value),
+            "actual_value": actual_value,
+            "actual_label": _local_time_label(actual_value),
+            "execution_started_label": maneuver.get("execution_started_label", "Sem hora"),
+            "execution_finished_label": maneuver.get("execution_finished_label", "Sem hora"),
+            "execution_started_at": maneuver.get("execution_started_at"),
+            "execution_finished_at": maneuver.get("execution_finished_at"),
+            "execution_window_label": (
+                f"{_local_time_label(maneuver.get('execution_started_at'))} -> {_local_time_label(maneuver.get('execution_finished_at'))}"
+                if maneuver.get("execution_started_at") and maneuver.get("execution_finished_at")
+                else ""
+            ),
+            "derived_standby_hours": _derive_standby_hours(
+                maneuver.get("execution_started_at"),
+                maneuver.get("execution_finished_at"),
+            ),
+            "situation_label": situation_label,
+            "situation_class": situation_class,
+            "maneuver_label": maneuver_label,
+            "local_origin": local_origin or "--",
+            "origin_cabin_label": "--- | ---",
+            "local_destination": local_destination or "--",
+            "destination_cabin_label": "--- | ---",
+            "loa_label": port_call.get("ship_loa_label") or "--",
+            "beam_label": port_call.get("ship_beam_label") or "--",
+            "draft_label": maneuver.get("reported_draft_m") or maneuver.get("planned_draft_m") or port_call.get("ship_max_draft_label") or "--",
+            "tug_count_label": maneuver.get("tug_count") or "--",
+            "agent_label": maneuver.get("agent_label") or port_call["agent_label"],
+            "agent_profile": maneuver.get("agent_profile") or port_call.get("agent_profile"),
+            "pilot_label": maneuver.get("pilot_label") or port_call["pilot_label"],
+            "pilot_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
+            "validated_by_label": maneuver.get("pilot_label") or port_call["pilot_label"],
+            "validated_by_profile": maneuver.get("pilot_profile") or port_call.get("pilot_profile"),
+            "reported_by_label": maneuver.get("reported_by_label", "--"),
+            "reported_by_profile": maneuver.get("reported_by_profile"),
+            "executed_by_label": maneuver.get("reported_by_label", "--"),
+            "executed_by_profile": maneuver.get("reported_by_profile"),
+            "report_completed": bool((maneuver.get("report_note") or "").strip()),
+            "constraint_badges": maneuver.get("constraint_badges", []),
+            "change_count": maneuver.get("change_count", 0),
+            "has_changes": maneuver.get("has_changes", False),
+            "detail_note": detail_note,
+            "approval_note": port_call.get("approval_note", ""),
+            "aborted_reason": port_call.get("aborted_reason", ""),
+            "show_approve": (
+                maneuver_label == "Entrar"
                 and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
-                and port_call.get("approval_status") != PORT_CALL_APPROVAL_ABORTED
-                and port_call.get("can_abort"),
-                "show_mark_arrived": maneuver_label == "Entrar"
-                and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
-                and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
-                "show_abort_departure": maneuver_label == "Sair"
+                and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
+            )
+            or (
+                maneuver_label == "Sair"
                 and port_call["status"] == PORT_CALL_STATUS_IN_PORT
                 and bool(port_call.get("planned_departure_at"))
-                and port_call.get("can_abort_departure_plan"),
-                "show_mark_departed": maneuver_label == "Sair"
-                and port_call["status"] == PORT_CALL_STATUS_IN_PORT
-                and bool(port_call.get("planned_departure_at"))
-                and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
-            }
-        )
+                and port_call.get("approval_status") == PORT_CALL_APPROVAL_PENDING
+            ),
+            "show_abort_entry": maneuver_label == "Entrar"
+            and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
+            and port_call.get("approval_status") != PORT_CALL_APPROVAL_ABORTED
+            and port_call.get("can_abort"),
+            "show_mark_arrived": maneuver_label == "Entrar"
+            and port_call["status"] == PORT_CALL_STATUS_SCHEDULED
+            and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
+            "show_abort_departure": maneuver_label == "Sair"
+            and port_call["status"] == PORT_CALL_STATUS_IN_PORT
+            and bool(port_call.get("planned_departure_at"))
+            and port_call.get("can_abort_departure_plan"),
+            "show_mark_departed": maneuver_label == "Sair"
+            and port_call["status"] == PORT_CALL_STATUS_IN_PORT
+            and bool(port_call.get("planned_departure_at"))
+            and port_call.get("approval_status") == PORT_CALL_APPROVAL_APPROVED,
+        }
 
     for raw in records:
         item = _decorate_port_call(raw)
+        scale_archived_rows: List[Dict] = []
+        scale_has_visible_archive = False
         eta_dt = _parse_iso_datetime(item.get("eta"))
         departure_dt = _parse_iso_datetime(item.get("departure_at"))
         decided_dt = _parse_iso_datetime(item.get("decided_at"))
@@ -839,6 +1031,8 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
             effective_completed_dt = _parse_iso_datetime(_effective_maneuver_time(maneuver))
             if state == "completed":
                 reference_dt = effective_completed_dt
+            elif state == PORT_CALL_APPROVAL_ABORTED:
+                reference_dt = maneuver_decided_dt or planned_dt
             else:
                 reference_dt = planned_dt or maneuver_decided_dt
             if not reference_dt or not (past_limit <= reference_dt <= future_limit):
@@ -849,7 +1043,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
                 if state == "completed"
                 else maneuver.get("decided_at") if state == PORT_CALL_APPROVAL_ABORTED else None
             )
-            add_planned_row(
+            row_payload = build_activity_row(
                 row_id=f"{maneuver_type}-{item['id']}-{maneuver.get('id')}",
                 port_call={
                     **item,
@@ -868,6 +1062,20 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
                 local_destination=maneuver.get("destination") or "--",
                 detail_note=detail_note,
             )
+            if not row_payload:
+                continue
+            within_window = past_limit <= reference_dt <= future_limit
+            if within_window:
+                planned_rows.append(row_payload)
+            if state in {"completed", PORT_CALL_APPROVAL_ABORTED}:
+                scale_archived_rows.append(row_payload)
+                if within_window:
+                    scale_has_visible_archive = True
+        if scale_has_visible_archive and scale_archived_rows:
+            archived_scale_sources[item["id"]] = {
+                "port_call": item,
+                "rows": scale_archived_rows,
+            }
 
     arrivals.sort(
         key=lambda item: _parse_iso_datetime(item.get("eta")) or datetime.max.replace(tzinfo=timezone.utc)
@@ -960,6 +1168,49 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         for item in planned_rows
         if _is_archived_row(item)
     ]
+    archived_scales = []
+    for source in archived_scale_sources.values():
+        summary = _build_archived_scale_summary(source["port_call"], source["rows"], now)
+        maneuver_search_tokens = [
+            " ".join(
+                [
+                    row.get("maneuver_label", ""),
+                    row.get("local_origin", ""),
+                    row.get("local_destination", ""),
+                    row.get("detail_note", ""),
+                    row.get("situation_label", ""),
+                ]
+            )
+            for row in summary["maneuvers"]
+        ]
+        archived_scales.append(
+            {
+                "port_call_id": source["port_call"]["id"],
+                "reference_code": source["port_call"]["reference_code"],
+                "vessel_name": source["port_call"].get("vessel_name", "Navio"),
+                "vessel_gt": source["port_call"].get("vessel_gt_t") or "",
+                "vessel_type": source["port_call"].get("ship_type_label") or "Navio",
+                "vessel_type_icon": source["port_call"].get("ship_type_icon"),
+                "agent_label": source["port_call"].get("agent_label", "--"),
+                "agent_profile": source["port_call"].get("agent_profile"),
+                "pilot_label": source["port_call"].get("pilot_label", "--"),
+                "pilot_profile": source["port_call"].get("pilot_profile"),
+                "status": source["port_call"].get("status"),
+                "status_label": source["port_call"].get("status", "").replace("_", " "),
+                "search_blob": " ".join(
+                    [
+                        source["port_call"].get("reference_code", ""),
+                        source["port_call"].get("vessel_name", ""),
+                        source["port_call"].get("ship_type_label", ""),
+                        source["port_call"].get("vessel_gt_t", ""),
+                        source["port_call"].get("agent_label", ""),
+                        *maneuver_search_tokens,
+                    ]
+                ).lower(),
+                **summary,
+            }
+        )
+    archived_scales.sort(key=lambda item: item.get("latest_activity_ts", 0.0), reverse=True)
     active_planned_rows = [
         item
         for item in planned_rows
@@ -990,6 +1241,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         "maneuvers": maneuvers,
         "planned_maneuvers": active_planned_rows,
         "archived_maneuvers": archived_rows,
+        "archived_scales": archived_scales,
         "planned_groups": planned_groups,
         "departure_candidates": departure_candidates,
         "stats": {
@@ -1001,6 +1253,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
             "maneuver_count": len(maneuvers),
             "planned_count": len(active_planned_rows),
             "archive_count": len(archived_rows),
+            "archive_scale_count": len(archived_scales),
             "pending_count": sum(
                 1 for item in active_planned_rows if item.get("situation_class") == "pending"
             ),

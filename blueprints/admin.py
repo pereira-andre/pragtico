@@ -5,9 +5,9 @@ import os
 
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
-import services
-from validators import validate_phone, validate_required_text, validate_role
-from helpers import (
+from core import services
+from core.validators import validate_phone, validate_required_text, validate_role
+from core.helpers import (
     current_reindex_status_payload,
     load_admin_status,
     login_required,
@@ -16,7 +16,7 @@ from helpers import (
     safe_rebuild_index,
     start_reindex_job,
 )
-from migration_service import migrate_local_json_to_postgres
+from domain.migration_service import migrate_local_json_to_postgres
 
 logger = logging.getLogger(__name__)
 
