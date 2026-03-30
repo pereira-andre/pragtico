@@ -17,6 +17,6 @@ COPY . .
 
 RUN mkdir -p /app/data /app/knowledge
 
-EXPOSE ${PORT:-5000}
+EXPOSE 5000
 
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -"]
+CMD ["sh", "-lc", "exec gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -"]
