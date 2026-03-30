@@ -1,5 +1,13 @@
 __pycache__/
 *.pyc
+.git/
+.github/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
 data/
 .env
 pgdata/
+docs/
+tests/

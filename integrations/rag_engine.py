@@ -49,6 +49,7 @@ class SimpleRAGEngine:
         generation_model: str,
         embedding_model: str,
         llm_provider: BaseLLMProvider | None = None,
+        embedding_api_provider: BaseLLMProvider | None = None,
         embedding_provider=None,
     ) -> None:
         self.api_key = api_key
@@ -65,13 +66,21 @@ class SimpleRAGEngine:
 
         # Embedding provider: local (sentence-transformers) or API-based
         self.embedding_provider = embedding_provider
+        self.embedding_api_provider = embedding_api_provider or self.provider
         self._use_local_embeddings = (
             embedding_provider is not None and embedding_provider.is_available
         )
 
-        # Backward compatibility: self.client is truthy when provider is available
-        self.client = self.provider if self.provider.is_available else None
+        # Backward compatibility: self.client represents the embedding-capable API provider.
+        self.client = (
+            self.embedding_api_provider
+            if self.embedding_api_provider.is_available
+            else None
+        )
         self.provider_name = self.provider.provider_name
+        self.embedding_provider_name = self.embedding_api_provider.provider_name
+        self.embedding_provider_label = self._provider_label(self.embedding_provider_name)
+        self.embedding_api_key_hint = self._provider_api_key_hint(self.embedding_provider_name)
 
         self.allowed_extensions = {".md", ".txt", ".pdf", ".docx", ".csv"}
         self.last_index_error = ""
@@ -100,6 +109,30 @@ class SimpleRAGEngine:
         self._embedding_quota_block_reason = ""
         self._reindex_started_monotonic: float | None = None
         self._reindex_status = self._build_initial_reindex_status()
+
+    @staticmethod
+    def _provider_label(provider_name: str) -> str:
+        normalized = (provider_name or "").strip().lower()
+        label_map = {
+            "gemini": "Gemini",
+            "openrouter": "OpenRouter",
+            "openai": "OpenAI",
+            "deepseek": "DeepSeek",
+            "openai_compatible": "API",
+            "base": "API",
+        }
+        return label_map.get(normalized, normalized.replace("_", " ").title() or "API")
+
+    @staticmethod
+    def _provider_api_key_hint(provider_name: str) -> str:
+        normalized = (provider_name or "").strip().lower()
+        hint_map = {
+            "gemini": "GEMINI_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY",
+        }
+        return hint_map.get(normalized, "LLM_API_KEY")
 
     def _has_embedding_payload(self, embedding) -> bool:
         if embedding is None:
@@ -267,7 +300,7 @@ class SimpleRAGEngine:
         if not self.client:
             raise RuntimeError(
                 "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                "ou configura uma API key."
+                f"ou configura {self.embedding_api_key_hint}."
             )
         if hasattr(self.client, "embed"):
             embed_result = self.client.embed(
@@ -310,7 +343,8 @@ class SimpleRAGEngine:
 
     def _embedding_quota_guard_message(self, marker: str = "") -> str:
         base = (
-            "Quota de embeddings Gemini esgotada; índice guardado com cobertura semântica parcial. "
+            f"Quota de embeddings {self.embedding_provider_label} esgotada; "
+            "índice guardado com cobertura semântica parcial. "
             "Verifica plano/faturação ou aguarda renovação da quota."
         )
         return f"{base} {marker}".strip()
@@ -386,7 +420,7 @@ class SimpleRAGEngine:
         candidate = self.last_index_error if message is None else message
         upper_candidate = str(candidate or "").upper()
         return (
-            "QUOTA DE EMBEDDINGS GEMINI ESGOTADA" in upper_candidate
+            "QUOTA DE EMBEDDINGS" in upper_candidate
             or self._is_permanent_quota_error(candidate)
         )
 
@@ -482,7 +516,10 @@ class SimpleRAGEngine:
         batch_callback=None,
     ) -> List[List[float]]:
         if not self._use_local_embeddings and not self.client:
-            raise RuntimeError("Embeddings não disponíveis: instala sentence-transformers para embeddings locais, ou configura uma API key.")
+            raise RuntimeError(
+                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
+                f"ou configura {self.embedding_api_key_hint}."
+            )
         vectors = []
         batch_size = self.embedding_batch_size
         for start in range(0, len(texts), batch_size):
@@ -775,7 +812,7 @@ class SimpleRAGEngine:
                         self._set_reindex_status(
                             phase="embedding_throttle",
                             message=(
-                                "A respeitar o limite local de embeddings. "
+                                "A respeitar o limite configurado de embeddings. "
                                 f"Retoma em {int(round(delay))}s."
                             ),
                             progress_pct=progress,
@@ -799,7 +836,10 @@ class SimpleRAGEngine:
                 except Exception as exc:
                     self.last_index_error = self._format_embedding_error(exc)
             elif chunks_missing_embedding and not self._use_local_embeddings and not self.client:
-                self.last_index_error = "API key do LLM não configurada (define OPENROUTER_API_KEY ou GEMINI_API_KEY)."
+                self.last_index_error = (
+                    "API key de embeddings não configurada "
+                    f"(define {self.embedding_api_key_hint})."
+                )
             else:
                 self.last_index_error = ""
 
@@ -862,7 +902,8 @@ class SimpleRAGEngine:
             return self._lexical_search(question, chunks, top_k)
         if not self._use_local_embeddings and self.is_embedding_quota_exhausted():
             raise RuntimeError(
-                "Pesquisa semântica Gemini indisponível enquanto a quota de embeddings não renovar."
+                "Pesquisa semântica "
+                f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
             )
 
         try:
@@ -874,7 +915,8 @@ class SimpleRAGEngine:
             self.last_index_error = self._format_embedding_error(exc)
             if self.is_embedding_quota_exhausted(self.last_index_error):
                 raise RuntimeError(
-                    "Pesquisa semântica Gemini indisponível enquanto a quota de embeddings não renovar."
+                    "Pesquisa semântica "
+                    f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
                 ) from exc
             return self._lexical_search(question, chunks, top_k)
 
@@ -1001,7 +1043,7 @@ Pergunta:
 {question}
 """.strip()
 
-        if not self.client:
+        if not self.provider.is_available:
             raise RuntimeError("Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot.")
 
         try:

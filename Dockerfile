@@ -5,8 +5,13 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ARG REQUIREMENTS_FILE=requirements-prod.txt
+
+COPY requirements.txt requirements-prod.txt ./
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && cp "${REQUIREMENTS_FILE}" /tmp/requirements.txt \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 COPY . .
 

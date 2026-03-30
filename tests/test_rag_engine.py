@@ -85,6 +85,7 @@ class SimpleRAGEngineTests(unittest.TestCase):
 
         index_store = LocalIndexStore(index_path=os.path.join(sandbox.name, "rag_index.json"))
         env = {
+            "LLM_PROVIDER": "gemini",
             "EMBEDDING_BATCH_SIZE": "4",
             "EMBEDDING_REQUESTS_PER_MINUTE": "0",
             "EMBEDDING_REQUESTS_PER_DAY": "0",

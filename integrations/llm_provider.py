@@ -317,6 +317,7 @@ class LocalEmbeddingProvider:
 
 def create_embedding_provider(
     model_name: Optional[str] = None,
+    enabled: Optional[bool] = None,
 ) -> Optional[LocalEmbeddingProvider]:
     """Create a local embedding provider if sentence-transformers is available.
 
@@ -327,6 +328,12 @@ def create_embedding_provider(
     Returns:
         LocalEmbeddingProvider or None if not available.
     """
+    if enabled is None:
+        enabled = os.getenv("EMBEDDING_LOCAL_ENABLED", "1").strip().lower() not in {
+            "0", "false", "no", "off",
+        }
+    if not enabled:
+        return None
     model = model_name or os.getenv("EMBEDDING_LOCAL_MODEL", "BAAI/bge-m3")
     provider = LocalEmbeddingProvider(model_name=model)
     if provider.is_available:

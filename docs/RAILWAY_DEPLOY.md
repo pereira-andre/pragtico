@@ -2,6 +2,8 @@
 
 Este repositório já inclui `Dockerfile`, `Procfile`, `railway.toml` e o endpoint `/healthz`, por isso não precisa de refactor extra para arrancar no Railway.
 
+O `Dockerfile` usa `requirements-prod.txt` por defeito, sem `sentence-transformers`, para manter a imagem abaixo do limite do Railway. Os embeddings locais ficam reservados ao desenvolvimento no teu PC.
+
 ## Topologia recomendada
 
 - 1 serviço web ligado ao repositório GitHub
@@ -45,15 +47,13 @@ APP_STORAGE_BACKEND=postgres
 RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 MIGRATE_LOCAL_DATA_ON_START=1
-```
-
-Variáveis adicionais conforme o que quiseres ativar:
-
-```bash
-GEMINI_API_KEY=<opcional, mas necessária para geração Gemini>
 OPENROUTER_API_KEY=<alternativa ao Gemini>
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini-2.5-flash
+LLM_PROVIDER=openrouter
+LLM_MODEL=openrouter/free
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
+EMBEDDING_LOCAL_ENABLED=0
+RAG_REINDEX_ON_START=1
 WEATHERAPI_KEY=<opcional>
 WEATHERAPI_LOCATION=Setubal
 ADMIN_EMAIL=admin@porto.pt
@@ -65,6 +65,8 @@ Notas:
 - Substitui `Postgres` no template `${{Postgres.DATABASE_URL}}` pelo nome real do serviço de base de dados no canvas, se for diferente.
 - Se usares `pgvector`, mantém `RAG_INDEX_BACKEND=pgvector`.
 - Se usares PostgreSQL sem extensão vetorial, muda para `RAG_INDEX_BACKEND=local`.
+- Depois da primeira indexação completa, volta `RAG_REINDEX_ON_START` para `0` para não reindexar em todos os deploys.
+- O modelo `nvidia/llama-nemotron-embed-vl-1b-v2:free` é um ponto de partida para testes no OpenRouter; se a quota não chegar, troca apenas `EMBEDDING_MODEL`.
 
 ### 5. Garantir o schema da base de dados
 
@@ -83,7 +85,8 @@ Se precisares de preparar a base manualmente:
 1. Volta ao serviço web.
 2. Abre o deployment mais recente.
 3. Confirma nos logs que o `gunicorn` arrancou sem erro.
-4. Confirma que o healthcheck `/healthz` fica verde.
+4. Confirma nos logs que a app reporta embeddings via API no provider esperado.
+5. Confirma que o healthcheck `/healthz` fica verde.
 
 ### 7. Gerar domínio público
 
@@ -104,6 +107,7 @@ Depois do primeiro deploy:
    - backend de storage `postgres`
    - backend RAG `pgvector` ou `local`, consoante a escolha
    - estado do índice documental sem erro bloqueante
+5. Se `RAG_REINDEX_ON_START=1`, espera a reindexação terminar e depois repõe `RAG_REINDEX_ON_START=0`.
 
 ## O que eu recomendo para este projeto
 
@@ -112,6 +116,9 @@ Para produção, a configuração mais coerente é:
 - `APP_STORAGE_BACKEND=postgres`
 - `RAG_INDEX_BACKEND=pgvector`
 - serviço de base de dados Railway com `pgvector`
+- `LLM_PROVIDER=openrouter`
+- `EMBEDDING_PROVIDER=openrouter`
+- `EMBEDDING_LOCAL_ENABLED=0`
 - domínio público gerado pelo Railway logo após o primeiro deploy saudável
 
 Essa combinação evita depender de ficheiros locais para dados operacionais e mantém o índice RAG persistente entre deploys.

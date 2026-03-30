@@ -80,6 +80,32 @@ TERMINAL_OPTIONS = [
 VESSEL_TYPE_OPTIONS = get_vessel_type_options()
 CONSTRAINT_OPTIONS = get_constraint_options()
 
+PROVIDER_API_KEY_ENV = {
+    "gemini": "GEMINI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
+
+
+def _env_flag(name: str, default: str = "1") -> bool:
+    return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _resolve_provider_name(explicit_name: str, default: str = "gemini") -> str:
+    provider_name = (explicit_name or "").strip().lower()
+    if provider_name:
+        return provider_name
+    for candidate in ("openrouter", "gemini", "openai", "deepseek"):
+        if os.getenv(PROVIDER_API_KEY_ENV[candidate], "").strip():
+            return candidate
+    return default
+
+
+def _resolve_provider_api_key(provider_name: str) -> str:
+    env_name = PROVIDER_API_KEY_ENV.get(provider_name, "LLM_API_KEY")
+    return os.getenv(env_name, "").strip()
+
 # ---------------------------------------------------------------------------
 # Service initialization
 # ---------------------------------------------------------------------------
@@ -88,28 +114,44 @@ store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR)
 auth_service = create_auth_service(store)
 index_store = create_index_store(data_dir=DATA_DIR)
 
-_llm_provider_name = os.getenv("LLM_PROVIDER", "").strip().lower()
-if not _llm_provider_name:
-    if os.getenv("OPENROUTER_API_KEY", "").strip():
-        _llm_provider_name = "openrouter"
-    elif os.getenv("GEMINI_API_KEY", "").strip():
-        _llm_provider_name = "gemini"
-    else:
-        _llm_provider_name = "gemini"
-
-_llm_api_key = (
-    os.getenv("OPENROUTER_API_KEY", "").strip()
-    if _llm_provider_name == "openrouter"
-    else os.getenv("GEMINI_API_KEY", "").strip()
+_llm_provider_name = _resolve_provider_name(
+    explicit_name=os.getenv("LLM_PROVIDER", ""),
+    default="gemini",
 )
+_llm_api_key = _resolve_provider_api_key(_llm_provider_name)
 _llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
 
-_embedding_provider = create_embedding_provider()
+_embedding_local_enabled = _env_flag("EMBEDDING_LOCAL_ENABLED", default="1")
+_embedding_provider = create_embedding_provider(enabled=_embedding_local_enabled)
+_embedding_provider_name = _resolve_provider_name(
+    explicit_name=os.getenv("EMBEDDING_PROVIDER", ""),
+    default=_llm_provider_name,
+)
+_embedding_api_key = _resolve_provider_api_key(_embedding_provider_name)
+_embedding_api_provider = None
+if not _embedding_provider:
+    _embedding_api_provider = create_llm_provider(
+        provider=_embedding_provider_name,
+        api_key=_embedding_api_key,
+    )
 
-_default_gen_models = {"gemini": "gemini-2.5-flash", "openrouter": "openrouter/free"}
-_default_emb_models = {"gemini": "gemini-embedding-001", "openrouter": "baai/bge-m3"}
+_default_gen_models = {
+    "gemini": "gemini-2.5-flash",
+    "openrouter": "openrouter/free",
+    "openai": "gpt-4.1-mini",
+    "deepseek": "deepseek-chat",
+}
+_default_emb_models = {
+    "gemini": "gemini-embedding-001",
+    "openrouter": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+    "openai": "text-embedding-3-small",
+    "deepseek": "text-embedding-3-small",
+}
 _gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openrouter/free"))
-_emb_model = os.getenv("EMBEDDING_MODEL", _default_emb_models.get(_llm_provider_name, "baai/bge-m3"))
+_emb_model = os.getenv(
+    "EMBEDDING_MODEL",
+    _default_emb_models.get(_embedding_provider_name, "text-embedding-3-small"),
+)
 
 rag = SimpleRAGEngine(
     api_key=_llm_api_key,
@@ -118,6 +160,7 @@ rag = SimpleRAGEngine(
     generation_model=_gen_model,
     embedding_model=_emb_model,
     llm_provider=_llm_provider,
+    embedding_api_provider=_embedding_api_provider,
     embedding_provider=_embedding_provider,
 )
 tide_service = TideService(
@@ -204,10 +247,15 @@ if _embedding_provider:
         "Embeddings locais activos: %s (%d dim)",
         _embedding_provider.model_name, _embedding_provider.dimensions,
     )
+elif _embedding_api_provider and _embedding_api_provider.is_available:
+    app.logger.info(
+        "Embeddings via API activos: %s (%s)",
+        _embedding_provider_name, _emb_model,
+    )
 else:
     app.logger.warning(
-        "Embeddings locais indisponíveis (sentence-transformers não instalado). "
-        "Os embeddings serão feitos via API, consumindo quota."
+        "Embeddings indisponíveis: instala sentence-transformers para uso local "
+        "ou configura o provider/API key de embeddings."
     )
 
 # ---------------------------------------------------------------------------

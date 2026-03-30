@@ -27,7 +27,8 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 - Pesquisa documental com contexto vivo do portal
 - Ações operacionais via chat com confirmação, cancelamento e feedback
 - Suporte multi-provider para geração LLM
-- Embeddings locais por defeito com `BAAI/bge-m3`, com fallback para API quando aplicável
+- Embeddings locais em desenvolvimento com `BAAI/bge-m3`
+- Perfil Railway com embeddings via API, sem `sentence-transformers` no container
 
 ### Segurança e perfis
 
@@ -77,6 +78,8 @@ python3 app.py
 
 Abre `http://127.0.0.1:5000` ou a porta definida em `FLASK_PORT`.
 
+`requirements.txt` mantém `sentence-transformers` para desenvolvimento local e reindexação com embeddings no teu PC.
+
 ### Docker Compose
 
 ```bash
@@ -90,6 +93,8 @@ O compose sobe a app e uma base PostgreSQL local.
 
 O repositório já inclui `Dockerfile`, `Procfile` e `railway.toml`.
 
+O `Dockerfile` instala `requirements-prod.txt` por defeito, para o deploy Railway ficar abaixo do limite de imagem. O `docker compose` local continua a usar `requirements.txt`.
+
 O guia completo está em [Deploy no Railway](docs/RAILWAY_DEPLOY.md).
 
 Variáveis mínimas para produção:
@@ -98,14 +103,17 @@ Variáveis mínimas para produção:
 FLASK_ENV=production
 FLASK_SECRET_KEY=<chave-segura>
 APP_STORAGE_BACKEND=postgres
-DATABASE_URL=<ligação PostgreSQL>
-```
-
-Se quiseres índice vetorial persistente na base de dados:
-
-```bash
 RAG_INDEX_BACKEND=pgvector
+DATABASE_URL=<ligação PostgreSQL>
+OPENROUTER_API_KEY=<api-key>
+LLM_PROVIDER=openrouter
+LLM_MODEL=openrouter/free
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
+EMBEDDING_LOCAL_ENABLED=0
 ```
+
+No primeiro deploy com documentos novos, podes ativar `RAG_REINDEX_ON_START=1`; depois volta a `0`.
 
 ## Scripts úteis
 
@@ -149,6 +157,6 @@ A suite atual cobre 238 testes unitários e de integração.
 - Backend: Flask, gunicorn, psycopg, PostgreSQL
 - RAG: retrieval local ou `pgvector`
 - LLM: Gemini / OpenRouter, com abstração de provider
-- Embeddings locais: `sentence-transformers` com `BAAI/bge-m3`
+- Embeddings: `sentence-transformers` local em desenvolvimento ou provider API em produção
 - Frontend: Jinja2, HTML, CSS, JavaScript vanilla
 - Deploy: Docker e Railway
