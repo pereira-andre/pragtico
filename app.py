@@ -203,7 +203,10 @@ rag = SimpleRAGEngine(
     embedding_provider=_embedding_provider,
 )
 tide_service = TideService(
-    csv_path=os.path.join(KNOWLEDGE_DIR, "mares.2026.201.9_setubal_troia.csv")
+    csv_path=os.getenv(
+        "TIDE_CSV_PATH",
+        os.path.join(BASE_DIR, "resources", "tides", "mares.2026.201.9_setubal_troia.csv"),
+    )
 )
 weather_service = WeatherService(
     api_key=os.getenv("WEATHERAPI_KEY", ""),

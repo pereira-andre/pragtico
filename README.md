@@ -30,6 +30,8 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 - Embeddings locais em desenvolvimento com `BAAI/bge-m3`
 - Perfil Railway com embeddings Gemini via API, sem `sentence-transformers` no container
 
+O CSV operacional de marés fica em `resources/tides/` e não em `knowledge/`, para não entrar na indexação documental do RAG.
+
 ### Segurança e perfis
 
 - Perfis `admin`, `agente` e `piloto`
