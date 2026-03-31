@@ -1,0 +1,229 @@
+DOCUMENTO: IT-029 — REGRAS APLICÁVEIS A MANOBRAS — CAIS DA SAPEC (TPS e TGL)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 03, datada de 23 de janeiro de 2012.
+NOTA: A revisão 01 (dezembro 2010) introduziu a regra das carochas para calados
+superiores a 8,8 m + baixa-mar. A revisão 02 (agosto 2011) estabeleceu o calado
+máximo de referência de 10 m para outros navios, calculado para PM de 2,4 m.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras nos dois terminais da SAPEC no Porto de Setúbal:
+
+  TPS — Terminal de Granéis Sólidos (carrega e descarrega granéis sólidos como
+        fertilizantes, carvão, minérios, etc.)
+
+  TGL — Terminal de Granéis Líquidos (carrega e descarrega produtos líquidos a
+        granel como ácidos, produtos químicos, combustíveis, etc.)
+
+Estes dois terminais têm regras de calado distintas e são tratados separadamente
+neste documento, embora pertençam ao mesmo operador (SAPEC).
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra. O Piloto nomeado executa
+a manobra em conformidade com estas regras.
+
+================================================================================
+DEFINIÇÃO — CARGA IMO
+================================================================================
+
+"Carga IMO" refere-se a cargas classificadas como perigosas ao abrigo dos códigos
+da Organização Marítima Internacional (IMO), nomeadamente o Código IMDG (para
+granéis líquidos perigosos em contentores ou embalagens), o Código IBC (para
+granéis líquidos químicos a granel) e o Código IGC (para gases liquefeitos).
+Em termos práticos, um navio com "carga IMO" é um navio que transporta substâncias
+químicas, inflamáveis, tóxicas, corrosivas ou de outra natureza perigosa,
+classificadas como tal pela IMO. Para estes navios, os limites de calado são mais
+restritivos do que para navios com carga não perigosa (outros navios / não IMO),
+como medida de segurança adicional.
+
+================================================================================
+TPS — TERMINAL DE GRANÉIS SÓLIDOS (SAPEC)
+================================================================================
+
+DIMENSÕES:
+  Comprimento físico do cais: 112 metros.
+  Comprimento máximo de navio aconselhável: 200 metros.
+  Distância ao Duque d'Alba: 70 metros.
+    O Duque d'Alba é uma estrutura de amarração isolada que estende o comprimento
+    operacional além do cais físico. Está posicionado a 70 metros do cais.
+
+CALADOS MÁXIMOS NO TPS:
+
+  Para navios tanque com carga IMO:
+    Calado máximo permitido: 9,5 metros.
+
+  Para outros navios (carga não IMO, granéis sólidos, etc.):
+    Calado máximo de referência: 10,0 metros.
+    Este valor foi calculado para uma preia-mar de 2,4 metros, que é o valor
+    mínimo da preia-mar ao longo do ano (a preia-mar mais baixa que ocorre
+    durante o ano). Significa que, mesmo no dia em que a preia-mar é mais baixa
+    (2,4 m), o calado praticável é de 10,0 m.
+    Em dias com preia-mar superior a 2,4 m (o que acontece na maioria dos dias),
+    o calado efetivamente praticável é superior a 10,0 m, mas o documento define
+    10,0 m como valor de referência. Caso a caso, poderão ser admitidos calados
+    ligeiramente superiores a 10,0 m mediante análise específica.
+
+FÓRMULA DE CALADO PRATICÁVEL NO TPS:
+
+  Para navios de carga (não IMO):
+    Calado possível = 7,6 metros + altura de água no momento
+    Calado mínimo garantido a qualquer hora: 7,7 metros
+    (correspondente à fórmula com altura de água ≈ 0,1 m acima do ZH)
+
+  Para navios tanque com carga IMO:
+    Calado possível = 7,1 metros + altura de água no momento
+    Calado mínimo garantido a qualquer hora: 7,2 metros
+    (correspondente à fórmula com altura de água ≈ 0,1 m acima do ZH)
+
+  O calado máximo de 10,0 m (outros) e 9,5 m (IMO) é explicado pela fórmula:
+    Outros: 7,6 + 2,4 (PM mínimo anual) = 10,0 m.
+    IMO:    7,1 + 2,4 (PM mínimo anual) = 9,5 m.
+
+Exemplos de aplicação:
+  — Água de 1,0 m, carga não IMO: calado praticável = 7,6 + 1,0 = 8,6 m.
+  — Água de 1,5 m, carga não IMO: calado praticável = 7,6 + 1,5 = 9,1 m.
+  — Água de 2,4 m, carga não IMO: calado praticável = 7,6 + 2,4 = 10,0 m (ref.).
+  — Água de 1,0 m, carga IMO: calado praticável = 7,1 + 1,0 = 8,1 m.
+  — Água de 2,4 m, carga IMO: calado praticável = 7,1 + 2,4 = 9,5 m (máximo).
+
+REGRA DAS CAROCHAS (DEFENSAS AFASTADORAS) NO TPS:
+
+  Navios cujo calado seja superior a 8,8 metros mais a altura da baixa-mar
+  devem atracar às defensas afastadoras, vulgarmente designadas "carochas".
+
+  "Altura da baixa-mar" é o nível mínimo que a maré vai atingir durante a
+  permanência do navio atracado, lido nas tabelas de marés.
+
+  "Defensas afastadoras (carochas)" são equipamentos físicos instalados no cais
+  que criam um espaço entre o casco do navio e a estrutura do cais, permitindo
+  que o navio flutue sobre zonas menos profundas junto à parede do cais.
+
+  Exemplo: se a baixa-mar do dia for 0,5 m, o limiar para uso de carochas é
+  8,8 + 0,5 = 9,3 m. Qualquer navio com calado superior a 9,3 m deve usar
+  as carochas para atracar no TPS.
+
+RECOMENDAÇÃO DE VELOCIDADE NO CANAL DE ACESSO AO TPS:
+
+  Para evitar squat elevado, recomenda-se navegar a velocidade inferior a 5 nós
+  no canal de acesso ao TPS.
+
+  "Squat" é o fenómeno pelo qual um navio em movimento numa zona de pouca
+  profundidade afunda ligeiramente em relação ao nível de repouso, devido à
+  aceleração da água sob o casco (efeito de Bernoulli). A velocidade de 5 nós
+  é o limiar acima do qual o squat começa a ser significativo neste canal, podendo
+  reduzir perigosamente a folga entre o casco e o fundo.
+
+================================================================================
+TGL — TERMINAL DE GRANÉIS LÍQUIDOS (SAPEC)
+================================================================================
+
+DIMENSÕES:
+  O TGL não tem um cais contínuo mas sim um conjunto de duques d'alba (estruturas
+  isoladas de amarração). As dimensões relevantes são as distâncias entre os
+  eixos (centros) desses duques d'alba:
+
+  Distância entre os duques d'alba dos extremos: 70 metros.
+    Estes são os pontos de amarração mais afastados entre si, que definem o
+    comprimento operacional máximo da linha de amarração.
+
+  Distância entre os duques d'alba do meio: 35 metros.
+    Estes são os duques d'alba centrais, que suportam a parte intermédia do navio.
+
+  Comprimento máximo de navio aconselhável: 200 metros.
+
+CALADOS MÁXIMOS NO TGL:
+
+  Com carga IMO (perigosa): calado máximo permitido = 9,5 metros.
+  Com outras cargas (não IMO): calado máximo = 10,0 metros.
+
+FÓRMULA DE CALADO PRATICÁVEL NO TGL:
+
+  Com carga IMO:
+    Calado possível = 7,1 metros + altura de água no momento
+    (calado mínimo a qualquer hora ≈ 7,1 m)
+
+  Com carga não IMO:
+    Calado possível = 7,6 metros + altura de água no momento
+    (calado mínimo a qualquer hora ≈ 7,6 m)
+
+  Nota: as fórmulas do TGL são iguais às do TPS para as mesmas categorias de
+  carga. Isto sugere que a profundidade de referência dos dois terminais é
+  idêntica. No TGL não é indicado um calado mínimo garantido a qualquer hora,
+  ao contrário do TPS onde são explicitados 7,2 m (IMO) e 7,7 m (outros).
+
+Exemplos de aplicação:
+  — Água de 1,0 m, carga não IMO: calado praticável = 7,6 + 1,0 = 8,6 m.
+  — Água de 2,0 m, carga IMO: calado praticável = 7,1 + 2,0 = 9,1 m.
+  — Água de 2,4 m, carga não IMO: calado praticável = 7,6 + 2,4 = 10,0 m.
+
+================================================================================
+COMPARAÇÃO DIRETA ENTRE TPS E TGL
+================================================================================
+
+Comprimento do cais/estrutura:
+  TPS: 112 metros de cais físico + Duque d'Alba a 70 m.
+  TGL: estrutura de duques d'alba com 70 m entre extremos e 35 m no meio.
+
+Comprimento máximo de navio:
+  Ambos: 200 metros (valor aconselhável).
+
+Calado máximo com carga IMO:
+  Ambos: 9,5 metros.
+
+Calado máximo com carga não IMO:
+  Ambos: 10,0 metros (TPS: calculado para PM mínimo de 2,4 m).
+
+Fórmulas de calado praticável:
+  Ambos usam as mesmas fórmulas: 7,6 + água (não IMO) / 7,1 + água (IMO).
+
+Regras especiais exclusivas do TPS:
+  — Regra das carochas: calado > 8,8 + baixa-mar → usar defensas afastadoras.
+  — Recomendação de velocidade < 5 nós no canal de acesso (squat).
+  — Calado garantido a qualquer hora explicitado: 7,7 m (outros) / 7,2 m (IMO).
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o calado máximo para um navio tanque com carga IMO no TPS?
+Resposta: 9,5 metros.
+
+Pergunta: Qual o calado máximo para um navio de granéis sólidos (sem carga IMO)
+no TPS?
+Resposta: 10,0 metros de referência (calculado para PM mínimo de 2,4 m).
+Calados ligeiramente superiores podem ser admitidos caso a caso.
+
+Pergunta: Qual o calado praticável no TPS com altura de água de 1,8 m para carga
+não IMO?
+Resposta: 7,6 + 1,8 = 9,4 metros.
+
+Pergunta: Com baixa-mar de 0,3 m, a partir de que calado é obrigatório usar
+carochas no TPS?
+Resposta: 8,8 + 0,3 = 9,1 metros. Navios com calado superior a 9,1 m devem
+atracar às defensas afastadoras (carochas).
+
+Pergunta: Qual a velocidade máxima recomendada no canal de acesso ao TPS?
+Resposta: Inferior a 5 nós, para evitar squat elevado.
+
+Pergunta: Qual o calado máximo no TGL com carga não IMO?
+Resposta: 10,0 metros.
+
+Pergunta: Qual a distância entre os duques d'alba extremos do TGL?
+Resposta: 70 metros.
+
+Pergunta: As fórmulas de calado do TPS e do TGL são iguais?
+Resposta: Sim. Ambos usam 7,6 m + altura de água para carga não IMO e 7,1 m +
+altura de água para carga IMO.
+
+Pergunta: Quem valida as requisições de manobra no TPS e no TGL?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-029 — CAIS DA SAPEC (TPS e TGL)
+================================================================================

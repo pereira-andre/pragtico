@@ -18,5 +18,6 @@ venv/
 data/
 knowledge/*
 !knowledge/.gitkeep
+!knowledge/*.txt
 contas.txt
 static/styles.css.bak

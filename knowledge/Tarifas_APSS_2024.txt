@@ -1,0 +1,388 @@
+DOCUMENTO: PROJETO DE REGULAMENTO DE TARIFAS DA APSS, S.A. PARA 2024
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+CÓDIGO: RG.01 — Edição/versão 1.00
+VIGÊNCIA: Em vigor a partir de 1 de janeiro de 2024.
+NOTA: Todas as taxas e valores indicados são acrescidos de IVA nos termos da
+legislação em vigor. As unidades de medida são indivisíveis com arredondamento
+por excesso.
+
+================================================================================
+CAPÍTULO III — PILOTAGEM (ARTIGOS 13.º A 17.º)
+================================================================================
+
+================================================================================
+ARTIGO 13.º — TARIFA DE PILOTAGEM — TIPOS DE SERVIÇO
+================================================================================
+
+A tarifa de pilotagem é devida pelos serviços prestados ao navio à entrada, saída
+e no interior do porto ou vizinhança, incluindo disponibilidade e uso dos sistemas.
+
+TIPOS DE SERVIÇO DE PILOTAGEM (com taxa associada):
+  a) Entrar e atracar, ou entrar e fundear.
+  b) Suspender e atracar, ou suspender e sair.
+  c) Largar e fundear, ou largar e sair do porto.
+  d) Mudanças ou suspender e fundear, dentro ou fora do porto.
+  e) Experiências, dentro ou fora do porto.
+  f) Serviço de correr ao longo do cais ou de outras estruturas de atracação.
+  g) Serviço de pilotagem à ordem das embarcações.
+
+DEFINIÇÃO DE "PILOTAGEM À ORDEM":
+  Considera-se serviço de pilotagem à ordem a permanência do piloto às ordens
+  da embarcação nos períodos de tempo que excedam:
+  a) Duas horas entre a hora requisitada e a hora de chegada à barra (ponto de
+     relato VTS), quando o navio vem de fora.
+  b) Meia hora entre a hora requisitada e o início efectivo do serviço, quando
+     a embarcação já se encontre nos limites da área ou dentro do porto.
+  c) Três horas, quando o serviço requisitado tenha duração superior a esse período.
+
+================================================================================
+ARTIGO 14.º — REQUISIÇÃO DO SERVIÇO DE PILOTAGEM
+================================================================================
+
+Os serviços de pilotagem devem ser requisitados com um máximo de 24 horas e
+um mínimo de 2 horas de antecedência. A requisição é feita na JUL (Janela Única
+Logística) no âmbito do Pedido de Manobra.
+
+================================================================================
+ARTIGO 15.º — VALOR DAS TAXAS DE PILOTAGEM — FÓRMULA E TABELA
+================================================================================
+
+FÓRMULA DE CÁLCULO (Artigo 15.º, n.º 1):
+
+  T = UP × √GT
+
+  Onde:
+    T  = Valor da taxa em euros.
+    UP = Valor da Unidade de Pilotagem (tabela abaixo).
+    GT = Arqueação Bruta da embarcação em unidades de GT.
+    √GT = Raiz quadrada do GT (não o GT directo — esta distinção é fundamental).
+
+ATENÇÃO: A fórmula usa a RAIZ QUADRADA do GT, não o GT directamente.
+Aplicar UP × GT em vez de UP × √GT resulta em valores incorrectos e
+significativamente inflacionados para navios de grande porte.
+
+VALORES DA UNIDADE DE PILOTAGEM (UP) POR TIPO DE SERVIÇO:
+
+  Serviço de correr ao longo do cais ou de outras estruturas de atracação:
+    UP = € 3,3628
+
+  Todos os outros serviços de pilotagem (entrada, saída, mudança, fundear,
+  experiências, suspender, etc.):
+    UP = € 9,2578
+
+EXEMPLOS DE CÁLCULO:
+  Navio com GT = 10.000, serviço normal:
+    T = 9,2578 × √10.000 = 9,2578 × 100 = € 925,78
+
+  Navio com GT = 40.000, serviço normal:
+    T = 9,2578 × √40.000 = 9,2578 × 200 = € 1.851,56
+
+  Navio com GT = 10.000, serviço de correr ao longo do cais:
+    T = 3,3628 × √10.000 = 3,3628 × 100 = € 336,28
+
+CASOS ESPECIAIS DE CÁLCULO:
+  Navios-tanque com tanques de lastro segregado: a taxa é calculada em função
+  do GT reduzido (não o GT nominal do certificado).
+
+  Estruturas flutuantes sem certificação: aplica-se LOA × Boca × Calado em
+  substituição do GT para efeitos de cálculo.
+
+  Embarcações sem propulsão própria: as taxas são acrescidas em 25%.
+
+  Assistência à regulação e compensação de agulhas durante a pilotagem: as
+  taxas são também acrescidas em 25%.
+
+TAXA DE PILOTAGEM À ORDEM:
+  € 74,6432 por hora, à qual acresce 25% do valor da taxa de pilotagem normal
+  calculada pela fórmula UP × √GT para o navio em causa.
+
+================================================================================
+ARTIGO 15.º, N.º 7 — CANCELAMENTOS E ALTERAÇÕES DE SERVIÇO
+================================================================================
+
+Em caso de cancelamento ou alteração do serviço de pilotagem, a taxa é cobrada
+nas seguintes percentagens da taxa normal calculada:
+
+CANCELAMENTOS:
+  a) Cancelamento até 2 horas antes da hora requisitada:
+     Redução de 70% → cobra-se 30% da taxa.
+
+  b) Cancelamento na 1.ª hora após a hora requisitada (até 60 min depois):
+     Redução de 50% → cobra-se 50% da taxa.
+
+  c) Cancelamento após a 1.ª hora seguinte à hora requisitada:
+     Cobra-se 100% da taxa (sem redução).
+
+  d) Cancelamento com piloto embarcado, sem início da manobra por condições
+     meteorológicas adversas:
+     Redução de 75% → cobra-se 25% da taxa.
+
+ALTERAÇÕES DE SERVIÇO:
+  e) Alteração que desloca o serviço entre 30 minutos e 3 horas após a hora
+     requisitada, comunicada nas 2 horas antes da hora requisitada:
+     Taxa de pilotagem à ordem + agravamento de 25%.
+     Nota: em alterações sucessivas sobre o mesmo Pedido de Manobra, o
+     agravamento de 25% só é cobrado na primeira alteração.
+
+  f) Alteração que desloca o serviço para mais de 3 horas após a hora requisitada,
+     comunicada nas 2 horas antes da hora requisitada:
+     Agravamento de 30% sobre a taxa normal.
+
+  g) Alteração que desloca o serviço para mais de 3 horas após a hora requisitada,
+     comunicada na 1.ª hora após a hora requisitada:
+     Agravamento de 50% sobre a taxa normal.
+
+  h) Alteração que desloca o serviço para mais de 3 horas após a hora requisitada,
+     efectuada após a 1.ª hora seguinte à hora requisitada:
+     Agravamento de 100% sobre a taxa normal.
+
+================================================================================
+ARTIGO 16.º — REDUÇÕES NAS TAXAS DE PILOTAGEM
+================================================================================
+
+REDUÇÃO DE 30% (serviços a) a e) do artigo 13.º):
+  — Navios da Armada Nacional e unidades auxiliares da Marinha, quando
+    requisitem o serviço.
+  — Embarcações que escalem o porto exclusivamente para embarcar combustíveis,
+    mantimentos e fazer aguada.
+
+REDUÇÕES POR LINHA REGULAR (serviços a), b) e c) do artigo 13.º):
+  Aplicam-se aos navios em serviço de linha regular com pelo menos 6 escalas
+  no porto nos 365 dias anteriores:
+
+  6 a 24 escalas:    redução de 10%
+  25 a 52 escalas:   redução de 15%
+  53 a 100 escalas:  redução de 20%
+  Mais de 100 escalas: redução de 25%
+
+  Nota: estas reduções não são acumuláveis entre si. Aplica-se o escalão
+  correspondente ao número total de escalas efectuadas nos 365 dias anteriores.
+
+REDUÇÃO DE 10% POR CABOTAGEM NACIONAL (serviços a) e e) do artigo 13.º):
+  Para navios em serviço de cabotagem nacional. Não acumulável com a redução
+  de linha regular acima.
+
+================================================================================
+ARTIGO 17.º — ISENÇÕES DE TAXA DE PILOTAGEM
+================================================================================
+
+Estão isentas de pagamento de taxa de pilotagem:
+
+  a) Embarcações que arribem ao porto para desembarcar náufragos, tripulantes
+     ou passageiros em perigo de vida ou que precisem de ser socorridos, não
+     fazendo outra operação de serviço.
+
+  b) Embarcações propriedade de entidades que prossigam interesses públicos
+     dignos de protecção especial, a requerimento dos interessados.
+
+  c) Embarcações cujo Comandante seja titular de um Certificado de Isenção de
+     Pilotagem emitido nos termos do Decreto-Lei n.º 48/2002, de 2 de março.
+
+CERTIFICADO DE ISENÇÃO DE PILOTAGEM — taxas:
+  Emissão:  € 1.246,99
+  Renovação: € 997,59
+
+NOTA: Em caso de detenção por Port State Control (Art. 9.º, n.º 4), não são
+aplicáveis reduções nem descontos na taxa de pilotagem.
+
+================================================================================
+CAPÍTULO II — USO DO PORTO — TUP (ARTIGOS 8.º A 10.º)
+================================================================================
+
+================================================================================
+ARTIGO 8.º E 9.º — TARIFA DE USO DO PORTO (TUP)
+================================================================================
+
+A TUP é devida por todos os navios e embarcações que entrem no porto (incluindo
+rebocadores com GT > 5). É calculada por GT, por período indivisível de 24 horas.
+
+TAXAS TUP POR TIPO DE NAVIO (valores em euros por GT por 24 horas):
+
+  Navios de Contentores:
+    Primeiro período de 24 horas: € 0,1144/GT
+    Restantes períodos de 24 horas: € 0,0263/GT
+
+  Navios Roll-on Roll-off (RoRo):
+    Primeiro período de 24 horas: € 0,1186/GT
+    Restantes períodos de 24 horas: € 0,0274/GT
+
+  Navios de Passageiros:
+    Primeiro período de 24 horas: € 0,0620/GT
+    Restantes períodos de 24 horas: € 0,0263/GT
+
+  Navios Tanque:
+    Primeiro período de 24 horas: € 0,1459/GT
+    Restantes períodos de 24 horas: € 0,0274/GT
+
+  Restantes embarcações ou navios:
+    Primeiro período de 24 horas: € 0,1459/GT
+    Restantes períodos de 24 horas: € 0,0274/GT
+
+NOTA: Os valores do primeiro período já incluem a taxa indireta de resíduos.
+
+CONTAGEM DO TEMPO DA TUP:
+  Inicia-se quando o navio entra no porto e termina quando sai. Se o navio
+  prolongar a estadia após o término das operações de carga/descarga, a
+  contagem termina no momento em que é solicitado o prolongamento e a partir
+  daí aplica-se a taxa de Restantes Períodos. Se ficar acostado nessa situação
+  (excepto nos cais da Lisnave e Etermar), aplica-se o dobro da taxa.
+
+NAVIOS DETIDOS (Port State Control):
+  TUP Restantes Períodos agravada em mais 200% durante o período de detenção.
+  Sem descontos nem isenções.
+
+TUP PARA EMBARCAÇÕES DE TRÁFEGO LOCAL, RECREIO E REBOCADORES:
+  € 0,1506 por unidade de √GT (raiz quadrada do GT) por período indivisível
+  de 24 horas.
+
+================================================================================
+ARTIGO 10.º — ISENÇÕES E REDUÇÕES DA TUP
+================================================================================
+
+ISENÇÕES DA TUP:
+  — Navios-hospitais.
+  — Navios da Armada Portuguesa e estrangeira (em visita oficial ou reciprocidade).
+  — Embarcações em missão científica, cultural ou benemérita (a pedido).
+  — Navios entrados exclusivamente para mudança de tripulação ou desembarque
+    de doentes ou mortos (pelo tempo estritamente necessário).
+  — Rebocadores e equipamentos ao serviço do porto; ferry Setúbal-Tróia;
+    embarcações de pesca nos locais a elas destinados.
+  — Embarcações em reparação em estaleiros, durante o período de reparação.
+
+REDUÇÕES DA TUP:
+
+  Escalas técnicas:
+    40% para navios entrados exclusivamente para meter mantimentos, aguada,
+    combustíveis, lubrificantes e sobressalentes para uso próprio.
+    40% para navios acostados por fora de outros (não acumulável).
+
+  Boas práticas ambientais (Prémio Verde):
+    3% para navios com Certificado Green Award de Roterdão, ISO 14001, navios
+    a LNG ou com scrubbers em circuito fechado.
+
+  Linha regular — reduções por número de escalas nos 365 dias anteriores
+  (não acumuláveis com outros descontos):
+    6 a 24 escalas:    10%
+    25 a 52 escalas:   25%
+    53 a 100 escalas:  30%
+    Mais de 100 escalas: 40%
+
+  ATENÇÃO: As reduções da TUP por linha regular são diferentes das reduções de
+  pilotagem por linha regular. Na TUP: 25% para 25-52 escalas e 40% para >100.
+  Na pilotagem: 15% para 25-52 escalas e 25% para >100. Não confundir.
+
+  Serviço de curta distância: 10% a partir da 24.ª escala nos 365 dias anteriores.
+
+  Cabotagem nacional ou curta distância (fora dos outros serviços): 15% a partir
+  da 6.ª escala nos 365 dias anteriores, mediante pedido prévio.
+
+  Interesse Estratégico: até 40% para linhas regulares com GT ≥ 20.000 GT com
+  número mínimo de escalas directas, mediante reconhecimento anual da APSS:
+    — Porta-contentores de longo curso: mínimo 20 escalas.
+    — Navios de passageiros: mínimo 6 escalas.
+    — Roll-on roll-off: mínimo 40 escalas.
+
+================================================================================
+ARTIGO 11.º — TARIFA DE TRÁFEGO DE PASSAGEIROS
+================================================================================
+
+Por desembarque ou embarque de passageiro: € 3,7362 por indivíduo.
+Por passageiro em regime de trânsito: € 2,4908 por indivíduo.
+Isentos: passageiros do tráfego local e fluvial.
+
+================================================================================
+ARTIGO 11.º A — TAXA DE CARBONO SOBRE VIAGENS MARÍTIMAS
+================================================================================
+
+Aplicável à atracação de navios de passageiros movidos a energia fóssil:
+  € 2,0000 por passageiro em trânsito, desembarque ou embarque.
+
+Isentos desta taxa: crianças com menos de 2 anos, navios para mudança de
+tripulação ou desembarque de doentes, navios de socorro, navios ro-ro de
+passageiros, transporte fluvial, tripulantes.
+
+Navios de passageiros que façam operação de turnaround: redução de 50%.
+
+O movimento de passageiros deve ser entregue à APSS no prazo de 3 dias após
+a escala, sob pena de facturação com base na capacidade registada na IMO.
+
+================================================================================
+ARTIGO 5.º — PRAZOS DE REQUISIÇÃO DE SERVIÇOS
+================================================================================
+
+Dias úteis (segunda a sexta-feira):
+  1.º Turno (08h00-17h00): requisição criada até às 16h30 do dia útil anterior.
+  2.º Turno (17h00-01h00): requisição criada até às 11h30 do próprio dia.
+
+Sábados, domingos e feriados:
+  Qualquer turno: requisição criada até às 15h00 do dia útil anterior.
+
+Prolongamento do 2.º Turno para acabamento de navio:
+  Pedido telefónico ao DePCP (968 576 744) com pelo menos 2 horas de
+  antecedência relativamente ao fim do turno, indicando as horas requisitadas.
+
+Operações na hora de refeição: requisição criada até 2 horas antes do início.
+
+Trabalho nocturno (01h00-08h00): requisição criada até às 15h00 do dia útil anterior.
+
+Requisição fora de prazo (aceite excepcionalmente): acréscimo de € 54,7566 por
+requisição.
+
+Valor mínimo de facturação: € 5,2600 por forma a cobrir despesas administrativas.
+
+================================================================================
+ARTIGO 29.º — TAXA INDIRETA DE RESÍDUOS (MARPOL)
+================================================================================
+
+Aplicada a todos os navios que entrem na zona do porto: € 0,0088/GT por escala,
+com mínimo de € 219,0264 por escala. Esta taxa está incluída na componente TUP
+do primeiro dia (Artigo 9.º).
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual a fórmula de cálculo da taxa de pilotagem?
+Resposta: T = UP × √GT (unidade de pilotagem multiplicada pela RAIZ QUADRADA
+do GT, não pelo GT directo).
+
+Pergunta: Qual o valor de UP para uma manobra normal de entrada ou saída?
+Resposta: € 9,2578 por unidade de √GT.
+
+Pergunta: Qual o valor de UP para uma manobra de correr ao longo do cais?
+Resposta: € 3,3628 por unidade de √GT.
+
+Pergunta: Qual a taxa de pilotagem para um navio de 25.000 GT numa manobra
+normal?
+Resposta: T = 9,2578 × √25.000 = 9,2578 × 158,11 = aproximadamente € 1.464.
+
+Pergunta: Com quanto tempo de antecedência se deve requisitar o serviço de
+pilotagem?
+Resposta: No máximo 24 horas e no mínimo 2 horas antes da hora pretendida.
+
+Pergunta: Quanto se paga se se cancelar o serviço 30 minutos antes da hora
+requisitada?
+Resposta: 30% da taxa normal (redução de 70%), pois o cancelamento ocorreu
+dentro das 2 horas antes da hora requisitada.
+
+Pergunta: Quanto se paga se o serviço for cancelado com o piloto já embarcado
+por mau tempo?
+Resposta: 25% da taxa normal (redução de 75%).
+
+Pergunta: Qual a redução de pilotagem para um navio em linha regular com 60
+escalas no porto nos últimos 365 dias?
+Resposta: Redução de 20% (escalão 53 a 100 escalas).
+
+Pergunta: Qual a redução de TUP para o mesmo navio com 60 escalas?
+Resposta: Redução de 30% na TUP (os escalões da TUP são diferentes dos da pilotagem).
+
+Pergunta: Qual a taxa de passageiro em trânsito?
+Resposta: € 2,4908 por passageiro + taxa de carbono de € 2,0000 (se navio movido
+a energia fóssil), totalizando € 4,4908 por passageiro em trânsito.
+
+Pergunta: A TUP aplica-se a rebocadores?
+Resposta: Sim, a rebocadores com GT superior a 5, à taxa de € 0,1506/√GT/24h.
+
+================================================================================
+FIM DO DOCUMENTO — REGULAMENTO DE TARIFAS APSS 2024
+================================================================================

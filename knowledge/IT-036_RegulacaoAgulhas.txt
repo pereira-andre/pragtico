@@ -1,0 +1,182 @@
+DOCUMENTO: IT-036 — REGRAS APLICÁVEIS À REGULAÇÃO DE AGULHAS NO PORTO DE SETÚBAL
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 01, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras aplicáveis à regulação de agulhas (RA) na
+área dos fundeadouros do Porto de Setúbal.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+Compete ao Piloto Coordenador validar as requisições de manobra relacionadas
+com a regulação de agulhas, de acordo com as regras descritas neste documento.
+
+================================================================================
+O QUE É A REGULAÇÃO DE AGULHAS (RA)
+================================================================================
+
+A Regulação de Agulhas (RA), também designada "swing de agulha" ou "desvio de
+agulha", é a operação náutica de calibração e compensação da agulha magnética
+(bússola magnética) de um navio. Consiste em fazer girar o navio lentamente em
+360 graus, parando em vários rumos predefinidos, enquanto um técnico especializado
+(regulador de agulhas) mede a diferença entre o rumo magnético real e o indicado
+pela agulha do navio. Com base nestas medições, a agulha é compensada com
+ímanes ou as correções são registadas na tabela de desvios do navio.
+
+Esta operação realiza-se tipicamente na área dos fundeadouros porque exige espaço
+livre para o navio girar completamente, sem obstáculos e com profundidade suficiente.
+
+A RA é uma operação exigente do ponto de vista de controlo do navio: a rotação
+deve ser lenta e controlada, o que é mais difícil quando existe corrente de maré
+ou quando o espaço está ocupado por outros navios fundeados.
+
+================================================================================
+LEGENDA DAS CONDIÇÕES USADAS NAS REGRAS
+================================================================================
+
+LOA = comprimento total do navio (Length Overall), em metros.
+
+Repontos de maré = momentos em que a maré muda de sentido e a corrente é
+praticamente nula. São as condições mais favoráveis para a RA, pois o navio
+gira sem ser arrastado pela corrente.
+
+Correntes de água = períodos em que a corrente de maré está ativa (enchente
+ou vazante). Nestas condições a RA é mais difícil pois a corrente actua sobre
+o navio durante a rotação.
+
+Marés mortas = marés de menor amplitude, com correntes mais fracas. O documento
+define marés mortas como as que têm preia-mar (PM) inferior a 3,0 metros. Portanto:
+PM < 3,0 m → marés mortas (corrente fraca).
+PM ≥ 3,0 m → marés vivas (corrente forte).
+
+Marés vivas = marés de maior amplitude, com correntes mais intensas. Correspondem
+a PM igual ou superior a 3,0 metros.
+
+================================================================================
+CONDIÇÕES EM QUE SE EFETUAM REGULAÇÕES DE AGULHAS
+================================================================================
+
+A RA pode ser efetuada nas seguintes combinações de condições:
+
+CONDIÇÃO 1 — EM REPONTOS DE MARÉ:
+  Podem realizar-se RAs nos repontos de maré para navios com LOA inferior a
+  250 metros. Navios com LOA igual ou superior a 250 metros não podem realizar
+  RA nos repontos de maré.
+
+CONDIÇÃO 2 — COM CORRENTES DE ÁGUA EM MARÉS MORTAS (PM < 3,0 m):
+  Com corrente ativa em período de marés mortas (preia-mar inferior a 3,0 metros),
+  podem realizar-se RAs para navios com LOA inferior a 225 metros. Navios com
+  LOA igual ou superior a 225 metros não podem realizar RA com corrente em
+  marés mortas.
+
+CONDIÇÃO 3 — COM CORRENTES DE ÁGUA EM MARÉS VIVAS (PM ≥ 3,0 m):
+  Com corrente ativa em período de marés vivas (preia-mar igual ou superior a
+  3,0 metros), podem realizar-se RAs apenas para navios com LOA inferior a
+  120 metros. Navios com LOA igual ou superior a 120 metros não podem realizar
+  RA com corrente em marés vivas.
+
+================================================================================
+CONDIÇÕES EM QUE NÃO SE EFETUAM REGULAÇÕES DE AGULHAS
+================================================================================
+
+A RA está PROIBIDA em qualquer das seguintes situações:
+
+PROIBIÇÃO 2.1 — NAVIOS FUNDEADOS NAS PROXIMIDADES:
+  Não se efetua RA se existirem navios fundeados num raio de 0,7 milhas náuticas.
+  A rotação completa de 360 graus exige um espaço livre considerável. A presença
+  de outros navios fundeados a menos de 0,7 milhas representa risco de colisão
+  ou interferência durante a manobra de rotação.
+  0,7 milhas náuticas equivalem a aproximadamente 1.296 metros.
+
+PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:
+  Não se efetua RA de noite com navios de LOA superior a 225 metros. Durante a
+  noite a visibilidade é reduzida, tornando mais difícil a vigilância do espaço
+  ao redor do navio durante a rotação. Este limite não se aplica a navios com
+  LOA igual ou inferior a 225 metros, que podem realizar RA de noite.
+
+PROIBIÇÃO 2.3 — NOS REPONTOS DE MARÉ COM LOA SUPERIOR A 250 METROS:
+  Não se efetua RA nos repontos de maré com navios de LOA superior a 250 metros.
+  Estes navios são demasiado grandes para realizar a manobra de rotação com
+  segurança mesmo em condições de corrente nula.
+
+PROIBIÇÃO 2.4 — COM CORRENTE EM MARÉS MORTAS PARA LOA SUPERIOR A 225 METROS:
+  Não se efetua RA com corrente de água em marés mortas para navios com LOA
+  superior a 225 metros. A corrente, mesmo fraca (marés mortas), não permite
+  controlar a rotação com segurança para navios desta dimensão.
+
+PROIBIÇÃO 2.5 — COM CORRENTE EM MARÉS VIVAS PARA LOA SUPERIOR A 120 METROS:
+  Não se efetua RA com corrente de água em marés vivas para navios com LOA
+  superior a 120 metros. A corrente intensa das marés vivas inviabiliza a rotação
+  controlada para navios com mais de 120 metros.
+
+================================================================================
+QUADRO RESUMO — LIMITES DE LOA POR CONDIÇÃO
+================================================================================
+
+Reponto de maré:
+  RA permitida: LOA < 250 m.
+  RA proibida: LOA ≥ 250 m.
+
+Corrente em marés mortas (PM < 3,0 m):
+  RA permitida: LOA < 225 m.
+  RA proibida: LOA ≥ 225 m.
+
+Corrente em marés vivas (PM ≥ 3,0 m):
+  RA permitida: LOA < 120 m.
+  RA proibida: LOA ≥ 120 m.
+
+Período noturno:
+  RA permitida: LOA < 225 m (em qualquer condição de maré aplicável).
+  RA proibida: LOA ≥ 225 m.
+
+Navios fundeados a menos de 0,7 milhas:
+  RA proibida independentemente do LOA e do estado de maré.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: O que é a Regulação de Agulhas?
+Resposta: É a operação de calibração da bússola magnética do navio, que consiste
+em rodar o navio 360 graus na área dos fundeadouros enquanto se medem e corrigem
+os desvios da agulha magnética.
+
+Pergunta: Onde se realiza a Regulação de Agulhas no Porto de Setúbal?
+Resposta: Na área dos fundeadouros do Porto de Setúbal (definidos no IT-015).
+
+Pergunta: Um navio com LOA de 200 metros pode fazer RA de noite?
+Resposta: Sim, desde que não haja navios fundeados a menos de 0,7 milhas e se
+escolha a condição de maré adequada ao seu LOA (reponto ou corrente em marés
+mortas, ambas permitidas para LOA < 225 m).
+
+Pergunta: Um navio com LOA de 240 metros pode fazer RA com corrente em marés
+mortas?
+Resposta: Não. Com corrente em marés mortas o limite é LOA < 225 metros.
+O navio de 240 metros excede este limite.
+
+Pergunta: Um navio com LOA de 240 metros pode fazer RA num reponto de maré?
+Resposta: Sim. No reponto de maré o limite é LOA < 250 metros, pelo que um navio
+de 240 metros está dentro do limite.
+
+Pergunta: Um navio com LOA de 130 metros pode fazer RA com corrente em marés vivas?
+Resposta: Não. Com corrente em marés vivas o limite é LOA < 120 metros.
+
+Pergunta: Existe um navio fundeado a 0,5 milhas. Pode-se fazer RA?
+Resposta: Não. A RA não se pode realizar se houver navios fundeados a menos de
+0,7 milhas náuticas, independentemente do LOA do navio que vai fazer a regulação.
+
+Pergunta: Qual o critério para distinguir marés mortas de marés vivas neste documento?
+Resposta: Preia-mar inferior a 3,0 metros = marés mortas. Preia-mar igual ou
+superior a 3,0 metros = marés vivas.
+
+Pergunta: Quem valida as requisições de manobra para Regulação de Agulhas?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-036 — REGULAÇÃO DE AGULHAS
+================================================================================

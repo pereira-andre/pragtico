@@ -1,0 +1,110 @@
+DOCUMENTO: IT-042 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL — CANAL NORTE
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 01, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as recomendações aplicáveis à passagem de navios no
+Canal Norte, especificamente na zona de curva deste canal, no Porto de Setúbal.
+
+O Canal Norte é o canal de navegação que faz a ligação entre a Barra do Porto
+de Setúbal e a zona interior do porto, passando junto à margem norte do estuário
+do Sado (onde se localiza a estação de Pilotos). A "zona de curva" é o troço
+deste canal em que a via navegável muda de direção, exigindo manobra de guinada
+(mudança de rumo) por parte do navio.
+
+As recomendações aqui descritas complementam as regras gerais do IT-018 (Normas
+Especiais) para este troço específico do canal.
+
+================================================================================
+RECOMENDAÇÃO 1 — USO DE DOIS REBOCADORES À POPA PARA CONTROLO DA GUINADA
+================================================================================
+
+Quando o número de rebocadores designados para a manobra for suficiente (ou seja,
+quando houver pelo menos dois rebocadores disponíveis), deverão ser estabelecidos
+dois rebocadores à popa do navio, de modo a aumentar o poder de guinada através
+da criação de um binário de forças.
+
+EXPLICAÇÃO DOS TERMOS TÉCNICOS:
+
+"Guinada" é o movimento de rotação do navio em torno do seu eixo vertical, ou
+seja, a mudança de rumo (virar à esquerda ou à direita). Na zona de curva do
+Canal Norte, o navio precisa de guinar para acompanhar a curvatura do canal.
+
+"Guinada ao passo" é um fenómeno indesejado que ocorre em navios com hélice de
+passo fixo convencional: quando o hélice gira, cria um efeito transversal (efeito
+de pá ou paddle-wheel effect) que faz o navio guindar numa direção não pretendida,
+dificultando o controlo direcional. Na zona de curva, este efeito pode agravar
+a situação se o navio guinar na direção errada.
+
+"Binário de forças" é um par de forças iguais e opostas, aplicadas em pontos
+diferentes do navio, que criam rotação sem deslocamento linear. Dois rebocadores
+à popa, puxando em direções opostas (um para cada bordo), criam exactamente este
+binário: o navio gira no local sem ser empurrado para a frente ou para trás.
+Isto dá ao Piloto um controlo de guinada muito mais preciso do que com apenas um
+rebocador ou com o leme.
+
+OBJECTIVO: evitar a guinada ao passo não controlada na zona de curva, onde a
+margem de erro lateral é reduzida. Os dois rebocadores à popa funcionam como um
+sistema de controlo de direção independente do leme e da máquina do navio.
+
+================================================================================
+RECOMENDAÇÃO 2 — EVITAR MÁQUINA A RÉ NA ZONA DE CANAL E CURVA
+================================================================================
+
+Deve evitar-se dar máquina a ré (engrenar a propulsão em marcha-atrás) em
+situações de canal e curva.
+
+EXPLICAÇÃO: quando um navio com hélice de passo fixo convencional engrana a
+marcha-atrás, o efeito de pá (paddle-wheel effect) do hélice em sentido inverso
+gera uma força transversal que empurra a popa do navio lateralmente de forma
+brusca e pouco previsível. Num canal estreito ou numa curva, esta força lateral
+inesperada pode lançar o navio contra a margem ou fora do canal antes de o Piloto
+conseguir corrigir com o leme. A máquina a ré deve portanto ser evitada nestes
+troços, preferindo-se o controlo de velocidade pelos rebocadores.
+
+================================================================================
+RECOMENDAÇÃO 3 — DISTÂNCIA À LINHA NORTE DA COSTA NA ZONA DE CURVA
+================================================================================
+
+Na zona de curva do Canal Norte, deve procurar-se cumprir uma distância de 0,15
+minutos de milha náutica (0,15') em relação à linha Norte da costa.
+
+CONVERSÃO: 0,15 minutos de milha náutica equivalem a 0,15 × 1852 metros =
+aproximadamente 278 metros de distância à margem norte do canal na zona de curva.
+
+"Linha Norte da costa" é a linha de costa ou de margem do estuário no lado norte
+do canal, que representa o limite navegável deste bordo. Manter-se a 278 metros
+desta linha na zona de curva garante folga suficiente tanto do lado norte como,
+por consequência, uma posição centrada ou ligeiramente afastada da margem norte,
+que é o posicionamento recomendado para efetuar a curva com segurança.
+
+================================================================================
+RESUMO DAS RECOMENDAÇÕES EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Quais as recomendações para navegar na zona de curva do Canal Norte?
+Resposta: Existem três recomendações: (1) quando possível, usar dois rebocadores
+à popa para criar binário de forças e controlar a guinada, evitando guinada ao
+passo; (2) evitar dar máquina a ré na zona de canal e curva; (3) manter uma
+distância de 0,15' (cerca de 278 metros) da linha norte da costa na zona de curva.
+
+Pergunta: Por que razão se usam dois rebocadores à popa na curva do Canal Norte?
+Resposta: Para criar um binário de forças que aumenta o controlo de guinada do
+navio, evitando a guinada ao passo — um efeito indesejado do hélice que pode
+fazer o navio guinar de forma não controlada numa zona de canal estreito.
+
+Pergunta: Qual a distância recomendada à margem norte na curva do Canal Norte?
+Resposta: 0,15 minutos de milha, equivalente a aproximadamente 278 metros.
+
+Pergunta: Porque se deve evitar máquina a ré na curva do Canal Norte?
+Resposta: Porque a marcha-atrás de um hélice convencional gera uma força lateral
+brusca (efeito de pá) que pode lançar a popa do navio lateralmente de forma
+imprevisível, colocando o navio fora do canal numa zona em que a margem de erro
+é reduzida.
+
+================================================================================
+FIM DO DOCUMENTO IT-042 — CANAL NORTE
+================================================================================

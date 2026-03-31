@@ -24,6 +24,7 @@ from storage import normalize_constraint_codes
 from core.validators import (
     validate_datetime_range,
     validate_imo,
+    validate_not_past_datetime,
     validate_optional_text,
     validate_positive_number,
     validate_required_text,
@@ -128,6 +129,7 @@ def create_port_call():
 
     try:
         eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
+        validate_not_past_datetime(eta, "ETA")
         parse_local_datetime_input(form_data["booking_local"], "Marcação")
         berth = require_form_text(form_data["berth"], "Cais previsto")
         last_port = require_form_text(form_data["last_port"], "Porto anterior")
@@ -430,7 +432,7 @@ def attach_shift_report(port_call_id: str):
 
 @bp.route("/port-calls/<port_call_id>/maneuvers/<maneuver_id>/edit-plan", methods=["POST"])
 @login_required
-@role_required("admin", "agente", "piloto")
+@role_required("admin", "agente")
 @port_call_scope_required
 def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
     """Editar o planeamento de uma manobra existente e registar o motivo da alteração."""

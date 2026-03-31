@@ -1,0 +1,303 @@
+DOCUMENTO: IT-018 — REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 04, datada de 25 de maio de 2015.
+NOTA: A revisão 01 (setembro de 2010) alterou o calado na Barra e Canal Norte
+de 10,0 m para 10,5 m a qualquer hora. A revisão 02 (dezembro de 2010) clarificou
+a regra 5 operacionalmente. A revisão 04 (maio 2015) estabeleceu a regra da
+Manobra de Correr ao Longo do Cais.
+ÂMBITO: Este documento contém regras de aplicação geral ao Porto de Setúbal,
+transversais a todos os terminais e operações, complementando as regras
+específicas de cada terminal (IT-005 a IT-015).
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra. O Piloto nomeado executa
+as manobras em conformidade com estas normas especiais.
+
+================================================================================
+CALADOS MÁXIMOS DE REFERÊNCIA GERAIS DO PORTO DE SETÚBAL
+================================================================================
+
+Calado máximo de referência na BARRA (entrada do porto): 12,00 metros.
+  Este é o calado máximo absoluto que pode ser praticado na Barra do Porto de
+  Setúbal, independentemente da maré.
+
+Calado máximo de referência para navios com destino ao Estaleiro da Mitrena
+(entrada e saída): 7,50 metros.
+  Este limite aplica-se especificamente a navios que se dirigem ao Estaleiro
+  Lisnave / Estaleiros Mitrena, tanto na entrada como na saída do porto. Não
+  se confunde com o calado máximo da Barra (12,0 m), que é o limite geral de
+  acesso ao porto.
+
+================================================================================
+REGRA 1 — CALADO NA BARRA E NO CANAL NORTE
+================================================================================
+
+O calado praticável na BARRA e no CANAL NORTE é calculado pela seguinte fórmula:
+
+  Calado máximo = 10,30 metros + altura de maré no momento
+
+O resultado desta fórmula está limitado a um máximo absoluto de 12,0 metros.
+
+"Canal Norte" é o canal junto à curva em frente à estação de Pilotos, que faz
+a ligação entre a Barra e a zona interior do porto.
+
+CALADO POTENCIAL MÍNIMO GARANTIDO:
+  O documento estabelece que o calado potencial é de 10,5 metros a qualquer hora.
+  Isto significa que, mesmo na maré mais baixa (quando a altura de maré está
+  próxima do Zero Hidrográfico), a profundidade disponível na Barra e no Canal
+  Norte permite sempre um calado de pelo menos 10,5 metros, sem necessidade de
+  aguardar maré favorável.
+
+CONDIÇÃO DE VALIDADE — ONDULAÇÃO:
+  Estes valores são válidos apenas para ondulação inferior a 1 metro. Quando a
+  ondulação for igual ou superior a 1 metro, os valores acima não são aplicáveis
+  e a viabilidade da entrada deve ser avaliada caso a caso. A ondulação reduz a
+  profundidade efetiva disponível para o navio porque o movimento vertical do
+  navio na vaga exige margem de segurança adicional.
+
+Exemplos de aplicação:
+  — Altura de maré 0,2 m: calado máximo na Barra = 10,30 + 0,20 = 10,50 m.
+  — Altura de maré 1,0 m: calado máximo na Barra = 10,30 + 1,00 = 11,30 m.
+  — Altura de maré 1,7 m: calado máximo = 10,30 + 1,70 = 12,00 m (teto atingido).
+  — Altura de maré 2,5 m: resultado seria 12,80 m, mas o teto é 12,00 m.
+
+================================================================================
+REGRA 2 — REBOCADOR OBRIGATÓRIO NO PERCURSO PARA NAVIOS ESPECIAIS
+================================================================================
+
+Os seguintes navios devem ser assistidos por pelo menos um rebocador durante
+todo o percurso no porto (não apenas na manobra de atracação/desatracação):
+
+  Categoria A: navios com comprimento superior a 220 metros com destino ao
+  Estaleiro da Mitrena. A grande dimensão destes navios num canal interior
+  justifica a presença constante de rebocador ao longo do percurso.
+
+  Categoria B: todos os navios que apresentem dificuldades de máquina ou de
+  governo, independentemente do comprimento ou destino. "Dificuldades de máquina"
+  significa que o sistema de propulsão não está a funcionar normalmente.
+  "Dificuldades de governo" significa que o sistema de leme ou direção do navio
+  não está a operar normalmente. Em qualquer destes casos, o rebocador de
+  assistência é obrigatório durante todo o percurso no porto.
+
+================================================================================
+REGRA 3 — VENTO SUPERIOR A 20 NÓS
+================================================================================
+
+Quando a velocidade do vento for superior a 20 nós, o Piloto nomeado, de acordo
+com o Comandante do navio, decide da viabilidade das manobras a executar.
+Esta regra aplica-se especialmente a navios de grande superfície vélica, ou seja,
+navios que apresentam uma grande área exposta ao vento (navios de grande porte a
+vazio, navios com superstruturas elevadas, porta-contentores em lastro, etc.).
+
+Nota: A referência de 20 nós nesta regra é para a viabilidade da manobra em geral.
+O IT-016 (Rebocadores) usa também 20 km/h (≈ 10,8 nós) como limite para navios
+com considerável área vélica nos Estaleiros Mitrena. São contextos diferentes:
+este ponto 3 refere-se à decisão de viabilidade da manobra em geral no porto;
+o IT-016 refere-se ao limite para manobrar especificamente no estaleiro.
+
+================================================================================
+REGRA 4 — PILOTAGEM ASSISTIDA À DISTÂNCIA POR CONDIÇÕES DE MAR
+================================================================================
+
+Está prevista a pilotagem assistida à distância quando as condições de tempo ou
+de mar não permitam o embarque do piloto nos limites normalmente estabelecidos.
+Neste caso, o serviço pode ser realizado por pilotagem à distância desde que:
+
+  — O Comandante da embarcação aceite a pilotagem à distância.
+  — Sejam cumpridos os requisitos de segurança definidos pelos regulamentos
+    portuários.
+
+Esta modalidade está regulamentada no Regulamento de Pilotagem do porto.
+O procedimento operacional consta do IT-017 — Pilotagem Assistida.
+
+================================================================================
+REGRA 5 — CONDIÇÕES PARA EMBARQUE E DESEMBARQUE DE PILOTO EM OUTÃO E CANAL DA BARRA
+================================================================================
+
+ALÍNEA a) — CONDIÇÕES NORMAIS:
+  Quando Comandante e Piloto julgem ser seguro, o embarque ou desembarque do
+  Piloto podem ser efetuados na zona do OUTÃO e do Canal da Barra quando se
+  verificarem SIMULTANEAMENTE as seguintes condições:
+    — Comprimento do navio inferior a 145 metros.
+    — Calado do navio inferior a 7,5 metros.
+    — Condições de tempo e mar regulares (sem mau tempo).
+
+  OUTÃO é o local de transferência de pilotos na entrada do porto, onde a lancha
+  de pilotos efetua o transbordo.
+
+ALÍNEA b) — CONDIÇÕES DE MAU TEMPO:
+  Com mau tempo, o embarque/desembarque normal não é possível nas condições da
+  alínea a). Neste caso deve utilizar-se o método de Pilotagem Assistida descrito
+  no IT-017. Em condições de mau tempo, podem ser considerados, com estudo caso
+  a caso, navios de dimensões superiores às descritas na alínea a) (ou seja,
+  navios com mais de 145 metros ou calado igual ou superior a 7,5 metros).
+
+================================================================================
+REGRA 6 — ATRACAÇÃO COM CORRENTE DE MARÉ NA PROA
+================================================================================
+
+É situação normalizada atracar com a corrente de maré na proa. Isto significa
+que, na situação padrão, o navio aproxima-se do cais com a corrente a actuar
+de frente (da proa para a popa), o que permite ao navio usar o seu leme e a
+corrente para controlar a velocidade de aproximação.
+
+Atracar com a corrente a favor (de popa para proa) é mais difícil de controlar
+pois acelera o navio. Outras configurações de corrente são analisadas caso a
+caso, não sendo situações normalizadas.
+
+================================================================================
+REGRA 7 — CRUZAMENTOS PROIBIDOS NO CANAL DA BARRA E CANAIS INTERNOS
+================================================================================
+
+Evitam-se cruzamentos de navios (navios a navegar em sentidos opostos ao mesmo
+tempo) nas seguintes zonas:
+
+  — Entre os pilares 2 e 4 do Canal da BARRA. Os pilares são as estruturas de
+    sinalização da barra que delimitam o canal de entrada. O troço entre os pilares
+    2 e 4 é um trecho estreito onde dois navios a cruzar representam risco de
+    colisão.
+
+  — No canal da SAPEC. Canal de acesso ao terminal SAPEC (instalação química/
+    fertilizantes).
+
+  — No canal da MAGUE. Canal de acesso ao terminal MAGUE.
+
+  — No canal da LISNAVE. Canal de acesso ao Estaleiro Lisnave / Estaleiros Mitrena.
+
+================================================================================
+REGRA 8 — CANAL NAVEGÁVEL PARA TANQUISADO, ECOOIL, ESTALEIRO E TERMITRENA
+================================================================================
+
+Considera-se navegável o espaço entre as boias 8/10 e o espaço entre as boias
+10/12 do Canal Sul, em direção aos terminais TANQUISADO, ECOOIL, ESTALEIRO e
+TERMITRENA, atendendo à mínima sonda existente nesse percurso.
+
+"Canal Sul" é a via navegável interna do porto que dá acesso aos terminais
+localizados na margem sul do estuário do Sado. As boias 8, 10 e 12 são
+referências de sinalização deste canal. A menção de "mínima sonda existente"
+indica que este troço tem limitações de profundidade que devem ser tidas em
+conta no cálculo de calado para estes destinos.
+
+================================================================================
+REGRA 9 — SAÍDA DE NAVIOS DO ESTALEIRO DA MITRENA (POR FAIXA DE DWT)
+================================================================================
+
+Esta regra aplica-se exclusivamente a navios com saída do Estaleiro da Mitrena
+e estabelece condições diferenciadas por dimensão do navio (DWT).
+
+NAVIOS COM DWT SUPERIOR A 60.000 TONELADAS:
+  Não devem sair com maré de vazante em período de marés vivas quando a preia-mar
+  precedente foi superior a 3 metros de altura.
+  Explicação: Em marés vivas com preia-mar elevada (>3 m), a corrente de vazante
+  é muito intensa. Um navio de grande porte saindo com esta corrente a favor
+  (corrente de popa) perde controlo de velocidade e governo, tornando a manobra
+  perigosa. A saída fica condicionada a não ocorrer nesta combinação de maré.
+
+NAVIOS COM DWT ENTRE 60.000 E 100.000 TONELADAS:
+  Podem sair a qualquer hora durante períodos de marés mortas.
+  "Marés mortas" são as marés de menor amplitude, que ocorrem próximo das luas
+  de quarto crescente e minguante, com correntes de maré mais fracas. Em marés
+  mortas, estes navios podem sair sem restrição de hora ou estado de maré.
+
+NAVIOS COM DWT SUPERIOR A 100.000 TONELADAS:
+  Podem sair durante a vazante em marés mortas, mas apenas se passarem OUTÃO
+  até 1,5 horas após a preia-mar.
+  Explicação: numa maré morta, a corrente de vazante é mais fraca do que em
+  marés vivas. No entanto, para navios muito grandes (>100.000 DWT), mesmo a
+  vazante de marés mortas representa um risco se a corrente já estiver muito
+  estabelecida. Ao limitar a passagem por OUTÃO a 1,5 horas após a preia-mar,
+  garante-se que o navio atravessa o troço crítico com a corrente ainda no início
+  da vazante, antes de atingir a sua intensidade máxima.
+
+================================================================================
+REGRA 10 — FUNDEAR EM TROIA EM NAVIOS DE ESTALEIRO
+================================================================================
+
+Com navios de estaleiro (entrada ou saída), o Piloto nomeado para executar a
+manobra tem competência para decidir, de acordo com o Comandante, se é necessário
+fundear em Troia para efetuar os preparativos necessários para concluir a manobra
+em segurança. Fundear em Troia significa ancorar temporariamente no Fundeadouro
+de Troia (definido no IT-015) antes de prosseguir a manobra de entrada no estaleiro
+ou de saída para o mar.
+
+================================================================================
+REGRA 11 — MANOBRA DE CORRER AO LONGO DO CAIS
+================================================================================
+
+DEFINIÇÃO:
+  A Manobra de Correr ao Longo do Cais (também designada "correr ao longo de
+  outra estrutura de atracação sem perda de contacto") é a manobra que se inicia
+  com o laborar (colocação em tensão) do primeiro cabo de amarração e termina
+  logo que todos os cabos estejam com volta (completamente amarrados). Durante
+  toda esta manobra, o navio mantém contacto físico com a estrutura de atracação,
+  deslizando lateralmente ao longo dela sem se afastar.
+
+REGRA DE AUTORIZAÇÃO:
+  A Manobra de Correr ao Longo do Cais carece de parecer prévio da Pilotagem,
+  independentemente da instalação portuária onde se pratique. Nenhum navio pode
+  executar esta manobra sem que a Pilotagem tenha sido consultada previamente.
+
+CRITÉRIO DE DESIGNAÇÃO DE PILOTO:
+  Quando a Coordenação da Pilotagem preveja que, pela força ou direção do vento,
+  a embarcação possa perder o contacto com a estrutura de atracação durante a
+  manobra, é designado um Piloto para acompanhar a operação.
+  A velocidade de referência para o vento neste critério é de 10 nós. Acima deste
+  valor, ou quando a direção do vento for desfavorável, a Coordenação avalia se
+  a designação de Piloto é necessária.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o calado máximo na Barra do Porto de Setúbal?
+Resposta: O calado máximo absoluto é 12,0 metros. A qualquer hora está garantido
+um calado de pelo menos 10,5 metros. O calado praticável em cada momento é
+10,30 m + altura de maré, com teto de 12,0 m, válido para ondulação < 1 m.
+
+Pergunta: Um navio com 11,0 m de calado pode entrar com maré de 0,5 m?
+Resposta: Não. Com maré de 0,5 m: calado máximo = 10,30 + 0,50 = 10,80 m. O
+navio com 11,0 m de calado excede este valor. Necessita de aguardar maré de
+pelo menos 0,70 m para ter calado máximo = 11,0 m.
+
+Pergunta: Qual o calado máximo para entrar no Estaleiro da Mitrena?
+Resposta: 7,50 metros (calado máximo específico para o Estaleiro da Mitrena).
+
+Pergunta: Um navio de 250 metros com destino à Mitrena precisa de rebocador
+durante o percurso no porto?
+Resposta: Sim. Navios com mais de 220 metros com destino à Mitrena são assistidos
+por pelo menos um rebocador durante todo o percurso no porto.
+
+Pergunta: Em que condições pode o Piloto embarcar/desembarcar em OUTÃO?
+Resposta: Com navio de comprimento inferior a 145 m, calado inferior a 7,5 m e
+condições de tempo e mar regulares. Com mau tempo usa-se o método do IT-017.
+
+Pergunta: Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena durante uma
+vazante de marés vivas com preia-mar de 3,5 m?
+Resposta: Não. Navios com DWT superior a 60.000 não devem sair em vazante de
+marés vivas quando a preia-mar foi superior a 3 metros.
+
+Pergunta: Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena a qualquer
+hora em marés mortas?
+Resposta: Sim. Navios entre 60.000 e 100.000 DWT podem sair a qualquer hora
+durante marés mortas.
+
+Pergunta: Um navio de 120.000 DWT pode sair do Estaleiro da Mitrena em vazante?
+Resposta: Sim, mas apenas em marés mortas e desde que passe OUTÃO até 1,5 horas
+após a preia-mar.
+
+Pergunta: O que é a Manobra de Correr ao Longo do Cais?
+Resposta: É a manobra em que o navio desliza ao longo da estrutura de atracação
+mantendo contacto, desde o laborar do primeiro cabo até todos os cabos estarem
+com volta. Requer parecer prévio da Pilotagem. Se o vento (referência: 10 nós)
+puder causar perda de contacto, é designado um Piloto.
+
+Pergunta: Qual a situação normalizada de atracação em termos de corrente?
+Resposta: Atracar com a corrente de maré na proa (de frente). Outras situações
+são analisadas caso a caso.
+
+================================================================================
+FIM DO DOCUMENTO IT-018 — NORMAS ESPECIAIS DO PORTO DE SETÚBAL
+================================================================================

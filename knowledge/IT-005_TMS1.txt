@@ -1,0 +1,162 @@
+DOCUMENTO: IT-005 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 1 (TMS1)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e às manobras
+de navios no Terminal Multiusos — Zona 1 (também designado TMS1) do Porto de
+Setúbal.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+IDENTIFICAÇÃO DO TERMINAL E CAIS DISPONÍVEIS
+================================================================================
+
+O Terminal Multiusos — Zona 1 (TMS1) dispõe de cais numerados do 4 ao 8. Cada
+cais é delimitado por cabeços (pontos de amarração numerados). A seguir descreve-se
+cada cais com o intervalo de cabeços que o delimita e o seu comprimento total.
+
+Cais número 4:
+  - Situa-se do início do terminal até ao cabeço número 10.
+  - Comprimento total: 175 metros.
+
+Cais número 5:
+  - Situa-se entre o cabeço número 10 e o cabeço número 17.
+  - Comprimento total: 175 metros.
+
+Cais número 6:
+  - Situa-se entre o cabeço número 17 e o cabeço número 26.
+  - Comprimento total: 175 metros.
+
+Cais número 7:
+  - Situa-se entre o cabeço número 26 e o cabeço número 30.
+  - Comprimento total: 80 metros.
+
+Cais número 8:
+  - Situa-se entre o cabeço número 30 e o cabeço número 38.
+  - Comprimento total: 215 metros.
+
+Os cabeços do TMS1 estão numerados de 1 a 39, abrangendo todos os cais acima
+descritos.
+
+================================================================================
+REGRAS ESPECIAIS PARA O CAIS NÚMERO 8
+================================================================================
+
+Em situação de vazante de marés vivas (descida da maré em período de maré de
+grande amplitude), a atracação no cais número 8 pode ser particularmente difícil.
+
+Nessa situação, recomenda-se o uso de um ou mais rebocadores de apoio, mas apenas
+se o navio estiver condicionado a atracar pelo lado de estibordo (EB). O lado de
+estibordo é o lado direito do navio quando olhado da popa para a proa (da parte
+de trás para a parte da frente do navio).
+
+================================================================================
+REGRA DE RESGUARDO ENTRE NAVIOS NA RAMPA
+================================================================================
+
+Quando um navio se aproxima para atracar à rampa do terminal, deve manter um
+resguardo mínimo de 30 metros em relação ao navio que se encontra imediatamente
+a jusante. "A jusante" significa na direção da corrente, ou seja, o navio que
+estiver posicionado mais próximo da saída para o rio ou mar. Esta regra visa
+garantir separação de segurança entre navios atracados.
+
+================================================================================
+CALADOS OPERACIONAIS POR ZONA DO TERMINAL
+================================================================================
+
+Definição: O calado de um navio é a profundidade que o casco do navio ocupa
+abaixo da superfície da água. Os valores indicados a seguir são "calados
+operacionais", ou seja, os calados máximos que podem ser praticados em qualquer
+estado de maré, sem necessidade de aguardar pela preia-mar ou de fazer cálculos
+adicionais de maré.
+
+Zona 1 — Do início do terminal até ao cabeço número 10 (corresponde ao Cais 4):
+  - Calado operacional máximo: 8,8 metros.
+  - Navios com calado superior a 8,8 metros não podem operar nesta zona em
+    condições normais.
+
+Zona 2 — Do cabeço número 10 ao cabeço número 20 (abrange parte do Cais 5):
+  - Calado operacional máximo: 9,8 metros.
+  - Navios com calado superior a 9,8 metros não podem operar nesta zona em
+    condições normais.
+
+Zona 3 — Do cabeço número 20 ao cabeço número 38 (abrange parte do Cais 5,
+Cais 6, Cais 7 e Cais 8):
+  - Calado operacional máximo: 10,0 metros.
+  - Navios com calado superior a 10,0 metros não podem operar nesta zona em
+    condições normais.
+
+================================================================================
+POSSIBILIDADE DE CALADOS SUPERIORES AOS OPERACIONAIS
+================================================================================
+
+É possível que um navio opere com calado superior aos valores operacionais indicados
+acima, desde que se calcule e some a altura da baixa-mar nos dias em que o navio
+permanece atracado. Isto significa que, se a diferença de maré (amplitude) permitir
+uma profundidade adicional suficiente, o calado efetivo praticável será maior do que
+o calado operacional base.
+
+================================================================================
+CASO ESPECIAL — CALADOS ATÉ 12 METROS COM USO DE AFASTADORES
+================================================================================
+
+Na zona aproximadamente compreendida entre o cabeço número 17 e o cabeço número 28
+(área que corresponde ao Cais 6 e início do Cais 7), é possível atracar navios com
+calado até 12 metros, desde que se utilizem os afastadores existentes no TMS1. Estes
+afastadores são equipamentos físicos instalados no cais, vulgarmente designados por
+"carochas", que criam espaço entre o casco do navio e a estrutura do cais,
+permitindo operar em zonas de menor profundidade.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o calado máximo operacional no Cais 4 (cabeços 1 a 10)?
+Resposta: 8,8 metros, praticável em qualquer maré.
+
+Pergunta: Qual o calado máximo operacional no Cais 5 (cabeços 10 a 17)?
+Resposta: Entre os cabeços 10 e 20 o calado operacional é 9,8 metros. A fronteira
+entre o Cais 5 e o Cais 6 situa-se no cabeço 17, mas a zona de calado de 9,8 m
+vai até ao cabeço 20.
+
+Pergunta: Qual o calado máximo operacional no Cais 6 (cabeços 17 a 26)?
+Resposta: 10,0 metros (zona dos cabeços 20 a 38). Entre o cabeço 17 e o cabeço 20
+o calado operacional é 9,8 metros. Entre o cabeço 20 e o cabeço 26 o calado
+operacional é 10,0 metros.
+
+Pergunta: Qual o calado máximo operacional no Cais 7 (cabeços 26 a 30)?
+Resposta: 10,0 metros, praticável em qualquer maré.
+
+Pergunta: Qual o calado máximo operacional no Cais 8 (cabeços 30 a 38)?
+Resposta: 10,0 metros, praticável em qualquer maré.
+
+Pergunta: Posso atracar um navio com 12 metros de calado no TMS1?
+Resposta: Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se
+utilizem os afastadores (carochas) existentes no TMS1.
+
+Pergunta: Quando é obrigatório usar rebocador no Cais 8?
+Resposta: Não é obrigatório, mas é fortemente recomendado em condições de vazante
+de marés vivas, caso o navio esteja condicionado a atracar pelo bordo de estibordo.
+
+Pergunta: Qual a separação mínima entre navios na rampa do TMS1?
+Resposta: 30 metros em relação ao navio a jusante.
+
+Pergunta: Quem valida as requisições de manobra no TMS1?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-005 — TMS1
+================================================================================

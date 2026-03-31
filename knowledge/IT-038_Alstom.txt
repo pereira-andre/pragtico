@@ -1,0 +1,154 @@
+DOCUMENTO: IT-038 — REGRAS APLICÁVEIS A MANOBRAS — CAIS ALSTOM
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 23 de outubro de 2015.
+NOTA: A revisão 02 (outubro 2015) introduziu a relação entre LOA superior e
+calado inferior — a regra de redução proporcional de calado para navios entre
+110 e 120 metros.
+LEVANTAMENTO HIDROGRÁFICO DE REFERÊNCIA: LHT de 02 de abril de 2008.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Cais da ALSTOM, no Porto de Setúbal.
+
+O Cais da ALSTOM, também referido como Cais ABB-ALSTOM, é uma instalação
+industrial com acesso por um canal interior designado Canal ABB-ALSTOM. ABB e
+ALSTOM são denominações históricas da empresa que opera esta instalação, estando
+ambos os nomes em uso nas referências documentais do porto.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra. O Piloto nomeado executa
+a manobra em conformidade com estas regras.
+
+================================================================================
+DIMENSÕES DO CAIS ALSTOM
+================================================================================
+
+Comprimento físico do cais: 91 metros.
+
+================================================================================
+REGRAS DE CALADO E COMPRIMENTO DE NAVIO — RELAÇÃO LOA/CALADO
+================================================================================
+
+O Cais ALSTOM aplica uma regra de compromisso entre o comprimento do navio (LOA)
+e o calado máximo admissível. Quanto maior o LOA, menor o calado máximo permitido.
+
+CASO BASE — LOA ATÉ 110 METROS:
+  Calado máximo permitido: 7,0 metros.
+  Comprimento aconselhável para calado de 7 m: 110 metros.
+  Para navios com LOA até 110 metros e calado até 7 metros, as condições são
+  normais sem restrições adicionais de dimensão.
+
+CASO ESTENDIDO — LOA ENTRE 110 E 120 METROS (com redução proporcional de calado):
+  Para navios com LOA superior a 110 metros e até 120 metros, é aceitável a
+  operação no Cais ALSTOM, mas o calado máximo deve ser reduzido de forma
+  proporcional, até ao mínimo de 6,0 metros para LOA de 120 metros.
+
+  A regra de proporcionalidade funciona da seguinte forma:
+    — LOA 110 m → calado máximo = 7,0 m.
+    — LOA 120 m → calado máximo = 6,0 m.
+    — Para LOA entre 110 m e 120 m, a redução é linear:
+      1 metro adicional de LOA corresponde a 0,1 metros de redução no calado.
+
+  Fórmula de cálculo para LOA entre 110 m e 120 m:
+    Calado máximo = 7,0 — ((LOA — 110) × 0,1)
+
+  Exemplos:
+    — LOA 112 m: calado máximo = 7,0 — (2 × 0,1) = 7,0 — 0,2 = 6,8 metros.
+    — LOA 115 m: calado máximo = 7,0 — (5 × 0,1) = 7,0 — 0,5 = 6,5 metros.
+    — LOA 118 m: calado máximo = 7,0 — (8 × 0,1) = 7,0 — 0,8 = 6,2 metros.
+    — LOA 120 m: calado máximo = 7,0 — (10 × 0,1) = 7,0 — 1,0 = 6,0 metros.
+
+NAVIOS COM LOA SUPERIOR A 120 METROS:
+  Não são aceites no Cais ALSTOM. O LOA máximo absoluto é 120 metros.
+
+================================================================================
+CONDIÇÕES DE TRÂNSITO NO CANAL ABB-ALSTOM
+================================================================================
+
+O trânsito no Canal ABB-ALSTOM (canal de acesso ao Cais ALSTOM) está sujeito
+às seguintes condições, que devem ser satisfeitas SIMULTANEAMENTE:
+
+CONDIÇÃO 1 — VENTO:
+  A velocidade do vento deve ser igual ou inferior a 15 nós. Com vento superior
+  a 15 nós, o trânsito no canal não deve ser efetuado, pois o canal é estreito
+  e o vento pode dificultar o controlo da aproximação e afastamento do cais.
+
+CONDIÇÃO 2 — CALADO NO CANAL (FÓRMULA DE PROFUNDIDADE):
+  A profundidade praticável no canal é calculada pela seguinte fórmula:
+    Profundidade disponível = 5 metros + altura de água no momento
+
+  Para que o trânsito seja seguro, o calado do navio deve ser inferior à
+  profundidade disponível no canal. Note-se que a fórmula usa a profundidade
+  do canal (5 m ao ZH + maré), que pode ser diferente da profundidade no local
+  de atracação.
+
+  Exemplos:
+    — Altura de água de 0,5 m: profundidade no canal = 5 + 0,5 = 5,5 m.
+    — Altura de água de 1,5 m: profundidade no canal = 5 + 1,5 = 6,5 m.
+    — Altura de água de 2,0 m: profundidade no canal = 5 + 2,0 = 7,0 m.
+
+  Para um navio com calado de 6,5 m, é necessária uma altura de água de pelo
+  menos 1,5 m no canal para que o trânsito seja possível.
+
+  IMPORTANTE: a fórmula do canal (5 m + maré) é independente do calado máximo
+  de atracação ao cais (7 m). O canal pode ser o factor condicionante se a maré
+  for baixa, mesmo que o calado do navio respeite o máximo do cais.
+
+================================================================================
+REGRA DE PERÍODO DO DIA — NAVIOS COM LOA SUPERIOR A 90 METROS
+================================================================================
+
+Navios com comprimento total (LOA) superior a 90 metros:
+  — Só podem ENTRAR no Cais ALSTOM durante o período diurno (com luz do dia).
+  — Podem SAIR no período noturno sem restrição de período do dia.
+
+Esta assimetria (entrada só de dia, saída permitida de noite) é comum em terminais
+com canais estreitos ou manobras de aproximação complexas, onde a visibilidade
+diurna é considerada essencial para a entrada segura mas menos crítica para a
+saída.
+
+Para navios com LOA igual ou inferior a 90 metros, não existe restrição de período
+do dia — podem entrar e sair tanto de dia como de noite.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento do Cais ALSTOM?
+Resposta: 91 metros.
+
+Pergunta: Qual o calado máximo no Cais ALSTOM para um navio de 100 metros de LOA?
+Resposta: 7,0 metros (LOA ≤ 110 m → calado máximo 7,0 m).
+
+Pergunta: Qual o calado máximo para um navio de 116 metros de LOA no Cais ALSTOM?
+Resposta: 7,0 — ((116 — 110) × 0,1) = 7,0 — 0,6 = 6,4 metros.
+
+Pergunta: Um navio com LOA de 125 metros pode atracar no Cais ALSTOM?
+Resposta: Não. O LOA máximo aceite no Cais ALSTOM é 120 metros.
+
+Pergunta: Qual a profundidade disponível no Canal ABB-ALSTOM com maré de 1,0 m?
+Resposta: 5 + 1,0 = 6,0 metros.
+
+Pergunta: Com que condições de vento se pode transitar no Canal ABB-ALSTOM?
+Resposta: Com vento igual ou inferior a 15 nós.
+
+Pergunta: Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?
+Resposta: Não. Navios com LOA superior a 90 metros só podem entrar durante
+o período diurno. Podem sair de noite.
+
+Pergunta: Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?
+Resposta: Sim. A restrição de entrada diurna aplica-se apenas a navios com LOA
+superior a 90 metros.
+
+Pergunta: Quem valida as requisições de manobra no Cais ALSTOM?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-038 — CAIS ALSTOM
+================================================================================

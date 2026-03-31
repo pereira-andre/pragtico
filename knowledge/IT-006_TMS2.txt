@@ -1,0 +1,129 @@
+DOCUMENTO: IT-006 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 2 (TMS2)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e às manobras
+de navios no Terminal Multiusos — Zona 2 (também designado TMS2) do Porto de
+Setúbal.
+
+O TMS2 é uma zona distinta do TMS1. O TMS1 abrange os cabeços 1 a 39. O TMS2
+abrange os cabeços 40 a 63. São terminais contíguos mas com regras próprias e
+documentos de referência separados.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+IDENTIFICAÇÃO DO TERMINAL E COMPRIMENTO TOTAL
+================================================================================
+
+O Terminal Multiusos — Zona 2 (TMS2) é delimitado pelos cabeços 40 a 63.
+O comprimento total do cais do TMS2 é de 723 metros.
+
+Ao contrário do TMS1, o TMS2 não está subdividido em cais numerados distintos.
+Trata-se de um único espaço contínuo de 723 metros, delimitado pelos cabeços
+40 a 63.
+
+================================================================================
+REGRA DE SEPARAÇÃO ENTRE NAVIOS — INTERVALO DE 10%
+================================================================================
+
+No TMS2, os navios devem atracar com um intervalo mínimo de 10% do comprimento
+do próprio navio para cada lado. Isto significa que, de cada bordo do navio (tanto
+a vante como a ré), deve existir um espaço livre mínimo igual a 10% do comprimento
+total do navio.
+
+Exemplo de aplicação desta regra:
+
+  — Se um navio tem 100 metros de comprimento, o intervalo mínimo de cada lado
+    é de 10 metros (10% de 100 m). O espaço total ocupado pelo navio mais os
+    intervalos de segurança será de 120 metros (10 + 100 + 10).
+
+  — Se um navio tem 150 metros de comprimento, o intervalo mínimo de cada lado
+    é de 15 metros (10% de 150 m). O espaço total ocupado será de 180 metros
+    (15 + 150 + 15).
+
+  — Se um navio tem 200 metros de comprimento, o intervalo mínimo de cada lado
+    é de 20 metros (10% de 200 m). O espaço total ocupado será de 240 metros
+    (20 + 200 + 20).
+
+Esta regra é relevante para avaliar se dois ou mais navios podem estar atracados
+simultaneamente no TMS2. Para verificar a compatibilidade, é necessário calcular
+o espaço total ocupado por cada navio (comprimento mais as duas margens de 10%)
+e confirmar que a soma não excede os 723 metros disponíveis.
+
+Nota importante: o intervalo de 10% é calculado sobre o comprimento do navio que
+está a atracar, não sobre o comprimento do navio vizinho. Cada navio contribui com
+a sua própria margem de separação.
+
+================================================================================
+CALADO MÁXIMO NO TMS2
+================================================================================
+
+O calado máximo admitido no Terminal Multiusos — Zona 2 é de 12 metros.
+
+Definição: O calado de um navio é a profundidade que o casco do navio ocupa abaixo
+da superfície da água. Um navio com calado superior a 12 metros não pode operar
+no TMS2.
+
+Ao contrário do TMS1, não há subdivisão por zonas de calado dentro do TMS2. O
+limite de 12 metros aplica-se de forma uniforme a todo o comprimento do cais,
+ou seja, do cabeço 40 ao cabeço 63.
+
+O documento não especifica se este valor é operacional (praticável em qualquer maré)
+ou dependente de maré. Na ausência de indicação contrária, deve ser tratado como
+o calado máximo absoluto admissível no terminal.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Quais são os cabeços do TMS2?
+Resposta: O TMS2 abrange os cabeços 40 a 63.
+
+Pergunta: Qual é o comprimento total do TMS2?
+Resposta: 723 metros.
+
+Pergunta: Qual o calado máximo permitido no TMS2?
+Resposta: 12 metros, aplicável de forma uniforme a todo o terminal.
+
+Pergunta: Qual a separação mínima entre navios no TMS2?
+Resposta: Cada navio deve ter um intervalo de 10% do seu próprio comprimento para
+cada lado. Por exemplo, um navio de 150 metros necessita de 15 metros livres de
+cada bordo.
+
+Pergunta: Um navio de 200 metros pode atracar no TMS2 se já houver um navio de
+150 metros atracado?
+Resposta: É necessário calcular o espaço total ocupado. O navio de 150 metros ocupa
+180 metros (15 + 150 + 15). O navio de 200 metros ocupa 240 metros (20 + 200 + 20).
+No entanto, as margens de separação entre os dois navios podem ser partilhadas: a
+margem de ré de um e a margem de vante do outro devem satisfazer individualmente
+os 10% de cada navio. O espaço total necessário para os dois navios juntos seria
+de pelo menos 15 + 150 + 20 + 200 + 20 = 405 metros, o que é inferior a 723 metros,
+sendo portanto possível em termos de comprimento disponível, desde que se respeitem
+os intervalos individuais de cada navio.
+
+Pergunta: Quem valida as requisições de manobra no TMS2?
+Resposta: O Piloto Coordenador.
+
+Pergunta: Qual a diferença entre o TMS1 e o TMS2?
+Resposta: O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados
+operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m) e regras de resguardo fixo
+de 30 metros. O TMS2 abrange os cabeços 40 a 63, tem um único espaço contínuo de
+723 metros, calado máximo uniforme de 12 metros e regra de separação de 10% do
+comprimento do navio para cada lado.
+
+================================================================================
+FIM DO DOCUMENTO IT-006 — TMS2
+================================================================================

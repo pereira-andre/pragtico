@@ -1,0 +1,193 @@
+DOCUMENTO: IT-009 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL SECIL
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 04, datada de 20 de setembro de 2017.
+NOTA: A revisão 04 (mais recente) alterou as condicionantes do Cais Oeste para
+navios com LOA superior a 170 metros. As revisões anteriores (02 e 03) tinham
+alterado calados e comprimentos máximos em ambos os cais. Os valores em vigor
+são exclusivamente os desta revisão 04.
+LEVANTAMENTO HIDROGRÁFICO DE REFERÊNCIA: 6 de abril de 2013, fornecido pela SECIL.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal da SECIL, no Porto de Setúbal.
+
+O Terminal da SECIL é composto por dois cais distintos com orientações geográficas
+e regras operacionais próprias: o Cais de Oeste (também designado Cais A) e o
+Cais de Este (também designado Cais B). Cada cais tem características, dimensões,
+calados e condicionantes de maré diferentes que devem ser consideradas
+separadamente.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+CAIS DE OESTE — TERMINAL SECIL (CAIS A)
+================================================================================
+
+DIMENSÕES DO CAIS:
+  Comprimento do cais: 105 metros.
+
+COMPRIMENTO MÁXIMO DE NAVIO:
+  O comprimento máximo de navio admitido no Cais de Oeste é de 200 metros.
+  "Comprimento máximo de navio" equivale ao LOA (Length Overall), ou seja, o
+  comprimento total do navio medido da proa à popa. Navios com LOA superior a
+  200 metros não podem operar no Cais de Oeste.
+
+  Nota: o cais tem apenas 105 metros de comprimento físico, mas o navio pode ter
+  até 200 metros porque parte do comprimento do navio estende-se para além dos
+  limites físicos do cais, sendo suportado pela manobra de amarração.
+
+CALADO MÁXIMO DE REFERÊNCIA:
+  O calado máximo de referência no Cais de Oeste é de 9,5 metros. "Calado máximo
+  de referência" significa o calado máximo que o documento define como praticável
+  neste cais, com base no levantamento hidrográfico disponível.
+
+REGRA DE MARÉ — TODOS OS NAVIOS:
+  Todos os navios devem atracar no Cais de Oeste próximo do reponto de maré.
+  "Reponto de maré" é o momento em que a maré muda de sentido (da preia-mar para
+  a vazante ou da baixa-mar para a enchente), em que a corrente de maré é
+  praticamente nula. Esta regra aplica-se a todos os navios sem excepção.
+
+CONDICIONANTE ESPECIAL — NAVIOS COM LOA SUPERIOR A 170 METROS:
+  Esta é a regra mais recente do documento (introduzida na revisão 04, de 2017)
+  e constitui uma restrição adicional que se aplica exclusivamente a navios com
+  comprimento total (LOA) superior a 170 metros.
+
+  Um navio com LOA superior a 170 metros só pode ser movimentado no Cais de Oeste
+  do Terminal SECIL se estiverem reunidas SIMULTANEAMENTE as duas condições
+  seguintes:
+
+  Condição 1 — Maré: a manobra deve ser realizada junto da preia-mar.
+    "Junto da preia-mar" significa na proximidade do momento de maré alta, ou seja,
+    no período em torno do reponto de preia-mar. Não é permitido movimentar navios
+    com LOA > 170 m em baixa-mar ou em enchente/vazante afastadas da preia-mar.
+
+  Condição 2 — Período do dia: a manobra deve ser realizada com luz do dia.
+    Não é permitido movimentar navios com LOA > 170 m durante a noite no Cais de
+    Oeste, independentemente do estado de maré.
+
+  Resumindo: navio com LOA > 170 m no Cais de Oeste = obrigatoriamente preia-mar
+  + dia. Se qualquer uma destas condições não estiver reunida, a manobra não pode
+  ser realizada.
+
+  Para navios com LOA igual ou inferior a 170 metros, a condicionante especial
+  não se aplica, sendo suficiente respeitar a regra geral de reponto de maré.
+
+================================================================================
+CAIS DE ESTE — TERMINAL SECIL (CAIS B)
+================================================================================
+
+DIMENSÕES DO CAIS:
+  Comprimento do cais estrutural: 60 metros.
+  Comprimento do cais com duques d'alba: 121 metros.
+
+  "Duques d'alba" (do inglês "dolphins") são estruturas de amarração independentes
+  instaladas na água, a alguma distância do cais principal, que permitem estender
+  o comprimento operacional disponível para navios mais longos. No Cais de Este,
+  os duques d'alba aumentam o comprimento operacional de 60 metros para 121 metros.
+  Quando um navio utiliza os duques d'alba, os seus cabos de amarração de proa
+  ou popa ligam a essas estruturas em vez de ao cais físico.
+
+COMPRIMENTO DE NAVIO DE REFERÊNCIA:
+  O comprimento de navio de referência para o Cais de Este é de 140 metros. Este
+  valor representa o comprimento de referência operacional para este cais. O uso
+  do termo "de referência" (em vez de "máximo") indica que este é o comprimento
+  típico de operação, sendo o comprimento efetivamente admissível dependente das
+  condições de cada manobra.
+
+CALADO MÁXIMO DE REFERÊNCIA:
+  O calado máximo de referência no Cais de Este é de 8,0 metros. Inferior ao do
+  Cais de Oeste (9,5 m). Navios com calado superior a 8,0 metros não devem operar
+  no Cais de Este com base neste documento.
+
+REGRA DE MARÉ — MARÉS VIVAS:
+  No Cais de Este, os navios atracam próximo do reponto de maré quando se trata
+  de marés vivas. "Marés vivas" são as marés de maior amplitude, que ocorrem
+  próximo das luas nova e cheia, em que a diferença entre a preia-mar e a baixa-mar
+  é máxima e a corrente de maré é mais intensa.
+
+  A formulação "quando marés vivas" indica que a obrigatoriedade de atracar no
+  reponto se aplica especificamente em período de marés vivas. Em marés mortas
+  (marés de menor amplitude, com correntes mais fracas), a restrição de reponto
+  não é explicitamente imposta, embora a boa prática de pilotagem recomende sempre
+  escolher o momento de menor corrente.
+
+================================================================================
+COMPARAÇÃO DIRETA ENTRE OS DOIS CAIS DO TERMINAL SECIL
+================================================================================
+
+Comprimento do cais físico:
+  Cais de Oeste: 105 metros.
+  Cais de Este: 60 metros (ou 121 metros com duques d'alba).
+
+Comprimento máximo de navio:
+  Cais de Oeste: 200 metros (LOA máximo absoluto).
+  Cais de Este: 140 metros (comprimento de referência).
+
+Calado máximo de referência:
+  Cais de Oeste: 9,5 metros.
+  Cais de Este: 8,0 metros.
+
+Regra de maré:
+  Cais de Oeste: sempre próximo do reponto, para todos os navios.
+  Cais de Este: próximo do reponto em marés vivas.
+
+Condicionante adicional:
+  Cais de Oeste: navios com LOA > 170 m — apenas em preia-mar e com luz do dia.
+  Cais de Este: sem condicionante equivalente explícita.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento máximo de navio no Cais de Oeste do Terminal SECIL?
+Resposta: 200 metros (LOA máximo).
+
+Pergunta: Qual o calado máximo de referência no Cais de Oeste do Terminal SECIL?
+Resposta: 9,5 metros.
+
+Pergunta: Um navio com LOA de 180 metros pode atracar no Cais de Oeste do Terminal
+SECIL de noite?
+Resposta: Não. Navios com LOA superior a 170 metros só podem ser movimentados no
+Cais de Oeste com luz do dia e junto da preia-mar. A manobra noturna está proibida
+para navios com LOA > 170 m.
+
+Pergunta: Um navio com LOA de 180 metros pode atracar no Cais de Oeste em baixa-mar?
+Resposta: Não. Navios com LOA superior a 170 metros só podem ser movimentados junto
+da preia-mar. A baixa-mar não é permitida para estes navios neste cais.
+
+Pergunta: Um navio com LOA de 150 metros pode atracar no Cais de Oeste de noite?
+Resposta: O documento não proíbe explicitamente a manobra noturna para navios com
+LOA igual ou inferior a 170 metros no Cais de Oeste. A condicionante de dia e
+preia-mar aplica-se apenas a navios com LOA superior a 170 metros. Para navios
+até 170 metros, a regra é atracar próximo do reponto de maré.
+
+Pergunta: Qual o comprimento do Cais de Este com duques d'alba?
+Resposta: 121 metros.
+
+Pergunta: Qual o calado máximo de referência no Cais de Este do Terminal SECIL?
+Resposta: 8,0 metros.
+
+Pergunta: Qual o comprimento de referência para navios no Cais de Este?
+Resposta: 140 metros.
+
+Pergunta: Quando é obrigatório atracar no reponto no Cais de Este?
+Resposta: Em período de marés vivas, ou seja, quando a amplitude de maré é maior
+e a corrente de maré é mais intensa.
+
+Pergunta: Quem valida as requisições de manobra no Terminal SECIL?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-009 — TERMINAL SECIL
+================================================================================

@@ -106,6 +106,33 @@ def validate_datetime_range(
         raise ValueError(f"{finished_label} deve ser posterior a {started_label}.")
 
 
+def validate_not_past_datetime(
+    value: Optional[str],
+    label: str = "Data e hora",
+    *,
+    reference: Optional[datetime] = None,
+) -> None:
+    """Raise ValueError if the datetime is earlier than the current minute."""
+    if not value:
+        return
+    try:
+        dt_value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return
+    if dt_value.tzinfo is None:
+        dt_value = dt_value.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
+    reference_dt = reference or datetime.now(dt_value.tzinfo)
+    if reference_dt.tzinfo is None:
+        reference_dt = reference_dt.replace(tzinfo=dt_value.tzinfo)
+    else:
+        reference_dt = reference_dt.astimezone(dt_value.tzinfo)
+    reference_dt = reference_dt.replace(second=0, microsecond=0)
+
+    if dt_value < reference_dt:
+        raise ValueError(f"{label} não pode ser anterior à data/hora presente.")
+
+
 # ---------------------------------------------------------------------------
 # Email / Phone
 # ---------------------------------------------------------------------------

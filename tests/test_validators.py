@@ -1,6 +1,7 @@
 """Unit tests for the validators module."""
 
 import unittest
+from datetime import datetime, timezone
 
 from core.validators import (
     validate_choice,
@@ -8,6 +9,7 @@ from core.validators import (
     validate_email,
     validate_feedback_status,
     validate_imo,
+    validate_not_past_datetime,
     validate_optional_positive_number,
     validate_optional_text,
     validate_password,
@@ -132,6 +134,23 @@ class TestDatetimeRange(unittest.TestCase):
         validate_datetime_range("", "2026-03-24T12:00:00+00:00")
         validate_datetime_range("2026-03-24T10:00:00+00:00", "")
         validate_datetime_range("", "")
+
+
+class TestNotPastDatetime(unittest.TestCase):
+    def test_current_minute_is_allowed(self):
+        validate_not_past_datetime(
+            "2026-03-31T10:15:00+00:00",
+            "ETA",
+            reference=datetime(2026, 3, 31, 10, 15, 42, tzinfo=timezone.utc),
+        )
+
+    def test_past_minute_raises(self):
+        with self.assertRaisesRegex(ValueError, "ETA não pode ser anterior à data/hora presente"):
+            validate_not_past_datetime(
+                "2026-03-31T10:14:59+00:00",
+                "ETA",
+                reference=datetime(2026, 3, 31, 10, 15, 0, tzinfo=timezone.utc),
+            )
 
 
 class TestEmail(unittest.TestCase):

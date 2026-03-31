@@ -1,0 +1,257 @@
+DOCUMENTO: IT-010 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL DA TANQUISADO
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 03, datada de 22 de julho de 2015.
+NOTA: A revisão 03 acrescentou o ponto relativo às características das defensas
+para navios de bordo livre baixo e frágil, e atualizou a data do levantamento
+hidrográfico. A revisão 02 (2012) retirou as condicionantes de passagem entre
+as boias 10 e 12, que deixaram de ser aplicáveis.
+LEVANTAMENTO HIDROGRÁFICO DE REFERÊNCIA: Janeiro de 2015.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal da TANQUISADO, no Porto de Setúbal.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+DIMENSÕES E ESTRUTURA DO TERMINAL
+================================================================================
+
+O Terminal da TANQUISADO é composto por um cais central e dois duques d'alba
+(estruturas de amarração independentes instaladas na água). O comprimento
+operacional total inclui o cais e os dois duques d'alba.
+
+Comprimento total do terminal (cais + 2 duques d'alba): 463 metros.
+Comprimento do cais físico: 75 metros.
+Distância do cais ao primeiro duque d'alba: 63 metros.
+Distância entre os dois duques d'alba: 100 metros.
+
+"Duques d'alba" são estruturas de amarração isoladas, instaladas na água a
+alguma distância do cais principal, que permitem suportar e amarrar navios
+com comprimento superior ao do cais físico. Um navio que opere neste terminal
+pode ter a sua proa ou popa amarrada a um dos duques d'alba enquanto o meio
+do navio fica alinhado com o cais.
+
+================================================================================
+PROFUNDIDADE E CÁLCULO DE CALADOS
+================================================================================
+
+SONDA AO ZERO HIDROGRÁFICO (ZH):
+  A sonda ao ZH no Terminal da TANQUISADO é de 10 metros. "Sonda" é a
+  profundidade medida a partir do fundo até à superfície de referência. O Zero
+  Hidrográfico (ZH) é o nível de referência das cartas náuticas portuguesas,
+  que corresponde aproximadamente ao nível de baixa-mar de sizígia (a maré
+  mais baixa possível). Significa que, no pior caso de maré, há 10 metros de
+  água sobre o fundo neste terminal.
+
+CALADO MÁXIMO PERMITIDO (VALOR BASE):
+  O calado máximo permitido no Terminal da TANQUISADO é de 9,5 metros.
+  A diferença de 0,5 metros entre a sonda ao ZH (10 m) e o calado permitido
+  (9,5 m) representa a margem de segurança mínima.
+
+FÓRMULA PARA CÁLCULO DE CALADO MÁXIMO INSTANTÂNEO:
+  Para determinar o calado máximo praticável num dado momento, aplica-se a
+  seguinte fórmula, válida para o período diurno e para passagem pelo canal:
+
+    Calado máximo instantâneo = 6,3 metros + altura da maré no momento
+
+  O resultado máximo possível desta fórmula é limitado a 9,5 metros, que é o
+  calado máximo absoluto do terminal. Nunca pode exceder 9,5 m independentemente
+  do valor da maré.
+
+  Exemplo de aplicação:
+    — Se a altura de maré no momento for 1,0 m: calado máximo = 6,3 + 1,0 = 7,3 m.
+    — Se a altura de maré no momento for 2,5 m: calado máximo = 6,3 + 2,5 = 8,8 m.
+    — Se a altura de maré no momento for 3,5 m: calado máximo = 6,3 + 3,5 = 9,8 m,
+      mas o tecto é 9,5 m, portanto o calado máximo praticável é 9,5 m.
+    — Se a altura de maré for 0,0 m (baixa-mar ao ZH): calado máximo = 6,3 m.
+
+  IMPORTANTE: Esta fórmula aplica-se apenas durante o período diurno e para
+  passagem pelo canal. Para manobras noturnas aplicam-se regras diferentes
+  (ver secção de atracação e saída nocturnas abaixo).
+
+================================================================================
+REGRAS DE ATRACAÇÃO — REGRA GERAL
+================================================================================
+
+A regra geral é que as manobras de atracação no Terminal da TANQUISADO se
+efetuam nos repontos de maré e durante o dia.
+
+"Reponto de maré" é o momento em que a maré muda de sentido e a corrente é
+praticamente nula, seja na passagem da preia-mar para a vazante, seja na
+passagem da baixa-mar para a enchente.
+
+"Durante o dia" significa no período com luz natural, ou seja, entre o nascer
+e o pôr do sol.
+
+================================================================================
+EXCEÇÕES À REGRA GERAL DE ATRACAÇÃO — ATRACAÇÃO NOTURNA
+================================================================================
+
+A regra geral admite duas exceções que permitem atracação durante a noite:
+
+EXCEÇÃO 1 — Navios com comprimento inferior a 110 metros:
+  Navios com comprimento total (LOA) inferior a 110 metros podem atracar
+  de noite sem condicionante adicional de calado especial. A regra de reponto
+  de maré continua a aplicar-se.
+
+EXCEÇÃO 2 — Navios com comprimento superior a 110 metros em dias com
+preia-mares exclusivamente noturnas:
+  Esta exceção aplica-se quando se verificam simultaneamente as seguintes
+  condições:
+
+  Condição A — O navio tem comprimento superior a 110 metros.
+
+  Condição B — No dia em questão, os dois preia-mares diários recaem
+  exclusivamente no período noturno. Ou seja, ambas as preia-mares do dia
+  ocorrem depois do pôr do sol e antes do nascer do sol, não existindo nenhuma
+  preia-mar durante o período diurno. Nestes dias, aguardar a preia-mar diurna
+  seria impossível pois não existe, o que justifica a excepção.
+
+  Condição C — O calado do navio satisfaz a seguinte equação:
+    Calado máximo = 4,8 metros + altura de água no momento da manobra,
+    com um teto máximo absoluto de 8,0 metros.
+
+  Exemplo para a Exceção 2:
+    — Se a altura de água no momento da manobra noturna for 1,5 m:
+      calado máximo admissível = 4,8 + 1,5 = 6,3 m.
+    — Se a altura de água for 3,0 m:
+      calado máximo admissível = 4,8 + 3,0 = 7,8 m.
+    — Se a altura de água for 4,0 m:
+      resultado seria 4,8 + 4,0 = 8,8 m, mas o teto é 8,0 m,
+      portanto o calado máximo é 8,0 m.
+
+  Esta exceção é a única situação em que um navio com mais de 110 metros pode
+  atracar de noite no Terminal da TANQUISADO, e apenas naqueles dias específicos
+  em que nenhuma preia-mar ocorre durante o dia.
+
+================================================================================
+REGRAS DE SAÍDA (DESATRACAÇÃO)
+================================================================================
+
+SAÍDA DIURNA — CONDIÇÕES PERMITIDAS:
+
+  As manobras de saída efetuam-se em qualquer das seguintes condições:
+
+  Condição 1 — Nos repontos de maré (igual à regra de atracação).
+
+  Condição 2 — Em maré de vazante, desde que a preia-mar precedente tenha sido
+  igual ou inferior a 3 metros de altura. "Maré de vazante de preia-mar igual
+  ou inferior a 3 m" significa que o navio pode sair durante a descida da maré
+  (vazante), mas apenas nos dias em que a preia-mar anterior não ultrapassou
+  3 metros de altura. Uma preia-mar baixa (até 3 m) corresponde a uma maré de
+  menor amplitude, com corrente de vazante mais fraca, tornando a saída mais
+  segura. Se a preia-mar for superior a 3 metros, a saída em vazante não é
+  permitida, sendo necessário aguardar o reponto.
+
+SAÍDA NOTURNA — CONDIÇÕES E CALADO MÁXIMO:
+
+  As saídas de noite são condicionadas ao seguinte limite de calado:
+    Calado máximo na saída noturna = 4,8 metros + altura de água no momento
+    da manobra de saída.
+
+  Não existe teto explícito adicional mencionado para as saídas noturnas
+  (ao contrário da atracação noturna de navios > 110 m, que tem teto de 8 m).
+  O calado efetivamente praticável é limitado pela fórmula e pelo calado
+  máximo absoluto do terminal (9,5 m).
+
+  Exemplo para saída noturna:
+    — Se a altura de água no momento da saída for 2,0 m:
+      calado máximo = 4,8 + 2,0 = 6,8 m.
+    — Se a altura de água for 3,5 m:
+      calado máximo = 4,8 + 3,5 = 8,3 m.
+
+================================================================================
+QUADRO RESUMO DAS REGRAS DE CALADO POR SITUAÇÃO
+================================================================================
+
+Calado máximo absoluto do terminal: 9,5 metros (nunca pode ser excedido).
+
+Calado máximo diurno (fórmula geral para canal e atracação):
+  = 6,3 m + altura da maré, com teto de 9,5 m.
+
+Calado máximo em atracação noturna de navios > 110 m (dias com PM só noturnas):
+  = 4,8 m + altura de água, com teto de 8,0 m.
+
+Calado máximo em saída noturna:
+  = 4,8 m + altura de água.
+
+================================================================================
+AVISO ESPECIAL — DEFENSAS E NAVIOS DE BORDO LIVRE BAIXO E FRÁGIL
+================================================================================
+
+"Defensa" é o elemento de proteção instalado no cais para amortecer o impacto
+do navio durante a atracação. No Terminal da TANQUISADO, as características das
+defensas instaladas exigem especial atenção a navios com bordo livre baixo ou
+bordo frágil.
+
+"Bordo livre" é a distância entre a linha de flutuação (superfície da água) e
+o convés do navio. Um navio com bordo livre baixo tem o convés muito próximo
+da superfície da água.
+
+Dois riscos específicos identificados:
+
+  Risco 1 — Durante a atracação:
+    Um navio de bordo livre baixo pode sofrer avarias ao atracar, pois a borda
+    do navio pode colidir com o topo das defensas em vez de comprimi-las
+    lateralmente como previsto.
+
+  Risco 2 — Durante o estacionamento:
+    Quando um navio com bordo livre baixo está estacionado, a borda do casco
+    pode ficar por baixo das defensas. Se houver variação de maré ou movimento
+    do navio, pode ocorrer engate ou dano na estrutura do navio ou nas defensas.
+
+O piloto deve avaliar o bordo livre do navio antes da manobra e adotar
+precauções adicionais sempre que se trate de um navio de bordo livre baixo
+ou com estrutura de bordo frágil.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento total operacional do Terminal da TANQUISADO?
+Resposta: 463 metros, incluindo o cais (75 m) e os dois duques d'alba.
+
+Pergunta: Qual o calado máximo absoluto no Terminal da TANQUISADO?
+Resposta: 9,5 metros. Nunca pode ser excedido independentemente da maré.
+
+Pergunta: Qual a sonda ao ZH no Terminal da TANQUISADO?
+Resposta: 10 metros.
+
+Pergunta: Como se calcula o calado máximo praticável durante o dia?
+Resposta: Somar 6,3 metros à altura da maré no momento, com teto de 9,5 m.
+Por exemplo, com maré de 2,0 m: calado máximo = 6,3 + 2,0 = 8,3 m.
+
+Pergunta: Um navio com 80 metros de comprimento pode atracar de noite?
+Resposta: Sim. Navios com comprimento inferior a 110 metros podem atracar
+de noite no Terminal da TANQUISADO.
+
+Pergunta: Um navio com 150 metros pode atracar de noite?
+Resposta: Apenas nos dias em que as duas preia-mares diárias recaiam
+exclusivamente no período noturno, e condicionado ao calado de 4,8 m mais a
+altura de água, com teto máximo de 8,0 metros.
+
+Pergunta: Quando se pode sair do Terminal da TANQUISADO sem ser no reponto?
+Resposta: Em maré de vazante, desde que a preia-mar precedente tenha sido
+igual ou inferior a 3 metros de altura.
+
+Pergunta: Qual o calado máximo para uma saída noturna?
+Resposta: 4,8 metros mais a altura de água no momento da manobra de saída.
+
+Pergunta: Quem valida as requisições de manobra no Terminal da TANQUISADO?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-010 — TERMINAL DA TANQUISADO
+================================================================================

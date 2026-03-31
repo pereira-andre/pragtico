@@ -1,0 +1,215 @@
+DOCUMENTO: IT-017 — PILOTAGEM ASSISTIDA
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 01, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras aplicáveis à Pilotagem Assistida no Porto de
+Setúbal.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra. O Piloto nomeado executa
+a manobra. Na Pilotagem Assistida intervém adicionalmente um Piloto experiente
+em terra, que conduz ou acompanha o navio por radar a partir da sala de
+coordenação de pilotagem.
+
+================================================================================
+O QUE É A PILOTAGEM ASSISTIDA
+================================================================================
+
+A Pilotagem Assistida é uma modalidade de pilotagem em que um navio entra ou sai
+do Porto de Setúbal com orientação de um Piloto experiente colocado em terra,
+que conduz ou acompanha o navio por informação de radar, em vez de um Piloto
+estar fisicamente a bordo durante toda a passagem da Barra.
+
+Esta modalidade não substitui a pilotagem a bordo na totalidade: o Piloto embarca
+ou desembarca em OUTÃO, que é o local de transferência de pilotos na entrada do
+porto. Na entrada, o Piloto de terra guia o navio até OUTÃO, onde embarca o
+Piloto da lancha. Na saída, o Piloto desembarca em OUTÃO e o Piloto em terra
+acompanha o navio por radar até à saída da Barra.
+
+As instruções dadas pelo Piloto de terra têm caráter de recomendação (ADVICE),
+ou seja, são instruções a cumprir mas com natureza consultiva, indicando rumo e
+velocidade adequados às características do navio e às condições meteorológicas.
+O Piloto de terra considera sempre a relação segura entre calado, profundidade
+do canal, altura de ondulação, força e direção do vento, e corrente de água.
+
+As comunicações devem ser curtas e concisas, de acordo com o Standard Marine
+Communications Phrases (SMCP) da IMO.
+
+O canal de comunicação utilizado com o navio em Pilotagem Assistida é o canal 10
+(VHF canal 10).
+
+================================================================================
+DEFINIÇÃO DE PILOTO EXPERIENTE PARA PILOTAGEM ASSISTIDA
+================================================================================
+
+Para efeitos desta instrução de trabalho, considera-se "Piloto experiente" para
+realizar Pilotagem Assistida (de terra, com imagem de radar) aquele que tiver
+efetuado no mínimo 200 (duzentas) manobras de entrada ou saída no Porto de
+Setúbal com o tipo de navio em causa, ou com navios similares ou de comprimento
+superior.
+
+Nota importante: o Piloto experiente que executa a Pilotagem Assistida pode não
+ser o Piloto Coordenador. São funções distintas que podem ser desempenhadas por
+pessoas diferentes.
+
+================================================================================
+LOCAL DE OPERAÇÃO DA PILOTAGEM ASSISTIDA
+================================================================================
+
+A Pilotagem Assistida é normalmente efetuada na sala de coordenação de Pilotagem,
+por um Piloto experiente em concordância com o Piloto distribuído para o navio.
+Durante a operação, as chamadas telefónicas são reencaminhadas para outra linha
+(extensão 517), na sala contígua, sendo atendidas por outra pessoa, para não
+perturbar a concentração do Piloto experiente.
+
+================================================================================
+REGRA FUNDAMENTAL — CRUZAMENTO DE NAVIOS
+================================================================================
+
+Não há cruzamento de navios sem Piloto a bordo. Isto significa que, enquanto
+um navio estiver a ser conduzido em regime de Pilotagem Assistida (sem Piloto
+físico a bordo, durante a fase de radar de terra), não podem existir navios a
+cruzar o mesmo canal em sentido contrário sem Piloto embarcado.
+
+================================================================================
+PROCEDIMENTO DE ENTRADA COM PILOTAGEM ASSISTIDA — PASSO A PASSO
+================================================================================
+
+O seguinte procedimento descreve a sequência de ações para a entrada de um navio
+com Pilotagem Assistida. Envolve dois intervenientes principais: os Pilotos
+(Piloto de terra em frente ao radar) e o VTS (Vessel Traffic Service, serviço de
+controlo de tráfego marítimo do porto).
+
+Pré-condição: A entrada só se inicia após o comandante do navio aceitar ser
+conduzido de terra por um Piloto experiente com indicação de radar, até ao local
+de encontro com a lancha de Pilotos em OUTÃO. O comandante deve ser consultado
+e dar o seu consentimento explícito.
+
+PASSO 1 — VTS:
+  O VTS coloca o navio a 4 milhas da entrada da Barra, com aquisição no sistema
+  VTS. Isto significa que o VTS inicia o acompanhamento do navio no seu sistema
+  quando este se encontra a 4 milhas de distância da entrada da Barra.
+
+PASSO 2 — Piloto de terra:
+  O Piloto, em frente ao monitor de radar, conduz o navio até ao cruzamento do
+  enfiamento da Barra com o anel de distância de 2 milhas à Barra. "Enfiamento"
+  é a linha imaginária que define o eixo do canal de entrada, servindo de
+  referência para o alinhamento do navio. O "anel de 2 milhas" é um círculo de
+  2 milhas de raio centrado na entrada da Barra, visível no radar como referência
+  de distância.
+  Ao mesmo tempo, o VTS vigia outra navegação para garantir que não há conflitos.
+
+PASSO 3 — Piloto de terra:
+  O navio toma o enfiamento da Barra a 2 milhas de distância. O Piloto de terra
+  pede passagem ao canal 10 (informa o navio e os demais intervenientes que vai
+  usar o canal 10 para comunicações). Informa o navio que o rumo de entrada é
+  040 graus e que a velocidade deve ser adequada, não inferior a 10 nós. O rumo
+  040 é o rumo magnético ou verdadeiro de alinhamento com o canal de entrada da
+  Barra do Porto de Setúbal.
+  O VTS vigia outra navegação.
+
+PASSO 4 — Piloto de terra:
+  O Piloto de terra segue o navio no radar, dando as correções de rumo necessárias
+  até que o navio esteja próximo da lancha de Pilotos, identificando-a no ecrã
+  do radar. O VTS continua a vigiar outra navegação.
+
+PASSO 5 — Transferência de serviço:
+  O Piloto de terra entrega o serviço ao Piloto que se encontra na lancha de
+  Pilotos. O Piloto da lancha embarca a bordo do navio e informa o VTS quando
+  chegar à Ponte (passadiço de comando) do navio. A partir deste momento, o navio
+  tem Piloto a bordo e a fase de Pilotagem Assistida de terra termina.
+
+================================================================================
+PROCEDIMENTO DE SAÍDA COM PILOTAGEM ASSISTIDA — PASSO A PASSO
+================================================================================
+
+Pré-condição: Enquanto o navio está ao cais, deve ser perguntado ao comandante se
+aceita que o Piloto desembarque em zona segura (OUTÃO) e que, no resto do percurso
+até à saída da Barra, o navio seja seguido por informação de radar por um Piloto
+experiente em terra. O comandante deve consentir.
+
+PASSO 1 — Piloto a bordo:
+  O Piloto a bordo informa o VTS da hora de embarque e da hora prevista de
+  desatracação. O VTS vigia outra navegação.
+
+PASSO 2 — Piloto a bordo:
+  O Piloto a bordo contacta o Piloto em terra, que está em frente ao monitor do
+  radar, indicando-lhe a hora prevista e o local para desembarque (OUTÃO).
+  O VTS vigia outra navegação.
+
+PASSO 3 — Piloto a bordo (antes de deixar a Ponte):
+  Antes de desembarcar, o Piloto a bordo contacta o Piloto em terra e muda as
+  comunicações para o canal 10. Informa o comandante mais uma vez que, a partir
+  do desembarque, o navio vai ser seguido por radar pelo Piloto em terra.
+  O VTS vigia outra navegação.
+
+PASSO 4 — Transferência de serviço:
+  O Piloto desembarca para a lancha de Pilotos em OUTÃO. Informa o VTS do seu
+  desembarque já a partir da lancha. A partir deste momento o navio não tem
+  Piloto a bordo e inicia a fase de Pilotagem Assistida de terra.
+
+PASSO 5 — Piloto na estação em terra:
+  O Piloto na estação segue o navio no radar, colocando-o sobre a linha do
+  enfiamento, com as correções de rumo e velocidade necessárias, até o navio
+  sair a Barra. O VTS vigia outra navegação.
+
+PASSO 6 — Conclusão:
+  O Piloto na estação informa o Piloto na lancha quando o navio sair a Barra.
+  O serviço de Pilotagem Assistida termina.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: O que é a Pilotagem Assistida?
+Resposta: É uma modalidade em que um Piloto experiente em terra guia o navio
+por radar durante a passagem da Barra, em vez de estar fisicamente a bordo.
+O Piloto embarca ou desembarca em OUTÃO, sendo o restante percurso da Barra
+coberto pelo Piloto de terra via radar.
+
+Pergunta: Qual é o canal de comunicação usado na Pilotagem Assistida?
+Resposta: Canal VHF 10.
+
+Pergunta: Qual é o mínimo de manobras para um Piloto ser considerado experiente
+para Pilotagem Assistida?
+Resposta: 200 manobras de entrada ou saída no Porto de Setúbal com o tipo de
+navio em causa, ou com navios similares ou de comprimento superior.
+
+Pergunta: O Piloto Coordenador é sempre o Piloto experiente na Pilotagem Assistida?
+Resposta: Não. O Piloto experiente que executa a Pilotagem Assistida pode não
+ser o Piloto Coordenador.
+
+Pergunta: Qual o rumo de entrada na Barra indicado na Pilotagem Assistida?
+Resposta: Rumo 040, com velocidade não inferior a 10 nós.
+
+Pergunta: A que distância da Barra o VTS inicia a aquisição do navio?
+Resposta: 4 milhas da entrada da Barra.
+
+Pergunta: A que distância da Barra o navio toma o enfiamento?
+Resposta: A 2 milhas de distância da Barra.
+
+Pergunta: Onde desembarca o Piloto na saída com Pilotagem Assistida?
+Resposta: Em OUTÃO, que é o local de transferência de pilotos na entrada do porto.
+
+Pergunta: Podem dois navios cruzar-se no canal durante a Pilotagem Assistida?
+Resposta: Não. Não há cruzamento de navios sem Piloto a bordo.
+
+Pergunta: As instruções do Piloto de terra são ordens obrigatórias?
+Resposta: Têm caráter de recomendação (ADVICE). São instruções a cumprir mas
+com natureza consultiva, indicando rumo e velocidade adequados às características
+do navio e às condições da passagem.
+
+Pergunta: Onde é efetuada a Pilotagem Assistida?
+Resposta: Normalmente na sala de coordenação de Pilotagem, por um Piloto
+experiente em concordância com o Piloto distribuído para o navio.
+
+================================================================================
+FIM DO DOCUMENTO IT-017 — PILOTAGEM ASSISTIDA
+================================================================================

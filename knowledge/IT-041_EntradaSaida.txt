@@ -1,0 +1,186 @@
+DOCUMENTO: IT-041 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 01, datada de 23 de janeiro de 2012.
+ÂMBITO: Este documento define as regras e procedimentos de entrada e saída de
+navios no Porto de Setúbal, estabelecendo as responsabilidades e comunicações
+entre os Operadores de VTS (OVTS) e os Pilotos, e delimitando as áreas de
+jurisdição de cada serviço.
+
+================================================================================
+DEFINIÇÕES FUNDAMENTAIS
+================================================================================
+
+VTS = Vessel Traffic Service (Serviço de Tráfego de Embarcações). Sistema de
+controlo e monitorização de tráfego marítimo, equivalente ao controlo de tráfego
+aéreo mas para navios, que usa radar, VHF e AIS para acompanhar os movimentos
+dos navios.
+
+OVTS = Operador de VTS. O técnico ou oficial que opera o sistema VTS e coordena
+o tráfego marítimo a partir da estação VTS em terra.
+
+VTS Portuário de Setúbal = o serviço VTS responsável pela zona interior do porto,
+definida para montante (a leste) do arco de círculo de 4 milhas de raio centrado
+na Baliza número 2. É o VTS que controla os movimentos dentro do porto.
+
+VTS Costeiro = o serviço VTS responsável pela zona a oeste do arco de 4 milhas
+centrado na Baliza número 2. Controla os navios que se aproximam do porto antes
+de entrar na área portuária.
+
+Baliza número 2 = marca de sinalização náutica (bóia ou balizagem fixa) na
+entrada do Porto de Setúbal, que serve de referência para a delimitação da área
+VTS Portuária.
+
+Área de Pilotagem Obrigatória = a zona geográfica dentro da qual é obrigatório
+ter Piloto a bordo. Esta área vai até ao limite exterior de 5 milhas náuticas,
+centrado no farol do Outão. O farol do Outão fica na Ponta do Outão, na entrada
+do estuário do Sado. Dentro deste raio de 5 milhas, os navios sujeitos a
+pilotagem obrigatória devem ter Piloto a bordo ou em Pilotagem Assistida.
+
+Enfiamento da Barra = a linha imaginária que define o eixo central do canal de
+entrada do porto, utilizada como referência de alinhamento para a navegação.
+
+Boia de João Farto = boia de sinalização náutica localizada no estuário do Sado,
+usada como referência geográfica para o desembarque do Piloto em condições de
+mau tempo.
+
+Canal 14 = canal VHF número 14, utilizado para as comunicações formais entre
+o VTS Portuário e os Pilotos.
+
+================================================================================
+DELIMITAÇÃO DAS ÁREAS DE RESPONSABILIDADE
+================================================================================
+
+Área de responsabilidade do VTS Portuário de Setúbal:
+  Toda a zona a montante (interior) do arco de círculo de 4 milhas de raio
+  centrado na Baliza número 2. "Montante" significa para o interior do estuário,
+  em direção ao porto. O VTS Portuário controla todos os navios nesta zona.
+
+Área de responsabilidade do VTS Costeiro:
+  Toda a zona a oeste do arco de 4 milhas centrado na Baliza número 2. Os navios
+  a aproximarem-se do porto, antes de cruzar esta fronteira, estão sob controlo
+  do VTS Costeiro.
+
+Área de Pilotagem Obrigatória:
+  Círculo de 5 milhas de raio centrado no farol do Outão. Dentro desta área os
+  navios sujeitos a pilotagem obrigatória devem ter Piloto a bordo ou estar em
+  regime de Pilotagem Assistida (conforme IT-017).
+
+================================================================================
+PROCEDIMENTO DE ENTRADA DE NAVIOS NO PORTO
+================================================================================
+
+PASSO A) — AGUARDAR FORA DAS 4 MILHAS:
+  O navio aguarda fora do arco de 4 milhas centrado na Baliza número 2, sob
+  controlo do OVTS, até que a situação da entrada esteja regularizada. "Situação
+  regularizada" significa que todas as formalidades de entrada estão tratadas
+  (autorização portuária, disponibilidade de cais, piloto disponível, etc.).
+  O navio não pode avançar para a zona portuária enquanto a entrada não estiver
+  autorizada.
+
+PASSO B) — POSICIONAMENTO DE REFERÊNCIA ANTES DO EMBARQUE DO PILOTO:
+  Sob controlo do OVTS, a distância de referência do navio à entrada da Barra,
+  próximo da linha do enfiamento, deve ser de 3 milhas, com um mínimo absoluto
+  de 2 milhas. Esta posição deve ser atingida no período de 1 hora antes da hora
+  prevista para o embarque do Piloto a bordo (quando aplicável). Ou seja, 1 hora
+  antes de o Piloto embarcar, o navio deve estar a entre 2 e 3 milhas da entrada
+  da Barra, alinhado com o enfiamento.
+
+PASSO C) — TRANSFERÊNCIA FORMAL DE RESPONSABILIDADE PARA O PILOTO:
+  Estabelece-se uma passagem formal da responsabilidade de assistência ao navio,
+  de OVTS para Piloto, por contacto em canal VHF 14. Esta transferência é feita
+  por iniciativa do Piloto, no momento em que este navega na lancha em direção
+  ao navio. A partir deste momento, o Piloto assume a responsabilidade de
+  assistência ao navio, mesmo antes de embarcar fisicamente a bordo.
+
+================================================================================
+PROCEDIMENTO DE SAÍDA DE NAVIOS DO PORTO
+================================================================================
+
+Existem três situações possíveis de saída, consoante as condições de tempo e
+o acordo entre Piloto e Comandante:
+
+SITUAÇÃO A) — SAÍDA PADRÃO (desembarque na linha Baliza 2/Boia 1):
+  O Piloto desembarca junto ou fora da linha definida pela Baliza número 2 e
+  pela Boia número 1. Esta é a situação de saída mais exterior, em que o Piloto
+  permanece a bordo até o navio ter saído completamente da área portuária interior.
+  Após o desembarque, o Piloto informa o OVTS.
+
+SITUAÇÃO B) — SAÍDA COM DESEMBARQUE ANTECIPADO EM OUTÃO/BOIA 3 (condições normais):
+  Com normais condições de tempo, o Piloto pode desembarcar mais cedo, na zona
+  do OUTÃO ou da Boia número 3, desde que:
+    — O Comandante do navio dê o seu acordo.
+    — As condições de segurança sejam salvaguardadas.
+  Após o desembarque, o Piloto informa o OVTS em canal VHF 14.
+  NOTA IMPORTANTE: neste caso, o comprimento e o calado do navio estão
+  condicionados pelas regras estabelecidas em instrução própria. Esta instrução
+  de referência é a IT-018 (Normas Especiais), ponto 5, que define LOA < 145 m
+  e calado < 7,5 m como condições para desembarque em OUTÃO.
+
+SITUAÇÃO C) — SAÍDA COM PILOTAGEM ASSISTIDA (mau tempo):
+  Com uma situação declarada de Pilotagem Assistida, motivada por mau tempo que
+  impede o desembarque seguro na zona normal, o desembarque do Piloto pode ser
+  efetuado entre o OUTÃO e a Boia de João Farto. Esta é uma posição mais interior
+  (mais protegida) do que o OUTÃO, permitindo o desembarque em condições de mar
+  mais seguras para a lancha de pilotos.
+  Neste caso, a assistência ao navio desde o ponto de desembarque até aos limites
+  da Barra é complementada por um Piloto colocado junto à consola de coordenação
+  em terra, que usa a informação do monitor radar para guiar o navio (conforme
+  IT-017 — Pilotagem Assistida).
+
+================================================================================
+QUADRO RESUMO — POSIÇÕES DE DESEMBARQUE DO PILOTO NA SAÍDA
+================================================================================
+
+Situação padrão (qualquer condição):
+  Desembarque em: linha Baliza 2 / Boia 1 (posição mais exterior).
+  Condições adicionais: nenhuma.
+
+Condições normais de tempo com acordo do Comandante:
+  Desembarque em: OUTÃO / Boia 3 (posição intermédia).
+  Condições adicionais: LOA < 145 m e calado < 7,5 m (ver IT-018, ponto 5).
+
+Mau tempo / Pilotagem Assistida declarada:
+  Desembarque em: entre OUTÃO e Boia de João Farto (posição mais interior).
+  Condições adicionais: Piloto em terra na consola de coordenação guia o navio
+  por radar até à Barra (ver IT-017).
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Até onde vai a área de responsabilidade do VTS Portuário de Setúbal?
+Resposta: Do interior do porto até ao arco de 4 milhas centrado na Baliza número 2.
+A oeste desse arco é área do VTS Costeiro.
+
+Pergunta: Até onde se estende a área de Pilotagem Obrigatória?
+Resposta: Até ao limite exterior de 5 milhas centrado no farol do Outão.
+
+Pergunta: Onde deve estar o navio 1 hora antes de receber o Piloto?
+Resposta: A entre 2 e 3 milhas da entrada da Barra, próximo da linha do enfiamento,
+sob controlo do OVTS.
+
+Pergunta: Em que canal VHF se faz a transferência de responsabilidade de OVTS
+para Piloto?
+Resposta: Canal VHF 14.
+
+Pergunta: Quem toma a iniciativa de contactar para transferir a responsabilidade?
+Resposta: O Piloto, quando navega na lancha em direção ao navio.
+
+Pergunta: Onde desembarca normalmente o Piloto na saída?
+Resposta: Junto ou fora da linha Baliza 2/Boia 1, informando depois o OVTS.
+
+Pergunta: Em que condições pode o Piloto desembarcar em OUTÃO/Boia 3 na saída?
+Resposta: Com normais condições de tempo, com acordo do Comandante, e desde que
+o navio tenha LOA inferior a 145 m e calado inferior a 7,5 m (conforme IT-018).
+
+Pergunta: O que acontece ao navio depois do desembarque do Piloto em mau tempo?
+Resposta: Um Piloto em terra, na consola de coordenação, acompanha o navio por
+radar até aos limites da Barra, conforme o procedimento de Pilotagem Assistida
+do IT-017.
+
+Pergunta: Onde pode o Piloto desembarcar em condições de Pilotagem Assistida?
+Resposta: Entre o OUTÃO e a Boia de João Farto.
+
+================================================================================
+FIM DO DOCUMENTO IT-041 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL
+================================================================================

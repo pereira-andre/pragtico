@@ -1,0 +1,213 @@
+DOCUMENTO: P-19 — PILOTAGEM
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 07, datada de 8 de abril de 2021.
+ÂMBITO: Este procedimento aplica-se à prestação do serviço de pilotagem na área
+de jurisdição da APSS. Extraído apenas o conteúdo operacionalmente relevante.
+
+================================================================================
+ABREVIATURAS RELEVANTES
+================================================================================
+
+AAP  = Apoio Administrativo da Pilotagem
+GAMA = Gabinete de Investigação de Acidentes Marítimos e da Autoridade para a
+       Meteorologia
+JUL  = Janela Única Portuária (plataforma informática de gestão portuária)
+OVTS = Operador do Vessel Traffic Service
+P    = Piloto
+PC   = Piloto Coordenador
+
+================================================================================
+RESPONSABILIDADES POR ATIVIDADE
+================================================================================
+
+Aceitação da manobra:            Responsável — Piloto Coordenador (PC).
+Nomeação do Piloto:              Responsável — Piloto Coordenador (PC).
+Execução da manobra:             Responsável — Piloto (P).
+Comunicação VHF ao OVTS:         Responsável — Piloto (P)*. Envolvido — OVTS.
+Comunicação de acidentes/incidentes/quase acidentes: Responsável — Piloto (P).
+Atualização dos dados na JUL:    Responsável — Piloto (P).
+Pedido de faturação:             Responsável — AAP.
+
+* NOTA SOBRE RESPONSABILIDADE DE COMUNICAÇÃO: a responsabilidade formal pela
+  comunicação de dados ao OVTS é do Comandante do Navio. Porém, é o Piloto que
+  assegura essa comunicação, directamente ou por assessoria ao Comandante.
+
+================================================================================
+PROCESSO DE ACEITAÇÃO DA MANOBRA (7.0)
+================================================================================
+
+A requisição de manobra é efetuada pelo Agente de Navegação através da JUL e
+analisada pelo Piloto Coordenador (PC).
+
+Para serviços de ENTRADA e MUDANÇA DE CAIS: o PC verifica se a manobra está
+autorizada pelo Planeamento (DePCP) e se é exequível face às normas das IT,
+outras normas portuárias e experiência local.
+
+Para serviços de SAÍDA: o PC verifica apenas as normas das IT, normas portuárias
+e experiência local — não é necessária autorização prévia do Planeamento.
+
+Se o pedido é exequível, o PC aceita-o e formaliza a aceitação na JUL.
+Se não é exequível, o Agente de Navegação é informado dos motivos e deve efectuar
+um novo pedido de manobra corrigido.
+
+================================================================================
+NOMEAÇÃO DO PILOTO (7.1)
+================================================================================
+
+Após aceitação formalizada na JUL, o PC nomeia e convoca o Piloto que executará
+a manobra, com base na escala de serviço.
+
+A convocatória é feita por telefone, VHF ou pessoalmente, normalmente com duas
+horas de antecedência da hora para a qual o serviço foi requisitado na JUL.
+
+================================================================================
+ANÁLISE DAS CONDIÇÕES PARA REALIZAÇÃO DA MANOBRA (7.2)
+================================================================================
+
+Compete ao Piloto nomeado planear e preparar a manobra, considerando, entre
+outros factores:
+  — Características técnicas do navio: calado, comprimento, equipamentos,
+    potência da máquina principal.
+  — Limitações do navio anunciadas na JUL.
+  — Condições meteorológicas: marés, correntes, visibilidade.
+  — Áreas de navegação.
+  — Meios auxiliares de manobra (rebocadores, lanchas de cabos, etc.).
+  — Local de destino: cais, terminal ou fundeadouro.
+
+Se as condições não estiverem reunidas e a manobra não for possível, o Piloto
+regista a impossibilidade no campo de observações do registo JUL e comunica ao
+Comandante e/ou Agente de Navegação, que deve efectuar nova requisição quando as
+condições forem restabelecidas.
+
+================================================================================
+EXECUÇÃO DA MANOBRA (7.3)
+================================================================================
+
+Antes de executar a manobra, o Piloto verifica, quando aplicável:
+  — Mercadoria HAZMAT (materiais e items perigosos) que o navio transporta.
+  — ISPS: nível de proteção do terminal e do navio.
+
+O Piloto executa a manobra de acordo com as regras das Instruções de Trabalho
+aplicáveis ao terminal de destino (IT-005 a IT-042, conforme o caso).
+
+Após a manobra, o Piloto regista no Registo de Execução do Serviço de Pilotagem
+(emitido pela JUL):
+  — Horas de manobra.
+  — Alterações efetuadas pelos agentes, se aplicável.
+  — No campo de observações: meios auxiliares usados e outras ocorrências
+    relevantes (anomalias no navio ou na tripulação, etc.).
+  — Acidentes e incidentes ocorridos ou detectados.
+
+================================================================================
+TRANSPORTE DO PILOTO (7.4)
+================================================================================
+
+A deslocação do Piloto de e para o navio é efetuada por embarcação (lancha de
+pilotos) ou viatura. O serviço prestado pela embarcação de pilotos e ocorrências
+relevantes são registados pelo Mestre ou Motorista no Diário de Navegação das
+Lanchas de Pilotagem (IMP.109).
+
+================================================================================
+COMUNICAÇÃO DE DADOS AO OVTS POR VHF (7.5)
+================================================================================
+
+O Piloto deve comunicar via VHF ao OVTS os seguintes dados relativos à manobra:
+
+NAVIO DE SAÍDA — o Piloto comunica:
+  1. Hora de embarque do Piloto a bordo.
+  2. Hora de largada do navio do cais.
+  3. Hora de desembarque do Piloto.
+
+NAVIO DE ENTRADA — o Piloto comunica:
+  1. Hora de embarque do Piloto a bordo.
+  2. Hora de atracação ou fundeio do navio.
+  3. Hora de desembarque do Piloto.
+
+================================================================================
+REGISTO E COMUNICAÇÃO DE OCORRÊNCIAS — ACIDENTES / INCIDENTES / QUASE ACIDENTES (7.6)
+================================================================================
+
+É obrigatório o Piloto comunicar a ocorrência de acidentes, incidentes ou quase
+acidentes nas manobras de atracação de um navio às seguintes entidades:
+
+  — Diretor de Pilotagem da APSS.
+  — OVTS da APSS.
+  — Capitania do Porto de Setúbal.
+  — GAMA (Gabinete de Investigação de Acidentes Marítimos e da Autoridade para
+    a Meteorologia).
+
+O instrumento de comunicação ao GAMA é o Modelo de Notificação Obrigatória do
+GAMA, disponível em www.gama.mm.gov.pt, na plataforma SGQAS e na Secretaria
+da Pilotagem em papel.
+
+PRAZOS OBRIGATÓRIOS DE NOTIFICAÇÃO AO GAMA:
+  Acidentes/incidentes muito graves e graves:
+    Notificação ao GAMA no prazo máximo de 6 horas após a ocorrência.
+
+  Restantes acidentes/incidentes:
+    Notificação ao GAMA no prazo máximo de 48 horas após a ocorrência.
+
+  Canal de envio: via eletrónica para gama@gama.mm.gov.pt
+
+================================================================================
+CONTACTOS TELEFÓNICOS DE COMUNICAÇÃO OBRIGATÓRIA
+================================================================================
+
+Direção de Pilotagem da APSS:
+  (+351) 968 576 713
+  (+351) 968 576 732
+
+OVTS da APSS:
+  (+351) 968 576 705
+  (+351) 265 531 700
+
+Capitania do Porto de Setúbal:
+  (+351) 265 548 270 / 275 / 276
+
+GAMA:
+  (+351) 967 852 458
+  Email: gama@gama.mm.gov.pt
+  Website: www.gama.mm.gov.pt
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Com quanto tempo de antecedência é convocado o Piloto?
+Resposta: Normalmente duas horas antes da hora para a qual o serviço foi
+requisitado na JUL.
+
+Pergunta: Para uma saída, é necessária autorização do Planeamento (DePCP)?
+Resposta: Não. Para saídas, o PC verifica apenas as normas das IT e experiência
+local, sem necessidade de autorização prévia do Planeamento.
+
+Pergunta: Quem é formalmente responsável pela comunicação ao OVTS?
+Resposta: Formalmente o Comandante do Navio, mas é o Piloto que assegura essa
+comunicação, diretamente ou por assessoria ao Comandante.
+
+Pergunta: O que comunica o Piloto ao OVTS quando um navio entra?
+Resposta: A hora de embarque do Piloto, a hora de atracação ou fundeio, e a hora
+de desembarque do Piloto.
+
+Pergunta: O que comunica o Piloto ao OVTS quando um navio sai?
+Resposta: A hora de embarque do Piloto, a hora de largada do navio, e a hora de
+desembarque do Piloto.
+
+Pergunta: Em quanto tempo deve ser notificado o GAMA após um acidente grave?
+Resposta: No prazo máximo de 6 horas após a ocorrência.
+
+Pergunta: Qual o prazo de notificação ao GAMA para incidentes não graves?
+Resposta: No prazo máximo de 48 horas após a ocorrência.
+
+Pergunta: Qual o número de telefone da Capitania do Porto de Setúbal?
+Resposta: (+351) 265 548 270, 275 ou 276.
+
+Pergunta: Qual o número de telefone do OVTS da APSS?
+Resposta: (+351) 968 576 705 ou (+351) 265 531 700.
+
+Pergunta: Qual o número de telefone da Direção de Pilotagem da APSS?
+Resposta: (+351) 968 576 713 ou (+351) 968 576 732.
+
+================================================================================
+FIM DO DOCUMENTO P-19 — PILOTAGEM
+================================================================================

@@ -1,0 +1,331 @@
+DOCUMENTO: IT-014 — REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 23 de janeiro de 2012.
+NOTA: A revisão 01 (novembro de 2009) alterou o comprimento de navio permitido
+para o período noturno.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras nos Terminais da LISNAVE, designados Estaleiros Mitrena, no Porto
+de Setúbal.
+
+O estaleiro LISNAVE / Estaleiros Mitrena é uma instalação de reparação e
+construção naval. É composto por múltiplos cais de reparação (Pontes-Cais I, II
+e III), docas secas (Docas 20, 21 e 22), cais auxiliares (Cais 0, Cais de
+Descarga de Aço) e plataformas flutuantes (Plataformas 31, 32 e 33).
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+REGRA FUNDAMENTAL — MANOBRAS NOS REPONTOS DE MARÉ (RAZÃO ESTRUTURAL)
+================================================================================
+
+TODAS as manobras nos Estaleiros Mitrena / LISNAVE são efetuadas próximo dos
+repontos de maré, sem exceção.
+
+MOTIVO ESTRUTURAL: Os cais dos Estaleiros Mitrena estão dispostos
+perpendicularmente à direção da corrente de maré. Isto significa que, quando
+a maré está em enchente ou em vazante com corrente significativa, essa corrente
+actua lateralmente sobre o navio durante a aproximação e a atracação, tornando
+a manobra extremamente difícil ou impossível de controlar com segurança.
+No reponto de maré, a corrente é praticamente nula, eliminando essa força lateral
+e permitindo que o piloto controle o navio com precisão. Esta é a razão pela qual
+a regra de reponto é absoluta neste estaleiro, ao contrário de outros terminais
+onde se pode manobrar livremente com enchente ou vazante.
+
+================================================================================
+DADOS GERAIS DOS ESTALEIROS MITRENA
+================================================================================
+
+Altura dos cais acima do Zero Hidrográfico (ZH): 4,80 metros.
+  Este valor indica a altura da estrutura dos cais acima do nível de referência
+  das cartas náuticas. É relevante para avaliar a altura de bordo livre e o
+  acesso entre o navio e o cais em diferentes estados de maré.
+
+Distância do Duque d'Alba da Ponte-Cais I até à boia número 14: 1000 metros.
+  A boia número 14 é uma referência de navegação no canal de acesso ao estaleiro.
+  Esta distância é útil para planear a aproximação e calcular os tempos de manobra.
+
+================================================================================
+REGRAS DE COMPRIMENTO DE NAVIO E PERÍODO DO DIA
+================================================================================
+
+Navios com comprimento até 280 metros (LOA igual ou inferior a 280 m):
+  Podem manobrar no estaleiro em qualquer reponto de maré, tanto de dia como
+  de noite.
+
+Navios com comprimento superior a 280 metros (LOA maior que 280 m):
+  Só podem manobrar de dia. A manobra noturna está proibida para estes navios,
+  independentemente do estado de maré.
+
+================================================================================
+CONDICIONANTE DE VENTO
+================================================================================
+
+Navios com considerável área vélica (navios que apresentam uma grande superfície
+exposta ao vento, como grandes navios de carga a vazio ou navios com superstruturas
+elevadas) devem manobrar com velocidade de vento até cerca de 20 km/h. Acima deste
+valor, a força do vento sobre a área vélica do navio dificulta o controlo da
+manobra e pode impedi-la.
+
+================================================================================
+REGRA DE GESTÃO DE BACIAS EM MARÉS VIVAS
+================================================================================
+
+Em período de marés vivas (marés de grande amplitude com correntes mais intensas),
+quando houver necessidade de ocupar a mesma bacia de manobra em simultâneo por
+mais do que um navio, sugere-se a realização de apenas uma manobra por cada
+reponto de maré. Esta recomendação aplica-se principalmente a navios com LOA
+superior a 200 metros, dado que um navio grande ocupa uma porção significativa
+da bacia durante a manobra, não deixando espaço seguro para outro navio manobrar
+ao mesmo tempo.
+
+================================================================================
+CAIS DE DESCARGA DE AÇO
+================================================================================
+
+O Cais de Descarga de Aço é o cais destinado à receção de matéria-prima (aço)
+utilizada na construção e reparação naval.
+
+Comprimento físico do cais: 100 metros.
+Distância entre cabeços: 150 metros.
+Comprimento de navio aconselhável: 120 metros.
+Calado permitido: ND (Não Disponível / Não Determinado neste documento).
+  O valor "ND" significa que o calado máximo para este cais não está definido
+  neste documento. Não deve ser inferido nem estimado sem consulta de fonte
+  hidrográfica atualizada específica para este cais.
+
+================================================================================
+CAIS 0 — FACE A E FACE B
+================================================================================
+
+O Cais 0 é um cais com duas faces operacionais (Face A e Face B), podendo
+receber navios em ambos os lados.
+
+Face B (lado B do Cais 0):
+  Largura: 20 metros.
+  Comprimento: 122 metros.
+  Sonda ao ZH: 6 metros. (profundidade disponível na maré mais baixa = 6 m)
+
+Face A (lado A do Cais 0):
+  Largura: 20 metros.
+  Comprimento: 122 metros.
+  Sonda ao ZH: 6 metros.
+
+Referências de distância a partir do Cais 0:
+  Distância do Cais 0 à boca da Doca 21: 134 metros.
+  Distância do Cais 0 à Ponte-Cais I: 388 metros.
+
+================================================================================
+DOCA 20 — PLATAFORMA DE CONSTRUÇÃO
+================================================================================
+
+A Doca 20 é utilizada como Plataforma de Construção Naval.
+
+Comprimento: 420 metros.
+Largura: 75 metros.
+Sonda: não indicada (plataforma de construção, não doca seca de reparação).
+
+================================================================================
+DOCA 21 — DOCA SECA DE REPARAÇÃO
+================================================================================
+
+A Doca 21 é uma doca seca utilizada para reparação de navios. "Doca seca" é
+uma estrutura fechada por uma comporta (eclusa) que permite esgotar a água do
+interior para que o casco do navio fique exposto para reparação. Para entrar na
+doca, o navio navega com a comporta aberta e a doca inundada.
+
+Comprimento interior: 450 metros.
+Largura interior: 75 metros.
+Sonda ao ZH na soleira (com comporta aberta): 20 pés = 6,10 metros.
+  A "soleira" é a soleira de entrada da doca, ou seja, o ponto mais raso
+  na entrada da doca quando esta está inundada. Com a comporta aberta, a
+  profundidade disponível na entrada ao ZH é de 20 pés (6,10 m).
+Sonda ao ZH na soleira com comporta descida (fechada): 18 pés = 5,49 metros.
+  Quando a comporta está descida (fechada), a estrutura da própria comporta
+  reduz a profundidade disponível na entrada para 18 pés (5,49 m). Um navio
+  que entre com a comporta na posição de fecho não pode ter calado superior
+  a 5,49 m mais a altura de maré no momento.
+
+================================================================================
+DOCA 22 — DOCA SECA DE REPARAÇÃO
+================================================================================
+
+Comprimento interior: 350 metros.
+Largura interior: 55 metros.
+Sonda ao ZH na soleira (com comporta aberta): 20 pés = 6,10 metros.
+Sonda ao ZH na soleira com comporta descida (fechada): 18 pés = 5,49 metros.
+  As mesmas condições e restrições descritas para a Doca 21 aplicam-se
+  integralmente à Doca 22.
+
+================================================================================
+CAIS DE REPARAÇÃO NÚMERO I (PONTE-CAIS I + DUQUE D'ALBA I)
+================================================================================
+
+O Cais de Reparação I é formado pela Ponte-Cais I (estrutura principal avançada
+sobre a água) e pelo Duque d'Alba I (estrutura de amarração isolada).
+
+CAIS I — SONDAS POR FACE:
+  Cais IA (face A): sonda ao ZH = 7,14 metros (equivalente a 23 pés e 5 pol.).
+  Cais IB (face B): sonda ao ZH = 7,40 metros (equivalente a 24 pés e 4 pol.).
+
+PONTE-CAIS I:
+  Comprimento: 110 metros.
+  Largura: 20 metros.
+
+DUQUE D'ALBA I:
+  Comprimento: 10 metros.
+  Largura: 20 metros.
+  Distância entre a Ponte-Cais I e o Duque d'Alba I: 140 metros.
+  Distância total da raiz da Ponte-Cais até à face sul do Duque d'Alba I
+  (comprimento operacional total do Cais I): 260 metros.
+
+REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA I:
+  Distância à boca da Doca 22: 98 metros.
+  Distância ao Cais I: 398 metros.
+  Distância à Ponte-Cais de Reparação II (bacia de manobras): aproximadamente
+  136 metros.
+
+================================================================================
+CAIS DE REPARAÇÃO NÚMERO II (PONTE-CAIS II + DUQUE D'ALBA II)
+================================================================================
+
+CAIS II — SONDAS POR FACE (medidas a 10 metros da face do cais):
+  Cais II-A: sonda ao ZH a 10 metros do cais = 7 metros.
+  Cais II-B: sonda ao ZH a 10 metros do cais = 7 metros.
+  NOTA: a sonda é medida a 10 metros da face do cais, não junto à face.
+  Junto à face do cais a profundidade pode ser inferior.
+
+PONTE-CAIS II:
+  Comprimento: 174,5 metros.
+  Largura: 20 metros.
+
+DUQUE D'ALBA II:
+  Comprimento: 10 metros.
+  Largura: 20 metros.
+  Distância entre a Ponte-Cais II e o Duque d'Alba II: 90 metros.
+  Distância total da raiz da Ponte-Cais II à face sul do Duque d'Alba II
+  (comprimento operacional total): 276 metros.
+
+REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA II:
+  Distância à Ponte-Cais de Reparação I (bacia de manobra): 135 metros.
+  Distância à Ponte-Cais de Reparação III (bacia de manobra): 135 metros.
+  A Ponte-Cais II é equidistante das Pontes-Cais I e III, separadas por
+  135 metros de cada lado, que constituem as bacias de manobra.
+
+================================================================================
+CAIS DE REPARAÇÃO NÚMERO III (PONTE-CAIS III + DUQUE D'ALBA III)
+================================================================================
+
+DUQUE D'ALBA III:
+  Comprimento: 10 metros.
+  Largura: 20 metros.
+
+CAIS III-A:
+  Comprimento: 240 metros.
+  Distância entre a Ponte-Cais III e o Duque d'Alba: 115 metros.
+  Distância total da raiz do cais à face sul do Duque d'Alba
+  (comprimento operacional): 366 metros.
+  Sonda ao ZH a 10 metros do cais: 7 metros.
+
+CAIS III-B:
+  Comprimento: 134 metros.
+  Distância entre a Ponte-Cais III e o Duque d'Alba: 115 metros.
+  Distância total da raiz do cais à face sul do Duque d'Alba: 259 metros.
+  Sonda ao ZH a 10 metros do cais: 8,60 metros.
+  Distância à Ponte-Cais de Reparação II (bacia de manobra): 135 metros.
+
+  NOTA: O Cais III-B tem sonda superior (8,60 m) à dos restantes cais de
+  reparação (7 m), o que o torna apto para navios com maior calado.
+
+================================================================================
+PLATAFORMAS 31, 32 E 33
+================================================================================
+
+As Plataformas 31, 32 e 33 são plataformas flutuantes ou diques de carena
+utilizados para reparação de embarcações de menores dimensões ou de boca
+reduzida.
+
+Comprimento total das plataformas: 320 metros.
+Boca máxima admissível: 32 metros.
+  "Boca" é a largura máxima do navio. Um navio com boca (largura) superior
+  a 32 metros não pode entrar nas plataformas 31, 32 e 33.
+Sonda à boca do cais: 5,5 metros.
+  Esta profundidade é reduzida e restringe as plataformas a navios com calado
+  inferior a 5,5 m (descontada a margem de maré disponível).
+
+================================================================================
+QUADRO RESUMO — SONDAS AO ZH POR LOCAL
+================================================================================
+
+Cais 0 (Face A e Face B): 6,0 metros ao ZH.
+Cais IA: 7,14 metros ao ZH.
+Cais IB: 7,40 metros ao ZH.
+Cais II-A (a 10 m do cais): 7,0 metros ao ZH.
+Cais II-B (a 10 m do cais): 7,0 metros ao ZH.
+Cais III-A (a 10 m do cais): 7,0 metros ao ZH.
+Cais III-B (a 10 m do cais): 8,60 metros ao ZH.
+Doca 21 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
+Doca 21 — soleira com comporta fechada: 5,49 metros ao ZH (18 pés).
+Doca 22 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
+Doca 22 — soleira com comporta fechada: 5,49 metros ao ZH (18 pés).
+Plataformas 31/32/33 — boca do cais: 5,5 metros.
+Cais de Descarga de Aço: calado não determinado (ND).
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Por que razão todas as manobras no LISNAVE se fazem nos repontos
+de maré?
+Resposta: Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente
+à corrente de maré. Com corrente ativa, esta atua lateralmente sobre o navio,
+tornando a manobra incontrolável. Só no reponto, com corrente nula, é possível
+manobrar com segurança.
+
+Pergunta: Um navio com 300 metros de LOA pode entrar no LISNAVE de noite?
+Resposta: Não. Navios com comprimento superior a 280 metros só podem manobrar
+durante o dia.
+
+Pergunta: Um navio com 250 metros de LOA pode entrar no LISNAVE de noite?
+Resposta: Sim. Navios com LOA até 280 metros podem manobrar em qualquer reponto
+de maré, tanto de dia como de noite.
+
+Pergunta: Qual a profundidade disponível na entrada da Doca 21 com a comporta
+aberta na baixa-mar?
+Resposta: 6,10 metros (20 pés ao ZH). Com a comporta fechada (descida), a
+profundidade na entrada reduz-se para 5,49 metros (18 pés).
+
+Pergunta: Qual o cais do LISNAVE com maior profundidade disponível?
+Resposta: O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do
+cais.
+
+Pergunta: O vento condiciona as manobras no LISNAVE?
+Resposta: Sim, para navios com considerável área vélica. Estes só devem manobrar
+com vento até cerca de 20 km/h.
+
+Pergunta: Podem dois navios grandes manobrar ao mesmo tempo no LISNAVE?
+Resposta: Em marés vivas, recomenda-se uma manobra por reponto quando houver
+necessidade de ocupar a mesma bacia em simultâneo, especialmente com navios de
+LOA superior a 200 metros.
+
+Pergunta: Qual a boca máxima para as Plataformas 31, 32 e 33 do LISNAVE?
+Resposta: 32 metros.
+
+Pergunta: Quem valida as requisições de manobra no LISNAVE?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-014 — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)
+================================================================================

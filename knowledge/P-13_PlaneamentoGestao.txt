@@ -1,0 +1,218 @@
+DOCUMENTO: P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 06, datada de 13 de maio de 2020.
+NOTA: Documento de procedimento administrativo e operacional. Extraído apenas
+o conteúdo com relevância operacional directa para pilotagem e planeamento de
+manobras. Detalhes de gestão da qualidade e fluxogramas administrativos omitidos.
+
+================================================================================
+ÂMBITO E EXCLUSÕES
+================================================================================
+
+Este procedimento aplica-se ao planeamento das manobras com embarcações no Porto
+de Setúbal.
+
+Estão EXCLUÍDOS deste procedimento:
+  — Embarcações destinadas à Doca Pesca.
+  — Embarcações militares destinadas ao cais da NATO.
+  — Embarcações de tráfego local.
+
+================================================================================
+SISTEMA INFORMÁTICO — JUL (JANELA ÚNICA LOGÍSTICA)
+================================================================================
+
+JUL = Janela Única Logística. É a plataforma informática centralizada do Porto
+de Setúbal onde são registados e geridos todos os processos de escala de navios,
+pedidos de manobra, autorizações, locais de acostagem e operações portuárias.
+Todos os intervenientes no processo (Agente de Navegação, DePCP, Direção de
+Pilotagem, concessionários, etc.) acedem e inserem informação na JUL, com
+restrições por nível de acesso.
+
+================================================================================
+RESPONSABILIDADES POR ATIVIDADE
+================================================================================
+
+Anúncio da escala da embarcação:
+  Responsável: Agente de Navegação (AN).
+  Envolvidos: DePCP (Departamento de Planeamento e Controlo Portuário).
+
+Análise do processo de escala:
+  Responsável: DePCP.
+  Envolvidos: DSMP (Diretor de Segurança Marítimo Portuária) e DP (Diretor de
+  Pilotagem).
+
+Definição de prioridades de acostagem:
+  Responsável: DePCP.
+  Envolvido: DP.
+
+Autorizações de manobra:
+  Responsável: CA/ADM (Conselho de Administração / Administrador).
+  A competência para autorizar manobras no dia-a-dia está atribuída ao DePCP.
+  Envolvidos: DGC, DSMP, DP, AN, Planeamento do Concessionário (PC).
+
+Definição do local de acostagem:
+  Responsável: DePCP.
+  Envolvidos: DP e Planeamento do Concessionário (PC).
+
+Execução de manobras:
+  Responsável: DP (Direção de Pilotagem).
+  Envolvidos: DePCP, AN, PC.
+
+Operação de navios:
+  Responsável: DePCP (terminais APSS) ou Concessionário (terminais concessionados).
+  Envolvidos: DGC, AN, PC.
+
+Previsão de manobras:
+  Responsável: DePCP.
+  Envolvidos: DP, AN, PC.
+
+================================================================================
+PROCESSO DE ANÚNCIO DE ESCALA (7.0)
+================================================================================
+
+O Agente de Navegação, representante do Armador, anuncia a escala da embarcação
+introduzindo os dados na aplicação JUL. Após abertura do processo de anúncio de
+escala, a informação fica disponível para todos os utilizadores autorizados.
+
+================================================================================
+EXCEÇÕES AO PROCESSO NORMAL — PEDIDOS ATÍPICOS (7.1)
+================================================================================
+
+O pedido de entrada pode ser antecedido de consulta ao DePCP quando as
+características da embarcação ou da carga não se enquadrem nos regulamentos de
+exploração do porto ou do terminal, nos contratos de concessão, ou nas ordens
+de serviço.
+
+O pedido pode ser enviado directamente ao CA ou ao DGC/DePCP. Quando feito ao
+DePCP, é encaminhado para o DGC e depois para o CA. A autorização final compete
+ao CA.
+
+NOTA IMPORTANTE: Tratando-se de um pedido relacionado com navegação — por
+exemplo, questões de calado — o pedido é feito directamente à Direção de
+Pilotagem (DP).
+
+================================================================================
+ANÁLISE DO PROCESSO DE ESCALA (7.2)
+================================================================================
+
+O DePCP verifica a viabilidade de entrada do navio no porto, analisando:
+  — Dimensões principais do navio.
+  — Natureza e tonelagem da mercadoria a carregar ou descarregar.
+  — Prioridade de acostagem.
+  — Passageiros a embarcar ou desembarcar.
+  — Terminal/Cais requerido pelo Agente de Navegação.
+
+O DePCP articula-se com a DP e a DSMP sempre que surjam dúvidas de segurança de
+operação. A DP e/ou DSMP comunicam por escrito a decisão sobre o pedido.
+
+O OPP (Oficial de Proteção do Porto) e a DSMP recebem e analisam a informação
+de pré-chegada de ISPS (segurança portuária) e HAZMAT (materiais perigosos).
+
+Todas as autorizações são formalizadas na JUL.
+
+================================================================================
+DEFINIÇÃO DE PRIORIDADES DE ACOSTAGEM (7.3) — REGRA OPERACIONAL CRÍTICA
+================================================================================
+
+As prioridades de acostagem estão definidas no Artigo 16.º da Portaria n.º 204/91
+de 13 de março e nos Regulamentos de Exploração dos Terminais.
+
+REGRA PARA DOIS NAVIOS COM O MESMO DESTINO DE ACOSTAGEM:
+  Quando o DePCP declara que dois navios têm o mesmo destino de acostagem e há
+  dúvida sobre qual deve ser pilotado primeiro, aplica-se o critério de prioridade
+  pela hora de chegada "em frente da barra", conforme o Artigo 16.º n.º 1 do
+  Regulamento de Exploração do Porto de Setúbal.
+
+  DEFINIÇÃO OPERACIONAL DE "EM FRENTE DA BARRA":
+    Para efeitos de prioridade, "em frente da barra" é definido como:
+    O arco de 8 milhas náuticas centrado na Baliza número 2 da Barra.
+
+  O primeiro navio a cruzar este arco de 8 milhas tem prioridade de manobra,
+  salvo se alguma condição técnica o impedir. O cruzamento do arco é monitorizado
+  pelo VTS, que o comunica à Pilotagem.
+
+  Nota: esta regra das 8 milhas para prioridade é distinta das regras de 4 milhas
+  (limite da área VTS Portuária, IT-041) e de 3 milhas (posição de referência 1 hora
+  antes do embarque do Piloto, IT-041). São três círculos concêntricos com funções
+  diferentes centrados na mesma referência (Baliza nº2 da Barra).
+
+================================================================================
+DEFINIÇÃO DO LOCAL DE ACOSTAGEM (7.5)
+================================================================================
+
+A definição do local de acostagem é da competência do DePCP. O local é registado
+na JUL em resposta ao Pedido de Manobra submetido pelo Agente de Navegação.
+
+REGRA IMPORTANTE: Só é possível atribuir local de acostagem se existir um Pedido
+de Manobra prévio na JUL. Sem esse pedido, o DePCP não pode atribuir o local.
+
+GESTÃO DO LOCAL DE ACOSTAGEM POR TIPO DE TERMINAL:
+
+  Terminal RoRo (sob gestão da APSS):
+    A determinação do local é da competência exclusiva do DePCP, sem necessidade
+    de consultar concessionário.
+
+  TMS-1 e TMS-2 (terminais concessionados):
+    A determinação do local é validada pelo DePCP após indicação prévia do
+    Concessionário. O DePCP contacta sempre o Concessionário quando algum navio
+    se destina a estes terminais, e o contacto fica formalizado na JUL.
+
+================================================================================
+OPERAÇÕES DE NAVIOS (7.6)
+================================================================================
+
+Nos terminais de uso privativo ou concessionados, a responsabilidade total pela
+operação dos navios pertence às entidades gestoras (concessionários).
+
+No Terminal RoRo sob gestão da APSS, as operações portuárias carecem de autorização
+prévia do DePCP. A Empresa de Estiva cria uma requisição na JUL, que é analisada
+e autorizada pelo DePCP.
+
+================================================================================
+PREVISÃO DE MANOBRAS E OPERAÇÕES (7.7)
+================================================================================
+
+Com base em todas as informações recebidas, o DePCP elabora um plano em Excel
+com a previsão de manobras e operações de navios, disponível para consulta de
+vários serviços. Este plano serve especialmente de apoio à fiscalização da DGC.
+
+================================================================================
+ALTERAÇÃO AOS PEDIDOS
+================================================================================
+
+Perante um pedido de alteração do Agente de Navegação ou do Armador, o processo
+volta ao ponto 7.2 (Análise do Processo), recomeçando o ciclo de verificação e
+autorização.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Quando dois navios pretendem o mesmo cais, qual tem prioridade?
+Resposta: O primeiro a cruzar o arco de 8 milhas náuticas centrado na Baliza
+número 2 da Barra, monitorizado pelo VTS. A prioridade baseia-se na hora de
+chegada "em frente da barra", conforme o Artigo 16.º n.º 1 do Regulamento de
+Exploração do Porto de Setúbal.
+
+Pergunta: Quem autoriza as manobras no Porto de Setúbal?
+Resposta: A competência para autorizar manobras está atribuída ao DePCP (para
+as situações correntes). Pedidos atípicos sobem ao DGC e depois ao CA.
+
+Pergunta: Para questões de calado, a quem se dirige o pedido?
+Resposta: Diretamente à Direção de Pilotagem (DP).
+
+Pergunta: Onde se regista o local de acostagem atribuído a um navio?
+Resposta: Na JUL (Janela Única Logística), em resposta ao Pedido de Manobra.
+Sem Pedido de Manobra prévio na JUL, o DePCP não pode atribuir local de acostagem.
+
+Pergunta: Quem define o local de acostagem no TMS-1 ou TMS-2?
+Resposta: O DePCP valida o local, mas apenas após indicação prévia do Concessionário
+que gere esses terminais.
+
+Pergunta: O procedimento P-13 aplica-se a navios militares?
+Resposta: Não. Embarcações militares destinadas ao cais da NATO estão excluídas
+deste procedimento, assim como as embarcações da Doca Pesca e as de tráfego local.
+
+================================================================================
+FIM DO DOCUMENTO P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA
+================================================================================

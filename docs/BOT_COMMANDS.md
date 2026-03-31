@@ -4,6 +4,9 @@ Este documento descreve os comandos suportados pelo bot no chat, o alvo que cada
 
 ## Regras Base
 
+- `admin` e `agente` tratam de escalas, navios e planeamento de manobras.
+- `piloto` aprova, aborta e regista manobras; não altera escalas nem planeamento.
+
 - `Ref` identifica a escala.
 - `ID da manobra` identifica uma manobra concreta.
 - Se por engano escreveres o `ID da manobra` no campo `Ref`, o bot tenta resolver, mas a forma recomendada continua a ser usar `ID da manobra`.

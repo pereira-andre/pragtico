@@ -1,0 +1,398 @@
+DOCUMENTO: IT-016 — REGRAS APLICÁVEIS A MANOBRAS — REBOCADORES
+            + PROTOCOLO DE ASSISTÊNCIA EM MANOBRA (APSS / PORTUQS II)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO IT-016 EM VIGOR: Revisão 01, datada de 23 de janeiro de 2012.
+PROTOCOLO: Acordo operacional entre APSS, S.A. (Diretor da Pilotagem: António
+Gomes) e empresa de rebocadores Portuqs II (Francisco Marques). Sem data explícita.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras aplicáveis ao uso de rebocadores no Porto de
+Setúbal, incluindo a tabela de utilização de rebocadores por tipo de navio e
+operação, as regras especiais para navios com destino à Lisnave-Mitrena, e o
+protocolo operacional de segurança para estabelecimento de cabos de reboque.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra de acordo com as regras
+desta instrução de trabalho. O Piloto nomeado cumpre-as na execução da manobra.
+
+================================================================================
+LEGENDA DAS ABREVIATURAS UTILIZADAS NA TABELA
+================================================================================
+
+TIPOS DE REBOCADOR:
+  G = Rebocador Grande: bollard pull igual ou superior a 25 toneladas.
+  p = Rebocador Pequeno: bollard pull inferior a 25 toneladas.
+
+COMBINAÇÕES DE REBOCADORES (lidas da esquerda para a direita):
+  GGG = 3 rebocadores grandes.
+  GGp = 2 rebocadores grandes + 1 rebocador pequeno.
+  GG  = 2 rebocadores grandes.
+  Gp  = 1 rebocador grande + 1 rebocador pequeno.
+  G   = 1 rebocador grande.
+  pp  = 2 rebocadores pequenos.
+  p   = 1 rebocador pequeno.
+  (vazio/ausente) = sem rebocador necessário.
+
+CONFIGURAÇÃO DO NAVIO (colunas da tabela):
+  S/HPr     = navio Sem Hélice de Proa (sem bow thruster). O navio não dispõe
+              de hélice transversal na proa, pelo que tem menor capacidade de
+              manobra autónoma lateral e necessita de mais assistência.
+  C/HPr     = navio Com Hélice de Proa (com bow thruster). O navio tem hélice
+              transversal na proa, melhorando a sua capacidade de manobra.
+  C/HPr e LPo = navio Com Hélice de Proa E com Hélice Lateral de Popa (stern
+              thruster). O navio tem hélice transversal tanto na proa como na
+              popa, sendo o mais manobrador dos três casos.
+
+TIPO DE OPERAÇÃO:
+  AC = Atracar Carregado (navio a aproximar-se do cais com carga).
+  AV = Atracar Vazio (navio a aproximar-se do cais sem carga / em lastro).
+  DC = Desatracar Carregado (navio a afastar-se do cais com carga).
+  DV = Desatracar Vazio (navio a afastar-se do cais sem carga / em lastro).
+
+TIPO DE CARGA:
+  Cargas perigosas = navios transportando cargas classificadas como perigosas
+    (inflamáveis, explosivas, tóxicas, etc.). Para estes navios com comprimento
+    superior a 70 metros, os valores da tabela são MÍNIMOS OBRIGATÓRIOS.
+  Outras = todos os restantes navios que não transportam cargas perigosas.
+
+DWT = Deadweight Tonnage (tonelagem de porte bruto). Medida da capacidade de
+  carga máxima do navio em toneladas. Determina a faixa de dimensão do navio
+  na tabela.
+
+================================================================================
+NOTA FUNDAMENTAL — CARÁTER OBRIGATÓRIO VS ORIENTATIVO DA TABELA
+================================================================================
+
+A tabela de rebocadores NÃO deve ser entendida como uma regra rígida a ser
+seguida em todas as situações. A decisão final sobre o número de rebocadores
+a utilizar é, em última análise, resultado do estudo conjunto do Comandante do
+navio com o Piloto.
+
+EXCEPÇÃO OBRIGATÓRIA: Para navios de cargas perigosas com comprimento superior
+a 70 metros, as indicações da tabela são MÍNIMOS OBRIGATÓRIOS, no âmbito das
+atribuições da Administração Portuária definidas no artigo 2.º do Decreto-Lei
+n.º 46/2002 de 2 de março. Neste caso específico, o Piloto e o Comandante não
+podem decidir usar menos rebocadores do que o indicado na tabela.
+
+PRESSUPOSTOS DA TABELA: os valores indicados assumem que:
+  — O navio se encontra em boas condições de manobra.
+  — As condições meteorológicas são favoráveis.
+  — As condições de maré e de atracação são normais.
+  — Todas as ajudas à manobra estão em boas condições.
+  — Os bowthrusters e sternthrusters estão suficientemente imersos para operar
+    com eficácia. Se um thruster não estiver imerso (navio muito alto de bordo),
+    deve-se tratar o navio como se não tivesse esse thruster.
+
+================================================================================
+TABELA DE USO DE REBOCADORES — EXPANDIDA POR FAIXA DE DWT
+================================================================================
+
+--- FAIXA 1: NAVIOS COM DWT INFERIOR A 4.000 TONELADAS ---
+
+CARGAS PERIGOSAS (mínimos obrigatórios para LOA > 70 m):
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       1 rebocador pequeno (p)
+    Com bow thruster:       sem rebocador
+    Com bow + stern thr.:   sem rebocador
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       1 rebocador pequeno (p)
+    Com bow thruster:       sem rebocador
+    Com bow + stern thr.:   sem rebocador
+
+OUTRAS CARGAS:
+  Atracar ou Desatracar: 1 rebocador pequeno (p), apenas quando L > 90 m e
+  calado > 6 m. Abaixo destes valores, não há indicação de rebocador obrigatório.
+
+--- FAIXA 2: NAVIOS COM DWT ENTRE 4.001 E 8.000 TONELADAS ---
+
+CARGAS PERIGOSAS (mínimos obrigatórios para LOA > 70 m):
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   sem rebocador
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       1 rebocador pequeno (p)
+    Com bow thruster:       sem rebocador
+    Com bow + stern thr.:   sem rebocador
+
+OUTRAS CARGAS:
+  Atracar ou Desatracar: 1 rebocador pequeno (p).
+
+--- FAIXA 3: NAVIOS COM DWT ENTRE 8.001 E 15.000 TONELADAS ---
+
+CARGAS PERIGOSAS (mínimos obrigatórios para LOA > 70 m):
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador grande (G)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   2 rebocadores pequenos (pp)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   1 rebocador pequeno (p)
+
+OUTRAS CARGAS:
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 rebocador grande (G)
+    Com bow + stern thr.:   sem rebocador
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   sem rebocador
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 rebocador grande (G)
+    Com bow + stern thr.:   sem rebocador
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores pequenos (pp)
+    Com bow thruster:       1 rebocador pequeno (p)
+    Com bow + stern thr.:   sem rebocador
+
+--- FAIXA 4: NAVIOS COM DWT ENTRE 15.001 E 25.000 TONELADAS ---
+
+CARGAS PERIGOSAS (mínimos obrigatórios para LOA > 70 m):
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 grandes + 1 pequeno (GGp)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 rebocador grande (G)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 grande + 1 pequeno (Gp)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+OUTRAS CARGAS:
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       2 grandes + 1 pequeno (GGp)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+--- FAIXA 5: NAVIOS COM DWT SUPERIOR A 25.001 TONELADAS ---
+
+CARGAS PERIGOSAS (mínimos obrigatórios para LOA > 70 m):
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       3 rebocadores grandes (GGG)
+    Com bow thruster:       2 grandes + 1 pequeno (GGp)
+    Com bow + stern thr.:   2 rebocadores grandes (GG)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   2 rebocadores grandes (GG)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+OUTRAS CARGAS:
+
+  Atracar Carregado (AC):
+    Sem bow thruster:       3 rebocadores grandes (GGG)
+    Com bow thruster:       2 rebocadores grandes (GG)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Atracar Vazio (AV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Carregado (DC):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 grande + 1 pequeno (Gp)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+  Desatracar Vazio (DV):
+    Sem bow thruster:       2 rebocadores grandes (GG)
+    Com bow thruster:       1 rebocador grande (G)
+    Com bow + stern thr.:   1 rebocador grande (G)
+
+================================================================================
+REBOCADORES E CALADOS NA BARRA — NAVIOS COM DESTINO À LISNAVE-MITRENA
+================================================================================
+
+Esta tabela define o número de rebocadores exigidos e o calado máximo na Barra
+(entrada do Porto de Setúbal) para navios com destino específico ao estaleiro
+Lisnave-Mitrena, em função do seu DWT.
+
+DWT até 50.000 toneladas:
+  Número de rebocadores na Barra: nenhum (sem assistência obrigatória de rebocador).
+  Calado máximo na Barra: 6,0 metros.
+
+DWT de 50.001 a 90.000 toneladas:
+  Número de rebocadores na Barra: 1 rebocador.
+  Calado máximo na Barra: 7,0 metros.
+
+DWT de 90.001 a 130.000 toneladas:
+  Número de rebocadores na Barra: 2 rebocadores.
+  Calado máximo na Barra: 7,0 metros.
+
+DWT de 130.001 a 170.000 toneladas:
+  Número de rebocadores na Barra: 3 rebocadores.
+  Calado máximo na Barra: 7,5 metros.
+
+DWT superior a 170.001 toneladas:
+  Número de rebocadores na Barra: 4 rebocadores.
+  Calado máximo na Barra: 7,5 metros.
+
+NOTA: esta tabela é específica para navios com destino à Lisnave-Mitrena e
+refere-se à passagem pela Barra (canal de entrada do porto), não à manobra
+de atracação nos cais do estaleiro, que é regida pelas regras do IT-014.
+
+================================================================================
+PROTOCOLO DE ASSISTÊNCIA EM MANOBRA — APSS / PORTUQS II
+================================================================================
+
+Este protocolo foi estabelecido entre a APSS, S.A. e a empresa de rebocadores
+Portuqs II para minimizar os riscos inerentes às manobras de estabelecimento de
+cabo de reboque, tendo em conta a velocidade de aproximação do navio e as
+condições de visibilidade.
+
+REGRA 1 — VELOCIDADES MÁXIMAS DO NAVIO PARA ESTABELECIMENTO DE CABO:
+
+  Durante as manobras para estabelecimento do cabo de rebocador, a velocidade
+  do navio sobre a água não deve ultrapassar os seguintes valores, consoante
+  a posição do rebocador em relação ao navio:
+
+  Rebocador posicionado à proa do navio: velocidade máxima do navio = 5 nós.
+  Rebocador posicionado ao costado do navio: velocidade máxima = 6 nós.
+  Rebocador posicionado à popa do navio: velocidade máxima = 8 nós.
+
+  "Velocidade sobre a água" é a velocidade do navio medida em relação à massa
+  de água, não em relação ao fundo. É a velocidade relevante para a segurança
+  do rebocador, pois determina a força relativa de impacto ou arrasto.
+
+REGRA 2 — PROCEDIMENTO QUANDO A VELOCIDADE É EXCEDIDA:
+
+  Se a velocidade do navio for superior à indicada na tabela acima, o Mestre
+  do rebocador deve alertar o Piloto da Barra desse facto. O Mestre pode
+  questionar o estabelecimento do cabo e, no limite, recusar estabelecê-lo,
+  de modo a evitar pôr em perigo o rebocador e a sua tripulação. O Piloto
+  da Barra deve ser informado sempre que a velocidade do navio exceda os
+  limites definidos.
+
+REGRA 3 — PROCEDIMENTO EM MÁ VISIBILIDADE:
+
+  Em condições de má visibilidade (nevoeiro, neblina, chuva intensa, ou outras
+  situações que reduzam a visibilidade operacional), o cabo de reboque só será
+  estabelecido por solicitação do Piloto da Barra, e apenas se o Mestre do
+  rebocador entender que estão reunidas as condições operacionais e de segurança
+  necessárias, tendo em conta a situação específica e a manobra a efetuar. Ou
+  seja, mesmo que o Piloto solicite, o Mestre do rebocador tem autonomia para
+  recusar se considerar as condições inseguras.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Os valores da tabela de rebocadores são obrigatórios?
+Resposta: Não na generalidade — são orientativos e a decisão final cabe ao
+Piloto e ao Comandante. Excepção: para navios de cargas perigosas com LOA
+superior a 70 metros, os valores são mínimos obrigatórios.
+
+Pergunta: Qual a diferença entre rebocador grande e rebocador pequeno?
+Resposta: Rebocador grande (G) tem bollard pull igual ou superior a 25 toneladas.
+Rebocador pequeno (p) tem bollard pull inferior a 25 toneladas.
+
+Pergunta: Quantos rebocadores são necessários para atracar carregado um navio
+de 20.000 DWT com cargas perigosas e sem bow thruster?
+Resposta: 2 grandes + 1 pequeno (GGp). São mínimos obrigatórios se LOA > 70 m.
+
+Pergunta: Qual o calado máximo na Barra para um navio de 100.000 DWT com
+destino à Lisnave-Mitrena?
+Resposta: 7,0 metros, com 2 rebocadores de assistência na Barra.
+
+Pergunta: Qual a velocidade máxima do navio quando o rebocador está a estabelecer
+cabo à proa?
+Resposta: 5 nós sobre a água.
+
+Pergunta: O Mestre do rebocador pode recusar estabelecer cabo?
+Resposta: Sim. Se a velocidade do navio exceder os limites definidos, o Mestre
+pode questionar e recusar o estabelecimento do cabo. Em má visibilidade, mesmo
+com solicitação do Piloto da Barra, pode recusar se julgar as condições inseguras.
+
+Pergunta: Quem valida as requisições de manobra relativas a rebocadores?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-016 + PROTOCOLO OPERACIONAL — REBOCADORES
+================================================================================

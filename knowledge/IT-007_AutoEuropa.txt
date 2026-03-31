@@ -1,0 +1,141 @@
+DOCUMENTO: IT-007 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL AUTO-EUROPA
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 17 de janeiro de 2017.
+NOTA: Esta é a revisão mais recente deste documento. A revisão 02 introduziu
+alterações no ponto 2 relativas ao comprimento e calado dos navios, dimensões
+e condicionantes.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal da AUTO-EUROPA, no Porto de Setúbal.
+
+O Terminal AUTO-EUROPA é composto por dois espaços operacionais distintos com
+regras próprias: o Terminal propriamente dito (Cais 10) e a Rampa (Cais 11).
+Cada um tem características, calados e condicionantes de manobra diferentes.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+TERMINAL AUTO-EUROPA — CAIS 10
+================================================================================
+
+O Cais 10 é o cais principal do Terminal AUTO-EUROPA.
+
+Comprimento total do cais: 363 metros.
+
+Calado máximo permitido no Cais 10: 10,0 metros.
+
+Navios com calado superior a 10,0 metros não podem operar no Cais 10 do Terminal
+AUTO-EUROPA.
+
+O documento não impõe condicionantes de maré para o Cais 10, pelo que, na ausência
+de indicação contrária, o calado de 10,0 metros deve ser entendido como operacional
+em qualquer estado de maré.
+
+================================================================================
+RAMPA AUTO-EUROPA — CAIS 11
+================================================================================
+
+O Cais 11 é a rampa do Terminal AUTO-EUROPA. A rampa é uma estrutura inclinada
+que permite a carga e descarga de veículos por rolamento (ro-ro), ou seja, os
+veículos entram e saem do navio pelo próprio eixo, circulando pela rampa.
+
+COMPRIMENTO DE REFERÊNCIA PARA O MÓDULO NAVIO-RAMPA:
+
+O comprimento de referência para o módulo navio-rampa na Cais 11 é de 172 metros.
+Este valor representa o comprimento máximo de referência que um navio deve ter
+para operar com a rampa em condições de segurança. "Módulo navio-rampa" designa
+o conjunto formado pelo navio e a rampa em posição de acoplamento operacional.
+
+CALADO MÁXIMO PERMITIDO NA RAMPA (CAIS 11):
+
+O calado máximo permitido na Rampa (Cais 11) é de 10,0 metros, igual ao do
+Cais 10.
+
+CONDICIONANTES DE MARÉ NA RAMPA (CAIS 11) — REGRA CRÍTICA:
+
+As manobras de atracação na rampa (Cais 11) podem ser realizadas tanto com maré
+enchente como com maré vazante. "Enchente" é a fase em que a maré está a subir.
+"Vazante" é a fase em que a maré está a descer.
+
+No entanto, deve-se evitar as meias-marés vivas para a execução de manobras na
+rampa. "Meias-marés vivas" correspondem ao período intermédio das marés de grande
+amplitude (marés vivas), ou seja, o momento em que a corrente de maré é mais
+intensa, a meio caminho entre a baixa-mar e a preia-mar, ou entre a preia-mar e a
+baixa-mar. Neste período, a força da corrente é máxima e a manobra de atracação
+à rampa torna-se mais difícil e potencialmente perigosa.
+
+Resumindo a regra de maré para o Cais 11:
+  - Permitido: manobrar com enchente (maré a subir).
+  - Permitido: manobrar com vazante (maré a descer).
+  - A evitar: manobrar nas meias-marés vivas (corrente máxima em período de
+    marés de grande amplitude).
+
+CONDICIONANTE ADICIONAL DA RAMPA — CAPACIDADE DO NAVIO:
+
+A execução da manobra na rampa depende ainda da capacidade do navio e do uso ou
+não de rebocadores. Isto significa que a avaliação da viabilidade de uma manobra
+na rampa deve considerar:
+  1. As condições de maré no momento da manobra (evitar meias-marés vivas).
+  2. As características operacionais do próprio navio.
+  3. Se o navio vai utilizar ou não rebocadores de apoio.
+
+CONDICIONANTE DE AMARRAÇÃO NA RAMPA:
+
+A dimensão dos navios que operam na rampa tem em conta a capacidade que estes
+apresentam para se manterem atracados em segurança com um só cabo de lançante
+à boia de amarração. "Cabo de lançante" é um cabo de amarração lançado a uma
+boia posicionada a alguma distância do cais, que serve para segurar a popa ou a
+proa do navio enquanto este está acoplado à rampa. Um navio que não consiga
+manter-se seguro com apenas um cabo de lançante à boia não reúne as condições
+para operar nesta rampa.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento do cais principal do Terminal AUTO-EUROPA?
+Resposta: O Cais 10 (terminal principal) tem 363 metros de comprimento.
+
+Pergunta: Qual o calado máximo no Cais 10 do Terminal AUTO-EUROPA?
+Resposta: 10,0 metros.
+
+Pergunta: Qual o calado máximo na Rampa do Terminal AUTO-EUROPA (Cais 11)?
+Resposta: 10,0 metros.
+
+Pergunta: Qual o comprimento máximo de referência para um navio operar na rampa
+do Terminal AUTO-EUROPA?
+Resposta: 172 metros (comprimento de referência para o módulo navio-rampa).
+
+Pergunta: Em que condições de maré se pode manobrar na rampa do Terminal
+AUTO-EUROPA?
+Resposta: A manobra pode ser feita com enchente ou com vazante. Deve evitar-se
+manobrar nas meias-marés vivas, pois a corrente é mais intensa e torna a
+atracação à rampa mais difícil.
+
+Pergunta: É sempre possível atracar na rampa do Terminal AUTO-EUROPA?
+Resposta: Não. Depende das condições de maré (evitar meias-marés vivas), da
+capacidade do navio e do uso ou não de rebocadores. O navio deve ainda ser capaz
+de se manter atracado em segurança com um só cabo de lançante à boia de amarração.
+
+Pergunta: O Terminal AUTO-EUROPA tem cais para ro-ro?
+Resposta: Sim. O Cais 11 é a rampa ro-ro do Terminal AUTO-EUROPA, com comprimento
+de referência de 172 metros e calado máximo de 10,0 metros.
+
+Pergunta: Quem valida as requisições de manobra no Terminal AUTO-EUROPA?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-007 — TERMINAL AUTO-EUROPA
+================================================================================

@@ -110,6 +110,52 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(finalized["missing_fields"], [])
 
+    def test_create_port_call_with_past_eta_is_rejected(self) -> None:
+        with app.app.test_request_context("/"):
+            session["role"] = "agente"
+            with self.assertRaisesRegex(ValueError, "ETA não pode ser anterior à data/hora presente"):
+                app.execute_pending_operational_action(
+                    {
+                        "action": "create_port_call",
+                        "fields": {
+                            "vessel_name": "MV SETUBAL PIONEER",
+                            "eta_local": "02/04/2025, 06:30",
+                            "berth": "Cais 3 – Terminal Multipurpose",
+                            "last_port": "Sines (PT)",
+                            "next_port": "Leixões (PT)",
+                            "vessel_imo": "9876543",
+                            "vessel_call_sign": "CQAB7",
+                            "vessel_flag": "Portugal",
+                            "vessel_type": "General Cargo",
+                            "vessel_loa_m": "142.50",
+                            "vessel_beam_m": "21.80",
+                            "vessel_gt_t": "8950",
+                            "vessel_dwt_t": "12400",
+                            "vessel_max_draft_m": "7.20",
+                            "notes": "Carga geral paletizada.",
+                        },
+                    },
+                    username="admin",
+                    role="agente",
+                )
+
+    def test_edit_port_call_with_explicit_past_eta_is_rejected(self) -> None:
+        port_call = self._create_entry(eta="2026-04-02T05:30:00+00:00", notes="Teste")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            with self.assertRaisesRegex(ValueError, "ETA não pode ser anterior à data/hora presente"):
+                app.execute_pending_operational_action(
+                    {
+                        "action": "edit_port_call",
+                        "port_call_id": port_call["id"],
+                        "target": {"reference_code": port_call["reference_code"]},
+                        "fields": {"eta_local": "02/04/2025, 06:30"},
+                    },
+                    username="admin",
+                    role="admin",
+                )
+
     def test_entry_report_accepts_scale_reference_passed_in_id_field(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         self.store.approve_port_call(port_call["id"], decided_by="admin")
@@ -459,7 +505,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["pending_action"]["proposal"]["action"], "approve_entry")
         self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
 
-    def test_piloto_edit_plan_follow_up_preserves_new_notes_and_constraints(self) -> None:
+    def test_piloto_edit_plan_via_chat_is_rejected(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         self._move_port_call_in_port(port_call["id"])
         self.store.create_user(
@@ -506,39 +552,10 @@ class OperationalFlowTests(unittest.TestCase):
                 },
             )
 
-            self.assertEqual(response.status_code, 200)
-            payload = response.get_json()
-            self.assertEqual(payload["answer_origin"], "slash_proposal")
-            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], ["motivo da alteração"])
-
-            response = client.post(
-                "/api/chat",
-                json={
-                    "conversation_id": conversation["id"],
-                    "question": "Motivo da alteração: janela operacional",
-                },
-            )
-
-            self.assertEqual(response.status_code, 200)
-            payload = response.get_json()
-            self.assertEqual(payload["answer_origin"], "operational_update")
-            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
-            self.assertEqual(payload["pending_action"]["proposal"]["fields"]["notes"], "Aguarda rebocador")
-            self.assertEqual(payload["pending_action"]["proposal"]["fields"]["constraints"], ["daylight"])
-
-            response = client.post(
-                "/api/chat/pending-action/confirm",
-                json={"conversation_id": conversation["id"]},
-            )
-
         self.assertEqual(response.status_code, 200)
-        updated = self.store.get_port_call(port_call["id"])
-        shift = next(item for item in updated["maneuver_history"] if item["type"] == "shift")
-        self.assertEqual(shift["plan_observations"], "Aguarda rebocador")
-        self.assertEqual(shift["constraints"], ["daylight"])
-        self.assertEqual(shift["planned_draft_m"], "9,94")
-        self.assertEqual(shift["tug_count"], "2")
-        self.assertEqual(shift["change_log"][-1]["reason"], "janela operacional")
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_rejected")
+        self.assertIn("não está autorizada", payload["answer"].lower())
 
     def test_abort_shift_via_chat_allows_approved_maneuver_after_planned_time_and_keeps_berth(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")

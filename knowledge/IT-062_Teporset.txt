@@ -1,0 +1,111 @@
+DOCUMENTO: IT-062 — CAIS DA TEPORSET
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 00, datada de 30 de março de 2023.
+NOTA: Este é o documento mais recente do conjunto de instruções de trabalho da
+pilotagem do Porto de Setúbal. É a primeira e única versão existente até à data.
+Elaborado por António Gomes e verificado por Joana Coelho.
+LEVANTAMENTOS HIDROGRÁFICOS DE REFERÊNCIA:
+  IH — Levantamento Hidrográfico de julho de 2022.
+  IH — Levantamento Hidrográfico de outubro de 2022.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal TEPORSET, no Porto de Setúbal.
+
+A TEPORSET (Terminal Portuário de Setúbal) é uma instalação portuária do Porto
+de Setúbal. O levantamento hidrográfico de referência é recente (2022), o que
+confere a este documento maior atualidade batimétrica em comparação com outros
+terminais cujos levantamentos datam de 2008 a 2017.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador valida as requisições de manobra. O Piloto nomeado executa
+a manobra em conformidade com estas regras.
+
+================================================================================
+DIMENSÕES DO CAIS DA TEPORSET
+================================================================================
+
+Comprimento físico do cais: 164 metros.
+
+Comprimento máximo de referência de navio: 200 metros.
+  O navio pode ter até 200 metros de LOA (comprimento total), excedendo o
+  comprimento físico do cais de 164 metros, com a proa ou popa a saliente.
+
+================================================================================
+CALADO MÁXIMO — FÓRMULA BASEADA NA ALTURA DA PREIA-MAR
+================================================================================
+
+O calado máximo no Cais da TEPORSET é calculado pela seguinte fórmula:
+
+  Calado máximo = 7,4 metros + altura da preia-mar do dia
+
+O resultado está limitado a um máximo absoluto de 11,0 metros.
+
+DISTINÇÃO IMPORTANTE — "ALTURA DA PREIA-MAR" vs "ALTURA DE ÁGUA":
+  Neste terminal, a fórmula usa a "altura do preia-mar" (o valor da preia-mar
+  prevista para o dia, lido nas tabelas de marés), e não a "altura de água no
+  momento" (o nível instantâneo da maré). Isto significa que a manobra é
+  planeada com base no valor máximo que a maré vai atingir no dia, e o navio
+  deve efetuar a sua atracação próximo da hora da preia-mar para que o calado
+  calculado pela fórmula seja efectivamente praticável.
+
+  Comparação com outros terminais:
+    — Tanquisado (IT-010): usa "altura de água no momento" (valor instantâneo).
+    — Termitrena (IT-011): usa "altura da baixa-mar de referência" (valor mínimo
+      esperado durante a permanência).
+    — TEPORSET (IT-062): usa "altura do preia-mar" (valor máximo previsto no dia).
+  Cada terminal tem lógica própria — não devem ser confundidas.
+
+Exemplos de aplicação:
+  — Preia-mar de 0,5 m: calado máximo = 7,4 + 0,5 = 7,9 metros.
+  — Preia-mar de 1,0 m: calado máximo = 7,4 + 1,0 = 8,4 metros.
+  — Preia-mar de 2,0 m: calado máximo = 7,4 + 2,0 = 9,4 metros.
+  — Preia-mar de 3,0 m: calado máximo = 7,4 + 3,0 = 10,4 metros.
+  — Preia-mar de 3,6 m: calado máximo = 7,4 + 3,6 = 11,0 metros (teto atingido).
+  — Preia-mar de 4,0 m: resultado seria 11,4 m, mas o teto é 11,0 m.
+
+CALADO MÍNIMO GARANTIDO:
+  Com preia-mar próxima do Zero Hidrográfico (0,0 m), o calado praticável é
+  de 7,4 metros. Este é o calado mínimo base do terminal.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento do Cais da TEPORSET?
+Resposta: 164 metros de comprimento físico.
+
+Pergunta: Qual o comprimento máximo de navio no Cais da TEPORSET?
+Resposta: 200 metros (comprimento máximo de referência).
+
+Pergunta: Qual o calado máximo absoluto no Cais da TEPORSET?
+Resposta: 11,0 metros.
+
+Pergunta: Como se calcula o calado máximo na TEPORSET?
+Resposta: Somam-se 7,4 metros à altura da preia-mar prevista para o dia, com
+teto de 11,0 metros. Por exemplo, com preia-mar de 2,5 m: calado máximo =
+7,4 + 2,5 = 9,9 metros.
+
+Pergunta: Um navio com 10,0 m de calado pode operar na TEPORSET?
+Resposta: Sim, desde que a preia-mar do dia seja igual ou superior a 2,6 m
+(7,4 + 2,6 = 10,0 m).
+
+Pergunta: Qual o calado mínimo praticável na TEPORSET independentemente da maré?
+Resposta: 7,4 metros (correspondente a preia-mar ao nível do Zero Hidrográfico).
+
+Pergunta: Quando foi feito o levantamento hidrográfico de referência da TEPORSET?
+Resposta: Foram feitos dois levantamentos pelo Instituto Hidrográfico (IH):
+um em julho de 2022 e outro em outubro de 2022.
+
+Pergunta: Quem valida as requisições de manobra no Cais da TEPORSET?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-062 — CAIS DA TEPORSET
+================================================================================

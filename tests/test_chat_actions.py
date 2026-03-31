@@ -1,8 +1,10 @@
 import unittest
+from datetime import datetime
 
 from domain.chat_actions import (
     action_for_maneuver_type,
     build_action_reply_template,
+    build_operational_action_prompt,
     build_port_call_reply_template,
     build_slash_help,
     canonicalize_action_name,
@@ -19,6 +21,7 @@ from domain.chat_actions import (
     parse_slash_command,
     resolve_maneuver,
     resolve_port_call,
+    summarize_port_calls,
     visible_port_calls_from_activity,
 )
 
@@ -74,6 +77,38 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["proposal"]["fields"]["next_port"], "Barcelona")
         self.assertNotIn("destination", parsed["proposal"]["fields"])
 
+    def test_parse_slash_register_scale_preserves_unicode_and_thousands(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-escala\n"
+            "Nome do navio: MV SETUBAL PIONEER\n"
+            "ETA de chegada: 02/04/2025, 06:30\n"
+            "Cais previsto: Cais 3 – Terminal Multipurpose\n"
+            "Último porto: Sines (PT)\n"
+            "Próximo destino: Leixões (PT)\n"
+            "IMO: 9876543\n"
+            "Indicativo: CQAB7\n"
+            "Bandeira: Portugal\n"
+            "Tipo de navio: General Cargo\n"
+            "LOA (m): 142.50\n"
+            "Boca (m): 21.80\n"
+            "GT (t): 8 950\n"
+            "DWT (t): 12 400\n"
+            "Calado máximo (m): 7.20\n"
+            "Observações: Carga geral paletizada. Requer grua de cais. Tripulação de 18 pessoas. Agente: Portline Transportes Marítimos.\n",
+            "agente",
+        )
+
+        fields = parsed["proposal"]["fields"]
+        self.assertEqual(fields["berth"], "Cais 3 – Terminal Multipurpose")
+        self.assertEqual(fields["last_port"], "Sines (PT)")
+        self.assertEqual(fields["next_port"], "Leixões (PT)")
+        self.assertEqual(fields["vessel_imo"], "9876543")
+        self.assertEqual(fields["vessel_call_sign"], "CQAB7")
+        self.assertEqual(fields["vessel_flag"], "Portugal")
+        self.assertEqual(fields["vessel_type"], "General Cargo")
+        self.assertEqual(fields["vessel_gt_t"], "8950")
+        self.assertEqual(fields["vessel_dwt_t"], "12400")
+
     def test_parse_slash_create_maneuver_template_does_not_request_maneuver_id(self) -> None:
         parsed = parse_slash_command("/criar-manobra", "agente")
 
@@ -100,14 +135,14 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "template")
         self.assertIn("Motivo da alteração", parsed["answer"])
 
-    def test_parse_slash_edit_maneuver_is_allowed_for_piloto(self) -> None:
+    def test_parse_slash_edit_maneuver_is_rejected_for_piloto(self) -> None:
         parsed = parse_slash_command(
             "/editar-manobra Ref: BF757B7F Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00 Motivo da alteração: ajuste operacional",
             "piloto",
         )
 
-        self.assertEqual(parsed["intent"], "action")
-        self.assertEqual(parsed["proposal"]["action"], "edit_maneuver_plan")
+        self.assertEqual(parsed["intent"], "unsupported")
+        self.assertIn("não está autorizada", parsed["answer"].lower())
 
     def test_parse_slash_edit_report_template_mentions_change_reason(self) -> None:
         parsed = parse_slash_command("/editar-registo-manobra", "admin")
@@ -145,6 +180,22 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "action")
         self.assertEqual(parsed["proposal"]["action"], "approve_entry")
         self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
+
+    def test_parse_slash_delete_scale_accepts_ref_only_for_agente(self) -> None:
+        parsed = parse_slash_command("/apagar-escala Ref: PTSET26OCEA123456", "agente")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "delete_port_call")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "PTSET26OCEA123456")
+        self.assertEqual(parsed["proposal"]["missing_fields"], [])
+
+    def test_parse_slash_delete_maneuver_accepts_id_only(self) -> None:
+        parsed = parse_slash_command("/apagar-manobra ID da manobra: 7f3c2a91", "admin")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "delete_maneuver")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
+        self.assertEqual(parsed["proposal"]["missing_fields"], [])
 
     def test_parse_slash_register_report_accepts_positional_target_with_multiline_fields(self) -> None:
         parsed = parse_slash_command(
@@ -213,13 +264,13 @@ class ChatActionsTests(unittest.TestCase):
         help_text = build_slash_help("agente")
 
         self.assertIn("/registar-escala", help_text)
-        self.assertNotIn("/apagar-escala", help_text)
+        self.assertIn("/apagar-escala", help_text)
         self.assertIn("ID da manobra é automático", help_text)
 
-    def test_build_slash_help_for_piloto_mentions_edit_maneuver(self) -> None:
+    def test_build_slash_help_for_piloto_hides_edit_maneuver(self) -> None:
         help_text = build_slash_help("piloto")
 
-        self.assertIn("/editar-manobra", help_text)
+        self.assertNotIn("/editar-manobra", help_text)
         self.assertNotIn("/criar-manobra", help_text)
 
     def test_build_action_reply_template_for_report_mentions_id_and_ref_plus_type(self) -> None:
@@ -234,6 +285,19 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertIn("ID da manobra", template)
         self.assertIn("Motivo: ", template)
+
+    def test_build_action_reply_template_for_delete_scale_only_requires_ref(self) -> None:
+        template = build_action_reply_template("delete_port_call")
+
+        self.assertIn("Ref: ", template)
+        self.assertNotIn("ID da manobra", template)
+
+    def test_build_action_reply_template_for_delete_maneuver_prefers_id_only(self) -> None:
+        template = build_action_reply_template("delete_maneuver")
+
+        self.assertIn("ID da manobra", template)
+        self.assertNotIn("Tipo de manobra", template)
+        self.assertNotIn("Ref: ", template)
 
     def test_parse_slash_edit_scale_with_maneuver_payload_redirects_to_correct_command(self) -> None:
         parsed = parse_slash_command(
@@ -820,6 +884,37 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(action_for_maneuver_type("approve_shift", "entry"), "approve_entry")
         self.assertEqual(action_for_maneuver_type("abort_departure", "shift"), "abort_shift")
         self.assertEqual(action_for_maneuver_type("shift_report", "entry"), "entry_report")
+
+    def test_summarize_port_calls_marks_fundeadouro_as_quadro(self) -> None:
+        summary = summarize_port_calls(
+            [
+                {
+                    "reference_code": "SET-001",
+                    "vessel_name": "QUADRO NORTE",
+                    "status": "in_port",
+                    "berth_label": "Fundeadouro Norte",
+                    "eta_label": "--",
+                    "ata_label": "31/03/2026, 09:10",
+                    "departure_label": "--",
+                }
+            ]
+        )
+
+        self.assertIn("em quadro", summary)
+
+    def test_build_operational_action_prompt_mentions_slot_logic_and_demo_rule(self) -> None:
+        prompt = build_operational_action_prompt(
+            question="O navio cabe no cais?",
+            role="admin",
+            now_local=datetime(2026, 3, 31, 10, 0),
+            port_calls=[],
+            berth_options=["TMS 2", "Fundeadouro Norte"],
+            constraint_options=[],
+        )
+
+        self.assertIn("slots de cais", prompt)
+        self.assertIn("Fundeadouro Norte e Fundeadouro Sul / Tróia", prompt)
+        self.assertIn("não rejeites uma atribuição de cais", prompt)
 
 
 if __name__ == "__main__":

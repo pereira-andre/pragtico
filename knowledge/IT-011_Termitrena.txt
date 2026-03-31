@@ -1,0 +1,181 @@
+DOCUMENTO: IT-011 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL TERMITRENA (EX-EUROMINAS)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 06, datada de 15 de fevereiro de 2017.
+NOTA HISTÓRICA: Este terminal foi anteriormente designado EUROMINAS. A partir da
+revisão 02 (março de 2011) passou a designar-se TERMITRENA. Qualquer referência
+a "Eurominas" no contexto operacional do Porto de Setúbal deve ser entendida como
+referente ao mesmo terminal, agora denominado TERMITRENA.
+LEVANTAMENTO HIDROGRÁFICO DE REFERÊNCIA: 19 de janeiro de 2017.
+ANÁLISE DE REFERÊNCIA: Realizada para um navio com LOA de 200 metros, acostado
+às defensas a cerca de 1 metro da linha de cais.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal da TERMITRENA, no Porto de Setúbal.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+DIMENSÕES DO CAIS DA TERMITRENA
+================================================================================
+
+Comprimento físico do cais: 154 metros.
+
+Comprimento máximo de navio permitido: 200 metros.
+  O navio pode ter até 200 metros de LOA (comprimento total), excedendo o
+  comprimento físico do cais, pois parte da proa ou da popa fica saliente
+  além da estrutura do cais. A análise de referência foi efetuada para um
+  navio de LOA de 200 metros acostado às defensas a cerca de 1 metro da
+  linha de cais.
+
+================================================================================
+CALADO DE REFERÊNCIA — FÓRMULA E CONCEITO
+================================================================================
+
+O calado de referência na TERMITRENA é calculado pela seguinte fórmula:
+
+  Calado máximo = 8,8 metros + altura da baixa-mar de referência
+
+O resultado máximo possível é limitado a 10,0 metros, que é o calado máximo
+absoluto do terminal. Nunca pode exceder 10,0 m independentemente do valor
+da baixa-mar.
+
+ATENÇÃO — O que é a "altura da baixa-mar de referência":
+  Nesta fórmula, o valor a somar a 8,8 m não é a altura atual da maré nem a
+  altura de preia-mar. É a altura da baixa-mar de referência, ou seja, o nível
+  mínimo de maré (baixa-mar) que se espera que ocorra durante a permanência do
+  navio atracado, medido acima do Zero Hidrográfico (ZH).
+
+  O ZH é o nível de referência das cartas náuticas, equivalente aproximadamente
+  à maré mais baixa possível. A altura da baixa-mar é sempre igual ou superior
+  a zero, pois o ZH é o nível mínimo de referência.
+
+Exemplos de aplicação da fórmula:
+  — Se a baixa-mar de referência tiver altura de 0,0 m (baixa-mar ao ZH):
+    calado máximo = 8,8 + 0,0 = 8,8 m.
+  — Se a baixa-mar de referência tiver altura de 0,5 m:
+    calado máximo = 8,8 + 0,5 = 9,3 m.
+  — Se a baixa-mar de referência tiver altura de 1,2 m:
+    calado máximo = 8,8 + 1,2 = 10,0 m.
+  — Se a baixa-mar de referência tiver altura de 2,0 m:
+    resultado seria 8,8 + 2,0 = 10,8 m, mas o teto é 10,0 m,
+    portanto o calado máximo praticável é 10,0 m.
+
+================================================================================
+DEFINIÇÃO DE "BAIXA-MAR DE REFERÊNCIA" — DOIS CASOS DISTINTOS
+================================================================================
+
+A "baixa-mar de referência" não é sempre a mesma baixa-mar. O documento define
+dois casos distintos consoante a situação operacional do navio:
+
+CASO 1 — NAVIO JÁ ATRACADO E A CARREGAR (NAVIO EM CARGA NO CAIS):
+
+  A baixa-mar de referência é aquela que antecede a preia-mar para a qual
+  existe a certeza de largada do cais.
+
+  Explicação: um navio que está a carregar vai ficar atracado durante várias
+  marés. A baixa-mar crítica é a que ocorre imediatamente antes da preia-mar
+  em que o navio tem certeza de partir. É nessa baixa-mar que o navio estará
+  com o maior calado (carregado) e a maré estará no seu ponto mais baixo
+  durante a operação. Se o calado do navio nesse momento satisfizer a fórmula,
+  a permanência é segura.
+
+  Exemplo: se um navio vai partir na segunda preia-mar de amanhã, a baixa-mar
+  de referência é a que ocorre entre a primeira e a segunda preia-mar de amanhã,
+  imediatamente antes da partida.
+
+CASO 2 — NAVIO DE CHEGADA COM CARGA (NAVIO QUE CHEGA PARA DESCARREGAR):
+
+  A baixa-mar de referência é aquela imediatamente após a preia-mar de
+  atracação, ou as baixas-mares seguintes caso o navio não inicie a descarga
+  em tempo.
+
+  Explicação: um navio que chega carregado vai estar com o seu calado máximo
+  logo após a atracação. A baixa-mar crítica é a que ocorre a seguir à
+  preia-mar em que o navio atracou, pois será a primeira vez que a maré
+  descer com o navio ainda carregado. Se o navio não iniciar a descarga
+  atempadamente, as baixas-mares seguintes (com o navio ainda pesado) também
+  devem ser verificadas. O piloto deve assegurar que o calado de chegada é
+  compatível com a baixa-mar que se seguirá imediatamente à atracação.
+
+RESUMO DA DIFERENÇA ENTRE OS DOIS CASOS:
+  Navio a carregar: a baixa-mar crítica é a anterior à partida (navio pesado
+  prestes a partir).
+  Navio a descarregar: a baixa-mar crítica é a posterior à chegada (navio
+  pesado recém-chegado).
+
+================================================================================
+CONDICIONANTE DE AMARRAÇÃO — ALTURA DE ÁGUA RECOMENDADA PARA ATRACAÇÃO
+================================================================================
+
+Devido à dificuldade em proceder à amarração dos cabos lançantes exteriores ao
+terminal pela lancha e pelo pessoal de cabos, deve-se procurar atracar com
+uma elevação de água de cerca de 2 metros acima do Zero Hidrográfico.
+
+"Cabos lançantes exteriores" são os cabos de amarração que são levados por uma
+lancha desde o navio até a boias ou pontos de amarração situados fora do cais
+principal, para prender a proa ou a popa do navio. Esta operação é realizada
+por pessoal especializado e pela lancha do porto.
+
+"Elevação de água de cerca de 2 metros acima do ZH" significa que, no momento
+da atracação, a altura da maré deve ser aproximadamente igual ou superior a
+2,0 metros acima do Zero Hidrográfico. Este nível de água facilita as operações
+de lançamento e amarração dos cabos exteriores.
+
+Esta é uma recomendação operacional, não uma proibição absoluta, mas deve ser
+considerada na programação da hora de atracação.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento físico do Cais da TERMITRENA?
+Resposta: 154 metros.
+
+Pergunta: Qual o comprimento máximo de navio permitido na TERMITRENA?
+Resposta: 200 metros de LOA.
+
+Pergunta: Qual o calado máximo absoluto na TERMITRENA?
+Resposta: 10,0 metros. Nunca pode ser excedido.
+
+Pergunta: Como se calcula o calado máximo na TERMITRENA?
+Resposta: Somar 8,8 metros à altura da baixa-mar de referência, com teto
+de 10,0 metros. Por exemplo, com baixa-mar de 0,8 m: calado máximo =
+8,8 + 0,8 = 9,6 m.
+
+Pergunta: O que é a baixa-mar de referência para um navio que chega a descarregar?
+Resposta: É a baixa-mar imediatamente após a preia-mar de atracação, ou as
+seguintes se o navio não iniciar a descarga em tempo. É a primeira vez que a
+maré vai descer com o navio ainda com carga, o que determina se o calado de
+chegada é seguro.
+
+Pergunta: O que é a baixa-mar de referência para um navio que está a carregar?
+Resposta: É a baixa-mar que antecede a preia-mar para a qual existe a certeza
+de largada do cais. É o ponto mais crítico: navio pesado + maré mais baixa
+antes de partir.
+
+Pergunta: A que altura de água se deve tentar atracar na TERMITRENA?
+Resposta: Cerca de 2 metros acima do Zero Hidrográfico, para facilitar a
+amarração dos cabos lançantes exteriores pela lancha e pessoal de cabos.
+
+Pergunta: O Terminal TERMITRENA e o Terminal Eurominas são o mesmo?
+Resposta: Sim. O terminal anteriormente designado Eurominas passou a chamar-se
+TERMITRENA a partir de março de 2011. Trata-se da mesma instalação.
+
+Pergunta: Quem valida as requisições de manobra na TERMITRENA?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-011 — TERMINAL TERMITRENA (EX-EUROMINAS)
+================================================================================

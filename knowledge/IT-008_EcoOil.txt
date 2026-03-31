@@ -1,0 +1,225 @@
+DOCUMENTO: IT-008 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL ECO-OIL (ECOIL)
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 29 de julho de 2015.
+NOTA: A revisão 02 acrescentou um novo ponto relativo às características das
+defensas, com especial atenção aos navios de bordo livre baixo e frágil, e
+atualizou a data do levantamento hidrográfico.
+LEVANTAMENTO HIDROGRÁFICO DE REFERÊNCIA: Janeiro de 2015.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento descreve as regras que se aplicam ao estacionamento e à execução
+das manobras no Terminal da ECO-OIL, no Porto de Setúbal.
+
+O terminal designado neste documento é o Terminal da ECOIL — Tanquisado Nascente.
+"Tanquisado" designa uma instalação com tanques para armazenamento de produtos
+líquidos a granel, nomeadamente produtos petrolíferos. "Nascente" indica a
+orientação geográfica do terminal dentro do complexo.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+O Piloto Coordenador é responsável por validar as requisições de manobra de acordo
+com as regras descritas neste documento.
+
+O Piloto nomeado para a manobra é responsável por cumprir essas regras durante a
+execução do ato de pilotagem.
+
+================================================================================
+REGRA GERAL DE MARÉ — EXECUÇÃO DAS MANOBRAS
+================================================================================
+
+No Terminal ECO-OIL, as manobras são executadas próximo dos repontos de maré.
+"Reponto de maré" é o momento em que a maré muda de sentido: o instante em que
+a maré atinge a preia-mar (máximo) ou a baixa-mar (mínimo) e a corrente de maré
+é praticamente nula. Manobrar próximo do reponto significa aproveitar o período
+de menor corrente, o que facilita a aproximação e a atracação em segurança.
+
+Esta é uma regra estrutural do terminal: ao contrário de outros terminais onde
+se pode manobrar livremente com enchente ou vazante, no ECO-OIL a manobra deve
+ser planeada para coincidir com os momentos de reponto.
+
+================================================================================
+CALADOS NO TERMINAL ECO-OIL
+================================================================================
+
+Os calados neste terminal variam consoante o estado da maré, ao contrário de
+terminais com calados operacionais fixos. Existem três valores de calado a
+considerar:
+
+Calado máximo absoluto para navios estacionados ao cais: 7,5 metros.
+  — Este é o calado máximo que um navio pode ter enquanto se encontra atracado
+    e estacionado ao cais, independentemente do estado de maré. Nenhum navio
+    com calado superior a 7,5 metros pode operar neste terminal.
+
+Calado máximo permitido na preia-mar: 7,0 metros.
+  — Na preia-mar (momento de maré alta, quando o nível da água está no máximo),
+    o calado máximo admissível para a realização de manobras é de 7,0 metros.
+  — Navios com calado entre 7,0 metros e 7,5 metros só podem estar estacionados,
+    não sendo o calado de 7,5 m praticável para manobra de atracação, apenas
+    para permanência.
+
+Calado máximo permitido na baixa-mar: 5,5 metros.
+  — Na baixa-mar (momento de maré baixa, quando o nível da água está no mínimo),
+    o calado máximo admissível para a realização de manobras é de 5,5 metros.
+  — Navios com calado superior a 5,5 metros não podem manobrar em baixa-mar
+    neste terminal.
+
+================================================================================
+ALTURA DA LANÇA DA GRUA
+================================================================================
+
+A altura da lança da grua instalada no Terminal ECO-OIL é de 55 metros. Este
+valor é relevante para avaliar a compatibilidade de operação com navios de grande
+altura de mastros ou superestrutura. O piloto deve verificar se a altura das
+estruturas do navio é compatível com a lança da grua durante a atracação e
+durante a permanência ao cais.
+
+================================================================================
+REGRAS DE ATRACAÇÃO — POR PERÍODO DO DIA E ESTADO DE MARÉ
+================================================================================
+
+ATRACAÇÃO DIURNA (período de dia):
+
+  Atracação na preia-mar, durante o dia:
+    — Permitida para todos os navios, sem restrição de comprimento.
+
+  Atracação na baixa-mar, durante o dia:
+    — Permitida para navios com comprimento até 250 metros.
+    — Exceção: navios com comprimento até 255 metros podem atracar em baixa-mar
+      diurna desde que a altura da baixa-mar seja igual ou superior a 0,9 metros.
+      "Altura da baixa-mar" (BM) refere-se ao valor da cota da baixa-mar no dia
+      em questão, consultável nas tabelas de marés. Se BM for menor que 0,9 m,
+      o limite de 250 metros é absoluto.
+
+ATRACAÇÃO NOTURNA (período de noite):
+
+  — Não há manobra de atracação durante a noite no Terminal ECO-OIL.
+  — Independentemente do estado de maré, nenhum navio pode realizar atracação
+    neste terminal durante o período noturno.
+
+================================================================================
+REGRAS DE DESATRACAÇÃO — POR PERÍODO DO DIA E ESTADO DE MARÉ
+================================================================================
+
+DESATRACAÇÃO DIURNA (período de dia):
+
+  Desatracação na preia-mar, durante o dia:
+    — Permitida para todos os navios, sem restrição de comprimento.
+
+  Desatracação na baixa-mar, durante o dia:
+    — Permitida para navios com comprimento até 250 metros.
+    — Exceção: navios com comprimento até 255 metros podem desatracar em baixa-mar
+      diurna desde que a altura da baixa-mar seja igual ou superior a 0,9 metros.
+      Se BM for menor que 0,9 m, o limite de 250 metros é absoluto.
+
+DESATRACAÇÃO NOTURNA (período de noite):
+
+  Desatracação na preia-mar, durante a noite:
+    — Permitida para navios com comprimento até 255 metros.
+    — Nota: este é o único caso em que uma manobra noturna é permitida no ECO-OIL,
+      e apenas para desatracação (não para atracação), e apenas na preia-mar.
+
+  Desatracação na baixa-mar, durante a noite:
+    — Não há manobras de desatracação em baixa-mar noturna.
+
+================================================================================
+QUADRO RESUMO DAS PERMISSÕES DE MANOBRA
+================================================================================
+
+Este quadro resume de forma estruturada todas as combinações permitidas e
+proibidas de manobra no Terminal ECO-OIL.
+
+ATRACAÇÃO:
+  Dia + Preia-mar:    Permitida para todos os navios (sem limite de comprimento).
+  Dia + Baixa-mar:    Permitida até 250 m. Permitida até 255 m se BM >= 0,9 m.
+  Noite + qualquer:   Proibida. Não há atracação noturna.
+
+DESATRACAÇÃO:
+  Dia + Preia-mar:    Permitida para todos os navios (sem limite de comprimento).
+  Dia + Baixa-mar:    Permitida até 250 m. Permitida até 255 m se BM >= 0,9 m.
+  Noite + Preia-mar:  Permitida até 255 m.
+  Noite + Baixa-mar:  Proibida. Não há desatracação em baixa-mar noturna.
+
+================================================================================
+AVISO ESPECIAL — DEFENSAS E NAVIOS DE BORDO LIVRE BAIXO E FRÁGIL
+================================================================================
+
+"Defensa" é o elemento de proteção (geralmente borracha ou material compressível)
+instalado no cais para amortecer o impacto do navio durante a atracação e proteger
+tanto o casco como a estrutura do cais.
+
+No Terminal ECO-OIL, as características das defensas instaladas exigem especial
+atenção quando o navio em causa tem bordo livre baixo ou bordo frágil.
+
+"Bordo livre" é a distância entre a linha de flutuação (superfície da água) e o
+convés do navio. Um navio com bordo livre baixo tem o convés muito próximo da
+superfície da água, o que significa que a borda do navio pode ficar ao nível ou
+abaixo do topo das defensas do cais.
+
+Dois riscos específicos identificados neste terminal:
+
+  Risco 1 — Durante a atracação:
+    Um navio de bordo livre baixo pode fazer avarias ao atracar, pois a borda
+    do navio pode colidir com o topo das defensas em vez de as comprimir
+    lateralmente como previsto.
+
+  Risco 2 — Durante o estacionamento:
+    Quando um navio com bordo livre baixo está estacionado, a borda do casco
+    pode ficar por baixo das defensas. Nessa posição, se houver variação de
+    maré ou movimento do navio, pode ocorrer engate ou dano na estrutura do
+    navio ou nas defensas.
+
+O piloto deve avaliar o bordo livre do navio antes da manobra e adotar
+precauções adicionais sempre que se trate de um navio de bordo livre baixo
+ou com estrutura de bordo frágil.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Quando se executam as manobras no Terminal ECO-OIL?
+Resposta: Próximo dos repontos de maré, ou seja, no momento em que a maré
+muda de sentido e a corrente é mínima.
+
+Pergunta: Qual o calado máximo absoluto para estacionamento no ECO-OIL?
+Resposta: 7,5 metros. Nenhum navio com calado superior pode operar neste terminal.
+
+Pergunta: Qual o calado máximo para manobrar na preia-mar no ECO-OIL?
+Resposta: 7,0 metros.
+
+Pergunta: Qual o calado máximo para manobrar na baixa-mar no ECO-OIL?
+Resposta: 5,5 metros.
+
+Pergunta: Pode um navio de 260 metros atracar no ECO-OIL?
+Resposta: Não. O comprimento máximo absoluto para atracação e desatracação no
+ECO-OIL é de 255 metros, e apenas em condições específicas (baixa-mar com
+BM >= 0,9 m, ou preia-mar noturna para desatracação). Para atracação sem
+restrições, o limite é 250 metros em baixa-mar diurna ou sem limite na
+preia-mar diurna.
+
+Pergunta: É possível atracar de noite no ECO-OIL?
+Resposta: Não. A atracação noturna está proibida em qualquer condição.
+
+Pergunta: É possível desatracar de noite no ECO-OIL?
+Resposta: Sim, mas apenas na preia-mar e para navios com comprimento até
+255 metros. Na baixa-mar noturna não há desatracação.
+
+Pergunta: Qual a altura da lança da grua no ECO-OIL?
+Resposta: 55 metros.
+
+Pergunta: O que é necessário verificar num navio com bordo livre baixo antes
+de manobrar no ECO-OIL?
+Resposta: Verificar se a borda do navio ficará ao nível ou abaixo das defensas
+durante a atracação ou o estacionamento, pois as características das defensas
+do terminal podem causar avarias em navios de bordo livre baixo ou frágil.
+
+Pergunta: Quem valida as requisições de manobra no Terminal ECO-OIL?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-008 — TERMINAL ECO-OIL
+================================================================================

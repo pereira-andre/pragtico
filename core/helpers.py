@@ -6,12 +6,13 @@ import os
 import re
 import threading
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import flash, jsonify, redirect, request, session, url_for
 
 from core import services
+from domain.berth_layout import build_slot_occupancy, is_anchorage_berth
 from domain.chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
@@ -51,6 +52,7 @@ from domain.cost_engine import (
 )
 from domain.migration_service import get_database_runtime_status
 from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
+from core.validators import validate_not_past_datetime
 from storage import (
     PASSWORD_HASH_METHOD,
     format_constraint_labels,
@@ -204,25 +206,9 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         if item.get("port_call_id")
     )
 
-    berthed_map = {}
-    for item in in_port:
-        berthed_map.setdefault(item.get("berth_label") or "Sem cais atribuído", []).append(item)
-
-    _berth_order = {name: idx for idx, name in enumerate(services.BERTH_OPTIONS)}
-
-    def _berth_sort_key(pair):
-        berth_name = pair[0]
-        if berth_name in _berth_order:
-            return _berth_order[berth_name]
-        for option_name, order in _berth_order.items():
-            if option_name in berth_name or berth_name in option_name:
-                return order
-        return 9999
-
-    berthed = [
-        {"berth": berth, "count": len(vessels), "vessels": vessels}
-        for berth, vessels in sorted(berthed_map.items(), key=_berth_sort_key)
-    ]
+    slot_occupancy = build_slot_occupancy(in_port, berth_options=services.BERTH_OPTIONS)
+    berthed = slot_occupancy["berthed"]
+    anchorages = slot_occupancy["anchorages"]
 
     planned_groups_map = {}
     for item in planned_maneuvers:
@@ -241,6 +227,7 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         "arrivals": arrivals,
         "in_port": in_port,
         "berthed": berthed,
+        "anchorages": anchorages,
         "departed": departed,
         "aborted": aborted,
         "planned_maneuvers": planned_maneuvers,
@@ -257,8 +244,14 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         **(port_activity.get("stats") or {}),
         "scheduled_count": len(arrivals),
         "in_port_count": len(in_port),
+        "quay_vessel_count": slot_occupancy["quay_vessel_count"],
+        "anchorage_vessel_count": slot_occupancy["anchorage_vessel_count"],
+        "quadro_count": slot_occupancy["anchorage_vessel_count"],
         "departed_count": len(departed),
-        "berth_count": len(berthed),
+        "berth_count": slot_occupancy["occupied_slot_count"],
+        "occupied_slot_count": slot_occupancy["occupied_slot_count"],
+        "free_slot_count": slot_occupancy["free_slot_count"],
+        "slot_capacity_count": slot_occupancy["slot_capacity_count"],
         "aborted_count": len(aborted),
         "planned_count": len(planned_maneuvers),
         "archive_count": len(archived_maneuvers),
@@ -541,8 +534,25 @@ def load_admin_status() -> dict:
         port_activity = services.store.get_port_activity_snapshot(window_days=5)
     except Exception as exc:
         port_activity = {
-            "stats": {"scheduled_count": 0, "in_port_count": 0, "departed_count": 0, "planned_count": 0},
-            "arrivals": [], "in_port": [], "departed": [], "planned_maneuvers": [],
+            "stats": {
+                "scheduled_count": 0,
+                "in_port_count": 0,
+                "quay_vessel_count": 0,
+                "anchorage_vessel_count": 0,
+                "quadro_count": 0,
+                "departed_count": 0,
+                "planned_count": 0,
+                "berth_count": 0,
+                "occupied_slot_count": 0,
+                "free_slot_count": 0,
+                "slot_capacity_count": 0,
+            },
+            "arrivals": [],
+            "in_port": [],
+            "berthed": [],
+            "anchorages": [],
+            "departed": [],
+            "planned_maneuvers": [],
             "error": str(exc),
         }
 
@@ -598,9 +608,14 @@ def build_operational_snapshot_source(port_activity: dict, max_rows: int = 12) -
     """Build a chat supplemental source summarizing the current planned maneuvers."""
     lines = [
         "Resumo operacional das manobras planeadas e referências do quadro:",
+        "- O quadro operacional conta ocupação apenas por slots de cais; fundeadouros são quadro e não ocupam slots.",
         (
             f"- Chegadas previstas: {port_activity['stats']['scheduled_count']} | "
             f"Navios em porto: {port_activity['stats']['in_port_count']} | "
+            f"em cais: {port_activity['stats'].get('quay_vessel_count', 0)} | "
+            f"em quadro: {port_activity['stats'].get('quadro_count', 0)} | "
+            f"slots ocupados: {port_activity['stats'].get('occupied_slot_count', 0)}/"
+            f"{port_activity['stats'].get('slot_capacity_count', 0)} | "
             f"Saídas recentes: {port_activity['stats']['departed_count']} | "
             f"Manobras planeadas: {port_activity['stats'].get('planned_count', 0)}"
         ),
@@ -722,15 +737,21 @@ def build_scale_registry_source(question: str, port_activity: dict, max_rows: in
 
     lines = [
         "Registo de escalas do portal:",
+        "- Fundeadouros representam navios em quadro/espera e não contam como slots de cais ocupados.",
         (
             f"- Escalas em porto: {port_activity['stats'].get('in_port_count', 0)} | "
+            f"em cais: {port_activity['stats'].get('quay_vessel_count', 0)} | "
+            f"em quadro: {port_activity['stats'].get('quadro_count', 0)} | "
+            f"slots ocupados: {port_activity['stats'].get('occupied_slot_count', 0)}/"
+            f"{port_activity['stats'].get('slot_capacity_count', 0)} | "
             f"chegadas previstas: {port_activity['stats'].get('scheduled_count', 0)} | "
             f"escalas com saída recente: {port_activity['stats'].get('departed_count', 0)}"
         ),
     ]
     for item in selected:
         status_label = (
-            "Em porto" if item.get("status") == "in_port"
+            "Em quadro" if item.get("status") == "in_port" and is_anchorage_berth(item.get("berth_label"))
+            else "Em porto" if item.get("status") == "in_port"
             else "Concluída" if item.get("status") == "departed"
             else "Abortada" if item.get("approval_status") == "aborted"
             else "Prevista"
@@ -1723,6 +1744,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 
     if action == "create_port_call":
         eta = parse_local_datetime_input(field_text("eta_local"), "ETA")
+        validate_not_past_datetime(eta, "ETA")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
         draft_m = field_text("draft_m")
         tug_count = field_text("tug_count")
@@ -1744,13 +1766,17 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             vessel_dwt_t=require_form_text(field_text("vessel_dwt_t"), "DWT"),
             notes=build_entry_request_note({"draft_m": draft_m, "tug_count": tug_count, "constraints": constraints, "notes": fields.get("notes", "")}),
         )
-        return port_call, f"Escala criada para {port_call['vessel_name']} com ETA {port_call['eta_label']}."
+        return port_call, _build_created_port_call_message(port_call)
     if action == "edit_port_call":
+        parsed_eta = None
+        if field_text("eta_local"):
+            parsed_eta = parse_optional_local_datetime_input(field_text("eta_local"), "ETA")
+            validate_not_past_datetime(parsed_eta, "ETA")
         result = services.store.edit_port_call(
             port_call_id=port_call_id,
             updated_by=username,
             vessel_name=fields.get("vessel_name"),
-            eta=parse_optional_local_datetime_input(field_text("eta_local"), "ETA") if field_text("eta_local") else None,
+            eta=parsed_eta,
             berth=fields.get("berth"),
             last_port=fields.get("last_port"),
             next_port=fields.get("next_port"),
@@ -2230,6 +2256,24 @@ def format_note_datetime(value: str) -> str:
         return datetime.fromisoformat(value).astimezone().strftime("%d/%m/%Y %H:%M")
     except ValueError:
         return value
+
+
+def _build_created_port_call_message(port_call: dict) -> str:
+    """Return the success message shown after creating a scale from chat."""
+    eta_value = port_call.get("eta") or ""
+    eta_label = format_note_datetime(eta_value) or port_call.get("eta_label") or "--"
+    message = f"Escala criada para {port_call['vessel_name']} com ETA {eta_label}."
+    if not eta_value:
+        return message
+    try:
+        eta_dt = datetime.fromisoformat(eta_value)
+    except ValueError:
+        return message
+    if eta_dt.tzinfo is None:
+        eta_dt = eta_dt.replace(tzinfo=timezone.utc)
+    if eta_dt < datetime.now(eta_dt.tzinfo) - timedelta(days=5):
+        message += " Atenção: o ETA ficou no passado e esta escala pode não aparecer na vista operacional atual."
+    return message
 
 
 def _local_iso_to_label(value: str | None) -> str:

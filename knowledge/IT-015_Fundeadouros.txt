@@ -1,0 +1,233 @@
+DOCUMENTO: IT-015 — DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 03, datada de 23 de janeiro de 2012.
+NOTA: A revisão 02 (junho de 2011) corrigiu as posições do Fundeadouro Norte e
+acrescentou o Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.
+A revisão 01 (março de 2009) atualizou as coordenadas de todos os fundeadouros.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+Este documento caracteriza e delimita geograficamente as zonas de fundeio do
+Porto de Setúbal.
+
+"Fundeadouro" é uma zona geograficamente delimitada onde os navios estão
+autorizados a fundear (lançar âncora) para aguardar autorização de entrada no
+porto, para realizar operações de abastecimento, ou para qualquer outra
+necessidade operacional que implique a permanência ancorada fora dos cais.
+
+Cada fundeadouro é definido por um polígono cujos vértices são identificados
+por letras. O navio deve permanecer dentro da área delimitada por esse polígono.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+Compete ao Piloto Coordenador validar as requisições de manobra relacionadas
+com fundeadouros, quando aplicável, de acordo com o descrito neste documento.
+A menção "se aplicável" indica que nem todas as operações de fundeio requerem
+intervenção formal do Piloto Coordenador.
+
+================================================================================
+SISTEMAS DE COORDENADAS UTILIZADOS
+================================================================================
+
+As coordenadas dos fundeadouros estão definidas em dois sistemas de referência:
+
+Sistema WGS84 (World Geodetic System 1984):
+  Coordenadas geográficas em graus e minutos decimais (formato GG° MM,MM').
+  N = Latitude Norte. W = Longitude Oeste. Este é o sistema utilizado pelos
+  receptores GPS modernos e a referência padrão da navegação internacional.
+
+Sistema Datum 73 (Datum de Lisboa 1973):
+  Coordenadas planimétricas portuguesas em metros, em projeção Gauss-Krüger.
+  X = coordenada Oeste-Este (Easting). Y = coordenada Sul-Norte (Northing),
+  com valores negativos no hemisfério a sul do ponto de origem.
+  Este sistema é a referência das cartas topográficas portuguesas e de alguns
+  sistemas internos de gestão portuária.
+
+================================================================================
+FUNDEADOURO NORTE
+================================================================================
+
+O Fundeadouro Norte é a zona de fundeio principal para navios em espera de
+acesso ao Porto de Setúbal, localizado a norte da entrada do porto. É delimitado
+por oito vértices, identificados pelas letras A a H, que formam um polígono
+fechado.
+
+Vértice A:
+  WGS84: Latitude 38° 30,56' N — Longitude 008° 54,44' W
+  Datum 73: X = -67531,8 m  /  Y = -128376,4 m
+
+Vértice B:
+  WGS84: Latitude 38° 30,89' N — Longitude 008° 53,89' W
+  Datum 73: X = -66727,2 m  /  Y = -127772,6 m
+
+Vértice C:
+  WGS84: Latitude 38° 30,98' N — Longitude 008° 53,51' W
+  Datum 73: X = -66173,4 m  /  Y = -127610,6 m
+
+Vértice D:
+  WGS84: Latitude 38° 30,96' N — Longitude 008° 53,14' W
+  Datum 73: X = -65635,9 m  /  Y = -127652,1 m
+
+Vértice E:
+  WGS84: Latitude 38° 30,70' N — Longitude 008° 53,14' W
+  Datum 73: X = -65639,9 m  /  Y = -128133,1 m
+
+Vértice F:
+  WGS84: Latitude 38° 30,70' N — Longitude 008° 53,43' W
+  Datum 73: X = -66061,4 m  /  Y = -128129,6 m
+  NOTA: o Vértice F é partilhado com o Fundeadouro para Embarcações de
+  Tráfego Local ao Serviço Portuário (ver abaixo), sendo um ponto comum
+  às duas delimitações.
+
+Vértice G:
+  WGS84: Latitude 38° 30,42' N — Longitude 008° 53,43' W
+  Datum 73: X = -66065,7 m  /  Y = -128647,7 m
+
+Vértice H:
+  WGS84: Latitude 38° 30,42' N — Longitude 008° 54,44' W
+  Datum 73: X = -67534,0 m  /  Y = -128635,5 m
+
+O polígono do Fundeadouro Norte fecha-se pela ligação do Vértice H de volta ao
+Vértice A, completando os oito lados do polígono.
+
+================================================================================
+FUNDEADOURO DE TROIA — 1ª ZONA
+================================================================================
+
+O Fundeadouro de Troia — 1ª Zona é a zona de fundeio mais próxima da Península
+de Tróia, localizado a sul do Porto de Setúbal, na área da entrada do estuário
+do Sado. É delimitado por quatro vértices, identificados pelas letras I, J, K e L.
+
+Vértice I:
+  WGS84: Latitude 38° 28,90' N — Longitude 008° 51,80' W
+  Datum 73: X = -63718,4 m  /  Y = -131479,1 m
+
+Vértice J:
+  WGS84: Latitude 38° 28,60' N — Longitude 008° 51,00' W
+  Datum 73: X = -62559,3 m  /  Y = -132043,3 m
+
+Vértice K:
+  WGS84: Latitude 38° 27,60' N — Longitude 008° 51,00' W
+  Datum 73: X = -62573,7 m  /  Y = -133893,5 m
+  NOTA: o Vértice K é partilhado com o Fundeadouro de Troia — 2ª Zona,
+  sendo um ponto de fronteira comum às duas zonas.
+
+Vértice L:
+  WGS84: Latitude 38° 28,25' N — Longitude 008° 51,80' W
+  Datum 73: X = -63728,0 m  /  Y = -132681,7 m
+
+O polígono fecha-se pela ligação do Vértice L de volta ao Vértice I.
+
+================================================================================
+FUNDEADOURO DE TROIA — 2ª ZONA
+================================================================================
+
+O Fundeadouro de Troia — 2ª Zona é uma zona de fundeio de maior dimensão,
+localizada a sul e a oeste do Fundeadouro de Troia — 1ª Zona, cobrindo uma
+área mais afastada da costa e com maior profundidade. É delimitado por cinco
+vértices: M, N, O, P e K.
+
+Vértice M:
+  WGS84: Latitude 38° 28,17' N — Longitude 008° 51,00' W
+  Datum 73: X = -62565,5 m  /  Y = -132838,9 m
+
+Vértice N:
+  WGS84: Latitude 38° 27,42' N — Longitude 008° 48,20' W
+  Datum 73: X = -58503,0 m  /  Y = -134257,2 m
+
+Vértice O:
+  WGS84: Latitude 38° 27,27' N — Longitude 008° 49,19' W
+  Datum 73: X = -59945,3 m  /  Y = -134524,1 m
+
+Vértice P:
+  WGS84: Latitude 38° 27,14' N — Longitude 008° 50,00' W
+  Datum 73: X = -61125,5 m  /  Y = -134755,7 m
+
+Vértice K (partilhado com a 1ª Zona):
+  WGS84: Latitude 38° 27,60' N — Longitude 008° 51,00' W
+  Datum 73: X = -62573,7 m  /  Y = -133893,5 m
+
+O polígono fecha-se pela ligação do Vértice K de volta ao Vértice M.
+
+RELAÇÃO ENTRE AS DUAS ZONAS DE TROIA: A 1ª Zona está situada a norte e mais
+próxima da margem. A 2ª Zona está a sul e mais afastada da costa, a oeste da
+Península de Tróia. O Vértice K é o ponto comum às duas zonas e representa a
+fronteira que as separa na direção norte-sul.
+
+================================================================================
+FUNDEADOURO PARA EMBARCAÇÕES DE TRÁFEGO LOCAL AO SERVIÇO PORTUÁRIO
+================================================================================
+
+Esta zona de fundeio destina-se exclusivamente a embarcações de tráfego local
+ao serviço portuário. Entende-se por "embarcações de tráfego local ao serviço
+portuário" as embarcações de apoio ao porto, como lanchas de cabos, rebocadores,
+embarcações de pilotos, barcaças e outras embarcações auxiliares que operam
+dentro dos limites do Porto de Setúbal e que necessitem de fundeio temporário.
+Esta zona não se destina a navios de grande porte em espera de cais.
+
+É delimitada por cinco vértices: F, Q, R, S e T.
+
+Vértice F (partilhado com o Fundeadouro Norte):
+  WGS84: Latitude 38° 30,70' N — Longitude 008° 53,43' W
+  Datum 73: X = -66061,4 m  /  Y = -128129,6 m
+
+Vértice Q:
+  WGS84: Latitude 38° 30,70' N — Longitude 008° 52,75' W
+  Datum 73: X = -65073,0 m  /  Y = -128137,8 m
+
+Vértice R:
+  WGS84: Latitude 38° 30,60' N — Longitude 008° 52,48' W
+  Datum 73: X = -64682,0 m  /  Y = -128326,0 m
+
+Vértice S:
+  WGS84: Latitude 38° 30,50' N — Longitude 008° 52,48' W
+  Datum 73: X = -64683,5 m  /  Y = -128511,0 m
+
+Vértice T:
+  WGS84: Latitude 38° 30,50' N — Longitude 008° 53,43' W
+  Datum 73: X = -66064,5 m  /  Y = -128499,7 m
+
+O polígono fecha-se pela ligação do Vértice T de volta ao Vértice F.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Quantos fundeadouros existem no Porto de Setúbal?
+Resposta: Existem quatro zonas de fundeio definidas: Fundeadouro Norte,
+Fundeadouro de Troia 1ª Zona, Fundeadouro de Troia 2ª Zona e Fundeadouro
+para Embarcações de Tráfego Local ao Serviço Portuário.
+
+Pergunta: Qual é o fundeadouro principal para navios em espera de cais?
+Resposta: O Fundeadouro Norte, localizado a norte da entrada do porto, delimitado
+pelos vértices A a H.
+
+Pergunta: O Fundeadouro Norte e o Fundeadouro de Tráfego Local têm limites
+partilhados?
+Resposta: Sim. O Vértice F (Latitude 38° 30,70' N, Longitude 008° 53,43' W) é
+um ponto comum às duas zonas.
+
+Pergunta: As duas zonas de Troia são contíguas?
+Resposta: Sim. Partilham o Vértice K (Latitude 38° 27,60' N, Longitude 008° 51,00' W),
+que é o ponto de fronteira entre as duas zonas.
+
+Pergunta: Para que tipo de embarcações se destina o quarto fundeadouro?
+Resposta: Exclusivamente a embarcações de tráfego local ao serviço portuário,
+como lanchas de cabos, rebocadores e embarcações de pilotos. Não se destina a
+navios de grande porte.
+
+Pergunta: Em que sistema de coordenadas estão definidos os fundeadouros?
+Resposta: As coordenadas estão fornecidas em dois sistemas: WGS84 (latitude e
+longitude em graus e minutos decimais, compatível com GPS) e Datum 73
+(coordenadas planimétricas portuguesas em metros, sistema X/Y).
+
+Pergunta: Quem valida as requisições de manobra relacionadas com fundeadouros?
+Resposta: O Piloto Coordenador, quando aplicável.
+
+================================================================================
+FIM DO DOCUMENTO IT-015 — FUNDEADOUROS DO PORTO DE SETÚBAL
+================================================================================

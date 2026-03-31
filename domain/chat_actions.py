@@ -6,6 +6,8 @@ import unicodedata
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from domain.berth_layout import is_anchorage_berth
+
 
 ACTION_SPECS = {
     # --- Escala (port_call) — Agente/Admin gerem ---
@@ -16,12 +18,12 @@ ACTION_SPECS = {
     },
     "edit_port_call": {
         "label": "Editar escala",
-        "roles": {"admin"},
+        "roles": {"admin", "agente"},
         "requires_target": True,
     },
     "delete_port_call": {
         "label": "Apagar escala",
-        "roles": {"admin"},
+        "roles": {"admin", "agente"},
         "requires_target": True,
     },
     # --- Entrada — Piloto/Admin operam ---
@@ -110,7 +112,7 @@ ACTION_SPECS = {
     # --- Edição de planeamento — Agente/Admin editam ---
     "edit_maneuver_plan": {
         "label": "Editar planeamento",
-        "roles": {"admin", "agente", "piloto"},
+        "roles": {"admin", "agente"},
         "requires_target": True,
     },
     "delete_maneuver": {
@@ -527,8 +529,21 @@ def _lookup_key(value: Optional[str]) -> str:
 
 
 def _normalized_ascii_text(value: Optional[str]) -> str:
-    normalized = unicodedata.normalize("NFKD", (value or "").strip().lower())
-    return normalized.encode("ascii", "ignore").decode("ascii")
+    normalized, _ = _normalized_ascii_text_with_index_map(value)
+    return normalized
+
+
+def _normalized_ascii_text_with_index_map(value: Optional[str]) -> tuple[str, List[int]]:
+    source = (value or "").strip().lower()
+    normalized_chars: List[str] = []
+    index_map: List[int] = []
+    for index, char in enumerate(source):
+        normalized_piece = unicodedata.normalize("NFKD", char).encode("ascii", "ignore").decode("ascii")
+        if not normalized_piece:
+            continue
+        normalized_chars.append(normalized_piece)
+        index_map.extend([index] * len(normalized_piece))
+    return "".join(normalized_chars), index_map
 
 
 def _extract_constraint_flags(question: str) -> List[str]:
@@ -868,8 +883,11 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
         match = re.search(r"[A-Za-z0-9-]+", clean)
         return match.group(0) if match else clean
     if canonical in {"vessel_loa_m", "vessel_beam_m", "vessel_gt_t", "vessel_dwt_t", "vessel_max_draft_m", "draft_m"}:
-        match = re.search(r"\d+(?:[.,]\d+)*", clean)
-        return match.group(0) if match else clean
+        match = re.search(r"\d+(?:[\s.,]\d+)*", clean)
+        if not match:
+            return clean
+        numeric_value = match.group(0)
+        return re.sub(r"(?<=\d)\s+(?=\d)", "", numeric_value)
     return clean
 
 
@@ -877,7 +895,7 @@ def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
-    search_text = _normalized_ascii_text(text)
+    search_text, index_map = _normalized_ascii_text_with_index_map(text)
     raw_hits = []
     for canonical, aliases in alias_map.items():
         for alias in aliases:
@@ -901,8 +919,10 @@ def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]
         hits.append(hit)
     extracted: Dict[str, object] = {}
     for index, (_start, value_start, canonical, needle) in enumerate(hits):
-        end = hits[index + 1][0] if index + 1 < len(hits) else len(text)
-        raw_value = text[value_start:end]
+        next_start = hits[index + 1][0] if index + 1 < len(hits) else len(search_text)
+        original_value_start = index_map[value_start] if value_start < len(index_map) else len(text)
+        original_end = index_map[next_start] if next_start < len(index_map) else len(text)
+        raw_value = text[original_value_start:original_end]
         clean_value = _clean_extracted_value(canonical, raw_value)
         if clean_value:
             extracted[canonical] = clean_value
@@ -1031,7 +1051,7 @@ def build_scale_edit_reply_template() -> str:
 def build_delete_scale_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a escala (usa a Ref da escala):",
+            "Responde neste formato para apagar a escala (basta a Ref):",
             "Ref: ",
         ]
     )
@@ -1076,10 +1096,8 @@ def build_edit_maneuver_plan_reply_template() -> str:
 def build_delete_maneuver_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
+            "Responde neste formato para apagar a manobra (basta o ID da manobra):",
             "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
         ]
     )
 
@@ -1202,13 +1220,13 @@ def build_slash_help(role: str) -> str:
                 "  cria uma nova escala; a entrada inicial fica associada à escala",
             ]
         )
-    if clean_role == "admin":
+    if clean_role in {"admin", "agente"}:
         lines.extend(
             [
                 "/editar-escala",
                 "  atualiza os dados da escala; usa a Ref da escala",
                 "/apagar-escala",
-                "  remove a escala; usa a Ref da escala",
+                "  remove a escala; basta a Ref da escala",
             ]
         )
     lines.extend(["", "Manobras:"])
@@ -1218,10 +1236,10 @@ def build_slash_help(role: str) -> str:
                 "/criar-manobra",
                 "  cria uma saída ou mudança; o ID da manobra é automático",
                 "/apagar-manobra",
-                "  remove a manobra planeada; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
+                "  remove a manobra planeada; usa o ID da manobra (ou Ref + Tipo se não tiveres o ID)",
             ]
         )
-    if clean_role in {"admin", "agente", "piloto"}:
+    if clean_role in {"admin", "agente"}:
         lines.extend(
             [
                 "/editar-manobra",
@@ -1682,13 +1700,17 @@ def summarize_port_calls(port_calls: List[Dict], limit: int = 18) -> str:
         return "Sem escalas visíveis."
     rows = []
     for item in port_calls[:limit]:
+        berth_label = item.get("berth_label") or item.get("berth") or "--"
+        status_label = item.get("status_label") or item.get("status") or "--"
+        if (item.get("status") or "").strip().lower() == "in_port" and is_anchorage_berth(berth_label):
+            status_label = "em quadro"
         rows.append(
             " | ".join(
                 [
                     item.get("reference_code") or "--",
                     item.get("vessel_name") or "--",
-                    item.get("status_label") or item.get("status") or "--",
-                    item.get("berth_label") or item.get("berth") or "--",
+                    status_label,
+                    berth_label,
                     f"ETA {item.get('eta_label') or '--'}",
                     f"ATA {item.get('ata_label') or '--'}",
                     f"ATD {item.get('departure_label') or '--'}",
@@ -1731,6 +1753,10 @@ Objetivo:
 - Se faltar informação obrigatória, preencher `missing_fields`.
 - Se a mensagem for só consulta, usa `intent: "question"`.
 - Se a mensagem pedir algo proibido ou fora de papel/arquivo, usa `intent: "unsupported"`.
+- Trata a ocupação portuária por slots de cais.
+- Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots ocupados.
+- Para efeitos desta demo, não rejeites uma atribuição de cais só porque o LOA do navio parece maior do que a extensão nominal do cais.
+- Se o utilizador perguntar por dimensões, limita-te aos factos documentais; não concluas automaticamente que o navio "não cabe".
 
 Ações permitidas para este papel:
 {chr(10).join(action_lines) or "- nenhuma"}
@@ -1819,6 +1845,9 @@ Regras:
 - Em `update`, mantém a mesma ação salvo correção explícita do utilizador.
 - Usa formato `YYYY-MM-DDTHH:MM` para datas/horas locais.
 - Não inventes valores em falta.
+- Mantém a lógica operacional por slots de cais.
+- Fundeadouros são quadros e não contam como slots ocupados.
+- Não invalides uma atribuição de cais apenas por comparação direta entre LOA do navio e extensão nominal do cais.
 
 Mensagem do utilizador:
 {question}

@@ -1,0 +1,209 @@
+DOCUMENTO: RG-14 — REGULAMENTO INTERNO DE PILOTAGEM — PORTO DE SETÚBAL
+ENTIDADE EMISSORA: Direção de Pilotagem — APSS
+DATA: 15 de junho de 2002. Assinado pelo Comandante Manuel Pedreiro.
+NOTA: Extraído apenas o conteúdo operacionalmente relevante para pilotos,
+agentes de navegação e utilizadores do sistema. Conteúdo de recursos humanos
+(férias, folgas, licenças, regime de trabalho) omitido.
+
+================================================================================
+HORÁRIO DE EXPEDIENTE DA DIREÇÃO DE PILOTAGEM
+================================================================================
+
+Dias úteis:
+  09h00 às 12h30
+  14h00 às 18h00
+
+Sábados, Domingos e Feriados:
+  09h00 às 13h00
+
+O Piloto Coordenador está em serviço permanente 24 horas por dia em sistema
+rotativo, mesmo fora do horário de expediente. A rendição dos Pilotos
+Coordenadores é às 09h00.
+
+================================================================================
+COMPETÊNCIAS DO DIRETOR DE PILOTAGEM
+================================================================================
+
+O Diretor de Pilotagem decide sobre:
+  — Dúvidas ou casos omissos nas normas do Regulamento Interno, ficando as
+    decisões registadas em Anexo e sendo vinculativas até futura revisão.
+  — Todas as manobras que saiam da rotina estabelecida nas normas em vigor.
+  — Os limites a praticar em cais, canais e barra.
+
+================================================================================
+DEVERES OPERACIONAIS DO PILOTO COORDENADOR
+================================================================================
+
+O Piloto Coordenador tem os seguintes deveres com relevância operacional directa:
+
+Canais de escuta permanente:
+  O PC mantém escuta permanente à navegação nos canais VHF 14 e 13, e mantém
+  comunicação VHF com as lanchas sempre que estas estejam a navegar.
+
+Distribuição de serviços:
+  O PC recebe as requisições de serviço de pilotagem e distribui-as de acordo com
+  as normas internas, registando-as no Diário e no Mapa de Serviços.
+
+Notificação dos pilotos:
+  Nos dias úteis às 18h00, e aos Sábados, Domingos e Feriados às 13h00, o PC
+  contacta (ou manda contactar) os Pilotos, informando-os dos serviços que lhes
+  foram distribuídos. O aviso ao Piloto deve ser feito com antecedência mínima
+  de 1 hora.
+
+Antecedência mínima para requisições:
+  O PC não aceita requisições para serviços de rio ou saídas com menos de 1 hora
+  de antecedência, a não ser com anuência do Piloto que vai executar o serviço e
+  sem alteração na escala de embarque.
+
+Fora do horário de expediente:
+  O PC aceita requisições apenas em casos excepcionais e de emergência que possam
+  influenciar a segurança de pessoas e bens.
+
+Navios arribados:
+  No caso de entrada de navios arribados (navios que entram em situação de
+  emergência ou de desvio forçado), o PC avisa o Capitão do Porto, que definirá
+  os requisitos da manobra.
+
+Quando o PC embarca:
+  Se o PC tiver de embarcar por insuficiência de Pilotos na escala, deve deixar
+  o serviço organizado e manter contacto com a Estação de Pilotagem. Quando embarca,
+  faz os serviços de menor duração.
+
+Dúvidas e casos omissos:
+  Quando surjam dúvidas de interpretação ou casos omissos, o PC consulta o Diretor
+  de Pilotagem. Se não for possível, resolve dentro do espírito das normas, sem
+  prejuízo para o serviço, segurança e exploração portuária, registando na folha
+  de Anexos para posterior estudo.
+
+================================================================================
+DEVERES OPERACIONAIS DO PILOTO
+================================================================================
+
+Canal VHF obrigatório quando embarcado:
+  O Piloto embarcado mantém escuta obrigatória no canal VHF 14.
+
+Comunicação de alterações ao assinalamento:
+  O Piloto informa o PC e o VTS de qualquer alteração no assinalamento marítimo
+  e qualquer ocorrência que possa ter interesse para a navegação e segurança do
+  porto.
+
+Gestão de serviços simultâneos:
+  O Piloto que preveja não chegar a horas para executar outro serviço para o qual
+  estava nomeado, deve informar o PC com antecedência e estimar a hora em que
+  ficará livre.
+
+================================================================================
+REQUISIÇÃO E DISTRIBUIÇÃO DOS SERVIÇOS — REGRAS OPERACIONAIS
+================================================================================
+
+ANTECEDÊNCIA DE DISTRIBUIÇÃO DE SERVIÇOS (dentro do horário de expediente):
+  Saídas e serviços no rio: distribuídos 1 hora antes da hora requisitada.
+  Entradas: distribuídas 2 horas antes da hora requisitada.
+
+Fora do horário de expediente: requisições excepcionais são distribuídas por
+ordem de escala.
+
+Emergências: têm prioridade absoluta sobre qualquer outro serviço.
+
+DEFINIÇÃO DA HORA DE REQUISIÇÃO:
+  A hora de requisição é definida da seguinte forma:
+
+  a) Serviços no rio ou saídas: hora que a Agência solicita o Piloto, menos 1 hora.
+
+  b) Entradas com comunicação directa com o navio ou informação da Agência
+     baseada em dados com menos de 24 horas: hora da chegada do navio à barra,
+     menos 2 horas.
+
+  c) Entradas com deslocação do Piloto a Lisboa: hora a que o Piloto deve
+     apresentar-se em Lisboa, menos 4 horas.
+
+  d) Requisições para a mesma hora: distribuídas por ordem de entrada na Estação
+     de Pilotagem.
+
+SERVIÇOS PARA O DIA SEGUINTE:
+  Aos Sábados, Domingos e Feriados às 13h00 e nos dias úteis às 18h00, são
+  distribuídos os serviços requisitados até às 08h59 do dia seguinte.
+
+  Para o grupo que completa as 48 horas de serviço:
+    — Entradas: requisições até às 06h59.
+    — Saídas ou mudanças: requisições até às 07h59.
+
+DESCANSO EXCEPCIONAL:
+  Quando um Piloto for sujeito a um período excepcionalmente longo de serviço
+  contínuo, pode pedir ao PC 5 horas de descanso.
+
+================================================================================
+EMERGÊNCIAS — DEFINIÇÃO E PROTOCOLO
+================================================================================
+
+São consideradas situações de emergência as seguintes:
+
+  a) Rebocadores que saiam para salvamento.
+  b) Navios com fogo a bordo.
+  c) Navios que rebentem as amarras.
+  d) Navios que garrem (arrastem a âncora) ou encalhem.
+  e) Navios que, quando rodem, possam tocar-se (risco de colisão por rotação).
+  f) Navios com água aberta (entrada de água no casco — risco de afundamento).
+  g) Navios com doentes ou acidentados para desembarcar no porto.
+
+PROTOCOLO DE RESPOSTA A EMERGÊNCIAS:
+  O Piloto que segue para a situação de emergência é o primeiro da escala de
+  embarque. Se este não puder ser contactado imediatamente, seguem os outros
+  Pilotos da escala por ordem, depois o Piloto Coordenador e, por último, o
+  Diretor de Pilotagem.
+
+================================================================================
+CANAL VHF DA ESTAÇÃO DE PILOTAGEM
+================================================================================
+
+Canal de serviço principal (navegação e comunicações operacionais): Canal VHF 14.
+Canal privativo (assuntos de carácter particular a bordo das embarcações): Canal VHF 40.
+
+================================================================================
+ESCALA DE RIO — CONDIÇÕES DE ACESSO E HORÁRIOS
+================================================================================
+
+A escala de rio é um regime especial reservado a Pilotos com mais de 20 anos de
+antiguidade na Pilotagem e mais de 10 anos como Piloto em Setúbal. Máximo de 20%
+dos efectivos, por ordem de antiguidades.
+
+Horários da escala de rio:
+  Serviços de entrada: entre as 07h00 e as 21h00 (horas de manobra).
+  Serviços de saída e mudanças: entre as 06h30 e as 21h00 (horas de manobra).
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o canal VHF obrigatório para pilotos embarcados?
+Resposta: Canal VHF 14.
+
+Pergunta: Com que antecedência é distribuído um serviço de entrada?
+Resposta: 2 horas antes da hora requisitada (dentro do horário de expediente).
+
+Pergunta: Com que antecedência é distribuído um serviço de saída ou rio?
+Resposta: 1 hora antes da hora requisitada (dentro do horário de expediente).
+
+Pergunta: O PC pode aceitar uma requisição de saída com 30 minutos de antecedência?
+Resposta: Não, em regra. O PC não aceita requisições de saída ou serviços no rio
+com menos de 1 hora de antecedência, salvo com anuência do Piloto que vai fazer
+o serviço e sem alterar a escala.
+
+Pergunta: Quem decide sobre manobras fora da rotina estabelecida?
+Resposta: O Diretor de Pilotagem.
+
+Pergunta: O que acontece quando há um navio com fogo a bordo?
+Resposta: É uma emergência. O primeiro Piloto da escala segue de imediato. Se
+não for contactável, seguem os restantes por ordem de escala, depois o PC e,
+por último, o Diretor de Pilotagem.
+
+Pergunta: Qual o horário de expediente da pilotagem aos sábados?
+Resposta: Das 09h00 às 13h00.
+
+Pergunta: O PC está disponível fora do horário de expediente?
+Resposta: Sim. O serviço do PC é permanente 24 horas, mas fora do horário de
+expediente aceita apenas requisições em casos excepcionais e de emergência.
+
+================================================================================
+FIM DO DOCUMENTO RG-14 — REGULAMENTO INTERNO DE PILOTAGEM
+================================================================================

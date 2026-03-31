@@ -110,14 +110,12 @@
           template: joinLines([
             "/apagar-manobra",
             "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
           ]),
         }
       );
     }
 
-    if (cleanRole === "admin" || cleanRole === "agente" || cleanRole === "piloto") {
+    if (cleanRole === "admin" || cleanRole === "agente") {
       suggestions.push({
         command: "/editar-manobra",
         label: "Editar manobra",
@@ -204,7 +202,7 @@
       );
     }
 
-    if (cleanRole === "admin") {
+    if (cleanRole === "admin" || cleanRole === "agente") {
       suggestions.push(
         {
           command: "/editar-escala",
@@ -240,7 +238,12 @@
             "/apagar-escala",
             "Ref: ",
           ]),
-        },
+        }
+      );
+    }
+
+    if (cleanRole === "admin") {
+      suggestions.push(
         {
           command: "/apagar-registo-manobra",
           label: "Apagar registo",
