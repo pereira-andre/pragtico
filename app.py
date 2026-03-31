@@ -167,17 +167,6 @@ if not _embedding_provider:
         provider=_embedding_provider_name,
         api_key=_embedding_api_key,
     )
-_embedding_fallback_provider_name = _resolve_fallback_provider_name(
-    primary_name=_embedding_provider_name,
-    explicit_name=os.getenv("EMBEDDING_FALLBACK_PROVIDER", ""),
-)
-_embedding_fallback_api_key = _resolve_provider_api_key(_embedding_fallback_provider_name)
-_embedding_fallback_api_provider = None
-if not _embedding_provider and _embedding_fallback_provider_name:
-    _embedding_fallback_api_provider = create_llm_provider(
-        provider=_embedding_fallback_provider_name,
-        api_key=_embedding_fallback_api_key,
-    )
 
 _default_gen_models = {
     "gemini": "gemini-2.5-flash",
@@ -200,10 +189,6 @@ _emb_model = os.getenv(
     "EMBEDDING_MODEL",
     _default_emb_models.get(_embedding_provider_name, "text-embedding-3-small"),
 )
-_emb_fallback_model = os.getenv(
-    "EMBEDDING_FALLBACK_MODEL",
-    _default_emb_models.get(_embedding_fallback_provider_name, "") if _embedding_fallback_provider_name else "",
-)
 
 rag = SimpleRAGEngine(
     api_key=_llm_api_key,
@@ -212,11 +197,9 @@ rag = SimpleRAGEngine(
     generation_model=_gen_model,
     generation_fallback_model=_gen_fallback_model,
     embedding_model=_emb_model,
-    embedding_fallback_model=_emb_fallback_model,
     llm_provider=_llm_provider,
     generation_fallback_provider=_llm_fallback_provider,
     embedding_api_provider=_embedding_api_provider,
-    embedding_fallback_api_provider=_embedding_fallback_api_provider,
     embedding_provider=_embedding_provider,
 )
 tide_service = TideService(

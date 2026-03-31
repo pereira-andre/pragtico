@@ -49,11 +49,9 @@ class SimpleRAGEngine:
         generation_model: str,
         embedding_model: str,
         generation_fallback_model: str = "",
-        embedding_fallback_model: str = "",
         llm_provider: BaseLLMProvider | None = None,
         generation_fallback_provider: BaseLLMProvider | None = None,
         embedding_api_provider: BaseLLMProvider | None = None,
-        embedding_fallback_api_provider: BaseLLMProvider | None = None,
         embedding_provider=None,
     ) -> None:
         self.api_key = api_key
@@ -62,7 +60,6 @@ class SimpleRAGEngine:
         self.generation_model = generation_model
         self.generation_fallback_model = generation_fallback_model
         self.embedding_model = embedding_model
-        self.embedding_fallback_model = embedding_fallback_model
 
         # LLM provider: use injected provider, or create from environment/api_key
         if llm_provider is not None:
@@ -74,7 +71,6 @@ class SimpleRAGEngine:
         # Embedding provider: local (sentence-transformers) or API-based
         self.embedding_provider = embedding_provider
         self.embedding_api_provider = embedding_api_provider or self.provider
-        self.embedding_fallback_api_provider = embedding_fallback_api_provider
         self._use_local_embeddings = (
             embedding_provider is not None and embedding_provider.is_available
         )
@@ -85,7 +81,6 @@ class SimpleRAGEngine:
         )
         self._embedding_api_candidates = self._build_provider_candidates(
             (self.embedding_api_provider, self.embedding_model),
-            (self.embedding_fallback_api_provider, self.embedding_fallback_model),
         )
 
         # Backward compatibility: self.client represents the embedding-capable API provider.

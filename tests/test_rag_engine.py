@@ -331,33 +331,6 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertEqual(summary["embedded_chunks"], 1)
         self.assertEqual(summary["missing_embedding_chunks"], 0)
 
-    def test_embeddings_fall_back_to_secondary_provider_on_primary_daily_limit(self) -> None:
-        engine, _ = self._make_engine()
-        primary = _StubProvider(
-            "gemini",
-            embed_exc=RuntimeError("429 RESOURCE_EXHAUSTED. You exceeded your current quota."),
-        )
-        fallback = _StubProvider("openrouter")
-        engine.embedding_api_provider = primary
-        engine.embedding_fallback_api_provider = fallback
-        engine._embedding_api_candidates = [
-            (primary, "gemini-embedding-001"),
-            (fallback, "nvidia/llama-nemotron-embed-vl-1b-v2:free"),
-        ]
-        engine.embedding_provider_name = primary.provider_name
-        engine.embedding_provider_label = engine._candidate_chain_label(engine._embedding_api_candidates)
-        engine.client = primary
-
-        engine.rebuild_index(force=True)
-
-        status = engine.get_reindex_status()
-        stored_chunks = engine.index_store.load_index()["chunks"]
-        self.assertEqual(primary.embed_calls, 1)
-        self.assertEqual(fallback.embed_calls, 1)
-        self.assertEqual(status["state"], "completed")
-        self.assertTrue(stored_chunks)
-        self.assertTrue(all(chunk.get("embedding") for chunk in stored_chunks))
-
     def test_answer_falls_back_to_secondary_generation_provider(self) -> None:
         engine, _ = self._make_engine()
         engine.client = None

@@ -107,14 +107,12 @@ RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=<ligação PostgreSQL>
 OPENROUTER_API_KEY=<api-key>
 GEMINI_API_KEY=<api-key>
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini-2.5-flash
-LLM_FALLBACK_PROVIDER=openrouter
-LLM_FALLBACK_MODEL=openrouter/free
+LLM_PROVIDER=openrouter
+LLM_MODEL=openrouter/free
+LLM_FALLBACK_PROVIDER=gemini
+LLM_FALLBACK_MODEL=gemini-2.5-flash
 EMBEDDING_PROVIDER=gemini
 EMBEDDING_MODEL=gemini-embedding-001
-EMBEDDING_FALLBACK_PROVIDER=openrouter
-EMBEDDING_FALLBACK_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
 EMBEDDING_LOCAL_ENABLED=0
 ```
 
