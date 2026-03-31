@@ -50,7 +50,7 @@ from domain.cost_engine import (
     format_cost_summary,
 )
 from domain.migration_service import get_database_runtime_status
-from core.reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
+from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
 from storage import (
     PASSWORD_HASH_METHOD,
     format_constraint_labels,
@@ -391,7 +391,9 @@ def sync_reindex_retry_schedule() -> None:
         services.reindex_retry_scheduler.cancel()
         return
     if services.rag.is_embedding_quota_exhausted():
-        retry_at = next_gemini_quota_reset_utc()
+        retry_at = next_provider_quota_reset_utc(
+            getattr(services.rag, "_embedding_quota_provider_name", services.rag.embedding_provider_name)
+        )
         services.reindex_retry_scheduler.schedule(
             retry_at,
             reason="Quota diária de embeddings esgotada; nova tentativa automática no próximo reset.",
@@ -550,7 +552,7 @@ def load_admin_status() -> dict:
         "storage_backend": getattr(services.store, "backend_name", "unknown"),
         "rag_backend": getattr(services.index_store, "backend_name", "unknown"),
         "config": {
-            "llm_ready": services.rag.client is not None,
+            "llm_ready": services.rag.can_generate(),
             "embeddings_local": services.rag._use_local_embeddings,
             "embedding_model": services.rag.embedding_model if not services.rag._use_local_embeddings else (services.rag.embedding_provider.model_name if services.rag.embedding_provider else "N/A"),
             "weather_ready": bool(os.getenv("WEATHERAPI_KEY", "").strip()),
@@ -998,7 +1000,7 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
             }
         code = code_match.group(1)
         title = RULE_CODE_TITLES.get(code, f"IT-{code}")
-        if not services.rag.client:
+        if not services.rag.can_generate():
             return {
                 "answer": f"Pedido da regra {title} recebido, mas o LLM está indisponível neste ambiente.",
                 "sources": [],
@@ -1261,10 +1263,8 @@ def propose_operational_action(question: str, role: str) -> dict | None:
     heuristic_proposal = heuristic_operational_proposal(question, role, resolvable_port_calls)
     if heuristic_proposal:
         return finalize_operational_proposal(heuristic_proposal, resolvable_port_calls)
-    if not services.rag.client:
-        unavailable_reason = getattr(services.rag.provider, "unavailable_reason", "") or (
-            "LLM provider unavailable."
-        )
+    if not services.rag.can_generate():
+        unavailable_reason = services.rag.generation_unavailable_reason()
         return {
             "intent": "unsupported", "action": "", "confidence": 0.0,
             "reason": f"O bot operador está indisponível: {unavailable_reason}",
@@ -1277,7 +1277,7 @@ def propose_operational_action(question: str, role: str) -> dict | None:
         constraint_options=services.CONSTRAINT_OPTIONS,
     )
     try:
-        gen_result = services.rag.provider.generate(prompt=prompt, model=services.rag.generation_model)
+        gen_result = services.rag.generate_text(prompt)
     except Exception as exc:
         return {
             "intent": "unsupported", "action": "", "confidence": 0.0,
@@ -1614,10 +1614,8 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
         merged = merge_action_candidate(pending_proposal, updates or {}, role)
         return {"intent": "update", "proposal": finalize_operational_proposal(merged)}
 
-    if not services.rag.client:
-        unavailable_reason = getattr(services.rag.provider, "unavailable_reason", "") or (
-            "LLM provider unavailable."
-        )
+    if not services.rag.can_generate():
+        unavailable_reason = services.rag.generation_unavailable_reason()
         return {
             "intent": "unsupported",
             "reason": f"O bot operador está indisponível: {unavailable_reason}",
@@ -1628,7 +1626,7 @@ def refine_pending_operational_action(question: str, pending_proposal: dict, rol
         berth_options=services.BERTH_OPTIONS, constraint_options=services.CONSTRAINT_OPTIONS,
     )
     try:
-        gen_result = services.rag.provider.generate(prompt=prompt, model=services.rag.generation_model)
+        gen_result = services.rag.generate_text(prompt)
     except Exception as exc:
         return {"intent": "unsupported", "reason": f"Falha a atualizar a proposta pendente: {exc}"}
 

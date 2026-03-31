@@ -28,7 +28,7 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 - Ações operacionais via chat com confirmação, cancelamento e feedback
 - Suporte multi-provider para geração LLM
 - Embeddings locais em desenvolvimento com `BAAI/bge-m3`
-- Perfil Railway com embeddings via API, sem `sentence-transformers` no container
+- Perfil Railway com embeddings Gemini via API, sem `sentence-transformers` no container
 
 ### Segurança e perfis
 
@@ -106,10 +106,15 @@ APP_STORAGE_BACKEND=postgres
 RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=<ligação PostgreSQL>
 OPENROUTER_API_KEY=<api-key>
-LLM_PROVIDER=openrouter
-LLM_MODEL=openrouter/free
-EMBEDDING_PROVIDER=openrouter
-EMBEDDING_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
+GEMINI_API_KEY=<api-key>
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.5-flash
+LLM_FALLBACK_PROVIDER=openrouter
+LLM_FALLBACK_MODEL=openrouter/free
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_FALLBACK_PROVIDER=openrouter
+EMBEDDING_FALLBACK_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
 EMBEDDING_LOCAL_ENABLED=0
 ```
 

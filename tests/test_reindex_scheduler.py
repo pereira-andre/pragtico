@@ -4,7 +4,11 @@ import time
 import unittest
 from zoneinfo import ZoneInfo
 
-from core.reindex_scheduler import DeferredTaskScheduler, next_gemini_quota_reset_utc
+from core.reindex_scheduler import (
+    DeferredTaskScheduler,
+    next_gemini_quota_reset_utc,
+    next_provider_quota_reset_utc,
+)
 
 
 class ReindexSchedulerTests(unittest.TestCase):
@@ -19,6 +23,17 @@ class ReindexSchedulerTests(unittest.TestCase):
         self.assertEqual(reset_local.minute, 0)
         self.assertEqual(reset_local.second, 0)
         self.assertEqual(reset_local.date().isoformat(), "2026-03-23")
+
+    def test_next_openrouter_quota_reset_uses_utc_midnight(self) -> None:
+        now = datetime(2026, 3, 31, 8, 0, tzinfo=timezone.utc)
+
+        reset_at = next_provider_quota_reset_utc("openrouter", now)
+
+        self.assertEqual(reset_at.tzinfo, timezone.utc)
+        self.assertEqual(reset_at.hour, 0)
+        self.assertEqual(reset_at.minute, 0)
+        self.assertEqual(reset_at.second, 0)
+        self.assertEqual(reset_at.date().isoformat(), "2026-04-01")
 
     def test_scheduler_triggers_callback_once(self) -> None:
         fired = threading.Event()

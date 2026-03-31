@@ -16,6 +16,15 @@ def next_gemini_quota_reset_utc(now: datetime | None = None) -> datetime:
     return next_midnight.astimezone(timezone.utc)
 
 
+def next_provider_quota_reset_utc(provider_name: str, now: datetime | None = None) -> datetime:
+    normalized = (provider_name or "").strip().lower()
+    if normalized == "gemini":
+        return next_gemini_quota_reset_utc(now)
+
+    current = now.astimezone(timezone.utc) if now else datetime.now(timezone.utc)
+    return (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 class DeferredTaskScheduler:
     def __init__(self, name: str, callback: Callable[[], None]) -> None:
         self.name = name

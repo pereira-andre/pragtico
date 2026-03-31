@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from integrations.llm_provider import EmbeddingResult, GenerationResult
 from integrations.rag_engine import SimpleRAGEngine
 from integrations.vector_store import LocalIndexStore
 
@@ -67,6 +68,41 @@ class _AmbiguousEmbedding:
 
     def tolist(self):
         return [0.1, 0.2, 0.3]
+
+
+class _StubProvider:
+    def __init__(
+        self,
+        provider_name: str,
+        *,
+        generation_text: str = "",
+        generation_exc: Exception | None = None,
+        embed_exc: Exception | None = None,
+    ) -> None:
+        self.provider_name = provider_name
+        self.unavailable_reason = ""
+        self._generation_text = generation_text
+        self._generation_exc = generation_exc
+        self._embed_exc = embed_exc
+        self.generate_calls = 0
+        self.embed_calls = 0
+
+    @property
+    def is_available(self) -> bool:
+        return True
+
+    def generate(self, prompt: str, model: str, **kwargs) -> GenerationResult:
+        self.generate_calls += 1
+        if self._generation_exc is not None:
+            raise self._generation_exc
+        return GenerationResult(text=self._generation_text or f"{self.provider_name}:{model}", model=model, usage={})
+
+    def embed(self, texts: list[str], model: str, **kwargs) -> EmbeddingResult:
+        self.embed_calls += 1
+        if self._embed_exc is not None:
+            raise self._embed_exc
+        vectors = [[0.1, 0.2, float(index)] for index, _text in enumerate(texts, start=1)]
+        return EmbeddingResult(vectors=vectors, model=model)
 
 
 class SimpleRAGEngineTests(unittest.TestCase):
@@ -294,6 +330,65 @@ class SimpleRAGEngineTests(unittest.TestCase):
             summary = engine.get_sync_status_summary()
         self.assertEqual(summary["embedded_chunks"], 1)
         self.assertEqual(summary["missing_embedding_chunks"], 0)
+
+    def test_embeddings_fall_back_to_secondary_provider_on_primary_daily_limit(self) -> None:
+        engine, _ = self._make_engine()
+        primary = _StubProvider(
+            "gemini",
+            embed_exc=RuntimeError("429 RESOURCE_EXHAUSTED. You exceeded your current quota."),
+        )
+        fallback = _StubProvider("openrouter")
+        engine.embedding_api_provider = primary
+        engine.embedding_fallback_api_provider = fallback
+        engine._embedding_api_candidates = [
+            (primary, "gemini-embedding-001"),
+            (fallback, "nvidia/llama-nemotron-embed-vl-1b-v2:free"),
+        ]
+        engine.embedding_provider_name = primary.provider_name
+        engine.embedding_provider_label = engine._candidate_chain_label(engine._embedding_api_candidates)
+        engine.client = primary
+
+        engine.rebuild_index(force=True)
+
+        status = engine.get_reindex_status()
+        stored_chunks = engine.index_store.load_index()["chunks"]
+        self.assertEqual(primary.embed_calls, 1)
+        self.assertEqual(fallback.embed_calls, 1)
+        self.assertEqual(status["state"], "completed")
+        self.assertTrue(stored_chunks)
+        self.assertTrue(all(chunk.get("embedding") for chunk in stored_chunks))
+
+    def test_answer_falls_back_to_secondary_generation_provider(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+        engine.rebuild_index(force=True)
+
+        primary = _StubProvider(
+            "gemini",
+            generation_exc=RuntimeError("429 RESOURCE_EXHAUSTED. You exceeded your current quota."),
+        )
+        fallback = _StubProvider("openrouter", generation_text="Resposta via fallback OpenRouter.")
+        engine.provider = primary
+        engine.generation_model = "gemini-2.5-flash"
+        engine.generation_fallback_provider = fallback
+        engine.generation_fallback_model = "openrouter/free"
+        engine._generation_candidates = [
+            (primary, engine.generation_model),
+            (fallback, engine.generation_fallback_model),
+        ]
+        engine.generation_provider_label = engine._candidate_chain_label(engine._generation_candidates)
+
+        answer = engine.answer(
+            question="Resume o procedimento de manobra.",
+            role="piloto",
+            history=[],
+            supplemental_sources=[],
+            trusted_answers=[],
+        )
+
+        self.assertEqual(primary.generate_calls, 1)
+        self.assertEqual(fallback.generate_calls, 1)
+        self.assertEqual(answer["answer"], "Resposta via fallback OpenRouter.")
 
 
 if __name__ == "__main__":

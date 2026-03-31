@@ -278,6 +278,9 @@ class TideService:
             return self._events_cache
 
         events: List[TideEvent] = []
+        if not os.path.exists(self.csv_path):
+            self._events_cache = events
+            return events
         with open(self.csv_path, "r", encoding="utf-8", errors="ignore") as handle:
             reader = csv.DictReader(handle)
             for row in reader:

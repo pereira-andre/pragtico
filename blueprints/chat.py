@@ -438,7 +438,7 @@ def api_chat():
             "feedback_match": {"similarity": best_match["similarity"], "message_id": best_match["message_id"], "question": best_match["question"], "feedback_note": best_match.get("feedback_note", "")},
         }
     elif answer is None:
-        if not services.rag.client:
+        if not services.rag.can_generate():
             return jsonify({"error": "Define a API key do LLM antes de usar o chatbot."}), 500
         answer = services.rag.answer(
             question=question, role=session.get("role", "piloto"),

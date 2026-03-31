@@ -47,11 +47,16 @@ APP_STORAGE_BACKEND=postgres
 RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 MIGRATE_LOCAL_DATA_ON_START=1
-OPENROUTER_API_KEY=<alternativa ao Gemini>
-LLM_PROVIDER=openrouter
-LLM_MODEL=openrouter/free
-EMBEDDING_PROVIDER=openrouter
-EMBEDDING_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
+OPENROUTER_API_KEY=<api-key fallback>
+GEMINI_API_KEY=<api-key principal>
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.5-flash
+LLM_FALLBACK_PROVIDER=openrouter
+LLM_FALLBACK_MODEL=openrouter/free
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_FALLBACK_PROVIDER=openrouter
+EMBEDDING_FALLBACK_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
 EMBEDDING_LOCAL_ENABLED=0
 RAG_REINDEX_ON_START=1
 WEATHERAPI_KEY=<opcional>
@@ -66,7 +71,9 @@ Notas:
 - Se usares `pgvector`, mantém `RAG_INDEX_BACKEND=pgvector`.
 - Se usares PostgreSQL sem extensão vetorial, muda para `RAG_INDEX_BACKEND=local`.
 - Depois da primeira indexação completa, volta `RAG_REINDEX_ON_START` para `0` para não reindexar em todos os deploys.
-- O modelo `nvidia/llama-nemotron-embed-vl-1b-v2:free` é um ponto de partida para testes no OpenRouter; se a quota não chegar, troca apenas `EMBEDDING_MODEL`.
+- A configuração acima usa `Gemini` como provider principal para chat e embeddings.
+- `OpenRouter` fica configurado como fallback automático para chat e embeddings.
+- Se quiseres inverter a prioridade, troca `LLM_PROVIDER`/`EMBEDDING_PROVIDER` com os respetivos `*_FALLBACK_PROVIDER`.
 
 ### 5. Garantir o schema da base de dados
 
@@ -116,8 +123,8 @@ Para produção, a configuração mais coerente é:
 - `APP_STORAGE_BACKEND=postgres`
 - `RAG_INDEX_BACKEND=pgvector`
 - serviço de base de dados Railway com `pgvector`
-- `LLM_PROVIDER=openrouter`
-- `EMBEDDING_PROVIDER=openrouter`
+- `LLM_PROVIDER=gemini`
+- `EMBEDDING_PROVIDER=gemini`
 - `EMBEDDING_LOCAL_ENABLED=0`
 - domínio público gerado pelo Railway logo após o primeiro deploy saudável
 

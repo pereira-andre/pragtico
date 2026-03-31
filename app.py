@@ -106,6 +106,29 @@ def _resolve_provider_api_key(provider_name: str) -> str:
     env_name = PROVIDER_API_KEY_ENV.get(provider_name, "LLM_API_KEY")
     return os.getenv(env_name, "").strip()
 
+
+def _resolve_fallback_provider_name(primary_name: str, explicit_name: str = "") -> str:
+    fallback_name = (explicit_name or "").strip().lower()
+    if fallback_name and fallback_name != primary_name:
+        return fallback_name
+
+    preferred = ""
+    if primary_name == "gemini":
+        preferred = "openrouter"
+    elif primary_name == "openrouter":
+        preferred = "gemini"
+
+    if preferred and os.getenv(PROVIDER_API_KEY_ENV.get(preferred, ""), "").strip():
+        return preferred
+
+    for candidate in ("gemini", "openrouter", "openai", "deepseek"):
+        if candidate == primary_name:
+            continue
+        env_name = PROVIDER_API_KEY_ENV.get(candidate, "")
+        if env_name and os.getenv(env_name, "").strip():
+            return candidate
+    return ""
+
 # ---------------------------------------------------------------------------
 # Service initialization
 # ---------------------------------------------------------------------------
@@ -120,12 +143,22 @@ _llm_provider_name = _resolve_provider_name(
 )
 _llm_api_key = _resolve_provider_api_key(_llm_provider_name)
 _llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
+_llm_fallback_provider_name = _resolve_fallback_provider_name(
+    primary_name=_llm_provider_name,
+    explicit_name=os.getenv("LLM_FALLBACK_PROVIDER", ""),
+)
+_llm_fallback_api_key = _resolve_provider_api_key(_llm_fallback_provider_name)
+_llm_fallback_provider = (
+    create_llm_provider(provider=_llm_fallback_provider_name, api_key=_llm_fallback_api_key)
+    if _llm_fallback_provider_name
+    else None
+)
 
 _embedding_local_enabled = _env_flag("EMBEDDING_LOCAL_ENABLED", default="1")
 _embedding_provider = create_embedding_provider(enabled=_embedding_local_enabled)
 _embedding_provider_name = _resolve_provider_name(
     explicit_name=os.getenv("EMBEDDING_PROVIDER", ""),
-    default=_llm_provider_name,
+    default="gemini",
 )
 _embedding_api_key = _resolve_provider_api_key(_embedding_provider_name)
 _embedding_api_provider = None
@@ -133,6 +166,17 @@ if not _embedding_provider:
     _embedding_api_provider = create_llm_provider(
         provider=_embedding_provider_name,
         api_key=_embedding_api_key,
+    )
+_embedding_fallback_provider_name = _resolve_fallback_provider_name(
+    primary_name=_embedding_provider_name,
+    explicit_name=os.getenv("EMBEDDING_FALLBACK_PROVIDER", ""),
+)
+_embedding_fallback_api_key = _resolve_provider_api_key(_embedding_fallback_provider_name)
+_embedding_fallback_api_provider = None
+if not _embedding_provider and _embedding_fallback_provider_name:
+    _embedding_fallback_api_provider = create_llm_provider(
+        provider=_embedding_fallback_provider_name,
+        api_key=_embedding_fallback_api_key,
     )
 
 _default_gen_models = {
@@ -148,9 +192,17 @@ _default_emb_models = {
     "deepseek": "text-embedding-3-small",
 }
 _gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openrouter/free"))
+_gen_fallback_model = os.getenv(
+    "LLM_FALLBACK_MODEL",
+    _default_gen_models.get(_llm_fallback_provider_name, "") if _llm_fallback_provider_name else "",
+)
 _emb_model = os.getenv(
     "EMBEDDING_MODEL",
     _default_emb_models.get(_embedding_provider_name, "text-embedding-3-small"),
+)
+_emb_fallback_model = os.getenv(
+    "EMBEDDING_FALLBACK_MODEL",
+    _default_emb_models.get(_embedding_fallback_provider_name, "") if _embedding_fallback_provider_name else "",
 )
 
 rag = SimpleRAGEngine(
@@ -158,9 +210,13 @@ rag = SimpleRAGEngine(
     knowledge_dir=KNOWLEDGE_DIR,
     index_store=index_store,
     generation_model=_gen_model,
+    generation_fallback_model=_gen_fallback_model,
     embedding_model=_emb_model,
+    embedding_fallback_model=_emb_fallback_model,
     llm_provider=_llm_provider,
+    generation_fallback_provider=_llm_fallback_provider,
     embedding_api_provider=_embedding_api_provider,
+    embedding_fallback_api_provider=_embedding_fallback_api_provider,
     embedding_provider=_embedding_provider,
 )
 tide_service = TideService(
@@ -339,7 +395,7 @@ def inject_globals():
     return {
         "current_user": username,
         "current_role": session.get("role"),
-        "provider": rag.provider_name.title(),
+        "provider": rag.generation_provider_label,
         "auth_backend": getattr(auth_service, "backend_name", "unknown"),
         "storage_backend": getattr(store, "backend_name", "unknown"),
         "rag_backend": getattr(index_store, "backend_name", "unknown"),

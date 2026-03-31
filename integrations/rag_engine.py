@@ -11,7 +11,7 @@ from typing import Dict, List
 
 from domain.document_processing import extract_text_from_path
 from integrations.llm_provider import BaseLLMProvider, create_llm_provider
-from core.reindex_scheduler import PACIFIC_TZ, next_gemini_quota_reset_utc
+from core.reindex_scheduler import PACIFIC_TZ, next_provider_quota_reset_utc
 from integrations.vector_store import BaseIndexStore
 
 
@@ -48,39 +48,62 @@ class SimpleRAGEngine:
         index_store: BaseIndexStore,
         generation_model: str,
         embedding_model: str,
+        generation_fallback_model: str = "",
+        embedding_fallback_model: str = "",
         llm_provider: BaseLLMProvider | None = None,
+        generation_fallback_provider: BaseLLMProvider | None = None,
         embedding_api_provider: BaseLLMProvider | None = None,
+        embedding_fallback_api_provider: BaseLLMProvider | None = None,
         embedding_provider=None,
     ) -> None:
         self.api_key = api_key
         self.knowledge_dir = knowledge_dir
         self.index_store = index_store
         self.generation_model = generation_model
+        self.generation_fallback_model = generation_fallback_model
         self.embedding_model = embedding_model
+        self.embedding_fallback_model = embedding_fallback_model
 
         # LLM provider: use injected provider, or create from environment/api_key
         if llm_provider is not None:
             self.provider = llm_provider
         else:
             self.provider = create_llm_provider(api_key=api_key if api_key else None)
+        self.generation_fallback_provider = generation_fallback_provider
 
         # Embedding provider: local (sentence-transformers) or API-based
         self.embedding_provider = embedding_provider
         self.embedding_api_provider = embedding_api_provider or self.provider
+        self.embedding_fallback_api_provider = embedding_fallback_api_provider
         self._use_local_embeddings = (
             embedding_provider is not None and embedding_provider.is_available
         )
 
+        self._generation_candidates = self._build_provider_candidates(
+            (self.provider, self.generation_model),
+            (self.generation_fallback_provider, self.generation_fallback_model),
+        )
+        self._embedding_api_candidates = self._build_provider_candidates(
+            (self.embedding_api_provider, self.embedding_model),
+            (self.embedding_fallback_api_provider, self.embedding_fallback_model),
+        )
+
         # Backward compatibility: self.client represents the embedding-capable API provider.
         self.client = (
-            self.embedding_api_provider
-            if self.embedding_api_provider.is_available
+            next(
+                (provider for provider, _model in self._embedding_api_candidates if provider.is_available),
+                None,
+            )
+            if self._embedding_api_candidates
             else None
         )
         self.provider_name = self.provider.provider_name
+        self.generation_provider_label = self._candidate_chain_label(self._generation_candidates)
         self.embedding_provider_name = self.embedding_api_provider.provider_name
         self.embedding_provider_label = self._provider_label(self.embedding_provider_name)
         self.embedding_api_key_hint = self._provider_api_key_hint(self.embedding_provider_name)
+        if self._embedding_api_candidates:
+            self.embedding_provider_label = self._candidate_chain_label(self._embedding_api_candidates)
 
         self.allowed_extensions = {".md", ".txt", ".pdf", ".docx", ".csv"}
         self.last_index_error = ""
@@ -107,6 +130,7 @@ class SimpleRAGEngine:
         self._embedding_request_count_today = 0
         self._embedding_quota_blocked_until = None
         self._embedding_quota_block_reason = ""
+        self._embedding_quota_provider_name = self.embedding_provider_name
         self._reindex_started_monotonic: float | None = None
         self._reindex_status = self._build_initial_reindex_status()
 
@@ -133,6 +157,44 @@ class SimpleRAGEngine:
             "deepseek": "DEEPSEEK_API_KEY",
         }
         return hint_map.get(normalized, "LLM_API_KEY")
+
+    @staticmethod
+    def _build_provider_candidates(*pairs) -> List[tuple[BaseLLMProvider, str]]:
+        candidates: List[tuple[BaseLLMProvider, str]] = []
+        seen = set()
+        for provider, model in pairs:
+            if provider is None or not model:
+                continue
+            key = (provider.provider_name, model)
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append((provider, model))
+        return candidates
+
+    def _candidate_chain_label(self, candidates: List[tuple[BaseLLMProvider, str]]) -> str:
+        labels = []
+        seen = set()
+        for provider, _model in candidates:
+            label = self._provider_label(getattr(provider, "provider_name", ""))
+            if label in seen:
+                continue
+            seen.add(label)
+            labels.append(label)
+        return " -> ".join(labels) if labels else "API"
+
+    def can_generate(self) -> bool:
+        return any(provider.is_available for provider, _model in self._generation_candidates)
+
+    def generation_unavailable_reason(self) -> str:
+        reasons = [
+            getattr(provider, "unavailable_reason", "").strip()
+            for provider, _model in self._generation_candidates
+            if getattr(provider, "unavailable_reason", "").strip()
+        ]
+        if reasons:
+            return " | ".join(dict.fromkeys(reasons))
+        return "LLM provider unavailable."
 
     def _has_embedding_payload(self, embedding) -> bool:
         if embedding is None:
@@ -296,27 +358,61 @@ class SimpleRAGEngine:
             return list(embedding.values)
         return list(getattr(embedding, "embedding", []))
 
-    def _api_embedding_vectors(self, batch: List[str]) -> List[List[float]]:
-        if not self.client:
-            raise RuntimeError(
-                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                f"ou configura {self.embedding_api_key_hint}."
-            )
-        if hasattr(self.client, "embed"):
-            embed_result = self.client.embed(
+    def _embed_with_client(self, client, batch: List[str], model: str) -> List[List[float]]:
+        if hasattr(client, "embed"):
+            embed_result = client.embed(
                 texts=batch,
-                model=self.embedding_model,
+                model=model,
             )
             return embed_result.vectors
 
-        models_api = getattr(self.client, "models", None)
+        models_api = getattr(client, "models", None)
         if models_api and hasattr(models_api, "embed_content"):
             embed_result = models_api.embed_content(
-                model=self.embedding_model,
+                model=model,
                 contents=batch,
             )
             return [self._extract_vector(item) for item in getattr(embed_result, "embeddings", [])]
 
+        raise RuntimeError("O cliente de embeddings configurado não suporta embeddings.")
+
+    def _api_embedding_vectors(self, batch: List[str]) -> List[List[float]]:
+        if not self._embedding_api_candidates and not self.client:
+            raise RuntimeError(
+                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
+                f"ou configura {self.embedding_api_key_hint}."
+            )
+
+        errors: List[str] = []
+        attempted_clients = set()
+        if self.client is not None and all(id(provider) != id(self.client) for provider, _model in self._embedding_api_candidates):
+            try:
+                return self._embed_with_client(self.client, batch, self.embedding_model)
+            except Exception as exc:
+                errors.append(str(exc))
+
+        for provider, model in self._embedding_api_candidates:
+            attempted_clients.add(id(provider))
+            label = self._provider_label(getattr(provider, "provider_name", ""))
+            if not provider.is_available:
+                reason = getattr(provider, "unavailable_reason", "").strip()
+                if reason:
+                    errors.append(f"{label}: {reason}")
+                continue
+            try:
+                self.client = provider
+                return self._embed_with_client(provider, batch, model)
+            except Exception as exc:
+                errors.append(f"{label}: {exc}")
+
+        if self.client is not None and id(self.client) not in attempted_clients:
+            try:
+                return self._embed_with_client(self.client, batch, self.embedding_model)
+            except Exception as exc:
+                errors.append(str(exc))
+
+        if errors:
+            raise RuntimeError(" | ".join(errors))
         raise RuntimeError("O cliente de embeddings configurado não suporta embeddings.")
 
     def _current_pacific_date(self) -> str:
@@ -336,9 +432,13 @@ class SimpleRAGEngine:
             self._embedding_quota_blocked_until = None
             self._embedding_quota_block_reason = ""
 
-    def _mark_embedding_quota_exhausted(self, reason: str) -> None:
+    def _mark_embedding_quota_exhausted(self, reason: str, provider_name: str | None = None) -> None:
         with self._embedding_rate_lock:
-            self._embedding_quota_blocked_until = next_gemini_quota_reset_utc()
+            normalized_provider = (provider_name or self.embedding_provider_name or "").strip().lower()
+            self._embedding_quota_provider_name = normalized_provider or self.embedding_provider_name
+            self._embedding_quota_blocked_until = next_provider_quota_reset_utc(
+                self._embedding_quota_provider_name
+            )
             self._embedding_quota_block_reason = reason
 
     def _embedding_quota_guard_message(self, marker: str = "") -> str:
@@ -367,7 +467,10 @@ class SimpleRAGEngine:
                     and self._embedding_request_count_today >= self.embedding_requests_per_day
                 ):
                     reason = self._embedding_quota_guard_message("LOCAL DAILY LIMIT.")
-                    self._embedding_quota_blocked_until = next_gemini_quota_reset_utc()
+                    self._embedding_quota_provider_name = self.embedding_provider_name
+                    self._embedding_quota_blocked_until = next_provider_quota_reset_utc(
+                        self._embedding_quota_provider_name
+                    )
                     self._embedding_quota_block_reason = reason
                     raise RuntimeError(reason)
 
@@ -406,6 +509,9 @@ class SimpleRAGEngine:
             "PER_DAY",
             "BILLING",
             "LOCAL DAILY LIMIT",
+            "KEY LIMIT EXCEEDED",
+            "DAILY LIMIT",
+            "SETTINGS/KEYS",
         )
         return any(marker in upper_message for marker in permanent_markers)
 
@@ -489,7 +595,10 @@ class SimpleRAGEngine:
             except Exception as exc:
                 last_exc = exc
                 if self._is_permanent_quota_error(exc):
-                    self._mark_embedding_quota_exhausted(self._format_embedding_error(exc))
+                    self._mark_embedding_quota_exhausted(
+                        self._format_embedding_error(exc),
+                        provider_name=getattr(self.client, "provider_name", self.embedding_provider_name),
+                    )
                 retryable = self._should_retry_embedding_error(exc)
                 if not retryable or attempt >= self.embedding_max_retries:
                     raise
@@ -974,6 +1083,30 @@ class SimpleRAGEngine:
             f"Detalhe técnico: {error_message}"
         )
 
+    def generate_text(self, prompt: str):
+        if not self.can_generate():
+            raise RuntimeError(
+                "Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot."
+            )
+
+        errors: List[str] = []
+        for provider, model in self._generation_candidates:
+            label = self._provider_label(getattr(provider, "provider_name", ""))
+            if not provider.is_available:
+                reason = getattr(provider, "unavailable_reason", "").strip()
+                if reason:
+                    errors.append(f"{label}: {reason}")
+                continue
+            try:
+                return provider.generate(
+                    prompt=prompt,
+                    model=model,
+                )
+            except Exception as exc:
+                errors.append(f"{label}: {exc}")
+
+        raise RuntimeError(" | ".join(errors) if errors else self.generation_unavailable_reason())
+
     def answer(
         self,
         question: str,
@@ -1043,14 +1176,11 @@ Pergunta:
 {question}
 """.strip()
 
-        if not self.provider.is_available:
+        if not self.can_generate():
             raise RuntimeError("Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot.")
 
         try:
-            gen_result = self.provider.generate(
-                prompt=prompt,
-                model=self.generation_model,
-            )
+            gen_result = self.generate_text(prompt)
             answer_text = gen_result.text or "Sem resposta do modelo."
         except Exception as exc:
             answer_text = self._build_fallback_answer(sources, str(exc))

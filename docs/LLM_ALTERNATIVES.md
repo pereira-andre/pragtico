@@ -2,7 +2,7 @@
 
 Nota: este documento é uma nota exploratória de março de 2026. Os preços e catálogos de modelos devem ser reconfirmados antes de qualquer decisão de compra. As referências ao código abaixo foram atualizadas para refletir a estrutura atual do projeto.
 
-Estado atual do projeto: a aplicação já separa provider de geração e provider de embeddings. Em desenvolvimento local podes usar `sentence-transformers`; no perfil Railway o mais leve é usar embeddings por API.
+Estado atual do projeto: a aplicação já separa provider de geração e provider de embeddings. Em desenvolvimento local podes usar `sentence-transformers`; no perfil Railway o default atual é `Gemini` como provider principal e `OpenRouter` como fallback para chat e embeddings por API.
 
 ## 1. Problema Atual
 
@@ -12,8 +12,8 @@ Historicamente o PRAGtico foi testado com Gemini para:
 - **Interpretação de comandos operacionais** (ações do bot)
 
 Hoje o código já permite separar estes papéis, por exemplo:
-- `LLM_PROVIDER=openrouter` para geração
-- `EMBEDDING_PROVIDER=openrouter` ou outro provider compatível para embeddings
+- `LLM_PROVIDER=gemini` para geração
+- `EMBEDDING_PROVIDER=gemini` ou outro provider compatível para embeddings
 - `EMBEDDING_LOCAL_ENABLED=1` apenas em desenvolvimento
 
 Os limites do free tier do Gemini são restritivos:

@@ -16,5 +16,7 @@ reports/
 venv/
 
 data/
+knowledge/*
+!knowledge/.gitkeep
 contas.txt
 static/styles.css.bak
