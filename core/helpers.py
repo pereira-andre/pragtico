@@ -423,6 +423,7 @@ def refresh_knowledge_state(force_reindex: bool = False, rebuild_index: bool = T
 def current_reindex_status_payload() -> dict:
     """Return a combined reindex status payload including sync summary and retry schedule."""
     status_payload = services.rag.get_reindex_status()
+    workflow_progress_pct = float(status_payload.get("progress_pct") or 0.0)
     try:
         sync_summary = services.rag.get_sync_status_summary()
     except Exception as exc:
@@ -467,7 +468,20 @@ def current_reindex_status_payload() -> dict:
         "scheduled_retry_at": retry_status.get("scheduled_for"),
         "scheduled_retry_eta_seconds": retry_status.get("eta_seconds"),
         "scheduled_retry_reason": retry_status.get("reason", ""),
+        "workflow_progress_pct": workflow_progress_pct,
     }
+
+    if status_payload.get("state") == "completed":
+        pending_documents_total = int(status_payload.get("pending_documents_total") or 0)
+        total_chunks = int(status_payload.get("total_chunks") or 0)
+        if pending_documents_total > 0:
+            status_payload["progress_pct"] = (
+                float(status_payload.get("semantic_chunk_coverage_pct") or 0.0)
+                if total_chunks > 0
+                else 0.0
+            )
+        else:
+            status_payload["progress_pct"] = 100.0
 
     if retry_status.get("scheduled") and status_payload.get("state") != "running":
         base_message = status_payload.get("message") or "Índice pronto."

@@ -210,7 +210,7 @@ def reindex_knowledge():
             status_payload = {
                 **status_payload, "state": "running", "phase": "queued",
                 "message": "A iniciar reindexação...",
-                "progress_pct": max(float(status_payload.get("progress_pct") or 0), 1.0),
+                "progress_pct": 1.0,
                 "error": "",
             }
         return jsonify({"started": started, "status": status_payload, "message": "Reindexação incremental iniciada." if started else "Já existe uma reindexação em curso."}), 202 if started else 200

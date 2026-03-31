@@ -1,8 +1,11 @@
 import os
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
+from core import services
+from core.helpers import current_reindex_status_payload
 from integrations.llm_provider import EmbeddingResult, GenerationResult
 from integrations.rag_engine import SimpleRAGEngine
 from integrations.vector_store import LocalIndexStore
@@ -330,6 +333,36 @@ class SimpleRAGEngineTests(unittest.TestCase):
             summary = engine.get_sync_status_summary()
         self.assertEqual(summary["embedded_chunks"], 1)
         self.assertEqual(summary["missing_embedding_chunks"], 0)
+
+    def test_current_reindex_payload_uses_semantic_coverage_when_completion_is_partial(self) -> None:
+        long_text = ("Procedimento de manobra. " * 80).strip()
+        engine, _ = self._make_engine(
+            document_text=long_text,
+            extra_env={
+                "EMBEDDING_BATCH_SIZE": "1",
+                "EMBEDDING_REQUESTS_PER_DAY": "1",
+            },
+        )
+        engine.client = _SuccessfulClient()
+
+        engine.rebuild_index(force=True)
+
+        raw_status = engine.get_reindex_status()
+        self.assertEqual(raw_status["state"], "completed")
+        self.assertEqual(raw_status["progress_pct"], 100.0)
+
+        with (
+            patch.object(services, "rag", engine),
+            patch.object(services, "reindex_thread_lock", threading.Lock()),
+            patch.object(services, "reindex_thread", None),
+            patch.object(services, "reindex_retry_scheduler", None),
+        ):
+            payload = current_reindex_status_payload()
+
+        self.assertEqual(payload["state"], "completed")
+        self.assertLess(payload["semantic_chunk_coverage_pct"], 100)
+        self.assertEqual(payload["progress_pct"], payload["semantic_chunk_coverage_pct"])
+        self.assertEqual(payload["workflow_progress_pct"], 100.0)
 
     def test_answer_falls_back_to_secondary_generation_provider(self) -> None:
         engine, _ = self._make_engine()
