@@ -28,7 +28,7 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 - Ações operacionais via chat com confirmação, cancelamento e feedback
 - Suporte multi-provider para geração LLM
 - Embeddings locais em desenvolvimento com `BAAI/bge-m3`
-- Perfil Railway com embeddings Gemini via API, sem `sentence-transformers` no container
+- Perfil Railway com `OpenRouter` a servir modelos OpenAI para chat e embeddings, sem `sentence-transformers` no container
 
 O CSV operacional de marés fica em `resources/tides/` e não em `knowledge/`, para não entrar na indexação documental do RAG.
 
@@ -108,13 +108,12 @@ APP_STORAGE_BACKEND=postgres
 RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=<ligação PostgreSQL>
 OPENROUTER_API_KEY=<api-key>
-GEMINI_API_KEY=<api-key>
 LLM_PROVIDER=openrouter
-LLM_MODEL=openrouter/free
-LLM_FALLBACK_PROVIDER=gemini
-LLM_FALLBACK_MODEL=gemini-2.5-flash
-EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini-embedding-001
+LLM_MODEL=openai/gpt-4.1-mini
+LLM_FALLBACK_PROVIDER=
+LLM_FALLBACK_MODEL=
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_MODEL=openai/text-embedding-3-small
 EMBEDDING_LOCAL_ENABLED=0
 ```
 

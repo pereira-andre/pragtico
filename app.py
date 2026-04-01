@@ -170,17 +170,17 @@ if not _embedding_provider:
 
 _default_gen_models = {
     "gemini": "gemini-2.5-flash",
-    "openrouter": "openrouter/free",
+    "openrouter": "openai/gpt-4.1-mini",
     "openai": "gpt-4.1-mini",
     "deepseek": "deepseek-chat",
 }
 _default_emb_models = {
     "gemini": "gemini-embedding-001",
-    "openrouter": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+    "openrouter": "openai/text-embedding-3-small",
     "openai": "text-embedding-3-small",
     "deepseek": "text-embedding-3-small",
 }
-_gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openrouter/free"))
+_gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openai/gpt-4.1-mini"))
 _gen_fallback_model = os.getenv(
     "LLM_FALLBACK_MODEL",
     _default_gen_models.get(_llm_fallback_provider_name, "") if _llm_fallback_provider_name else "",

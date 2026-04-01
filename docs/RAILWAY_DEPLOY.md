@@ -47,14 +47,13 @@ APP_STORAGE_BACKEND=postgres
 RAG_INDEX_BACKEND=pgvector
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 MIGRATE_LOCAL_DATA_ON_START=1
-OPENROUTER_API_KEY=<api-key principal do chat>
-GEMINI_API_KEY=<api-key principal dos embeddings>
+OPENROUTER_API_KEY=<api-key principal do chat e embeddings>
 LLM_PROVIDER=openrouter
-LLM_MODEL=openrouter/free
-LLM_FALLBACK_PROVIDER=gemini
-LLM_FALLBACK_MODEL=gemini-2.5-flash
-EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini-embedding-001
+LLM_MODEL=openai/gpt-4.1-mini
+LLM_FALLBACK_PROVIDER=
+LLM_FALLBACK_MODEL=
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_MODEL=openai/text-embedding-3-small
 EMBEDDING_LOCAL_ENABLED=0
 RAG_REINDEX_ON_START=1
 WEATHERAPI_KEY=<opcional>
@@ -69,8 +68,9 @@ Notas:
 - Se usares `pgvector`, mantém `RAG_INDEX_BACKEND=pgvector`.
 - Se usares PostgreSQL sem extensão vetorial, muda para `RAG_INDEX_BACKEND=local`.
 - Depois da primeira indexação completa, volta `RAG_REINDEX_ON_START` para `0` para não reindexar em todos os deploys.
-- A configuração acima usa `OpenRouter` para resposta do chat e `Gemini` para embeddings.
-- O fallback automático fica só no LLM de resposta.
+- A configuração acima usa `OpenRouter` para resposta do chat e embeddings, com modelos `OpenAI` servidos pelo próprio OpenRouter.
+- O mesmo saldo/crédito do OpenRouter cobre chat e embeddings.
+- O fallback automático do LLM pode ficar vazio nesta configuração, para simplificar o arranque inicial.
 - Não configures fallback entre providers diferentes para embeddings, para não misturar espaços vetoriais e invalidar o índice.
 
 ### 5. Garantir o schema da base de dados
@@ -122,7 +122,9 @@ Para produção, a configuração mais coerente é:
 - `RAG_INDEX_BACKEND=pgvector`
 - serviço de base de dados Railway com `pgvector`
 - `LLM_PROVIDER=openrouter`
-- `EMBEDDING_PROVIDER=gemini`
+- `LLM_MODEL=openai/gpt-4.1-mini`
+- `EMBEDDING_PROVIDER=openrouter`
+- `EMBEDDING_MODEL=openai/text-embedding-3-small`
 - `EMBEDDING_LOCAL_ENABLED=0`
 - domínio público gerado pelo Railway logo após o primeiro deploy saudável
 
