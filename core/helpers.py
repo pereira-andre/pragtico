@@ -869,28 +869,8 @@ def build_operational_chat_sources(question: str) -> list[dict]:
 def answer_direct_operational_query(question: str) -> dict | None:
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     clean_question = _operational_lookup_key(question)
-    if not re.search(r"\b(id|identificador)\b", clean_question) or "manobra" not in clean_question:
-        return None
-
     port_calls = current_resolvable_port_calls()
-    matched_port_call = None
-    padded_question = f" {clean_question} "
-    by_reference = [
-        item for item in port_calls
-        if item.get("reference_code") and f" {_operational_lookup_key(item.get('reference_code'))} " in padded_question
-    ]
-    if len(by_reference) == 1:
-        matched_port_call = by_reference[0]
-    else:
-        by_name = []
-        for item in port_calls:
-            vessel_key = _operational_lookup_key(item.get("vessel_name"))
-            if vessel_key and f" {vessel_key} " in padded_question:
-                by_name.append(item)
-        if len(by_name) == 1:
-            matched_port_call = by_name[0]
-    if not matched_port_call:
-        return None
+    matched_port_call = _match_port_call_from_question(question, port_calls)
 
     maneuver_type = ""
     maneuver_label = "manobra"
@@ -903,6 +883,67 @@ def answer_direct_operational_query(question: str) -> dict | None:
     elif re.search(r"\b(mudanca|mudança|shift)\b", clean_question):
         maneuver_type = "shift"
         maneuver_label = "manobra de mudança"
+
+    if matched_port_call and re.search(r"\b(acho|achas|achar|opina|opiniao|opinião|recomenda|recomendacao|recomendação|avali|segur|prudente|devo|viavel|viável)\b", clean_question):
+        resolved_port_call = services.store.get_port_call(matched_port_call["id"])
+        scale_context = build_scale_context(resolved_port_call)
+        candidate_maneuvers = list(scale_context.get("maneuvers") or [])
+        if maneuver_type:
+            candidate_maneuvers = [item for item in candidate_maneuvers if item.get("type") == maneuver_type]
+        if candidate_maneuvers:
+            candidate_maneuvers.sort(
+                key=lambda item: (
+                    0 if item.get("status_key") in {"pending", "approved"} else 1,
+                    item.get("planned_label") or "",
+                    item.get("when_label") or "",
+                )
+            )
+            maneuver = candidate_maneuvers[0]
+            recommendation = maneuver.get("casebook_recommendation") or {}
+            similar_cases = maneuver.get("similar_cases") or []
+            if recommendation:
+                answer_lines = [
+                    f"Leitura histórica para {maneuver.get('title', 'a manobra')} de {resolved_port_call.get('vessel_name', 'este navio')}: {recommendation.get('title', 'Sem leitura histórica forte')}.",
+                    recommendation.get("summary", ""),
+                    f"Base: {recommendation.get('basis_label', 'sem casos suficientes')}.",
+                ]
+                if recommendation.get("signals_label"):
+                    answer_lines.append(f"Sinais: {recommendation['signals_label']}.")
+                if similar_cases:
+                    top_case = similar_cases[0]
+                    answer_lines.append(
+                        f"Caso mais próximo: {top_case.get('reference_code', '--')} · {top_case.get('state_label', '--')} · {top_case.get('route_label', '--')}."
+                    )
+                    if top_case.get("feedback_status_label"):
+                        answer_lines.append(f"Feedback validado do caso: {top_case['feedback_status_label']}.")
+                answer_lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
+                answer = " ".join(part for part in answer_lines if part).strip()
+                return {
+                    "answer": answer,
+                    "sources": [
+                        {
+                            "document": resolved_port_call.get("vessel_name", "Casebook"),
+                            "source_id": resolved_port_call.get("reference_code", ""),
+                            "retrieval_mode": "casebook_recommendation",
+                            "snippet": answer,
+                        }
+                    ],
+                    "answer_origin": "casebook_recommendation",
+                }
+            answer = (
+                f"Ainda não tenho base histórica suficientemente semelhante para opinar sobre "
+                f"{maneuver.get('title', 'esta manobra')} de {resolved_port_call.get('vessel_name', 'este navio')}."
+            )
+            return {
+                "answer": answer,
+                "sources": [],
+                "answer_origin": "casebook_recommendation",
+            }
+
+    if not re.search(r"\b(id|identificador)\b", clean_question) or "manobra" not in clean_question:
+        return None
+    if not matched_port_call:
+        return None
 
     resolved_port_call = services.store.get_port_call(matched_port_call["id"])
     maneuvers = list(resolved_port_call.get("maneuver_history", []) or [])

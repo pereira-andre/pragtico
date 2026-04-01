@@ -295,6 +295,33 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn(historical["reference_code"], casebook_sources[0]["snippet"])
         self.assertIn("recomendação histórica", casebook_sources[0]["snippet"])
 
+    def test_direct_operational_query_returns_casebook_recommendation_for_opinion_question(self) -> None:
+        historical = self._create_entry(notes="Entrada histórica", eta="2026-03-18T05:30:00+00:00")
+        self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada sem incidentes.")
+        historical_done = self.store.mark_port_call_arrived(
+            historical["id"],
+            arrived_at="2026-03-18T06:00:00+00:00",
+            updated_by="admin",
+        )
+        historical_entry = next(item for item in historical_done["maneuver_history"] if item["type"] == "entry")
+        self.store.update_maneuver_case_feedback(
+            maneuver_id=historical_entry["id"],
+            feedback_status="approved",
+            feedback_note="Boa referência.",
+            feedback_by="admin",
+        )
+
+        current = self._create_entry(notes="Nova entrada", eta="2026-04-07T05:30:00+00:00")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            answer = answer_direct_operational_query(f"O que achas da entrada da escala {current['reference_code']}?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual(answer["answer_origin"], "casebook_recommendation")
+        self.assertIn("Leitura histórica", answer["answer"])
+        self.assertIn("Feedback validado", answer["answer"])
+
     def test_complete_entry_rejects_occupied_quay(self) -> None:
         occupied = self._create_entry(notes="Primeira escala")
         self._move_port_call_in_port(occupied["id"])
