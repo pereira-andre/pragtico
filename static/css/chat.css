@@ -355,6 +355,16 @@
   pointer-events: none;
 }
 
+.chatbot-send-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateX(1px);
+}
+
 .chatbot-pending {
   padding: 10px 14px;
   border-top: 1px solid var(--line);
@@ -449,6 +459,10 @@
   fill: none;
   width: 18px;
   height: 18px;
+}
+
+.chatbot-input button[type="submit"] .chatbot-send-icon {
+  color: #ffffff;
 }
 
 .chatbot-input button[type="submit"]:hover {

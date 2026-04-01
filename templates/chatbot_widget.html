@@ -46,6 +46,30 @@
               {% endfor %}
             </details>
           {% endif %}
+          {% if msg.role == 'assistant' %}
+            <details class="feedback-box chatbot-feedback" data-feedback-box="1" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}">
+              <summary class="chatbot-feedback-summary">
+                <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
+                <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
+                  {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% else %}Sem feedback{% endif %}
+                </span>
+              </summary>
+              <div class="chatbot-feedback-body">
+                <textarea class="feedback-note" rows="2" placeholder="Opcional: indica o que esteve bem ou o que deve ser revisto..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                <div class="feedback-actions">
+                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
+                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
+                </div>
+                <p class="chatbot-feedback-meta" data-feedback-meta>
+                  {% if msg.feedback_status %}
+                    {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}.
+                  {% else %}
+                    Podes aprovar a resposta ou marcar para revisão.
+                  {% endif %}
+                </p>
+              </div>
+            </details>
+          {% endif %}
         </article>
       {% endfor %}
     {% else %}
@@ -75,10 +99,8 @@
       <textarea id="chatbot-question" rows="2" placeholder="Pergunta ao bot..." required></textarea>
       <div class="chat-command-autocomplete hidden" id="chatbot-command-autocomplete"></div>
     </div>
-    <button type="submit" id="chatbot-send" title="Enviar">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
+    <button type="submit" id="chatbot-send" title="Enviar" aria-label="Enviar">
+      <span class="chatbot-send-icon" aria-hidden="true">➜</span>
     </button>
   </form>
   <p class="chatbot-status" id="chatbot-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
@@ -203,12 +225,18 @@
   }
 
   function mountFeedbackBox(article, initialState = null) {
-    if (!article || !article.dataset.messageId || article.querySelector("[data-feedback-box]")) return;
-    const box = buildFeedbackBox(initialState || {
+    if (!article || !article.dataset.messageId) return;
+    const existingBox = article.querySelector("[data-feedback-box]");
+    const state = initialState || {
       status: article.dataset.feedbackStatus || "",
       note: article.dataset.feedbackNote || "",
       updatedAtLabel: article.dataset.feedbackUpdatedAtLabel || "",
-    });
+    };
+    if (existingBox) {
+      setFeedbackState(existingBox, state);
+      return;
+    }
+    const box = buildFeedbackBox(state);
     article.appendChild(box);
   }
 
