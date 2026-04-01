@@ -980,6 +980,14 @@ def _format_maneuver_case_flags(flags: list[str] | None) -> list[str]:
     return labels
 
 
+def _format_case_feedback_label(value: str | None) -> str:
+    return {
+        "approved": "referência positiva",
+        "avoid": "evitar como padrão",
+        "review": "rever caso",
+    }.get((value or "").strip().lower(), "")
+
+
 def _format_thruster_case_label(value: str | None) -> str:
     clean = (value or "").strip().lower()
     if clean in {"yes", "true", "1", "sim"}:
@@ -1048,6 +1056,9 @@ def _build_similar_case_cards(port_call: dict, maneuver: dict, limit: int = 3) -
                 "reasons_label": ", ".join(reasons) if reasons else "perfil semelhante",
                 "decision_flags": decision_flags,
                 "decision_excerpt": _extract_case_decision_excerpt(case),
+                "feedback_status": case.get("feedback_status", ""),
+                "feedback_status_label": case.get("feedback_status_label", ""),
+                "feedback_note": case.get("feedback_note", ""),
                 "tug_count": features.get("tug_count") or "--",
                 "loa_label": (
                     f"{features.get('vessel_loa_m'):.1f} m"
@@ -1070,6 +1081,9 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
 
     completed = sum(1 for item in similar_cases if item.get("status_class") == "completed")
     aborted = sum(1 for item in similar_cases if item.get("status_class") == "aborted")
+    approved_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "approved")
+    avoid_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "avoid")
+    review_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "review")
     wave_related = sum(
         1
         for item in similar_cases
@@ -1087,7 +1101,13 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
 
     status_key = "neutral"
     title = "Leitura histórica mista"
-    if completed and aborted == 0:
+    if avoid_feedback > approved_feedback:
+        status_key = "caution"
+        title = "Feedback validado recomenda prudência"
+    elif approved_feedback and avoid_feedback == 0:
+        status_key = "positive"
+        title = "Feedback validado favorável"
+    elif completed and aborted == 0:
         status_key = "positive"
         title = "Histórico favorável"
     elif aborted and completed == 0:
@@ -1106,8 +1126,18 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         recommendation_parts.append(f"rebocadores mais usados: {dominant_tug_count}")
     if wave_related and maneuver.get("type") in {"entry", "departure"}:
         recommendation_parts.append(f"ondulação relevante em {wave_related} caso(s)")
+    if approved_feedback:
+        recommendation_parts.append(f"feedback positivo validado em {approved_feedback} caso(s)")
+    if avoid_feedback:
+        recommendation_parts.append(f"feedback a evitar em {avoid_feedback} caso(s)")
+    if review_feedback:
+        recommendation_parts.append(f"{review_feedback} caso(s) marcado(s) para revisão")
 
-    if status_key == "caution":
+    if avoid_feedback > approved_feedback:
+        summary = "Casos semelhantes foram sinalizados para evitar este padrão sem validação reforçada."
+    elif approved_feedback and avoid_feedback == 0:
+        summary = "Casos semelhantes com feedback validado apoiam esta abordagem, mantendo confirmação humana."
+    elif status_key == "caution":
         summary = "Pede validação mais conservadora antes de confirmar esta manobra."
     elif status_key == "positive":
         summary = "O histórico semelhante é globalmente favorável, mantendo validação operacional normal."
@@ -2513,6 +2543,7 @@ def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
     maneuver = next((item for item in scale["maneuvers"] if item.get("id") == maneuver_id), None)
     if not maneuver:
         raise ValueError("Manobra não encontrada.")
+    case_record = services.store.get_maneuver_case(maneuver_id) if hasattr(services.store, "get_maneuver_case") else None
 
     state_key = (maneuver.get("status_key") or "").strip().lower()
     plan_status = "done" if maneuver.get("planned_label") and maneuver.get("planned_label") != "Sem hora" else "current"
@@ -2547,6 +2578,7 @@ def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
     return {
         "scale": scale,
         "maneuver": maneuver,
+        "case_record": case_record or {},
         "similar_cases": maneuver.get("similar_cases", []),
         "timeline": timeline,
     }

@@ -33,6 +33,14 @@ def _is_wave_sensitive_maneuver(maneuver_type: Optional[str]) -> bool:
     return _normalize_maneuver_type(maneuver_type) in {"entry", "departure"}
 
 
+def _feedback_status_label(value: Optional[str]) -> str:
+    return {
+        "approved": "Referência positiva",
+        "avoid": "Evitar como padrão",
+        "review": "Rever caso",
+    }.get((value or "").strip().lower(), "")
+
+
 def _should_capture_live_environment() -> bool:
     flag = os.getenv("MANEUVER_CASE_CAPTURE_ENVIRONMENT", "1").strip().lower()
     return flag not in {"0", "false", "no", "off"}
@@ -381,6 +389,10 @@ def build_maneuver_case(
         "environment_snapshot": environment_snapshot,
         "feature_snapshot": features,
         "change_log": list(maneuver.get("change_log") or []),
+        "feedback_status": existing_case.get("feedback_status", ""),
+        "feedback_note": existing_case.get("feedback_note", ""),
+        "feedback_updated_by": existing_case.get("feedback_updated_by", ""),
+        "feedback_updated_at": existing_case.get("feedback_updated_at"),
         "created_at": existing_case.get("created_at") or iso_now(),
         "updated_at": iso_now(),
     }
@@ -397,6 +409,9 @@ def decorate_maneuver_case(case: Dict) -> Dict:
         "completed_label": _local_iso_to_label(case.get("completed_at")),
         "reported_label": _local_iso_to_label(case.get("reported_at")),
         "has_report": bool(((case.get("execution_snapshot") or {}).get("report_note") or "").strip()),
+        "feedback_status_label": _feedback_status_label(case.get("feedback_status")),
+        "feedback_updated_at_label": _local_iso_to_label(case.get("feedback_updated_at")),
+        "has_validated_feedback": bool((case.get("feedback_status") or "").strip()),
     }
 
 
@@ -481,6 +496,7 @@ def rank_similar_maneuver_cases(
     ranked.sort(
         key=lambda item: (
             item.get("similarity_score", 0.0),
+            1 if item.get("has_validated_feedback") else 0,
             (_parse_iso_datetime(item.get("latest_event_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
         ),
         reverse=True,

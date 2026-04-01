@@ -73,6 +73,7 @@ from .utils import (
     is_user_profile_complete,
     normalize_constraint_codes,
 )
+from core.validators import validate_operational_feedback_status
 
 
 class LocalStore(BaseStore):
@@ -987,6 +988,32 @@ class LocalStore(BaseStore):
             tug_count=tug_count,
             limit=limit,
         )
+
+    def update_maneuver_case_feedback(
+        self,
+        *,
+        maneuver_id: str,
+        feedback_status: str,
+        feedback_note: str = "",
+        feedback_by: str = "",
+    ) -> Dict:
+        feedback_status = validate_operational_feedback_status(feedback_status)
+        cases = self._read_maneuver_cases()
+        updated = None
+        for item in cases:
+            if item.get("maneuver_id") != maneuver_id:
+                continue
+            item["feedback_status"] = feedback_status.strip().lower()
+            item["feedback_note"] = feedback_note.strip()
+            item["feedback_updated_by"] = feedback_by.strip()
+            item["feedback_updated_at"] = iso_now()
+            item["updated_at"] = iso_now()
+            updated = item
+            break
+        if not updated:
+            raise ValueError("Caso operacional não encontrado.")
+        self._write_maneuver_cases(cases)
+        return decorate_maneuver_case(updated)
 
     def clear_port_calls(self) -> int:
         removed = len(self._read_port_calls())

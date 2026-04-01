@@ -246,10 +246,17 @@ class OperationalFlowTests(unittest.TestCase):
     def test_scale_context_exposes_similar_cases_for_matching_maneuver_profile(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-20T05:30:00+00:00")
         self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada sem incidentes.")
-        self.store.mark_port_call_arrived(
+        historical_done = self.store.mark_port_call_arrived(
             historical["id"],
             arrived_at="2026-03-20T06:00:00+00:00",
             updated_by="admin",
+        )
+        historical_entry = next(item for item in historical_done["maneuver_history"] if item["type"] == "entry")
+        self.store.update_maneuver_case_feedback(
+            maneuver_id=historical_entry["id"],
+            feedback_status="approved",
+            feedback_note="Boa referência para este perfil.",
+            feedback_by="admin",
         )
 
         current = self._create_entry(notes="Nova entrada", eta="2026-04-05T05:30:00+00:00")
@@ -263,7 +270,8 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(entry["similar_cases"][0]["reference_code"], historical["reference_code"])
         self.assertNotEqual(entry["similar_cases"][0]["maneuver_id"], entry["id"])
         self.assertEqual(entry["casebook_recommendation"]["status_key"], "positive")
-        self.assertIn("Histórico", entry["casebook_recommendation"]["title"])
+        self.assertIn("Feedback", entry["casebook_recommendation"]["title"])
+        self.assertEqual(entry["similar_cases"][0]["feedback_status"], "approved")
 
     def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-19T05:30:00+00:00")

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash, generate_password_hash
-from core.validators import normalize_thruster_state, validate_datetime_range
+from core.validators import normalize_thruster_state, validate_datetime_range, validate_operational_feedback_status
 
 from domain.document_processing import (
     build_preview,
@@ -194,6 +194,7 @@ class PostgresStore(BaseStore):
             "completed_at": row["completed_at"].isoformat() if row.get("completed_at") else None,
             "reported_at": row["reported_at"].isoformat() if row.get("reported_at") else None,
             "latest_event_at": row["latest_event_at"].isoformat() if row.get("latest_event_at") else None,
+            "feedback_updated_at": row["feedback_updated_at"].isoformat() if row.get("feedback_updated_at") else None,
             "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
             "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
         }
@@ -226,13 +227,17 @@ class PostgresStore(BaseStore):
                     environment_snapshot,
                     feature_snapshot,
                     change_log,
+                    feedback_status,
+                    feedback_note,
+                    feedback_updated_by,
+                    feedback_updated_at,
                     created_at,
                     updated_at
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
-                    %s, %s
+                    %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (maneuver_id) DO UPDATE SET
                     port_call_id = EXCLUDED.port_call_id,
@@ -257,6 +262,16 @@ class PostgresStore(BaseStore):
                     environment_snapshot = EXCLUDED.environment_snapshot,
                     feature_snapshot = EXCLUDED.feature_snapshot,
                     change_log = EXCLUDED.change_log,
+                    feedback_status = COALESCE(NULLIF(maneuver_cases.feedback_status, ''), EXCLUDED.feedback_status),
+                    feedback_note = CASE
+                        WHEN maneuver_cases.feedback_status <> '' THEN maneuver_cases.feedback_note
+                        ELSE EXCLUDED.feedback_note
+                    END,
+                    feedback_updated_by = CASE
+                        WHEN maneuver_cases.feedback_status <> '' THEN maneuver_cases.feedback_updated_by
+                        ELSE EXCLUDED.feedback_updated_by
+                    END,
+                    feedback_updated_at = COALESCE(maneuver_cases.feedback_updated_at, EXCLUDED.feedback_updated_at),
                     created_at = COALESCE(maneuver_cases.created_at, EXCLUDED.created_at),
                     updated_at = EXCLUDED.updated_at
                 """,
@@ -284,6 +299,10 @@ class PostgresStore(BaseStore):
                     json.dumps(record.get("environment_snapshot", {})),
                     json.dumps(record.get("feature_snapshot", {})),
                     json.dumps(record.get("change_log", [])),
+                    record.get("feedback_status", ""),
+                    record.get("feedback_note", ""),
+                    record.get("feedback_updated_by", ""),
+                    record.get("feedback_updated_at"),
                     record.get("created_at") or iso_now(),
                     record.get("updated_at") or iso_now(),
                 ),
@@ -340,6 +359,10 @@ class PostgresStore(BaseStore):
                     environment_snapshot,
                     feature_snapshot,
                     change_log,
+                    feedback_status,
+                    feedback_note,
+                    feedback_updated_by,
+                    feedback_updated_at,
                     created_at,
                     updated_at
                 FROM maneuver_cases
@@ -1674,6 +1697,67 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             tug_count=tug_count,
             limit=limit,
         )
+
+    def update_maneuver_case_feedback(
+        self,
+        *,
+        maneuver_id: str,
+        feedback_status: str,
+        feedback_note: str = "",
+        feedback_by: str = "",
+    ) -> Dict:
+        feedback_status = validate_operational_feedback_status(feedback_status)
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE maneuver_cases
+                    SET
+                        feedback_status = %s,
+                        feedback_note = %s,
+                        feedback_updated_by = %s,
+                        feedback_updated_at = NOW(),
+                        updated_at = NOW()
+                    WHERE maneuver_id = %s
+                    RETURNING
+                        maneuver_id,
+                        port_call_id::text AS port_call_id,
+                        reference_code,
+                        vessel_name,
+                        maneuver_type,
+                        current_state,
+                        origin_label,
+                        destination_label,
+                        planned_at,
+                        decided_at,
+                        completed_at,
+                        reported_at,
+                        latest_event_at,
+                        case_summary,
+                        vessel_snapshot,
+                        scale_snapshot,
+                        planning_snapshot,
+                        decision_snapshot,
+                        execution_snapshot,
+                        outcome_snapshot,
+                        environment_snapshot,
+                        feature_snapshot,
+                        change_log,
+                        feedback_status,
+                        feedback_note,
+                        feedback_updated_by,
+                        feedback_updated_at,
+                        created_at,
+                        updated_at
+                    """,
+                    (feedback_status.strip().lower(), feedback_note.strip(), feedback_by.strip(), maneuver_id),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        payload = self._row_to_maneuver_case_record(row)
+        if not payload:
+            raise ValueError("Caso operacional não encontrado.")
+        return decorate_maneuver_case(payload)
 
     def clear_port_calls(self) -> int:
         with self._connect() as conn:

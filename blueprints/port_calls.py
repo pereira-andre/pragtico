@@ -25,6 +25,7 @@ from core.helpers import (
 from storage import normalize_constraint_codes
 from core.validators import (
     validate_datetime_range,
+    validate_operational_feedback_status,
     validate_imo,
     validate_not_past_datetime,
     normalize_thruster_state,
@@ -132,6 +133,38 @@ def maneuver_detail(port_call_id: str, maneuver_id: str):
         maneuver_view=maneuver_context,
         title=f"Manobra {maneuver_context['maneuver']['title']} · {port_call['vessel_name']}",
     )
+
+
+@bp.route("/port-calls/<port_call_id>/maneuvers/<maneuver_id>/feedback", methods=["POST"])
+@login_required
+@role_required("admin", "piloto")
+@port_call_scope_required
+def update_maneuver_case_feedback(port_call_id: str, maneuver_id: str):
+    """Guardar feedback operacional validado sobre um caso histórico de manobra."""
+    try:
+        feedback_status = validate_operational_feedback_status(request.form.get("feedback_status"))
+        feedback_note = validate_optional_text(request.form.get("feedback_note", ""))
+        if feedback_status in {"avoid", "review"} and not feedback_note:
+            raise ValueError("Indica uma nota para justificar este feedback operacional.")
+        updated = services.store.update_maneuver_case_feedback(
+            maneuver_id=maneuver_id,
+            feedback_status=feedback_status,
+            feedback_note=feedback_note,
+            feedback_by=session["username"],
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("port_calls.maneuver_detail", port_call_id=port_call_id, maneuver_id=maneuver_id))
+    except Exception:
+        logger.exception("Falha inesperada ao atualizar feedback do caso %s.", maneuver_id)
+        flash("Falha inesperada ao guardar o feedback operacional.", "error")
+        return redirect(url_for("port_calls.maneuver_detail", port_call_id=port_call_id, maneuver_id=maneuver_id))
+
+    flash(
+        f"Feedback operacional atualizado: {updated.get('feedback_status_label') or updated.get('feedback_status', '')}.",
+        "success",
+    )
+    return redirect(url_for("port_calls.maneuver_detail", port_call_id=port_call_id, maneuver_id=maneuver_id))
 
 
 @bp.route("/port-calls", methods=["POST"])

@@ -257,8 +257,16 @@
                     {% endfor %}
                   </div>
                 {% endif %}
+                {% if case.feedback_status_label %}
+                  <div class="casebook-tag-list">
+                    <span class="casebook-tag casebook-tag-feedback">{{ case.feedback_status_label }}</span>
+                  </div>
+                {% endif %}
                 {% if case.decision_excerpt %}
                   <p class="casebook-note">{{ case.decision_excerpt }}</p>
+                {% endif %}
+                {% if case.feedback_note %}
+                  <p class="casebook-note">{{ case.feedback_note }}</p>
                 {% endif %}
                 <div class="inline-link-row">
                   <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=case.port_call_id, maneuver_id=case.maneuver_id) }}">Abrir caso</a>
@@ -266,6 +274,49 @@
               </article>
             {% endfor %}
           </div>
+        </section>
+      {% endif %}
+
+      {% if current_role in ["admin", "piloto"] and maneuver.status_key in ["completed", "aborted"] %}
+        <section class="panel inset-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Validação</p>
+              <h2>Feedback operacional</h2>
+            </div>
+          </div>
+          {% if maneuver_view.case_record.feedback_status_label %}
+            <section class="casebook-recommendation casebook-recommendation-{{ 'caution' if maneuver_view.case_record.feedback_status == 'avoid' else 'positive' if maneuver_view.case_record.feedback_status == 'approved' else 'neutral' }}">
+              <strong>{{ maneuver_view.case_record.feedback_status_label }}</strong>
+              {% if maneuver_view.case_record.feedback_note %}
+                <p>{{ maneuver_view.case_record.feedback_note }}</p>
+              {% endif %}
+              <small>
+                {% if maneuver_view.case_record.feedback_updated_by %}
+                  {{ maneuver_view.case_record.feedback_updated_by }}
+                {% endif %}
+                {% if maneuver_view.case_record.feedback_updated_at_label %}
+                  · {{ maneuver_view.case_record.feedback_updated_at_label }}
+                {% endif %}
+              </small>
+            </section>
+          {% endif %}
+          <form method="post" action="{{ url_for('port_calls.update_maneuver_case_feedback', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" class="stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Classificação do caso
+              <select name="feedback_status" required>
+                <option value="approved" {% if maneuver_view.case_record.feedback_status == 'approved' %}selected{% endif %}>Referência positiva</option>
+                <option value="avoid" {% if maneuver_view.case_record.feedback_status == 'avoid' %}selected{% endif %}>Evitar como padrão</option>
+                <option value="review" {% if maneuver_view.case_record.feedback_status == 'review' %}selected{% endif %}>Rever caso</option>
+              </select>
+            </label>
+            <label>
+              Nota de validação
+              <textarea name="feedback_note" rows="3" placeholder="Justifica a decisão, exceção, risco ou boa prática...">{{ maneuver_view.case_record.feedback_note }}</textarea>
+            </label>
+            <button type="submit" class="mini-button">Guardar feedback</button>
+          </form>
         </section>
       {% endif %}
 

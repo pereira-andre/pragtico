@@ -106,9 +106,25 @@ CREATE TABLE IF NOT EXISTS maneuver_cases (
     environment_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
     feature_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
     change_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+    feedback_status TEXT NOT NULL DEFAULT '',
+    feedback_note TEXT NOT NULL DEFAULT '',
+    feedback_updated_by TEXT NOT NULL DEFAULT '',
+    feedback_updated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS feedback_status TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS feedback_note TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS feedback_updated_by TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS feedback_updated_at TIMESTAMPTZ;
 
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS vessel_short_name TEXT NOT NULL DEFAULT '';

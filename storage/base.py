@@ -228,6 +228,18 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def update_maneuver_case_feedback(
+        self,
+        *,
+        maneuver_id: str,
+        feedback_status: str,
+        feedback_note: str = "",
+        feedback_by: str = "",
+    ) -> Dict:
+        """Persist validated operational feedback on a maneuver case and return the updated case."""
+        raise NotImplementedError
+
+    @abstractmethod
     def clear_port_calls(self) -> int:
         """Delete all port calls and maneuver history, returning the number of removed records."""
         raise NotImplementedError

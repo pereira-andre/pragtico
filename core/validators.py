@@ -226,6 +226,14 @@ def validate_feedback_status(value: Optional[str]) -> str:
     return validate_choice(value, ALLOWED_FEEDBACK_STATUSES, "Estado de feedback")
 
 
+ALLOWED_OPERATIONAL_FEEDBACK_STATUSES = {"approved", "avoid", "review"}
+
+
+def validate_operational_feedback_status(value: Optional[str]) -> str:
+    """Validate that the given value is an allowed operational case feedback status."""
+    return validate_choice(value, ALLOWED_OPERATIONAL_FEEDBACK_STATUSES, "Estado de feedback operacional")
+
+
 # ---------------------------------------------------------------------------
 # Password
 # ---------------------------------------------------------------------------

@@ -396,6 +396,90 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(matches[0]["port_call_id"], first["id"])
         self.assertGreater(matches[0]["similarity_score"], 0)
 
+    def test_update_maneuver_case_feedback_persists_validation(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin", approval_note="Entrada ok.")
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-24T05:40:00+00:00",
+            maneuver_finished_at="2026-03-24T06:10:00+00:00",
+            draft_m="9.94",
+            notes="Entrada realizada sem incidentes.",
+        )
+        updated_port_call = self.store.get_port_call(port_call["id"])
+        entry = next(item for item in updated_port_call["maneuver_history"] if item["type"] == "entry")
+
+        case = self.store.update_maneuver_case_feedback(
+            maneuver_id=entry["id"],
+            feedback_status="approved",
+            feedback_note="Padrão seguro com esta configuração.",
+            feedback_by="piloto",
+        )
+
+        self.assertEqual(case["feedback_status"], "approved")
+        self.assertEqual(case["feedback_status_label"], "Referência positiva")
+        self.assertEqual(case["feedback_note"], "Padrão seguro com esta configuração.")
+        self.assertEqual(case["feedback_updated_by"], "piloto")
+
+    def test_similarity_prefers_validated_case_when_profile_is_equivalent(self) -> None:
+        first = self._create_entry()
+        self.store.approve_port_call(first["id"], decided_by="admin")
+        self.store.attach_entry_report(
+            first["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-24T05:40:00+00:00",
+            maneuver_finished_at="2026-03-24T06:10:00+00:00",
+            draft_m="9.94",
+            notes="Entrada 1.",
+        )
+        first_entry = next(item for item in self.store.get_port_call(first["id"])["maneuver_history"] if item["type"] == "entry")
+        self.store.update_maneuver_case_feedback(
+            maneuver_id=first_entry["id"],
+            feedback_status="approved",
+            feedback_note="Boa referência.",
+            feedback_by="admin",
+        )
+
+        second = self.store.create_port_call(
+            vessel_name="BELITAKI 2",
+            eta="2026-03-25T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            vessel_imo="9152999",
+            vessel_call_sign="D5OC9",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="9.94",
+            vessel_dwt_t="22330",
+        )
+        self.store.approve_port_call(second["id"], decided_by="admin")
+        self.store.attach_entry_report(
+            second["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-25T05:45:00+00:00",
+            maneuver_finished_at="2026-03-25T06:15:00+00:00",
+            draft_m="9.94",
+            notes="Entrada 2.",
+        )
+
+        matches = self.store.find_similar_maneuver_cases(
+            maneuver_type="entry",
+            origin="Leixoes",
+            destination="TMS 2",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            limit=2,
+        )
+
+        self.assertGreaterEqual(len(matches), 2)
+        self.assertEqual(matches[0]["feedback_status"], "approved")
+
     def test_create_port_call_missing_vessel_name_raises(self) -> None:
         with self.assertRaises(ValueError):
             self.store.create_port_call(

@@ -2169,6 +2169,12 @@ button:hover {
   font-size: 0.76rem;
 }
 
+.casebook-tag-feedback {
+  background: rgba(66, 160, 201, 0.14);
+  border-color: rgba(117, 201, 237, 0.2);
+  color: #a8dbef;
+}
+
 .casebook-note {
   color: #d5e7ee;
   font-size: 0.9rem;

@@ -346,8 +346,16 @@
                             {% endfor %}
                           </div>
                         {% endif %}
+                        {% if case.feedback_status_label %}
+                          <div class="casebook-tag-list">
+                            <span class="casebook-tag casebook-tag-feedback">{{ case.feedback_status_label }}</span>
+                          </div>
+                        {% endif %}
                         {% if case.decision_excerpt %}
                           <p class="casebook-note">{{ case.decision_excerpt }}</p>
+                        {% endif %}
+                        {% if case.feedback_note %}
+                          <p class="casebook-note">{{ case.feedback_note }}</p>
                         {% endif %}
                         <div class="inline-link-row">
                           <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=case.port_call_id, maneuver_id=case.maneuver_id) }}">Abrir caso</a>
