@@ -75,6 +75,34 @@
         {% endif %}
       </section>
 
+      <section class="panel inset-panel">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Checklist</p>
+            <h3>Análise operacional</h3>
+          </div>
+        </div>
+        <section class="checklist-summary checklist-summary-{{ 'caution' if maneuver.analysis_summary.caution_count else 'ok' }}">
+          <strong>{{ maneuver.analysis_summary.headline }}</strong>
+          <small>
+            alertas {{ maneuver.analysis_summary.caution_count }} ·
+            ok {{ maneuver.analysis_summary.ok_count }} ·
+            info {{ maneuver.analysis_summary.info_count }}
+          </small>
+        </section>
+        <div class="analysis-checklist">
+          {% for item in maneuver.analysis_checklist %}
+            <article class="analysis-checklist-item analysis-checklist-item-{{ item.status }}">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.detail }}</p>
+              </div>
+              <span class="analysis-checklist-status">{{ item.status }}</span>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
       <section class="panel inset-panel scale-actions-panel">
         <div class="section-head compact-head">
           <div>

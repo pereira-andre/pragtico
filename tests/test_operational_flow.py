@@ -272,6 +272,8 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(entry["casebook_recommendation"]["status_key"], "positive")
         self.assertIn("Feedback", entry["casebook_recommendation"]["title"])
         self.assertEqual(entry["similar_cases"][0]["feedback_status"], "approved")
+        self.assertTrue(entry["analysis_checklist"])
+        self.assertTrue(any(item["title"] == "Disponibilidade do destino" for item in entry["analysis_checklist"]))
 
     def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-19T05:30:00+00:00")
@@ -321,6 +323,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(answer["answer_origin"], "casebook_recommendation")
         self.assertIn("Leitura histórica", answer["answer"])
         self.assertIn("Feedback validado", answer["answer"])
+        self.assertIn("Checklist:", answer["answer"])
 
     def test_complete_entry_rejects_occupied_quay(self) -> None:
         occupied = self._create_entry(notes="Primeira escala")

@@ -902,6 +902,8 @@ def answer_direct_operational_query(question: str) -> dict | None:
             recommendation = maneuver.get("casebook_recommendation") or {}
             similar_cases = maneuver.get("similar_cases") or []
             if recommendation:
+                checklist = list(maneuver.get("analysis_checklist") or [])
+                checklist_alerts = [item for item in checklist if item.get("status") == "caution"][:2]
                 answer_lines = [
                     f"Leitura histórica para {maneuver.get('title', 'a manobra')} de {resolved_port_call.get('vessel_name', 'este navio')}: {recommendation.get('title', 'Sem leitura histórica forte')}.",
                     recommendation.get("summary", ""),
@@ -916,6 +918,12 @@ def answer_direct_operational_query(question: str) -> dict | None:
                     )
                     if top_case.get("feedback_status_label"):
                         answer_lines.append(f"Feedback validado do caso: {top_case['feedback_status_label']}.")
+                if checklist_alerts:
+                    answer_lines.append(
+                        "Checklist: " + " | ".join(
+                            f"{item.get('title', '')}: {item.get('detail', '')}" for item in checklist_alerts
+                        )
+                    )
                 answer_lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
                 answer = " ".join(part for part in answer_lines if part).strip()
                 return {
@@ -1027,6 +1035,257 @@ def _format_case_feedback_label(value: str | None) -> str:
         "avoid": "evitar como padrão",
         "review": "rever caso",
     }.get((value or "").strip().lower(), "")
+
+
+def _build_checklist_item(status: str, title: str, detail: str) -> dict:
+    return {
+        "status": status,
+        "title": title,
+        "detail": detail,
+    }
+
+
+def _build_maneuver_analysis_checklist(
+    port_call: dict,
+    maneuver: dict,
+    *,
+    similar_cases: list[dict],
+    casebook_recommendation: dict,
+) -> tuple[list[dict], dict]:
+    """Build a deterministic operational checklist for a maneuver analysis."""
+    items: list[dict] = []
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    origin = (maneuver.get("origin") or "").strip()
+    destination = (maneuver.get("destination") or "").strip()
+    tug_count_raw = str(maneuver.get("tug_count") or "").strip()
+    tug_count = int(tug_count_raw) if tug_count_raw.isdigit() else 0
+    bow_thruster = (port_call.get("vessel_bow_thruster") or "").strip().lower()
+    stern_thruster = (port_call.get("vessel_stern_thruster") or "").strip().lower()
+
+    required_profile = [
+        ("tipo", port_call.get("vessel_type")),
+        ("LOA", port_call.get("vessel_loa_m")),
+        ("boca", port_call.get("vessel_beam_m")),
+        ("GT", port_call.get("vessel_gt_t")),
+        ("calado máximo", port_call.get("vessel_max_draft_m")),
+    ]
+    missing_profile = [label for label, value in required_profile if not str(value or "").strip()]
+    if missing_profile:
+        items.append(
+            _build_checklist_item(
+                "caution",
+                "Perfil do navio",
+                f"Faltam dados para análise segura: {', '.join(missing_profile)}.",
+            )
+        )
+    else:
+        items.append(
+            _build_checklist_item(
+                "ok",
+                "Perfil do navio",
+                "Tipo, dimensões, GT e calado máximo estão preenchidos.",
+            )
+        )
+
+    if maneuver_type in {"entry", "shift"}:
+        canonical_destination = canonicalize_berth_label(destination, berth_options=services.BERTH_OPTIONS)
+        if not destination:
+            items.append(_build_checklist_item("caution", "Destino operacional", "Falta indicar cais ou fundeadouro de destino."))
+        elif not is_known_berth_label(canonical_destination, berth_options=services.BERTH_OPTIONS):
+            items.append(
+                _build_checklist_item(
+                    "caution",
+                    "Destino operacional",
+                    f"O destino '{destination}' não está no catálogo canónico do porto.",
+                )
+            )
+        else:
+            items.append(
+                _build_checklist_item(
+                    "ok",
+                    "Destino operacional",
+                    f"Destino normalizado para {canonical_destination}.",
+                )
+            )
+            in_port_items = [
+                item
+                for item in current_resolvable_port_calls()
+                if (item.get("status") or "").strip().lower() == "in_port"
+            ]
+            conflict = find_occupied_berth_conflict(
+                canonical_destination,
+                in_port_items,
+                current_port_call_id=port_call.get("id", ""),
+                berth_options=services.BERTH_OPTIONS,
+            )
+            if conflict:
+                items.append(
+                    _build_checklist_item(
+                        "caution",
+                        "Disponibilidade do destino",
+                        f"{canonical_destination} está ocupado por {conflict.get('vessel_name', 'outro navio')}.",
+                    )
+                )
+            else:
+                items.append(
+                    _build_checklist_item(
+                        "ok",
+                        "Disponibilidade do destino",
+                        f"{canonical_destination} está livre no snapshot operacional atual.",
+                    )
+                )
+    else:
+        if origin:
+            items.append(
+                _build_checklist_item(
+                    "ok",
+                    "Origem operacional",
+                    f"A saída segue o último local conhecido do navio: {origin}.",
+                )
+            )
+        else:
+            items.append(
+                _build_checklist_item(
+                    "caution",
+                    "Origem operacional",
+                    "A origem da saída não está definida no registo atual.",
+                )
+            )
+        if destination:
+            items.append(
+                _build_checklist_item(
+                    "ok",
+                    "Destino externo",
+                    f"Próximo destino indicado: {destination}.",
+                )
+            )
+        else:
+            items.append(
+                _build_checklist_item(
+                    "caution",
+                    "Destino externo",
+                    "Falta indicar o próximo destino da saída.",
+                )
+            )
+
+    if tug_count > 0:
+        items.append(
+            _build_checklist_item(
+                "ok",
+                "Meios de governo",
+                f"Estão previstos {tug_count} rebocador(es) para a manobra.",
+            )
+        )
+    elif bow_thruster == "yes" or stern_thruster == "yes":
+        items.append(
+            _build_checklist_item(
+                "info",
+                "Meios de governo",
+                "Sem rebocadores previstos; o navio tem thruster(s) declarado(s).",
+            )
+        )
+    elif bow_thruster == "unknown" or stern_thruster == "unknown":
+        items.append(
+            _build_checklist_item(
+                "caution",
+                "Meios de governo",
+                "Sem rebocadores previstos e os thrusters do navio ainda não estão totalmente confirmados.",
+            )
+        )
+    else:
+        items.append(
+            _build_checklist_item(
+                "caution",
+                "Meios de governo",
+                "Sem rebocadores previstos e sem thrusters declarados.",
+            )
+        )
+
+    constraint_labels = format_constraint_labels(maneuver.get("constraint_codes") or [])
+    if constraint_labels:
+        items.append(
+            _build_checklist_item(
+                "caution",
+                "Restrições operacionais",
+                f"Há restrições ativas: {', '.join(constraint_labels)}.",
+            )
+        )
+    else:
+        items.append(
+            _build_checklist_item(
+                "ok",
+                "Restrições operacionais",
+                "Não há restrições explícitas registadas nesta manobra.",
+            )
+        )
+
+    if maneuver_type in {"entry", "departure"}:
+        items.append(
+            _build_checklist_item(
+                "info",
+                "Ondulação e barra",
+                "Validar leitura costeira fora da barra, Pilar 2 e zona do Outão antes de decidir.",
+            )
+        )
+    else:
+        items.append(
+            _build_checklist_item(
+                "info",
+                "Ondulação e barra",
+                "Não é fator primário para mudanças internas, salvo condicionantes excecionais.",
+            )
+        )
+
+    if casebook_recommendation:
+        checklist_status = (
+            "ok"
+            if casebook_recommendation.get("status_key") == "positive"
+            else "caution"
+            if casebook_recommendation.get("status_key") == "caution"
+            else "info"
+        )
+        detail = casebook_recommendation.get("summary", "")
+        if casebook_recommendation.get("basis_label"):
+            detail = f"{detail} Base: {casebook_recommendation['basis_label']}"
+        items.append(
+            _build_checklist_item(
+                checklist_status,
+                "Histórico semelhante",
+                detail.strip(),
+            )
+        )
+    elif similar_cases:
+        items.append(
+            _build_checklist_item(
+                "info",
+                "Histórico semelhante",
+                f"Foram encontrados {len(similar_cases)} caso(s) semelhante(s), sem padrão decisivo único.",
+            )
+        )
+    else:
+        items.append(
+            _build_checklist_item(
+                "info",
+                "Histórico semelhante",
+                "Ainda não há casos semelhantes suficientes para apoiar a decisão.",
+            )
+        )
+
+    caution_count = sum(1 for item in items if item.get("status") == "caution")
+    ok_count = sum(1 for item in items if item.get("status") == "ok")
+    summary = {
+        "caution_count": caution_count,
+        "ok_count": ok_count,
+        "info_count": sum(1 for item in items if item.get("status") == "info"),
+        "headline": (
+            "Checklist com alertas operacionais"
+            if caution_count
+            else "Checklist operacional coerente"
+            if ok_count
+            else "Checklist operacional informativa"
+        ),
+    }
+    return items, summary
 
 
 def _format_thruster_case_label(value: str | None) -> str:
@@ -1247,6 +1506,19 @@ def build_maneuver_case_context_source(question: str, port_calls: list[dict]) ->
             )
             if recommendation.get("signals_label"):
                 lines.append(f"  sinais: {recommendation['signals_label']}")
+        checklist_summary = maneuver.get("analysis_summary") or {}
+        checklist_items = list(maneuver.get("analysis_checklist") or [])
+        if checklist_summary:
+            lines.append(
+                f"- checklist operacional: {checklist_summary.get('headline', 'sem resumo')} | "
+                f"alertas {checklist_summary.get('caution_count', 0)} | "
+                f"ok {checklist_summary.get('ok_count', 0)}"
+            )
+        for checklist_item in checklist_items[:3]:
+            lines.append(
+                f"  checklist [{checklist_item.get('status', 'info')}]: "
+                f"{checklist_item.get('title', '')} - {checklist_item.get('detail', '')}"
+            )
         for case in maneuver.get("similar_cases", [])[:3]:
             lines.append(
                 f"- {case.get('reference_code', '--')} | {case.get('vessel_name', '--')} | "
@@ -2448,6 +2720,12 @@ def build_scale_context(port_call: dict) -> dict:
     for item in history:
         similar_cases = _build_similar_case_cards(port_call, item, limit=3) if casebook_enabled else []
         casebook_recommendation = _build_casebook_recommendation(item, similar_cases)
+        analysis_checklist, analysis_summary = _build_maneuver_analysis_checklist(
+            port_call,
+            item,
+            similar_cases=similar_cases,
+            casebook_recommendation=casebook_recommendation,
+        )
         maneuvers.append({
             "id": item.get("id"), "type": item.get("type"),
             "status_key": item.get("state", ""),
@@ -2484,6 +2762,8 @@ def build_scale_context(port_call: dict) -> dict:
             "report_completed": bool((item.get("report_note") or "").strip()),
             "similar_cases": similar_cases,
             "casebook_recommendation": casebook_recommendation,
+            "analysis_checklist": analysis_checklist,
+            "analysis_summary": analysis_summary,
             "can_edit_plan": (
                 (current_role == "admin")
                 or (item.get("state") != "completed" and current_role == "piloto")

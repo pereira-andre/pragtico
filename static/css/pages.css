@@ -2074,6 +2074,88 @@ button:hover {
   background: linear-gradient(180deg, rgba(69, 46, 15, 0.86), rgba(42, 29, 11, 0.94));
 }
 
+.checklist-summary {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 197, 217, 0.16);
+  background: rgba(8, 26, 38, 0.78);
+}
+
+.checklist-summary strong,
+.checklist-summary small {
+  margin: 0;
+}
+
+.checklist-summary small {
+  color: var(--text-dim);
+}
+
+.checklist-summary-caution {
+  border-color: rgba(196, 143, 56, 0.3);
+}
+
+.checklist-summary-ok {
+  border-color: rgba(59, 179, 119, 0.24);
+}
+
+.analysis-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.analysis-checklist-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 197, 217, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.analysis-checklist-item strong,
+.analysis-checklist-item p {
+  margin: 0;
+}
+
+.analysis-checklist-item p {
+  margin-top: 4px;
+  color: #d5e7ee;
+  line-height: 1.45;
+}
+
+.analysis-checklist-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analysis-checklist-item-ok .analysis-checklist-status {
+  background: rgba(59, 179, 119, 0.14);
+  color: #9de3bb;
+}
+
+.analysis-checklist-item-caution .analysis-checklist-status {
+  background: rgba(196, 143, 56, 0.16);
+  color: #f0cb84;
+}
+
+.analysis-checklist-item-info .analysis-checklist-status {
+  background: rgba(66, 160, 201, 0.15);
+  color: #a8dbef;
+}
+
 .casebook-strip-head,
 .casebook-card-top,
 .casebook-meta-grid {
