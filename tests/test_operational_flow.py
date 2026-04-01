@@ -321,9 +321,12 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertIsNotNone(answer)
         self.assertEqual(answer["answer_origin"], "casebook_recommendation")
-        self.assertIn("Leitura histórica", answer["answer"])
+        self.assertIn("Leitura rápida", answer["answer"])
+        self.assertIn("Alertas", answer["answer"])
+        self.assertIn("Recomendação", answer["answer"])
+        self.assertIn("Base usada", answer["answer"])
         self.assertIn("Feedback validado", answer["answer"])
-        self.assertIn("Checklist:", answer["answer"])
+        self.assertIn("Checklist operacional determinística do portal", answer["answer"])
 
     def test_complete_entry_rejects_occupied_quay(self) -> None:
         occupied = self._create_entry(notes="Primeira escala")

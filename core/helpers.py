@@ -903,29 +903,13 @@ def answer_direct_operational_query(question: str) -> dict | None:
             similar_cases = maneuver.get("similar_cases") or []
             if recommendation:
                 checklist = list(maneuver.get("analysis_checklist") or [])
-                checklist_alerts = [item for item in checklist if item.get("status") == "caution"][:2]
-                answer_lines = [
-                    f"Leitura histórica para {maneuver.get('title', 'a manobra')} de {resolved_port_call.get('vessel_name', 'este navio')}: {recommendation.get('title', 'Sem leitura histórica forte')}.",
-                    recommendation.get("summary", ""),
-                    f"Base: {recommendation.get('basis_label', 'sem casos suficientes')}.",
-                ]
-                if recommendation.get("signals_label"):
-                    answer_lines.append(f"Sinais: {recommendation['signals_label']}.")
-                if similar_cases:
-                    top_case = similar_cases[0]
-                    answer_lines.append(
-                        f"Caso mais próximo: {top_case.get('reference_code', '--')} · {top_case.get('state_label', '--')} · {top_case.get('route_label', '--')}."
-                    )
-                    if top_case.get("feedback_status_label"):
-                        answer_lines.append(f"Feedback validado do caso: {top_case['feedback_status_label']}.")
-                if checklist_alerts:
-                    answer_lines.append(
-                        "Checklist: " + " | ".join(
-                            f"{item.get('title', '')}: {item.get('detail', '')}" for item in checklist_alerts
-                        )
-                    )
-                answer_lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
-                answer = " ".join(part for part in answer_lines if part).strip()
+                answer = _format_operational_opinion_answer(
+                    port_call=resolved_port_call,
+                    maneuver=maneuver,
+                    recommendation=recommendation,
+                    similar_cases=similar_cases,
+                    checklist=checklist,
+                )
                 return {
                     "answer": answer,
                     "sources": [
@@ -1043,6 +1027,64 @@ def _build_checklist_item(status: str, title: str, detail: str) -> dict:
         "title": title,
         "detail": detail,
     }
+
+
+def _format_operational_opinion_answer(
+    *,
+    port_call: dict,
+    maneuver: dict,
+    recommendation: dict,
+    similar_cases: list[dict],
+    checklist: list[dict],
+) -> str:
+    """Format a professional, structured opinion answer for a maneuver."""
+    alerts = [item for item in checklist if item.get("status") == "caution"]
+    infos = [item for item in checklist if item.get("status") == "info"]
+    top_case = similar_cases[0] if similar_cases else {}
+
+    lines = [
+        "Leitura rápida",
+        (
+            f"- {maneuver.get('title', 'Manobra')} de {port_call.get('vessel_name', 'navio')}: "
+            f"{recommendation.get('title', 'sem leitura histórica forte')}."
+        ),
+    ]
+    if recommendation.get("basis_label"):
+        lines.append(f"- {recommendation['basis_label']}.")
+
+    lines.append("")
+    lines.append("Alertas")
+    if alerts:
+        for item in alerts[:3]:
+            lines.append(f"- {item.get('title', '')}: {item.get('detail', '')}")
+    else:
+        lines.append("- Sem alertas críticos nesta leitura determinística.")
+    if not alerts and infos:
+        lines.append(f"- Nota: {infos[0].get('detail', '')}")
+
+    lines.append("")
+    lines.append("Recomendação")
+    lines.append(f"- {recommendation.get('summary', 'Sem recomendação automática disponível.')}")
+    if recommendation.get("signals_label"):
+        lines.append(f"- Sinais: {recommendation['signals_label']}.")
+
+    lines.append("")
+    lines.append("Base usada")
+    lines.append("- Checklist operacional determinística do portal.")
+    if similar_cases:
+        base_line = (
+            f"- Histórico semelhante: {len(similar_cases)} caso(s); mais próximo {top_case.get('reference_code', '--')} "
+            f"({top_case.get('state_label', '--')} · {top_case.get('route_label', '--')})."
+        )
+        lines.append(base_line)
+        if top_case.get("feedback_status_label"):
+            lines.append(f"- Feedback validado do caso mais próximo: {top_case['feedback_status_label']}.")
+    else:
+        lines.append("- Histórico semelhante: sem casos suficientes para comparação.")
+    lines.append("- Base documental: não foi invocada regra específica nesta leitura; pede regra/norma se precisares de enquadramento normativo.")
+    lines.append("")
+    lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
+    return "\n".join(lines).strip()
 
 
 def _build_maneuver_analysis_checklist(
