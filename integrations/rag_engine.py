@@ -1002,10 +1002,7 @@ class SimpleRAGEngine:
         if not self._use_local_embeddings and not self.client:
             return self._lexical_search(question, chunks, top_k)
         if not self._use_local_embeddings and self.is_embedding_quota_exhausted():
-            raise RuntimeError(
-                "Pesquisa semântica "
-                f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
-            )
+            return self._lexical_search(question, chunks, top_k)
 
         try:
             query_vector = self._embed_many([question])[0]
@@ -1015,10 +1012,7 @@ class SimpleRAGEngine:
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
             if self.is_embedding_quota_exhausted(self.last_index_error):
-                raise RuntimeError(
-                    "Pesquisa semântica "
-                    f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
-                ) from exc
+                return self._lexical_search(question, chunks, top_k)
             return self._lexical_search(question, chunks, top_k)
 
         return []
