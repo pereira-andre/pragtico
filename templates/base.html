@@ -20,6 +20,57 @@
       </div>
     </div>
     <div class="page-shell">
+      {% if current_user %}
+        {% set current_endpoint = request.endpoint or "" %}
+        <header class="portal-nav">
+          <div class="portal-nav-main">
+            <a class="portal-nav-brand" href="{{ url_for('dashboard_bp.dashboard') }}">
+              <span class="portal-nav-brand-mark">PR</span>
+              <span class="portal-nav-brand-copy">
+                <strong>PRAGtico</strong>
+                <small>{{ current_role or "operacional" }} · {{ current_profile.organization or "Porto de Setúbal" }}</small>
+              </span>
+            </a>
+            <nav class="portal-nav-links" aria-label="Navegação principal">
+              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.dashboard' else '' }}" href="{{ url_for('dashboard_bp.dashboard') }}">Quadro</a>
+              {% if current_role in ["admin", "agente"] %}
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'port_calls.port_call_register' else '' }}" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
+              {% endif %}
+              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.maneuver_archive' else '' }}" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
+              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
+              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
+              {% if current_role == "admin" %}
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_documents' else '' }}" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_status' else '' }}" href="{{ url_for('admin.admin_status') }}">Estado</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_users' else '' }}" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
+              {% endif %}
+              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'auth.profile' else '' }}" href="{{ url_for('auth.profile') }}">Perfil</a>
+            </nav>
+          </div>
+          <div class="portal-nav-tools">
+            <form class="portal-page-jump" action="#" method="get">
+              <label for="portal-page-jump-select" class="mini-label">Ir para</label>
+              <select id="portal-page-jump-select" data-page-jump>
+                <option value="">Escolher página...</option>
+                <option value="{{ url_for('dashboard_bp.dashboard') }}">Quadro</option>
+                {% if current_role in ["admin", "agente"] %}
+                  <option value="{{ url_for('port_calls.port_call_register') }}">Registar escala</option>
+                {% endif %}
+                <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
+                <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>
+                <option value="{{ url_for('dashboard_bp.local_warnings') }}">Avisos locais</option>
+                {% if current_role == "admin" %}
+                  <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
+                  <option value="{{ url_for('admin.admin_status') }}">Estado da plataforma</option>
+                  <option value="{{ url_for('admin.admin_users') }}">Utilizadores</option>
+                {% endif %}
+                <option value="{{ url_for('auth.profile') }}">Perfil</option>
+              </select>
+            </form>
+            <a class="portal-nav-logout" href="{{ url_for('auth.logout') }}">Sair</a>
+          </div>
+        </header>
+      {% endif %}
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="flash-stack">
@@ -51,6 +102,12 @@
     (function() {
       const loader = document.getElementById("site-loader");
       if (!loader) return;
+      const pageJump = document.querySelector("[data-page-jump]");
+      if (pageJump) {
+        pageJump.addEventListener("change", function() {
+          if (this.value) window.location.href = this.value;
+        });
+      }
       const hideLoader = () => {
         loader.classList.add("is-hidden");
         window.setTimeout(() => loader.remove(), 320);

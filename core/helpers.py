@@ -12,7 +12,13 @@ from functools import wraps
 from flask import flash, jsonify, redirect, request, session, url_for
 
 from core import services
-from domain.berth_layout import build_slot_occupancy, is_anchorage_berth
+from domain.berth_layout import (
+    build_slot_occupancy,
+    canonicalize_berth_label,
+    find_occupied_berth_conflict,
+    is_anchorage_berth,
+    is_known_berth_label,
+)
 from domain.chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
@@ -52,7 +58,7 @@ from domain.cost_engine import (
 )
 from domain.migration_service import get_database_runtime_status
 from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
-from core.validators import validate_not_past_datetime
+from core.validators import normalize_thruster_state, validate_not_past_datetime
 from storage import (
     PASSWORD_HASH_METHOD,
     format_constraint_labels,
@@ -851,6 +857,9 @@ def build_operational_chat_sources(question: str) -> list[dict]:
         build_maneuver_archive_source(question, historical_port_activity),
         build_scale_registry_source(question, historical_port_activity),
     ]
+    maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
+    if maneuver_case_source:
+        sources.append(maneuver_case_source)
     cost_source = build_cost_context_source(question, recent_port_activity)
     if cost_source:
         sources.append(cost_source)
@@ -930,6 +939,264 @@ def answer_direct_operational_query(question: str) -> dict | None:
             }
         ],
         "answer_origin": "operational_lookup",
+    }
+
+
+def _match_port_call_from_question(question: str, port_calls: list[dict]) -> dict | None:
+    """Resolve a single visible port call from free text using reference code or vessel name."""
+    clean_question = _operational_lookup_key(question)
+    if not clean_question:
+        return None
+    padded_question = f" {clean_question} "
+    by_reference = [
+        item for item in port_calls
+        if item.get("reference_code") and f" {_operational_lookup_key(item.get('reference_code'))} " in padded_question
+    ]
+    if len(by_reference) == 1:
+        return by_reference[0]
+
+    by_name = []
+    for item in port_calls:
+        vessel_key = _operational_lookup_key(item.get("vessel_name"))
+        if vessel_key and f" {vessel_key} " in padded_question:
+            by_name.append(item)
+    if len(by_name) == 1:
+        return by_name[0]
+    return None
+
+
+def _format_maneuver_case_flags(flags: list[str] | None) -> list[str]:
+    mapping = {
+        "wave_related": "ondulação relevante",
+        "pilotage_suspended": "pilotagem suspensa",
+        "pilotage_cancelled": "pilotagem cancelada",
+        "entry_aborted_by_sea_state": "entrada abortada por estado do mar",
+    }
+    labels = []
+    for flag in flags or []:
+        clean = mapping.get((flag or "").strip().lower())
+        if clean:
+            labels.append(clean)
+    return labels
+
+
+def _format_thruster_case_label(value: str | None) -> str:
+    clean = (value or "").strip().lower()
+    if clean in {"yes", "true", "1", "sim"}:
+        return "Sim"
+    if clean in {"no", "false", "0", "nao", "não"}:
+        return "Não"
+    return "Desconhecido"
+
+
+def _extract_case_decision_excerpt(case: dict) -> str:
+    for value in (
+        ((case.get("execution_snapshot") or {}).get("report_note") or "").strip(),
+        ((case.get("decision_snapshot") or {}).get("aborted_reason") or "").strip(),
+        ((case.get("decision_snapshot") or {}).get("approval_note") or "").strip(),
+        ((case.get("planning_snapshot") or {}).get("plan_observations") or "").strip(),
+        ((case.get("planning_snapshot") or {}).get("plan_note") or "").strip(),
+    ):
+        if value:
+            compact = " ".join(value.split())
+            return compact[:180] + "…" if len(compact) > 180 else compact
+    return ""
+
+
+def _build_similar_case_cards(port_call: dict, maneuver: dict, limit: int = 3) -> list[dict]:
+    try:
+        ranked_cases = services.store.find_similar_maneuver_cases(
+            maneuver_type=maneuver.get("type", ""),
+            origin=maneuver.get("origin", ""),
+            destination=maneuver.get("destination", ""),
+            vessel_type=port_call.get("vessel_type", ""),
+            vessel_loa_m=port_call.get("vessel_loa_m", ""),
+            bow_thruster=port_call.get("vessel_bow_thruster", ""),
+            stern_thruster=port_call.get("vessel_stern_thruster", ""),
+            tug_count=maneuver.get("tug_count", ""),
+            limit=max(limit + 1, 4),
+        )
+    except Exception:
+        logger.exception("Falha ao procurar casos semelhantes para a manobra %s.", maneuver.get("id"))
+        return []
+
+    cards = []
+    for case in ranked_cases:
+        if case.get("maneuver_id") == maneuver.get("id"):
+            continue
+        features = case.get("feature_snapshot") or {}
+        decision_flags = _format_maneuver_case_flags((case.get("outcome_snapshot") or {}).get("decision_flags"))
+        reasons = list(case.get("similarity_reasons") or [])
+        cards.append(
+            {
+                "maneuver_id": case.get("maneuver_id", ""),
+                "port_call_id": case.get("port_call_id", ""),
+                "reference_code": case.get("reference_code", "--"),
+                "vessel_name": case.get("vessel_name", "--"),
+                "state_label": case.get("current_state_label", "--"),
+                "status_class": (
+                    "completed"
+                    if case.get("current_state") == "completed"
+                    else "aborted"
+                    if case.get("current_state") == "aborted"
+                    else "pending"
+                ),
+                "route_label": f"{case.get('origin_label') or '--'} → {case.get('destination_label') or '--'}",
+                "latest_event_label": case.get("latest_event_label", "--"),
+                "planned_label": case.get("planned_label", "--"),
+                "similarity_score": case.get("similarity_score", 0),
+                "reasons_label": ", ".join(reasons) if reasons else "perfil semelhante",
+                "decision_flags": decision_flags,
+                "decision_excerpt": _extract_case_decision_excerpt(case),
+                "tug_count": features.get("tug_count") or "--",
+                "loa_label": (
+                    f"{features.get('vessel_loa_m'):.1f} m"
+                    if isinstance(features.get("vessel_loa_m"), (int, float))
+                    else "--"
+                ),
+                "bow_thruster_label": _format_thruster_case_label(features.get("bow_thruster")),
+                "stern_thruster_label": _format_thruster_case_label(features.get("stern_thruster")),
+            }
+        )
+        if len(cards) >= limit:
+            break
+    return cards
+
+
+def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) -> dict:
+    """Summarize similar historical cases into a short operational recommendation."""
+    if not similar_cases:
+        return {}
+
+    completed = sum(1 for item in similar_cases if item.get("status_class") == "completed")
+    aborted = sum(1 for item in similar_cases if item.get("status_class") == "aborted")
+    wave_related = sum(
+        1
+        for item in similar_cases
+        if "ondulação relevante" in (item.get("decision_flags") or [])
+    )
+
+    tug_counter: dict[str, int] = {}
+    for item in similar_cases:
+        tug_value = str(item.get("tug_count") or "").strip()
+        if tug_value and tug_value != "--":
+            tug_counter[tug_value] = tug_counter.get(tug_value, 0) + 1
+    dominant_tug_count = ""
+    if tug_counter:
+        dominant_tug_count = sorted(tug_counter.items(), key=lambda pair: (pair[1], pair[0]), reverse=True)[0][0]
+
+    status_key = "neutral"
+    title = "Leitura histórica mista"
+    if completed and aborted == 0:
+        status_key = "positive"
+        title = "Histórico favorável"
+    elif aborted and completed == 0:
+        status_key = "caution"
+        title = "Histórico desfavorável"
+    elif aborted > completed:
+        status_key = "caution"
+        title = "Histórico conservador"
+    elif completed > aborted:
+        status_key = "positive"
+        title = "Histórico maioritariamente favorável"
+
+    basis = f"{completed} realizada(s) e {aborted} abortada(s) em {len(similar_cases)} caso(s) semelhante(s)"
+    recommendation_parts = []
+    if dominant_tug_count:
+        recommendation_parts.append(f"rebocadores mais usados: {dominant_tug_count}")
+    if wave_related and maneuver.get("type") in {"entry", "departure"}:
+        recommendation_parts.append(f"ondulação relevante em {wave_related} caso(s)")
+
+    if status_key == "caution":
+        summary = "Pede validação mais conservadora antes de confirmar esta manobra."
+    elif status_key == "positive":
+        summary = "O histórico semelhante é globalmente favorável, mantendo validação operacional normal."
+    else:
+        summary = "O histórico semelhante não aponta para um padrão único; valida pelos fatores do momento."
+
+    return {
+        "status_key": status_key,
+        "title": title,
+        "basis_label": basis,
+        "summary": summary,
+        "signals_label": " · ".join(recommendation_parts),
+    }
+
+
+def build_maneuver_case_context_source(question: str, port_calls: list[dict]) -> dict | None:
+    """Build a compact historical casebook source for the matched scale/maneuver in chat."""
+    clean_question = _operational_lookup_key(question)
+    if not clean_question:
+        return None
+    if not re.search(r"\b(manobra|entrada|saida|departure|mudanca|shift|rebocador|rebocadores|thruster|cais|fundeadouro|aprovar|abortar|cancelar|opiniao|opiniao|achar|recomend)\b", clean_question):
+        return None
+
+    matched_port_call = _match_port_call_from_question(question, port_calls)
+    if not matched_port_call:
+        return None
+
+    try:
+        resolved_port_call = services.store.get_port_call(matched_port_call["id"])
+        scale_context = build_scale_context(resolved_port_call)
+    except Exception:
+        logger.exception("Falha ao montar contexto de casos para %s.", matched_port_call.get("id"))
+        return None
+
+    maneuver_type = ""
+    if re.search(r"\b(entrada|entry)\b", clean_question):
+        maneuver_type = "entry"
+    elif re.search(r"\b(saida|departure)\b", clean_question):
+        maneuver_type = "departure"
+    elif re.search(r"\b(mudanca|mudança|shift)\b", clean_question):
+        maneuver_type = "shift"
+
+    maneuvers = list(scale_context.get("maneuvers") or [])
+    if maneuver_type:
+        maneuvers = [item for item in maneuvers if item.get("type") == maneuver_type]
+    maneuvers.sort(
+        key=lambda item: (
+            0 if item.get("status_key") in {"pending", "approved"} else 1,
+            item.get("planned_label") or "",
+        )
+    )
+
+    lines = []
+    for maneuver in maneuvers[:2]:
+        if not maneuver.get("similar_cases"):
+            continue
+        lines.append(
+            f"Casos semelhantes para {maneuver.get('title', 'manobra')} "
+            f"de {resolved_port_call.get('vessel_name', 'navio')} ({maneuver.get('origin', '--')} -> {maneuver.get('destination', '--')}):"
+        )
+        recommendation = maneuver.get("casebook_recommendation") or {}
+        if recommendation:
+            lines.append(
+                f"- recomendação histórica: {recommendation.get('title', '')} | "
+                f"{recommendation.get('basis_label', '')} | {recommendation.get('summary', '')}"
+            )
+            if recommendation.get("signals_label"):
+                lines.append(f"  sinais: {recommendation['signals_label']}")
+        for case in maneuver.get("similar_cases", [])[:3]:
+            lines.append(
+                f"- {case.get('reference_code', '--')} | {case.get('vessel_name', '--')} | "
+                f"{case.get('state_label', '--')} | {case.get('route_label', '--')} | "
+                f"{case.get('latest_event_label', '--')} | afinidade {case.get('similarity_score', 0)} | "
+                f"{case.get('reasons_label', 'perfil semelhante')}"
+            )
+            if case.get("decision_flags"):
+                lines.append(f"  flags: {', '.join(case['decision_flags'])}")
+            if case.get("decision_excerpt"):
+                lines.append(f"  nota: {case['decision_excerpt']}")
+    if not lines:
+        return None
+
+    return {
+        "source_id": f"CASEBOOK:{resolved_port_call.get('reference_code', '')}",
+        "document": "casebook_manobras",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "maneuver_casebook",
+        "snippet": "\n".join(lines),
     }
 
 
@@ -1434,6 +1701,8 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
                 "vessel_gt_t",
                 "vessel_dwt_t",
                 "vessel_max_draft_m",
+                "vessel_bow_thruster",
+                "vessel_stern_thruster",
             )
         )
         has_report_fields = any(
@@ -1743,12 +2012,22 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             planned_at_value = field_text("planned_at_local", field_text("planned_shift_at_local", planned_at_value))
         if not any([planned_at_value, field_text("draft_m"), field_text("tug_count"), field_text("notes"), field_text("plan_observations"), field_text("change_reason"), fields.get("constraints")]):
             return
+        origin_value = field_text("origin", current_maneuver.get("origin") or current_port_call.get("last_port", ""))
+        destination_value = destination
+        if current_maneuver_type == "entry":
+            destination_value = normalize_portal_berth(destination_value, "Destino")
+        elif current_maneuver_type in {"departure", "shift"}:
+            origin_value = normalize_portal_berth(origin_value, "Origem")
+            if current_maneuver_type == "shift":
+                destination_value = normalize_portal_berth(destination_value, "Destino")
+                if destination_value == origin_value:
+                    raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
         services.store.edit_maneuver_plan(
             port_call_id=port_call_id, maneuver_id=current_maneuver.get("id", ""),
             updated_by=username, actor_role=role,
             planned_at=parse_local_datetime_input(planned_at_value or current_maneuver.get("planned_input_value") or current_maneuver.get("planned_at") or ""),
-            origin=require_form_text(field_text("origin", current_maneuver.get("origin") or current_port_call.get("last_port", "")), "Origem"),
-            destination=require_form_text(destination, "Destino"),
+            origin=require_form_text(origin_value, "Origem"),
+            destination=require_form_text(destination_value, "Destino"),
             draft_m=field_text("draft_m", current_maneuver.get("planned_draft_m", "")),
             tug_count=field_text("tug_count", current_maneuver.get("tug_count", "")),
             constraints=normalize_constraint_codes(fields.get("constraints") or current_maneuver.get("constraints", [])),
@@ -1765,7 +2044,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         port_call = services.store.create_port_call(
             vessel_name=field_text("vessel_name"), eta=eta, created_by=username,
             constraints=constraints,
-            berth=require_form_text(field_text("berth"), "Cais previsto"),
+            berth=normalize_portal_berth(field_text("berth"), "Cais previsto"),
             last_port=require_form_text(field_text("last_port"), "Porto anterior"),
             next_port=require_form_text(field_text("next_port"), "Próximo destino"),
             vessel_short_name=field_text("vessel_short_name"),
@@ -1778,20 +2057,31 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             vessel_gt_t=require_form_text(field_text("vessel_gt_t"), "GT"),
             vessel_max_draft_m=require_form_text(field_text("vessel_max_draft_m"), "Calado máximo"),
             vessel_dwt_t=require_form_text(field_text("vessel_dwt_t"), "DWT"),
+            vessel_bow_thruster=normalize_thruster_state(fields.get("vessel_bow_thruster"), "Bow thruster"),
+            vessel_stern_thruster=normalize_thruster_state(fields.get("vessel_stern_thruster"), "Stern thruster"),
             notes=build_entry_request_note({"draft_m": draft_m, "tug_count": tug_count, "constraints": constraints, "notes": fields.get("notes", "")}),
         )
         return port_call, _build_created_port_call_message(port_call)
     if action == "edit_port_call":
+        current_port_call = apply_scope(port_call_id) if port_call_id else None
         parsed_eta = None
         if field_text("eta_local"):
             parsed_eta = parse_optional_local_datetime_input(field_text("eta_local"), "ETA")
-            validate_not_past_datetime(parsed_eta, "ETA")
+            if (current_port_call or {}).get("status") == "scheduled":
+                validate_not_past_datetime(parsed_eta, "ETA")
+        berth_value = fields.get("berth")
+        normalized_berth = None
+        if berth_value not in {None, ""}:
+            if (current_port_call or {}).get("status") == "in_port":
+                normalized_berth = ensure_portal_berth_is_available(berth_value, current_port_call_id=port_call_id, label="Cais")
+            else:
+                normalized_berth = normalize_portal_berth(berth_value, "Cais")
         result = services.store.edit_port_call(
             port_call_id=port_call_id,
             updated_by=username,
             vessel_name=fields.get("vessel_name"),
             eta=parsed_eta,
-            berth=fields.get("berth"),
+            berth=normalized_berth,
             last_port=fields.get("last_port"),
             next_port=fields.get("next_port"),
             notes=fields.get("notes"),
@@ -1806,6 +2096,14 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             vessel_gt_t=fields.get("vessel_gt_t"),
             vessel_max_draft_m=fields.get("vessel_max_draft_m"),
             vessel_dwt_t=fields.get("vessel_dwt_t"),
+            vessel_bow_thruster=(
+                normalize_thruster_state(fields.get("vessel_bow_thruster"), "Bow thruster")
+                if "vessel_bow_thruster" in fields else None
+            ),
+            vessel_stern_thruster=(
+                normalize_thruster_state(fields.get("vessel_stern_thruster"), "Stern thruster")
+                if "vessel_stern_thruster" in fields else None
+            ),
         )
         return result, f"Escala atualizada para {result['vessel_name']}."
     if action == "delete_port_call":
@@ -1840,7 +2138,9 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         return result, f"Entrada {label} para {result['vessel_name']}."
     if action == "complete_entry":
         arrived_at_value = field_text("arrived_at_local", field_text("maneuver_finished_local"))
-        result = services.store.mark_port_call_arrived(port_call_id=port_call_id, arrived_at=parse_optional_local_datetime_input(arrived_at_value, "ATA") or datetime.now().astimezone().isoformat(), updated_by=username, berth=field_text("berth", port_call.get("berth")))
+        target_berth = field_text("berth", port_call.get("berth"))
+        berth_for_arrival = ensure_portal_berth_is_available(target_berth, current_port_call_id=port_call_id, label="Cais")
+        result = services.store.mark_port_call_arrived(port_call_id=port_call_id, arrived_at=parse_optional_local_datetime_input(arrived_at_value, "ATA") or datetime.now().astimezone().isoformat(), updated_by=username, berth=berth_for_arrival)
         return result, f"Entrada confirmada para {result['vessel_name']} às {result['ata_label']}. Já podes preencher o registo operacional."
     if action == "entry_report":
         target_maneuver = resolve_target_maneuver(port_call, action, "entry")
@@ -1855,7 +2155,22 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
-        result = services.store.schedule_departure_plan(port_call_id=port_call_id, planned_departure_at=planned_departure_at, updated_by=username, next_port=require_form_text(field_text("next_port", port_call.get("next_port", "")), "Próximo destino"), constraints=constraints, departure_plan_note=build_departure_plan_note({"draft_m": field_text("draft_m"), "tug_count": field_text("tug_count"), "constraints": constraints, "notes": field_text("notes")}))
+        result = services.store.schedule_departure_plan(
+            port_call_id=port_call_id,
+            planned_departure_at=planned_departure_at,
+            updated_by=username,
+            next_port=require_form_text(field_text("next_port", port_call.get("next_port", "")), "Próximo destino"),
+            constraints=constraints,
+            departure_plan_note=build_departure_plan_note(
+                {
+                    "origin_berth": port_call.get("berth", ""),
+                    "draft_m": field_text("draft_m"),
+                    "tug_count": field_text("tug_count"),
+                    "constraints": constraints,
+                    "notes": field_text("notes"),
+                }
+            ),
+        )
         return result, f"Saída planeada para {result['vessel_name']} às {result['planned_departure_label']}."
     if action == "approve_departure":
         apply_plan_updates_before_approval(port_call, "departure")
@@ -1888,7 +2203,11 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
-        result = services.store.schedule_shift_plan(port_call_id=port_call_id, planned_shift_at=planned_shift_at, updated_by=username, destination_berth=require_form_text(field_text("destination_berth"), "Cais destino"), constraints=constraints, shift_plan_note=build_shift_plan_note({"origin_berth": field_text("origin_berth", port_call.get("berth", "")), "destination_berth": field_text("destination_berth"), "draft_m": field_text("draft_m"), "tug_count": field_text("tug_count"), "constraints": constraints, "notes": field_text("notes")}))
+        origin_berth = normalize_portal_berth(field_text("origin_berth", port_call.get("berth", "")), "Cais origem")
+        destination_berth = normalize_portal_berth(field_text("destination_berth"), "Cais destino")
+        if destination_berth == origin_berth:
+            raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
+        result = services.store.schedule_shift_plan(port_call_id=port_call_id, planned_shift_at=planned_shift_at, updated_by=username, destination_berth=destination_berth, constraints=constraints, shift_plan_note=build_shift_plan_note({"origin_berth": origin_berth, "destination_berth": destination_berth, "draft_m": field_text("draft_m"), "tug_count": field_text("tug_count"), "constraints": constraints, "notes": field_text("notes")}))
         return result, f"Mudança planeada para {result['vessel_name']} às {result['planned_shift_label']}."
     if action == "approve_shift":
         apply_plan_updates_before_approval(port_call, "shift")
@@ -1906,6 +2225,11 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         return result, f"Mudança {label} para {result['vessel_name']}."
     if action == "complete_shift":
         shifted_at_value = field_text("shifted_at_local", field_text("maneuver_finished_local"))
+        shift_destination = normalize_portal_berth(
+            field_text("destination_berth", port_call.get("shift_destination_berth", "") or port_call.get("berth", "")),
+            "Cais destino",
+        )
+        ensure_portal_berth_is_available(shift_destination, current_port_call_id=port_call_id, label="Cais destino")
         result = services.store.mark_shift_completed(port_call_id=port_call_id, shifted_at=parse_optional_local_datetime_input(shifted_at_value, "Hora da mudança") or datetime.now().astimezone().isoformat(), updated_by=username)
         return result, f"Mudança concluída para {result['vessel_name']} às {result['shift_label']}. Já podes preencher o registo operacional."
     if action == "shift_report":
@@ -1994,6 +2318,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 def build_scale_context(port_call: dict) -> dict:
     """Build the rich context dict for the port call detail page including maneuvers and actions."""
     current_role = (session.get("role") or "").strip().lower()
+    casebook_enabled = hasattr(services.store, "find_similar_maneuver_cases")
 
     def _hours_between(start_value: str | None, end_value: str | None) -> str:
         if not start_value or not end_value:
@@ -2050,6 +2375,8 @@ def build_scale_context(port_call: dict) -> dict:
     maneuvers = []
     change_log_rows = []
     for item in history:
+        similar_cases = _build_similar_case_cards(port_call, item, limit=3) if casebook_enabled else []
+        casebook_recommendation = _build_casebook_recommendation(item, similar_cases)
         maneuvers.append({
             "id": item.get("id"), "type": item.get("type"),
             "status_key": item.get("state", ""),
@@ -2084,8 +2411,11 @@ def build_scale_context(port_call: dict) -> dict:
             "change_count": item.get("change_count", 0),
             "has_changes": item.get("has_changes", False),
             "report_completed": bool((item.get("report_note") or "").strip()),
+            "similar_cases": similar_cases,
+            "casebook_recommendation": casebook_recommendation,
             "can_edit_plan": (
-                (item.get("state") != "completed" and current_role in {"admin", "piloto"})
+                (current_role == "admin")
+                or (item.get("state") != "completed" and current_role == "piloto")
                 or (current_role == "agente" and item.get("state") == "pending")
             ),
             "can_edit_report": current_role in {"admin", "piloto"} and item.get("state") == "completed",
@@ -2139,6 +2469,8 @@ def build_scale_context(port_call: dict) -> dict:
         "gt": port_call["ship_gt_label"],
         "draft": port_call["ship_max_draft_label"],
         "dwt": port_call["ship_dwt_label"],
+        "bow_thruster": port_call["ship_bow_thruster_label"],
+        "stern_thruster": port_call["ship_stern_thruster_label"],
     }
     actions = {
         "can_approve_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") == "pending",
@@ -2169,6 +2501,7 @@ def build_scale_context(port_call: dict) -> dict:
         "ship_profile": ship_profile,
         "summary": summary,
         "maneuvers": maneuvers,
+        "has_casebook_support": any(item.get("similar_cases") for item in maneuvers),
         "change_log_rows": sorted(change_log_rows, key=lambda item: item.get("changed_at") or "", reverse=True),
         "actions": actions,
     }
@@ -2214,6 +2547,7 @@ def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
     return {
         "scale": scale,
         "maneuver": maneuver,
+        "similar_cases": maneuver.get("similar_cases", []),
         "timeline": timeline,
     }
 
@@ -2260,6 +2594,36 @@ def require_form_text(value: str, label: str) -> str:
     if not clean:
         raise ValueError(f"{label} é obrigatório.")
     return clean
+
+
+def normalize_portal_berth(value: str, label: str = "Cais") -> str:
+    """Resolve a berth label against the canonical Setubal berth catalog."""
+    clean = require_form_text(value, label)
+    canonical = canonicalize_berth_label(clean, berth_options=services.BERTH_OPTIONS)
+    if not is_known_berth_label(canonical, berth_options=services.BERTH_OPTIONS):
+        raise ValueError(f"{label} inválido. Usa um dos cais/fundeadouros conhecidos do porto.")
+    return canonical
+
+
+def occupied_portal_berth_conflict(berth: str, *, current_port_call_id: str = "") -> dict | None:
+    """Return the conflicting in-port vessel occupying a quay berth, ignoring anchorages."""
+    port_activity = services.store.get_port_activity_snapshot(window_days=3650)
+    return find_occupied_berth_conflict(
+        berth,
+        port_activity.get("in_port", []) or [],
+        current_port_call_id=current_port_call_id,
+        berth_options=services.BERTH_OPTIONS,
+    )
+
+
+def ensure_portal_berth_is_available(berth: str, *, current_port_call_id: str = "", label: str = "Cais") -> str:
+    """Validate a canonical berth and raise when the quay is already occupied by another in-port vessel."""
+    canonical = normalize_portal_berth(berth, label=label)
+    conflict = occupied_portal_berth_conflict(canonical, current_port_call_id=current_port_call_id)
+    if conflict:
+        conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
+        raise ValueError(f"{label} {canonical} já está ocupado por {conflict_name}.")
+    return canonical
 
 
 def format_note_datetime(value: str) -> str:
@@ -2331,6 +2695,7 @@ def build_entry_request_note(form_data: dict) -> str:
 def build_departure_plan_note(form_data: dict) -> str:
     """Build the agent departure plan note from form data fields."""
     return compact_multiline_note("Registo do agente · Saída", [
+        ("Origem", form_data.get("origin_berth", "")),
         ("Calado", form_data.get("draft_m", "")),
         ("Rebocadores", form_data.get("tug_count", "")),
         ("Restrições", format_constraint_labels(form_data.get("constraints", []))),

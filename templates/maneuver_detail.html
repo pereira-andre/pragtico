@@ -211,6 +211,64 @@
     </section>
 
     <aside class="detail-side">
+      {% if maneuver_view.similar_cases %}
+        <section class="panel inset-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Casebook</p>
+              <h2>Casos semelhantes</h2>
+            </div>
+          </div>
+          {% if maneuver.casebook_recommendation %}
+            <section class="casebook-recommendation casebook-recommendation-{{ maneuver.casebook_recommendation.status_key }}">
+              <strong>{{ maneuver.casebook_recommendation.title }}</strong>
+              <p>{{ maneuver.casebook_recommendation.summary }}</p>
+              <small>{{ maneuver.casebook_recommendation.basis_label }}</small>
+              {% if maneuver.casebook_recommendation.signals_label %}
+                <small>{{ maneuver.casebook_recommendation.signals_label }}</small>
+              {% endif %}
+            </section>
+          {% endif %}
+          <div class="casebook-list">
+            {% for case in maneuver_view.similar_cases %}
+              <article class="casebook-card casebook-card-prominent">
+                <div class="casebook-card-top">
+                  <div>
+                    <strong>{{ case.reference_code }}</strong>
+                    <p>{{ case.vessel_name }}</p>
+                  </div>
+                  <div class="stack tight align-end">
+                    <span class="planned-status planned-status-{{ case.status_class }}">{{ case.state_label }}</span>
+                    <span class="casebook-score">{{ case.similarity_score }}</span>
+                  </div>
+                </div>
+                <p class="casebook-route">{{ case.route_label }}</p>
+                <p class="casebook-reasons">{{ case.reasons_label }}</p>
+                <div class="casebook-meta-grid">
+                  <span>{{ case.latest_event_label }}</span>
+                  <span>Rebocadores {{ case.tug_count }}</span>
+                  <span>LOA {{ case.loa_label }}</span>
+                  <span>Bow {{ case.bow_thruster_label }} · Stern {{ case.stern_thruster_label }}</span>
+                </div>
+                {% if case.decision_flags %}
+                  <div class="casebook-tag-list">
+                    {% for flag in case.decision_flags %}
+                      <span class="casebook-tag">{{ flag }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if case.decision_excerpt %}
+                  <p class="casebook-note">{{ case.decision_excerpt }}</p>
+                {% endif %}
+                <div class="inline-link-row">
+                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=case.port_call_id, maneuver_id=case.maneuver_id) }}">Abrir caso</a>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+
       <section class="panel inset-panel">
         <div class="section-head">
           <div>

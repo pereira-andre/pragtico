@@ -8,7 +8,9 @@ from pathlib import Path
 
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
+os.environ["MANEUVER_CASE_CAPTURE_ENVIRONMENT"] = "0"
 
+from domain.berth_layout import slot_berth_options
 from domain.cost_engine import UP_NORMAL, calculate_tup
 from storage import LocalStore
 
@@ -214,6 +216,186 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(pc["vessel_name"], "BELITAKI")
         self.assertEqual(pc["status"], "scheduled")
 
+    def test_create_and_edit_port_call_persist_thruster_flags(self) -> None:
+        created = self.store.create_port_call(
+            vessel_name="THRUSTER TEST",
+            eta="2026-03-24T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            vessel_imo="9152923",
+            vessel_call_sign="D5OC2",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="9.94",
+            vessel_dwt_t="22330",
+            vessel_bow_thruster="yes",
+            vessel_stern_thruster="no",
+        )
+
+        self.assertEqual(created["vessel_bow_thruster"], "yes")
+        self.assertEqual(created["vessel_stern_thruster"], "no")
+
+        updated = self.store.edit_port_call(
+            created["id"],
+            updated_by="admin",
+            vessel_bow_thruster="unknown",
+            vessel_stern_thruster="yes",
+        )
+
+        self.assertEqual(updated["vessel_bow_thruster"], "unknown")
+        self.assertEqual(updated["vessel_stern_thruster"], "yes")
+
+    def test_create_port_call_creates_maneuver_case(self) -> None:
+        created = self.store.create_port_call(
+            vessel_name="CASE TEST",
+            eta="2026-03-24T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            vessel_imo="9152923",
+            vessel_call_sign="D5OC2",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="9.94",
+            vessel_dwt_t="22330",
+            vessel_bow_thruster="yes",
+            vessel_stern_thruster="no",
+        )
+
+        cases = self.store.list_maneuver_cases(port_call_id=created["id"])
+
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(cases[0]["maneuver_type"], "entry")
+        self.assertEqual(cases[0]["current_state"], "pending")
+        self.assertEqual(cases[0]["feature_snapshot"]["bow_thruster"], "yes")
+        self.assertEqual(cases[0]["feature_snapshot"]["stern_thruster"], "no")
+
+    def test_maneuver_case_tracks_decision_and_execution_snapshots(self) -> None:
+        port_call = self._create_entry()
+        approved = self.store.approve_port_call(port_call["id"], decided_by="admin", approval_note="Condições ok.")
+        entry = next(item for item in approved["maneuver_history"] if item["type"] == "entry")
+
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-24T05:40:00+00:00",
+            maneuver_finished_at="2026-03-24T06:10:00+00:00",
+            draft_m="9.94",
+            notes="Entrada realizada sem incidentes.",
+            maneuver_id=entry["id"],
+        )
+
+        case = self.store.get_maneuver_case(entry["id"])
+
+        self.assertIsNotNone(case)
+        self.assertEqual(case["current_state"], "completed")
+        self.assertEqual(case["decision_snapshot"]["decision"], "approved")
+        self.assertEqual(case["decision_snapshot"]["approval_note"], "Condições ok.")
+        self.assertIn("sem incidentes", case["execution_snapshot"]["report_note"].lower())
+        self.assertEqual(case["execution_snapshot"]["reported_draft_m"], "9.94")
+        self.assertTrue(case["feature_snapshot"]["wave_sensitive"])
+        self.assertEqual(case["environment_snapshot"]["planning"]["wave_relevance"], "applicable")
+
+    def test_departure_case_marks_wave_as_applicable(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        planned = self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at="2026-03-25T10:00:00+00:00",
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        departure = next(item for item in planned["maneuver_history"] if item["type"] == "departure")
+
+        case = self.store.get_maneuver_case(departure["id"])
+
+        self.assertIsNotNone(case)
+        self.assertTrue(case["feature_snapshot"]["wave_sensitive"])
+        self.assertEqual(case["environment_snapshot"]["planning"]["wave_relevance"], "applicable")
+
+    def test_shift_case_marks_wave_as_not_applicable(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        planned = self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2026-03-25T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1 - Cais 3",
+        )
+        shift = next(item for item in planned["maneuver_history"] if item["type"] == "shift")
+
+        case = self.store.get_maneuver_case(shift["id"])
+
+        self.assertIsNotNone(case)
+        self.assertFalse(case["feature_snapshot"]["wave_sensitive"])
+        self.assertEqual(case["environment_snapshot"]["planning"]["wave_relevance"], "not_applicable")
+        self.assertEqual(case["environment_snapshot"]["planning"]["wave"]["status"], "not_applicable")
+
+    def test_find_similar_maneuver_cases_prefers_matching_profile(self) -> None:
+        first = self._create_entry()
+        self.store.approve_port_call(first["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            first["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+
+        second = self.store.create_port_call(
+            vessel_name="OTHER TEST",
+            eta="2026-03-25T05:30:00+00:00",
+            created_by="admin",
+            berth="Cais 10 / Autoeuropa",
+            last_port="Sines",
+            next_port="Vigo",
+            vessel_imo="9152000",
+            vessel_call_sign="D5OC9",
+            vessel_flag="Panama",
+            vessel_type="Petroleiro",
+            vessel_loa_m="110.00",
+            vessel_beam_m="18.0",
+            vessel_gt_t="8000",
+            vessel_max_draft_m="6.50",
+            vessel_dwt_t="10000",
+        )
+        self.store.approve_port_call(second["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            second["id"],
+            arrived_at="2026-03-25T06:15:00+00:00",
+            updated_by="admin",
+        )
+
+        matches = self.store.find_similar_maneuver_cases(
+            maneuver_type="entry",
+            origin="Leixoes",
+            destination="TMS 2",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="180.00",
+            limit=3,
+        )
+
+        self.assertGreaterEqual(len(matches), 1)
+        self.assertEqual(matches[0]["port_call_id"], first["id"])
+        self.assertGreater(matches[0]["similarity_score"], 0)
+
     def test_create_port_call_missing_vessel_name_raises(self) -> None:
         with self.assertRaises(ValueError):
             self.store.create_port_call(
@@ -337,6 +519,52 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertIn("planned_maneuvers", snapshot)
         self.assertIn("archived_maneuvers", snapshot)
         self.assertIn("archived_scales", snapshot)
+
+    def test_port_activity_snapshot_treats_fundeadouros_as_quadro_not_occupied_slots(self) -> None:
+        quay_call = self._create_entry()
+        self.store.approve_port_call(quay_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            quay_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+
+        anchorage_call = self.store.create_port_call(
+            vessel_name="QUADRO SUL",
+            eta="2026-03-24T07:15:00+00:00",
+            created_by="admin",
+            berth="Fundeadouro Norte",
+            last_port="Sines",
+            next_port="Setubal",
+            notes="Navio em quadro.",
+            vessel_imo="9252923",
+            vessel_call_sign="D5QS2",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="190.10",
+            vessel_beam_m="26.1",
+            vessel_gt_t="18000",
+            vessel_max_draft_m="10.10",
+            vessel_dwt_t="24000",
+        )
+        self.store.approve_port_call(anchorage_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            anchorage_call["id"],
+            arrived_at="2026-03-24T07:45:00+00:00",
+            updated_by="admin",
+        )
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+
+        self.assertEqual(snapshot["stats"]["in_port_count"], 2)
+        self.assertEqual(snapshot["stats"]["quay_vessel_count"], 1)
+        self.assertEqual(snapshot["stats"]["quadro_count"], 1)
+        self.assertEqual(snapshot["stats"]["occupied_slot_count"], 1)
+        self.assertEqual(snapshot["stats"]["berth_count"], 1)
+        self.assertEqual(snapshot["stats"]["slot_capacity_count"], len(slot_berth_options()))
+        self.assertEqual(snapshot["stats"]["free_slot_count"], len(slot_berth_options()) - 1)
+        self.assertEqual([item["berth"] for item in snapshot["berthed"]], ["TMS 2"])
+        self.assertEqual([item["berth"] for item in snapshot["anchorages"]], ["Fundeadouro Norte"])
 
     def test_archived_scale_estimate_uses_full_gt_and_aggregates_scale_costs(self) -> None:
         port_call = self.store.create_port_call(

@@ -83,6 +83,25 @@ def validate_tug_count(value: Optional[str]) -> str:
     return str(count)
 
 
+def normalize_thruster_state(value: object, label: str = "Thruster") -> str:
+    """Normalize a thruster capability value to `yes`, `no`, or `unknown`."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+
+    clean = " ".join(str(value or "").strip().split()).lower()
+    if not clean:
+        return "unknown"
+
+    if clean in {"yes", "sim", "tem", "with", "disponivel", "disponível", "y", "1", "true"}:
+        return "yes"
+    if clean in {"no", "nao", "não", "sem", "n", "0", "false"}:
+        return "no"
+    if clean in {"unknown", "desconhecido", "desconhecida", "nd", "n/d", "por confirmar"}:
+        return "unknown"
+
+    raise ValueError(f"{label} inválido(a). Usa sim, não ou desconhecido.")
+
+
 # ---------------------------------------------------------------------------
 # Date / Time
 # ---------------------------------------------------------------------------

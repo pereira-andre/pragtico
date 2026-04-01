@@ -28,6 +28,7 @@ from core.helpers import (
 from integrations.llm_provider import create_embedding_provider, create_llm_provider
 from integrations.local_warning_service import LocalWarningService
 from domain.migration_service import migrate_local_json_to_postgres
+from domain.berth_layout import BERTH_OPTIONS, TERMINAL_OPTIONS
 from integrations.rag_engine import SimpleRAGEngine
 from core.reindex_scheduler import DeferredTaskScheduler
 from core.security import init_csrf
@@ -52,31 +53,6 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 KNOWLEDGE_DIR = os.path.join(BASE_DIR, "knowledge")
-
-BERTH_OPTIONS = [
-    "Secil W", "Secil E", "Fundeadouro Norte", "Cais Palmeiras",
-    "TMS 1 - Cais 3", "TMS 1 - Cais 4", "TMS 1 - Cais 5",
-    "TMS 1 - Cais 6", "TMS 1 - Cais 7", "TMS 1 - Cais 8", "TMS 2",
-    "Cais 10 / Autoeuropa", "Cais 11 / Autoeuropa",
-    "Praias do Sado / Pirites Alentejanas",
-    "SAPEC Sólidos", "SAPEC Líquidos", "ALSTOM",
-    "PAN Tróia", "Fundeadouro Sul / Tróia",
-    "Tanquisado (lado jusante)", "Eco-Oil (lado montante)",
-    "Lisnave - Cais 0 B", "Lisnave - Cais 0 A",
-    "Lisnave - Doca 20", "Lisnave - Doca 21", "Lisnave - Doca 22",
-    "Lisnave - Cais 1 B", "Lisnave - Cais 1 A",
-    "Lisnave - Cais 2 B", "Lisnave - Cais 2 A",
-    "Lisnave - Cais 3 B", "Lisnave - Cais 3 A",
-    "Lisnave - Doca 31", "Lisnave - Doca 32", "Lisnave - Doca 33",
-    "Teporset",
-]
-TERMINAL_OPTIONS = [
-    "Secil", "Fundeadouro Norte", "Cais Palmeiras", "TMS 1", "TMS 2",
-    "Autoeuropa", "Praias do Sado / Pirites Alentejanas",
-    "SAPEC Sólidos", "SAPEC Líquidos", "ALSTOM",
-    "PAN Tróia", "Fundeadouro Sul / Tróia",
-    "Tanquisado", "Eco-Oil", "Lisnave", "Teporset",
-]
 VESSEL_TYPE_OPTIONS = get_vessel_type_options()
 CONSTRAINT_OPTIONS = get_constraint_options()
 
@@ -92,11 +68,11 @@ def _env_flag(name: str, default: str = "1") -> bool:
     return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _resolve_provider_name(explicit_name: str, default: str = "openai") -> str:
+def _resolve_provider_name(explicit_name: str, default: str = "gemini") -> str:
     provider_name = (explicit_name or "").strip().lower()
     if provider_name:
         return provider_name
-    for candidate in ("openai", "openrouter", "gemini", "deepseek"):
+    for candidate in ("openrouter", "gemini", "openai", "deepseek"):
         if os.getenv(PROVIDER_API_KEY_ENV[candidate], "").strip():
             return candidate
     return default
@@ -117,8 +93,6 @@ def _resolve_fallback_provider_name(primary_name: str, explicit_name: str = "") 
         preferred = "openrouter"
     elif primary_name == "openrouter":
         preferred = "gemini"
-    elif primary_name == "openai":
-        preferred = "openrouter"
 
     if preferred and os.getenv(PROVIDER_API_KEY_ENV.get(preferred, ""), "").strip():
         return preferred
@@ -141,7 +115,7 @@ index_store = create_index_store(data_dir=DATA_DIR)
 
 _llm_provider_name = _resolve_provider_name(
     explicit_name=os.getenv("LLM_PROVIDER", ""),
-    default="openai",
+    default="gemini",
 )
 _llm_api_key = _resolve_provider_api_key(_llm_provider_name)
 _llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
@@ -160,7 +134,7 @@ _embedding_local_enabled = _env_flag("EMBEDDING_LOCAL_ENABLED", default="1")
 _embedding_provider = create_embedding_provider(enabled=_embedding_local_enabled)
 _embedding_provider_name = _resolve_provider_name(
     explicit_name=os.getenv("EMBEDDING_PROVIDER", ""),
-    default="openai",
+    default="gemini",
 )
 _embedding_api_key = _resolve_provider_api_key(_embedding_provider_name)
 _embedding_api_provider = None
@@ -172,17 +146,17 @@ if not _embedding_provider:
 
 _default_gen_models = {
     "gemini": "gemini-2.5-flash",
-    "openrouter": "openai/gpt-4.1-mini",
+    "openrouter": "openrouter/free",
     "openai": "gpt-4.1-mini",
     "deepseek": "deepseek-chat",
 }
 _default_emb_models = {
     "gemini": "gemini-embedding-001",
-    "openrouter": "openai/text-embedding-3-small",
+    "openrouter": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
     "openai": "text-embedding-3-small",
     "deepseek": "text-embedding-3-small",
 }
-_gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openai/gpt-4.1-mini"))
+_gen_model = os.getenv("LLM_MODEL", _default_gen_models.get(_llm_provider_name, "openrouter/free"))
 _gen_fallback_model = os.getenv(
     "LLM_FALLBACK_MODEL",
     _default_gen_models.get(_llm_fallback_provider_name, "") if _llm_fallback_provider_name else "",

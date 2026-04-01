@@ -1002,7 +1002,10 @@ class SimpleRAGEngine:
         if not self._use_local_embeddings and not self.client:
             return self._lexical_search(question, chunks, top_k)
         if not self._use_local_embeddings and self.is_embedding_quota_exhausted():
-            return self._lexical_search(question, chunks, top_k)
+            raise RuntimeError(
+                "Pesquisa semântica "
+                f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
+            )
 
         try:
             query_vector = self._embed_many([question])[0]
@@ -1012,7 +1015,10 @@ class SimpleRAGEngine:
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
             if self.is_embedding_quota_exhausted(self.last_index_error):
-                return self._lexical_search(question, chunks, top_k)
+                raise RuntimeError(
+                    "Pesquisa semântica "
+                    f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
+                ) from exc
             return self._lexical_search(question, chunks, top_k)
 
         return []
@@ -1148,6 +1154,10 @@ Regras:
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
 - Integra a informação de forma natural, como resposta operacional fluida.
+- Quando falares de ocupação portuária, usa lógica de slots de cais.
+- Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots de cais ocupados.
+- Não digas que um navio "não cabe" num cais só porque a extensão nominal do cais é menor do que o LOA do navio.
+- Se a pergunta for sobre dimensões do cais ou do navio, limita-te aos factos documentais disponíveis e evita conclusões automáticas de incompatibilidade.
 
 Histórico recente:
 {history_block or "Sem histórico anterior."}

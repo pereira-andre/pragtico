@@ -99,7 +99,7 @@ class ChatActionsTests(unittest.TestCase):
         )
 
         fields = parsed["proposal"]["fields"]
-        self.assertEqual(fields["berth"], "Cais 3 – Terminal Multipurpose")
+        self.assertEqual(fields["berth"], "TMS 1 - Cais 3")
         self.assertEqual(fields["last_port"], "Sines (PT)")
         self.assertEqual(fields["next_port"], "Leixões (PT)")
         self.assertEqual(fields["vessel_imo"], "9876543")
@@ -115,6 +115,33 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "template")
         self.assertNotIn("ID da manobra", parsed["answer"])
         self.assertIn("ID é gerado automaticamente", parsed["answer"])
+        self.assertNotIn("Origem:", parsed["answer"])
+        self.assertIn("origem segue automaticamente", parsed["answer"])
+
+    def test_parse_slash_register_scale_accepts_thruster_fields(self) -> None:
+        parsed = parse_slash_command(
+            "/registar-escala\n"
+            "Nome do navio: BELITAKI\n"
+            "ETA de chegada: 2026-03-24T05:30\n"
+            "Cais previsto: TMS 2\n"
+            "Último porto: Leixões\n"
+            "Próximo destino: Barcelona\n"
+            "IMO: 9152923\n"
+            "Indicativo: D5OC2\n"
+            "Bandeira: Libéria\n"
+            "Tipo de navio: Porta-contentores\n"
+            "LOA (m): 179.23\n"
+            "Boca (m): 25.3\n"
+            "GT (t): 16281\n"
+            "DWT (t): 22330\n"
+            "Calado máximo (m): 9.94\n"
+            "Bow thruster: sim\n"
+            "Stern thruster: não\n",
+            "agente",
+        )
+
+        self.assertEqual(parsed["proposal"]["fields"]["vessel_bow_thruster"], "sim")
+        self.assertEqual(parsed["proposal"]["fields"]["vessel_stern_thruster"], "não")
 
     def test_parse_slash_edit_maneuver_with_ref_requests_change_reason(self) -> None:
         parsed = parse_slash_command(
@@ -433,6 +460,27 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(candidate["intent"], "action")
         self.assertEqual(candidate["missing_fields"], [])
+
+    def test_normalize_action_candidate_rejects_unknown_shift_destination_berth(self) -> None:
+        candidate = normalize_action_candidate(
+            {
+                "intent": "action",
+                "action": "schedule_shift",
+                "target": {
+                    "reference_code": "PTSET26ABCD1234",
+                    "maneuver_type": "shift",
+                },
+                "fields": {
+                    "planned_at_local": "2026-03-24T05:30",
+                    "destination": "Cais Fantasma 99",
+                },
+            },
+            "agente",
+        )
+
+        self.assertEqual(candidate["intent"], "unsupported")
+        self.assertIn("destino válido", candidate["reason"].lower())
+        self.assertIn("repete ou reformula", candidate["reason"].lower())
 
     def test_normalize_action_candidate_accepts_nested_grouped_create_payload(self) -> None:
         candidate = normalize_action_candidate(

@@ -12,6 +12,6 @@ from integrations.ais_service import create_ais_service
 if __name__ == "__main__":
     service = create_ais_service(ROOT_DIR)
     embed = service.embed_context()
-    print("AIS configurado para VesselFinder sem API.")
+    print("Fonte: VesselFinder")
     print(f"Centro: {embed['latitude']}, {embed['longitude']} | zoom {embed['zoom']}")
-    print("Abre o dashboard da aplicacao para ver o mapa embebido.")
+    print("Abre o dashboard da aplicação para ver o mapa embebido.")

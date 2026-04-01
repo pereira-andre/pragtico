@@ -194,6 +194,40 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_maneuver_cases(
+        self,
+        *,
+        limit: int = 100,
+        maneuver_type: Optional[str] = None,
+        state: Optional[str] = None,
+        port_call_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """Return persisted maneuver cases, newest first."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_maneuver_case(self, maneuver_id: str) -> Optional[Dict]:
+        """Return a persisted maneuver case by maneuver id, if any."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_similar_maneuver_cases(
+        self,
+        *,
+        maneuver_type: str,
+        origin: str = "",
+        destination: str = "",
+        vessel_type: str = "",
+        vessel_loa_m: str = "",
+        bow_thruster: str = "",
+        stern_thruster: str = "",
+        tug_count: str = "",
+        limit: int = 5,
+    ) -> List[Dict]:
+        """Return the best matching historical maneuver cases for the given profile."""
+        raise NotImplementedError
+
+    @abstractmethod
     def clear_port_calls(self) -> int:
         """Delete all port calls and maneuver history, returning the number of removed records."""
         raise NotImplementedError
@@ -226,6 +260,8 @@ class BaseStore(ABC):
         vessel_gt_t: Optional[str] = None,
         vessel_max_draft_m: Optional[str] = None,
         vessel_dwt_t: Optional[str] = None,
+        vessel_bow_thruster: Optional[str] = None,
+        vessel_stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Edit the scale and vessel data for an existing port call."""
         raise NotImplementedError
@@ -256,6 +292,8 @@ class BaseStore(ABC):
         vessel_gt_t: str = "",
         vessel_max_draft_m: str = "",
         vessel_dwt_t: str = "",
+        vessel_bow_thruster: str = "unknown",
+        vessel_stern_thruster: str = "unknown",
     ) -> Dict:
         """Create a new port call record and return it."""
         raise NotImplementedError

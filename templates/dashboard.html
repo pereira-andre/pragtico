@@ -31,7 +31,7 @@
       <article class="hero-stat">
         <span>Navios em porto</span>
         <strong>{{ port_activity.stats.in_port_count }}</strong>
-        <small>{{ port_activity.stats.berth_count }} cais ocupados</small>
+        <small>{{ port_activity.stats.berth_count }} slots ocupados · {{ port_activity.stats.quadro_count }} em quadro</small>
       </article>
       <article class="hero-stat">
         <span>Chegadas previstas</span>
@@ -569,8 +569,8 @@
         <h2>Navios por cais</h2>
       </div>
       <div class="berth-panel-meta">
-        <span class="ops-pill ops-pill-strong">{{ port_activity.stats.in_port_count }} navios</span>
-        <span class="ops-pill">{{ berth_options|length - port_activity.stats.berth_count }} livres</span>
+        <span class="ops-pill ops-pill-strong">{{ port_activity.stats.occupied_slot_count }}/{{ port_activity.stats.slot_capacity_count }} slots</span>
+        <span class="ops-pill">{{ port_activity.stats.free_slot_count }} livres</span>
       </div>
     </div>
     <div class="berth-horizontal-strip">
@@ -588,7 +588,9 @@
           {% endfor %}
         </section>
       {% else %}
-        <article class="ops-empty"><p>Sem navios em porto.</p></article>
+        <article class="ops-empty">
+          <p>{% if port_activity.stats.quadro_count %}Sem navios em cais. Os navios em quadro aparecem abaixo.{% else %}Sem navios em porto.{% endif %}</p>
+        </article>
       {% endfor %}
     </div>
     {% if port_activity.berthed|length > 4 %}
@@ -605,6 +607,27 @@
                 <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
                   <strong>{{ vessel.vessel_name }}</strong>
                   <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
+                </a>
+              {% endfor %}
+            </section>
+          {% endfor %}
+        </div>
+      </details>
+    {% endif %}
+    {% if port_activity.anchorages %}
+      <details class="ops-expand" {% if not port_activity.berthed %}open{% endif %}>
+        <summary>Ver quadro / fundeadouros</summary>
+        <div class="berth-compact-grid">
+          {% for berth in port_activity.anchorages %}
+            <section class="berth-group-compact">
+              <div class="berth-head-compact">
+                <h3>{{ berth.berth }}</h3>
+                <span class="ops-pill berth-count-pill">{{ berth.count }}</span>
+              </div>
+              {% for vessel in berth.vessels %}
+                <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
+                  <strong>{{ vessel.vessel_name }}</strong>
+                  <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Em espera{% endif %}</span>
                 </a>
               {% endfor %}
             </section>

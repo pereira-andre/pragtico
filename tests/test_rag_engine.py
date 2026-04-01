@@ -184,7 +184,7 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertIn("cobertura semântica parcial", status["message"].lower())
         self.assertIn("quota de embeddings gemini esgotada", status["error"].lower())
 
-    def test_quota_exhaustion_falls_back_to_lexical_search(self) -> None:
+    def test_quota_exhaustion_blocks_future_query_embeddings_without_lexical_fallback(self) -> None:
         engine, _ = self._make_engine()
         quota_error = RuntimeError(
             "429 RESOURCE_EXHAUSTED. "
@@ -197,43 +197,10 @@ class SimpleRAGEngineTests(unittest.TestCase):
 
         successful_client = _SuccessfulClient()
         engine.client = successful_client
-        results = engine.retrieve("procedimento de manobra", top_k=2)
+        with self.assertRaises(RuntimeError) as ctx:
+            engine.retrieve("procedimento de manobra", top_k=2)
         self.assertEqual(successful_client.models.calls, 0)
-        self.assertTrue(results)
-        self.assertTrue(all(item.get("retrieval_mode") == "lexical" for item in results))
-
-    def test_answer_still_handles_greetings_when_embedding_quota_is_exhausted(self) -> None:
-        engine, _ = self._make_engine()
-        quota_error = RuntimeError(
-            "429 RESOURCE_EXHAUSTED. "
-            "You exceeded your current quota, please check your plan and billing details. "
-            "Quota exceeded for metric: generativelanguage.googleapis.com/embed_content_free_tier_requests."
-        )
-        engine.client = _FailingClient(quota_error)
-
-        engine.rebuild_index(force=True)
-
-        successful_client = _SuccessfulClient()
-        generator = _StubProvider("gemini", generation_text="Olá. Estou operacional.")
-        engine.client = successful_client
-        engine.provider = generator
-        engine.generation_model = "gemini-2.5-flash"
-        engine._generation_candidates = [(generator, engine.generation_model)]
-        engine.generation_provider_label = engine._candidate_chain_label(engine._generation_candidates)
-
-        answer = engine.answer(
-            question="olá :)",
-            role="piloto",
-            history=[],
-            supplemental_sources=[],
-            trusted_answers=[],
-        )
-
-        self.assertEqual(successful_client.models.calls, 0)
-        self.assertEqual(generator.generate_calls, 1)
-        self.assertEqual(answer["answer"], "Olá. Estou operacional.")
-        self.assertEqual(answer.get("retrieval_error"), None)
-        self.assertEqual(answer["sources"], [])
+        self.assertIn("pesquisa semântica gemini indisponível", str(ctx.exception).lower())
 
     def test_local_daily_embedding_guard_stops_reindex_before_extra_requests(self) -> None:
         long_text = ("Procedimento de manobra. " * 80).strip()

@@ -149,6 +149,7 @@
                   <input type="number" name="tug_count" min="0" value="0" required>
                 </label>
               </div>
+              <p class="muted small-note scale-auto-origin-note">Origem automática: a saída segue o último local conhecido do navio ({{ scale.summary.current_location }}).</p>
               <div class="constraint-picker">
                 <span class="mini-label">Restrições</span>
                 <div class="constraint-option-list">
@@ -186,10 +187,6 @@
               </div>
               <div class="mini-grid planned-mini-grid">
                 <label>
-                  Cais origem
-                  <input type="text" name="origin_berth" list="berth-options" value="{{ scale.summary.current_location if scale.summary.current_location != 'Sem cais atribuído' else '' }}" required>
-                </label>
-                <label>
                   Cais destino
                   <input type="text" name="destination_berth" list="berth-options" required>
                 </label>
@@ -202,6 +199,7 @@
                   <input type="number" name="tug_count" min="0" value="0" required>
                 </label>
               </div>
+              <p class="muted small-note scale-auto-origin-note">Origem automática: a mudança segue o local atual conhecido do navio ({{ scale.summary.current_location }}).</p>
               <div class="constraint-picker">
                 <span class="mini-label">Restrições</span>
                 <div class="constraint-option-list">
@@ -305,6 +303,60 @@
               {% if item.notes %}
                 <p class="muted scale-maneuver-note">{{ item.notes }}</p>
               {% endif %}
+              {% if item.casebook_recommendation %}
+                <section class="casebook-recommendation casebook-recommendation-{{ item.casebook_recommendation.status_key }}">
+                  <strong>{{ item.casebook_recommendation.title }}</strong>
+                  <p>{{ item.casebook_recommendation.summary }}</p>
+                  <small>{{ item.casebook_recommendation.basis_label }}</small>
+                  {% if item.casebook_recommendation.signals_label %}
+                    <small>{{ item.casebook_recommendation.signals_label }}</small>
+                  {% endif %}
+                </section>
+              {% endif %}
+              {% if item.similar_cases %}
+                <section class="casebook-strip">
+                  <div class="casebook-strip-head">
+                    <span class="mini-label">Casos semelhantes</span>
+                    <span class="casebook-strip-meta">{{ item.similar_cases|length }} caso(s) comparáveis</span>
+                  </div>
+                  <div class="casebook-list">
+                    {% for case in item.similar_cases %}
+                      <article class="casebook-card">
+                        <div class="casebook-card-top">
+                          <div>
+                            <strong>{{ case.reference_code }}</strong>
+                            <p>{{ case.vessel_name }}</p>
+                          </div>
+                          <div class="stack tight align-end">
+                            <span class="planned-status planned-status-{{ case.status_class }}">{{ case.state_label }}</span>
+                            <span class="casebook-score">{{ case.similarity_score }}</span>
+                          </div>
+                        </div>
+                        <p class="casebook-route">{{ case.route_label }}</p>
+                        <p class="casebook-reasons">{{ case.reasons_label }}</p>
+                        <div class="casebook-meta-grid">
+                          <span>{{ case.latest_event_label }}</span>
+                          <span>Rebocadores {{ case.tug_count }}</span>
+                          <span>LOA {{ case.loa_label }}</span>
+                        </div>
+                        {% if case.decision_flags %}
+                          <div class="casebook-tag-list">
+                            {% for flag in case.decision_flags %}
+                              <span class="casebook-tag">{{ flag }}</span>
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                        {% if case.decision_excerpt %}
+                          <p class="casebook-note">{{ case.decision_excerpt }}</p>
+                        {% endif %}
+                        <div class="inline-link-row">
+                          <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=case.port_call_id, maneuver_id=case.maneuver_id) }}">Abrir caso</a>
+                        </div>
+                      </article>
+                    {% endfor %}
+                  </div>
+                </section>
+              {% endif %}
               <div class="inline-link-row">
                 <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=item.id) }}">Abrir manobra</a>
               </div>
@@ -384,12 +436,109 @@
           <article class="scale-fact-row"><span>GT</span><strong>{{ scale.ship_profile.gt }} t</strong></article>
           <article class="scale-fact-row"><span>Calado</span><strong>{{ scale.ship_profile.draft }} m</strong></article>
           <article class="scale-fact-row"><span>DWT</span><strong>{{ scale.ship_profile.dwt }} t</strong></article>
+          <article class="scale-fact-row"><span>Bow thruster</span><strong>{{ scale.ship_profile.bow_thruster }}</strong></article>
+          <article class="scale-fact-row"><span>Stern thruster</span><strong>{{ scale.ship_profile.stern_thruster }}</strong></article>
           <article class="scale-fact-row"><span>Agente</span><strong>{{ scale.summary.agent_profile.label }}</strong></article>
           <article class="scale-fact-row"><span>Contacto agente</span><strong>{{ scale.summary.agent_profile.contact_label }}</strong></article>
           <article class="scale-fact-row"><span>Piloto</span><strong>{{ scale.summary.pilot_profile.label }}</strong></article>
           <article class="scale-fact-row"><span>Contacto piloto</span><strong>{{ scale.summary.pilot_profile.contact_label }}</strong></article>
         </div>
       </section>
+
+      {% if current_role == "admin" %}
+        <section class="panel inset-panel scale-admin-editor">
+          <div class="section-head compact-head">
+            <div>
+              <p class="eyebrow">Admin</p>
+              <h2>Editar escala e navio</h2>
+            </div>
+          </div>
+          <form method="post" action="{{ url_for('port_calls.edit_port_call', port_call_id=port_call.id) }}" class="stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="redirect_to" value="scale">
+            <div class="admin-scale-edit-grid">
+              <label>
+                Navio
+                <input type="text" name="vessel_name" value="{{ scale_edit_defaults.vessel_name }}" required>
+              </label>
+              <label>
+                ETA
+                <input type="datetime-local" name="eta_local" value="{{ scale_edit_defaults.eta_local }}" required>
+              </label>
+              <label>
+                Cais / fundeadouro
+                <input type="text" name="berth" list="berth-options" value="{{ scale_edit_defaults.berth }}" required>
+              </label>
+              <label>
+                Último porto
+                <input type="text" name="last_port" value="{{ scale_edit_defaults.last_port }}" required>
+              </label>
+              <label>
+                Próximo destino
+                <input type="text" name="next_port" value="{{ scale_edit_defaults.next_port }}" required>
+              </label>
+              <label>
+                IMO
+                <input type="text" name="vessel_imo" value="{{ scale_edit_defaults.vessel_imo }}" required>
+              </label>
+              <label>
+                Indicativo
+                <input type="text" name="vessel_call_sign" value="{{ scale_edit_defaults.vessel_call_sign }}" required>
+              </label>
+              <label>
+                Bandeira
+                <input type="text" name="vessel_flag" value="{{ scale_edit_defaults.vessel_flag }}" required>
+              </label>
+              <label>
+                Tipo de navio
+                <input type="text" name="vessel_type" list="vessel-type-options" value="{{ scale_edit_defaults.vessel_type }}" required>
+              </label>
+              <label>
+                LOA (m)
+                <input type="text" name="vessel_loa_m" value="{{ scale_edit_defaults.vessel_loa_m }}" required>
+              </label>
+              <label>
+                Boca (m)
+                <input type="text" name="vessel_beam_m" value="{{ scale_edit_defaults.vessel_beam_m }}" required>
+              </label>
+              <label>
+                GT (t)
+                <input type="text" name="vessel_gt_t" value="{{ scale_edit_defaults.vessel_gt_t }}" required>
+              </label>
+              <label>
+                DWT (t)
+                <input type="text" name="vessel_dwt_t" value="{{ scale_edit_defaults.vessel_dwt_t }}" required>
+              </label>
+              <label>
+                Calado máximo (m)
+                <input type="text" name="vessel_max_draft_m" value="{{ scale_edit_defaults.vessel_max_draft_m }}" required>
+              </label>
+              <label>
+                Bow thruster
+                <select name="vessel_bow_thruster" required>
+                  <option value="unknown" {% if scale_edit_defaults.vessel_bow_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                  <option value="no" {% if scale_edit_defaults.vessel_bow_thruster == "no" %}selected{% endif %}>Não</option>
+                  <option value="yes" {% if scale_edit_defaults.vessel_bow_thruster == "yes" %}selected{% endif %}>Sim</option>
+                </select>
+              </label>
+              <label>
+                Stern thruster
+                <select name="vessel_stern_thruster" required>
+                  <option value="unknown" {% if scale_edit_defaults.vessel_stern_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                  <option value="no" {% if scale_edit_defaults.vessel_stern_thruster == "no" %}selected{% endif %}>Não</option>
+                  <option value="yes" {% if scale_edit_defaults.vessel_stern_thruster == "yes" %}selected{% endif %}>Sim</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Observações
+              <textarea name="notes" rows="3" placeholder="Contexto operacional ou correção histórica...">{{ scale_edit_defaults.notes }}</textarea>
+            </label>
+            <p class="muted small-note">O admin pode corrigir também escalas já arquivadas. Se o navio estiver em porto, o portal valida ocupação antes de aceitar um novo cais real.</p>
+            <button type="submit" class="mini-button">Guardar escala</button>
+          </form>
+        </section>
+      {% endif %}
 
       <section class="panel inset-panel">
         <div class="section-head compact-head">

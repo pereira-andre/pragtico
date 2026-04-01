@@ -1,0 +1,488 @@
+"""Helpers for building and ranking historical maneuver cases."""
+
+from __future__ import annotations
+
+import os
+import unicodedata
+from datetime import datetime, timezone
+from typing import Any, Dict, Iterable, List, Optional
+
+from core import services
+from domain.berth_layout import canonicalize_berth_label, is_anchorage_berth
+from domain.document_processing import iso_now
+
+from .utils import _clean_text, _local_iso_to_label, _normalize_maneuver_type, _parse_iso_datetime
+
+
+def _case_key(value: Optional[str]) -> str:
+    normalized = unicodedata.normalize("NFKD", _clean_text(value).lower())
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    return " ".join(ascii_value.split())
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        return float(str(value).replace(",", ".").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_wave_sensitive_maneuver(maneuver_type: Optional[str]) -> bool:
+    return _normalize_maneuver_type(maneuver_type) in {"entry", "departure"}
+
+
+def _should_capture_live_environment() -> bool:
+    flag = os.getenv("MANEUVER_CASE_CAPTURE_ENVIRONMENT", "1").strip().lower()
+    return flag not in {"0", "false", "no", "off"}
+
+
+def _capture_live_environment_sources() -> tuple[Optional[Dict], Optional[Dict]]:
+    if not _should_capture_live_environment():
+        return None, None
+
+    weather = None
+    wave = None
+
+    try:
+        weather_service = getattr(services, "weather_service", None)
+        if weather_service and weather_service.enabled:
+            weather = weather_service.get_forecast(days=3)
+    except Exception:
+        weather = None
+
+    try:
+        wave_service = getattr(services, "wave_service", None)
+        if wave_service and wave_service.enabled:
+            wave = wave_service.get_current_conditions()
+    except Exception:
+        wave = None
+
+    return weather, wave
+
+
+def _closest_weather_hour(weather_forecast: Optional[Dict], event_at: Optional[str]) -> Optional[Dict]:
+    if not weather_forecast or not event_at:
+        return None
+    event_dt = _parse_iso_datetime(event_at)
+    if not event_dt:
+        return None
+
+    closest: Optional[Dict] = None
+    closest_gap: Optional[float] = None
+    for group in weather_forecast.get("hourly_groups", []) or []:
+        for hour in group.get("hours", []) or []:
+            hour_dt = _parse_iso_datetime((hour.get("timestamp") or "").replace(" ", "T"))
+            if not hour_dt:
+                continue
+            if hour_dt.tzinfo is None:
+                hour_dt = hour_dt.replace(tzinfo=timezone.utc)
+            gap = abs((hour_dt - event_dt).total_seconds())
+            if closest_gap is None or gap < closest_gap:
+                closest_gap = gap
+                closest = {
+                    "date": group.get("date"),
+                    "date_label": group.get("date_label"),
+                    **hour,
+                    "gap_seconds": int(gap),
+                }
+    return closest
+
+
+def _build_phase_environment_snapshot(
+    *,
+    event_at: Optional[str],
+    phase: str,
+    existing_snapshot: Optional[Dict],
+    capture_live_environment: bool,
+    include_wave: bool,
+    weather_forecast: Optional[Dict],
+    wave_conditions: Optional[Dict],
+) -> Dict:
+    if existing_snapshot and existing_snapshot.get("event_at") == event_at:
+        return existing_snapshot
+
+    if not event_at:
+        return {}
+
+    if not capture_live_environment:
+        return {
+            "status": "not_captured",
+            "phase": phase,
+            "event_at": event_at,
+            "captured_at": existing_snapshot.get("captured_at") if existing_snapshot else None,
+            "wave_relevance": "applicable" if include_wave else "not_applicable",
+            "wave": (
+                {}
+                if include_wave
+                else {
+                    "status": "not_applicable",
+                    "reason": "Ondulação só é tratada como fator operacional relevante nas entradas e saídas.",
+                }
+            ),
+        }
+
+    closest_hour = _closest_weather_hour(weather_forecast, event_at)
+    payload = {
+        "status": "captured",
+        "phase": phase,
+        "event_at": event_at,
+        "captured_at": iso_now(),
+        "wave_relevance": "applicable" if include_wave else "not_applicable",
+        "weather": {
+            "provider": "WeatherAPI" if weather_forecast else "",
+            "location": (weather_forecast or {}).get("location", {}),
+            "current": (weather_forecast or {}).get("current", {}),
+            "closest_hour": closest_hour or {},
+        },
+        "wave": (
+            {
+                "provider": "wave_service" if wave_conditions else "",
+                "current": wave_conditions or {},
+            }
+            if include_wave
+            else {
+                "status": "not_applicable",
+                "reason": "Ondulação só é tratada como fator operacional relevante nas entradas e saídas.",
+            }
+        ),
+    }
+    if not weather_forecast and not wave_conditions:
+        payload["status"] = "unavailable"
+    return payload
+
+
+def _latest_case_event_at(maneuver: Dict) -> Optional[str]:
+    return (
+        maneuver.get("reported_at")
+        or maneuver.get("execution_finished_at")
+        or maneuver.get("completed_at")
+        or maneuver.get("decided_at")
+        or maneuver.get("planned_at")
+        or maneuver.get("created_at")
+    )
+
+
+def _state_label(state: str) -> str:
+    return {
+        "pending": "Pendente",
+        "approved": "Aprovada",
+        "aborted": "Abortada",
+        "completed": "Realizada",
+    }.get((state or "").strip().lower(), "Pendente")
+
+
+def _case_summary(port_call: Dict, maneuver: Dict) -> str:
+    parts = [
+        maneuver.get("action_label") or maneuver.get("type_label") or maneuver.get("type") or "Manobra",
+        f"{maneuver.get('origin') or '--'} -> {maneuver.get('destination') or '--'}",
+        port_call.get("ship_type_label") or port_call.get("vessel_type") or "Navio",
+    ]
+    loa = port_call.get("vessel_loa_m") or port_call.get("ship_loa_label")
+    if loa:
+        parts.append(f"LOA {loa} m")
+    tug_count = maneuver.get("tug_count")
+    if tug_count:
+        parts.append(f"rebocadores {tug_count}")
+    return " | ".join(parts)
+
+
+def _decision_flags(maneuver: Dict) -> List[str]:
+    text = " ".join(
+        value
+        for value in (
+            maneuver.get("approval_note", ""),
+            maneuver.get("aborted_reason", ""),
+            maneuver.get("report_note", ""),
+            maneuver.get("plan_note", ""),
+        )
+        if value
+    ).lower()
+    flags: List[str] = []
+    if any(token in text for token in ("ondul", "vaga", "mar grosso", "agitação marítima")):
+        flags.append("wave_related")
+    if any(token in text for token in ("suspens", "suspensa", "suspender")):
+        flags.append("pilotage_suspended")
+    if any(token in text for token in ("cancel", "cancelada", "cancelado")):
+        flags.append("pilotage_cancelled")
+    if (
+        _normalize_maneuver_type(maneuver.get("type")) == "entry"
+        and (maneuver.get("state") or "").strip().lower() == "aborted"
+        and "wave_related" in flags
+    ):
+        flags.append("entry_aborted_by_sea_state")
+    return flags
+
+
+def _feature_snapshot(port_call: Dict, maneuver: Dict) -> Dict:
+    canonical_origin = canonicalize_berth_label(maneuver.get("origin")) or _clean_text(maneuver.get("origin"))
+    canonical_destination = canonicalize_berth_label(maneuver.get("destination")) or _clean_text(maneuver.get("destination"))
+    return {
+        "maneuver_type": _normalize_maneuver_type(maneuver.get("type")),
+        "origin": canonical_origin,
+        "destination": canonical_destination,
+        "origin_key": _case_key(canonical_origin),
+        "destination_key": _case_key(canonical_destination),
+        "origin_is_anchorage": is_anchorage_berth(canonical_origin),
+        "destination_is_anchorage": is_anchorage_berth(canonical_destination),
+        "vessel_type": _clean_text(port_call.get("vessel_type") or port_call.get("ship_type_label")),
+        "vessel_type_key": _case_key(port_call.get("vessel_type") or port_call.get("ship_type_label")),
+        "vessel_loa_m": _safe_float(port_call.get("vessel_loa_m")),
+        "vessel_beam_m": _safe_float(port_call.get("vessel_beam_m")),
+        "vessel_gt_t": _safe_float(port_call.get("vessel_gt_t")),
+        "planned_draft_m": _safe_float(maneuver.get("planned_draft_m") or port_call.get("vessel_max_draft_m")),
+        "reported_draft_m": _safe_float(maneuver.get("reported_draft_m")),
+        "bow_thruster": (port_call.get("vessel_bow_thruster") or "unknown").strip().lower(),
+        "stern_thruster": (port_call.get("vessel_stern_thruster") or "unknown").strip().lower(),
+        "tug_count": _clean_text(maneuver.get("tug_count")),
+        "constraints": list(maneuver.get("constraints") or []),
+        "wave_sensitive": _is_wave_sensitive_maneuver(maneuver.get("type")),
+    }
+
+
+def build_maneuver_case(
+    port_call: Dict,
+    maneuver: Dict,
+    *,
+    existing_case: Optional[Dict] = None,
+    capture_live_environment: bool = True,
+    weather_forecast: Optional[Dict] = None,
+    wave_conditions: Optional[Dict] = None,
+) -> Dict:
+    """Build a normalized historical case from a decorated port call and maneuver."""
+    existing_case = existing_case or {}
+    features = _feature_snapshot(port_call, maneuver)
+    include_wave = bool(features.get("wave_sensitive"))
+
+    planning_event_at = maneuver.get("created_at") or maneuver.get("planned_at")
+    decision_event_at = maneuver.get("decided_at")
+    execution_event_at = maneuver.get("reported_at") or maneuver.get("execution_finished_at") or maneuver.get("completed_at")
+
+    environment_snapshot = {
+        "planning": _build_phase_environment_snapshot(
+            event_at=planning_event_at,
+            phase="planning",
+            existing_snapshot=(existing_case.get("environment_snapshot") or {}).get("planning"),
+            capture_live_environment=capture_live_environment,
+            include_wave=include_wave,
+            weather_forecast=weather_forecast,
+            wave_conditions=wave_conditions,
+        ),
+        "decision": _build_phase_environment_snapshot(
+            event_at=decision_event_at,
+            phase="decision",
+            existing_snapshot=(existing_case.get("environment_snapshot") or {}).get("decision"),
+            capture_live_environment=capture_live_environment,
+            include_wave=include_wave,
+            weather_forecast=weather_forecast,
+            wave_conditions=wave_conditions,
+        ),
+        "execution": _build_phase_environment_snapshot(
+            event_at=execution_event_at,
+            phase="execution",
+            existing_snapshot=(existing_case.get("environment_snapshot") or {}).get("execution"),
+            capture_live_environment=capture_live_environment,
+            include_wave=include_wave,
+            weather_forecast=weather_forecast,
+            wave_conditions=wave_conditions,
+        ),
+    }
+    environment_snapshot["latest"] = (
+        environment_snapshot["execution"]
+        or environment_snapshot["decision"]
+        or environment_snapshot["planning"]
+    )
+
+    case = {
+        "maneuver_id": maneuver.get("id"),
+        "port_call_id": port_call.get("id"),
+        "reference_code": port_call.get("reference_code", ""),
+        "vessel_name": port_call.get("vessel_name", ""),
+        "maneuver_type": features["maneuver_type"],
+        "maneuver_type_label": maneuver.get("type_label") or maneuver.get("action_label") or features["maneuver_type"],
+        "current_state": (maneuver.get("state") or "pending").strip().lower(),
+        "current_state_label": _state_label(maneuver.get("state") or "pending"),
+        "origin_label": features["origin"],
+        "destination_label": features["destination"],
+        "planned_at": maneuver.get("planned_at"),
+        "decided_at": maneuver.get("decided_at"),
+        "completed_at": maneuver.get("completed_at"),
+        "reported_at": maneuver.get("reported_at"),
+        "latest_event_at": _latest_case_event_at(maneuver),
+        "case_summary": _case_summary(port_call, maneuver),
+        "vessel_snapshot": {
+            "name": port_call.get("vessel_name", ""),
+            "short_name": port_call.get("ship_short_name_label") or port_call.get("vessel_short_name", ""),
+            "imo": port_call.get("vessel_imo", ""),
+            "call_sign": port_call.get("vessel_call_sign", ""),
+            "flag": port_call.get("vessel_flag", ""),
+            "type": port_call.get("ship_type_label") or port_call.get("vessel_type", ""),
+            "loa_m": port_call.get("vessel_loa_m", ""),
+            "beam_m": port_call.get("vessel_beam_m", ""),
+            "gt_t": port_call.get("vessel_gt_t", ""),
+            "max_draft_m": port_call.get("vessel_max_draft_m", ""),
+            "dwt_t": port_call.get("vessel_dwt_t", ""),
+            "bow_thruster": port_call.get("vessel_bow_thruster", "unknown"),
+            "stern_thruster": port_call.get("vessel_stern_thruster", "unknown"),
+        },
+        "scale_snapshot": {
+            "port_call_status": port_call.get("status", ""),
+            "eta": port_call.get("eta"),
+            "ata": port_call.get("ata"),
+            "berth": port_call.get("berth", ""),
+            "last_port": port_call.get("last_port", ""),
+            "next_port": port_call.get("next_port", ""),
+            "agent": port_call.get("agent_label", "--"),
+            "pilot": port_call.get("pilot_label", "--"),
+            "notes": port_call.get("notes", ""),
+        },
+        "planning_snapshot": {
+            "planned_at": maneuver.get("planned_at"),
+            "origin": features["origin"],
+            "destination": features["destination"],
+            "planned_draft_m": maneuver.get("planned_draft_m", ""),
+            "tug_count": maneuver.get("tug_count", ""),
+            "constraints": list(maneuver.get("constraints") or []),
+            "plan_note": maneuver.get("plan_note", ""),
+            "plan_observations": maneuver.get("plan_observations", ""),
+            "created_by": maneuver.get("agent_label") or maneuver.get("created_by") or "--",
+            "created_by_profile": maneuver.get("agent_profile") or maneuver.get("created_by_profile") or {},
+            "created_at": maneuver.get("created_at"),
+        },
+        "decision_snapshot": {
+            "decision": "aborted" if (maneuver.get("state") or "").strip().lower() == "aborted" else "approved" if maneuver.get("decided_at") else "",
+            "state": maneuver.get("state", ""),
+            "approval_note": maneuver.get("approval_note", ""),
+            "aborted_reason": maneuver.get("aborted_reason", ""),
+            "decided_by": maneuver.get("pilot_label") or maneuver.get("decided_by") or "--",
+            "decided_by_profile": maneuver.get("pilot_profile") or maneuver.get("decided_by_profile") or {},
+            "decided_at": maneuver.get("decided_at"),
+        },
+        "execution_snapshot": {
+            "completed_at": maneuver.get("completed_at"),
+            "execution_started_at": maneuver.get("execution_started_at"),
+            "execution_finished_at": maneuver.get("execution_finished_at"),
+            "reported_draft_m": maneuver.get("reported_draft_m", ""),
+            "report_note": maneuver.get("report_note", ""),
+            "reported_by": maneuver.get("reported_by_label") or maneuver.get("reported_by") or "--",
+            "reported_by_profile": maneuver.get("reported_by_profile") or {},
+            "reported_at": maneuver.get("reported_at"),
+        },
+        "outcome_snapshot": {
+            "state": maneuver.get("state", ""),
+            "state_label": _state_label(maneuver.get("state") or "pending"),
+            "report_completed": bool((maneuver.get("report_note") or "").strip()),
+            "resulting_port_call_status": port_call.get("status", ""),
+            "resulting_location": port_call.get("berth", ""),
+            "next_port": port_call.get("next_port", ""),
+            "decision_flags": _decision_flags(maneuver),
+        },
+        "environment_snapshot": environment_snapshot,
+        "feature_snapshot": features,
+        "change_log": list(maneuver.get("change_log") or []),
+        "created_at": existing_case.get("created_at") or iso_now(),
+        "updated_at": iso_now(),
+    }
+    return case
+
+
+def decorate_maneuver_case(case: Dict) -> Dict:
+    latest_event_at = case.get("latest_event_at")
+    return {
+        **case,
+        "latest_event_label": _local_iso_to_label(latest_event_at),
+        "planned_label": _local_iso_to_label(case.get("planned_at")),
+        "decided_label": _local_iso_to_label(case.get("decided_at")),
+        "completed_label": _local_iso_to_label(case.get("completed_at")),
+        "reported_label": _local_iso_to_label(case.get("reported_at")),
+        "has_report": bool(((case.get("execution_snapshot") or {}).get("report_note") or "").strip()),
+    }
+
+
+def rank_similar_maneuver_cases(
+    cases: Iterable[Dict],
+    *,
+    maneuver_type: str,
+    origin: str = "",
+    destination: str = "",
+    vessel_type: str = "",
+    vessel_loa_m: str = "",
+    bow_thruster: str = "",
+    stern_thruster: str = "",
+    tug_count: str = "",
+    limit: int = 5,
+) -> List[Dict]:
+    clean_type = _normalize_maneuver_type(maneuver_type)
+    if not clean_type:
+        return []
+
+    origin_key = _case_key(canonicalize_berth_label(origin) or origin)
+    destination_key = _case_key(canonicalize_berth_label(destination) or destination)
+    vessel_type_key = _case_key(vessel_type)
+    bow_key = (bow_thruster or "").strip().lower()
+    stern_key = (stern_thruster or "").strip().lower()
+    tug_key = _clean_text(tug_count)
+    loa_value = _safe_float(vessel_loa_m)
+
+    ranked: List[Dict] = []
+    for raw_case in cases:
+        case = decorate_maneuver_case(raw_case)
+        if _normalize_maneuver_type(case.get("maneuver_type")) != clean_type:
+            continue
+        if case.get("current_state") not in {"completed", "aborted"}:
+            continue
+
+        features = case.get("feature_snapshot") or {}
+        score = 0.0
+        reasons: List[str] = []
+
+        if destination_key and features.get("destination_key") == destination_key:
+            score += 35
+            reasons.append("mesmo destino")
+        if origin_key and features.get("origin_key") == origin_key:
+            score += 20
+            reasons.append("mesma origem")
+        if vessel_type_key and features.get("vessel_type_key") == vessel_type_key:
+            score += 18
+            reasons.append("mesmo tipo de navio")
+        case_loa = _safe_float(features.get("vessel_loa_m"))
+        if loa_value is not None and case_loa is not None:
+            diff = abs(case_loa - loa_value)
+            if diff <= 10:
+                score += 12
+                reasons.append("LOA muito próxima")
+            elif diff <= 25:
+                score += 6
+                reasons.append("LOA próxima")
+        if bow_key and bow_key != "unknown" and features.get("bow_thruster") == bow_key:
+            score += 6
+            reasons.append("mesmo bow thruster")
+        if stern_key and stern_key != "unknown" and features.get("stern_thruster") == stern_key:
+            score += 6
+            reasons.append("mesmo stern thruster")
+        if tug_key and features.get("tug_count") == tug_key:
+            score += 5
+            reasons.append("mesmos rebocadores")
+        if not destination_key and not origin_key and not vessel_type_key and loa_value is None:
+            score += 1
+
+        if score <= 0:
+            continue
+
+        ranked.append(
+            {
+                **case,
+                "similarity_score": round(score, 1),
+                "similarity_reasons": reasons,
+            }
+        )
+
+    ranked.sort(
+        key=lambda item: (
+            item.get("similarity_score", 0.0),
+            (_parse_iso_datetime(item.get("latest_event_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
+        ),
+        reverse=True,
+    )
+    return ranked[: max(limit, 0)]

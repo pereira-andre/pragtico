@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS port_calls (
     vessel_gt_t TEXT NOT NULL DEFAULT '',
     vessel_max_draft_m TEXT NOT NULL DEFAULT '',
     vessel_dwt_t TEXT NOT NULL DEFAULT '',
+    vessel_bow_thruster TEXT NOT NULL DEFAULT 'unknown',
+    vessel_stern_thruster TEXT NOT NULL DEFAULT 'unknown',
     status TEXT NOT NULL CHECK (status IN ('scheduled', 'in_port', 'departed')),
     approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'aborted')),
     approval_note TEXT NOT NULL DEFAULT '',
@@ -76,6 +78,34 @@ CREATE TABLE IF NOT EXISTS port_calls (
     next_port TEXT,
     created_by TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS maneuver_cases (
+    maneuver_id TEXT PRIMARY KEY,
+    port_call_id UUID NOT NULL REFERENCES port_calls(id) ON DELETE CASCADE,
+    reference_code TEXT NOT NULL,
+    vessel_name TEXT NOT NULL,
+    maneuver_type TEXT NOT NULL,
+    current_state TEXT NOT NULL,
+    origin_label TEXT NOT NULL DEFAULT '',
+    destination_label TEXT NOT NULL DEFAULT '',
+    planned_at TIMESTAMPTZ,
+    decided_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    reported_at TIMESTAMPTZ,
+    latest_event_at TIMESTAMPTZ,
+    case_summary TEXT NOT NULL DEFAULT '',
+    vessel_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    scale_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    planning_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    decision_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    execution_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    outcome_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    environment_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    feature_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    change_log JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -109,6 +139,12 @@ ALTER TABLE port_calls
 
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS vessel_dwt_t TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE port_calls
+    ADD COLUMN IF NOT EXISTS vessel_bow_thruster TEXT NOT NULL DEFAULT 'unknown';
+
+ALTER TABLE port_calls
+    ADD COLUMN IF NOT EXISTS vessel_stern_thruster TEXT NOT NULL DEFAULT 'unknown';
 
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'pending';
@@ -164,6 +200,69 @@ ALTER TABLE port_calls
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS maneuver_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS reference_code TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS vessel_name TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS maneuver_type TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS current_state TEXT NOT NULL DEFAULT 'pending';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS origin_label TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS destination_label TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS planned_at TIMESTAMPTZ;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS reported_at TIMESTAMPTZ;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS latest_event_at TIMESTAMPTZ;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS case_summary TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS vessel_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS scale_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS planning_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS decision_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS execution_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS outcome_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS environment_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS feature_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE maneuver_cases
+    ADD COLUMN IF NOT EXISTS change_log JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY,
     username TEXT NOT NULL REFERENCES app_users(username) ON DELETE CASCADE,
@@ -207,3 +306,9 @@ CREATE INDEX IF NOT EXISTS port_calls_status_eta_idx
 
 CREATE INDEX IF NOT EXISTS port_calls_status_departure_idx
     ON port_calls (status, departure_at DESC);
+
+CREATE INDEX IF NOT EXISTS maneuver_cases_port_call_idx
+    ON maneuver_cases (port_call_id, latest_event_at DESC);
+
+CREATE INDEX IF NOT EXISTS maneuver_cases_type_state_idx
+    ON maneuver_cases (maneuver_type, current_state, latest_event_at DESC);

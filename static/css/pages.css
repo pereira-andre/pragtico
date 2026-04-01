@@ -100,6 +100,10 @@
   font-size: 1rem;
 }
 
+.scale-auto-origin-note {
+  margin: -4px 0 0;
+}
+
 .scale-maneuver-grid small,
 .scale-maneuver-card small {
   color: var(--muted);
@@ -194,6 +198,17 @@
 .scale-fact-sheet {
   display: grid;
   gap: 10px;
+}
+
+.scale-admin-editor {
+  background:
+    linear-gradient(180deg, rgba(26, 159, 255, 0.05), rgba(255, 255, 255, 0.04));
+}
+
+.admin-scale-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .scale-fact-row {
@@ -326,7 +341,8 @@
   .scale-masthead,
   .scale-summary-grid,
   .scale-actions-grid,
-  .scale-maneuver-grid {
+  .scale-maneuver-grid,
+  .admin-scale-edit-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2016,6 +2032,147 @@ button:hover {
 
 .flash-error {
   background: rgba(179, 66, 42, 0.14);
+}
+
+.casebook-strip {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(141, 197, 217, 0.14);
+}
+
+.casebook-recommendation {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 197, 217, 0.18);
+  background: rgba(9, 26, 38, 0.84);
+}
+
+.casebook-recommendation strong,
+.casebook-recommendation p,
+.casebook-recommendation small {
+  margin: 0;
+}
+
+.casebook-recommendation p {
+  color: #edf8fc;
+}
+
+.casebook-recommendation small {
+  color: var(--text-dim);
+}
+
+.casebook-recommendation-positive {
+  border-color: rgba(59, 179, 119, 0.28);
+  background: linear-gradient(180deg, rgba(15, 52, 41, 0.82), rgba(10, 34, 28, 0.92));
+}
+
+.casebook-recommendation-caution {
+  border-color: rgba(196, 143, 56, 0.3);
+  background: linear-gradient(180deg, rgba(69, 46, 15, 0.86), rgba(42, 29, 11, 0.94));
+}
+
+.casebook-strip-head,
+.casebook-card-top,
+.casebook-meta-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.casebook-strip-meta,
+.casebook-reasons,
+.casebook-note,
+.casebook-route,
+.casebook-card p {
+  margin: 0;
+}
+
+.casebook-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.casebook-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 197, 217, 0.16);
+  background:
+    linear-gradient(180deg, rgba(7, 34, 47, 0.7), rgba(7, 25, 37, 0.92)),
+    rgba(255, 255, 255, 0.02);
+  display: grid;
+  gap: 8px;
+}
+
+.casebook-card-prominent {
+  padding: 16px 18px;
+}
+
+.casebook-card-top strong {
+  font-size: 0.95rem;
+}
+
+.casebook-card-top p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.casebook-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(66, 160, 201, 0.16);
+  border: 1px solid rgba(117, 201, 237, 0.24);
+  color: #9fd9f3;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.casebook-route {
+  color: #eefbff;
+  font-weight: 600;
+}
+
+.casebook-reasons {
+  color: #9ac7d8;
+  font-size: 0.9rem;
+}
+
+.casebook-meta-grid {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.casebook-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.casebook-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f5f8fb;
+  font-size: 0.76rem;
+}
+
+.casebook-note {
+  color: #d5e7ee;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .section-head {

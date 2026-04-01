@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash, generate_password_hash
-from core.validators import validate_datetime_range
+from core.validators import normalize_thruster_state, validate_datetime_range
 
 from domain.document_processing import (
     build_preview,
@@ -28,6 +28,12 @@ from domain.document_processing import (
 )
 
 from .base import BaseStore
+from .maneuver_case_helpers import (
+    _capture_live_environment_sources,
+    build_maneuver_case,
+    decorate_maneuver_case,
+    rank_similar_maneuver_cases,
+)
 from .constants import (
     ALLOWED_FEEDBACK_STATUSES,
     DEFAULT_CONVERSATION_TITLE,
@@ -80,6 +86,7 @@ class PostgresStore(BaseStore):
         self._ensure_schema()
         self._seed_defaults()
         self._sync_document_records()
+        self._rebuild_maneuver_cases(capture_live_environment=False)
 
     def _connect(self):
         try:
@@ -125,6 +132,8 @@ class PostgresStore(BaseStore):
                 vessel_gt_t,
                 vessel_max_draft_m,
                 vessel_dwt_t,
+                vessel_bow_thruster,
+                vessel_stern_thruster,
                 status,
                 approval_status,
                 approval_note,
@@ -175,6 +184,262 @@ class PostgresStore(BaseStore):
             "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
         }
 
+    def _row_to_maneuver_case_record(self, row: Optional[Dict]) -> Optional[Dict]:
+        if not row:
+            return None
+        return {
+            **row,
+            "planned_at": row["planned_at"].isoformat() if row.get("planned_at") else None,
+            "decided_at": row["decided_at"].isoformat() if row.get("decided_at") else None,
+            "completed_at": row["completed_at"].isoformat() if row.get("completed_at") else None,
+            "reported_at": row["reported_at"].isoformat() if row.get("reported_at") else None,
+            "latest_event_at": row["latest_event_at"].isoformat() if row.get("latest_event_at") else None,
+            "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+            "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
+        }
+
+    def _upsert_maneuver_case(self, conn, record: Dict) -> None:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO maneuver_cases (
+                    maneuver_id,
+                    port_call_id,
+                    reference_code,
+                    vessel_name,
+                    maneuver_type,
+                    current_state,
+                    origin_label,
+                    destination_label,
+                    planned_at,
+                    decided_at,
+                    completed_at,
+                    reported_at,
+                    latest_event_at,
+                    case_summary,
+                    vessel_snapshot,
+                    scale_snapshot,
+                    planning_snapshot,
+                    decision_snapshot,
+                    execution_snapshot,
+                    outcome_snapshot,
+                    environment_snapshot,
+                    feature_snapshot,
+                    change_log,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
+                    %s, %s
+                )
+                ON CONFLICT (maneuver_id) DO UPDATE SET
+                    port_call_id = EXCLUDED.port_call_id,
+                    reference_code = EXCLUDED.reference_code,
+                    vessel_name = EXCLUDED.vessel_name,
+                    maneuver_type = EXCLUDED.maneuver_type,
+                    current_state = EXCLUDED.current_state,
+                    origin_label = EXCLUDED.origin_label,
+                    destination_label = EXCLUDED.destination_label,
+                    planned_at = EXCLUDED.planned_at,
+                    decided_at = EXCLUDED.decided_at,
+                    completed_at = EXCLUDED.completed_at,
+                    reported_at = EXCLUDED.reported_at,
+                    latest_event_at = EXCLUDED.latest_event_at,
+                    case_summary = EXCLUDED.case_summary,
+                    vessel_snapshot = EXCLUDED.vessel_snapshot,
+                    scale_snapshot = EXCLUDED.scale_snapshot,
+                    planning_snapshot = EXCLUDED.planning_snapshot,
+                    decision_snapshot = EXCLUDED.decision_snapshot,
+                    execution_snapshot = EXCLUDED.execution_snapshot,
+                    outcome_snapshot = EXCLUDED.outcome_snapshot,
+                    environment_snapshot = EXCLUDED.environment_snapshot,
+                    feature_snapshot = EXCLUDED.feature_snapshot,
+                    change_log = EXCLUDED.change_log,
+                    created_at = COALESCE(maneuver_cases.created_at, EXCLUDED.created_at),
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    record["maneuver_id"],
+                    record["port_call_id"],
+                    record.get("reference_code", ""),
+                    record.get("vessel_name", ""),
+                    record.get("maneuver_type", ""),
+                    record.get("current_state", "pending"),
+                    record.get("origin_label", ""),
+                    record.get("destination_label", ""),
+                    record.get("planned_at"),
+                    record.get("decided_at"),
+                    record.get("completed_at"),
+                    record.get("reported_at"),
+                    record.get("latest_event_at"),
+                    record.get("case_summary", ""),
+                    json.dumps(record.get("vessel_snapshot", {})),
+                    json.dumps(record.get("scale_snapshot", {})),
+                    json.dumps(record.get("planning_snapshot", {})),
+                    json.dumps(record.get("decision_snapshot", {})),
+                    json.dumps(record.get("execution_snapshot", {})),
+                    json.dumps(record.get("outcome_snapshot", {})),
+                    json.dumps(record.get("environment_snapshot", {})),
+                    json.dumps(record.get("feature_snapshot", {})),
+                    json.dumps(record.get("change_log", [])),
+                    record.get("created_at") or iso_now(),
+                    record.get("updated_at") or iso_now(),
+                ),
+            )
+
+    def _list_raw_maneuver_cases(
+        self,
+        conn,
+        *,
+        limit: Optional[int] = None,
+        maneuver_type: Optional[str] = None,
+        state: Optional[str] = None,
+        port_call_id: Optional[str] = None,
+    ) -> List[Dict]:
+        conditions = []
+        params: List[object] = []
+        if maneuver_type:
+            conditions.append("maneuver_type = %s")
+            params.append(maneuver_type.strip().lower())
+        if state:
+            conditions.append("current_state = %s")
+            params.append(state.strip().lower())
+        if port_call_id:
+            conditions.append("port_call_id = %s")
+            params.append(port_call_id)
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        limit_clause = "LIMIT %s" if limit is not None else ""
+        if limit is not None:
+            params.append(max(limit, 0))
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    maneuver_id,
+                    port_call_id::text AS port_call_id,
+                    reference_code,
+                    vessel_name,
+                    maneuver_type,
+                    current_state,
+                    origin_label,
+                    destination_label,
+                    planned_at,
+                    decided_at,
+                    completed_at,
+                    reported_at,
+                    latest_event_at,
+                    case_summary,
+                    vessel_snapshot,
+                    scale_snapshot,
+                    planning_snapshot,
+                    decision_snapshot,
+                    execution_snapshot,
+                    outcome_snapshot,
+                    environment_snapshot,
+                    feature_snapshot,
+                    change_log,
+                    created_at,
+                    updated_at
+                FROM maneuver_cases
+                {where_clause}
+                ORDER BY latest_event_at DESC NULLS LAST, updated_at DESC
+                {limit_clause}
+                """,
+                tuple(params),
+            )
+            return [self._row_to_maneuver_case_record(row) for row in cur.fetchall()]
+
+    def _sync_maneuver_cases_for_port_call(
+        self,
+        conn,
+        port_call_record: Dict,
+        *,
+        capture_live_environment: bool,
+    ) -> None:
+        decorated = _decorate_port_call(port_call_record)
+        existing_cases = {
+            item["maneuver_id"]: item
+            for item in self._list_raw_maneuver_cases(conn, port_call_id=decorated["id"])
+            if item.get("maneuver_id")
+        }
+        active_ids = [
+            maneuver.get("id")
+            for maneuver in decorated.get("maneuver_history", []) or []
+            if maneuver.get("id")
+        ]
+        with conn.cursor() as cur:
+            if active_ids:
+                cur.execute(
+                    "DELETE FROM maneuver_cases WHERE port_call_id = %s AND maneuver_id <> ALL(%s)",
+                    (decorated["id"], active_ids),
+                )
+            else:
+                cur.execute("DELETE FROM maneuver_cases WHERE port_call_id = %s", (decorated["id"],))
+
+        weather_forecast = None
+        wave_conditions = None
+        if capture_live_environment:
+            weather_forecast, wave_conditions = _capture_live_environment_sources()
+
+        for maneuver in decorated.get("maneuver_history", []) or []:
+            if not maneuver.get("id"):
+                continue
+            self._upsert_maneuver_case(
+                conn,
+                build_maneuver_case(
+                    decorated,
+                    maneuver,
+                    existing_case=existing_cases.get(maneuver["id"]),
+                    capture_live_environment=capture_live_environment,
+                    weather_forecast=weather_forecast,
+                    wave_conditions=wave_conditions,
+                ),
+            )
+
+    def _rebuild_maneuver_cases(self, *, capture_live_environment: bool) -> None:
+        with self._connect() as conn:
+            existing_cases = {
+                item["maneuver_id"]: item
+                for item in self._list_raw_maneuver_cases(conn)
+                if item.get("maneuver_id")
+            }
+            with conn.cursor() as cur:
+                cur.execute(self._port_call_select_clause())
+                rows = cur.fetchall()
+            weather_forecast = None
+            wave_conditions = None
+            if capture_live_environment:
+                weather_forecast, wave_conditions = _capture_live_environment_sources()
+            active_ids: List[str] = []
+            for row in rows:
+                payload = self._row_to_port_call_record(row)
+                if not payload:
+                    continue
+                decorated = _decorate_port_call(_normalize_port_call_record(payload))
+                for maneuver in decorated.get("maneuver_history", []) or []:
+                    if not maneuver.get("id"):
+                        continue
+                    active_ids.append(maneuver["id"])
+                    self._upsert_maneuver_case(
+                        conn,
+                        build_maneuver_case(
+                            decorated,
+                            maneuver,
+                            existing_case=existing_cases.get(maneuver["id"]),
+                            capture_live_environment=capture_live_environment,
+                            weather_forecast=weather_forecast,
+                            wave_conditions=wave_conditions,
+                        ),
+                    )
+            with conn.cursor() as cur:
+                if active_ids:
+                    cur.execute("DELETE FROM maneuver_cases WHERE maneuver_id <> ALL(%s)", (active_ids,))
+                else:
+                    cur.execute("DELETE FROM maneuver_cases")
+            conn.commit()
+
     def _fetch_port_call_record(self, conn, port_call_id: str, for_update: bool = False) -> Optional[Dict]:
         query = f"{self._port_call_select_clause()} WHERE id = %s"
         if for_update:
@@ -205,6 +470,8 @@ class PostgresStore(BaseStore):
                     vessel_gt_t = %s,
                     vessel_max_draft_m = %s,
                     vessel_dwt_t = %s,
+                    vessel_bow_thruster = %s,
+                    vessel_stern_thruster = %s,
                     status = %s,
                     approval_status = %s,
                     approval_note = %s,
@@ -247,6 +514,8 @@ class PostgresStore(BaseStore):
                     vessel_gt_t,
                     vessel_max_draft_m,
                     vessel_dwt_t,
+                    vessel_bow_thruster,
+                    vessel_stern_thruster,
                     status,
                     approval_status,
                     approval_note,
@@ -289,6 +558,8 @@ class PostgresStore(BaseStore):
                     payload.get("vessel_gt_t", ""),
                     payload.get("vessel_max_draft_m", ""),
                     payload.get("vessel_dwt_t", ""),
+                    payload.get("vessel_bow_thruster", "unknown"),
+                    payload.get("vessel_stern_thruster", "unknown"),
                     payload.get("status"),
                     payload.get("approval_status"),
                     payload.get("approval_note", ""),
@@ -325,6 +596,7 @@ class PostgresStore(BaseStore):
         saved = self._row_to_port_call_record(row)
         if not saved:
             raise ValueError("Manobra não encontrada.")
+        self._sync_maneuver_cases_for_port_call(conn, saved, capture_live_environment=True)
         return saved
 
     def _mutate_port_call(self, port_call_id: str, mutator) -> Dict:
@@ -1317,6 +1589,92 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         records = [self._row_to_port_call_record(row) for row in rows]
         return _build_port_activity_snapshot(records, window_days=window_days)
 
+    def list_maneuver_cases(
+        self,
+        *,
+        limit: int = 100,
+        maneuver_type: Optional[str] = None,
+        state: Optional[str] = None,
+        port_call_id: Optional[str] = None,
+    ) -> List[Dict]:
+        with self._connect() as conn:
+            rows = self._list_raw_maneuver_cases(
+                conn,
+                limit=limit,
+                maneuver_type=maneuver_type,
+                state=state,
+                port_call_id=port_call_id,
+            )
+        return [decorate_maneuver_case(item) for item in rows]
+
+    def get_maneuver_case(self, maneuver_id: str) -> Optional[Dict]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        maneuver_id,
+                        port_call_id::text AS port_call_id,
+                        reference_code,
+                        vessel_name,
+                        maneuver_type,
+                        current_state,
+                        origin_label,
+                        destination_label,
+                        planned_at,
+                        decided_at,
+                        completed_at,
+                        reported_at,
+                        latest_event_at,
+                        case_summary,
+                        vessel_snapshot,
+                        scale_snapshot,
+                        planning_snapshot,
+                        decision_snapshot,
+                        execution_snapshot,
+                        outcome_snapshot,
+                        environment_snapshot,
+                        feature_snapshot,
+                        change_log,
+                        created_at,
+                        updated_at
+                    FROM maneuver_cases
+                    WHERE maneuver_id = %s
+                    """,
+                    (maneuver_id,),
+                )
+                row = cur.fetchone()
+        payload = self._row_to_maneuver_case_record(row)
+        return decorate_maneuver_case(payload) if payload else None
+
+    def find_similar_maneuver_cases(
+        self,
+        *,
+        maneuver_type: str,
+        origin: str = "",
+        destination: str = "",
+        vessel_type: str = "",
+        vessel_loa_m: str = "",
+        bow_thruster: str = "",
+        stern_thruster: str = "",
+        tug_count: str = "",
+        limit: int = 5,
+    ) -> List[Dict]:
+        with self._connect() as conn:
+            rows = self._list_raw_maneuver_cases(conn, limit=500, maneuver_type=maneuver_type)
+        return rank_similar_maneuver_cases(
+            rows,
+            maneuver_type=maneuver_type,
+            origin=origin,
+            destination=destination,
+            vessel_type=vessel_type,
+            vessel_loa_m=vessel_loa_m,
+            bow_thruster=bow_thruster,
+            stern_thruster=stern_thruster,
+            tug_count=tug_count,
+            limit=limit,
+        )
+
     def clear_port_calls(self) -> int:
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -1355,6 +1713,8 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         vessel_gt_t: Optional[str] = None,
         vessel_max_draft_m: Optional[str] = None,
         vessel_dwt_t: Optional[str] = None,
+        vessel_bow_thruster: Optional[str] = None,
+        vessel_stern_thruster: Optional[str] = None,
     ) -> Dict:
         def mutator(current: Dict) -> Dict:
             entry = _latest_maneuver(current.get("maneuver_history", []), "entry")
@@ -1382,6 +1742,14 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                 "vessel_gt_t": _clean_text(vessel_gt_t) if vessel_gt_t is not None else current.get("vessel_gt_t", ""),
                 "vessel_max_draft_m": _clean_text(vessel_max_draft_m) if vessel_max_draft_m is not None else current.get("vessel_max_draft_m", ""),
                 "vessel_dwt_t": _clean_text(vessel_dwt_t) if vessel_dwt_t is not None else current.get("vessel_dwt_t", ""),
+                "vessel_bow_thruster": normalize_thruster_state(
+                    vessel_bow_thruster if vessel_bow_thruster is not None else current.get("vessel_bow_thruster", "unknown"),
+                    "Bow thruster",
+                ),
+                "vessel_stern_thruster": normalize_thruster_state(
+                    vessel_stern_thruster if vessel_stern_thruster is not None else current.get("vessel_stern_thruster", "unknown"),
+                    "Stern thruster",
+                ),
             }
             _validate_required_vessel_profile(vessel_profile)
             _validate_required_operational_profile(
@@ -1449,6 +1817,8 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
         vessel_gt_t: str = "",
         vessel_max_draft_m: str = "",
         vessel_dwt_t: str = "",
+        vessel_bow_thruster: str = "unknown",
+        vessel_stern_thruster: str = "unknown",
     ) -> Dict:
         clean_name = _clean_text(vessel_name)
         creator_username = _normalize_username(created_by) or "system"
@@ -1468,6 +1838,8 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             "vessel_gt_t": _clean_text(vessel_gt_t),
             "vessel_max_draft_m": _clean_text(vessel_max_draft_m),
             "vessel_dwt_t": _clean_text(vessel_dwt_t),
+            "vessel_bow_thruster": normalize_thruster_state(vessel_bow_thruster, "Bow thruster"),
+            "vessel_stern_thruster": normalize_thruster_state(vessel_stern_thruster, "Stern thruster"),
         }
         _validate_required_vessel_profile(vessel_profile)
         _validate_required_operational_profile(
@@ -1549,6 +1921,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                     INSERT INTO port_calls (
                         id, vessel_name, vessel_short_name, vessel_imo, vessel_call_sign, vessel_flag, vessel_type,
                         vessel_loa_m, vessel_beam_m, vessel_gt_t, vessel_max_draft_m, vessel_dwt_t,
+                        vessel_bow_thruster, vessel_stern_thruster,
                         status, approval_status, approval_note, aborted_reason,
                         decided_by, decided_at, eta, ata, planned_departure_at, departure_plan_note, departure_at,
                         planned_shift_at, shift_plan_note, shift_at, shift_origin_berth, shift_destination_berth,
@@ -1557,7 +1930,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                     )
                     VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s
                     )
                     """,
                     (
@@ -1573,6 +1946,8 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                         record["vessel_gt_t"],
                         record["vessel_max_draft_m"],
                         record["vessel_dwt_t"],
+                        record["vessel_bow_thruster"],
+                        record["vessel_stern_thruster"],
                         record["status"],
                         record["approval_status"],
                         record["approval_note"],
@@ -1604,6 +1979,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                         record["updated_at"],
                     ),
                 )
+            self._sync_maneuver_cases_for_port_call(conn, record, capture_live_environment=True)
             conn.commit()
         return self.get_port_call(record["id"])
 
@@ -1654,7 +2030,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada na escala.")
-            if target.get("state") == "completed":
+            if target.get("state") == "completed" and (actor_role or "").strip().lower() != "admin":
                 raise ValueError("A manobra concluída já só pode ser ajustada no registo.")
             if not _can_edit_maneuver_plan(target, actor_role):
                 raise ValueError("Depois de validada, esta manobra só pode ser editada por piloto.")

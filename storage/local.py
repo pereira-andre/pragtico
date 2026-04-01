@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash, generate_password_hash
-from core.validators import validate_datetime_range
+from core.validators import normalize_thruster_state, validate_datetime_range
 
 from domain.document_processing import (
     build_preview,
@@ -26,6 +26,12 @@ from domain.document_processing import (
 )
 
 from .base import BaseStore
+from .maneuver_case_helpers import (
+    _capture_live_environment_sources,
+    build_maneuver_case,
+    decorate_maneuver_case,
+    rank_similar_maneuver_cases,
+)
 from .constants import (
     ALLOWED_FEEDBACK_STATUSES,
     DEFAULT_CONVERSATION_TITLE,
@@ -81,11 +87,13 @@ class LocalStore(BaseStore):
         self.messages_path = os.path.join(data_dir, "messages.json")
         self.runtime_state_path = os.path.join(data_dir, "runtime_state.json")
         self.port_calls_path = os.path.join(data_dir, "port_calls.json")
+        self.maneuver_cases_path = os.path.join(data_dir, "maneuver_cases.json")
         self.legacy_chats_path = os.path.join(data_dir, "chats.json")
         self._ensure_dirs()
         self._seed_defaults()
         self._migrate_legacy_chats()
         self._sync_document_records()
+        self._sync_maneuver_cases_from_port_calls(self._read_port_calls(), capture_live_environment=False)
 
     def _ensure_dirs(self) -> None:
         os.makedirs(self.data_dir, exist_ok=True)
@@ -119,6 +127,7 @@ class LocalStore(BaseStore):
             (self.messages_path, []),
             (self.runtime_state_path, {}),
             (self.port_calls_path, _default_port_calls()),
+            (self.maneuver_cases_path, []),
         ):
             if not os.path.exists(path):
                 self._write_json(path, fallback)
@@ -260,11 +269,50 @@ class LocalStore(BaseStore):
         records = self._read_json(self.port_calls_path, [])
         normalized_records = [_normalize_port_call_record(item) for item in records]
         if normalized_records != records:
-            self._write_port_calls(normalized_records)
+            self._write_port_calls(normalized_records, capture_live_environment=False)
         return normalized_records
 
-    def _write_port_calls(self, records: List[Dict]) -> None:
+    def _write_port_calls(self, records: List[Dict], *, capture_live_environment: bool = True) -> None:
         self._write_json(self.port_calls_path, records)
+        self._sync_maneuver_cases_from_port_calls(records, capture_live_environment=capture_live_environment)
+
+    def _read_maneuver_cases(self) -> List[Dict]:
+        return self._read_json(self.maneuver_cases_path, [])
+
+    def _write_maneuver_cases(self, records: List[Dict]) -> None:
+        self._write_json(self.maneuver_cases_path, records)
+
+    def _sync_maneuver_cases_from_port_calls(
+        self,
+        records: List[Dict],
+        *,
+        capture_live_environment: bool,
+    ) -> None:
+        existing_cases = {item.get("maneuver_id"): item for item in self._read_maneuver_cases() if item.get("maneuver_id")}
+        weather_forecast = None
+        wave_conditions = None
+        if capture_live_environment:
+            weather_forecast, wave_conditions = _capture_live_environment_sources()
+
+        synced_cases: List[Dict] = []
+        for record in records:
+            decorated = _decorate_port_call(record)
+            for maneuver in decorated.get("maneuver_history", []) or []:
+                maneuver_id = maneuver.get("id")
+                if not maneuver_id:
+                    continue
+                synced_cases.append(
+                    build_maneuver_case(
+                        decorated,
+                        maneuver,
+                        existing_case=existing_cases.get(maneuver_id),
+                        capture_live_environment=capture_live_environment,
+                        weather_forecast=weather_forecast,
+                        wave_conditions=wave_conditions,
+                    )
+                )
+        synced_cases.sort(key=lambda item: item.get("latest_event_at") or "", reverse=True)
+        self._write_maneuver_cases(synced_cases)
 
     def _find_port_call_index(self, port_call_id: str) -> int:
         for index, item in enumerate(self._read_port_calls()):
@@ -889,6 +937,57 @@ class LocalStore(BaseStore):
         """Return a decorated port activity snapshot covering the specified number of days."""
         return _build_port_activity_snapshot(self._read_port_calls(), window_days=window_days)
 
+    def list_maneuver_cases(
+        self,
+        *,
+        limit: int = 100,
+        maneuver_type: Optional[str] = None,
+        state: Optional[str] = None,
+        port_call_id: Optional[str] = None,
+    ) -> List[Dict]:
+        cases = self._read_maneuver_cases()
+        if maneuver_type:
+            clean_type = maneuver_type.strip().lower()
+            cases = [item for item in cases if (item.get("maneuver_type") or "").strip().lower() == clean_type]
+        if state:
+            clean_state = state.strip().lower()
+            cases = [item for item in cases if (item.get("current_state") or "").strip().lower() == clean_state]
+        if port_call_id:
+            cases = [item for item in cases if item.get("port_call_id") == port_call_id]
+        return [decorate_maneuver_case(item) for item in cases[: max(limit, 0)]]
+
+    def get_maneuver_case(self, maneuver_id: str) -> Optional[Dict]:
+        for item in self._read_maneuver_cases():
+            if item.get("maneuver_id") == maneuver_id:
+                return decorate_maneuver_case(item)
+        return None
+
+    def find_similar_maneuver_cases(
+        self,
+        *,
+        maneuver_type: str,
+        origin: str = "",
+        destination: str = "",
+        vessel_type: str = "",
+        vessel_loa_m: str = "",
+        bow_thruster: str = "",
+        stern_thruster: str = "",
+        tug_count: str = "",
+        limit: int = 5,
+    ) -> List[Dict]:
+        return rank_similar_maneuver_cases(
+            self._read_maneuver_cases(),
+            maneuver_type=maneuver_type,
+            origin=origin,
+            destination=destination,
+            vessel_type=vessel_type,
+            vessel_loa_m=vessel_loa_m,
+            bow_thruster=bow_thruster,
+            stern_thruster=stern_thruster,
+            tug_count=tug_count,
+            limit=limit,
+        )
+
     def clear_port_calls(self) -> int:
         removed = len(self._read_port_calls())
         self._write_port_calls(_default_port_calls())
@@ -923,6 +1022,8 @@ class LocalStore(BaseStore):
         vessel_gt_t: Optional[str] = None,
         vessel_max_draft_m: Optional[str] = None,
         vessel_dwt_t: Optional[str] = None,
+        vessel_bow_thruster: Optional[str] = None,
+        vessel_stern_thruster: Optional[str] = None,
     ) -> Dict:
         records = self._read_port_calls()
         updated = None
@@ -955,6 +1056,14 @@ class LocalStore(BaseStore):
                 "vessel_gt_t": _clean_text(vessel_gt_t) if vessel_gt_t is not None else current.get("vessel_gt_t", ""),
                 "vessel_max_draft_m": _clean_text(vessel_max_draft_m) if vessel_max_draft_m is not None else current.get("vessel_max_draft_m", ""),
                 "vessel_dwt_t": _clean_text(vessel_dwt_t) if vessel_dwt_t is not None else current.get("vessel_dwt_t", ""),
+                "vessel_bow_thruster": normalize_thruster_state(
+                    vessel_bow_thruster if vessel_bow_thruster is not None else current.get("vessel_bow_thruster", "unknown"),
+                    "Bow thruster",
+                ),
+                "vessel_stern_thruster": normalize_thruster_state(
+                    vessel_stern_thruster if vessel_stern_thruster is not None else current.get("vessel_stern_thruster", "unknown"),
+                    "Stern thruster",
+                ),
             }
             _validate_required_vessel_profile(vessel_profile)
             _validate_required_operational_profile(
@@ -1028,6 +1137,8 @@ class LocalStore(BaseStore):
         vessel_gt_t: str = "",
         vessel_max_draft_m: str = "",
         vessel_dwt_t: str = "",
+        vessel_bow_thruster: str = "unknown",
+        vessel_stern_thruster: str = "unknown",
     ) -> Dict:
         """Create a new port call record with an initial entry maneuver and return the decorated result."""
         clean_name = _clean_text(vessel_name)
@@ -1048,6 +1159,8 @@ class LocalStore(BaseStore):
             "vessel_gt_t": _clean_text(vessel_gt_t),
             "vessel_max_draft_m": _clean_text(vessel_max_draft_m),
             "vessel_dwt_t": _clean_text(vessel_dwt_t),
+            "vessel_bow_thruster": normalize_thruster_state(vessel_bow_thruster, "Bow thruster"),
+            "vessel_stern_thruster": normalize_thruster_state(vessel_stern_thruster, "Stern thruster"),
         }
         _validate_required_vessel_profile(vessel_profile)
         _validate_required_operational_profile(
@@ -1726,7 +1839,7 @@ class LocalStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada na escala.")
-            if target.get("state") == "completed":
+            if target.get("state") == "completed" and (actor_role or "").strip().lower() != "admin":
                 raise ValueError("A manobra concluída já só pode ser ajustada no registo.")
             if not _can_edit_maneuver_plan(target, actor_role):
                 raise ValueError("Depois de validada, esta manobra só pode ser editada por piloto.")

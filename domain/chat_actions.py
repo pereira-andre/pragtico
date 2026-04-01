@@ -6,7 +6,7 @@ import unicodedata
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from domain.berth_layout import is_anchorage_berth
+from domain.berth_layout import BERTH_OPTIONS, canonicalize_berth_label, is_anchorage_berth, is_known_berth_label
 
 
 ACTION_SPECS = {
@@ -298,6 +298,8 @@ PENDING_UPDATE_FIELD_ALIASES = {
     "vessel_beam_m": ["boca", "boca (m)", "beam", "vessel_beam_m", "largura"],
     "vessel_gt_t": ["gt", "gt (t)", "vessel_gt_t", "arqueacao bruta", "arqueação bruta"],
     "vessel_dwt_t": ["dwt", "dwt (t)", "vessel_dwt_t", "deadweight"],
+    "vessel_bow_thruster": ["bow thruster", "thruster de proa", "propulsor de proa", "vessel_bow_thruster"],
+    "vessel_stern_thruster": ["stern thruster", "thruster de popa", "propulsor de popa", "vessel_stern_thruster"],
     "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "calado (m)", "max_draft", "vessel_max_draft_m"],
 }
 SLASH_COMMAND_ALIASES = {
@@ -384,6 +386,12 @@ FIELD_ALIASES = {
     "dwt_t": "vessel_dwt_t",
     "vessel_dwt": "vessel_dwt_t",
     "deadweight": "vessel_dwt_t",
+    "bow_thruster": "vessel_bow_thruster",
+    "thruster_de_proa": "vessel_bow_thruster",
+    "propulsor_de_proa": "vessel_bow_thruster",
+    "stern_thruster": "vessel_stern_thruster",
+    "thruster_de_popa": "vessel_stern_thruster",
+    "propulsor_de_popa": "vessel_stern_thruster",
     "draft": "draft_m",
     "draught": "draft_m",
     "vessel_draft": "draft_m",
@@ -500,6 +508,8 @@ DISPLAY_FIELD_LABELS = {
     "vessel_gt_t": "GT",
     "vessel_max_draft_m": "calado máximo",
     "vessel_dwt_t": "DWT",
+    "vessel_bow_thruster": "bow thruster",
+    "vessel_stern_thruster": "stern thruster",
     "eta_local": "ETA",
     "berth": "cais previsto",
     "last_port": "último porto",
@@ -599,6 +609,8 @@ PORT_CALL_FIELD_HINTS = {
     "vessel_beam_m",
     "vessel_gt_t",
     "vessel_dwt_t",
+    "vessel_bow_thruster",
+    "vessel_stern_thruster",
     "vessel_max_draft_m",
     "eta_local",
     "berth",
@@ -802,6 +814,13 @@ def normalize_action_fields(action: str, fields: Dict) -> Dict:
             if not vessel_imo:
                 normalized["vessel_imo"] = vessel_name
             normalized["vessel_name"] = ""
+    for berth_field in ("berth", "origin_berth", "destination_berth"):
+        berth_value = " ".join(str(normalized.get(berth_field) or "").split())
+        if not berth_value:
+            continue
+        canonical = canonicalize_berth_label(berth_value, berth_options=BERTH_OPTIONS)
+        if is_known_berth_label(canonical, berth_options=BERTH_OPTIONS):
+            normalized[berth_field] = canonical
     if normalized.get("notes") is None:
         normalized["notes"] = ""
     return normalized
@@ -864,6 +883,35 @@ def proposal_missing_field_labels(action: str, fields: Dict, target: Dict) -> Li
         if item not in deduped:
             deduped.append(item)
     return display_missing_field_labels(deduped)
+
+
+def _invalid_berth_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
+    maneuver_type = (target.get("maneuver_type") or "").strip().lower()
+    invalid: List[str] = []
+
+    def register(field_key: str, raw_value: object, custom_label: str) -> None:
+        clean = " ".join(str(raw_value or "").split())
+        if not clean:
+            return
+        canonical = canonicalize_berth_label(clean, berth_options=BERTH_OPTIONS)
+        if is_known_berth_label(canonical, berth_options=BERTH_OPTIONS):
+            return
+        if custom_label not in invalid:
+            invalid.append(custom_label)
+
+    if action in {"create_port_call", "edit_port_call"}:
+        register("berth", fields.get("berth"), "cais/fundeadouro válido")
+    elif action == "schedule_shift":
+        register("origin_berth", fields.get("origin_berth") or fields.get("origin"), "origem válida")
+        register("destination_berth", fields.get("destination_berth") or fields.get("destination"), "destino válido")
+    elif action == "edit_maneuver_plan":
+        if maneuver_type == "entry":
+            register("berth", fields.get("berth") or fields.get("destination"), "destino válido")
+        elif maneuver_type == "shift":
+            register("origin_berth", fields.get("origin_berth") or fields.get("origin"), "origem válida")
+            register("destination_berth", fields.get("destination_berth") or fields.get("destination"), "destino válido")
+
+    return invalid
 
 
 def _clean_extracted_value(canonical: str, raw_value: str) -> str:
@@ -1043,6 +1091,8 @@ def build_scale_edit_reply_template() -> str:
             "GT (t): ",
             "DWT (t): ",
             "Calado máximo (m): ",
+            "Bow thruster: sim | não | desconhecido",
+            "Stern thruster: sim | não | desconhecido",
             "Observações: ",
         ]
     )
@@ -1064,12 +1114,12 @@ def build_create_maneuver_reply_template() -> str:
             "Ref: ",
             "Tipo de manobra: saída | mudança",
             "Hora prevista: DD/MM/AAAA, HH:MM",
-            "Origem: ",
             "Destino: ",
             "Calado: ",
             "Rebocadores: ",
             "Restrições: daylight, gas, estrategico",
             "Observações: ",
+            "Nota: a origem segue automaticamente o último local conhecido do navio.",
         ]
     )
 
@@ -1272,6 +1322,7 @@ def build_slash_help(role: str) -> str:
             "Notas:",
             "  Ref identifica a escala. Se só tiveres o ID curto da escala, o bot também tenta resolvê-lo.",
             "  Ao criar manobra não precisas de indicar ID; para manobra existente podes usar ID da manobra ou Ref + Tipo.",
+            "  Ao criar uma saída ou mudança, a origem segue automaticamente o último local conhecido do navio.",
             "  Se houver mais do que uma manobra elegível do mesmo tipo, o bot exige o ID da manobra.",
             "  Se o comando vier incompleto, o bot devolve o template certo para preencher.",
         ]
@@ -1892,6 +1943,30 @@ def normalize_action_candidate(candidate: Dict, role: str) -> Optional[Dict]:
         }
 
     normalized_fields = normalize_action_fields(action, fields)
+    if action == "schedule_departure":
+        if normalized_fields.get("planned_at_local") and not normalized_fields.get("planned_departure_at_local"):
+            normalized_fields["planned_departure_at_local"] = normalized_fields["planned_at_local"]
+        if normalized_fields.get("destination") and not normalized_fields.get("next_port"):
+            normalized_fields["next_port"] = normalized_fields["destination"]
+    elif action == "schedule_shift":
+        if normalized_fields.get("planned_at_local") and not normalized_fields.get("planned_shift_at_local"):
+            normalized_fields["planned_shift_at_local"] = normalized_fields["planned_at_local"]
+        if normalized_fields.get("destination") and not normalized_fields.get("destination_berth"):
+            normalized_fields["destination_berth"] = normalized_fields["destination"]
+        if normalized_fields.get("origin") and not normalized_fields.get("origin_berth"):
+            normalized_fields["origin_berth"] = normalized_fields["origin"]
+    elif action == "edit_maneuver_plan":
+        if maneuver_type == "entry":
+            if normalized_fields.get("destination") and not normalized_fields.get("berth"):
+                normalized_fields["berth"] = normalized_fields["destination"]
+        elif maneuver_type == "departure":
+            if normalized_fields.get("destination") and not normalized_fields.get("next_port"):
+                normalized_fields["next_port"] = normalized_fields["destination"]
+        elif maneuver_type == "shift":
+            if normalized_fields.get("destination") and not normalized_fields.get("destination_berth"):
+                normalized_fields["destination_berth"] = normalized_fields["destination"]
+            if normalized_fields.get("origin") and not normalized_fields.get("origin_berth"):
+                normalized_fields["origin_berth"] = normalized_fields["origin"]
     if action == "create_port_call":
         if not normalized_fields.get("vessel_name"):
             normalized_fields["vessel_name"] = " ".join((target.get("vessel_name") or "").strip().split())
@@ -1902,6 +1977,21 @@ def normalize_action_candidate(candidate: Dict, role: str) -> Optional[Dict]:
         "vessel_name": " ".join((target.get("vessel_name") or "").strip().split()),
         "maneuver_type": maneuver_type,
     }
+    invalid_berth_labels = _invalid_berth_field_labels(action, normalized_fields, normalized_target)
+    if invalid_berth_labels:
+        invalid_text = ", ".join(invalid_berth_labels)
+        return {
+            "intent": "unsupported",
+            "action": "",
+            "confidence": float(candidate.get("confidence") or 0.0),
+            "reason": (
+                f"Não reconheci {invalid_text}. "
+                "Usa um cais/fundeadouro do catálogo do porto e repete ou reformula o pedido."
+            ),
+            "target": {},
+            "fields": {},
+            "missing_fields": [],
+        }
     constraints = normalized_fields.get("constraints")
     if not isinstance(constraints, list):
         constraints = []
@@ -2189,6 +2279,8 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
         "GT (t): ",
         "DWT (t): ",
         "Calado (m): ",
+        "Bow thruster: sim | não | desconhecido",
+        "Stern thruster: sim | não | desconhecido",
         "Calado (operacional): ",
         "Rebocadores: ",
         "Observações: ",

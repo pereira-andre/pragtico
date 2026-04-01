@@ -392,6 +392,7 @@ def api_chat():
                     answer = {
                         "answer": (
                             "Percebi que o pedido é operacional, mas a proposta automática não ficou suficientemente segura para execução.\n\n"
+                            "Repete ou reformula o pedido de forma mais explícita.\n\n"
                             "Responde neste formato para eu completar o registo sem consultar regras documentais:\n"
                             + template
                         ),
@@ -404,6 +405,7 @@ def api_chat():
                 answer = {
                     "answer": (
                         "Não consegui interpretar com segurança os dados da nova escala.\n\n"
+                        "Repete ou reformula o pedido com os campos abaixo.\n\n"
                         + build_port_call_reply_template()
                     ),
                     "sources": [],
@@ -421,6 +423,7 @@ def api_chat():
                     answer = {
                         "answer": (
                             "Percebi que o pedido é operacional, mas não consegui identificar a escala/manobra com segurança.\n\n"
+                            "Repete ou reformula o pedido indicando a escala, o navio ou o ID da manobra.\n\n"
                             "Indica o navio ou o número de escala e, se for registo de manobra, responde neste formato:\n"
                             + template
                         ),

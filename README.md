@@ -116,6 +116,7 @@ LLM_FALLBACK_MODEL=openai/gpt-4.1-mini
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_LOCAL_ENABLED=0
+MANEUVER_CASE_CAPTURE_ENVIRONMENT=1
 ```
 
 No primeiro deploy com documentos novos, podes ativar `RAG_REINDEX_ON_START=1`; depois volta a `0`.

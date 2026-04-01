@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
+from domain.berth_layout import build_slot_occupancy
 from domain.cost_engine import ManoeuvreInput, ManoeuvreType, calculate_scale_cost
 from domain.document_processing import iso_now
 
@@ -168,6 +169,15 @@ def _extract_compact_note_value(note: str, label: str) -> str:
 
 def _effective_maneuver_time(record: Dict) -> Optional[str]:
     return record.get("execution_finished_at") or record.get("completed_at") or record.get("planned_at")
+
+
+def _thruster_state_label(value: Optional[str]) -> str:
+    clean = " ".join(str(value or "").strip().split()).lower()
+    if clean == "yes":
+        return "Sim"
+    if clean == "no":
+        return "Não"
+    return "Desconhecido"
 
 
 def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
@@ -440,6 +450,8 @@ def _normalize_port_call_record(record: Dict) -> Dict:
         "vessel_gt_t": record.get("vessel_gt_t", "") or "",
         "vessel_max_draft_m": record.get("vessel_max_draft_m", "") or "",
         "vessel_dwt_t": record.get("vessel_dwt_t", "") or "",
+        "vessel_bow_thruster": record.get("vessel_bow_thruster", "unknown") or "unknown",
+        "vessel_stern_thruster": record.get("vessel_stern_thruster", "unknown") or "unknown",
         "status": status,
         "approval_status": approval_status,
         "approval_note": record.get("approval_note", "") or "",
@@ -823,6 +835,8 @@ def _decorate_port_call(record: Dict) -> Dict:
         "ship_gt_label": normalized.get("vessel_gt_t") or "--",
         "ship_max_draft_label": normalized.get("vessel_max_draft_m") or "--",
         "ship_dwt_label": normalized.get("vessel_dwt_t") or "--",
+        "ship_bow_thruster_label": _thruster_state_label(normalized.get("vessel_bow_thruster")),
+        "ship_stern_thruster_label": _thruster_state_label(normalized.get("vessel_stern_thruster")),
         "can_abort": _can_abort_port_call(normalized),
         "can_abort_departure_plan": _can_abort_departure_plan(normalized),
         "can_abort_shift_plan": _can_abort_shift_plan(normalized),
@@ -1103,34 +1117,9 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
 
     maneuvers.sort(key=_snapshot_maneuver_sort_key)
 
-    berth_map: Dict[str, List[Dict]] = {}
-    for item in in_port:
-        berth_map.setdefault(item["berth_label"], []).append(item)
-
-    _BERTH_GEO_ORDER = [
-        "Secil", "Fundeadouro Norte", "Cais Palmeiras",
-        "TMS 1", "TMS 2", "Autoeuropa", "Cais 10", "Cais 11",
-        "Praias do Sado", "Pirites", "SAPEC",
-        "ALSTOM", "PAN", "Tróia", "Fundeadouro Sul",
-        "Tanquisado", "Eco-Oil",
-        "Lisnave", "Teporset",
-    ]
-
-    def _berth_geo_sort_key(pair):
-        name = pair[0]
-        for idx, prefix in enumerate(_BERTH_GEO_ORDER):
-            if prefix.lower() in name.lower():
-                return idx
-        return 9999
-
-    berthed = [
-        {
-            "berth": berth,
-            "count": len(vessels),
-            "vessels": vessels,
-        }
-        for berth, vessels in sorted(berth_map.items(), key=_berth_geo_sort_key)
-    ]
+    slot_occupancy = build_slot_occupancy(in_port)
+    berthed = slot_occupancy["berthed"]
+    anchorages = slot_occupancy["anchorages"]
 
     for item in in_port:
         active_departure = _latest_maneuver(
@@ -1236,6 +1225,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         "arrivals": arrivals,
         "in_port": in_port,
         "berthed": berthed,
+        "anchorages": anchorages,
         "departed": departed,
         "aborted": aborted,
         "maneuvers": maneuvers,
@@ -1247,8 +1237,14 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         "stats": {
             "scheduled_count": len(arrivals),
             "in_port_count": len(in_port),
+            "quay_vessel_count": slot_occupancy["quay_vessel_count"],
+            "anchorage_vessel_count": slot_occupancy["anchorage_vessel_count"],
+            "quadro_count": slot_occupancy["anchorage_vessel_count"],
             "departed_count": len(departed),
-            "berth_count": len(berthed),
+            "berth_count": slot_occupancy["occupied_slot_count"],
+            "occupied_slot_count": slot_occupancy["occupied_slot_count"],
+            "free_slot_count": slot_occupancy["free_slot_count"],
+            "slot_capacity_count": slot_occupancy["slot_capacity_count"],
             "aborted_count": len(aborted),
             "maneuver_count": len(maneuvers),
             "planned_count": len(active_planned_rows),

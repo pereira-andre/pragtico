@@ -13,7 +13,9 @@ from core.helpers import (
     build_pilot_report_note,
     build_scale_context,
     build_shift_plan_note,
+    ensure_portal_berth_is_available,
     login_required,
+    normalize_portal_berth,
     parse_local_datetime_input,
     port_call_scope_required,
     redirect_to_portal_target,
@@ -25,6 +27,7 @@ from core.validators import (
     validate_datetime_range,
     validate_imo,
     validate_not_past_datetime,
+    normalize_thruster_state,
     validate_optional_text,
     validate_positive_number,
     validate_required_text,
@@ -35,6 +38,37 @@ from core.validators import (
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("port_calls", __name__)
+
+
+def _iso_to_local_input_value(value: str | None) -> str:
+    if not value:
+        return ""
+    try:
+        return datetime.fromisoformat(value).astimezone().strftime("%Y-%m-%dT%H:%M")
+    except ValueError:
+        return ""
+
+
+def _build_scale_edit_defaults(port_call: dict) -> dict:
+    return {
+        "vessel_name": port_call.get("vessel_name", ""),
+        "eta_local": _iso_to_local_input_value(port_call.get("eta")),
+        "berth": port_call.get("berth", ""),
+        "last_port": port_call.get("last_port", ""),
+        "next_port": port_call.get("next_port", ""),
+        "vessel_imo": port_call.get("vessel_imo", ""),
+        "vessel_call_sign": port_call.get("vessel_call_sign", ""),
+        "vessel_flag": port_call.get("vessel_flag", ""),
+        "vessel_type": port_call.get("vessel_type", ""),
+        "vessel_loa_m": port_call.get("vessel_loa_m", ""),
+        "vessel_beam_m": port_call.get("vessel_beam_m", ""),
+        "vessel_gt_t": port_call.get("vessel_gt_t", ""),
+        "vessel_dwt_t": port_call.get("vessel_dwt_t", ""),
+        "vessel_max_draft_m": port_call.get("vessel_max_draft_m", ""),
+        "vessel_bow_thruster": port_call.get("vessel_bow_thruster", "unknown"),
+        "vessel_stern_thruster": port_call.get("vessel_stern_thruster", "unknown"),
+        "notes": port_call.get("notes", ""),
+    }
 
 
 @bp.route("/port-calls/register")
@@ -71,6 +105,7 @@ def port_call_detail(port_call_id: str):
         "port_call_detail.html",
         port_call=port_call,
         scale=build_scale_context(port_call),
+        scale_edit_defaults=_build_scale_edit_defaults(port_call),
         title=f"Escala {port_call['vessel_name']}",
     )
 
@@ -116,6 +151,8 @@ def create_port_call():
         "vessel_gt_t": request.form.get("vessel_gt_t", "").strip(),
         "vessel_max_draft_m": request.form.get("vessel_max_draft_m", "").strip(),
         "vessel_dwt_t": request.form.get("vessel_dwt_t", "").strip(),
+        "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown").strip(),
+        "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown").strip(),
         "eta_local": request.form.get("eta_local", "").strip(),
         "berth": request.form.get("berth", "").strip(),
         "last_port": request.form.get("last_port", "").strip(),
@@ -131,7 +168,7 @@ def create_port_call():
         eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
         validate_not_past_datetime(eta, "ETA")
         parse_local_datetime_input(form_data["booking_local"], "Marcação")
-        berth = require_form_text(form_data["berth"], "Cais previsto")
+        berth = normalize_portal_berth(form_data["berth"], "Cais previsto")
         last_port = require_form_text(form_data["last_port"], "Porto anterior")
         next_port = require_form_text(form_data["next_port"], "Próximo destino")
         draft_m = validate_positive_number(form_data["draft_m"], "Calado (m)", max_value=30.0)
@@ -139,6 +176,8 @@ def create_port_call():
         validate_imo(form_data["vessel_imo"])
         validated_dims = validate_vessel_dimensions(form_data)
         form_data.update(validated_dims)
+        form_data["vessel_bow_thruster"] = normalize_thruster_state(form_data.get("vessel_bow_thruster"), "Bow thruster")
+        form_data["vessel_stern_thruster"] = normalize_thruster_state(form_data.get("vessel_stern_thruster"), "Stern thruster")
         port_call = services.store.create_port_call(
             vessel_name=form_data["vessel_name"], eta=eta,
             created_by=session["username"], constraints=form_data["constraints"],
@@ -153,6 +192,8 @@ def create_port_call():
             vessel_gt_t=form_data["vessel_gt_t"],
             vessel_max_draft_m=form_data["vessel_max_draft_m"],
             vessel_dwt_t=form_data["vessel_dwt_t"],
+            vessel_bow_thruster=form_data["vessel_bow_thruster"],
+            vessel_stern_thruster=form_data["vessel_stern_thruster"],
             notes=build_entry_request_note({**form_data, "draft_m": draft_m, "tug_count": tug_count}),
         )
     except ValueError as exc:
@@ -165,6 +206,81 @@ def create_port_call():
 
     flash(f"Manobra registada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
     return redirect(url_for("dashboard_bp.dashboard"))
+
+
+@bp.route("/port-calls/<port_call_id>/edit", methods=["POST"])
+@login_required
+@role_required("admin")
+@port_call_scope_required
+def edit_port_call(port_call_id: str):
+    """Editar os dados da escala/navio a partir da página de detalhe."""
+    try:
+        current = services.store.get_port_call(port_call_id)
+        form_data = {
+            "vessel_name": request.form.get("vessel_name", "").strip(),
+            "vessel_imo": request.form.get("vessel_imo", "").strip(),
+            "vessel_call_sign": request.form.get("vessel_call_sign", "").strip(),
+            "vessel_flag": request.form.get("vessel_flag", "").strip(),
+            "vessel_type": request.form.get("vessel_type", "").strip(),
+            "vessel_loa_m": request.form.get("vessel_loa_m", "").strip(),
+            "vessel_beam_m": request.form.get("vessel_beam_m", "").strip(),
+            "vessel_gt_t": request.form.get("vessel_gt_t", "").strip(),
+            "vessel_max_draft_m": request.form.get("vessel_max_draft_m", "").strip(),
+            "vessel_dwt_t": request.form.get("vessel_dwt_t", "").strip(),
+            "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown").strip(),
+            "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown").strip(),
+            "eta_local": request.form.get("eta_local", "").strip(),
+            "berth": request.form.get("berth", "").strip(),
+            "last_port": request.form.get("last_port", "").strip(),
+            "next_port": request.form.get("next_port", "").strip(),
+            "notes": request.form.get("notes", "").strip(),
+        }
+        eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
+        if current.get("status") == "scheduled":
+            validate_not_past_datetime(eta, "ETA")
+        berth = (
+            ensure_portal_berth_is_available(form_data["berth"], current_port_call_id=port_call_id, label="Cais")
+            if current.get("status") == "in_port"
+            else normalize_portal_berth(form_data["berth"], "Cais")
+        )
+        last_port = require_form_text(form_data["last_port"], "Porto anterior")
+        next_port = require_form_text(form_data["next_port"], "Próximo destino")
+        validate_imo(form_data["vessel_imo"])
+        validated_dims = validate_vessel_dimensions(form_data)
+        form_data.update(validated_dims)
+        form_data["vessel_bow_thruster"] = normalize_thruster_state(form_data.get("vessel_bow_thruster"), "Bow thruster")
+        form_data["vessel_stern_thruster"] = normalize_thruster_state(form_data.get("vessel_stern_thruster"), "Stern thruster")
+        updated = services.store.edit_port_call(
+            port_call_id=port_call_id,
+            updated_by=session["username"],
+            vessel_name=require_form_text(form_data["vessel_name"], "Nome do navio"),
+            eta=eta,
+            berth=berth,
+            last_port=last_port,
+            next_port=next_port,
+            notes=form_data["notes"],
+            vessel_imo=form_data["vessel_imo"],
+            vessel_call_sign=require_form_text(form_data["vessel_call_sign"], "Indicativo"),
+            vessel_flag=require_form_text(form_data["vessel_flag"], "Bandeira"),
+            vessel_type=require_form_text(form_data["vessel_type"], "Tipo de navio"),
+            vessel_loa_m=form_data["vessel_loa_m"],
+            vessel_beam_m=form_data["vessel_beam_m"],
+            vessel_gt_t=form_data["vessel_gt_t"],
+            vessel_max_draft_m=form_data["vessel_max_draft_m"],
+            vessel_dwt_t=form_data["vessel_dwt_t"],
+            vessel_bow_thruster=form_data["vessel_bow_thruster"],
+            vessel_stern_thruster=form_data["vessel_stern_thruster"],
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect_to_portal_target(port_call_id)
+    except Exception:
+        logger.exception("Falha inesperada ao editar a escala %s.", port_call_id)
+        flash("Falha inesperada ao atualizar a escala.", "error")
+        return redirect_to_portal_target(port_call_id)
+
+    flash(f"Escala atualizada para {updated['vessel_name']}.", "success")
+    return redirect_to_portal_target(port_call_id)
 
 
 @bp.route("/port-calls/<port_call_id>/approve", methods=["POST"])
@@ -211,6 +327,7 @@ def abort_port_call(port_call_id: str):
 def schedule_departure_plan(port_call_id: str):
     """Planear a manobra de saída de um navio em porto."""
     try:
+        current = services.store.get_port_call(port_call_id)
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
         next_port = require_form_text(request.form.get("next_port", "").strip(), "Próximo destino")
@@ -221,6 +338,7 @@ def schedule_departure_plan(port_call_id: str):
             updated_by=session["username"], next_port=next_port,
             constraints=request.form.getlist("constraints"),
             departure_plan_note=build_departure_plan_note({
+                "origin_berth": current.get("berth", ""),
                 "draft_m": draft_m, "constraints": request.form.getlist("constraints"),
                 "tug_count": tug_count, "notes": request.form.get("departure_plan_note", "").strip(),
             }),
@@ -258,10 +376,13 @@ def abort_departure_plan(port_call_id: str):
 def schedule_shift_plan(port_call_id: str):
     """Planear uma mudança de cais para um navio em porto."""
     try:
+        current = services.store.get_port_call(port_call_id)
         planned_shift_at = parse_local_datetime_input(request.form.get("planned_shift_at_local", "").strip(), "Hora prevista da mudança")
         parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
-        origin_berth = require_form_text(request.form.get("origin_berth", "").strip(), "Cais origem")
-        destination_berth = require_form_text(request.form.get("destination_berth", "").strip(), "Cais destino")
+        origin_berth = normalize_portal_berth(current.get("berth", ""), "Cais origem")
+        destination_berth = normalize_portal_berth(request.form.get("destination_berth", "").strip(), "Cais destino")
+        if destination_berth == origin_berth:
+            raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
         port_call = services.store.schedule_shift_plan(
@@ -323,6 +444,12 @@ def abort_shift_plan(port_call_id: str):
 def mark_shift_completed(port_call_id: str):
     """Confirmar a conclusão da mudança de cais e atualizar a localização do navio."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        ensure_portal_berth_is_available(
+            current.get("shift_destination_berth") or current.get("berth", ""),
+            current_port_call_id=port_call_id,
+            label="Cais destino",
+        )
         port_call = services.store.mark_shift_completed(
             port_call_id=port_call_id,
             shifted_at=datetime.now().astimezone().isoformat(),
@@ -341,11 +468,17 @@ def mark_shift_completed(port_call_id: str):
 def mark_port_call_arrived(port_call_id: str):
     """Registar a chegada do navio ao porto e confirmar a manobra de entrada."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        berth = ensure_portal_berth_is_available(
+            request.form.get("berth", "").strip() or current.get("berth", ""),
+            current_port_call_id=port_call_id,
+            label="Cais",
+        )
         port_call = services.store.mark_port_call_arrived(
             port_call_id=port_call_id,
             arrived_at=datetime.now().astimezone().isoformat(),
             updated_by=session["username"],
-            berth=request.form.get("berth", "").strip(),
+            berth=berth,
         )
     except ValueError as exc:
         flash(str(exc), "error")
@@ -437,12 +570,25 @@ def attach_shift_report(port_call_id: str):
 def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
     """Editar o planeamento de uma manobra existente e registar o motivo da alteração."""
     try:
+        port_call = services.store.get_port_call(port_call_id)
+        maneuver_context = build_maneuver_context(port_call, maneuver_id)
+        maneuver_type = maneuver_context["maneuver"]["type"]
+        origin = require_form_text(request.form.get("origin", "").strip(), "Origem")
+        destination = require_form_text(request.form.get("destination", "").strip(), "Destino")
+        if maneuver_type == "entry":
+            destination = normalize_portal_berth(destination, "Destino")
+        elif maneuver_type in {"departure", "shift"}:
+            origin = normalize_portal_berth(origin, "Origem")
+            if maneuver_type == "shift":
+                destination = normalize_portal_berth(destination, "Destino")
+                if destination == origin:
+                    raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
         port_call = services.store.edit_maneuver_plan(
             port_call_id=port_call_id, maneuver_id=maneuver_id,
             updated_by=session["username"], actor_role=session.get("role", ""),
             planned_at=parse_local_datetime_input(request.form.get("planned_at_local", "").strip(), "Hora de marcação"),
-            origin=require_form_text(request.form.get("origin", "").strip(), "Origem"),
-            destination=require_form_text(request.form.get("destination", "").strip(), "Destino"),
+            origin=origin,
+            destination=destination,
             draft_m=validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0),
             tug_count=validate_tug_count(request.form.get("tug_count", "").strip()),
             constraints=request.form.getlist("constraints"),

@@ -59,6 +59,7 @@ EMBEDDING_LOCAL_ENABLED=0
 RAG_REINDEX_ON_START=1
 WEATHERAPI_KEY=<opcional>
 WEATHERAPI_LOCATION=Setubal
+MANEUVER_CASE_CAPTURE_ENVIRONMENT=1
 ADMIN_EMAIL=admin@porto.pt
 ADMIN_PASSWORD=<password inicial temporária>
 ```
@@ -72,6 +73,7 @@ Notas:
 - A configuração acima usa `OpenAI` como provider principal de chat e embeddings.
 - O `OpenRouter` fica só como fallback de geração, para o chat continuar vivo se o crédito/quota do `OpenAI` falhar.
 - Não configures fallback entre providers diferentes para embeddings, para não misturar espaços vetoriais e invalidar o índice.
+- `MANEUVER_CASE_CAPTURE_ENVIRONMENT=1` faz snapshot live de meteorologia/ondulação nas transições das manobras; desliga com `0` se quiseres writes totalmente offline.
 
 ### 5. Garantir o schema da base de dados
 

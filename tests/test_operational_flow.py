@@ -5,12 +5,13 @@ from pathlib import Path
 
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
+os.environ["MANEUVER_CASE_CAPTURE_ENVIRONMENT"] = "0"
 
 import app
 from core import services
 from domain.chat_actions import normalize_action_candidate
 from flask import session
-from core.helpers import answer_direct_operational_query
+from core.helpers import answer_direct_operational_query, build_operational_chat_sources, build_scale_context
 from storage import LocalStore
 
 
@@ -155,6 +156,186 @@ class OperationalFlowTests(unittest.TestCase):
                     username="admin",
                     role="admin",
                 )
+
+    def test_create_port_call_canonicalizes_known_berth_alias(self) -> None:
+        with app.app.test_request_context("/"):
+            session["role"] = "agente"
+            result, _message = app.execute_pending_operational_action(
+                {
+                    "action": "create_port_call",
+                    "fields": {
+                        "vessel_name": "AUTO TESTE",
+                        "eta_local": "2026-04-02T06:30",
+                        "berth": "Cais 10 Autoeuropa",
+                        "last_port": "Sines",
+                        "next_port": "Vigo",
+                        "vessel_imo": "9876543",
+                        "vessel_call_sign": "CQAB7",
+                        "vessel_flag": "Portugal",
+                        "vessel_type": "General Cargo",
+                        "vessel_loa_m": "142.50",
+                        "vessel_beam_m": "21.80",
+                        "vessel_gt_t": "8950",
+                        "vessel_dwt_t": "12400",
+                        "vessel_max_draft_m": "7.20",
+                        "notes": "Carga geral paletizada.",
+                    },
+                },
+                username="admin",
+                role="agente",
+            )
+
+        self.assertEqual(result["berth"], "Cais 10 / Autoeuropa")
+
+    def test_schedule_shift_uses_current_berth_as_origin_when_omitted(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            result, _message = app.execute_pending_operational_action(
+                {
+                    "action": "schedule_shift",
+                    "port_call_id": port_call["id"],
+                    "target": {"maneuver_type": "shift"},
+                    "fields": {
+                        "planned_shift_at_local": "2026-04-02T08:30",
+                        "destination_berth": "Cais 3 Terminal Multipurpose",
+                        "draft_m": "9.94",
+                        "tug_count": "2",
+                        "notes": "Mudança operacional.",
+                    },
+                },
+                username="admin",
+                role="admin",
+            )
+
+        shift = next(item for item in result["maneuver_history"] if item["type"] == "shift")
+        self.assertEqual(shift["origin"], "TMS 2")
+        self.assertEqual(shift["destination"], "TMS 1 - Cais 3")
+        self.assertIn("Origem: TMS 2", shift["plan_note"])
+
+    def test_schedule_departure_uses_current_berth_as_origin_when_omitted(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self._move_port_call_in_port(port_call["id"])
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            result, _message = app.execute_pending_operational_action(
+                {
+                    "action": "schedule_departure",
+                    "port_call_id": port_call["id"],
+                    "target": {"maneuver_type": "departure"},
+                    "fields": {
+                        "planned_departure_at_local": "2026-04-02T09:10",
+                        "next_port": "Barcelona",
+                        "draft_m": "9.94",
+                        "tug_count": "2",
+                        "notes": "Saída operacional.",
+                    },
+                },
+                username="admin",
+                role="admin",
+            )
+
+        departure = next(item for item in result["maneuver_history"] if item["type"] == "departure")
+        self.assertEqual(departure["origin"], "TMS 2")
+        self.assertEqual(departure["destination"], "Barcelona")
+        self.assertIn("Origem: TMS 2", departure["plan_note"])
+
+    def test_scale_context_exposes_similar_cases_for_matching_maneuver_profile(self) -> None:
+        historical = self._create_entry(notes="Entrada histórica", eta="2026-03-20T05:30:00+00:00")
+        self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada sem incidentes.")
+        self.store.mark_port_call_arrived(
+            historical["id"],
+            arrived_at="2026-03-20T06:00:00+00:00",
+            updated_by="admin",
+        )
+
+        current = self._create_entry(notes="Nova entrada", eta="2026-04-05T05:30:00+00:00")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            scale = build_scale_context(self.store.get_port_call(current["id"]))
+
+        entry = next(item for item in scale["maneuvers"] if item["type"] == "entry")
+        self.assertTrue(entry["similar_cases"])
+        self.assertEqual(entry["similar_cases"][0]["reference_code"], historical["reference_code"])
+        self.assertNotEqual(entry["similar_cases"][0]["maneuver_id"], entry["id"])
+        self.assertEqual(entry["casebook_recommendation"]["status_key"], "positive")
+        self.assertIn("Histórico", entry["casebook_recommendation"]["title"])
+
+    def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
+        historical = self._create_entry(notes="Entrada histórica", eta="2026-03-19T05:30:00+00:00")
+        self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada com 2 rebocadores.")
+        self.store.mark_port_call_arrived(
+            historical["id"],
+            arrived_at="2026-03-19T06:00:00+00:00",
+            updated_by="admin",
+        )
+
+        current = self._create_entry(notes="Nova entrada", eta="2026-04-06T05:30:00+00:00")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            sources = build_operational_chat_sources(
+                f"O que achas da entrada da escala {current['reference_code']}?"
+            )
+
+        casebook_sources = [item for item in sources if item.get("retrieval_mode") == "maneuver_casebook"]
+        self.assertTrue(casebook_sources)
+        self.assertIn(historical["reference_code"], casebook_sources[0]["snippet"])
+        self.assertIn("recomendação histórica", casebook_sources[0]["snippet"])
+
+    def test_complete_entry_rejects_occupied_quay(self) -> None:
+        occupied = self._create_entry(notes="Primeira escala")
+        self._move_port_call_in_port(occupied["id"])
+        waiting = self._create_entry(notes="Segunda escala", eta="2026-04-02T05:30:00+00:00")
+        self.store.approve_port_call(waiting["id"], decided_by="admin")
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            with self.assertRaisesRegex(ValueError, "já está ocupado"):
+                app.execute_pending_operational_action(
+                    {
+                        "action": "complete_entry",
+                        "port_call_id": waiting["id"],
+                        "target": {"maneuver_type": "entry"},
+                        "fields": {},
+                    },
+                    username="admin",
+                    role="admin",
+                )
+
+    def test_admin_can_edit_completed_maneuver_plan_for_archive_corrections(self) -> None:
+        port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        entry = next(item for item in self.store.get_port_call(port_call["id"])["maneuver_history"] if item["type"] == "entry")
+
+        updated = self.store.edit_maneuver_plan(
+            port_call["id"],
+            entry["id"],
+            updated_by="admin",
+            actor_role="admin",
+            planned_at="2026-03-24T05:45:00+00:00",
+            origin="Sines",
+            destination="TMS 1 - Cais 3",
+            draft_m="9.94",
+            tug_count="2",
+            constraints=["daylight"],
+            plan_note="Correção histórica do planeamento.",
+            change_reason="Correção de arquivo.",
+        )
+
+        updated_entry = next(item for item in updated["maneuver_history"] if item["id"] == entry["id"])
+        self.assertEqual(updated_entry["state"], "completed")
+        self.assertEqual(updated_entry["destination"], "TMS 1 - Cais 3")
+        self.assertTrue(updated_entry["change_log"])
 
     def test_entry_report_accepts_scale_reference_passed_in_id_field(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
