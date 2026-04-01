@@ -594,6 +594,35 @@ class OperationalFlowTests(unittest.TestCase):
         entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
         self.assertEqual(entry["state"], "completed")
 
+    def test_chat_message_feedback_api_returns_updated_label(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta operacional.",
+            )
+            response = client.post(
+                f"/api/messages/{message['id']}/feedback",
+                json={
+                    "conversation_id": conversation["id"],
+                    "feedback_status": "approved",
+                    "feedback_note": "Boa resposta.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["feedback_status"], "approved")
+        self.assertEqual(payload["feedback_note"], "Boa resposta.")
+        self.assertTrue(payload["feedback_updated_at"])
+        self.assertTrue(payload["feedback_updated_at_label"])
+
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

@@ -73,7 +73,7 @@
     <div class="chat-page-log" id="chat-page-log">
       {% if messages %}
         {% for msg in messages %}
-          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}"{% endif %}>
+          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
             <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
             <div class="chatbot-bubble-meta">
               <span>{{ msg.created_at_label }}</span>
@@ -146,6 +146,141 @@
       })
     : { handleKeydown() { return false; } };
 
+  function feedbackStatusLabel(status) {
+    if (status === "approved") return "Aprovada";
+    if (status === "review") return "Rever";
+    return "Sem feedback";
+  }
+
+  function feedbackMetaLabel(status, updatedAtLabel) {
+    if (!status) return "Podes aprovar a resposta ou marcar para revisão.";
+    if (updatedAtLabel) return feedbackStatusLabel(status) + " em " + updatedAtLabel + ".";
+    return feedbackStatusLabel(status) + ".";
+  }
+
+  function setFeedbackState(box, state) {
+    if (!box) return;
+    const status = String(state?.status || "").trim().toLowerCase();
+    const note = String(state?.note || "");
+    const updatedAtLabel = String(state?.updatedAtLabel || "");
+    const statusBadge = box.querySelector("[data-feedback-status-label]");
+    const noteField = box.querySelector("[data-feedback-note]");
+    const meta = box.querySelector("[data-feedback-meta]");
+    const article = box.closest("[data-message-id]");
+
+    box.dataset.feedbackStatus = status;
+    box.dataset.feedbackUpdatedAtLabel = updatedAtLabel;
+    if (statusBadge) {
+      statusBadge.textContent = feedbackStatusLabel(status);
+      statusBadge.className = "feedback-status" + (status ? " is-" + status : "");
+    }
+    if (noteField && noteField.value !== note) noteField.value = note;
+    if (meta) meta.textContent = feedbackMetaLabel(status, updatedAtLabel);
+    box.querySelectorAll("[data-feedback-choice]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.feedbackChoice === status);
+    });
+    if (article) {
+      article.dataset.feedbackStatus = status;
+      article.dataset.feedbackNote = note;
+      article.dataset.feedbackUpdatedAtLabel = updatedAtLabel;
+    }
+  }
+
+  function buildFeedbackBox(initialState = {}) {
+    const details = document.createElement("details");
+    details.className = "feedback-box chatbot-feedback";
+    details.dataset.feedbackBox = "1";
+
+    const summary = document.createElement("summary");
+    summary.className = "chatbot-feedback-summary";
+    const summaryLabel = document.createElement("span");
+    summaryLabel.className = "chatbot-feedback-summary-label";
+    summaryLabel.textContent = "Feedback da resposta";
+    const summaryStatus = document.createElement("span");
+    summaryStatus.dataset.feedbackStatusLabel = "1";
+    summary.append(summaryLabel, summaryStatus);
+
+    const body = document.createElement("div");
+    body.className = "chatbot-feedback-body";
+
+    const note = document.createElement("textarea");
+    note.className = "feedback-note";
+    note.rows = 2;
+    note.placeholder = "Opcional: indica o que esteve bem ou o que deve ser revisto...";
+    note.dataset.feedbackNote = "1";
+
+    const actions = document.createElement("div");
+    actions.className = "feedback-actions";
+    [
+      ["approved", "Aprovar"],
+      ["review", "Pedir revisão"],
+    ].forEach(([value, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mini-button secondary-button";
+      button.dataset.feedbackChoice = value;
+      button.textContent = label;
+      actions.appendChild(button);
+    });
+
+    const meta = document.createElement("p");
+    meta.className = "chatbot-feedback-meta";
+    meta.dataset.feedbackMeta = "1";
+
+    body.append(note, actions, meta);
+    details.append(summary, body);
+    setFeedbackState(details, initialState);
+    return details;
+  }
+
+  function mountFeedbackBox(article, initialState = null) {
+    if (!article || !article.dataset.messageId || article.querySelector("[data-feedback-box]")) return;
+    const box = buildFeedbackBox(initialState || {
+      status: article.dataset.feedbackStatus || "",
+      note: article.dataset.feedbackNote || "",
+      updatedAtLabel: article.dataset.feedbackUpdatedAtLabel || "",
+    });
+    article.appendChild(box);
+  }
+
+  async function submitMessageFeedback(box, status) {
+    const article = box.closest("[data-message-id]");
+    const messageId = article?.dataset.messageId || "";
+    const noteField = box.querySelector("[data-feedback-note]");
+    if (!messageId || !conversationIdField.value || !status) return;
+
+    box.dataset.submitting = "1";
+    box.querySelectorAll("button, textarea").forEach((control) => {
+      control.disabled = true;
+    });
+    try {
+      const response = await fetch("/api/messages/" + encodeURIComponent(messageId) + "/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: conversationIdField.value,
+          feedback_status: status,
+          feedback_note: noteField?.value || "",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Falha ao guardar feedback.");
+      setFeedbackState(box, {
+        status: payload.feedback_status || "",
+        note: payload.feedback_note || "",
+        updatedAtLabel: payload.feedback_updated_at_label || "",
+      });
+      chatStatus.textContent = "Feedback guardado.";
+    } catch (error) {
+      chatStatus.textContent = "Erro ao guardar feedback: " + error.message;
+    } finally {
+      delete box.dataset.submitting;
+      box.querySelectorAll("button, textarea").forEach((control) => {
+        control.disabled = false;
+      });
+    }
+  }
+
   function filterConversations() {
     const query = (conversationSearch?.value || "").trim().toLowerCase();
     let visible = 0;
@@ -199,6 +334,7 @@
       });
       article.appendChild(details);
     }
+    if (role === "assistant" && messageId) mountFeedbackBox(article);
     chatLog.appendChild(article);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
@@ -294,6 +430,15 @@
   pendingConfirm.addEventListener("click", () => submitPending("/api/chat/pending-action/confirm"));
   pendingCancel.addEventListener("click", () => submitPending("/api/chat/pending-action/cancel"));
 
+  chatLog.querySelectorAll(".chatbot-bubble-assistant[data-message-id]").forEach((article) => {
+    mountFeedbackBox(article);
+  });
+  chatLog.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-feedback-choice]");
+    if (!button) return;
+    event.preventDefault();
+    submitMessageFeedback(button.closest("[data-feedback-box]"), button.dataset.feedbackChoice || "");
+  });
   chatLog.scrollTop = chatLog.scrollHeight;
   fetchPending();
 </script>

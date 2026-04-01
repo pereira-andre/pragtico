@@ -37,6 +37,7 @@ from core.helpers import (
     refine_pending_operational_action,
     save_pending_chat_action,
 )
+from storage.utils import _utc_iso_to_label
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +151,12 @@ def api_message_feedback(message_id: str):
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
-    return jsonify(message)
+    payload = dict(message)
+    feedback_updated_at = payload.get("feedback_updated_at")
+    payload["feedback_updated_at_label"] = (
+        _utc_iso_to_label(feedback_updated_at) if feedback_updated_at else ""
+    )
+    return jsonify(payload)
 
 
 @bp.route("/api/chat/pending-action")
