@@ -334,6 +334,19 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertEqual(summary["embedded_chunks"], 1)
         self.assertEqual(summary["missing_embedding_chunks"], 0)
 
+    def test_stale_has_embedding_flags_do_not_hide_pending_backfill(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+
+        engine.rebuild_index(force=True)
+        current_index = engine.index_store.load_index()
+        for chunk in current_index["chunks"]:
+            chunk["has_embedding"] = True
+        engine.client = _SuccessfulClient()
+        with patch.object(engine.index_store, "load_index", return_value=current_index):
+            self.assertTrue(engine.index_has_missing_embeddings())
+            self.assertTrue(engine.has_pending_reindex())
+
     def test_current_reindex_payload_uses_semantic_coverage_when_completion_is_partial(self) -> None:
         long_text = ("Procedimento de manobra. " * 80).strip()
         engine, _ = self._make_engine(

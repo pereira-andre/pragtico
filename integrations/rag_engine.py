@@ -210,9 +210,6 @@ class SimpleRAGEngine:
     def _count_embedded_chunks(self, chunks: List[Dict]) -> int:
         total = 0
         for item in chunks:
-            if item.get("has_embedding"):
-                total += 1
-                continue
             if self._has_embedding_payload(item.get("embedding")):
                 total += 1
         return total
