@@ -92,11 +92,12 @@ class PgvectorIndexStore(BaseIndexStore):
         self.database_url = database_url
         self._ensure_schema()
 
-    def _connect(self):
+    def _connect(self, *, register_vector_types: bool = True):
         try:
             import psycopg
-            from pgvector.psycopg import register_vector
             from psycopg.rows import dict_row
+            if register_vector_types:
+                from pgvector.psycopg import register_vector
         except ImportError as exc:
             raise RuntimeError(
                 "Instala `psycopg[binary]` e `pgvector` para usar RAG_INDEX_BACKEND=pgvector."
@@ -107,11 +108,18 @@ class PgvectorIndexStore(BaseIndexStore):
         last_exc = None
 
         while True:
+            conn = None
             try:
                 conn = psycopg.connect(self.database_url, row_factory=dict_row)
-                register_vector(conn)
+                if register_vector_types:
+                    register_vector(conn)
                 return conn
             except Exception as exc:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
                 last_exc = exc
                 elapsed = time.monotonic() - started_at
                 if elapsed >= max_wait_seconds:
@@ -132,7 +140,8 @@ class PgvectorIndexStore(BaseIndexStore):
         with open(schema_path, "r", encoding="utf-8") as handle:
             schema_sql = handle.read()
         try:
-            with self._connect() as conn:
+            # The extension must exist before pgvector can register the `vector` type.
+            with self._connect(register_vector_types=False) as conn:
                 with conn.cursor() as cur:
                     cur.execute(schema_sql)
                 conn.commit()
