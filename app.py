@@ -92,11 +92,11 @@ def _env_flag(name: str, default: str = "1") -> bool:
     return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _resolve_provider_name(explicit_name: str, default: str = "gemini") -> str:
+def _resolve_provider_name(explicit_name: str, default: str = "openai") -> str:
     provider_name = (explicit_name or "").strip().lower()
     if provider_name:
         return provider_name
-    for candidate in ("openrouter", "gemini", "openai", "deepseek"):
+    for candidate in ("openai", "openrouter", "gemini", "deepseek"):
         if os.getenv(PROVIDER_API_KEY_ENV[candidate], "").strip():
             return candidate
     return default
@@ -117,6 +117,8 @@ def _resolve_fallback_provider_name(primary_name: str, explicit_name: str = "") 
         preferred = "openrouter"
     elif primary_name == "openrouter":
         preferred = "gemini"
+    elif primary_name == "openai":
+        preferred = "openrouter"
 
     if preferred and os.getenv(PROVIDER_API_KEY_ENV.get(preferred, ""), "").strip():
         return preferred
@@ -139,7 +141,7 @@ index_store = create_index_store(data_dir=DATA_DIR)
 
 _llm_provider_name = _resolve_provider_name(
     explicit_name=os.getenv("LLM_PROVIDER", ""),
-    default="gemini",
+    default="openai",
 )
 _llm_api_key = _resolve_provider_api_key(_llm_provider_name)
 _llm_provider = create_llm_provider(provider=_llm_provider_name, api_key=_llm_api_key)
@@ -158,7 +160,7 @@ _embedding_local_enabled = _env_flag("EMBEDDING_LOCAL_ENABLED", default="1")
 _embedding_provider = create_embedding_provider(enabled=_embedding_local_enabled)
 _embedding_provider_name = _resolve_provider_name(
     explicit_name=os.getenv("EMBEDDING_PROVIDER", ""),
-    default="gemini",
+    default="openai",
 )
 _embedding_api_key = _resolve_provider_api_key(_embedding_provider_name)
 _embedding_api_provider = None
