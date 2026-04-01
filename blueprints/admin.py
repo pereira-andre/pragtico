@@ -157,13 +157,13 @@ def add_document():
         content = validate_required_text(request.form.get("content", ""), "Conteúdo", max_length=50000)
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("dashboard_bp.dashboard"))
+        return redirect(url_for("admin.admin_documents"))
     filename = services.store.save_document(title, content, created_by=session["username"])
     if safe_rebuild_index(force=False):
         flash(f"Documento {filename} indexado.", "success")
     else:
         flash(f"Documento {filename} guardado, mas a reindexação falhou: {services.rag.last_index_error}", "error")
-    return redirect(url_for("dashboard_bp.dashboard"))
+    return redirect(url_for("admin.admin_documents"))
 
 
 @bp.route("/documents/upload", methods=["POST"])
@@ -174,7 +174,7 @@ def upload_documents():
     uploaded_files = [item for item in request.files.getlist("files") if item and item.filename]
     if not uploaded_files:
         flash("Seleciona pelo menos um ficheiro.", "error")
-        return redirect(url_for("dashboard_bp.dashboard"))
+        return redirect(url_for("admin.admin_documents"))
     stored = []
     failed = []
     for uploaded_file in uploaded_files:
@@ -190,7 +190,7 @@ def upload_documents():
             flash("Os ficheiros foram guardados, mas a reindexação falhou: " + services.rag.last_index_error, "error")
     if failed:
         flash("Falhas no upload: " + " | ".join(failed), "error")
-    return redirect(url_for("dashboard_bp.dashboard"))
+    return redirect(url_for("admin.admin_documents"))
 
 
 @bp.route("/knowledge/reindex", methods=["POST"])
@@ -286,4 +286,4 @@ def delete_document(name: str):
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("admin.document_detail", name=name))
-    return redirect(url_for("dashboard_bp.dashboard"))
+    return redirect(url_for("admin.admin_documents"))

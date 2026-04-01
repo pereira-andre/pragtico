@@ -1062,6 +1062,489 @@
   background: rgba(255, 252, 247, 0.92);
 }
 
+.documents-admin-page {
+  gap: 24px;
+}
+
+.documents-admin-page .panel.section-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.documents-admin-page .panel.section-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(88, 189, 218, 0.28), transparent);
+  pointer-events: none;
+}
+
+.documents-admin-page .hero-card.compact {
+  min-height: 280px;
+}
+
+.documents-admin-page .hero-meta-grid .hero-stat {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px 20px;
+  backdrop-filter: blur(10px);
+}
+
+.documents-admin-page .hero-meta-grid .hero-stat small {
+  color: rgba(247, 244, 239, 0.72);
+}
+
+.documents-admin-page .reindex-status-card {
+  gap: 18px;
+  padding: 26px;
+  border-radius: 24px;
+  border: 1px solid rgba(88, 189, 218, 0.16);
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(12, 26, 44, 0.98), rgba(15, 31, 50, 0.96));
+  box-shadow: 0 24px 60px rgba(3, 12, 24, 0.34);
+}
+
+.documents-admin-page .reindex-status-card.is-running {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.22), transparent 28%),
+    linear-gradient(180deg, rgba(10, 31, 54, 0.98), rgba(13, 33, 58, 0.96));
+}
+
+.documents-admin-page .reindex-status-card.is-completed {
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 26%),
+    radial-gradient(circle at left center, rgba(26, 159, 255, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(12, 28, 44, 0.98), rgba(15, 33, 50, 0.96));
+}
+
+.documents-admin-page .reindex-status-card.is-error {
+  background:
+    radial-gradient(circle at top right, rgba(239, 68, 68, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(38, 22, 29, 0.98), rgba(34, 20, 26, 0.96));
+}
+
+.documents-admin-page .reindex-status-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 320px);
+  gap: 20px;
+  align-items: start;
+}
+
+.documents-admin-page .reindex-status-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.documents-admin-page .reindex-status-copy strong {
+  font-size: clamp(1.2rem, 1.2vw + 1rem, 1.75rem);
+  line-height: 1.15;
+  color: var(--text-strong);
+  max-width: 32ch;
+}
+
+.documents-admin-page .reindex-query-summary {
+  margin: 0;
+  max-width: 58ch;
+  color: rgba(228, 233, 240, 0.8);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.documents-admin-page .reindex-status-side {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.documents-admin-page .reindex-chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.16);
+  background: rgba(8, 19, 32, 0.72);
+  color: rgba(228, 233, 240, 0.88);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.documents-admin-page .reindex-chip.is-running {
+  background: rgba(26, 159, 255, 0.14);
+  border-color: rgba(26, 159, 255, 0.26);
+  color: #7dccff;
+}
+
+.documents-admin-page .reindex-chip.is-completed {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.24);
+  color: #8ee7af;
+}
+
+.documents-admin-page .reindex-chip.is-error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.24);
+  color: #ffb0b0;
+}
+
+.documents-admin-page .reindex-coverage-card {
+  display: grid;
+  gap: 6px;
+  min-width: 100%;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(130, 160, 195, 0.15);
+  background: rgba(7, 16, 29, 0.56);
+  text-align: right;
+}
+
+.documents-admin-page .reindex-coverage-card span,
+.documents-admin-page .reindex-progress-heading span,
+.documents-admin-page .reindex-meta-card span,
+.documents-admin-page .reindex-sync-card span,
+.documents-admin-page .reindex-note-card span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.documents-admin-page .reindex-coverage-card strong {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 3vw, 3.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--text-strong);
+}
+
+.documents-admin-page .reindex-coverage-card small {
+  color: #7dccff;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.documents-admin-page .reindex-progress-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.documents-admin-page .reindex-progress-topline {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.documents-admin-page .reindex-progress-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.documents-admin-page .reindex-progress-heading strong {
+  color: var(--text-strong);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.documents-admin-page .reindex-progress-context {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.documents-admin-page .reindex-progress-context span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  background: rgba(8, 19, 32, 0.74);
+  color: rgba(228, 233, 240, 0.86);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.documents-admin-page .reindex-progress-track {
+  height: 12px;
+  margin: 0;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(6, 16, 30, 0.72);
+}
+
+.documents-admin-page .reindex-progress-track span {
+  background: linear-gradient(90deg, #1a9fff 0%, #58bdda 56%, #91e7d6 100%);
+  box-shadow: 0 0 28px rgba(26, 159, 255, 0.26);
+}
+
+.documents-admin-page .reindex-meta-grid,
+.documents-admin-page .reindex-sync-grid,
+.documents-admin-page .reindex-note-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.documents-admin-page .reindex-meta-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.documents-admin-page .reindex-sync-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.documents-admin-page .reindex-note-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+
+.documents-admin-page .reindex-meta-card,
+.documents-admin-page .reindex-sync-card,
+.documents-admin-page .reindex-note-card,
+.documents-admin-page .reindex-doc-row {
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.documents-admin-page .reindex-meta-card,
+.documents-admin-page .reindex-sync-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.documents-admin-page .reindex-meta-card strong,
+.documents-admin-page .reindex-sync-card strong {
+  color: var(--text-strong);
+  font-size: 1.14rem;
+  line-height: 1.1;
+}
+
+.documents-admin-page .reindex-sync-card strong {
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.documents-admin-page .reindex-sync-card small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.documents-admin-page .reindex-sync-card-accent strong {
+  color: #7dccff;
+}
+
+.documents-admin-page .reindex-sync-card-success strong {
+  color: #8ee7af;
+}
+
+.documents-admin-page .reindex-sync-card-warning strong {
+  color: #f5c74a;
+}
+
+.documents-admin-page .reindex-note-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.documents-admin-page .reindex-note-card p {
+  margin: 8px 0 0;
+  color: rgba(228, 233, 240, 0.86);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.documents-admin-page .reindex-note-card-attention {
+  background: linear-gradient(180deg, rgba(245, 199, 74, 0.08), rgba(255, 255, 255, 0.03));
+  border-color: rgba(245, 199, 74, 0.16);
+}
+
+.documents-admin-page .reindex-doc-detail {
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(7, 16, 29, 0.52);
+}
+
+.documents-admin-page .reindex-doc-detail summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.documents-admin-page .reindex-doc-list {
+  gap: 12px;
+}
+
+.documents-admin-page .reindex-doc-row {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.documents-admin-page .reindex-doc-row-head {
+  align-items: start;
+  margin-bottom: 0;
+}
+
+.documents-admin-page .reindex-doc-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.documents-admin-page .reindex-doc-row-main strong {
+  color: var(--text-strong);
+}
+
+.documents-admin-page .reindex-doc-row-main p,
+.documents-admin-page .reindex-doc-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.documents-admin-page .reindex-doc-row-side {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  flex: 0 0 auto;
+}
+
+.documents-admin-page .reindex-doc-coverage {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--text-strong);
+}
+
+.documents-admin-page .reindex-doc-status {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  background: rgba(8, 19, 32, 0.74);
+  color: rgba(228, 233, 240, 0.82);
+  font-size: 0.7rem;
+}
+
+.documents-admin-page .reindex-doc-progress {
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.1);
+  background: rgba(6, 16, 30, 0.7);
+  overflow: hidden;
+}
+
+.documents-admin-page .reindex-doc-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1a9fff 0%, #58bdda 50%, #91e7d6 100%);
+}
+
+.documents-admin-page .reindex-doc-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.documents-admin-page .reindex-doc-row-synced {
+  border-color: rgba(34, 197, 94, 0.16);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.07), rgba(255, 255, 255, 0.03));
+}
+
+.documents-admin-page .reindex-doc-row-embedding_pending,
+.documents-admin-page .reindex-doc-row-new,
+.documents-admin-page .reindex-doc-row-changed {
+  border-color: rgba(26, 159, 255, 0.18);
+}
+
+.documents-admin-page .reindex-doc-row-removed {
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.documents-admin-page .reindex-error {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ffb0b0;
+}
+
+.documents-admin-page .compact-ingest-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(20, 36, 56, 0.96));
+  border-color: rgba(88, 189, 218, 0.12);
+}
+
+.documents-admin-page .compact-ingest-panel form,
+.documents-admin-page .compact-ingest-panel .section-head {
+  position: relative;
+  z-index: 1;
+}
+
+.documents-admin-page .compact-ingest-panel .small-note {
+  color: var(--muted);
+}
+
+.documents-admin-page .document-window-table {
+  border-radius: 20px;
+  border-color: rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.documents-admin-page .planned-table {
+  min-width: 980px;
+}
+
+.documents-admin-page .planned-table thead th {
+  background: rgba(8, 19, 32, 0.92);
+  color: rgba(148, 173, 200, 0.88);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.documents-admin-page .planned-table tbody tr {
+  transition: background 0.18s ease;
+}
+
+.documents-admin-page .planned-table tbody tr:hover {
+  background: rgba(26, 159, 255, 0.05);
+}
+
+.documents-admin-page .planned-table td {
+  vertical-align: top;
+}
+
+.documents-admin-page .document-window-preview {
+  margin-top: 8px;
+  max-width: 72ch;
+  color: rgba(126, 147, 168, 0.92);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.documents-admin-page .doc-actions {
+  gap: 10px 14px;
+  margin-top: 0;
+}
+
 .admin-users-panel {
   background:
     radial-gradient(circle at top left, rgba(10, 108, 102, 0.08), transparent 28%),
@@ -1943,5 +2426,53 @@ button:hover {
 
   .planned-form-card {
     position: static;
+  }
+
+  .documents-admin-page .reindex-status-head,
+  .documents-admin-page .reindex-note-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .documents-admin-page .reindex-status-side {
+    justify-items: start;
+  }
+
+  .documents-admin-page .reindex-coverage-card {
+    text-align: left;
+  }
+
+  .documents-admin-page .reindex-progress-topline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .documents-admin-page .reindex-progress-context {
+    justify-content: flex-start;
+  }
+
+  .documents-admin-page .reindex-meta-grid,
+  .documents-admin-page .reindex-sync-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .documents-admin-page .reindex-status-card {
+    padding: 20px;
+  }
+
+  .documents-admin-page .reindex-meta-grid,
+  .documents-admin-page .reindex-sync-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .documents-admin-page .reindex-doc-row-head,
+  .documents-admin-page .reindex-doc-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .documents-admin-page .reindex-doc-row-side {
+    justify-items: start;
   }
 }

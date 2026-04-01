@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell">
+<main class="ops-shell documents-admin-page">
   <section class="hero-card compact">
     <div class="hero-topline">
       <div>
@@ -50,56 +50,127 @@
       data-reindex-card
     >
       <div class="reindex-status-head">
-        <div>
+        <div class="reindex-status-copy">
           <p class="mini-label">Estado da indexação</p>
           <strong id="reindex-message">{{ reindex_status.message }}</strong>
+          <p class="reindex-query-summary{% if not reindex_status.query_embedding_summary %} hidden{% endif %}" id="reindex-query-summary">{{ reindex_status.query_embedding_summary or "" }}</p>
         </div>
-        <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
-          {{ reindex_status.state }}
-        </span>
+        <div class="reindex-status-side">
+          <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
+            {{ reindex_status.state }}
+          </span>
+          <div class="reindex-coverage-card">
+            <span>Cobertura semântica</span>
+            <strong id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}%</strong>
+            <small id="reindex-embedding-provider">{{ reindex_status.embedding_provider or "indisponivel" }}</small>
+          </div>
+        </div>
       </div>
-      <div class="reindex-progress-track" aria-hidden="true">
-        <span id="reindex-progress-fill" style="width: {{ (reindex_status.progress_pct or 0)|round|int }}%"></span>
-      </div>
-      <div class="reindex-meta-grid">
-        <span id="reindex-phase">{{ reindex_status.phase }}</span>
-        <span id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</span>
-        <span id="reindex-chunks">{{ reindex_status.embedded_chunks or 0 }}/{{ reindex_status.total_chunks or 0 }} chunks</span>
-        <span id="reindex-docs">{{ reindex_status.processed_documents or 0 }}/{{ reindex_status.total_documents or 0 }} docs</span>
-        <span id="reindex-eta">
-          {% if reindex_status.eta_seconds %}
-            ETA {{ reindex_status.eta_seconds }}s
-          {% elif reindex_status.scheduled_retry_eta_seconds %}
-            Nova tentativa em {{ reindex_status.scheduled_retry_eta_seconds }}s
-          {% else %}
-            ETA --
-          {% endif %}
-        </span>
+      <div class="reindex-progress-panel">
+        <div class="reindex-progress-topline">
+          <div class="reindex-progress-heading">
+            <span>Progresso da reindexação</span>
+            <strong id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</strong>
+          </div>
+          <div class="reindex-progress-context">
+            <span id="reindex-phase">{{ reindex_status.phase }}</span>
+            <span id="reindex-eta">
+              {% if reindex_status.eta_seconds %}
+                ETA {{ reindex_status.eta_seconds }}s
+              {% elif reindex_status.scheduled_retry_eta_seconds %}
+                Nova tentativa em {{ reindex_status.scheduled_retry_eta_seconds }}s
+              {% else %}
+                ETA --
+              {% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="reindex-progress-track" aria-hidden="true">
+          <span id="reindex-progress-fill" style="width: {{ (reindex_status.progress_pct or 0)|round|int }}%"></span>
+        </div>
+        <div class="reindex-meta-grid">
+          <article class="reindex-meta-card">
+            <span>Chunks com embedding</span>
+            <strong id="reindex-chunks">{{ reindex_status.embedded_chunks or 0 }}/{{ reindex_status.total_chunks or 0 }}</strong>
+          </article>
+          <article class="reindex-meta-card">
+            <span>Docs processados</span>
+            <strong id="reindex-docs">{{ reindex_status.processed_documents or 0 }}/{{ reindex_status.total_documents or 0 }}</strong>
+          </article>
+          <article class="reindex-meta-card">
+            <span>Knowledge</span>
+            <strong id="reindex-knowledge-docs">{{ reindex_status.knowledge_documents or 0 }}</strong>
+          </article>
+          <article class="reindex-meta-card">
+            <span>Índice</span>
+            <strong id="reindex-index-docs">{{ reindex_status.indexed_documents or 0 }}</strong>
+          </article>
+        </div>
       </div>
       <div class="reindex-sync-grid">
-        <span id="reindex-embedding-provider">embeddings {{ reindex_status.embedding_provider or "indisponivel" }}</span>
-        <span id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}% cobertura semântica</span>
-        <span id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }} docs totalmente embebidos</span>
-        <span id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }} docs parciais</span>
-        <span id="reindex-knowledge-docs">knowledge {{ reindex_status.knowledge_documents or 0 }} docs</span>
-        <span id="reindex-index-docs">indice {{ reindex_status.indexed_documents or 0 }} docs</span>
-        <span id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }} chunks sem embedding</span>
-        <span id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }} docs com embeddings em falta</span>
-        <span id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }} docs pendentes</span>
+        <article class="reindex-sync-card reindex-sync-card-accent">
+          <span>Embeddings</span>
+          <strong id="reindex-embedding-provider-card">{{ reindex_status.embedding_provider or "indisponivel" }}</strong>
+          <small>fornecedor configurado</small>
+        </article>
+        <article class="reindex-sync-card reindex-sync-card-success">
+          <span>Docs completos</span>
+          <strong id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }}</strong>
+          <small>sem falhas de embedding</small>
+        </article>
+        <article class="reindex-sync-card">
+          <span>Docs parciais</span>
+          <strong id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }}</strong>
+          <small>ainda com cobertura parcial</small>
+        </article>
+        <article class="reindex-sync-card reindex-sync-card-warning">
+          <span>Chunks em falta</span>
+          <strong id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }}</strong>
+          <small>sem vetor gerado</small>
+        </article>
+        <article class="reindex-sync-card">
+          <span>Docs com falta</span>
+          <strong id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }}</strong>
+          <small>afetados no índice</small>
+        </article>
+        <article class="reindex-sync-card reindex-sync-card-warning">
+          <span>Docs pendentes</span>
+          <strong id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }}</strong>
+          <small>à espera de backfill</small>
+        </article>
       </div>
-      <p class="reindex-query-summary" id="reindex-query-summary">{{ reindex_status.query_embedding_summary or "" }}</p>
-      <p class="reindex-sync-summary" id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
-      <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
+      <div class="reindex-note-grid">
+        <article class="reindex-note-card">
+          <span>Resumo de sincronização</span>
+          <p class="reindex-sync-summary" id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
+        </article>
+        <article class="reindex-note-card reindex-note-card-attention">
+          <span>Pendências</span>
+          <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
+        </article>
+      </div>
       <details class="reindex-doc-detail" {% if reindex_status.document_sync_rows %}open{% endif %}>
         <summary>Ver detalhe por documento</summary>
         <div class="reindex-doc-list" id="reindex-doc-list">
           {% for item in reindex_status.document_sync_rows or [] %}
             <article class="reindex-doc-row reindex-doc-row-{{ item.status }}">
               <div class="reindex-doc-row-head">
-                <strong>{{ item.name }}</strong>
-                <span class="reindex-doc-status">{{ item.status }}</span>
+                <div class="reindex-doc-row-main">
+                  <strong>{{ item.name }}</strong>
+                  <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding</p>
+                </div>
+                <div class="reindex-doc-row-side">
+                  <strong class="reindex-doc-coverage">{{ item.coverage_pct }}%</strong>
+                  <span class="reindex-doc-status">{{ item.status|replace("_", " ") }}</span>
+                </div>
               </div>
-              <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding · {{ item.coverage_pct }}% · faltam {{ item.missing_chunks }}</p>
+              <div class="reindex-doc-progress" aria-hidden="true">
+                <span style="width: {{ item.coverage_pct }}%"></span>
+              </div>
+              <div class="reindex-doc-meta">
+                <span>{{ item.total_chunks }} chunks</span>
+                <span>faltam {{ item.missing_chunks }}</span>
+              </div>
             </article>
           {% else %}
             <p class="muted">Sem detalhe documental disponível.</p>
@@ -225,6 +296,7 @@
   const reindexError = document.getElementById("reindex-error");
   const reindexDocList = document.getElementById("reindex-doc-list");
   const reindexEmbeddingProvider = document.getElementById("reindex-embedding-provider");
+  const reindexEmbeddingProviderCard = document.getElementById("reindex-embedding-provider-card");
   const reindexSemanticCoverage = document.getElementById("reindex-semantic-coverage");
   const reindexFullyEmbeddedDocs = document.getElementById("reindex-fully-embedded-docs");
   const reindexPartiallyEmbeddedDocs = document.getElementById("reindex-partially-embedded-docs");
@@ -253,15 +325,31 @@
       reindexDocList.innerHTML = '<p class="muted">Sem detalhe documental disponível.</p>';
       return;
     }
-    reindexDocList.innerHTML = rows.map((item) => `
+    reindexDocList.innerHTML = rows.map((item) => {
+      const coverage = Math.max(0, Math.min(100, Math.round(item.coverage_pct || 0)));
+      const statusLabel = String(item.status || "").replaceAll("_", " ");
+      return `
       <article class="reindex-doc-row reindex-doc-row-${item.status}">
         <div class="reindex-doc-row-head">
-          <strong>${escapeHtml(item.name)}</strong>
-          <span class="reindex-doc-status">${escapeHtml(item.status)}</span>
+          <div class="reindex-doc-row-main">
+            <strong>${escapeHtml(item.name)}</strong>
+            <p>${item.embedded_chunks}/${item.total_chunks} chunks com embedding</p>
+          </div>
+          <div class="reindex-doc-row-side">
+            <strong class="reindex-doc-coverage">${coverage}%</strong>
+            <span class="reindex-doc-status">${escapeHtml(statusLabel)}</span>
+          </div>
         </div>
-        <p>${item.embedded_chunks}/${item.total_chunks} chunks com embedding · ${item.coverage_pct}% · faltam ${item.missing_chunks}</p>
+        <div class="reindex-doc-progress" aria-hidden="true">
+          <span style="width: ${coverage}%"></span>
+        </div>
+        <div class="reindex-doc-meta">
+          <span>${item.total_chunks} chunks</span>
+          <span>faltam ${item.missing_chunks}</span>
+        </div>
       </article>
-    `).join("");
+    `;
+    }).join("");
   }
 
   function renderReindexStatus(p) {
@@ -275,21 +363,25 @@
     reindexProgressFill.style.width = pct + "%";
     reindexPhase.textContent = p.phase || "idle";
     reindexProgressLabel.textContent = pct + "%";
-    reindexChunks.textContent = (p.embedded_chunks||0) + "/" + (p.total_chunks||0) + " chunks";
-    reindexDocs.textContent = (p.processed_documents||0) + "/" + (p.total_documents||0) + " docs";
+    reindexChunks.textContent = (p.embedded_chunks||0) + "/" + (p.total_chunks||0);
+    reindexDocs.textContent = (p.processed_documents||0) + "/" + (p.total_documents||0);
     if (p.eta_seconds) reindexEta.textContent = "ETA " + p.eta_seconds + "s";
     else if (p.scheduled_retry_eta_seconds) reindexEta.textContent = "Nova tentativa em " + p.scheduled_retry_eta_seconds + "s";
     else reindexEta.textContent = "ETA --";
-    if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = "embeddings " + (p.embedding_provider || "indisponivel");
-    if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = (p.semantic_chunk_coverage_pct || 0) + "% cobertura semântica";
-    if (reindexFullyEmbeddedDocs) reindexFullyEmbeddedDocs.textContent = (p.fully_embedded_documents || 0) + " docs totalmente embebidos";
-    if (reindexPartiallyEmbeddedDocs) reindexPartiallyEmbeddedDocs.textContent = (p.partially_embedded_documents || 0) + " docs parciais";
-    if (reindexKnowledgeDocs) reindexKnowledgeDocs.textContent = "knowledge " + (p.knowledge_documents || 0) + " docs";
-    if (reindexIndexDocs) reindexIndexDocs.textContent = "indice " + (p.indexed_documents || 0) + " docs";
-    if (reindexMissingChunks) reindexMissingChunks.textContent = (p.missing_embedding_chunks || 0) + " chunks sem embedding";
-    if (reindexMissingDocs) reindexMissingDocs.textContent = (p.documents_with_missing_embeddings || 0) + " docs com embeddings em falta";
-    if (reindexPendingDocs) reindexPendingDocs.textContent = (p.pending_documents_total || 0) + " docs pendentes";
-    if (reindexQuerySummary) reindexQuerySummary.textContent = p.query_embedding_summary || "";
+    if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = p.embedding_provider || "indisponivel";
+    if (reindexEmbeddingProviderCard) reindexEmbeddingProviderCard.textContent = p.embedding_provider || "indisponivel";
+    if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = (p.semantic_chunk_coverage_pct || 0) + "%";
+    if (reindexFullyEmbeddedDocs) reindexFullyEmbeddedDocs.textContent = p.fully_embedded_documents || 0;
+    if (reindexPartiallyEmbeddedDocs) reindexPartiallyEmbeddedDocs.textContent = p.partially_embedded_documents || 0;
+    if (reindexKnowledgeDocs) reindexKnowledgeDocs.textContent = p.knowledge_documents || 0;
+    if (reindexIndexDocs) reindexIndexDocs.textContent = p.indexed_documents || 0;
+    if (reindexMissingChunks) reindexMissingChunks.textContent = p.missing_embedding_chunks || 0;
+    if (reindexMissingDocs) reindexMissingDocs.textContent = p.documents_with_missing_embeddings || 0;
+    if (reindexPendingDocs) reindexPendingDocs.textContent = p.pending_documents_total || 0;
+    if (reindexQuerySummary) {
+      reindexQuerySummary.textContent = p.query_embedding_summary || "";
+      reindexQuerySummary.classList.toggle("hidden", !p.query_embedding_summary);
+    }
     if (reindexSyncSummary) reindexSyncSummary.textContent = p.sync_summary || "Resumo de sincronização indisponível.";
     if (reindexPendingSummary) reindexPendingSummary.textContent = p.pending_summary || "Sem pendências conhecidas.";
     renderDocumentSyncRows(p.document_sync_rows || []);
