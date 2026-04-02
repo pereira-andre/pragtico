@@ -308,6 +308,9 @@ SLASH_COMMAND_ALIASES = {
     "ondulacao": "wave",
     "ondulação": "wave",
     "leitura-costeira": "wave",
+    "validar-manobra": "validate_maneuver",
+    "validar": "validate_maneuver",
+    "checklist-manobra": "validate_maneuver",
     "registar-escala": "register_scale",
     "nova-escala": "register_scale",
     "editar-escala": "edit_scale",
@@ -1239,6 +1242,17 @@ def build_delete_report_reply_template() -> str:
     )
 
 
+def build_validate_maneuver_reply_template() -> str:
+    return "\n".join(
+        [
+            "Responde neste formato para validar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
+            "ID da manobra: ",
+            "Ref: ",
+            "Tipo de manobra: entrada | saída | mudança",
+        ]
+    )
+
+
 def build_action_reply_template(action: str, missing_fields: Optional[List[str]] = None) -> str:
     if action == "create_port_call":
         return build_port_call_reply_template()
@@ -1301,6 +1315,12 @@ def build_slash_help(role: str) -> str:
             ]
         )
     lines.extend(["", "Manobras:"])
+    lines.extend(
+        [
+            "/validar-manobra",
+            "  valida uma manobra específica com checklist e histórico; usa ID da manobra ou Ref + Tipo",
+        ]
+    )
     if clean_role in {"admin", "agente"}:
         lines.extend(
             [
@@ -1341,8 +1361,10 @@ def build_slash_help(role: str) -> str:
         [
             "",
             "Notas:",
+            "  Sem `/` o chat responde em modo Q&A técnico e não altera o portal.",
             "  Ref identifica a escala. Se só tiveres o ID curto da escala, o bot também tenta resolvê-lo.",
             "  Ao criar manobra não precisas de indicar ID; para manobra existente podes usar ID da manobra ou Ref + Tipo.",
+            "  Usa `/validar-manobra` quando quiseres a checklist determinística e a leitura histórica de uma manobra específica.",
             "  Ao criar uma saída ou mudança, a origem segue automaticamente o último local conhecido do navio.",
             "  Se houver mais do que uma manobra elegível do mesmo tipo, o bot exige o ID da manobra.",
             "  Se o comando vier incompleto, o bot devolve o template certo para preencher.",
@@ -1396,6 +1418,17 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         target["maneuver_type"] = positional_target["maneuver_type"]
     for target_only_field in ("reference_code", "maneuver_id", "maneuver_type"):
         extracted_fields.pop(target_only_field, None)
+
+    if command == "validate_maneuver":
+        template = build_validate_maneuver_reply_template()
+        if target["reference_code"] and target["maneuver_type"]:
+            target["maneuver_id"] = ""
+        has_explicit_target = bool(target["maneuver_id"]) or bool(
+            (target["reference_code"] or target["vessel_name"]) and target["maneuver_type"]
+        )
+        if not has_explicit_target:
+            return {"intent": "template", "answer": template}
+        return {"intent": "validate", "target": target}
 
     maneuver_payload_fields = {
         "planned_at_local",

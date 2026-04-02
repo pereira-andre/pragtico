@@ -27,6 +27,7 @@ from domain.chat_actions import (
     build_operational_action_prompt,
     build_pending_action_update_prompt,
     build_slash_help,
+    build_validate_maneuver_reply_template,
     candidate_maneuvers_for_action,
     display_missing_field_labels,
     extract_json_object,
@@ -915,54 +916,6 @@ def answer_direct_operational_query(question: str) -> dict | None:
         maneuver_type = "shift"
         maneuver_label = "manobra de mudança"
 
-    if matched_port_call and re.search(r"\b(acho|achas|achar|opina|opiniao|opinião|recomenda|recomendacao|recomendação|avali|segur|prudente|devo|viavel|viável)\b", clean_question):
-        resolved_port_call = services.store.get_port_call(matched_port_call["id"])
-        scale_context = build_scale_context(resolved_port_call)
-        candidate_maneuvers = list(scale_context.get("maneuvers") or [])
-        if maneuver_type:
-            candidate_maneuvers = [item for item in candidate_maneuvers if item.get("type") == maneuver_type]
-        if candidate_maneuvers:
-            candidate_maneuvers.sort(
-                key=lambda item: (
-                    0 if item.get("status_key") in {"pending", "approved"} else 1,
-                    item.get("planned_label") or "",
-                    item.get("when_label") or "",
-                )
-            )
-            maneuver = candidate_maneuvers[0]
-            recommendation = maneuver.get("casebook_recommendation") or {}
-            similar_cases = maneuver.get("similar_cases") or []
-            if recommendation:
-                checklist = list(maneuver.get("analysis_checklist") or [])
-                answer = _format_operational_opinion_answer(
-                    port_call=resolved_port_call,
-                    maneuver=maneuver,
-                    recommendation=recommendation,
-                    similar_cases=similar_cases,
-                    checklist=checklist,
-                )
-                return {
-                    "answer": answer,
-                    "sources": [
-                        {
-                            "document": resolved_port_call.get("vessel_name", "Casebook"),
-                            "source_id": resolved_port_call.get("reference_code", ""),
-                            "retrieval_mode": "casebook_recommendation",
-                            "snippet": answer,
-                        }
-                    ],
-                    "answer_origin": "casebook_recommendation",
-                }
-            answer = (
-                f"Ainda não tenho base histórica suficientemente semelhante para opinar sobre "
-                f"{maneuver.get('title', 'esta manobra')} de {resolved_port_call.get('vessel_name', 'este navio')}."
-            )
-            return {
-                "answer": answer,
-                "sources": [],
-                "answer_origin": "casebook_recommendation",
-            }
-
     if not re.search(r"\b(id|identificador)\b", clean_question) or "manobra" not in clean_question:
         return None
     if not matched_port_call:
@@ -1003,6 +956,111 @@ def answer_direct_operational_query(question: str) -> dict | None:
             }
         ],
         "answer_origin": "operational_lookup",
+    }
+
+
+def _select_validation_maneuver(scale_context: dict, port_call: dict, target: dict) -> tuple[dict | None, list[dict]]:
+    """Resolve a maneuver for hard validation, returning the decorated maneuver and same-type candidates."""
+    maneuvers_by_id = {
+        str(item.get("id") or ""): item
+        for item in list(scale_context.get("maneuvers") or [])
+        if item.get("id")
+    }
+    maneuver_id = str((target or {}).get("maneuver_id") or "").strip()
+    maneuver_type = str((target or {}).get("maneuver_type") or "").strip().lower()
+    if maneuver_id:
+        raw_maneuver = resolve_maneuver(port_call, "delete_maneuver", maneuver_type, maneuver_id=maneuver_id)
+        if not raw_maneuver:
+            return None, []
+        return maneuvers_by_id.get(str(raw_maneuver.get("id") or "")), []
+    if maneuver_type not in {"entry", "departure", "shift"}:
+        return None, []
+    candidates = []
+    for item in candidate_maneuvers_for_action(port_call, "delete_maneuver", maneuver_type):
+        decorated = maneuvers_by_id.get(str(item.get("id") or ""))
+        if decorated:
+            candidates.append(decorated)
+    if len(candidates) == 1:
+        return candidates[0], candidates
+    return None, candidates
+
+
+def answer_slash_validation(target: dict, role: str) -> dict:
+    """Run the deterministic checklist/casebook validation for a specific maneuver."""
+    del role  # Read-only command; access is already scoped by visible port calls.
+
+    template = build_validate_maneuver_reply_template()
+    port_call_match = resolve_port_call(current_resolvable_port_calls(), target or {})
+    if not port_call_match:
+        return {
+            "answer": "Não encontrei a escala/manobra pedida para validar.\n\n" + template,
+            "sources": [],
+            "answer_origin": "slash_validation",
+        }
+
+    resolved_port_call = services.store.get_port_call(port_call_match["id"])
+    scale_context = build_scale_context(resolved_port_call)
+    maneuver, candidates = _select_validation_maneuver(scale_context, resolved_port_call, target or {})
+    if not maneuver and len(candidates) > 1:
+        lines = [
+            (
+                f"Encontrei {len(candidates)} manobras do mesmo tipo para a escala "
+                f"{resolved_port_call.get('reference_code', '--')}. Indica o ID da manobra para fazer a validação dura."
+            ),
+            "",
+            "Candidatas:",
+        ]
+        for item in candidates[:5]:
+            lines.append(
+                f"- {item.get('id', '--')} | {item.get('title', 'Manobra')} | "
+                f"{item.get('status', '--')} | {item.get('planned_label') or item.get('when_label') or '--'}"
+            )
+        lines.extend(["", template])
+        return {
+            "answer": "\n".join(lines),
+            "sources": [],
+            "answer_origin": "slash_validation",
+        }
+    if not maneuver:
+        return {
+            "answer": "Não encontrei a manobra pedida para validar.\n\n" + template,
+            "sources": [],
+            "answer_origin": "slash_validation",
+        }
+
+    recommendation = maneuver.get("casebook_recommendation") or {}
+    checklist = list(maneuver.get("analysis_checklist") or [])
+    similar_cases = maneuver.get("similar_cases") or []
+    details = [
+        (
+            f"Validação da {maneuver.get('title', 'manobra').lower()} da escala "
+            f"{resolved_port_call.get('reference_code', '--')} ({resolved_port_call.get('vessel_name', 'navio')})"
+        ),
+        f"- ID da manobra: {maneuver.get('id', '--')}",
+        f"- Estado atual: {maneuver.get('status', '--')}",
+        f"- Janela planeada: {maneuver.get('planned_label') or maneuver.get('when_label') or '--'}",
+        f"- Trajeto: {maneuver.get('origin', '--')} -> {maneuver.get('destination', '--')}",
+        "",
+        _format_operational_opinion_answer(
+            port_call=resolved_port_call,
+            maneuver=maneuver,
+            recommendation=recommendation,
+            similar_cases=similar_cases,
+            checklist=checklist,
+        ),
+    ]
+    snippet = recommendation.get("summary") or details[0]
+    return {
+        "answer": "\n".join(details),
+        "sources": [
+            {
+                "document": resolved_port_call.get("vessel_name", "Validação de manobra"),
+                "source_id": resolved_port_call.get("reference_code", ""),
+                "retrieval_mode": "maneuver_validation",
+                "snippet": snippet,
+            }
+        ],
+        "answer_origin": "slash_validation",
     }
 
 

@@ -299,7 +299,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn(historical["reference_code"], casebook_sources[0]["snippet"])
         self.assertIn("recomendação histórica", casebook_sources[0]["snippet"])
 
-    def test_direct_operational_query_returns_casebook_recommendation_for_opinion_question(self) -> None:
+    def test_direct_operational_query_returns_none_for_opinion_question(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-18T05:30:00+00:00")
         self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada sem incidentes.")
         historical_done = self.store.mark_port_call_arrived(
@@ -321,14 +321,7 @@ class OperationalFlowTests(unittest.TestCase):
             session["role"] = "admin"
             answer = answer_direct_operational_query(f"O que achas da entrada da escala {current['reference_code']}?")
 
-        self.assertIsNotNone(answer)
-        self.assertEqual(answer["answer_origin"], "casebook_recommendation")
-        self.assertIn("Leitura rápida", answer["answer"])
-        self.assertIn("Alertas", answer["answer"])
-        self.assertIn("Recomendação", answer["answer"])
-        self.assertIn("Base usada", answer["answer"])
-        self.assertIn("Feedback validado", answer["answer"])
-        self.assertIn("Checklist operacional determinística do portal", answer["answer"])
+        self.assertIsNone(answer)
 
     def test_complete_entry_rejects_occupied_quay(self) -> None:
         occupied = self._create_entry(notes="Primeira escala")
@@ -1043,6 +1036,54 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertNotEqual(payload["answer_origin"], "operational_clarification")
         self.assertIn("Doca 21", payload["answer"])
         answer_mock.assert_called_once()
+
+    def test_plain_text_operational_command_redirects_to_slash_commands(self) -> None:
+        port_call = self._create_entry(notes="Entrada pendente")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": f"Aprova a entrada da escala {port_call['reference_code']}.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_redirect")
+        self.assertIsNone(payload["pending_action"])
+        self.assertIn("/aprovar", payload["answer"])
+        self.assertIn("/validar-manobra", payload["answer"])
+
+    def test_slash_validate_maneuver_returns_structured_validation(self) -> None:
+        port_call = self._create_entry(notes="Entrada pendente")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": f"/validar-manobra {port_call['reference_code']} entrada",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_validation")
+        self.assertIn("Validação da", payload["answer"])
+        self.assertIn("Checklist operacional determinística do portal", payload["answer"])
+        self.assertIn(port_call["reference_code"], payload["answer"])
 
 
 class AdminDocumentPolicyTests(unittest.TestCase):

@@ -68,6 +68,7 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertEqual(parsed["intent"], "help")
         self.assertIn("/registar-escala", parsed["answer"])
+        self.assertIn("/validar-manobra", parsed["answer"])
         self.assertIn("/avisos-locais", parsed["answer"])
         self.assertIn("/ondulacao", parsed["answer"])
 
@@ -89,6 +90,26 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "query")
         self.assertEqual(parsed["command"], "rule")
         self.assertIn("015", parsed["argument"])
+
+    def test_parse_slash_validate_without_target_returns_template(self) -> None:
+        parsed = parse_slash_command("/validar-manobra", "piloto")
+
+        self.assertEqual(parsed["intent"], "template")
+        self.assertIn("validar a manobra", parsed["answer"])
+        self.assertIn("ID da manobra", parsed["answer"])
+
+    def test_parse_slash_validate_accepts_positional_ref_and_type(self) -> None:
+        parsed = parse_slash_command("/validar-manobra BF757B7F entrada", "piloto")
+
+        self.assertEqual(parsed["intent"], "validate")
+        self.assertEqual(parsed["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["target"]["maneuver_type"], "entry")
+
+    def test_parse_slash_validate_accepts_maneuver_id_only(self) -> None:
+        parsed = parse_slash_command("/validar 7f3c2a91", "piloto")
+
+        self.assertEqual(parsed["intent"], "validate")
+        self.assertEqual(parsed["target"]["maneuver_id"], "7f3c2a91")
 
     def test_parse_slash_register_scale_builds_action_proposal(self) -> None:
         parsed = parse_slash_command(

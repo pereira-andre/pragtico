@@ -9,12 +9,6 @@ from flask import Blueprint, Response, flash, jsonify, redirect, render_template
 from core import services
 from domain.chat_actions import (
     build_action_reply_template,
-    build_abort_reply_template,
-    build_port_call_reply_template,
-    build_maneuver_report_reply_template,
-    looks_like_abort_payload,
-    looks_like_maneuver_report_payload,
-    looks_like_port_call_registration_request,
     looks_like_operational_command,
     looks_like_operational_query,
     looks_like_slash_command,
@@ -24,16 +18,16 @@ from core.security import api_limiter, rate_limit
 from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
+    answer_slash_validation,
     build_operational_chat_sources,
     clear_pending_chat_action,
     current_resolvable_port_calls,
     execute_pending_operational_action,
+    finalize_operational_proposal,
     get_current_conversation,
     load_pending_chat_action,
     login_required,
     looks_like_pending_confirmation,
-    finalize_operational_proposal,
-    propose_operational_action,
     refresh_knowledge_state,
     refine_pending_operational_action,
     save_pending_chat_action,
@@ -307,6 +301,8 @@ def api_chat():
         answer = {"answer": slash_command["answer"], "sources": [], "answer_origin": "slash_help"}
     elif slash_command and slash_command.get("intent") == "query":
         answer = answer_slash_query(slash_command.get("command", ""), slash_command.get("argument", ""), session.get("role", "piloto"))
+    elif slash_command and slash_command.get("intent") == "validate":
+        answer = answer_slash_validation(slash_command.get("target") or {}, session.get("role", "piloto"))
     elif slash_command and slash_command.get("intent") == "template":
         proposal = slash_command.get("proposal") or {}
         if proposal.get("intent") == "action" and proposal.get("action"):
@@ -374,73 +370,18 @@ def api_chat():
                         block_message = f"{block_message}\n\n{template}"
                     answer = {"answer": block_message, "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "pending_action_block"}
         else:
-            action_proposal = propose_operational_action(question, session.get("role", "piloto"))
-            if action_proposal and action_proposal.get("intent") == "action":
-                pending_action = save_pending_chat_action(username=username, conversation_id=conversation["id"], proposal=action_proposal, question=question)
-                answer = {"answer": pending_action["summary"], "sources": [], "pending_action": load_pending_chat_action(username, conversation["id"]), "answer_origin": "operational_proposal"}
-            elif action_proposal and action_proposal.get("intent") == "unsupported":
-                answer = {"answer": action_proposal.get("reason") or "Essa ação não pode ser executada pelo bot nesta conta.", "sources": [], "answer_origin": "operational_rejected"}
-            elif action_proposal and action_proposal.get("intent") == "question":
-                if looks_like_port_call_registration_request(question):
-                    answer = {
-                        "answer": (
-                            "Preciso dos dados operacionais num formato mais explícito para criar a escala.\n\n"
-                            + build_port_call_reply_template()
-                        ),
-                        "sources": [],
-                        "answer_origin": "operational_template",
-                    }
-                elif looks_like_operational_query(question):
-                    answer = None
-                elif looks_like_operational_command(question):
-                    template = (
-                        build_abort_reply_template()
-                        if looks_like_abort_payload(question) or "aborta" in question.lower() or "cancela" in question.lower() or "anula" in question.lower()
-                        else build_maneuver_report_reply_template()
-                    )
-                    answer = {
-                        "answer": (
-                            "Percebi que o pedido é operacional, mas a proposta automática não ficou suficientemente segura para execução.\n\n"
-                            "Repete ou reformula o pedido de forma mais explícita.\n\n"
-                            "Responde neste formato para eu completar o registo sem consultar regras documentais:\n"
-                            + template
-                        ),
-                        "sources": [],
-                        "answer_origin": "operational_clarification",
-                    }
-                else:
-                    answer = None
-            elif looks_like_port_call_registration_request(question):
+            if looks_like_operational_command(question):
                 answer = {
                     "answer": (
-                        "Não consegui interpretar com segurança os dados da nova escala.\n\n"
-                        "Repete ou reformula o pedido com os campos abaixo.\n\n"
-                        + build_port_call_reply_template()
+                        "Para executar operações ou validações no portal usa um comando começado por `/`.\n\n"
+                        "Exemplos: `/aprovar`, `/registar-manobra`, `/editar-manobra`, `/abortar`, `/validar-manobra`.\n"
+                        "Usa `/help` para ver a lista completa."
                     ),
                     "sources": [],
-                    "answer_origin": "operational_template",
+                    "answer_origin": "slash_redirect",
                 }
             else:
-                if looks_like_operational_command(question):
-                    template = (
-                        build_abort_reply_template()
-                        if looks_like_abort_payload(question) or "aborta" in question.lower() or "cancela" in question.lower() or "anula" in question.lower()
-                        else build_maneuver_report_reply_template()
-                        if looks_like_maneuver_report_payload(question) or "manobra" in question.lower()
-                        else build_maneuver_report_reply_template()
-                    )
-                    answer = {
-                        "answer": (
-                            "Percebi que o pedido é operacional, mas não consegui identificar a escala/manobra com segurança.\n\n"
-                            "Repete ou reformula o pedido indicando a escala, o navio ou o ID da manobra.\n\n"
-                            "Indica o navio ou o número de escala e, se for registo de manobra, responde neste formato:\n"
-                            + template
-                        ),
-                        "sources": [],
-                        "answer_origin": "operational_clarification",
-                    }
-                else:
-                    answer = None
+                answer = None
 
     if answer is None and trusted_answers and trusted_answers[0].get("similarity", 0) >= 0.96:
         best_match = trusted_answers[0]
