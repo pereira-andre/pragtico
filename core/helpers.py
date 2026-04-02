@@ -37,6 +37,7 @@ from domain.chat_actions import (
     looks_like_maneuver_report_payload,
     looks_like_port_call_payload,
     looks_like_operational_command,
+    looks_like_operational_query,
     looks_like_slash_command,
     merge_action_candidate,
     normalize_action_candidate,
@@ -848,6 +849,33 @@ def build_cost_context_source(question: str, port_activity: dict) -> dict | None
     }
 
 
+def build_berth_catalog_source(question: str) -> dict | None:
+    """Build a berth catalog source for terminal/berth questions, with explicit Lisnave aliases."""
+    clean = _operational_lookup_key(question)
+    if not clean:
+        return None
+    if not re.search(r"\b(lisnave|doca|cais|fundeadouro|teporset|autoeuropa|sapec|tms)\b", clean):
+        return None
+
+    lisnave_berths = [item for item in services.BERTH_OPTIONS if item.startswith("Lisnave - ")]
+    lines = [
+        "Catálogo canónico de cais/fundeadouros do portal:",
+        "- 'Lisnave' identifica o terminal/estaleiro; para registo operacional usa-se um cais ou doca específicos.",
+        "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A' -> 'Lisnave - Cais 2 A'.",
+        "- Cais/docas Lisnave disponíveis no sistema:",
+    ]
+    for item in lisnave_berths:
+        lines.append(f"  {item}")
+    return {
+        "source_id": "OPS4",
+        "document": "catalogo_cais_portal",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "berth_catalog",
+        "snippet": "\n".join(lines),
+    }
+
+
 def build_operational_chat_sources(question: str) -> list[dict]:
     """Assemble supplemental operational context sources for the chat RAG pipeline."""
     recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
@@ -857,6 +885,9 @@ def build_operational_chat_sources(question: str) -> list[dict]:
         build_maneuver_archive_source(question, historical_port_activity),
         build_scale_registry_source(question, historical_port_activity),
     ]
+    berth_catalog_source = build_berth_catalog_source(question)
+    if berth_catalog_source:
+        sources.append(berth_catalog_source)
     maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
     if maneuver_case_source:
         sources.append(maneuver_case_source)
@@ -1944,6 +1975,16 @@ def clear_pending_chat_action(username: str, conversation_id: str) -> None:
 
 def propose_operational_action(question: str, role: str) -> dict | None:
     """Attempt to derive an operational action proposal from the question using heuristics or LLM."""
+    if looks_like_operational_query(question) and not looks_like_operational_command(question):
+        return {
+            "intent": "question",
+            "action": "",
+            "confidence": 0.99,
+            "reason": "Pergunta consultiva sem pedido explícito de execução operacional.",
+            "target": {},
+            "fields": {},
+            "missing_fields": [],
+        }
     if not looks_like_operational_command(question):
         return None
     resolvable_port_calls = current_resolvable_port_calls()

@@ -133,45 +133,6 @@ GENERIC_ACTION_FAMILIES = (
     ("edit_report", "edit_report"),
 )
 
-ACTION_KEYWORDS = (
-    "aprova",
-    "aprove",
-    "aborta",
-    "cancela",
-    "anula",
-    "regista",
-    "registar",
-    "registo",
-    "cria",
-    "criar",
-    "marca",
-    "marcar",
-    "agenda",
-    "agendar",
-    "planeia",
-    "planear",
-    "altera",
-    "altera",
-    "editar",
-    "edita",
-    "atualiza",
-    "actualiza",
-    "muda",
-    "mete",
-    "poe",
-    "põe",
-    "prevista",
-    "previsto",
-    "planeada",
-    "planeado",
-    "pendente",
-    "ajusta",
-    "fechar",
-    "fecha",
-    "confirma",
-    "confirma",
-)
-
 QUERY_HINTS = (
     "qual",
     "quais",
@@ -185,6 +146,45 @@ QUERY_HINTS = (
     "consulta",
     "mostra",
     "ver",
+)
+OPERATIONAL_QUERY_HINT_RE = re.compile(
+    r"\b("
+    r"qual|quais|como|quando|onde|porque|"
+    r"a que horas|que horas|"
+    r"devo|devemos|posso|podemos|"
+    r"explica|consulta|sabendo que"
+    r")\b"
+)
+OPERATIONAL_STRONG_ACTION_HINT_RE = re.compile(
+    r"\b("
+    r"aprova|aprove|aprovar|"
+    r"aborta|abortar|cancela|cancelar|anula|anular|"
+    r"regista|registar|registra|"
+    r"cria|criar|"
+    r"apaga|apagar|remove|remover|"
+    r"altera|alterar|edita|editar|"
+    r"atualiza|actualiza|"
+    r"fecha|fechar|"
+    r"confirma|confirmar"
+    r")\b"
+)
+OPERATIONAL_WEAK_ACTION_HINT_RE = re.compile(
+    r"\b("
+    r"marca|marcar|agenda|agendar|"
+    r"planeia|planear|"
+    r"muda|mudar|mete|poe|põe|ajusta|"
+    r"prevista|previsto|planeada|planeado|pendente"
+    r")\b"
+)
+OPERATIONAL_TIMING_QUERY_HINT_RE = re.compile(
+    r"\b("
+    r"a que horas|que horas|quando|"
+    r"qual a antecedencia|qual a antecedencia de marcacao|"
+    r"pode atracar|podemos atracar|"
+    r"podemos marcar|marcar piloto|embarcar piloto|"
+    r"deve embarcar|deve marcar|"
+    r"reponto|preia mar|janela"
+    r")\b"
 )
 
 MANEUVER_TYPES = {"entry", "departure", "shift"}
@@ -590,13 +590,34 @@ def looks_like_operational_command(question: str) -> bool:
         return False
     if "arquivo" in clean or "archived" in clean:
         return False
-    if any(token in clean for token in ACTION_KEYWORDS):
+    has_query_hint = bool(OPERATIONAL_QUERY_HINT_RE.search(clean)) or "?" in question
+    has_strong_action = bool(OPERATIONAL_STRONG_ACTION_HINT_RE.search(clean))
+    has_weak_action = bool(OPERATIONAL_WEAK_ACTION_HINT_RE.search(clean))
+    has_timing_query = bool(OPERATIONAL_TIMING_QUERY_HINT_RE.search(clean))
+    if has_query_hint and has_timing_query and not has_strong_action:
+        return False
+    if has_query_hint and not has_strong_action and not has_weak_action:
+        return False
+    if has_strong_action:
+        return True
+    if has_query_hint and has_weak_action:
+        return False
+    if has_weak_action:
         return True
     if any(token in clean for token in OPERATIONAL_OBJECT_HINTS) and TIME_OR_STATUS_HINT_RE.search(clean):
-        return True
+        return not has_query_hint
     if any(clean.startswith(token) for token in QUERY_HINTS):
         return False
+    if has_query_hint:
+        return False
     return bool(re.search(r"\b(ata|atd|eta|etd)\b", clean))
+
+
+def looks_like_operational_query(question: str) -> bool:
+    clean = _lookup_key(question)
+    if not clean:
+        return False
+    return bool(OPERATIONAL_QUERY_HINT_RE.search(clean) or "?" in question)
 
 
 PORT_CALL_FIELD_HINTS = {
@@ -1789,7 +1810,7 @@ def build_operational_action_prompt(
         spec = ACTION_SPECS[action]
         action_lines.append(f"- {action}: {spec['label']}")
     constraints = ", ".join(item.get("code", "") for item in constraint_options if item.get("code"))
-    berths = ", ".join(berth_options[:24])
+    berths = "\n".join(f"- {item}" for item in berth_options)
 
     return f"""
 És um classificador de ações operacionais para um portal marítimo.
@@ -1808,6 +1829,7 @@ Objetivo:
 - Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots ocupados.
 - Para efeitos desta demo, não rejeites uma atribuição de cais só porque o LOA do navio parece maior do que a extensão nominal do cais.
 - Se o utilizador perguntar por dimensões, limita-te aos factos documentais; não concluas automaticamente que o navio "não cabe".
+- Perguntas de consulta sobre janela/horário, por exemplo "a que horas", "quando", "podemos marcar piloto", "deve embarcar piloto" ou "pode atracar", são normalmente `intent: "question"` mesmo que mencionem entrada, saída ou marcação.
 
 Ações permitidas para este papel:
 {chr(10).join(action_lines) or "- nenhuma"}
@@ -1821,7 +1843,7 @@ Restrições válidas:
 - {constraints or "nenhuma"}
 
 Cais conhecidos:
-- {berths}
+{berths or "- nenhum"}
 
 Escalas visíveis neste utilizador:
 {summarize_port_calls(port_calls)}
@@ -1852,7 +1874,7 @@ def build_pending_action_update_prompt(
     constraint_options: List[Dict],
 ) -> str:
     constraints = ", ".join(item.get("code", "") for item in constraint_options if item.get("code"))
-    berths = ", ".join(berth_options[:24])
+    berths = "\n".join(f"- {item}" for item in berth_options)
     current_fields = json.dumps(proposal.get("fields") or {}, ensure_ascii=False, indent=2)
     current_target = json.dumps(proposal.get("target") or {}, ensure_ascii=False, indent=2)
     missing = ", ".join(proposal.get("missing_fields") or []) or "nenhum"
@@ -1876,7 +1898,7 @@ Restrições válidas:
 - {constraints or "nenhuma"}
 
 Cais conhecidos:
-- {berths}
+{berths or "- nenhum"}
 
 Objetivo:
 - Se o utilizador estiver a responder ao que falta ou a corrigir dados, devolve `intent: "update"`.

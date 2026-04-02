@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
@@ -985,6 +986,63 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(proposal["intent"], "unsupported")
         self.assertIn("já está prevista", proposal["reason"])
+
+    def test_operational_consultation_question_uses_llm_instead_of_action_template(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                return_value={"answer": "Deve embarcar com antecedência suficiente para não perder a maré.", "sources": []},
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": (
+                            "Sabendo que o preia-mar hoje é às 15:13, a que horas deve embarcar piloto "
+                            "para trazer um navio para a Lisnave?"
+                        ),
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        self.assertNotEqual(payload["answer_origin"], "operational_clarification")
+        self.assertIn("antecedência suficiente", payload["answer"])
+        answer_mock.assert_called_once()
+
+    def test_operational_consultation_question_for_lisnave_dry_dock_uses_llm(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                return_value={"answer": "Para a Doca 21, a resposta deve seguir a janela documental aplicável.", "sources": []},
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Sabendo isso, tenho um navio para entrar para a doca 21. A que horas podemos marcar piloto para hoje?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        self.assertNotEqual(payload["answer_origin"], "operational_clarification")
+        self.assertIn("Doca 21", payload["answer"])
+        answer_mock.assert_called_once()
 
 
 class AdminDocumentPolicyTests(unittest.TestCase):

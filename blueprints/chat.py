@@ -16,6 +16,7 @@ from domain.chat_actions import (
     looks_like_maneuver_report_payload,
     looks_like_port_call_registration_request,
     looks_like_operational_command,
+    looks_like_operational_query,
     looks_like_slash_command,
     parse_slash_command,
 )
@@ -389,6 +390,8 @@ def api_chat():
                         "sources": [],
                         "answer_origin": "operational_template",
                     }
+                elif looks_like_operational_query(question):
+                    answer = None
                 elif looks_like_operational_command(question):
                     template = (
                         build_abort_reply_template()

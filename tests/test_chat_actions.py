@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime
 
+from domain.berth_layout import BERTH_OPTIONS
 from domain.chat_actions import (
     action_for_maneuver_type,
     build_action_reply_template,
@@ -14,6 +15,7 @@ from domain.chat_actions import (
     format_action_summary,
     infer_maneuver_type,
     looks_like_operational_command,
+    looks_like_operational_query,
     looks_like_slash_command,
     merge_action_candidate,
     normalize_action_candidate,
@@ -35,7 +37,31 @@ class ChatActionsTests(unittest.TestCase):
         )
         self.assertFalse(looks_like_operational_command("Qual é a regra de reboques no cais?"))
         self.assertFalse(looks_like_operational_command("Mostra o arquivo de manobras do mês passado."))
+        self.assertFalse(
+            looks_like_operational_command(
+                "Sabendo que o preia-mar hoje é às 15:13, a que horas deve embarcar piloto para trazer um navio para a Lisnave?"
+            )
+        )
+        self.assertTrue(looks_like_operational_command("Podes aprovar a entrada da escala REF-001?"))
         self.assertTrue(looks_like_slash_command("/help"))
+
+    def test_operational_query_detection_flags_consultation_questions(self) -> None:
+        self.assertTrue(
+            looks_like_operational_query(
+                "Sabendo que o preia-mar hoje é às 15:13, a que horas deve embarcar piloto para trazer um navio para a Lisnave?"
+            )
+        )
+        self.assertFalse(looks_like_operational_query("Aprova a entrada da escala REF-001."))
+        self.assertFalse(
+            looks_like_operational_command(
+                "Sabendo isso, tenho um navio para entrar para a doca 21. A que horas podemos marcar piloto para hoje?"
+            )
+        )
+        self.assertFalse(
+            looks_like_operational_command(
+                "Sabendo isso, tenho um navio para entrar para a cais 2 A. A que horas podemos marcar piloto para hoje?"
+            )
+        )
 
     def test_parse_slash_help_returns_help_intent(self) -> None:
         parsed = parse_slash_command("/help", "admin")
@@ -963,6 +989,20 @@ class ChatActionsTests(unittest.TestCase):
         self.assertIn("slots de cais", prompt)
         self.assertIn("Fundeadouro Norte e Fundeadouro Sul / Tróia", prompt)
         self.assertIn("não rejeites uma atribuição de cais", prompt)
+
+    def test_build_operational_action_prompt_lists_full_lisnave_catalog(self) -> None:
+        prompt = build_operational_action_prompt(
+            question="Marca entrada na doca 21 da Lisnave.",
+            role="admin",
+            now_local=datetime(2026, 3, 31, 10, 0),
+            port_calls=[],
+            berth_options=BERTH_OPTIONS,
+            constraint_options=[],
+        )
+
+        self.assertIn("Lisnave - Doca 21", prompt)
+        self.assertIn("Lisnave - Cais 2 A", prompt)
+        self.assertIn("podemos marcar piloto", prompt)
 
 
 if __name__ == "__main__":
