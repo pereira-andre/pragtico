@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import html
+import json
+import os
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -33,21 +35,121 @@ class LocalWarningService:
         base_url: str = "https://anavnetbackend.hidrografico.pt",
         cache_ttl_seconds: int = 900,
         timeout: int = 15,
+        snapshot_path: str = "",
+        failure_backoff_seconds: Optional[int] = None,
     ) -> None:
         self.endpoint = endpoint
         self.base_url = base_url.rstrip("/")
-        self.cache_ttl_seconds = cache_ttl_seconds
+        self.cache_ttl_seconds = max(int(cache_ttl_seconds or 0), 0)
         self.timeout = timeout
+        self.snapshot_path = snapshot_path
+        self.failure_backoff_seconds = max(
+            int(failure_backoff_seconds if failure_backoff_seconds is not None else self.cache_ttl_seconds or 0),
+            0,
+        )
         self._cache: Optional[List[Dict[str, Any]]] = None
         self._cached_at = 0.0
+        self._last_attempt_at = 0.0
+        self._last_error = ""
+        self._last_error_at = 0.0
         self._lock = Lock()
+        self._load_snapshot()
 
     @property
     def enabled(self) -> bool:
         return bool((self.endpoint or "").strip())
 
     def _is_cache_valid(self) -> bool:
-        return bool(self._cache) and (time.monotonic() - self._cached_at) < self.cache_ttl_seconds
+        return bool(self._cache) and (time.time() - self._cached_at) < self.cache_ttl_seconds
+
+    def _is_backoff_active(self) -> bool:
+        return bool(self._last_error and self.failure_backoff_seconds > 0) and (
+            time.time() - self._last_attempt_at
+        ) < self.failure_backoff_seconds
+
+    def _format_timestamp_label(self, value: float) -> str:
+        if value <= 0:
+            return ""
+        return datetime.fromtimestamp(value, tz=timezone.utc).astimezone().strftime("%d/%m/%Y, %H:%M")
+
+    def _snapshot_payload(self) -> Dict[str, Any]:
+        return {
+            "data": self._cache,
+            "cached_at": self._cached_at,
+            "last_attempt_at": self._last_attempt_at,
+            "last_error": self._last_error,
+            "last_error_at": self._last_error_at,
+        }
+
+    def _load_snapshot(self) -> None:
+        if not self.snapshot_path:
+            return
+        try:
+            with open(self.snapshot_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return
+        data = payload.get("data")
+        if not isinstance(data, list):
+            return
+        self._cache = data
+        self._cached_at = float(payload.get("cached_at") or 0.0)
+        self._last_attempt_at = float(payload.get("last_attempt_at") or 0.0)
+        self._last_error = str(payload.get("last_error") or "")
+        self._last_error_at = float(payload.get("last_error_at") or 0.0)
+
+    def _persist_snapshot(self) -> None:
+        if not self.snapshot_path:
+            return
+        try:
+            directory = os.path.dirname(self.snapshot_path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            with open(self.snapshot_path, "w", encoding="utf-8") as handle:
+                json.dump(self._snapshot_payload(), handle, ensure_ascii=False, indent=2)
+        except OSError:
+            return
+
+    def _humanize_error(self, exc: Exception) -> str:
+        message = str(exc)
+        lowered = message.lower()
+        if "connection refused" in lowered or "failed to establish a new connection" in lowered:
+            return "Ligação ao Instituto Hidrográfico recusada neste ambiente."
+        if "max retries exceeded" in lowered or "newconnectionerror" in lowered:
+            return "Ligação ao Instituto Hidrográfico indisponível neste momento."
+        if "timed out" in lowered or "timeout" in lowered:
+            return "O Instituto Hidrográfico não respondeu a tempo."
+        return message
+
+    def _mark_success(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        now = time.time()
+        self._cache = data
+        self._cached_at = now
+        self._last_attempt_at = now
+        self._last_error = ""
+        self._last_error_at = 0.0
+        self._persist_snapshot()
+        return list(data)
+
+    def _mark_failure(self, exc: Exception) -> None:
+        now = time.time()
+        self._last_attempt_at = now
+        self._last_error = self._humanize_error(exc)
+        self._last_error_at = now
+        self._persist_snapshot()
+
+    def status(self) -> Dict[str, Any]:
+        warning_count = len(self._cache or [])
+        return {
+            "stale": bool(self._cache and self._last_error),
+            "error": self._last_error,
+            "cache_updated_at_label": self._format_timestamp_label(self._cached_at),
+            "cache_updated_at_iso": (
+                datetime.fromtimestamp(self._cached_at, tz=timezone.utc).isoformat() if self._cached_at else ""
+            ),
+            "last_attempt_at_label": self._format_timestamp_label(self._last_attempt_at),
+            "count": warning_count,
+        }
 
     def _parse_date(self, value: Optional[str]) -> Optional[datetime]:
         if not value:
@@ -155,15 +257,15 @@ class LocalWarningService:
         with self._lock:
             if self._is_cache_valid():
                 return list(self._cache or [])
+            if self._cache and self._is_backoff_active():
+                return list(self._cache)
             try:
-                data = self._fetch_all()
-                self._cache = data
-                self._cached_at = time.monotonic()
-                return list(data)
-            except Exception:
+                return self._mark_success(self._fetch_all())
+            except Exception as exc:
+                self._mark_failure(exc)
                 if self._cache:
                     return list(self._cache)
-                raise
+                raise RuntimeError(self._last_error) from exc
 
     def get_warning(self, warning_id: int) -> Optional[Dict[str, Any]]:
         for item in self.list_warnings():

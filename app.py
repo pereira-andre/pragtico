@@ -196,12 +196,23 @@ wave_service = WaveService(
         "https://www.hidrografico.pt/hmapi/ondobuoystation/?buoyID=19",
     ),
     station_name=os.getenv("WAVE_STATION_NAME", "Sines"),
+    cache_ttl_seconds=int(os.getenv("WAVE_CACHE_TTL_SECONDS", "10800")),
+    failure_backoff_seconds=int(os.getenv("WAVE_FAILURE_BACKOFF_SECONDS", os.getenv("WAVE_CACHE_TTL_SECONDS", "10800"))),
+    snapshot_path=os.path.join(DATA_DIR, "wave_conditions_cache.json"),
 )
 local_warning_service = LocalWarningService(
     endpoint=os.getenv(
         "LOCAL_WARNING_API_URL",
         "https://anavnetbackend.hidrografico.pt/api/v1/local-warnings?stateId=93&currentPage=1&entityId=27",
     ),
+    cache_ttl_seconds=int(os.getenv("LOCAL_WARNING_CACHE_TTL_SECONDS", "10800")),
+    failure_backoff_seconds=int(
+        os.getenv(
+            "LOCAL_WARNING_FAILURE_BACKOFF_SECONDS",
+            os.getenv("LOCAL_WARNING_CACHE_TTL_SECONDS", "10800"),
+        )
+    ),
+    snapshot_path=os.path.join(DATA_DIR, "local_warnings_cache.json"),
 )
 
 # ---------------------------------------------------------------------------

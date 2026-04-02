@@ -370,6 +370,9 @@
       {% if wave_conditions %}
         <div class="tide-window-meta">
           <span class="ops-pill">{{ wave_conditions.last_reading_label }}</span>
+          {% if wave_conditions.cache_stale %}
+            <span class="ops-pill">cache</span>
+          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -385,8 +388,17 @@
           {% endfor %}
         </div>
       </article>
+      {% if wave_conditions.cache_stale %}
+        <p class="muted">
+          A mostrar a última leitura guardada{% if wave_conditions.cache_updated_at_label %}, atualizada em {{ wave_conditions.cache_updated_at_label }}{% endif %}.
+          A ligação ao Instituto Hidrográfico falhou entretanto.
+        </p>
+      {% endif %}
     {% elif wave_error %}
-      <p class="muted">Erro ao obter ondulação: {{ wave_error }}</p>
+      <p class="muted">
+        Ondulação indisponível neste momento: {{ wave_error }}
+        {% if wave_status.last_attempt_at_label %}Última tentativa: {{ wave_status.last_attempt_at_label }}.{% endif %}
+      </p>
     {% else %}
       <p class="muted">Sem leitura de ondulação disponível.</p>
     {% endif %}
@@ -401,12 +413,21 @@
       <div class="dashboard-head-meta">
         <div class="dashboard-head-pills">
           <span class="ops-pill ops-pill-strong">{{ (local_warnings or [])|length }} avisos</span>
+          {% if local_warnings_status.stale %}
+            <span class="ops-pill">cache</span>
+          {% endif %}
         </div>
         <a class="hero-link" href="{{ url_for('dashboard_bp.local_warnings') }}">Abrir página de avisos</a>
       </div>
     </div>
 
     {% if local_warnings %}
+      {% if local_warnings_status.stale %}
+        <p class="muted">
+          A mostrar a última lista guardada{% if local_warnings_status.cache_updated_at_label %}, atualizada em {{ local_warnings_status.cache_updated_at_label }}{% endif %}.
+          A atualização remota falhou entretanto.
+        </p>
+      {% endif %}
       <div class="warning-preview-grid">
         {% for warning in local_warnings[:3] %}
           <article class="warning-card">
@@ -447,7 +468,10 @@
         </details>
       {% endif %}
     {% elif local_warnings_error %}
-      <p class="muted">Erro ao obter avisos locais: {{ local_warnings_error }}</p>
+      <p class="muted">
+        Avisos locais indisponíveis neste momento: {{ local_warnings_error }}
+        {% if local_warnings_status.last_attempt_at_label %}Última tentativa: {{ local_warnings_status.last_attempt_at_label }}.{% endif %}
+      </p>
     {% else %}
       <p class="muted">Sem avisos locais disponíveis.</p>
     {% endif %}

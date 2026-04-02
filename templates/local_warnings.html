@@ -27,10 +27,21 @@
         <p class="eyebrow">Em vigor</p>
         <h2>Lista completa</h2>
       </div>
-      <span class="ops-pill ops-pill-strong">{{ warnings|length }}</span>
+      <div class="dashboard-head-pills">
+        <span class="ops-pill ops-pill-strong">{{ warnings|length }}</span>
+        {% if warnings_status.stale %}
+          <span class="ops-pill">cache</span>
+        {% endif %}
+      </div>
     </div>
 
     {% if warnings %}
+      {% if warnings_status.stale %}
+        <p class="muted">
+          A mostrar a última lista guardada{% if warnings_status.cache_updated_at_label %}, atualizada em {{ warnings_status.cache_updated_at_label }}{% endif %}.
+          A atualização remota falhou entretanto.
+        </p>
+      {% endif %}
       <div class="warning-preview-grid warning-preview-grid-full">
         {% for warning in warnings %}
           <article class="warning-card">
@@ -54,7 +65,10 @@
         {% endfor %}
       </div>
     {% elif warnings_error %}
-      <p class="muted">Erro ao obter avisos locais: {{ warnings_error }}</p>
+      <p class="muted">
+        Avisos locais indisponíveis neste momento: {{ warnings_error }}
+        {% if warnings_status.last_attempt_at_label %}Última tentativa: {{ warnings_status.last_attempt_at_label }}.{% endif %}
+      </p>
     {% else %}
       <p class="muted">Sem avisos locais disponíveis.</p>
     {% endif %}

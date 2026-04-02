@@ -83,19 +83,23 @@ def dashboard():
 
     wave_conditions = None
     wave_error = ""
+    wave_status = {}
     if getattr(services, "wave_service", None) and services.wave_service.enabled:
         try:
             wave_conditions = services.wave_service.get_current_conditions()
         except Exception as exc:
             wave_error = str(exc)
+        wave_status = services.wave_service.status()
 
     local_warnings = []
     local_warnings_error = ""
+    local_warnings_status = {}
     if getattr(services, "local_warning_service", None) and services.local_warning_service.enabled:
         try:
             local_warnings = services.local_warning_service.list_warnings()
         except Exception as exc:
             local_warnings_error = str(exc)
+        local_warnings_status = services.local_warning_service.status()
 
     ais_context = services.ais_service.dashboard_context()
     return render_template(
@@ -108,8 +112,10 @@ def dashboard():
         weather_error=weather_error,
         wave_conditions=wave_conditions,
         wave_error=wave_error,
+        wave_status=wave_status,
         local_warnings=local_warnings,
         local_warnings_error=local_warnings_error,
+        local_warnings_status=local_warnings_status,
         ais=ais_context,
         title="PRAGtico",
     )
@@ -179,15 +185,18 @@ def maneuver_archive_export():
 def local_warnings():
     warnings = []
     warnings_error = ""
+    warnings_status = {}
     if getattr(services, "local_warning_service", None) and services.local_warning_service.enabled:
         try:
             warnings = services.local_warning_service.list_warnings()
         except Exception as exc:
             warnings_error = str(exc)
+        warnings_status = services.local_warning_service.status()
     return render_template(
         "local_warnings.html",
         warnings=warnings,
         warnings_error=warnings_error,
+        warnings_status=warnings_status,
         title="Avisos Locais",
     )
 
