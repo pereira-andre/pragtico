@@ -41,7 +41,7 @@
 
   {% if current_role == "admin" %}
     <section class="detail-side">
-      {% if document.editable %}
+      {% if manual_knowledge_authoring_enabled and document.editable %}
         <section class="panel">
           <div class="section-head">
             <div>
@@ -66,9 +66,15 @@
               <h2>Substituir conhecimento</h2>
             </div>
           </div>
-          <p class="muted">
-            Este tipo de ficheiro não é editável no browser. Para atualizar a regra, apaga este documento e carrega uma nova versão.
-          </p>
+          {% if manual_knowledge_authoring_enabled %}
+            <p class="muted">
+              Este tipo de ficheiro não é editável no browser. Para atualizar a regra, apaga este documento e carrega uma nova versão.
+            </p>
+          {% else %}
+            <p class="muted">
+              A edição manual no browser está desativada. Para atualizar a regra, substitui o ficheiro oficial e reindexa.
+            </p>
+          {% endif %}
         </section>
       {% endif %}
 

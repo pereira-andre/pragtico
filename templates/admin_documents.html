@@ -207,22 +207,14 @@
     <section class="panel section-panel compact-ingest-panel">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Manual</p>
-          <h2>Novo documento manual</h2>
+          <p class="eyebrow">Política documental</p>
+          <h2>Conteúdo oficial apenas</h2>
         </div>
       </div>
-      <form method="post" action="{{ url_for('admin.add_document') }}" class="stack">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>
-          Título
-          <input type="text" name="title" placeholder="Procedimento de Entrada" required>
-        </label>
-        <label>
-          Conteúdo
-          <textarea name="content" rows="6" placeholder="Cole aqui texto operacional ou normativo..." required></textarea>
-        </label>
-        <button type="submit">Guardar e reindexar</button>
-      </form>
+      <p class="muted small-note">
+        A criação manual no browser está desativada para evitar documentos não oficiais. Usa upload de ficheiros validados
+        ou coloca o documento diretamente em <code>knowledge/</code>.
+      </p>
     </section>
   </div>
 
@@ -262,7 +254,7 @@
                   <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">Abrir</a>
                   <a class="inline-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
                   <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">
-                    {% if doc.editable %}Editar{% else %}Ver{% endif %}
+                    {% if manual_knowledge_authoring_enabled and doc.editable %}Editar{% else %}Ver{% endif %}
                   </a>
                   <form method="post" action="{{ url_for('admin.delete_document', name=doc.name) }}" onsubmit="return confirm('Apagar {{ doc.original_name }}?')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

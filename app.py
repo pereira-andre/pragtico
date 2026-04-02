@@ -249,6 +249,10 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV", "production") == "production"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=int(os.getenv("SESSION_IDLE_MINUTES", "45")))
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+app.config["MANUAL_KNOWLEDGE_AUTHORING_ENABLED"] = _env_flag(
+    "MANUAL_KNOWLEDGE_AUTHORING_ENABLED",
+    default="0",
+)
 
 
 def render_chat_markdown(text: str) -> Markup:
@@ -370,6 +374,7 @@ def inject_globals():
         "chatbot_messages": chatbot_messages,
         "chatbot_conversations": chatbot_conversations,
         "chatbot_model": rag.generation_model,
+        "manual_knowledge_authoring_enabled": app.config.get("MANUAL_KNOWLEDGE_AUTHORING_ENABLED", False),
     }
 
 

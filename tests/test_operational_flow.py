@@ -111,6 +111,7 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(finalized["missing_fields"], [])
 
+
     def test_create_port_call_with_past_eta_is_rejected(self) -> None:
         with app.app.test_request_context("/"):
             session["role"] = "agente"
@@ -984,6 +985,62 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(proposal["intent"], "unsupported")
         self.assertIn("já está prevista", proposal["reason"])
+
+
+class AdminDocumentPolicyTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
+        self.original_store = services.store
+        self.original_manual_authoring_enabled = app.app.config["MANUAL_KNOWLEDGE_AUTHORING_ENABLED"]
+        services.store = self.store
+        app.app.config["MANUAL_KNOWLEDGE_AUTHORING_ENABLED"] = False
+
+    def tearDown(self) -> None:
+        services.store = self.original_store
+        app.app.config["MANUAL_KNOWLEDGE_AUTHORING_ENABLED"] = self.original_manual_authoring_enabled
+        self.temp_dir.cleanup()
+
+    def _set_admin_session(self, client) -> str:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = "admin"
+            flask_session["role"] = "admin"
+            flask_session["_csrf_token"] = "test-token"
+        return "test-token"
+
+    def test_manual_document_creation_route_is_disabled(self) -> None:
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+
+            response = client.post(
+                "/documents",
+                data={
+                    "csrf_token": csrf_token,
+                    "title": "Meteorologia e Mares",
+                    "content": "Conteúdo não oficial.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.store.list_documents(), [])
+
+    def test_manual_document_edit_route_is_disabled(self) -> None:
+        filename = self.store.save_document("Norma de Seguranca", "Versão oficial.")
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+
+            response = client.post(
+                f"/documents/{filename}/edit",
+                data={
+                    "csrf_token": csrf_token,
+                    "content": "Versão alterada no browser.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("Versão oficial.", self.store.get_document_text(filename))
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 import logging
 import os
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 from core import services
 from core.validators import validate_phone, validate_required_text, validate_role
@@ -21,6 +21,10 @@ from domain.migration_service import migrate_local_json_to_postgres
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
+
+
+def _manual_knowledge_authoring_enabled() -> bool:
+    return bool(current_app.config.get("MANUAL_KNOWLEDGE_AUTHORING_ENABLED", False))
 
 
 @bp.route("/admin/status")
@@ -152,6 +156,12 @@ def admin_documents():
 @role_required("admin")
 def add_document():
     """Guardar um novo documento de texto na base de conhecimento e reindexar."""
+    if not _manual_knowledge_authoring_enabled():
+        flash(
+            "Criação manual de documentos desativada. Usa upload de ficheiros oficiais ou a pasta knowledge/.",
+            "error",
+        )
+        return redirect(url_for("admin.admin_documents"))
     try:
         title = validate_required_text(request.form.get("title", ""), "Título", max_length=200)
         content = validate_required_text(request.form.get("content", ""), "Conteúdo", max_length=50000)
@@ -260,6 +270,12 @@ def download_document(name: str):
 @role_required("admin")
 def edit_document(name: str):
     """Guardar o conteúdo editado de um documento de texto e reindexar."""
+    if not _manual_knowledge_authoring_enabled():
+        flash(
+            "Edição manual de documentos desativada. Atualiza o ficheiro original e volta a indexar.",
+            "error",
+        )
+        return redirect(url_for("admin.document_detail", name=name))
     content = request.form.get("content", "").strip()
     try:
         services.store.update_document_text(name=name, content=content, updated_by=session["username"])
