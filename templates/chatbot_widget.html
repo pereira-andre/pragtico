@@ -9,7 +9,15 @@
   <header class="chatbot-drawer-head">
     <div class="chatbot-drawer-title">
       <p class="eyebrow">Assistente</p>
-      <h3 id="chatbot-conv-title">{{ chatbot_conversation.title if chatbot_conversation else 'PRAGtico Bot' }}</h3>
+      <div class="chatbot-title-row" id="chatbot-title-row">
+        <h3 id="chatbot-conv-title" title="Duplo clique para renomear conversa">{{ chatbot_conversation.title if chatbot_conversation else 'Nova conversa' }}</h3>
+        <button type="button" class="chatbot-title-edit" id="chatbot-title-edit" title="Renomear conversa">
+          <span class="chatbot-glyph chatbot-glyph-edit" aria-hidden="true"></span>
+        </button>
+      </div>
+      <form class="chatbot-title-form hidden" id="chatbot-title-form">
+        <input type="text" id="chatbot-title-input" value="{{ chatbot_conversation.title if chatbot_conversation else 'Nova conversa' }}" maxlength="120" aria-label="Nome da conversa">
+      </form>
     </div>
     <div class="chatbot-drawer-controls">
       <a href="/conversations" class="chatbot-icon-btn" title="Abrir janela de chats">
@@ -118,6 +126,12 @@
   const convIdField = document.getElementById("chatbot-conv-id");
   const csrfField = document.getElementById("chatbot-csrf-token");
   const statusEl = document.getElementById("chatbot-status");
+  const defaultStatusText = statusEl ? statusEl.textContent : "";
+  const convTitle = document.getElementById("chatbot-conv-title");
+  const convTitleRow = document.getElementById("chatbot-title-row");
+  const convTitleForm = document.getElementById("chatbot-title-form");
+  const convTitleInput = document.getElementById("chatbot-title-input");
+  const titleEditBtn = document.getElementById("chatbot-title-edit");
   const commandAutocomplete = document.getElementById("chatbot-command-autocomplete");
   const pendingPanel = document.getElementById("chatbot-pending");
   const pendingTitle = document.getElementById("chatbot-pending-title");
@@ -128,7 +142,10 @@
   const pendingCancel = document.getElementById("chatbot-pending-cancel");
   const convStrip = document.getElementById("chatbot-conversations");
   const PREF_KEY = "pragtico.chatbot.open";
+  const DEFAULT_CONVERSATION_TITLE = "Nova conversa";
+  const DEFAULT_GREETING = "Olá! Pergunta sobre procedimentos, meteorologia, marés ou estado operacional.";
   let isOpen = localStorage.getItem(PREF_KEY) === "1";
+  let renameSubmitting = false;
   const autocomplete = window.PRAGticoChatCommandAutocomplete
     ? window.PRAGticoChatCommandAutocomplete.attach({
         textarea: questionField,
@@ -291,6 +308,54 @@
     window.history.replaceState({}, "", url);
   }
 
+  function normalizeConversationTitle(value) {
+    const clean = String(value || "").trim();
+    return clean || DEFAULT_CONVERSATION_TITLE;
+  }
+
+  function setConversationTitle(value) {
+    const title = normalizeConversationTitle(value);
+    if (convTitle) convTitle.textContent = title;
+    if (convTitleInput && document.activeElement !== convTitleInput) convTitleInput.value = title;
+  }
+
+  function setRenameMode(editing) {
+    if (!convTitleRow || !convTitleForm) return;
+    convTitleRow.classList.toggle("hidden", editing);
+    convTitleForm.classList.toggle("hidden", !editing);
+    if (editing && convTitleInput) {
+      convTitleInput.value = normalizeConversationTitle(convTitle?.textContent || "");
+      window.requestAnimationFrame(() => {
+        convTitleInput.focus();
+        convTitleInput.select();
+      });
+    }
+  }
+
+  function renderConversationStrip(conversations, activeConversationId) {
+    if (!convStrip) return;
+    convStrip.innerHTML = "";
+    (Array.isArray(conversations) ? conversations : []).forEach((conversation) => {
+      const chip = document.createElement("a");
+      chip.href = "#";
+      chip.dataset.convId = conversation.id || "";
+      chip.className = "chatbot-conv-chip" + (conversation.id === activeConversationId ? " active" : "");
+      chip.textContent = normalizeConversationTitle(conversation.title || "");
+      convStrip.appendChild(chip);
+    });
+  }
+
+  function renderGreeting() {
+    log.innerHTML = "";
+    const article = document.createElement("article");
+    article.className = "chatbot-bubble chatbot-bubble-assistant";
+    const paragraph = document.createElement("p");
+    paragraph.textContent = DEFAULT_GREETING;
+    article.appendChild(paragraph);
+    log.appendChild(article);
+    log.scrollTop = 0;
+  }
+
   function toggle(open) {
     isOpen = open;
     drawer.classList.toggle("hidden", !isOpen);
@@ -310,7 +375,7 @@
     if (e.key === "Escape" && isOpen) toggle(false);
   });
 
-  function appendBubble(role, content, citations, messageId, timestampLabel) {
+  function appendBubble(role, content, citations, messageId, timestampLabel, feedbackState) {
     function escapeHtml(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -352,9 +417,98 @@
       });
       article.appendChild(details);
     }
-    if (role === "assistant" && messageId) mountFeedbackBox(article);
+    if (role === "assistant" && messageId) mountFeedbackBox(article, feedbackState || null);
     log.appendChild(article);
     log.scrollTop = log.scrollHeight;
+  }
+
+  function renderConversationMessages(messages) {
+    if (!Array.isArray(messages) || !messages.length) {
+      renderGreeting();
+      return;
+    }
+    log.innerHTML = "";
+    messages.forEach((message) => {
+      appendBubble(
+        message.role || "assistant",
+        message.content || "",
+        Array.isArray(message.citations) ? message.citations : [],
+        message.id || "",
+        message.created_at_label || "",
+        {
+          status: message.feedback_status || "",
+          note: message.feedback_note || "",
+          updatedAtLabel: message.feedback_updated_at_label || "",
+        }
+      );
+    });
+  }
+
+  function applyConversationPayload(payload, options = {}) {
+    const replaceMessages = options.replaceMessages !== false;
+    const conversation = payload && payload.conversation ? payload.conversation : {};
+    const nextConversationId = String(conversation.id || payload.conversation_id || "").trim();
+    if (nextConversationId) syncConversationId(nextConversationId);
+    setConversationTitle(conversation.title || DEFAULT_CONVERSATION_TITLE);
+    renderConversationStrip(payload.conversations || [], nextConversationId);
+    if (replaceMessages) renderConversationMessages(payload.messages || []);
+    if (Object.prototype.hasOwnProperty.call(payload, "pending_action")) {
+      renderPending(payload.pending_action || null);
+    } else {
+      fetchPending();
+    }
+  }
+
+  async function loadConversation(conversationId, options = {}) {
+    const cleanId = String(conversationId || "").trim();
+    if (!cleanId) return null;
+    const response = await fetch("/api/conversations/" + encodeURIComponent(cleanId));
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Falha ao abrir conversa.");
+    applyConversationPayload(payload, options);
+    return payload;
+  }
+
+  async function saveConversationTitle() {
+    const conversationId = String(convIdField.value || "").trim();
+    if (!conversationId || !convTitleInput) {
+      setRenameMode(false);
+      return true;
+    }
+    const nextTitle = convTitleInput.value.trim();
+    const currentTitle = normalizeConversationTitle(convTitle?.textContent || "");
+    if (!nextTitle) {
+      statusEl.textContent = "O nome da conversa não pode ficar vazio.";
+      convTitleInput.focus();
+      convTitleInput.select();
+      return false;
+    }
+    if (nextTitle === currentTitle) {
+      setRenameMode(false);
+      return true;
+    }
+    renameSubmitting = true;
+    statusEl.textContent = "A guardar nome da conversa...";
+    try {
+      const response = await fetch("/api/conversations/" + encodeURIComponent(conversationId) + "/rename", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: nextTitle }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Falha ao renomear conversa.");
+      applyConversationPayload(payload, { replaceMessages: false });
+      setRenameMode(false);
+      statusEl.textContent = "Nome da conversa atualizado.";
+      return true;
+    } catch (error) {
+      statusEl.textContent = "Erro ao renomear: " + error.message;
+      convTitleInput.focus();
+      convTitleInput.select();
+      return false;
+    } finally {
+      renameSubmitting = false;
+    }
   }
 
   function renderPending(action) {
@@ -393,8 +547,7 @@
         body: JSON.stringify({conversation_id: convIdField.value})
       });
       const d = await r.json();
-      syncConversationId(d.conversation_id || "");
-      renderPending(d.pending_action || null);
+      applyConversationPayload(d, { replaceMessages: false });
       if (d.answer) appendBubble("assistant", d.answer, d.sources || [], d.message_id || "", d.created_at_label || "");
       statusEl.textContent = r.ok ? "Ação aplicada." : "Erro: " + (d.error||"");
       if (r.ok && d.refresh_required && window.location.pathname !== "/conversations") {
@@ -417,8 +570,7 @@
         body: JSON.stringify({conversation_id: convIdField.value})
       });
       const d = await r.json();
-      syncConversationId(d.conversation_id || "");
-      renderPending(d.pending_action || null);
+      applyConversationPayload(d, { replaceMessages: false });
       if (d.answer) appendBubble("assistant", d.answer, [], d.message_id || "", d.created_at_label || "");
       statusEl.textContent = r.ok ? "Ação cancelada." : "Erro: " + (d.error || "");
     } catch(e) {
@@ -443,9 +595,8 @@
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Falha no chatbot.");
-      syncConversationId(d.conversation_id || "");
+      applyConversationPayload(d, { replaceMessages: false });
       appendBubble("assistant", d.answer, d.sources || [], d.message_id || "", d.created_at_label || "");
-      renderPending(d.pending_action || null);
       statusEl.textContent = "Resposta recebida.";
     } catch(err) {
       appendBubble("assistant", "Erro: " + err.message, [], "", new Date().toLocaleString("pt-PT"));
@@ -464,25 +615,84 @@
 
   /* New conversation */
   newConvBtn.addEventListener("click", async () => {
+    if (convTitleForm && !convTitleForm.classList.contains("hidden")) {
+      const saved = await saveConversationTitle();
+      if (!saved) return;
+    }
+    newConvBtn.disabled = true;
+    statusEl.textContent = "A abrir nova conversa...";
     try {
-      const r = await fetch("/conversations", {
+      const r = await fetch("/api/conversations", {
         method: "POST",
-        headers: { "X-CSRF-Token": csrfField?.value || "" },
-        redirect: "manual"
+        headers: { "Content-Type": "application/json" },
       });
-      window.location.reload();
-    } catch(e) { window.location.reload(); }
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Falha ao criar conversa.");
+      applyConversationPayload(d);
+      questionField.value = "";
+      toggle(true);
+      statusEl.textContent = "Nova conversa pronta.";
+    } catch(e) {
+      statusEl.textContent = "Erro: " + e.message;
+    } finally {
+      newConvBtn.disabled = false;
+    }
   });
 
   /* Switch conversation */
   if (convStrip) {
-    convStrip.addEventListener("click", (e) => {
+    convStrip.addEventListener("click", async (e) => {
       const chip = e.target.closest("[data-conv-id]");
       if (!chip) return;
       e.preventDefault();
-      const url = new URL(window.location);
-      url.searchParams.set("conversation_id", chip.dataset.convId);
-      window.location = url.toString();
+      const nextConversationId = String(chip.dataset.convId || "").trim();
+      if (!nextConversationId || nextConversationId === convIdField.value) return;
+      if (convTitleForm && !convTitleForm.classList.contains("hidden")) {
+        const saved = await saveConversationTitle();
+        if (!saved) return;
+      }
+      statusEl.textContent = "A abrir conversa...";
+      try {
+        await loadConversation(nextConversationId);
+        statusEl.textContent = "Conversa aberta.";
+      } catch (error) {
+        statusEl.textContent = "Erro: " + error.message;
+      }
+    });
+  }
+
+  if (titleEditBtn) {
+    titleEditBtn.addEventListener("click", () => setRenameMode(true));
+  }
+  if (convTitle) {
+    convTitle.addEventListener("dblclick", () => setRenameMode(true));
+  }
+  if (convTitleForm) {
+    convTitleForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await saveConversationTitle();
+    });
+  }
+  if (convTitleInput) {
+    convTitleInput.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        convTitleInput.value = normalizeConversationTitle(convTitle?.textContent || "");
+        setRenameMode(false);
+        statusEl.textContent = defaultStatusText;
+        return;
+      }
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        convTitleForm.dispatchEvent(new Event("submit"));
+      }
+    });
+    convTitleInput.addEventListener("blur", () => {
+      if (renameSubmitting || convTitleForm.classList.contains("hidden")) return;
+      window.setTimeout(() => {
+        if (!renameSubmitting && !convTitleForm.classList.contains("hidden")) saveConversationTitle();
+      }, 40);
     });
   }
 

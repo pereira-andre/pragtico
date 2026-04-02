@@ -9,7 +9,6 @@
         <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
       </div>
       <div class="chat-sidebar-actions">
-        <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard', conversation_id=current_conversation.id) }}">Voltar ao quadro</a>
         <a class="hero-link" href="{{ url_for('chat.export_conversation_json', conversation_id=current_conversation.id) }}">Exportar JSON</a>
         <form method="post" action="{{ url_for('chat.create_conversation') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

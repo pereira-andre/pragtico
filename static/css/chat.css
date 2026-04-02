@@ -90,6 +90,12 @@
   gap: 2px;
 }
 
+.chatbot-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .chatbot-drawer-title .eyebrow {
   color: rgba(255,255,255,0.7);
   font-size: 0.72rem;
@@ -103,6 +109,55 @@
   font-size: 1rem;
   font-family: var(--font-display);
   color: #fff;
+  cursor: text;
+}
+
+.chatbot-title-edit {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.chatbot-title-edit:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+}
+
+.chatbot-title-form {
+  margin: 0;
+}
+
+.chatbot-title-form.hidden {
+  display: none;
+}
+
+.chatbot-title-form input {
+  width: min(220px, 100%);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  background: rgba(7, 20, 36, 0.22);
+  color: #fff;
+  padding: 6px 10px;
+  font: inherit;
+}
+
+.chatbot-title-form input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+.chatbot-title-form input:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.72);
+  background: rgba(7, 20, 36, 0.32);
 }
 
 .chatbot-drawer-controls {
@@ -201,6 +256,26 @@
     linear-gradient(currentColor, currentColor) left top / 2px 6px no-repeat,
     linear-gradient(currentColor, currentColor) right bottom / 6px 2px no-repeat,
     linear-gradient(currentColor, currentColor) right bottom / 2px 6px no-repeat;
+}
+
+.chatbot-glyph-edit::before {
+  left: 3px;
+  top: 9px;
+  width: 10px;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-38deg);
+  border-radius: 2px;
+}
+
+.chatbot-glyph-edit::after {
+  right: 1px;
+  top: 2px;
+  width: 4px;
+  height: 4px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: rotate(7deg);
 }
 
 .chatbot-conversations {

@@ -1085,6 +1085,65 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Checklist operacional determinística do portal", payload["answer"])
         self.assertIn(port_call["reference_code"], payload["answer"])
 
+    def test_widget_create_conversation_api_returns_widget_payload(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            response = client.post("/api/conversations")
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.get_json()
+        self.assertIn("conversation", payload)
+        self.assertIn("conversations", payload)
+        self.assertEqual(payload["conversation"]["id"], payload["conversations"][0]["id"])
+        self.assertEqual(payload["messages"], [])
+        self.assertIsNone(payload["pending_action"])
+
+    def test_widget_get_conversation_api_returns_selected_messages(self) -> None:
+        first = self.store.create_conversation("admin", title="Primeira conversa")
+        second = self.store.create_conversation("admin", title="Segunda conversa")
+        self.store.append_chat_message("admin", second["id"], "user", "Estado da maré?")
+        self.store.append_chat_message("admin", second["id"], "assistant", "Preia-mar às 15:13.")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            response = client.get(f"/api/conversations/{second['id']}")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["conversation"]["id"], second["id"])
+        self.assertEqual(payload["conversation"]["title"], "Estado da maré?")
+        self.assertEqual(len(payload["messages"]), 2)
+        self.assertEqual(payload["messages"][0]["content"], "Estado da maré?")
+        self.assertEqual(payload["messages"][1]["content"], "Preia-mar às 15:13.")
+        self.assertEqual(payload["conversations"][0]["id"], second["id"])
+        self.assertEqual(payload["conversations"][1]["id"], first["id"])
+
+    def test_widget_rename_conversation_api_updates_title(self) -> None:
+        conversation = self.store.create_conversation("admin")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            response = client.post(
+                f"/api/conversations/{conversation['id']}/rename",
+                json={"title": "Janela de marés Lisnave"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["conversation"]["id"], conversation["id"])
+        self.assertEqual(payload["conversation"]["title"], "Janela de marés Lisnave")
+        self.assertEqual(payload["conversations"][0]["title"], "Janela de marés Lisnave")
+        self.assertIsNone(payload["pending_action"])
+
 
 class AdminDocumentPolicyTests(unittest.TestCase):
     def setUp(self) -> None:

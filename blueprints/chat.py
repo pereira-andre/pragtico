@@ -39,6 +39,25 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("chat", __name__)
 
 
+def _conversation_shell(username: str, conversation_id: str) -> dict:
+    """Return lightweight metadata for a specific conversation owned by the user."""
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        raise ValueError("Conversa não encontrada.")
+    return {
+        "conversation": conversation,
+        "conversations": services.store.list_conversations(username),
+        "pending_action": load_pending_chat_action(username, conversation_id),
+    }
+
+
+def _conversation_payload(username: str, conversation_id: str) -> dict:
+    """Return the full conversation payload for widget hydration."""
+    payload = _conversation_shell(username, conversation_id)
+    payload["messages"] = services.store.list_messages(username, conversation_id)
+    return payload
+
+
 @bp.route("/conversations")
 @login_required
 def chat_archive():
@@ -63,6 +82,24 @@ def create_conversation():
     conversation = services.store.create_conversation(session["username"])
     flash("Nova conversa criada.", "success")
     return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation["id"]))
+
+
+@bp.route("/api/conversations", methods=["POST"])
+@login_required
+def api_create_conversation():
+    """Criar uma conversa para o widget sem redirecionar a página atual."""
+    conversation = services.store.create_conversation(session["username"])
+    return jsonify(_conversation_payload(session["username"], conversation["id"])), 201
+
+
+@bp.route("/api/conversations/<conversation_id>")
+@login_required
+def api_get_conversation(conversation_id: str):
+    """Retornar uma conversa específica para o widget do chat."""
+    try:
+        return jsonify(_conversation_payload(session["username"], conversation_id))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
 
 
 @bp.route("/conversations/<conversation_id>/export.json")
@@ -98,6 +135,20 @@ def rename_conversation(conversation_id: str):
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation_id))
+
+
+@bp.route("/api/conversations/<conversation_id>/rename", methods=["POST"])
+@login_required
+def api_rename_conversation(conversation_id: str):
+    """Renomear uma conversa sem recarregar a página atual."""
+    payload = request.get_json(silent=True) or {}
+    title = payload.get("title", "")
+    try:
+        services.store.rename_conversation(session["username"], conversation_id, title)
+        return jsonify(_conversation_shell(session["username"], conversation_id))
+    except ValueError as exc:
+        status_code = 404 if "não encontrada" in str(exc).lower() else 400
+        return jsonify({"error": str(exc)}), status_code
 
 
 @bp.route("/conversations/<conversation_id>/clear", methods=["POST"])
@@ -181,12 +232,13 @@ def api_cancel_pending_chat_action():
         username=session["username"], conversation_id=conversation_id,
         role="assistant", content="Ação operacional cancelada. O portal não foi alterado.",
     )
+    shell = _conversation_shell(session["username"], conversation_id)
     return jsonify({
         "answer": assistant_message["content"],
         "message_id": assistant_message["id"],
         "created_at_label": assistant_message.get("created_at_label", ""),
-        "pending_action": None,
         "conversation_id": conversation_id,
+        **shell,
     })
 
 
@@ -213,25 +265,27 @@ def api_confirm_pending_chat_action():
     except (PermissionError, ValueError) as exc:
         clear_pending_chat_action(username, conversation_id)
         assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=f"Não consegui aplicar a ação operacional. Motivo: {exc}")
+        shell = _conversation_shell(username, conversation_id)
         return jsonify({
             "error": str(exc),
             "answer": assistant_message["content"],
             "message_id": assistant_message["id"],
             "created_at_label": assistant_message.get("created_at_label", ""),
-            "pending_action": None,
             "conversation_id": conversation_id,
+            **shell,
         }), 400
     except Exception as exc:
         logger.exception("Falha inesperada na execução da ação operacional do chat.")
         clear_pending_chat_action(username, conversation_id)
         assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content="Falha inesperada ao aplicar a ação operacional no portal.")
+        shell = _conversation_shell(username, conversation_id)
         return jsonify({
             "error": str(exc),
             "answer": assistant_message["content"],
             "message_id": assistant_message["id"],
             "created_at_label": assistant_message.get("created_at_label", ""),
-            "pending_action": None,
             "conversation_id": conversation_id,
+            **shell,
         }), 500
 
     clear_pending_chat_action(username, conversation_id)
@@ -240,15 +294,16 @@ def api_confirm_pending_chat_action():
     if current_port_call and current_port_call.get("reference_code"):
         citations.append({"document": current_port_call.get("vessel_name", "Escala"), "source_id": current_port_call.get("reference_code", ""), "retrieval_mode": "operational_action", "snippet": message})
     assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=message, citations=citations)
+    shell = _conversation_shell(username, conversation_id)
     return jsonify({
         "answer": assistant_message["content"],
         "message_id": assistant_message["id"],
         "created_at_label": assistant_message.get("created_at_label", ""),
-        "pending_action": None,
         "conversation_id": conversation_id,
         "sources": citations,
         "refresh_required": True,
         "port_call_id": current_port_call.get("id", "") if current_port_call else "",
+        **shell,
     })
 
 
@@ -403,10 +458,11 @@ def api_chat():
             answer["feedback_match"] = {"similarity": trusted_answers[0]["similarity"], "message_id": trusted_answers[0]["message_id"], "question": trusted_answers[0]["question"], "feedback_note": trusted_answers[0].get("feedback_note", "")}
 
     assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation["id"], role="assistant", content=answer["answer"], citations=answer.get("sources", []))
+    shell = _conversation_shell(username, conversation["id"])
     return jsonify({
         **answer,
         "conversation_id": conversation["id"],
         "message_id": assistant_message["id"],
         "created_at_label": assistant_message.get("created_at_label", ""),
-        "pending_action": answer.get("pending_action"),
+        **shell,
     })
