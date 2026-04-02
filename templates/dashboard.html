@@ -5,20 +5,8 @@
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Coordenação Portuária · Porto de Setúbal</p>
-        <h1>PRAGtico</h1>
-        <p class="lead">Quadro operacional de pilotagem — chegadas, movimentos em porto, planeamento de manobras e contexto meteorológico contínuo.</p>
-      </div>
-      <div class="hero-actions">
-        {% if current_role in ["admin", "agente"] %}
-          <a class="hero-link" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
-        {% endif %}
-        <a class="hero-link" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
-        {% if current_role == "admin" %}
-          <a class="hero-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
-          <a class="hero-link" href="{{ url_for('admin.admin_status') }}">Estado</a>
-        {% endif %}
-        <a class="hero-link" href="{{ url_for('auth.profile') }}">Perfil</a>
-        <a class="hero-link" href="{{ url_for('auth.logout') }}">Sair</a>
+        <h1>Quadro operacional</h1>
+        <p class="lead">Chegadas, movimentos em porto, planeamento de manobras e contexto meteorológico contínuo num único ecrã.</p>
       </div>
     </div>
 

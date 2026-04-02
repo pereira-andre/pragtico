@@ -10,9 +10,6 @@
       </div>
       <div class="hero-actions">
         <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
-        {% if current_role in ["admin", "agente"] %}
-          <a class="hero-link" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
-        {% endif %}
       </div>
     </div>
     <div class="hero-meta-grid">

@@ -11,9 +11,6 @@
       <div class="hero-actions">
         <a class="hero-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
         <a class="hero-link" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Consultar arquivo</a>
-        {% if current_role == "admin" %}
-          <a class="hero-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
-        {% endif %}
       </div>
     </div>
     <div class="hero-meta-grid">
