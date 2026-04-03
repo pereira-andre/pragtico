@@ -50,10 +50,17 @@
         template: "/meteorologia hoje",
       },
       {
+        command: "/regras",
+        label: "Regras",
+        description: "Lista os códigos de regras e instruções disponíveis.",
+        keywords: "regras codigos instrucoes it",
+        template: "/regras",
+      },
+      {
         command: "/regra 015",
         label: "Regra",
         description: "Consulta uma regra ou instrução por código.",
-        keywords: "regra instrucao it",
+        keywords: "regra regras instrucao instrucoes it codigo",
         template: "/regra 015",
       },
     ];
