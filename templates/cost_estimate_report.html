@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Relatório de Estimativa" }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #16324b;
+        --muted: #66778d;
+        --line: #d8e0e8;
+        --panel: #ffffff;
+        --bg: #eef3f7;
+        --accent: #0a6c66;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      .sheet {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 28px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .toolbar,
+      .header,
+      .panel,
+      .empty {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+      }
+
+      .toolbar,
+      .header,
+      .panel,
+      .empty {
+        padding: 18px 20px;
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .header {
+        display: grid;
+        gap: 16px;
+      }
+
+      .meta,
+      .totals {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .meta div,
+      .totals article {
+        display: grid;
+        gap: 4px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #f8fbfc;
+      }
+
+      .meta span,
+      .totals span,
+      .note,
+      .muted {
+        color: var(--muted);
+      }
+
+      .totals strong {
+        font-size: 1.25rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f5f8fb;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      td.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .panel h3,
+      .header h1 {
+        margin: 0;
+      }
+
+      .breakdown {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .breakdown li + li {
+        margin-top: 4px;
+      }
+
+      .note {
+        margin: 0;
+      }
+
+      @media print {
+        body { background: #fff; }
+        .sheet { max-width: none; padding: 0; }
+        .toolbar { display: none; }
+        .toolbar,
+        .header,
+        .panel,
+        .empty { border-radius: 0; border-left: 0; border-right: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <section class="toolbar">
+        <div>
+          <strong>Documento formal de estimativa</strong><br>
+          <span class="muted">Preparado para partilha com cliente e exportação em PDF.</span>
+        </div>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('dashboard_bp.maneuver_archive') }}#cost-simulator-panel">Voltar ao simulador</a>
+          <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+      </section>
+
+      {% if estimate %}
+        <section class="header">
+          <div>
+            <p style="margin:0;color:#66778d;text-transform:uppercase;letter-spacing:.16em;font-size:.74rem;">PRAGtico · Simulador</p>
+            <h1>Estimativa Formal de Pilotagem</h1>
+          </div>
+          <div class="meta">
+            <div>
+              <span>Navio</span>
+              <strong>{{ estimate.vessel_name }}</strong>
+            </div>
+            <div>
+              <span>GT</span>
+              <strong>{{ "{:,.0f}".format(estimate.gt).replace(",", ".") }}</strong>
+            </div>
+            <div>
+              <span>Tipo de navio</span>
+              <strong>{{ estimate.vessel_type }}</strong>
+            </div>
+            <div>
+              <span>Dias em porto</span>
+              <strong>{{ estimate.stay_days }}</strong>
+            </div>
+          </div>
+          <div class="totals">
+            <article>
+              <span>Pilotagem</span>
+              <strong>{{ "{:,.2f}".format(estimate.pilotage_total).replace(",", "X").replace(".", ",").replace("X", ".") }} €</strong>
+            </article>
+            <article>
+              <span>TUP</span>
+              <strong>{{ "{:,.2f}".format(estimate.tup_estimate).replace(",", "X").replace(".", ",").replace("X", ".") }} €</strong>
+            </article>
+            <article>
+              <span>Total estimado</span>
+              <strong>{{ "{:,.2f}".format(estimate.grand_total).replace(",", "X").replace(".", ",").replace("X", ".") }} €</strong>
+            </article>
+            <article>
+              <span>Manobras</span>
+              <strong>{{ estimate.manoeuvres|length }}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3>Detalhe por manobra</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Tipo</th>
+                <th>Detalhe tarifário</th>
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in estimate.manoeuvres %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td>{{ item.manoeuvre_type }}</td>
+                  <td>
+                    <ul class="breakdown">
+                      {% for line in item.breakdown %}
+                        <li>{{ line }}</li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                  <td class="num">{{ "{:,.2f}".format(item.total_cost).replace(",", "X").replace(".", ",").replace("X", ".") }} €</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h3>Notas do cálculo</h3>
+          {% for note in estimate.notes %}
+            <p class="note">• {{ note }}</p>
+          {% else %}
+            <p class="note">Sem notas adicionais.</p>
+          {% endfor %}
+        </section>
+
+        <section class="panel">
+          <p class="note">Esta estimativa usa o tarifário de pilotagem configurado na aplicação e serve como documento formal de apoio comercial. Não substitui validação contratual, descontos comerciais específicos, serviços acessórios nem emissão final de faturação.</p>
+        </section>
+      {% else %}
+        <section class="empty">
+          <p class="note">{{ estimate_error or "Não foi possível gerar a estimativa." }}</p>
+        </section>
+      {% endif %}
+    </main>
+
+    {% if auto_print %}
+      <script>
+        window.addEventListener("load", () => window.print(), { once: true });
+      </script>
+    {% endif %}
+  </body>
+</html>

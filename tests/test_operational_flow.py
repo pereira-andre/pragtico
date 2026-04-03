@@ -56,6 +56,54 @@ class OperationalFlowTests(unittest.TestCase):
             updated_by="admin",
         )
 
+    def _archive_entry(
+        self,
+        *,
+        vessel_name: str,
+        eta: str,
+        arrived_at: str,
+        started_at: str,
+        finished_at: str,
+    ) -> dict:
+        port_call = self.store.create_port_call(
+            vessel_name=vessel_name,
+            eta=eta,
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            notes="Arquivo de teste.",
+            vessel_imo="9152923",
+            vessel_call_sign="D5OC2",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="9.94",
+            vessel_dwt_t="22330",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at=arrived_at,
+            updated_by="admin",
+        )
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at=started_at,
+            maneuver_finished_at=finished_at,
+            draft_m="9.94",
+            notes="Entrada concluída.",
+        )
+        return self.store.get_port_call(port_call["id"])
+
+    def _login_client_as_admin(self, client) -> None:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = "admin"
+            flask_session["role"] = "admin"
+
     def test_complete_entry_with_real_times_only_confirms_maneuver(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         self.store.approve_port_call(port_call["id"], decided_by="admin")
@@ -588,6 +636,74 @@ class OperationalFlowTests(unittest.TestCase):
         updated = self.store.get_port_call(port_call["id"])
         entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
         self.assertEqual(entry["state"], "completed")
+
+    def test_maneuver_archive_defaults_to_latest_available_month(self) -> None:
+        older = self._archive_entry(
+            vessel_name="BELITAKI FEB",
+            eta="2026-02-10T05:30:00+00:00",
+            arrived_at="2026-02-10T06:00:00+00:00",
+            started_at="2026-02-10T05:40:00+00:00",
+            finished_at="2026-02-10T06:00:00+00:00",
+        )
+        latest = self._archive_entry(
+            vessel_name="BELITAKI MAR",
+            eta="2026-03-12T05:30:00+00:00",
+            arrived_at="2026-03-12T06:00:00+00:00",
+            started_at="2026-03-12T05:40:00+00:00",
+            finished_at="2026-03-12T06:00:00+00:00",
+        )
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get("/maneuvers/archive")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Março 2026", html)
+        self.assertIn(latest["reference_code"], html)
+        self.assertNotIn(older["reference_code"], html)
+
+    def test_archive_billing_report_uses_filtered_scale_selection(self) -> None:
+        archived = self._archive_entry(
+            vessel_name="BELITAKI REPORT",
+            eta="2026-03-18T05:30:00+00:00",
+            arrived_at="2026-03-18T06:00:00+00:00",
+            started_at="2026-03-18T05:40:00+00:00",
+            finished_at="2026-03-18T06:00:00+00:00",
+        )
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(
+                f"/maneuvers/archive/report?year=2026&month=3&selection=scales&scale_ids={archived['id']}"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Relatório de Faturação por Escala", html)
+        self.assertIn(archived["reference_code"], html)
+        self.assertIn("Imprimir / PDF", html)
+
+    def test_maneuver_estimate_report_renders_formal_document(self) -> None:
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(
+                "/maneuvers/archive/estimate-report"
+                "?vessel_name=MSC%20Lyria"
+                "&vessel_type=contentores"
+                "&gt=32540"
+                "&stay_days=2"
+                "&manoeuvres=entry,departure"
+                "&surcharges=no_propulsion"
+                "&reductions=regular_line"
+                "&include_tup=1"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Estimativa Formal de Pilotagem", html)
+        self.assertIn("MSC Lyria", html)
+        self.assertIn("Imprimir / PDF", html)
 
     def test_chat_message_feedback_api_returns_updated_label(self) -> None:
         with app.app.test_client() as client:

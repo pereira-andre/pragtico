@@ -5,44 +5,113 @@
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Arquivo</p>
-        <h1>Manobras arquivadas</h1>
-        <p class="lead">Consulta histórica, estimativa de custos e exportação para faturação.</p>
+        <h1>Escalas e Manobras Arquivadas</h1>
+        <p class="lead">Consulta histórica por mês e ano, seleção para faturação e emissão de relatórios formais imprimíveis.</p>
       </div>
     </div>
     <div class="hero-meta-grid">
       <article class="hero-stat">
-        <span>Escalas em arquivo</span>
-        <strong>{{ port_activity.stats.archive_scale_count or 0 }}</strong>
-        <small>{{ port_activity.stats.archive_count }} manobra(s) arquivada(s)</small>
+        <span>Escalas filtradas</span>
+        <strong>{{ archive_summary.scale_count }}</strong>
+        <small>{{ archive_summary.maneuver_count }} manobra(s) no período atual</small>
       </article>
       <article class="hero-stat">
-        <span>Janela</span>
-        <strong>{{ port_activity.window_days }}d</strong>
-        <small>últimos dias</small>
+        <span>Período</span>
+        <strong>{{ archive_summary.period_label }}</strong>
+        <small>{{ archive_summary.period_hint }}</small>
       </article>
       <article class="hero-stat">
-        <span>Custo estimado visível</span>
-        <strong id="archive-total-cost">--</strong>
-        <small>pilotagem + TUP (€)</small>
+        <span>Total filtrado</span>
+        <strong>{{ archive_summary.total_cost_label }}</strong>
+        <small>{{ archive_summary.total_pilotage_label }} pilotagem + {{ archive_summary.total_tup_label }} TUP</small>
       </article>
     </div>
   </section>
 
   <section class="panel planned-panel">
-    <div class="section-head">
+    <div class="section-head archive-head">
       <div>
         <p class="eyebrow">Histórico &amp; Faturação</p>
         <h2>Arquivo por escala</h2>
       </div>
-      <div class="archive-toolbar">
+      <span class="ops-pill ops-pill-strong">{{ archive_summary.scale_count }}/{{ port_activity.stats.archive_scale_count or 0 }}</span>
+    </div>
+
+    <form method="get" action="{{ url_for('dashboard_bp.maneuver_archive') }}" class="archive-filter-form">
+      <div class="archive-filter-grid">
         <label class="archive-search-field">
-          <span class="mini-label">Filtrar</span>
-          <input id="archive-search" type="search" placeholder="Escala, navio, agente, manobra...">
+          <span class="mini-label">Pesquisa</span>
+          <input name="q" type="search" value="{{ archive_filters.q }}" placeholder="Escala, navio, agente, origem, destino...">
         </label>
-        <div class="archive-actions">
-          <a class="mini-button secondary-button" href="{{ url_for('dashboard_bp.maneuver_archive_export') }}">CSV manobras</a>
-        </div>
-        <span class="ops-pill ops-pill-strong" id="archive-visible-pill">{{ port_activity.stats.archive_scale_count or 0 }}</span>
+        <label>
+          <span class="mini-label">Ano</span>
+          <select name="year">
+            {% if archive_filters.years %}
+              {% for year in archive_filters.years %}
+                <option value="{{ year }}" {% if archive_filters.year == year %}selected{% endif %}>{{ year }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="0">Sem dados</option>
+            {% endif %}
+            <option value="all" {% if not archive_filters.year %}selected{% endif %}>Todos os anos</option>
+          </select>
+        </label>
+        <label>
+          <span class="mini-label">Mês</span>
+          <select name="month">
+            <option value="all" {% if not archive_filters.month %}selected{% endif %}>Todos os meses</option>
+            {% for month in archive_filters.months %}
+              <option value="{{ month.value }}" {% if archive_filters.month == month.value %}selected{% endif %}>{{ month.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span class="mini-label">Agência</span>
+          <select name="agent">
+            <option value="" {% if not archive_filters.agent %}selected{% endif %}>Todas</option>
+            {% for agent in archive_filters.agents %}
+              <option value="{{ agent }}" {% if archive_filters.agent == agent %}selected{% endif %}>{{ agent }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span class="mini-label">Tipo de manobra</span>
+          <select name="maneuver_type">
+            <option value="" {% if not archive_filters.maneuver_type %}selected{% endif %}>Todas</option>
+            <option value="entry" {% if archive_filters.maneuver_type == "entry" %}selected{% endif %}>Entrada</option>
+            <option value="departure" {% if archive_filters.maneuver_type == "departure" %}selected{% endif %}>Saída</option>
+            <option value="shift" {% if archive_filters.maneuver_type == "shift" %}selected{% endif %}>Mudança</option>
+          </select>
+        </label>
+      </div>
+      <div class="archive-actions">
+        <button type="submit" class="mini-button">Aplicar filtros</button>
+        <a class="mini-button secondary-button" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Limpar</a>
+        <a
+          class="mini-button secondary-button"
+          href="{{ url_for('dashboard_bp.maneuver_archive_export', year=archive_filters.year or None, month=archive_filters.month or None, agent=archive_filters.agent or None, maneuver_type=archive_filters.maneuver_type or None, q=archive_filters.q or None) }}">
+          CSV manobras
+        </a>
+      </div>
+    </form>
+
+    <div class="archive-selection-bar">
+      <div>
+        <p class="eyebrow">Seleção para relatório</p>
+        <p id="archive-selection-summary" class="muted">Sem seleção manual. O relatório usa as escalas filtradas.</p>
+      </div>
+      <div class="archive-selection-actions">
+        <label>
+          <span class="mini-label">Base do relatório</span>
+          <select id="archive-selection-mode">
+            <option value="scales" {% if archive_filters.selection == "scales" %}selected{% endif %}>Escalas</option>
+            <option value="maneuvers" {% if archive_filters.selection == "maneuvers" %}selected{% endif %}>Manobras</option>
+          </select>
+        </label>
+        <button type="button" class="mini-button secondary-button" id="archive-select-filtered">Selecionar tudo filtrado</button>
+        <button type="button" class="mini-button secondary-button" id="archive-clear-selection">Nenhuma</button>
+        <button type="button" class="mini-button" id="archive-open-report">Relatório faturação</button>
+        <button type="button" class="mini-button secondary-button" id="archive-print-report">Imprimir / PDF</button>
       </div>
     </div>
 
@@ -50,6 +119,7 @@
       <table class="planned-table archive-table" id="archive-table">
         <thead>
           <tr>
+            <th class="archive-th-narrow">Sel.</th>
             <th class="archive-th-narrow">#</th>
             <th>Última atividade</th>
             <th>Escala</th>
@@ -65,11 +135,16 @@
           </tr>
         </thead>
         <tbody id="archive-body">
-          {% for scale in port_activity.archived_scales %}
-            <tr class="planned-row"
-                data-archive-row
-                data-search="{{ scale.search_blob }}"
-                data-total-cost="{{ scale.estimated_grand_total or 0 }}">
+          {% for scale in archived_scales %}
+            <tr class="planned-row">
+              <td class="archive-select-cell">
+                <input
+                  type="checkbox"
+                  class="archive-checkbox"
+                  data-select-scale
+                  value="{{ scale.port_call_id }}"
+                  aria-label="Selecionar escala {{ scale.reference_code }}">
+              </td>
               <td class="archive-td-narrow">{{ loop.index }}</td>
               <td>{{ scale.latest_activity_label }}</td>
               <td>
@@ -113,7 +188,18 @@
                               <span class="ops-pill">À ordem {{ item.derived_standby_hours_label }}</span>
                             {% endif %}
                           </div>
-                          <strong class="archive-maneuver-cost">{{ item.estimated_cost_label }}</strong>
+                          <div class="archive-maneuver-actions">
+                            <strong class="archive-maneuver-cost">{{ item.estimated_cost_label }}</strong>
+                            <label class="archive-inline-check">
+                              <input
+                                type="checkbox"
+                                class="archive-checkbox"
+                                data-select-maneuver
+                                value="{{ item.maneuver_id or item.id }}"
+                                aria-label="Selecionar manobra {{ item.maneuver_label }}">
+                              <span>Selecionar</span>
+                            </label>
+                          </div>
                         </div>
                         <p class="muted">{{ item.execution_window_label or item.actual_label or item.planned_label or '--' }}</p>
                         <p>{{ item.local_origin }} → {{ item.local_destination }}</p>
@@ -139,21 +225,18 @@
             </tr>
           {% else %}
             <tr id="archive-empty-row">
-              <td colspan="12" class="planned-empty">Sem escalas arquivadas.</td>
+              <td colspan="13" class="planned-empty">Sem escalas arquivadas para o período e filtros atuais.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <p id="archive-limit-note" class="muted {% if (port_activity.archived_scales|length) <= 10 %}hidden{% endif %}">A mostrar as 10 escalas mais recentes. Usa a pesquisa para ver mais resultados.</p>
-    <p id="archive-no-results" class="muted hidden">Nenhuma escala corresponde à pesquisa.</p>
 
     <div class="archive-footer">
-      <p class="muted">A tabela agrega por escala e estima pilotagem + TUP com base no tarifário de Setúbal 2024. Quando uma manobra registada excede 3 horas, o excesso entra automaticamente como horas à ordem. A TUP é calculada a partir da estadia conhecida da escala; se o navio ainda está em porto, usa o período até ao momento. Não inclui rebocadores, amarração, lanchas, resíduos ou acordos comerciais específicos.</p>
+      <p class="muted">O arquivo agrega por escala e estima pilotagem + TUP com base no tarifário de Setúbal 2024. Quando uma manobra registada excede 3 horas, o excesso entra automaticamente como horas à ordem. A TUP é calculada a partir da estadia conhecida da escala. Não inclui rebocadores, amarração, lanchas, resíduos ou acordos comerciais específicos.</p>
     </div>
   </section>
 
-  {# ── SIMULADOR DE CUSTOS ── #}
   <section class="panel" id="cost-simulator-panel">
     <div class="section-head">
       <div>
@@ -220,7 +303,13 @@
             <label class="constraint-option"><input type="checkbox" id="sim-include-tup" checked> <span>Incluir TUP</span></label>
           </div>
         </div>
-        <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
+        <div class="archive-actions">
+          <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
+          <button type="button" class="mini-button secondary-button" id="sim-open-report" disabled>Abrir relatório formal</button>
+          <button type="button" class="mini-button secondary-button" id="sim-copy-link" disabled>Partilhar ligação</button>
+          <button type="button" class="mini-button secondary-button" id="sim-print-pdf" disabled>Imprimir / PDF</button>
+        </div>
+        <p class="muted archive-report-hint" id="sim-report-status">Calcula primeiro a estimativa para gerar uma ligação formal partilhável.</p>
       </div>
       <div class="cost-simulator-result" id="sim-result">
         <p class="muted">Preenche os campos e clica em calcular para ver a estimativa.</p>
@@ -230,139 +319,244 @@
 </main>
 
 <script>
-  const DEFAULT_ARCHIVE_ROWS = 10;
+  const archiveSelectionMode = document.getElementById("archive-selection-mode");
+  const archiveScaleBoxes = Array.from(document.querySelectorAll("[data-select-scale]"));
+  const archiveManeuverBoxes = Array.from(document.querySelectorAll("[data-select-maneuver]"));
+  const archiveSelectionSummary = document.getElementById("archive-selection-summary");
+  const archiveReportBaseUrl = "{{ url_for('dashboard_bp.maneuver_archive_report') }}";
 
-  /* ── Search filter ── */
-  const archiveSearch = document.getElementById("archive-search");
-  const archiveRows = Array.from(document.querySelectorAll("[data-archive-row]"));
-  const archiveEmptyRow = document.getElementById("archive-empty-row");
-  const archiveNoResults = document.getElementById("archive-no-results");
-  const archiveVisiblePill = document.getElementById("archive-visible-pill");
-  const archiveLimitNote = document.getElementById("archive-limit-note");
+  function currentArchiveSelectionMode() {
+    return archiveSelectionMode?.value === "maneuvers" ? "maneuvers" : "scales";
+  }
 
-  function filterArchiveRows() {
-    const q = (archiveSearch?.value || "").trim().toLowerCase();
-    const matchedRows = archiveRows.filter((row) => !q || (row.dataset.search || "").includes(q));
-    const visibleRows = q ? matchedRows : matchedRows.slice(0, DEFAULT_ARCHIVE_ROWS);
+  function updateArchiveSelectionSummary() {
+    const selectedScales = archiveScaleBoxes.filter((box) => box.checked).length;
+    const selectedManeuvers = archiveManeuverBoxes.filter((box) => box.checked).length;
+    if (!archiveSelectionSummary) return;
 
-    archiveRows.forEach((row) => row.classList.add("hidden"));
-    visibleRows.forEach((row) => row.classList.remove("hidden"));
-
-    if (archiveEmptyRow) archiveEmptyRow.classList.toggle("hidden", archiveRows.length > 0);
-    if (archiveNoResults) archiveNoResults.classList.toggle("hidden", matchedRows.length !== 0 || !q || archiveRows.length === 0);
-    if (archiveLimitNote) archiveLimitNote.classList.toggle("hidden", !!q || matchedRows.length <= DEFAULT_ARCHIVE_ROWS);
-    if (archiveVisiblePill) {
-      archiveVisiblePill.textContent = q ? String(visibleRows.length) : `${visibleRows.length}/${matchedRows.length}`;
+    if (currentArchiveSelectionMode() === "maneuvers") {
+      if (selectedManeuvers > 0) {
+        archiveSelectionSummary.textContent = `${selectedManeuvers} manobra(s) selecionada(s) para relatório.`;
+      } else {
+        archiveSelectionSummary.textContent = "Sem seleção manual. O relatório usa as manobras do filtro atual.";
+      }
+      return;
     }
-    updateTotalCost();
-  }
-  if (archiveSearch) archiveSearch.addEventListener("input", filterArchiveRows);
 
-  function updateTotalCost() {
-    let total = 0;
-    let count = 0;
-    archiveRows.forEach((row) => {
-      if (row.classList.contains("hidden")) return;
-      const value = parseFloat(row.dataset.totalCost || "0");
-      if (!isNaN(value) && value > 0) { total += value; count++; }
+    if (selectedScales > 0) {
+      archiveSelectionSummary.textContent = `${selectedScales} escala(s) selecionada(s) para relatório.`;
+    } else {
+      archiveSelectionSummary.textContent = "Sem seleção manual. O relatório usa as escalas filtradas.";
+    }
+  }
+
+  function setArchiveSelection(checked) {
+    const targetBoxes = currentArchiveSelectionMode() === "maneuvers" ? archiveManeuverBoxes : archiveScaleBoxes;
+    targetBoxes.forEach((box) => { box.checked = checked; });
+    updateArchiveSelectionSummary();
+  }
+
+  function buildArchiveReportUrl(autoPrint) {
+    const params = new URLSearchParams(window.location.search);
+    params.set("selection", currentArchiveSelectionMode());
+
+    const selectedScaleIds = archiveScaleBoxes.filter((box) => box.checked).map((box) => box.value);
+    const selectedManeuverIds = archiveManeuverBoxes.filter((box) => box.checked).map((box) => box.value);
+
+    if (currentArchiveSelectionMode() === "maneuvers") {
+      if (selectedManeuverIds.length) params.set("maneuver_ids", selectedManeuverIds.join(","));
+      else params.delete("maneuver_ids");
+      params.delete("scale_ids");
+    } else {
+      if (selectedScaleIds.length) params.set("scale_ids", selectedScaleIds.join(","));
+      else params.delete("scale_ids");
+      params.delete("maneuver_ids");
+    }
+
+    if (autoPrint) params.set("print", "1");
+    else params.delete("print");
+
+    const query = params.toString();
+    const base = new URL(archiveReportBaseUrl, window.location.origin);
+    base.search = query;
+    return base.toString();
+  }
+
+  document.getElementById("archive-select-filtered")?.addEventListener("click", () => setArchiveSelection(true));
+  document.getElementById("archive-clear-selection")?.addEventListener("click", () => {
+    archiveScaleBoxes.forEach((box) => { box.checked = false; });
+    archiveManeuverBoxes.forEach((box) => { box.checked = false; });
+    updateArchiveSelectionSummary();
+  });
+  document.getElementById("archive-open-report")?.addEventListener("click", () => {
+    window.open(buildArchiveReportUrl(false), "_blank", "noopener");
+  });
+  document.getElementById("archive-print-report")?.addEventListener("click", () => {
+    window.open(buildArchiveReportUrl(true), "_blank", "noopener");
+  });
+  archiveSelectionMode?.addEventListener("change", updateArchiveSelectionSummary);
+  archiveScaleBoxes.forEach((box) => box.addEventListener("change", updateArchiveSelectionSummary));
+  archiveManeuverBoxes.forEach((box) => box.addEventListener("change", updateArchiveSelectionSummary));
+  updateArchiveSelectionSummary();
+
+  const simResult = document.getElementById("sim-result");
+  const simStatus = document.getElementById("sim-report-status");
+  const simOpenReport = document.getElementById("sim-open-report");
+  const simCopyLink = document.getElementById("sim-copy-link");
+  const simPrintPdf = document.getElementById("sim-print-pdf");
+  let lastEstimateReportUrl = "";
+
+  function setEstimateActionsEnabled(enabled) {
+    [simOpenReport, simCopyLink, simPrintPdf].forEach((button) => {
+      if (!button) return;
+      button.disabled = !enabled;
     });
-    const el = document.getElementById("archive-total-cost");
-    if (el) el.textContent = count > 0 ? total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + " €" : "--";
   }
-  filterArchiveRows();
 
-  /* ── Cost simulator ── */
-  document.getElementById("sim-calculate")?.addEventListener("click", async () => {
+  function collectEstimatePayload() {
     const gt = parseFloat(document.getElementById("sim-gt")?.value);
-    if (!gt || gt <= 0) { alert("Introduz um GT válido."); return; }
+    if (!gt || gt <= 0) throw new Error("Introduz um GT válido.");
 
     const vessel = (document.getElementById("sim-vessel")?.value || "Simulação").trim();
     const vesselType = (document.getElementById("sim-vessel-type")?.value || "restantes").trim();
     const days = parseFloat(document.getElementById("sim-days")?.value) || 1;
     const manoeuvres = [];
-    if (document.getElementById("sim-entry")?.checked) {
-      manoeuvres.push({ type: "entry", surcharges: [], reductions: [] });
-    }
-    if (document.getElementById("sim-departure")?.checked) {
-      manoeuvres.push({ type: "departure", surcharges: [], reductions: [] });
-    }
-    if (document.getElementById("sim-shift")?.checked) {
-      manoeuvres.push({ type: "shift", surcharges: [], reductions: [] });
-    }
-    if (document.getElementById("sim-anchoring")?.checked) {
-      manoeuvres.push({ type: "anchoring", surcharges: [], reductions: [] });
-    }
-    if (document.getElementById("sim-trials")?.checked) {
-      manoeuvres.push({ type: "trials", surcharges: [], reductions: [] });
-    }
-    if (document.getElementById("sim-standby")?.checked) {
-      manoeuvres.push({
-        type: "standby",
-        surcharges: [],
-        reductions: [],
-        standby_hours: parseFloat(document.getElementById("sim-standby-hours")?.value || "0") || 0,
-      });
-    }
-    if (!manoeuvres.length) { alert("Seleciona pelo menos uma manobra."); return; }
+    if (document.getElementById("sim-entry")?.checked) manoeuvres.push("entry");
+    if (document.getElementById("sim-departure")?.checked) manoeuvres.push("departure");
+    if (document.getElementById("sim-shift")?.checked) manoeuvres.push("shift");
+    if (document.getElementById("sim-anchoring")?.checked) manoeuvres.push("anchoring");
+    if (document.getElementById("sim-trials")?.checked) manoeuvres.push("trials");
+    if (document.getElementById("sim-standby")?.checked) manoeuvres.push("standby");
+    if (!manoeuvres.length) throw new Error("Seleciona pelo menos uma manobra.");
 
     const surcharges = [];
     if (document.getElementById("sim-no-prop")?.checked) surcharges.push("no_propulsion");
     if (document.getElementById("sim-special")?.checked) surcharges.push("special_assistance");
     const reductions = [];
-    const regularLineCalls = parseInt(document.getElementById("sim-regular-line-calls")?.value || "0", 10);
     if (document.getElementById("sim-regular")?.checked) reductions.push("regular_line");
     if (document.getElementById("sim-cabotage")?.checked) reductions.push("cabotage");
     if (document.getElementById("sim-technical")?.checked) reductions.push("technical_call");
-    manoeuvres.forEach(m => {
-      m.surcharges = surcharges;
-      m.reductions = reductions;
-      if (regularLineCalls > 0) m.regular_line_calls = regularLineCalls;
-    });
 
-    const resultDiv = document.getElementById("sim-result");
-    resultDiv.innerHTML = '<p class="muted">A calcular...</p>';
+    return {
+      vessel,
+      vesselType,
+      gt,
+      days,
+      manoeuvres,
+      surcharges,
+      reductions,
+      standbyHours: parseFloat(document.getElementById("sim-standby-hours")?.value || "0") || 0,
+      regularLineCalls: parseInt(document.getElementById("sim-regular-line-calls")?.value || "0", 10) || 0,
+      includeTup: !!document.getElementById("sim-include-tup")?.checked,
+    };
+  }
+
+  function buildEstimateReportUrl(autoPrint) {
+    const payload = collectEstimatePayload();
+    const params = new URLSearchParams();
+    params.set("vessel_name", payload.vessel);
+    params.set("vessel_type", payload.vesselType);
+    params.set("gt", String(payload.gt));
+    params.set("stay_days", String(payload.days));
+    params.set("manoeuvres", payload.manoeuvres.join(","));
+    params.set("surcharges", payload.surcharges.join(","));
+    params.set("reductions", payload.reductions.join(","));
+    params.set("standby_hours", String(payload.standbyHours));
+    params.set("regular_line_calls", String(payload.regularLineCalls));
+    params.set("include_tup", payload.includeTup ? "1" : "0");
+    if (autoPrint) params.set("print", "1");
+    const url = new URL("{{ url_for('dashboard_bp.maneuver_estimate_report') }}", window.location.origin);
+    url.search = params.toString();
+    return url.toString();
+  }
+
+  document.getElementById("sim-calculate")?.addEventListener("click", async () => {
+    let payload;
+    try {
+      payload = collectEstimatePayload();
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
+
+    const manoeuvres = payload.manoeuvres.map((type) => ({
+      type,
+      surcharges: payload.surcharges,
+      reductions: payload.reductions,
+      standby_hours: type === "standby" ? payload.standbyHours : 0,
+      regular_line_calls: payload.regularLineCalls,
+    }));
+
+    simResult.innerHTML = '<p class="muted">A calcular...</p>';
 
     try {
-      const r = await fetch("/api/cost/estimate", {
+      const response = await fetch("/api/cost/estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vessel_name: vessel,
-          vessel_type: vesselType,
-          gt,
-          stay_days: days,
+          vessel_name: payload.vessel,
+          vessel_type: payload.vesselType,
+          gt: payload.gt,
+          stay_days: payload.days,
           manoeuvres,
-          include_tup: !!document.getElementById("sim-include-tup")?.checked,
+          include_tup: payload.includeTup,
         }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Erro no cálculo.");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Erro no cálculo.");
 
       let html = '<div class="sim-result-card">';
-      html += '<h3>' + d.vessel_name + ' · GT ' + d.gt.toLocaleString("pt-PT") + '</h3>';
-      d.manoeuvres.forEach((m, i) => {
+      html += '<h3>' + data.vessel_name + ' · GT ' + data.gt.toLocaleString("pt-PT") + '</h3>';
+      data.manoeuvres.forEach((item, index) => {
         html += '<div class="sim-manoeuvre">';
-        html += '<strong>Manobra ' + (i + 1) + ': ' + m.type + '</strong>';
-        html += '<p class="sim-cost">' + m.total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</p>';
-        m.breakdown.forEach(b => { html += '<p class="sim-line">' + b + '</p>'; });
+        html += '<strong>Manobra ' + (index + 1) + ': ' + item.type + '</strong>';
+        html += '<p class="sim-cost">' + item.total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</p>';
+        item.breakdown.forEach((line) => { html += '<p class="sim-line">' + line + '</p>'; });
         html += '</div>';
       });
       html += '<div class="sim-total">';
-      html += '<span>Total pilotagem</span><strong>' + d.pilotage_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+      html += '<span>Total pilotagem</span><strong>' + data.pilotage_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
       html += '</div>';
-      if (d.tup_estimate > 0) {
+      if (data.tup_estimate > 0) {
         html += '<div class="sim-total sim-total-secondary">';
-        html += '<span>TUP estimada (' + d.stay_days + ' dia' + (d.stay_days > 1 ? 's' : '') + ')</span><strong>' + d.tup_estimate.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+        html += '<span>TUP estimada (' + data.stay_days + ' dia' + (data.stay_days > 1 ? 's' : '') + ')</span><strong>' + data.tup_estimate.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
         html += '</div>';
       }
       html += '<div class="sim-total sim-total-grand">';
-      html += '<span>Total estimado</span><strong>' + d.grand_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
+      html += '<span>Total estimado</span><strong>' + data.grand_total.toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + ' €</strong>';
       html += '</div>';
-      d.notes.forEach(n => { html += '<p class="sim-note">• ' + n + '</p>'; });
+      data.notes.forEach((note) => { html += '<p class="sim-note">• ' + note + '</p>'; });
       html += '</div>';
-      resultDiv.innerHTML = html;
-    } catch (e) {
-      resultDiv.innerHTML = '<p class="muted">Erro: ' + e.message + '</p>';
+      simResult.innerHTML = html;
+
+      lastEstimateReportUrl = buildEstimateReportUrl(false);
+      setEstimateActionsEnabled(true);
+      if (simStatus) simStatus.textContent = "Relatório formal pronto para abrir, partilhar ou imprimir em PDF.";
+    } catch (error) {
+      setEstimateActionsEnabled(false);
+      lastEstimateReportUrl = "";
+      simResult.innerHTML = '<p class="muted">Erro: ' + error.message + '</p>';
+      if (simStatus) simStatus.textContent = "Corrige os campos e volta a calcular para gerar o relatório.";
+    }
+  });
+
+  simOpenReport?.addEventListener("click", () => {
+    if (!lastEstimateReportUrl) return;
+    window.open(lastEstimateReportUrl, "_blank", "noopener");
+  });
+
+  simPrintPdf?.addEventListener("click", () => {
+    if (!lastEstimateReportUrl) return;
+    window.open(buildEstimateReportUrl(true), "_blank", "noopener");
+  });
+
+  simCopyLink?.addEventListener("click", async () => {
+    if (!lastEstimateReportUrl) return;
+    try {
+      await navigator.clipboard.writeText(lastEstimateReportUrl);
+      if (simStatus) simStatus.textContent = "Ligação da estimativa copiada. Podes enviar ao cliente ou abrir o relatório em PDF.";
+    } catch (_error) {
+      if (simStatus) simStatus.textContent = "Não foi possível copiar automaticamente. Abre o relatório e copia a ligação do browser.";
     }
   });
 </script>

@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Relatório de Faturação" }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17324d;
+        --muted: #62748a;
+        --line: #d5dde6;
+        --panel: #ffffff;
+        --bg: #eef3f7;
+        --accent: #0a6c66;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      .report-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .report-toolbar,
+      .report-header,
+      .report-card,
+      .report-table-wrap,
+      .report-empty {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+      }
+
+      .report-toolbar,
+      .report-header,
+      .report-card,
+      .report-empty {
+        padding: 18px 20px;
+      }
+
+      .report-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .report-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .report-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .report-button-primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .report-header {
+        display: grid;
+        gap: 16px;
+      }
+
+      .report-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .report-kpi {
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #f9fbfc;
+        display: grid;
+        gap: 6px;
+      }
+
+      .report-kpi span,
+      .report-meta span,
+      .report-meta strong small {
+        color: var(--muted);
+      }
+
+      .report-kpi strong {
+        font-size: 1.3rem;
+      }
+
+      .report-meta {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .report-meta div {
+        display: grid;
+        gap: 4px;
+      }
+
+      .report-table-wrap {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        text-align: left;
+        font-size: 0.92rem;
+      }
+
+      th {
+        background: #f5f8fb;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      td.report-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .report-card h3,
+      .report-header h1 {
+        margin: 0;
+      }
+
+      .report-card h3 {
+        margin-bottom: 12px;
+      }
+
+      .report-scale-block {
+        display: grid;
+        gap: 10px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .report-scale-block:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .report-maneuver-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .report-maneuver-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1fr auto;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fafcfd;
+      }
+
+      .report-empty p,
+      .report-note {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      @media print {
+        body { background: #fff; }
+        .report-shell { max-width: none; padding: 0; }
+        .report-toolbar { display: none; }
+        .report-header,
+        .report-card,
+        .report-table-wrap,
+        .report-empty { border-radius: 0; border-left: 0; border-right: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report-shell">
+      <section class="report-toolbar">
+        <div>
+          <strong>Relatório formal para faturação</strong><br>
+          <span class="report-note">Documento preparado para impressão ou exportação em PDF.</span>
+        </div>
+        <div class="report-actions">
+          <a class="report-button" href="{{ url_for('dashboard_bp.maneuver_archive', year=archive_filters.year or None, month=archive_filters.month or None, agent=archive_filters.agent or None, maneuver_type=archive_filters.maneuver_type or None, q=archive_filters.q or None, selection=report.selection) }}">Voltar ao arquivo</a>
+          <button type="button" class="report-button report-button-primary" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+      </section>
+
+      <section class="report-header">
+        <div>
+          <p style="margin:0;color:#62748a;text-transform:uppercase;letter-spacing:.16em;font-size:.74rem;">PRAGtico · Arquivo</p>
+          <h1>
+            {% if report.selection == "maneuvers" %}
+              Relatório de Manobras Selecionadas
+            {% else %}
+              Relatório de Faturação por Escala
+            {% endif %}
+          </h1>
+        </div>
+        <div class="report-meta">
+          <div>
+            <span>Período</span>
+            <strong>{{ report.period_label }}</strong>
+          </div>
+          <div>
+            <span>Agência</span>
+            <strong>{{ report.agent_filter_label }}</strong>
+          </div>
+          <div>
+            <span>Tipo de manobra</span>
+            <strong>{{ report.maneuver_type_label }}</strong>
+          </div>
+          <div>
+            <span>Gerado em</span>
+            <strong>{{ report.generated_at_label }}</strong>
+          </div>
+        </div>
+        <div class="report-kpis">
+          <article class="report-kpi">
+            <span>{% if report.selection == "maneuvers" %}Manobras{% else %}Escalas{% endif %}</span>
+            <strong>{{ report.summary.item_count }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>Escalas distintas</span>
+            <strong>{{ report.summary.scale_count }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>Pilotagem</span>
+            <strong>{{ report.summary.pilotage_total_label }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>{% if report.selection == "maneuvers" %}Total selecionado{% else %}Total geral{% endif %}</span>
+            <strong>{{ report.summary.grand_total_label }}</strong>
+          </article>
+        </div>
+      </section>
+
+      {% if report.selection == "maneuvers" %}
+        {% if report.maneuvers %}
+          <section class="report-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Escala</th>
+                  <th>Navio</th>
+                  <th>Janela</th>
+                  <th>Manobra</th>
+                  <th>Trajeto</th>
+                  <th>Agência</th>
+                  <th class="report-num">Estimativa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in report.maneuvers %}
+                  <tr>
+                    <td>{{ item.reference_code }}</td>
+                    <td>{{ item.vessel_name }}</td>
+                    <td>{{ item.execution_window_label or item.actual_label or item.planned_label or "--" }}</td>
+                    <td>{{ item.maneuver_label }}</td>
+                    <td>{{ item.local_origin }} → {{ item.local_destination }}</td>
+                    <td>{{ item.agent_label }}</td>
+                    <td class="report-num">{{ item.estimated_cost_label }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </section>
+          <section class="report-card">
+            <p class="report-note">Na seleção por manobra o total representa apenas a pilotagem estimada das manobras incluídas. A TUP mantém-se uma rubrica de escala e não é somada neste modo.</p>
+          </section>
+        {% else %}
+          <section class="report-empty">
+            <p>Não existem manobras arquivadas para os filtros e seleção atuais.</p>
+          </section>
+        {% endif %}
+      {% else %}
+        {% if report.scales %}
+          <section class="report-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Escala</th>
+                  <th>Navio</th>
+                  <th>Última atividade</th>
+                  <th>Estadia</th>
+                  <th>Manobras</th>
+                  <th>Agência</th>
+                  <th class="report-num">Pilotagem</th>
+                  <th class="report-num">TUP</th>
+                  <th class="report-num">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for scale in report.scales %}
+                  <tr>
+                    <td>{{ scale.reference_code }}</td>
+                    <td>{{ scale.vessel_name }}</td>
+                    <td>{{ scale.latest_activity_label }}</td>
+                    <td>{{ scale.stay_days_label }}</td>
+                    <td>{{ scale.maneuver_count }}</td>
+                    <td>{{ scale.agent_label }}</td>
+                    <td class="report-num">{{ scale.estimated_pilotage_label }}</td>
+                    <td class="report-num">{{ scale.estimated_tup_label }}</td>
+                    <td class="report-num">{{ scale.estimated_grand_total_label }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </section>
+
+          <section class="report-card">
+            <h3>Detalhe operacional por escala</h3>
+            {% for scale in report.scales %}
+              <article class="report-scale-block">
+                <div>
+                  <strong>{{ scale.reference_code }} · {{ scale.vessel_name }}</strong><br>
+                  <span class="report-note">Agência {{ scale.agent_label }} · {{ scale.latest_activity_label }} · Total {{ scale.estimated_grand_total_label }}</span>
+                </div>
+                <div class="report-maneuver-list">
+                  {% for item in scale.maneuvers %}
+                    <div class="report-maneuver-row">
+                      <div>
+                        <strong>{{ item.maneuver_label }}</strong><br>
+                        <span class="report-note">{{ item.execution_window_label or item.actual_label or item.planned_label or "--" }}</span>
+                      </div>
+                      <div>{{ item.local_origin }} → {{ item.local_destination }}</div>
+                      <div>{{ item.situation_label }}</div>
+                      <div><strong>{{ item.estimated_cost_label }}</strong></div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </article>
+            {% endfor %}
+          </section>
+        {% else %}
+          <section class="report-empty">
+            <p>Não existem escalas arquivadas para os filtros e seleção atuais.</p>
+          </section>
+        {% endif %}
+      {% endif %}
+    </main>
+
+    {% if report.auto_print %}
+      <script>
+        window.addEventListener("load", () => window.print(), { once: true });
+      </script>
+    {% endif %}
+  </body>
+</html>
