@@ -3,6 +3,8 @@
 import logging
 import json
 import re
+import unicodedata
+from textwrap import wrap
 
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
@@ -41,6 +43,152 @@ bp = Blueprint("chat", __name__)
 APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
+
+
+def _wants_archive_redirect() -> bool:
+    return (request.form.get("redirect_to") or "").strip().lower() == "archive"
+
+
+def _redirect_after_conversation_action(conversation_id: str | None = None):
+    if _wants_archive_redirect():
+        if conversation_id:
+            return redirect(url_for("chat.chat_archive", conversation_id=conversation_id))
+        return redirect(url_for("chat.chat_archive"))
+    if conversation_id:
+        return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation_id))
+    return redirect(url_for("dashboard_bp.dashboard"))
+
+
+def _conversation_export_payload(username: str, conversation_id: str) -> tuple[dict | None, list[dict] | None]:
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        return None, None
+    return conversation, services.store.list_messages(username, conversation_id)
+
+
+def _conversation_export_text(conversation: dict, messages: list[dict]) -> str:
+    role_labels = {
+        "user": "Utilizador",
+        "assistant": "Assistente",
+        "system": "Sistema",
+    }
+    lines = [
+        f"Conversa: {conversation.get('title', 'Conversa')}",
+        f"Criada: {conversation.get('created_at_label', '--')}",
+        f"Atualizada: {conversation.get('updated_at_label', '--')}",
+        "",
+    ]
+    for message in messages:
+        lines.append(
+            f"[{message.get('created_at_label', '--')}] "
+            f"{role_labels.get(message.get('role'), str(message.get('role') or 'Mensagem').title())}"
+        )
+        content = str(message.get("content") or "").strip()
+        if content:
+            lines.extend(content.splitlines())
+        citations = [item.get("document", "") for item in (message.get("citations") or []) if item.get("document")]
+        if citations:
+            lines.append("Fontes: " + ", ".join(citations))
+        feedback_status = (message.get("feedback_status") or "").strip()
+        if feedback_status:
+            feedback_label = "Aprovada" if feedback_status == "approved" else "Rever"
+            feedback_note = (message.get("feedback_note") or "").strip()
+            suffix = f" | Nota: {feedback_note}" if feedback_note else ""
+            lines.append(f"Feedback: {feedback_label}{suffix}")
+        lines.append("")
+    return "\n".join(lines).strip() + "\n"
+
+
+def _pdf_safe_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    encoded = normalized.encode("latin-1", "replace").decode("latin-1")
+    return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _render_text_pdf(title: str, body: str) -> bytes:
+    page_width = 595
+    page_height = 842
+    margin = 48
+    line_height = 14
+    max_chars = 96
+
+    raw_lines = [title, "", *str(body or "").splitlines()]
+    wrapped_lines: list[str] = []
+    for raw_line in raw_lines:
+        clean = str(raw_line or "").replace("\t", "  ")
+        if not clean:
+            wrapped_lines.append("")
+            continue
+        wrapped_lines.extend(
+            wrap(
+                clean,
+                width=max_chars,
+                replace_whitespace=False,
+                drop_whitespace=False,
+                break_long_words=True,
+                break_on_hyphens=False,
+            )
+            or [""]
+        )
+
+    max_lines_per_page = max(1, int((page_height - (margin * 2)) / line_height))
+    pages = [
+        wrapped_lines[index:index + max_lines_per_page]
+        for index in range(0, len(wrapped_lines), max_lines_per_page)
+    ] or [["Sem conteúdo."]]
+
+    objects: dict[int, bytes] = {}
+    font_id = 3
+    next_id = 4
+    page_ids: list[int] = []
+
+    for page_lines in pages:
+        page_id = next_id
+        content_id = next_id + 1
+        next_id += 2
+        page_ids.append(page_id)
+
+        stream_lines = ["BT", "/F1 10 Tf"]
+        y = page_height - margin
+        for line in page_lines:
+            stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
+            y -= line_height
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines).encode("latin-1", "replace")
+
+        objects[content_id] = (
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
+        )
+        objects[page_id] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets: dict[int, int] = {}
+    for object_id in range(1, next_id):
+        offsets[object_id] = len(pdf)
+        pdf.extend(f"{object_id} 0 obj\n".encode("ascii"))
+        pdf.extend(objects[object_id])
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {next_id}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for object_id in range(1, next_id):
+        pdf.extend(f"{offsets[object_id]:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {next_id} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
 
 
 def _feedback_timestamp(value: dict | None) -> str:
@@ -133,10 +281,10 @@ def chat_archive():
 @bp.route("/conversations", methods=["POST"])
 @login_required
 def create_conversation():
-    """Criar uma nova conversa e redirecionar para o dashboard."""
+    """Criar uma nova conversa e redirecionar para o destino adequado."""
     conversation = services.store.create_conversation(session["username"])
     flash("Nova conversa criada.", "success")
-    return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation["id"]))
+    return _redirect_after_conversation_action(conversation["id"])
 
 
 @bp.route("/api/conversations", methods=["POST"])
@@ -161,11 +309,10 @@ def api_get_conversation(conversation_id: str):
 @login_required
 def export_conversation_json(conversation_id: str):
     """Exportar uma conversa e respetivas mensagens em JSON."""
-    conversation = services.store.ensure_conversation(session["username"], conversation_id)
-    if conversation["id"] != conversation_id:
+    conversation, messages = _conversation_export_payload(session["username"], conversation_id)
+    if not conversation:
         flash("Conversa não encontrada.", "error")
         return redirect(url_for("chat.chat_archive"))
-    messages = services.store.list_messages(session["username"], conversation_id)
     payload = {
         "conversation": conversation,
         "messages": messages,
@@ -178,18 +325,54 @@ def export_conversation_json(conversation_id: str):
     )
 
 
+@bp.route("/conversations/<conversation_id>/export.txt")
+@login_required
+def export_conversation_txt(conversation_id: str):
+    """Exportar uma conversa em texto simples."""
+    conversation, messages = _conversation_export_payload(session["username"], conversation_id)
+    if not conversation:
+        flash("Conversa não encontrada.", "error")
+        return redirect(url_for("chat.chat_archive"))
+    filename = f"conversa_{conversation_id}.txt"
+    return Response(
+        _conversation_export_text(conversation, messages),
+        mimetype="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@bp.route("/conversations/<conversation_id>/export.pdf")
+@login_required
+def export_conversation_pdf(conversation_id: str):
+    """Exportar uma conversa em PDF simples e imprimível."""
+    conversation, messages = _conversation_export_payload(session["username"], conversation_id)
+    if not conversation:
+        flash("Conversa não encontrada.", "error")
+        return redirect(url_for("chat.chat_archive"))
+    pdf = _render_text_pdf(
+        title=f"Conversa · {conversation.get('title', 'Conversa')}",
+        body=_conversation_export_text(conversation, messages),
+    )
+    filename = f"conversa_{conversation_id}.pdf"
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @bp.route("/conversations/<conversation_id>/rename", methods=["POST"])
 @login_required
 def rename_conversation(conversation_id: str):
-    """Renomear uma conversa e redirecionar para o dashboard."""
+    """Renomear uma conversa e redirecionar para o destino adequado."""
     title = request.form.get("title", "")
     try:
         conversation = services.store.rename_conversation(session["username"], conversation_id, title)
         flash("Conversa renomeada.", "success")
-        return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation["id"]))
+        return _redirect_after_conversation_action(conversation["id"])
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation_id))
+        return _redirect_after_conversation_action(conversation_id)
 
 
 @bp.route("/api/conversations/<conversation_id>/rename", methods=["POST"])
@@ -215,7 +398,7 @@ def clear_conversation(conversation_id: str):
         flash("Mensagens da conversa removidas.", "success")
     except ValueError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation_id))
+    return _redirect_after_conversation_action(conversation_id)
 
 
 @bp.route("/conversations/<conversation_id>/delete", methods=["POST"])
@@ -225,12 +408,10 @@ def delete_conversation(conversation_id: str):
     try:
         next_conversation_id = services.store.delete_conversation(session["username"], conversation_id)
         flash("Conversa eliminada.", "success")
-        if next_conversation_id:
-            return redirect(url_for("dashboard_bp.dashboard", conversation_id=next_conversation_id))
-        return redirect(url_for("dashboard_bp.dashboard"))
+        return _redirect_after_conversation_action(next_conversation_id)
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("dashboard_bp.dashboard", conversation_id=conversation_id))
+        return _redirect_after_conversation_action(conversation_id)
 
 
 @bp.route("/api/messages/<message_id>/feedback", methods=["POST"])

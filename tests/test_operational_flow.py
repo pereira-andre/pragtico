@@ -1394,6 +1394,49 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["conversations"][0]["title"], "Janela de marés Lisnave")
         self.assertIsNone(payload["pending_action"])
 
+    def test_chat_archive_page_renders_compact_export_actions(self) -> None:
+        conversation = self.store.create_conversation("admin", title="Arquivo operacional")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(f"/conversations?conversation_id={conversation['id']}")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Exportar", html)
+        self.assertIn("export.txt", html)
+        self.assertIn("export.pdf", html)
+        self.assertIn("Nova", html)
+
+    def test_conversation_export_txt_returns_plain_text_transcript(self) -> None:
+        conversation = self.store.create_conversation("admin", title="Janela de marés")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Qual é a maré?")
+        self.store.append_chat_message("admin", conversation["id"], "assistant", "Preia-mar às 15:13.")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(f"/conversations/{conversation['id']}/export.txt")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response.mimetype)
+        body = response.get_data(as_text=True)
+        self.assertIn("Conversa:", body)
+        self.assertIn("Qual é a maré?", body)
+        self.assertIn("Preia-mar às 15:13.", body)
+
+    def test_conversation_export_pdf_returns_pdf_bytes(self) -> None:
+        conversation = self.store.create_conversation("admin", title="Estado operacional")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Resumo do porto?")
+        self.store.append_chat_message("admin", conversation["id"], "assistant", "Duas entradas e uma saída.")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(f"/conversations/{conversation['id']}/export.pdf")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertTrue(response.data.startswith(b"%PDF-1.4"))
+
 
 class AdminDocumentPolicyTests(unittest.TestCase):
     def setUp(self) -> None:
