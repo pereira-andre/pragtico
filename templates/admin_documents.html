@@ -6,14 +6,14 @@
       <div>
         <p class="eyebrow">Base documental</p>
         <h1>Gestão de documentos</h1>
-        <p class="lead">Gestão da base de conhecimento do chatbot. Indexação, upload, edição e monitorização do estado semântico.</p>
+        <p class="lead">Catálogo filtrável com ações comprimidas, gestão em lote e monitorização da indexação semântica.</p>
       </div>
     </div>
     <div class="hero-meta-grid">
       <article class="hero-stat">
         <span>Documentos</span>
-        <strong>{{ rag_stats.document_count }}</strong>
-        <small>na base de conhecimento</small>
+        <strong>{{ docs_total }}</strong>
+        <small>{{ docs|length }} no filtro atual</small>
       </article>
       <article class="hero-stat">
         <span>Chunks</span>
@@ -144,7 +144,7 @@
           <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
         </article>
       </div>
-      <details class="reindex-doc-detail" {% if reindex_status.document_sync_rows %}open{% endif %}>
+      <details class="reindex-doc-detail">
         <summary>Ver detalhe por documento</summary>
         <div class="reindex-doc-list" id="reindex-doc-list">
           {% for item in reindex_status.document_sync_rows or [] %}
@@ -180,93 +180,169 @@
     </article>
   </section>
 
-  <div class="knowledge-admin-grid">
-    <section class="panel section-panel compact-ingest-panel">
-      <div class="section-head">
+  <div class="knowledge-admin-grid documents-collapse-grid">
+    <details class="panel section-panel compact-ingest-panel documents-collapse-card">
+      <summary class="documents-collapse-summary">
         <div>
           <p class="eyebrow">Ingestão</p>
           <h2>Adicionar ficheiros</h2>
         </div>
+        <span class="ops-pill">upload</span>
+      </summary>
+      <div class="documents-collapse-body">
+        <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label>
+            Ficheiros documentais
+            <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
+          </label>
+          <p class="muted small-note">Sincroniza a base <code>knowledge/</code> e reindexa o conteúdo do bot.</p>
+          <button type="submit">Substituir ou adicionar</button>
+        </form>
       </div>
-      <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="stack">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>
-          Ficheiros documentais
-          <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
-        </label>
-        <p class="muted small-note">Sincroniza a base `knowledge/` e reindexa o conteúdo do bot.</p>
-        <button type="submit">Substituir ou adicionar</button>
-      </form>
-    </section>
+    </details>
 
-    <section class="panel section-panel compact-ingest-panel">
-      <div class="section-head">
+    <details class="panel section-panel compact-ingest-panel documents-collapse-card">
+      <summary class="documents-collapse-summary">
         <div>
           <p class="eyebrow">Política documental</p>
           <h2>Conteúdo oficial apenas</h2>
         </div>
+        <span class="ops-pill">regras</span>
+      </summary>
+      <div class="documents-collapse-body">
+        <p class="muted small-note">
+          A criação manual no browser está desativada para evitar documentos não oficiais. Usa upload de ficheiros validados
+          ou coloca o documento diretamente em <code>knowledge/</code>.
+        </p>
       </div>
-      <p class="muted small-note">
-        A criação manual no browser está desativada para evitar documentos não oficiais. Usa upload de ficheiros validados
-        ou coloca o documento diretamente em <code>knowledge/</code>.
-      </p>
-    </section>
+    </details>
   </div>
 
-  <section class="panel section-panel">
-    <div class="section-head">
+  <details class="panel section-panel document-catalog-detail" id="document-catalog-detail" {% if document_filters.has_active_filters %}open{% endif %}>
+    <summary class="documents-collapse-summary">
       <div>
         <p class="eyebrow">Catálogo</p>
         <h2>Documentos indexados</h2>
       </div>
-      <span class="ops-pill ops-pill-strong">{{ docs|length }}</span>
+      <span class="ops-pill ops-pill-strong">{{ docs|length }}/{{ docs_total }}</span>
+    </summary>
+    <div class="documents-collapse-body">
+      <form method="get" action="{{ url_for('admin.admin_documents') }}" class="archive-filter-form">
+        <div class="archive-filter-grid">
+          <label class="archive-search-field">
+            <span class="mini-label">Pesquisa</span>
+            <input name="q" type="search" value="{{ document_filters.q }}" placeholder="Nome, excerto, origem, tipo...">
+          </label>
+          <label>
+            <span class="mini-label">Tipo</span>
+            <select name="doc_type">
+              <option value="" {% if not document_filters.doc_type %}selected{% endif %}>Todos</option>
+              {% for doc_type in document_filters.doc_types %}
+                <option value="{{ doc_type }}" {% if document_filters.doc_type == doc_type %}selected{% endif %}>{{ doc_type }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span class="mini-label">Origem</span>
+            <select name="uploaded_by">
+              <option value="" {% if not document_filters.uploaded_by %}selected{% endif %}>Todas</option>
+              {% for uploaded_by in document_filters.uploaded_bys %}
+                <option value="{{ uploaded_by }}" {% if document_filters.uploaded_by == uploaded_by %}selected{% endif %}>{{ uploaded_by }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span class="mini-label">Edição</span>
+            <select name="editable">
+              <option value="" {% if not document_filters.editable %}selected{% endif %}>Todos</option>
+              <option value="editable" {% if document_filters.editable == "editable" %}selected{% endif %}>Editáveis</option>
+              <option value="read_only" {% if document_filters.editable == "read_only" %}selected{% endif %}>Só leitura</option>
+            </select>
+          </label>
+        </div>
+        <div class="archive-actions">
+          <button type="submit" class="mini-button">Aplicar filtros</button>
+          <a class="mini-button secondary-button" href="{{ url_for('admin.admin_documents') }}#document-catalog-detail">Limpar</a>
+        </div>
+      </form>
+
+      <form method="post" action="{{ url_for('admin.bulk_delete_documents') }}" id="document-bulk-delete-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ documents_return_to }}">
+        <div id="document-selected-inputs"></div>
+        <div class="archive-selection-bar">
+          <div>
+            <p class="eyebrow">Gestão em lote</p>
+            <p id="document-selection-summary" class="muted">Sem seleção manual. Podes selecionar vários ficheiros filtrados para remoção.</p>
+          </div>
+          <div class="archive-selection-actions">
+            <button type="button" class="mini-button secondary-button" id="document-select-filtered">Selecionar tudo filtrado</button>
+            <button type="button" class="mini-button secondary-button" id="document-clear-selection">Nenhum</button>
+            <button type="submit" class="mini-button danger-button" id="document-delete-selected">Eliminar selecionados</button>
+          </div>
+        </div>
+
+        <div class="document-window-table">
+          <table class="planned-table">
+            <thead>
+              <tr>
+                <th class="archive-th-narrow">Sel.</th>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Tamanho</th>
+                <th>Atualizado</th>
+                <th>Por</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in docs %}
+                <tr>
+                  <td class="archive-select-cell">
+                    <input
+                      type="checkbox"
+                      class="document-select-box"
+                      value="{{ doc.name }}"
+                      aria-label="Selecionar {{ doc.original_name }}">
+                  </td>
+                  <td>
+                    <strong>{{ doc.original_name }}</strong>
+                    <p class="document-window-preview">{{ doc.preview }}</p>
+                  </td>
+                  <td><span class="doc-badge">{{ doc.doc_type }}</span></td>
+                  <td>{{ doc.size_label }}</td>
+                  <td>{{ doc.updated_at_label }}</td>
+                  <td>{{ doc.uploaded_by }}</td>
+                  <td>
+                    <details class="chat-sidebar-menu document-row-menu">
+                      <summary class="chat-sidebar-menu-toggle" aria-label="Opções do documento">⋯</summary>
+                      <div class="chat-sidebar-menu-body">
+                        <a class="chat-sidebar-menu-link" href="{{ url_for('admin.document_detail', name=doc.name, return_to=documents_return_to) }}">Abrir</a>
+                        <a class="chat-sidebar-menu-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
+                        <a class="chat-sidebar-menu-link" href="{{ url_for('admin.document_detail', name=doc.name, return_to=documents_return_to) }}">
+                          {% if manual_knowledge_authoring_enabled and doc.editable %}Editar{% else %}Ver{% endif %}
+                        </a>
+                        <form method="post" action="{{ url_for('admin.delete_document', name=doc.name) }}" onsubmit="return confirm('Apagar {{ doc.original_name }}?')">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="return_to" value="{{ documents_return_to }}">
+                          <button type="submit" class="mini-button danger-button">Apagar</button>
+                        </form>
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="planned-empty">Sem documentos na base de conhecimento para os filtros atuais.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </form>
     </div>
-    <div class="document-window-table">
-      <table class="planned-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Tipo</th>
-            <th>Tamanho</th>
-            <th>Atualizado</th>
-            <th>Por</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for doc in docs %}
-            <tr>
-              <td>
-                <strong>{{ doc.original_name }}</strong>
-                <p class="document-window-preview">{{ doc.preview }}</p>
-              </td>
-              <td><span class="doc-badge">{{ doc.doc_type }}</span></td>
-              <td>{{ doc.size_label }}</td>
-              <td>{{ doc.updated_at_label }}</td>
-              <td>{{ doc.uploaded_by }}</td>
-              <td>
-                <div class="doc-actions">
-                  <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">Abrir</a>
-                  <a class="inline-link" href="{{ url_for('admin.download_document', name=doc.name) }}">Download</a>
-                  <a class="inline-link" href="{{ url_for('admin.document_detail', name=doc.name) }}">
-                    {% if manual_knowledge_authoring_enabled and doc.editable %}Editar{% else %}Ver{% endif %}
-                  </a>
-                  <form method="post" action="{{ url_for('admin.delete_document', name=doc.name) }}" onsubmit="return confirm('Apagar {{ doc.original_name }}?')">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="inline-link danger-link">Apagar</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="6" class="planned-empty">Sem documentos na base de conhecimento.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+  </details>
 </main>
 
 <script>
@@ -429,5 +505,51 @@
   fetchReindexStatus().then((p) => {
     if (p && (p.state === "running" || p.scheduled_retry_at)) scheduleReindexPolling();
   }).catch(() => {});
+
+  const documentBoxes = Array.from(document.querySelectorAll(".document-select-box"));
+  const documentSummary = document.getElementById("document-selection-summary");
+  const documentHiddenInputs = document.getElementById("document-selected-inputs");
+  const documentDeleteSelected = document.getElementById("document-delete-selected");
+
+  function syncSelectedDocuments() {
+    if (!documentHiddenInputs) return;
+    documentHiddenInputs.innerHTML = "";
+    const selected = documentBoxes.filter((box) => box.checked).map((box) => box.value);
+    selected.forEach((name) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "document_names";
+      input.value = name;
+      documentHiddenInputs.appendChild(input);
+    });
+    if (documentSummary) {
+      documentSummary.textContent = selected.length
+        ? `${selected.length} ficheiro(s) selecionado(s) para eliminação.`
+        : "Sem seleção manual. Podes selecionar vários ficheiros filtrados para remoção.";
+    }
+    if (documentDeleteSelected) {
+      documentDeleteSelected.disabled = selected.length === 0;
+    }
+  }
+
+  function setDocumentSelection(checked) {
+    documentBoxes.forEach((box) => { box.checked = checked; });
+    syncSelectedDocuments();
+  }
+
+  documentBoxes.forEach((box) => box.addEventListener("change", syncSelectedDocuments));
+  document.getElementById("document-select-filtered")?.addEventListener("click", () => setDocumentSelection(true));
+  document.getElementById("document-clear-selection")?.addEventListener("click", () => setDocumentSelection(false));
+  document.getElementById("document-bulk-delete-form")?.addEventListener("submit", (event) => {
+    syncSelectedDocuments();
+    if (!documentHiddenInputs?.children.length) {
+      event.preventDefault();
+      return;
+    }
+    if (!window.confirm("Eliminar os ficheiros selecionados?")) {
+      event.preventDefault();
+    }
+  });
+  syncSelectedDocuments();
 </script>
 {% endblock %}

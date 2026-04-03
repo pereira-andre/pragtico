@@ -1,34 +1,91 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell">
+<main class="ops-shell warnings-archive-page">
   <section class="hero-card compact">
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Capitania do Porto de Setúbal</p>
         <h1>Avisos locais</h1>
-        <p class="lead">Consulta rápida dos avisos locais em vigor, com acesso ao detalhe completo de cada aviso.</p>
+        <p class="lead">Consulta operacional com filtros, seleção múltipla e emissão de relatórios em TXT ou PDF.</p>
       </div>
     </div>
     <div class="hero-meta-grid">
       <article class="hero-stat">
-        <span>Avisos listados</span>
+        <span>Avisos filtrados</span>
         <strong>{{ warnings|length }}</strong>
-        <small>fonte oficial da capitania</small>
+        <small>{{ warnings_total|default(0) }} na lista atual da fonte oficial</small>
+      </article>
+      <article class="hero-stat">
+        <span>Estado</span>
+        <strong>{% if warnings_status.stale %}cache{% else %}online{% endif %}</strong>
+        <small>{% if warnings_status.cache_updated_at_label %}atualizado {{ warnings_status.cache_updated_at_label }}{% else %}sem cache local{% endif %}</small>
       </article>
     </div>
   </section>
 
   <section class="panel warnings-panel">
-    <div class="section-head">
+    <div class="section-head archive-head">
       <div>
         <p class="eyebrow">Em vigor</p>
-        <h2>Lista completa</h2>
+        <h2>Arquivo de avisos para consulta e impressão</h2>
       </div>
       <div class="dashboard-head-pills">
-        <span class="ops-pill ops-pill-strong">{{ warnings|length }}</span>
+        <span class="ops-pill ops-pill-strong">{{ warnings|length }}/{{ warnings_total|default(0) }}</span>
         {% if warnings_status.stale %}
           <span class="ops-pill">cache</span>
         {% endif %}
+      </div>
+    </div>
+
+    <form method="get" action="{{ url_for('dashboard_bp.local_warnings') }}" class="archive-filter-form">
+      <div class="archive-filter-grid">
+        <label class="archive-search-field">
+          <span class="mini-label">Pesquisa</span>
+          <input name="q" type="search" value="{{ warning_filters.q }}" placeholder="Código, assunto, local, descrição...">
+        </label>
+        <label>
+          <span class="mini-label">Estado</span>
+          <select name="status">
+            <option value="" {% if not warning_filters.status %}selected{% endif %}>Todos</option>
+            {% for status in warning_filters.statuses %}
+              <option value="{{ status }}" {% if warning_filters.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span class="mini-label">Local</span>
+          <select name="location">
+            <option value="" {% if not warning_filters.location %}selected{% endif %}>Todos</option>
+            {% for location in warning_filters.locations %}
+              <option value="{{ location }}" {% if warning_filters.location == location %}selected{% endif %}>{{ location }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span class="mini-label">Anexos</span>
+          <select name="attachments">
+            <option value="" {% if not warning_filters.attachments %}selected{% endif %}>Todos</option>
+            <option value="with" {% if warning_filters.attachments == "with" %}selected{% endif %}>Com anexos</option>
+            <option value="without" {% if warning_filters.attachments == "without" %}selected{% endif %}>Sem anexos</option>
+          </select>
+        </label>
+      </div>
+      <div class="archive-actions">
+        <button type="submit" class="mini-button">Aplicar filtros</button>
+        <a class="mini-button secondary-button" href="{{ url_for('dashboard_bp.local_warnings') }}">Limpar</a>
+      </div>
+    </form>
+
+    <div class="archive-selection-bar">
+      <div>
+        <p class="eyebrow">Seleção para relatório</p>
+        <p id="warnings-selection-summary" class="muted">Sem seleção manual. O relatório usa os avisos filtrados.</p>
+      </div>
+      <div class="archive-selection-actions">
+        <button type="button" class="mini-button secondary-button" id="warnings-select-filtered">Selecionar tudo filtrado</button>
+        <button type="button" class="mini-button secondary-button" id="warnings-clear-selection">Nenhum</button>
+        <button type="button" class="mini-button secondary-button" id="warnings-export-txt">TXT</button>
+        <button type="button" class="mini-button" id="warnings-export-pdf">PDF</button>
       </div>
     </div>
 
@@ -39,36 +96,108 @@
           A atualização remota falhou entretanto.
         </p>
       {% endif %}
-      <div class="warning-preview-grid warning-preview-grid-full">
-        {% for warning in warnings %}
-          <article class="warning-card">
-            <div class="warning-card-head">
-              <div>
-                <p class="warning-code">{{ warning.display_code }}</p>
-                <h3>{{ warning.subject }}</h3>
-              </div>
-              <span class="ops-pill warning-status-pill">{{ warning.status_label }}</span>
-            </div>
-            <p class="warning-location">{{ warning.location }}</p>
-            <p class="warning-period">De {{ warning.start_date_label }} · Até {{ warning.end_date_label }}</p>
-            <p class="warning-excerpt">{{ warning.excerpt }}</p>
-            <div class="inline-link-row">
-              <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir aviso</a>
-              {% if warning.has_attachments %}
-                <span class="doc-badge">com anexos</span>
-              {% endif %}
-            </div>
-          </article>
-        {% endfor %}
+      <div class="planned-table-wrap archive-table-wrap">
+        <table class="planned-table archive-table warning-table">
+          <thead>
+            <tr>
+              <th class="archive-th-narrow">Sel.</th>
+              <th>Código</th>
+              <th>Assunto</th>
+              <th>Local</th>
+              <th>Período</th>
+              <th>Anexos</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for warning in warnings %}
+              <tr class="planned-row">
+                <td class="archive-select-cell">
+                  <input
+                    type="checkbox"
+                    class="warning-select-box"
+                    value="{{ warning.id }}"
+                    aria-label="Selecionar aviso {{ warning.display_code }}">
+                </td>
+                <td>
+                  <strong>{{ warning.display_code }}</strong>
+                  <p class="muted">{{ warning.status_label }}</p>
+                </td>
+                <td>
+                  <strong>{{ warning.subject }}</strong>
+                  <p class="document-window-preview">{{ warning.excerpt }}</p>
+                </td>
+                <td>{{ warning.location }}</td>
+                <td>{{ warning.start_date_label }}<br><span class="muted">até {{ warning.end_date_label }}</span></td>
+                <td>
+                  {% if warning.has_attachments %}
+                    <span class="doc-badge">com anexos</span>
+                  {% else %}
+                    <span class="muted">sem anexos</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="doc-actions">
+                    <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir aviso</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     {% elif warnings_error %}
       <p class="muted">
         Avisos locais indisponíveis neste momento: {{ warnings_error }}
         {% if warnings_status.last_attempt_at_label %}Última tentativa: {{ warnings_status.last_attempt_at_label }}.{% endif %}
       </p>
+    {% elif warnings_total %}
+      <p class="muted">Nenhum aviso corresponde aos filtros atuais.</p>
     {% else %}
       <p class="muted">Sem avisos locais disponíveis.</p>
     {% endif %}
   </section>
 </main>
+
+<script>
+  const warningBoxes = Array.from(document.querySelectorAll(".warning-select-box"));
+  const warningSummary = document.getElementById("warnings-selection-summary");
+  const warningTxtUrl = "{{ url_for('dashboard_bp.local_warnings_report_txt') }}";
+  const warningPdfUrl = "{{ url_for('dashboard_bp.local_warnings_report_pdf') }}";
+
+  function updateWarningSummary() {
+    if (!warningSummary) return;
+    const selected = warningBoxes.filter((box) => box.checked).length;
+    if (selected > 0) {
+      warningSummary.textContent = `${selected} aviso(s) selecionado(s) para relatório.`;
+      return;
+    }
+    warningSummary.textContent = "Sem seleção manual. O relatório usa os avisos filtrados.";
+  }
+
+  function setWarningSelection(checked) {
+    warningBoxes.forEach((box) => { box.checked = checked; });
+    updateWarningSummary();
+  }
+
+  function buildWarningReportUrl(baseUrl) {
+    const params = new URLSearchParams(window.location.search);
+    const selectedIds = warningBoxes.filter((box) => box.checked).map((box) => box.value);
+    if (selectedIds.length) params.set("warning_ids", selectedIds.join(","));
+    else params.delete("warning_ids");
+    const query = params.toString();
+    return query ? `${baseUrl}?${query}` : baseUrl;
+  }
+
+  warningBoxes.forEach((box) => box.addEventListener("change", updateWarningSummary));
+  document.getElementById("warnings-select-filtered")?.addEventListener("click", () => setWarningSelection(true));
+  document.getElementById("warnings-clear-selection")?.addEventListener("click", () => setWarningSelection(false));
+  document.getElementById("warnings-export-txt")?.addEventListener("click", () => {
+    window.location.href = buildWarningReportUrl(warningTxtUrl);
+  });
+  document.getElementById("warnings-export-pdf")?.addEventListener("click", () => {
+    window.open(buildWarningReportUrl(warningPdfUrl), "_blank", "noopener");
+  });
+  updateWarningSummary();
+</script>
 {% endblock %}

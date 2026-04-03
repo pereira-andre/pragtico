@@ -23,6 +23,7 @@ from domain.document_processing import (
     is_allowed_document,
     is_text_editable,
     iso_now,
+    read_text_file,
     sanitize_upload_filename,
     slugify,
 )
@@ -70,6 +71,7 @@ from .utils import (
     _utc_iso_to_label,
     _validate_required_operational_profile,
     _validate_required_vessel_profile,
+    is_legacy_system_markdown_document,
     normalize_constraint_codes,
 )
 
@@ -85,6 +87,7 @@ class PostgresStore(BaseStore):
         os.makedirs(self.knowledge_dir, exist_ok=True)
         self._ensure_schema()
         self._seed_defaults()
+        self._remove_legacy_seed_markdown_documents()
         self._sync_document_records()
         self._rebuild_maneuver_cases(capture_live_environment=False)
 
@@ -662,21 +665,6 @@ class PostgresStore(BaseStore):
                 port_calls_count = int(cur.fetchone()["total"])
             conn.commit()
 
-        if not os.listdir(self.knowledge_dir):
-            self.save_document(
-                "Manual de Manobra",
-                """Checklist de aproximação:
-1. Confirmar vento, maré e calado.
-2. Validar disponibilidade dos rebocadores.
-3. Rever canal VHF ativo.
-
-Procedimento de atracação:
-- Reduzir velocidade antes da bacia.
-- Confirmar ordens do piloto e do comandante.
-- Registar incidentes e tempos no histórico operacional.
-""",
-                created_by="system",
-            )
         if port_calls_count == 0:
             with self._connect() as conn:
                 with conn.cursor() as cur:
@@ -727,22 +715,51 @@ Procedimento de atracação:
                             ),
                         )
                 conn.commit()
-            self.save_document(
-                "Norma de Segurança",
-                """Em caso de dúvida operacional, prevalece o princípio de segurança.
-Qualquer falha de comunicação entre navio e autoridade portuária deve ser tratada como evento crítico.
-O agente deve confirmar documentação obrigatória antes da janela de entrada.
-""",
-                created_by="system",
-            )
-            self.save_document(
-                "Meteorologia e Marés",
-                """Dados de marés e meteorologia devem ser revistos antes de cada manobra.
-Se a intensidade do vento exceder o limite definido para o tipo de navio, a operação deve ser reavaliada.
-O sistema futuro deverá integrar APIs externas para marés, vento e avisos costeiros.
-""",
-                created_by="system",
-            )
+
+    def _remove_legacy_seed_markdown_documents(self) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT name, uploaded_by, preview, file_path
+                    FROM documents
+                    """
+                )
+                rows = cur.fetchall()
+
+                removed_names = []
+                for row in rows:
+                    text = ""
+                    file_path = row.get("file_path")
+                    if file_path and os.path.exists(file_path):
+                        try:
+                            text = read_text_file(file_path)
+                        except OSError:
+                            text = ""
+                    if not is_legacy_system_markdown_document(
+                        name=row.get("name"),
+                        uploaded_by=row.get("uploaded_by"),
+                        preview=row.get("preview"),
+                        text=text,
+                    ):
+                        continue
+                    if file_path and os.path.exists(file_path):
+                        os.remove(file_path)
+                    cur.execute("DELETE FROM documents WHERE name = %s", (row["name"],))
+                    removed_names.append(row["name"])
+
+            conn.commit()
+
+        for name in os.listdir(self.knowledge_dir):
+            path = os.path.join(self.knowledge_dir, name)
+            if not os.path.isfile(path) or name in removed_names:
+                continue
+            try:
+                text = read_text_file(path)
+            except OSError:
+                continue
+            if is_legacy_system_markdown_document(name=name, text=text):
+                os.remove(path)
 
     def _upsert_document_record(self, record: Dict, file_path: str) -> None:
         with self._connect() as conn:

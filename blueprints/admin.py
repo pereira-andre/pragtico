@@ -2,6 +2,7 @@
 
 import logging
 import os
+from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
@@ -25,6 +26,86 @@ bp = Blueprint("admin", __name__)
 
 def _manual_knowledge_authoring_enabled() -> bool:
     return bool(current_app.config.get("MANUAL_KNOWLEDGE_AUTHORING_ENABLED", False))
+
+
+def _safe_return_to(value: str | None) -> str:
+    target = (value or "").strip()
+    if not target:
+        return ""
+    parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
+        return ""
+    rebuilt = parsed.path
+    if parsed.query:
+        rebuilt = f"{rebuilt}?{parsed.query}"
+    return rebuilt
+
+
+def _documents_return_to() -> str:
+    if request.query_string:
+        return f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
+    return request.path
+
+
+def _build_document_filters(docs: list[dict]) -> dict:
+    q = " ".join((request.args.get("q") or "").strip().split())
+    q_search = q.lower()
+    doc_types = sorted(
+        {
+            (item.get("doc_type") or "").strip()
+            for item in docs
+            if (item.get("doc_type") or "").strip()
+        }
+    )
+    uploaded_bys = sorted(
+        {
+            (item.get("uploaded_by") or "").strip()
+            for item in docs
+            if (item.get("uploaded_by") or "").strip()
+        }
+    )
+    doc_type = (request.args.get("doc_type") or "").strip()
+    if doc_type not in doc_types:
+        doc_type = ""
+    uploaded_by = (request.args.get("uploaded_by") or "").strip()
+    if uploaded_by not in uploaded_bys:
+        uploaded_by = ""
+    editable = (request.args.get("editable") or "").strip().lower()
+    if editable not in {"", "editable", "read_only"}:
+        editable = ""
+    return {
+        "q": q,
+        "q_search": q_search,
+        "doc_type": doc_type,
+        "uploaded_by": uploaded_by,
+        "editable": editable,
+        "doc_types": doc_types,
+        "uploaded_bys": uploaded_bys,
+        "has_active_filters": bool(q or doc_type or uploaded_by or editable),
+    }
+
+
+def _document_matches_filters(document: dict, filters: dict) -> bool:
+    if filters.get("doc_type") and (document.get("doc_type") or "") != filters["doc_type"]:
+        return False
+    if filters.get("uploaded_by") and (document.get("uploaded_by") or "") != filters["uploaded_by"]:
+        return False
+    if filters.get("editable") == "editable" and not document.get("editable"):
+        return False
+    if filters.get("editable") == "read_only" and document.get("editable"):
+        return False
+    if filters.get("q_search"):
+        haystack = " ".join(
+            str(document.get(field) or "")
+            for field in ("name", "original_name", "doc_type", "uploaded_by", "preview")
+        ).lower()
+        if filters["q_search"] not in haystack:
+            return False
+    return True
+
+
+def _filter_documents(docs: list[dict], filters: dict) -> list[dict]:
+    return [item for item in docs if _document_matches_filters(item, filters)]
 
 
 @bp.route("/admin/status")
@@ -139,6 +220,8 @@ def admin_documents():
     """Página de gestão de documentos da base de conhecimento."""
     refresh_knowledge_state(force_reindex=False)
     docs = services.store.list_documents()
+    document_filters = _build_document_filters(docs)
+    filtered_docs = _filter_documents(docs, document_filters)
     try:
         rag_stats = services.rag.index_summary()
     except Exception as exc:
@@ -148,7 +231,16 @@ def admin_documents():
             "index_error": str(exc),
         }
     reindex_status = current_reindex_status_payload()
-    return render_template("admin_documents.html", docs=docs, rag_stats=rag_stats, reindex_status=reindex_status, title="Gestão de Documentos")
+    return render_template(
+        "admin_documents.html",
+        docs=filtered_docs,
+        docs_total=len(docs),
+        document_filters=document_filters,
+        documents_return_to=_documents_return_to(),
+        rag_stats=rag_stats,
+        reindex_status=reindex_status,
+        title="Gestão de Documentos",
+    )
 
 
 @bp.route("/documents", methods=["POST"])
@@ -246,11 +338,17 @@ def document_detail(name: str):
     document = services.store.get_document(name)
     if not document:
         abort(404)
+    document_return_to = _safe_return_to(request.args.get("return_to")) or url_for("admin.admin_documents")
     try:
         document_text = services.store.get_document_text(name)
     except Exception as exc:
         document_text = f"Erro ao ler conteúdo extraído: {exc}"
-    return render_template("document_detail.html", document=document, document_text=document_text)
+    return render_template(
+        "document_detail.html",
+        document=document,
+        document_text=document_text,
+        document_return_to=document_return_to,
+    )
 
 
 @bp.route("/documents/<name>/download")
@@ -270,12 +368,13 @@ def download_document(name: str):
 @role_required("admin")
 def edit_document(name: str):
     """Guardar o conteúdo editado de um documento de texto e reindexar."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_documents")
     if not _manual_knowledge_authoring_enabled():
         flash(
             "Edição manual de documentos desativada. Atualiza o ficheiro original e volta a indexar.",
             "error",
         )
-        return redirect(url_for("admin.document_detail", name=name))
+        return redirect(url_for("admin.document_detail", name=name, return_to=return_to))
     content = request.form.get("content", "").strip()
     try:
         services.store.update_document_text(name=name, content=content, updated_by=session["username"])
@@ -285,7 +384,13 @@ def edit_document(name: str):
             flash(f"Documento {name} atualizado, mas a reindexação falhou: {services.rag.last_index_error}", "error")
     except ValueError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("admin.document_detail", name=name))
+    return redirect(
+        url_for(
+            "admin.document_detail",
+            name=name,
+            return_to=return_to,
+        )
+    )
 
 
 @bp.route("/documents/<name>/delete", methods=["POST"])
@@ -293,6 +398,7 @@ def edit_document(name: str):
 @role_required("admin")
 def delete_document(name: str):
     """Remover um documento da base de conhecimento e reindexar."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_documents")
     try:
         services.store.delete_document(name)
         if safe_rebuild_index(force=False):
@@ -301,5 +407,42 @@ def delete_document(name: str):
             flash(f"Documento {name} removido, mas a reindexação falhou: {services.rag.last_index_error}", "error")
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("admin.document_detail", name=name))
-    return redirect(url_for("admin.admin_documents"))
+        return redirect(return_to)
+    return redirect(return_to)
+
+
+@bp.route("/documents/bulk-delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def bulk_delete_documents():
+    """Remover vários documentos filtrados/selecionados da base de conhecimento."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_documents")
+    selected_names = []
+    for raw_name in request.form.getlist("document_names"):
+        clean_name = raw_name.strip()
+        if clean_name and clean_name not in selected_names:
+            selected_names.append(clean_name)
+    if not selected_names:
+        flash("Seleciona pelo menos um ficheiro para eliminar.", "error")
+        return redirect(return_to)
+
+    removed = []
+    failed = []
+    for name in selected_names:
+        try:
+            services.store.delete_document(name)
+            removed.append(name)
+        except ValueError as exc:
+            failed.append(f"{name}: {exc}")
+
+    if removed:
+        if safe_rebuild_index(force=False):
+            flash(f"Foram removidos {len(removed)} ficheiro(s) da base documental.", "success")
+        else:
+            flash(
+                f"Os ficheiros foram removidos, mas a reindexação falhou: {services.rag.last_index_error}",
+                "error",
+            )
+    if failed:
+        flash("Falhas na eliminação: " + " | ".join(failed), "error")
+    return redirect(return_to)

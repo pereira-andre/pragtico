@@ -2,8 +2,10 @@
 
 import csv
 import os
+import unicodedata
 from datetime import date, datetime, timedelta
 from io import StringIO
+from textwrap import wrap
 
 from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -30,6 +32,7 @@ bp = Blueprint("dashboard_bp", __name__)
 
 ARCHIVE_MANEUVER_TYPES = {"entry", "departure", "shift"}
 ARCHIVE_REPORT_SELECTIONS = {"scales", "maneuvers"}
+WARNING_ATTACHMENT_FILTERS = {"", "with", "without"}
 
 
 def _parse_archive_datetime(value: str | None) -> datetime | None:
@@ -341,6 +344,232 @@ def _build_archive_report_context(filtered_scales: list[dict], filters: dict) ->
     return report_context
 
 
+def _parse_warning_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _warning_search_blob(warning: dict) -> str:
+    return " ".join(
+        str(warning.get(field) or "")
+        for field in ("display_code", "subject", "location", "description_text", "status_label")
+    ).lower()
+
+
+def _build_warning_filters(warnings: list[dict]) -> dict:
+    q = " ".join((request.args.get("q") or "").strip().split())
+    q_search = q.lower()
+    statuses = sorted(
+        {
+            (item.get("status_label") or "").strip()
+            for item in warnings
+            if (item.get("status_label") or "").strip()
+        }
+    )
+    locations = sorted(
+        {
+            (item.get("location") or "").strip()
+            for item in warnings
+            if (item.get("location") or "").strip() and (item.get("location") or "").strip() != "--"
+        }
+    )
+    status = (request.args.get("status") or "").strip()
+    if status not in statuses:
+        status = ""
+    location = (request.args.get("location") or "").strip()
+    if location not in locations:
+        location = ""
+    attachments = (request.args.get("attachments") or "").strip().lower()
+    if attachments not in WARNING_ATTACHMENT_FILTERS:
+        attachments = ""
+    return {
+        "q": q,
+        "q_search": q_search,
+        "status": status,
+        "location": location,
+        "attachments": attachments,
+        "statuses": statuses,
+        "locations": locations,
+    }
+
+
+def _warning_matches_filters(warning: dict, filters: dict) -> bool:
+    if filters.get("status") and (warning.get("status_label") or "") != filters["status"]:
+        return False
+    if filters.get("location") and (warning.get("location") or "") != filters["location"]:
+        return False
+    if filters.get("attachments") == "with" and not warning.get("has_attachments"):
+        return False
+    if filters.get("attachments") == "without" and warning.get("has_attachments"):
+        return False
+    if filters.get("q_search") and filters["q_search"] not in _warning_search_blob(warning):
+        return False
+    return True
+
+
+def _filter_warnings(warnings: list[dict], filters: dict) -> list[dict]:
+    filtered = [item for item in warnings if _warning_matches_filters(item, filters)]
+
+    def warning_sort_key(item: dict) -> tuple[float, str]:
+        start_dt = _parse_warning_datetime(item.get("start_date_iso"))
+        return (start_dt.timestamp() if start_dt else 0.0, str(item.get("display_code") or ""))
+
+    return sorted(
+        filtered,
+        key=warning_sort_key,
+        reverse=True,
+    )
+
+
+def _selected_warnings(filtered_warnings: list[dict]) -> list[dict]:
+    selected_ids = set(_split_csv_values(request.args.get("warning_ids")))
+    if not selected_ids:
+        return filtered_warnings
+    return [item for item in filtered_warnings if str(item.get("id") or "") in selected_ids]
+
+
+def _warning_filter_summary(filters: dict) -> str:
+    parts = []
+    if filters.get("status"):
+        parts.append(f"Estado: {filters['status']}")
+    if filters.get("location"):
+        parts.append(f"Local: {filters['location']}")
+    if filters.get("attachments") == "with":
+        parts.append("Com anexos")
+    elif filters.get("attachments") == "without":
+        parts.append("Sem anexos")
+    if filters.get("q"):
+        parts.append(f"Pesquisa: {filters['q']}")
+    return " | ".join(parts) if parts else "Sem filtros adicionais."
+
+
+def _warning_report_text(warnings: list[dict], filters: dict) -> str:
+    generated_at = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M")
+    lines = [
+        "Relatório de Avisos Locais",
+        f"Gerado em: {generated_at}",
+        f"Filtros: {_warning_filter_summary(filters)}",
+        f"Avisos incluídos: {len(warnings)}",
+        "",
+    ]
+    for warning in warnings:
+        lines.extend(
+            [
+                f"{warning.get('display_code', '--')} | {warning.get('subject', '--')}",
+                f"Estado: {warning.get('status_label', '--')}",
+                f"Local: {warning.get('location', '--')}",
+                f"Período: {warning.get('start_date_label', '--')} até {warning.get('end_date_label', '--')}",
+            ]
+        )
+        description = str(warning.get("description_text") or "").strip()
+        if description:
+            lines.append("Descrição:")
+            lines.extend(description.splitlines())
+        attachments = warning.get("attachments") or []
+        if attachments:
+            lines.append("Anexos:")
+            for attachment in attachments:
+                lines.append(f"- {attachment.get('name', 'Anexo')}: {attachment.get('url', '')}")
+        lines.append("")
+    return "\n".join(lines).strip() + "\n"
+
+
+def _pdf_safe_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    encoded = normalized.encode("latin-1", "replace").decode("latin-1")
+    return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _render_text_pdf(title: str, body: str) -> bytes:
+    page_width = 595
+    page_height = 842
+    margin = 48
+    line_height = 14
+    max_chars = 96
+
+    raw_lines = [title, "", *str(body or "").splitlines()]
+    wrapped_lines: list[str] = []
+    for raw_line in raw_lines:
+        clean = str(raw_line or "").replace("\t", "  ")
+        if not clean:
+            wrapped_lines.append("")
+            continue
+        wrapped_lines.extend(
+            wrap(
+                clean,
+                width=max_chars,
+                replace_whitespace=False,
+                drop_whitespace=False,
+                break_long_words=True,
+                break_on_hyphens=False,
+            )
+            or [""]
+        )
+
+    max_lines_per_page = max(1, int((page_height - (margin * 2)) / line_height))
+    pages = [
+        wrapped_lines[index:index + max_lines_per_page]
+        for index in range(0, len(wrapped_lines), max_lines_per_page)
+    ] or [["Sem conteúdo."]]
+
+    objects: dict[int, bytes] = {}
+    font_id = 3
+    next_id = 4
+    page_ids: list[int] = []
+
+    for page_lines in pages:
+        page_id = next_id
+        content_id = next_id + 1
+        next_id += 2
+        page_ids.append(page_id)
+
+        stream_lines = ["BT", "/F1 10 Tf"]
+        y = page_height - margin
+        for line in page_lines:
+            stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
+            y -= line_height
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines).encode("latin-1", "replace")
+
+        objects[content_id] = (
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
+        )
+        objects[page_id] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets: dict[int, int] = {}
+    for object_id in range(1, next_id):
+        offsets[object_id] = len(pdf)
+        pdf.extend(f"{object_id} 0 obj\n".encode("ascii"))
+        pdf.extend(objects[object_id])
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {next_id}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for object_id in range(1, next_id):
+        pdf.extend(f"{offsets[object_id]:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {next_id} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
+
+
 def _build_estimate_from_query() -> dict:
     gt = _coerce_non_negative_float(request.args.get("gt", 0), 0.0)
     if gt <= 0:
@@ -633,12 +862,54 @@ def local_warnings():
         except Exception as exc:
             warnings_error = str(exc)
         warnings_status = services.local_warning_service.status()
+    warning_filters = _build_warning_filters(warnings)
+    filtered_warnings = _filter_warnings(warnings, warning_filters)
     return render_template(
         "local_warnings.html",
-        warnings=warnings,
+        warnings=filtered_warnings,
+        warnings_total=len(warnings),
+        warning_filters=warning_filters,
         warnings_error=warnings_error,
         warnings_status=warnings_status,
         title="Avisos Locais",
+    )
+
+
+@bp.route("/warnings/local/report.txt")
+@login_required
+def local_warnings_report_txt():
+    if not getattr(services, "local_warning_service", None) or not services.local_warning_service.enabled:
+        abort(404)
+    warnings = services.local_warning_service.list_warnings()
+    warning_filters = _build_warning_filters(warnings)
+    filtered_warnings = _filter_warnings(warnings, warning_filters)
+    selected_warnings = _selected_warnings(filtered_warnings)
+    filename = f"avisos_locais_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
+    return Response(
+        _warning_report_text(selected_warnings, warning_filters),
+        mimetype="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@bp.route("/warnings/local/report.pdf")
+@login_required
+def local_warnings_report_pdf():
+    if not getattr(services, "local_warning_service", None) or not services.local_warning_service.enabled:
+        abort(404)
+    warnings = services.local_warning_service.list_warnings()
+    warning_filters = _build_warning_filters(warnings)
+    filtered_warnings = _filter_warnings(warnings, warning_filters)
+    selected_warnings = _selected_warnings(filtered_warnings)
+    pdf = _render_text_pdf(
+        "Relatório de Avisos Locais",
+        _warning_report_text(selected_warnings, warning_filters),
+    )
+    filename = f"avisos_locais_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

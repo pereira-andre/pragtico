@@ -1,5 +1,6 @@
 """Integration tests for the LocalStore storage backend."""
 
+import json
 import math
 import os
 import tempfile
@@ -188,6 +189,49 @@ class LocalStoreDocumentTests(unittest.TestCase):
         self.store.save_document("Doc2", "Segundo.")
         docs = self.store.list_documents()
         self.assertGreaterEqual(len(docs), 2)
+
+    def test_init_removes_legacy_system_seed_markdown_documents(self) -> None:
+        self.temp_dir.cleanup()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        data_dir = base / "data"
+        knowledge_dir = base / "knowledge"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        knowledge_dir.mkdir(parents=True, exist_ok=True)
+
+        legacy_name = "meteorologia-e-mares.md"
+        legacy_text = (
+            "Dados de marés e meteorologia devem ser revistos antes de cada manobra.\n"
+            "Se a intensidade do vento exceder o limite definido para o tipo de navio, a operação deve ser reavaliada.\n"
+        )
+        (knowledge_dir / legacy_name).write_text(legacy_text, encoding="utf-8")
+        (data_dir / "documents.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "name": legacy_name,
+                        "original_name": legacy_name,
+                        "doc_type": "Markdown",
+                        "size_bytes": len(legacy_text.encode("utf-8")),
+                        "size_label": "0.3 KB",
+                        "updated_at": "2026-04-03T16:31:00+00:00",
+                        "updated_at_label": "2026-04-03 16:31 UTC",
+                        "created_at": "2026-04-03T16:31:00+00:00",
+                        "uploaded_by": "system",
+                        "preview": "Dados de marés e meteorologia devem ser revistos antes de cada manobra.",
+                        "editable": True,
+                    }
+                ],
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        self.store = LocalStore(data_dir=str(data_dir), knowledge_dir=str(knowledge_dir))
+
+        self.assertFalse((knowledge_dir / legacy_name).exists())
+        self.assertIsNone(self.store.get_document(legacy_name))
 
 
 class LocalStorePortCallTests(unittest.TestCase):

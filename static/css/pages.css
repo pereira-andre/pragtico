@@ -1584,6 +1584,55 @@
   color: var(--muted);
 }
 
+.documents-admin-page .documents-collapse-grid {
+  align-items: start;
+}
+
+.documents-collapse-card {
+  overflow: hidden;
+}
+
+.documents-collapse-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.documents-collapse-summary::-webkit-details-marker {
+  display: none;
+}
+
+.documents-collapse-summary h2 {
+  margin: 4px 0 0;
+}
+
+.documents-collapse-summary::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.documents-collapse-card[open] .documents-collapse-summary::after,
+.document-catalog-detail[open] > .documents-collapse-summary::after {
+  content: "−";
+}
+
+.documents-collapse-body {
+  margin-top: 16px;
+}
+
 .documents-admin-page .document-window-table {
   border-radius: 20px;
   border-color: rgba(130, 160, 195, 0.14);
@@ -1625,6 +1674,63 @@
 .documents-admin-page .doc-actions {
   gap: 10px 14px;
   margin-top: 0;
+}
+
+.documents-admin-page .document-catalog-detail {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(20, 36, 56, 0.96));
+}
+
+.documents-admin-page .document-catalog-detail > .documents-collapse-body {
+  display: grid;
+  gap: 18px;
+}
+
+.documents-admin-page .document-row-menu {
+  justify-self: end;
+}
+
+.documents-admin-page .document-row-menu .chat-sidebar-menu-body {
+  min-width: 180px;
+}
+
+.documents-admin-page .document-row-menu form {
+  margin: 0;
+}
+
+.warnings-archive-page .warning-table td {
+  vertical-align: top;
+}
+
+.warnings-archive-page .warning-table .document-window-preview {
+  max-width: 56ch;
+  margin-top: 8px;
+}
+
+.document-detail-page .document-detail-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 18px 0 22px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.48);
+}
+
+.document-detail-page .document-detail-toolbar form {
+  margin: 0;
+}
+
+.document-detail-page .document-toolbar-danger {
+  width: auto;
+}
+
+.document-detail-page .document-quick-links {
+  display: grid;
+  gap: 10px;
 }
 
 .admin-users-panel {
@@ -2769,6 +2875,12 @@ button:hover {
   .documents-admin-page .reindex-sync-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .documents-collapse-summary,
+  .document-detail-page .document-detail-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 720px) {
@@ -2799,5 +2911,10 @@ button:hover {
 
   .documents-admin-page .reindex-doc-row-side {
     justify-items: start;
+  }
+
+  .documents-admin-page .document-row-menu .chat-sidebar-menu-body {
+    position: static;
+    min-width: 0;
   }
 }

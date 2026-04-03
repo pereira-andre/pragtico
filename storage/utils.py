@@ -19,6 +19,45 @@ from .constants import (
 )
 
 
+LEGACY_SYSTEM_MARKDOWN_SEEDS = {
+    "manual-de-manobra": "Checklist de aproximação:",
+    "norma-de-seguranca": "Em caso de dúvida operacional, prevalece o princípio de segurança.",
+    "meteorologia-e-mares": "Dados de marés e meteorologia devem ser revistos antes de cada manobra.",
+}
+
+
+def legacy_system_markdown_seed_prefix(name: Optional[str]) -> str:
+    clean_name = (name or "").strip().lower()
+    if not clean_name.endswith(".md"):
+        return ""
+    stem = clean_name[:-3]
+    for slug, prefix in LEGACY_SYSTEM_MARKDOWN_SEEDS.items():
+        if stem == slug or stem.startswith(f"{slug}-"):
+            return prefix
+    return ""
+
+
+def is_legacy_system_markdown_document(
+    *,
+    name: Optional[str],
+    uploaded_by: Optional[str] = None,
+    preview: Optional[str] = None,
+    text: Optional[str] = None,
+) -> bool:
+    expected_prefix = legacy_system_markdown_seed_prefix(name)
+    if not expected_prefix:
+        return False
+    uploader = _clean_text(uploaded_by).lower()
+    if uploader and uploader != "system":
+        return False
+    normalized_expected = _clean_text(expected_prefix).lower()
+    for candidate in (preview, text):
+        normalized_candidate = _clean_text(candidate).lower()
+        if normalized_candidate.startswith(normalized_expected):
+            return True
+    return False
+
+
 def _utc_iso_to_label(value: str) -> str:
     try:
         dt = datetime.fromisoformat(value.replace("Z", "+00:00"))

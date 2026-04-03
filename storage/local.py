@@ -21,6 +21,7 @@ from domain.document_processing import (
     is_allowed_document,
     is_text_editable,
     iso_now,
+    read_text_file,
     sanitize_upload_filename,
     slugify,
 )
@@ -71,6 +72,7 @@ from .utils import (
     _validate_required_operational_profile,
     _validate_required_vessel_profile,
     is_user_profile_complete,
+    is_legacy_system_markdown_document,
     normalize_constraint_codes,
 )
 from core.validators import validate_operational_feedback_status
@@ -93,6 +95,7 @@ class LocalStore(BaseStore):
         self._ensure_dirs()
         self._seed_defaults()
         self._migrate_legacy_chats()
+        self._remove_legacy_seed_markdown_documents()
         self._sync_document_records()
         self._sync_maneuver_cases_from_port_calls(self._read_port_calls(), capture_live_environment=False)
 
@@ -111,6 +114,45 @@ class LocalStore(BaseStore):
         with open(temp_path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2)
         os.replace(temp_path, path)
+
+    def _remove_legacy_seed_markdown_documents(self) -> None:
+        records = self._read_json(self.documents_path, [])
+        kept_records = []
+        removed_names = set()
+        for record in records:
+            path = os.path.join(self.knowledge_dir, record.get("name", ""))
+            text = ""
+            if os.path.exists(path):
+                try:
+                    text = read_text_file(path)
+                except OSError:
+                    text = ""
+            if is_legacy_system_markdown_document(
+                name=record.get("name"),
+                uploaded_by=record.get("uploaded_by"),
+                preview=record.get("preview"),
+                text=text,
+            ):
+                removed_names.add(record.get("name", ""))
+                if os.path.exists(path):
+                    os.remove(path)
+                continue
+            kept_records.append(record)
+        if kept_records != records:
+            self._write_json(self.documents_path, kept_records)
+
+        for name in os.listdir(self.knowledge_dir):
+            path = os.path.join(self.knowledge_dir, name)
+            if not os.path.isfile(path):
+                continue
+            if name in removed_names:
+                continue
+            try:
+                text = read_text_file(path)
+            except OSError:
+                continue
+            if is_legacy_system_markdown_document(name=name, text=text):
+                os.remove(path)
 
     def _seed_defaults(self) -> None:
         users = self._read_json(self.users_path, [])

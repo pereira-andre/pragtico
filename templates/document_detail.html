@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="detail-layout">
+<main class="detail-layout document-detail-page">
   <section class="panel detail-main">
     <div class="section-head">
       <div>
@@ -10,16 +10,22 @@
           {{ document.doc_type }} · {{ document.size_label }} · atualizado {{ document.updated_at_label }}
         </p>
       </div>
-      <div class="detail-actions">
-        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar</a>
-        <a class="outline-link" href="{{ url_for('admin.download_document', name=document.name) }}">Download</a>
-        {% if current_role == "admin" %}
-          <form method="post" action="{{ url_for('admin.reindex_knowledge') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="secondary-button">Reindexar incremental</button>
-          </form>
-        {% endif %}
-      </div>
+    </div>
+
+    <div class="document-detail-toolbar">
+      <a class="outline-link" href="{{ document_return_to }}">Voltar aos documentos</a>
+      <a class="outline-link" href="{{ url_for('admin.download_document', name=document.name) }}">Download</a>
+      {% if current_role == "admin" %}
+        <form method="post" action="{{ url_for('admin.reindex_knowledge') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="secondary-button">Reindexar</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.delete_document', name=document.name) }}" onsubmit="return confirm('Apagar {{ document.original_name }}?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="return_to" value="{{ document_return_to }}">
+          <button type="submit" class="danger-button document-toolbar-danger">Apagar documento</button>
+        </form>
+      {% endif %}
     </div>
 
     <div class="detail-grid">
@@ -50,7 +56,8 @@
             </div>
           </div>
           <form method="post" action="{{ url_for('admin.edit_document', name=document.name) }}" class="stack">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ document_return_to }}">
             <label>
               Conteúdo
               <textarea name="content" rows="18" required>{{ document_text }}</textarea>
@@ -63,36 +70,34 @@
           <div class="section-head">
             <div>
               <p class="eyebrow">Atualização</p>
-              <h2>Substituir conhecimento</h2>
+              <h2>Gestão do ficheiro</h2>
             </div>
           </div>
           {% if manual_knowledge_authoring_enabled %}
             <p class="muted">
-              Este tipo de ficheiro não é editável no browser. Para atualizar a regra, apaga este documento e carrega uma nova versão.
+              Este tipo de ficheiro não é editável no browser. Para atualizar a regra, substitui o ficheiro original e volta a indexar.
             </p>
           {% else %}
             <p class="muted">
-              A edição manual no browser está desativada. Para atualizar a regra, substitui o ficheiro oficial e reindexa.
+              A edição manual no browser está desativada. Usa o upload de uma nova versão oficial e remove a antiga quando necessário.
             </p>
           {% endif %}
         </section>
       {% endif %}
 
-      <section class="panel danger-panel">
-        <div class="section-head">
+      <details class="panel documents-collapse-card" open>
+        <summary class="documents-collapse-summary">
           <div>
-            <p class="eyebrow">Remoção</p>
-            <h2>Eliminar conhecimento</h2>
+            <p class="eyebrow">Ações rápidas</p>
+            <h2>Operações sobre o ficheiro</h2>
           </div>
+          <span class="ops-pill">atalhos</span>
+        </summary>
+        <div class="documents-collapse-body document-quick-links">
+          <a class="outline-link" href="{{ url_for('admin.download_document', name=document.name) }}">Descarregar original</a>
+          <a class="outline-link" href="{{ document_return_to }}">Voltar ao catálogo</a>
         </div>
-        <p class="muted">
-          Ao remover este ficheiro, o conteúdo deixa de ser usado no RAG após reindexação.
-        </p>
-        <form method="post" action="{{ url_for('admin.delete_document', name=document.name) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="danger-button">Apagar documento</button>
-        </form>
-      </section>
+      </details>
     </section>
   {% endif %}
 </main>

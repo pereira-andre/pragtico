@@ -16,6 +16,29 @@ from core.helpers import answer_direct_operational_query, build_operational_chat
 from storage import LocalStore
 
 
+class _StubLocalWarningService:
+    enabled = True
+
+    def __init__(self, warnings: list[dict]) -> None:
+        self._warnings = warnings
+
+    def list_warnings(self) -> list[dict]:
+        return list(self._warnings)
+
+    def status(self) -> dict:
+        return {
+            "stale": False,
+            "cache_updated_at_label": "03/04/2026, 18:10",
+            "last_attempt_at_label": "03/04/2026, 18:10",
+        }
+
+    def get_warning(self, warning_id: int) -> dict | None:
+        for item in self._warnings:
+            if item.get("id") == warning_id:
+                return item
+        return None
+
+
 class OperationalFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -1437,6 +1460,109 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(response.mimetype, "application/pdf")
         self.assertTrue(response.data.startswith(b"%PDF-1.4"))
 
+    def test_local_warnings_report_txt_respects_filters_and_selection(self) -> None:
+        warnings = [
+            {
+                "id": 101,
+                "display_code": "Anav nr 101",
+                "subject": "Dragagem no canal",
+                "location": "Canal Norte",
+                "description_text": "Operação de dragagem até novo aviso.",
+                "excerpt": "Operação de dragagem até novo aviso.",
+                "status_label": "Em vigor",
+                "start_date_label": "03 abr 2026",
+                "end_date_label": "10 abr 2026",
+                "start_date_iso": "2026-04-03T08:00:00+00:00",
+                "end_date_iso": "2026-04-10T17:00:00+00:00",
+                "has_attachments": False,
+                "attachments": [],
+            },
+            {
+                "id": 102,
+                "display_code": "Anav nr 102",
+                "subject": "Sondagens na barra",
+                "location": "Barra",
+                "description_text": "Sondagens hidrográficas com embarcação de apoio.",
+                "excerpt": "Sondagens hidrográficas com embarcação de apoio.",
+                "status_label": "Em vigor",
+                "start_date_label": "04 abr 2026",
+                "end_date_label": "12 abr 2026",
+                "start_date_iso": "2026-04-04T08:00:00+00:00",
+                "end_date_iso": "2026-04-12T17:00:00+00:00",
+                "has_attachments": True,
+                "attachments": [{"name": "Croqui", "url": "https://example.test/croqui.pdf"}],
+            },
+        ]
+
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                response = client.get("/warnings/local/report.txt?q=sondagens&warning_ids=102")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response.mimetype)
+        body = response.get_data(as_text=True)
+        self.assertIn("Anav nr 102", body)
+        self.assertNotIn("Anav nr 101", body)
+        self.assertIn("Croqui", body)
+
+    def test_local_warnings_report_pdf_returns_pdf_bytes(self) -> None:
+        warnings = [
+            {
+                "id": 201,
+                "display_code": "Anav nr 201",
+                "subject": "Balizagem temporária",
+                "location": "Canal Sul",
+                "description_text": "Balizagem provisória em vigor.",
+                "excerpt": "Balizagem provisória em vigor.",
+                "status_label": "Em vigor",
+                "start_date_label": "03 abr 2026",
+                "end_date_label": "05 abr 2026",
+                "start_date_iso": "2026-04-03T08:00:00+00:00",
+                "end_date_iso": "2026-04-05T17:00:00+00:00",
+                "has_attachments": False,
+                "attachments": [],
+            },
+        ]
+
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                response = client.get("/warnings/local/report.pdf")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertTrue(response.data.startswith(b"%PDF-1.4"))
+
+    def test_local_warnings_page_renders_selection_actions(self) -> None:
+        warnings = [
+            {
+                "id": 301,
+                "display_code": "Anav nr 301",
+                "subject": "Corrente forte na barra",
+                "location": "Barra",
+                "description_text": "Corrente forte com recomendação de prudência.",
+                "excerpt": "Corrente forte com recomendação de prudência.",
+                "status_label": "Em vigor",
+                "start_date_label": "03 abr 2026",
+                "end_date_label": "06 abr 2026",
+                "start_date_iso": "2026-04-03T08:00:00+00:00",
+                "end_date_iso": "2026-04-06T17:00:00+00:00",
+                "has_attachments": False,
+                "attachments": [],
+            },
+        ]
+
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                response = client.get("/warnings/local")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Selecionar tudo filtrado", html)
+        self.assertIn("warnings-export-pdf", html)
+
 
 class AdminDocumentPolicyTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -1492,6 +1618,48 @@ class AdminDocumentPolicyTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("Versão oficial.", self.store.get_document_text(filename))
+
+    def test_bulk_delete_documents_removes_selected_files(self) -> None:
+        first = self.store.save_document("Documento A", "Primeiro conteúdo.")
+        second = self.store.save_document("Documento B", "Segundo conteúdo.")
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/documents/bulk-delete",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/documents?q=Documento",
+                    "document_names": [first],
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNone(self.store.get_document(first))
+        self.assertIsNotNone(self.store.get_document(second))
+
+    def test_document_detail_preserves_return_to_catalog(self) -> None:
+        filename = self.store.save_document("Manual Operacional", "Texto oficial.")
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get(f"/documents/{filename}?return_to=/admin/documents?q=manual")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("/admin/documents?q=manual", html)
+
+    def test_admin_documents_page_renders_bulk_actions_and_filters(self) -> None:
+        self.store.save_document("Manual Operacional", "Texto oficial.")
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/documents?q=Manual")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Eliminar selecionados", html)
+        self.assertIn("Documentos indexados", html)
 
 
 if __name__ == "__main__":
