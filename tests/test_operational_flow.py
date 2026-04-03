@@ -19,17 +19,38 @@ from storage import LocalStore
 class _StubLocalWarningService:
     enabled = True
 
-    def __init__(self, warnings: list[dict]) -> None:
+    def __init__(
+        self,
+        warnings: list[dict],
+        *,
+        stale: bool = False,
+        error: str = "",
+        cache_updated_at_label: str = "03/04/2026, 18:10",
+        last_attempt_at_label: str = "03/04/2026, 18:10",
+        probe_error: str = "",
+    ) -> None:
         self._warnings = warnings
+        self._stale = stale
+        self._error = error
+        self._cache_updated_at_label = cache_updated_at_label
+        self._last_attempt_at_label = last_attempt_at_label
+        self._probe_error = probe_error
 
     def list_warnings(self) -> list[dict]:
         return list(self._warnings)
 
+    def probe_warnings(self) -> list[dict]:
+        if self._probe_error:
+            raise RuntimeError(self._probe_error)
+        return list(self._warnings)
+
     def status(self) -> dict:
         return {
-            "stale": False,
-            "cache_updated_at_label": "03/04/2026, 18:10",
-            "last_attempt_at_label": "03/04/2026, 18:10",
+            "stale": self._stale,
+            "error": self._error,
+            "cache_updated_at_label": self._cache_updated_at_label,
+            "last_attempt_at_label": self._last_attempt_at_label,
+            "count": len(self._warnings),
         }
 
     def get_warning(self, warning_id: int) -> dict | None:
@@ -37,6 +58,42 @@ class _StubLocalWarningService:
             if item.get("id") == warning_id:
                 return item
         return None
+
+
+class _StubWaveService:
+    enabled = True
+
+    def __init__(
+        self,
+        *,
+        probe_payload: dict | None = None,
+        stale: bool = False,
+        error: str = "",
+        cache_updated_at_label: str = "03/04/2026, 18:10",
+        last_attempt_at_label: str = "03/04/2026, 18:10",
+        probe_error: str = "",
+        station_name: str = "Sines",
+    ) -> None:
+        self._probe_payload = probe_payload or {}
+        self._stale = stale
+        self._error = error
+        self._cache_updated_at_label = cache_updated_at_label
+        self._last_attempt_at_label = last_attempt_at_label
+        self._probe_error = probe_error
+        self.station_name = station_name
+
+    def probe_current_conditions(self) -> dict:
+        if self._probe_error:
+            raise RuntimeError(self._probe_error)
+        return dict(self._probe_payload)
+
+    def status(self) -> dict:
+        return {
+            "stale": self._stale,
+            "error": self._error,
+            "cache_updated_at_label": self._cache_updated_at_label,
+            "last_attempt_at_label": self._last_attempt_at_label,
+        }
 
 
 class OperationalFlowTests(unittest.TestCase):
@@ -1563,16 +1620,56 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Selecionar tudo filtrado", html)
         self.assertIn("warnings-export-pdf", html)
 
+    def test_local_warnings_page_shows_offline_when_source_probe_fails(self) -> None:
+        warning_service = _StubLocalWarningService(
+            [],
+            error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+            cache_updated_at_label="",
+            last_attempt_at_label="03/04/2026, 18:22",
+            probe_error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+        )
+
+        with patch.object(services, "local_warning_service", warning_service):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                response = client.get("/warnings/local")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Indisponível", html)
+        self.assertIn("Ligação ao Instituto Hidrográfico recusada neste ambiente.", html)
+        self.assertNotIn("sem cache local", html)
+
     def test_admin_status_page_uses_clear_operational_labels(self) -> None:
-        with app.app.test_client() as client:
-            self._login_client_as_admin(client)
-            response = client.get("/admin/status")
+        warning_service = _StubLocalWarningService(
+            [],
+            error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+            cache_updated_at_label="",
+            last_attempt_at_label="03/04/2026, 18:35",
+            probe_error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+        )
+        wave_service = _StubWaveService(
+            error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+            cache_updated_at_label="",
+            last_attempt_at_label="03/04/2026, 18:35",
+            probe_error="Ligação ao Instituto Hidrográfico recusada neste ambiente.",
+        )
+
+        with patch.object(services, "local_warning_service", warning_service):
+            with patch.object(services, "wave_service", wave_service):
+                with app.app.test_client() as client:
+                    self._login_client_as_admin(client)
+                    response = client.get("/admin/status")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn("Estado da plataforma", html)
         self.assertIn("Embed web público", html)
+        self.assertIn("Indisponível", html)
+        self.assertIn("Última tentativa 03/04/2026, 18:35", html)
+        self.assertIn("Ligação ao Instituto Hidrográfico recusada neste ambiente.", html)
         self.assertNotIn("Ir para utilizadores", html)
+        self.assertNotIn("estado sem cache local", html)
         self.assertNotIn("sem API", html)
 
 

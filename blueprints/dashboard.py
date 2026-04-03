@@ -447,6 +447,49 @@ def _warning_filter_summary(filters: dict) -> str:
     return " | ".join(parts) if parts else "Sem filtros adicionais."
 
 
+def _warning_runtime_status(
+    warnings: list[dict],
+    warnings_status: dict,
+    warnings_error: str,
+    *,
+    fetch_ok: bool,
+) -> dict:
+    error_message = (warnings_error or warnings_status.get("error") or "").strip()
+    is_stale = bool(warnings_status.get("stale"))
+    has_cache = bool(warnings_status.get("cache_updated_at_label"))
+    if error_message and not warnings:
+        return {
+            "state": "offline",
+            "label": "Indisponível",
+            "detail": error_message,
+        }
+    if is_stale:
+        detail_parts = []
+        if error_message:
+            detail_parts.append(error_message)
+        detail_parts.append(
+            f"cache {warnings_status.get('cache_updated_at_label')}"
+            if has_cache
+            else "a usar último snapshot local"
+        )
+        return {
+            "state": "degraded",
+            "label": "Cache local",
+            "detail": " · ".join(part for part in detail_parts if part),
+        }
+    if fetch_ok:
+        return {
+            "state": "online",
+            "label": "Online",
+            "detail": f"{len(warnings)} aviso(s) em vigor",
+        }
+    return {
+        "state": "offline",
+        "label": "Sem ligação",
+        "detail": "sem dados remotos disponíveis",
+    }
+
+
 def _warning_report_text(warnings: list[dict], filters: dict) -> str:
     generated_at = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M")
     lines = [
@@ -856,12 +899,20 @@ def local_warnings():
     warnings = []
     warnings_error = ""
     warnings_status = {}
+    warnings_fetch_ok = False
     if getattr(services, "local_warning_service", None) and services.local_warning_service.enabled:
         try:
-            warnings = services.local_warning_service.list_warnings()
+            warnings = services.local_warning_service.probe_warnings()
+            warnings_fetch_ok = True
         except Exception as exc:
             warnings_error = str(exc)
         warnings_status = services.local_warning_service.status()
+    warnings_runtime = _warning_runtime_status(
+        warnings,
+        warnings_status,
+        warnings_error,
+        fetch_ok=warnings_fetch_ok,
+    )
     warning_filters = _build_warning_filters(warnings)
     filtered_warnings = _filter_warnings(warnings, warning_filters)
     return render_template(
@@ -871,6 +922,7 @@ def local_warnings():
         warning_filters=warning_filters,
         warnings_error=warnings_error,
         warnings_status=warnings_status,
+        warnings_runtime=warnings_runtime,
         title="Avisos Locais",
     )
 

@@ -17,8 +17,8 @@
       </article>
       <article class="hero-stat">
         <span>Estado</span>
-        <strong>{% if warnings_status.stale %}cache{% else %}online{% endif %}</strong>
-        <small>{% if warnings_status.cache_updated_at_label %}atualizado {{ warnings_status.cache_updated_at_label }}{% else %}sem cache local{% endif %}</small>
+        <strong>{{ warnings_runtime.label }}</strong>
+        <small>{{ warnings_runtime.detail }}</small>
       </article>
     </div>
   </section>
@@ -31,9 +31,7 @@
       </div>
       <div class="dashboard-head-pills">
         <span class="ops-pill ops-pill-strong">{{ warnings|length }}/{{ warnings_total|default(0) }}</span>
-        {% if warnings_status.stale %}
-          <span class="ops-pill">cache</span>
-        {% endif %}
+        <span class="ops-pill">{{ warnings_runtime.label }}</span>
       </div>
     </div>
 

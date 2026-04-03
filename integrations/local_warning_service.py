@@ -248,6 +248,18 @@ class LocalWarningService:
             rows.extend((self._fetch_page(page).get("rows") or []))
         return [self._normalize_row(row) for row in rows]
 
+    def probe_warnings(self) -> List[Dict[str, Any]]:
+        if not self.enabled:
+            return []
+        with self._lock:
+            try:
+                return self._mark_success(self._fetch_all())
+            except Exception as exc:
+                self._mark_failure(exc)
+                if self._cache:
+                    return list(self._cache)
+                raise RuntimeError(self._last_error) from exc
+
     def list_warnings(self) -> List[Dict[str, Any]]:
         if not self.enabled:
             return []

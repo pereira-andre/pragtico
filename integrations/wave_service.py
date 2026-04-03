@@ -183,6 +183,23 @@ class WaveService:
             ],
         }
 
+    def _fetch_remote_conditions(self) -> Dict[str, Any]:
+        response = requests.get(self.endpoint, timeout=self.timeout)
+        response.raise_for_status()
+        return self._normalize_payload(response.json())
+
+    def probe_current_conditions(self) -> Optional[Dict[str, Any]]:
+        if not self.enabled:
+            return None
+        with self._lock:
+            try:
+                return self._mark_success(self._fetch_remote_conditions())
+            except Exception as exc:
+                self._mark_failure(exc)
+                if self._cache:
+                    return self._decorate_payload(self._cache, stale=True)
+                raise RuntimeError(self._last_error) from exc
+
     def get_current_conditions(self) -> Optional[Dict[str, Any]]:
         if not self.enabled:
             return None
@@ -195,10 +212,7 @@ class WaveService:
             if self._cache and self._is_backoff_active():
                 return self._decorate_payload(self._cache, stale=True)
             try:
-                response = requests.get(self.endpoint, timeout=self.timeout)
-                response.raise_for_status()
-                data = self._normalize_payload(response.json())
-                return self._mark_success(data)
+                return self._mark_success(self._fetch_remote_conditions())
             except Exception as exc:
                 self._mark_failure(exc)
                 if self._cache:

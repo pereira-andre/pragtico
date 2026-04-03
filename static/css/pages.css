@@ -2814,9 +2814,13 @@ button:hover {
 }
 
 .mini-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 12px;
   border-radius: 12px;
   font-size: 0.88rem;
+  text-decoration: none;
 }
 
 .voice-bubble-button[data-speaking="true"] {
