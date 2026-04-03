@@ -1755,6 +1755,230 @@
   box-shadow: 0 14px 32px rgba(29, 44, 43, 0.05);
 }
 
+.admin-status-page {
+  display: grid;
+  gap: 20px;
+}
+
+.admin-status-hero {
+  background:
+    radial-gradient(circle at top left, rgba(18, 182, 89, 0.16), transparent 26%),
+    radial-gradient(circle at top right, rgba(220, 38, 38, 0.14), transparent 22%),
+    linear-gradient(180deg, rgba(15, 35, 32, 0.96), rgba(11, 23, 34, 0.98));
+  color: #eff7f3;
+}
+
+.admin-status-hero .lead,
+.admin-status-hero .hero-stat small,
+.admin-status-hero .hero-stat span {
+  color: rgba(239, 247, 243, 0.8);
+}
+
+.admin-status-hero-grid {
+  margin-top: 10px;
+}
+
+.admin-status-hero-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.admin-status-badge.is-online {
+  background: rgba(22, 163, 74, 0.16);
+  color: #6ee7a3;
+  border-color: rgba(74, 222, 128, 0.26);
+}
+
+.admin-status-badge.is-degraded {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.admin-status-badge.is-offline {
+  background: rgba(220, 38, 38, 0.16);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.24);
+}
+
+.admin-status-alert-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.admin-status-alert {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fee2e2;
+}
+
+.admin-status-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.admin-status-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.system-state-card,
+.admin-status-surface {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.system-state-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.system-state-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.system-state-card.is-online::before {
+  background: rgba(34, 197, 94, 0.92);
+}
+
+.system-state-card.is-degraded::before {
+  background: rgba(245, 158, 11, 0.92);
+}
+
+.system-state-card.is-offline::before {
+  background: rgba(239, 68, 68, 0.92);
+}
+
+.system-state-card.is-online {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.08), rgba(255, 255, 255, 0.04));
+}
+
+.system-state-card.is-degraded {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08), rgba(255, 255, 255, 0.04));
+}
+
+.system-state-card.is-offline {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.04));
+}
+
+.system-state-head,
+.admin-status-surface-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.system-state-card strong,
+.admin-status-fact strong,
+.admin-status-surface strong {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.system-state-card p,
+.system-state-card small,
+.admin-status-note,
+.admin-status-migration-copy {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-status-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-status-note.is-danger {
+  background: rgba(239, 68, 68, 0.08);
+  color: #9f371f;
+}
+
+.admin-status-metric-grid,
+.admin-status-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-status-metric {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-status-metric span,
+.admin-status-fact span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-status-metric strong,
+.admin-status-fact strong {
+  font-size: 1.15rem;
+}
+
+.admin-status-metric.is-success {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.admin-status-metric.is-warning {
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.admin-status-metric.is-danger {
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.admin-status-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-status-fact {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .admin-traffic-grid {
   margin-top: 14px;
 }
@@ -2881,6 +3105,13 @@ button:hover {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .admin-status-service-grid,
+  .admin-status-metric-grid,
+  .admin-status-compact-grid,
+  .admin-status-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -2916,5 +3147,19 @@ button:hover {
   .documents-admin-page .document-row-menu .chat-sidebar-menu-body {
     position: static;
     min-width: 0;
+  }
+
+  .admin-status-service-grid,
+  .admin-status-metric-grid,
+  .admin-status-compact-grid,
+  .admin-status-split {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-status-hero-tools,
+  .system-state-head,
+  .admin-status-surface-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

@@ -1563,6 +1563,18 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Selecionar tudo filtrado", html)
         self.assertIn("warnings-export-pdf", html)
 
+    def test_admin_status_page_uses_clear_operational_labels(self) -> None:
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get("/admin/status")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Estado da plataforma", html)
+        self.assertIn("Embed web público", html)
+        self.assertNotIn("Ir para utilizadores", html)
+        self.assertNotIn("sem API", html)
+
 
 class AdminDocumentPolicyTests(unittest.TestCase):
     def setUp(self) -> None:

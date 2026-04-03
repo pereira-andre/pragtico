@@ -566,6 +566,20 @@ def current_reindex_status_payload() -> dict:
 def load_admin_status() -> dict:
     """Collect and return a comprehensive status payload for the admin dashboard."""
     ais_status = services.ais_service.dashboard_context()
+    wave_status = {}
+    wave_status_error = ""
+    if getattr(services, "wave_service", None):
+        try:
+            wave_status = services.wave_service.status()
+        except Exception as exc:
+            wave_status_error = str(exc)
+    local_warning_status = {}
+    local_warning_status_error = ""
+    if getattr(services, "local_warning_service", None):
+        try:
+            local_warning_status = services.local_warning_service.status()
+        except Exception as exc:
+            local_warning_status_error = str(exc)
     local_counts = {
         "users": len(services.store.list_users()),
         "documents": len(services.store.list_documents()),
@@ -607,6 +621,10 @@ def load_admin_status() -> dict:
                 "occupied_slot_count": 0,
                 "free_slot_count": 0,
                 "slot_capacity_count": 0,
+                "archive_count": 0,
+                "archive_scale_count": 0,
+                "aborted_count": 0,
+                "pending_count": 0,
             },
             "arrivals": [],
             "in_port": [],
@@ -617,28 +635,270 @@ def load_admin_status() -> dict:
             "error": str(exc),
         }
 
+    def _state(ok: bool, *, degraded: bool = False) -> str:
+        if ok and degraded:
+            return "degraded"
+        return "online" if ok else "offline"
+
+    def _backend_label(value: str) -> str:
+        mapping = {
+            "local": "Local JSON",
+            "postgres": "PostgreSQL",
+            "unknown": "Desconhecido",
+        }
+        return mapping.get((value or "").strip().lower(), (value or "").strip() or "Desconhecido")
+
+    def _build_service_item(
+        label: str,
+        *,
+        ok: bool,
+        headline: str,
+        detail: str,
+        technical: str = "",
+        degraded: bool = False,
+    ) -> dict:
+        state = _state(ok, degraded=degraded)
+        return {
+            "label": label,
+            "headline": headline,
+            "detail": detail,
+            "technical": technical,
+            "state": state,
+            "state_label": {
+                "online": "Ligado",
+                "degraded": "Degradado",
+                "offline": "Desligado",
+            }[state],
+        }
+
+    rag_chunk_total = int(rag_status.get("chunk_count") or 0)
+    rag_embedded_total = int(rag_status.get("embedded_chunks") or 0)
+    rag_coverage_pct = round((rag_embedded_total / rag_chunk_total) * 100) if rag_chunk_total else 0
+    llm_ready = services.rag.can_generate()
+    embeddings_ready = bool(services.rag._use_local_embeddings or services.rag.client)
+    weather_ready = bool(getattr(services, "weather_service", None) and services.weather_service.enabled)
+    wave_enabled = bool(getattr(services, "wave_service", None) and services.wave_service.enabled)
+    warning_enabled = bool(getattr(services, "local_warning_service", None) and services.local_warning_service.enabled)
+    storage_backend = getattr(services.store, "backend_name", "unknown")
+    storage_label = _backend_label(storage_backend)
+    db_runtime_ok = bool(db_runtime)
+    db_degraded = bool(db_runtime_error)
+
+    storage_detail = (
+        f"{db_runtime.get('database_name', '--')} · utilizador {db_runtime.get('database_user', '--')}"
+        if db_runtime
+        else "Persistência local em ficheiro JSON"
+        if storage_backend == "local"
+        else db_runtime_error or "Runtime PostgreSQL indisponível"
+    )
+    storage_technical = (
+        "pgvector ativo" if db_runtime and db_runtime.get("vector_installed")
+        else "pgvector em falta" if db_runtime
+        else "Sem ligação runtime PostgreSQL"
+    )
+    startup_migration = services.startup_migration_status or {}
+    startup_migration_status = (startup_migration.get("status") or "unknown").strip().lower()
+    migration_state = {
+        "completed": "online",
+        "skipped": "degraded",
+        "disabled": "degraded",
+        "not_applicable": "online",
+        "error": "offline",
+    }.get(startup_migration_status, "degraded")
+    migration_label = {
+        "completed": "Concluída",
+        "skipped": "Ignorada",
+        "disabled": "Desativada",
+        "not_applicable": "Não aplicável",
+        "error": "Com erro",
+    }.get(startup_migration_status, "Sem estado")
+    migration_detail = startup_migration.get("reason") or "Estado da migração automática no arranque."
+    embedding_detail = (
+        services.rag.embedding_provider.model_name
+        if services.rag._use_local_embeddings and services.rag.embedding_provider
+        else services.rag.embedding_model
+        if embeddings_ready
+        else f"Configurar {services.rag.embedding_api_key_hint}"
+    )
+
+    service_health = [
+        _build_service_item(
+            "Geração IA",
+            ok=llm_ready,
+            headline=services.rag.generation_provider_label if llm_ready else "Sem geração disponível",
+            detail=services.rag.generation_model if llm_ready else services.rag.generation_unavailable_reason(),
+            technical="cadeia de providers ativa",
+        ),
+        _build_service_item(
+            "Embeddings",
+            ok=embeddings_ready,
+            headline="Modelo local" if services.rag._use_local_embeddings else services.rag.embedding_provider_label if embeddings_ready else "Indisponíveis",
+            detail=embedding_detail,
+            technical="indexação semântica e procura vetorial",
+        ),
+        _build_service_item(
+            "Meteorologia",
+            ok=weather_ready,
+            headline="WeatherAPI configurado" if weather_ready else "WeatherAPI em falta",
+            detail=getattr(getattr(services, "weather_service", None), "location", "") or "Setúbal",
+            technical="previsão horária e vento",
+        ),
+        _build_service_item(
+            "Ondulação",
+            ok=wave_enabled or bool(wave_status),
+            degraded=bool(wave_status.get("stale")) or bool(wave_status_error),
+            headline="Cache local" if wave_status.get("stale") else "Ligado" if wave_enabled else "Desligado",
+            detail=(
+                wave_status_error
+                or wave_status.get("error")
+                or getattr(getattr(services, "wave_service", None), "station_name", "Sines")
+            ),
+            technical=(
+                f"cache {wave_status.get('cache_updated_at_label')}"
+                if wave_status.get("cache_updated_at_label")
+                else "estado sem cache local"
+            ),
+        ),
+        _build_service_item(
+            "AIS",
+            ok=bool(ais_status.get("map_available")),
+            headline="Embed web público",
+            detail=f"{ais_status.get('provider_name', 'AIS')} · zoom {ais_status.get('embed', {}).get('zoom', '--')}",
+            technical=f"{ais_status.get('embed', {}).get('latitude_dm', '--')} · {ais_status.get('embed', {}).get('longitude_dm', '--')}",
+        ),
+        _build_service_item(
+            "Avisos locais",
+            ok=warning_enabled or bool(local_warning_status),
+            degraded=bool(local_warning_status.get("stale")) or bool(local_warning_status_error),
+            headline="Cache local" if local_warning_status.get("stale") else "Ligado" if warning_enabled else "Desligado",
+            detail=local_warning_status_error or local_warning_status.get("error") or "Instituto Hidrográfico",
+            technical=(
+                f"{local_warning_status.get('count', 0)} aviso(s)"
+                if local_warning_status
+                else "sem contagem disponível"
+            ),
+        ),
+        _build_service_item(
+            "Persistência",
+            ok=storage_backend == "local" or db_runtime_ok,
+            degraded=db_degraded,
+            headline=storage_label,
+            detail=storage_detail,
+            technical=storage_technical,
+        ),
+    ]
+
+    alerts = []
+    if db_runtime_error:
+        alerts.append(f"Base de dados: {db_runtime_error}")
+    if rag_status.get("index_error"):
+        alerts.append(f"Índice documental: {rag_status['index_error']}")
+    if port_activity.get("error"):
+        alerts.append(f"Snapshot operacional: {port_activity['error']}")
+    if wave_status_error:
+        alerts.append(f"Ondulação: {wave_status_error}")
+    if local_warning_status_error:
+        alerts.append(f"Avisos locais: {local_warning_status_error}")
+    if not llm_ready:
+        alerts.append("Geração IA indisponível.")
+
+    overall_state = "online"
+    if alerts:
+        overall_state = "degraded"
+    if not llm_ready or (storage_backend == "postgres" and not db_runtime_ok):
+        overall_state = "offline"
+
+    operational_metrics = [
+        {"label": "Chegadas previstas", "value": port_activity["stats"].get("scheduled_count", 0), "tone": "neutral"},
+        {"label": "Em porto", "value": port_activity["stats"].get("in_port_count", 0), "tone": "success"},
+        {"label": "Em quadro", "value": port_activity["stats"].get("quadro_count", 0), "tone": "warning"},
+        {"label": "Em cais", "value": port_activity["stats"].get("quay_vessel_count", 0), "tone": "neutral"},
+        {
+            "label": "Slots ocupados",
+            "value": f"{port_activity['stats'].get('occupied_slot_count', 0)}/{port_activity['stats'].get('slot_capacity_count', 0)}",
+            "tone": "neutral",
+        },
+        {"label": "Livres", "value": port_activity["stats"].get("free_slot_count", 0), "tone": "success"},
+        {"label": "Manobras planeadas", "value": port_activity["stats"].get("planned_count", 0), "tone": "neutral"},
+        {"label": "Pendentes", "value": port_activity["stats"].get("pending_count", 0), "tone": "warning"},
+        {"label": "Arquivo de escalas", "value": port_activity["stats"].get("archive_scale_count", 0), "tone": "neutral"},
+        {"label": "Abortadas", "value": port_activity["stats"].get("aborted_count", 0), "tone": "danger"},
+    ]
+
+    db_metrics = [
+        {"label": "Base", "value": db_runtime.get("database_name", "--") if db_runtime else storage_label},
+        {"label": "Utilizador", "value": db_runtime.get("database_user", "--") if db_runtime else "n/d"},
+        {"label": "pgvector", "value": "Ligado" if db_runtime and db_runtime.get("vector_installed") else "Desligado"},
+        {"label": "Users", "value": db_runtime.get("counts", {}).get("app_users", local_counts.get("users", 0)) if db_runtime else local_counts.get("users", 0)},
+        {"label": "Docs", "value": db_runtime.get("counts", {}).get("documents", local_counts.get("documents", 0)) if db_runtime else local_counts.get("documents", 0)},
+        {"label": "Conversas", "value": db_runtime.get("counts", {}).get("conversations", local_counts.get("conversations", 0)) if db_runtime else local_counts.get("conversations", 0)},
+        {"label": "Mensagens", "value": db_runtime.get("counts", {}).get("messages", 0) if db_runtime else 0},
+        {"label": "Escalas", "value": db_runtime.get("counts", {}).get("port_calls", 0) if db_runtime else port_activity["stats"].get("scheduled_count", 0) + port_activity["stats"].get("in_port_count", 0) + port_activity["stats"].get("departed_count", 0)},
+        {"label": "Chunks", "value": db_runtime.get("counts", {}).get("rag_chunks", rag_chunk_total) if db_runtime else rag_chunk_total},
+    ]
+
+    rag_metrics = [
+        {"label": "Backend", "value": _backend_label(rag_status.get("index_backend", "unknown"))},
+        {"label": "Documentos", "value": rag_status.get("document_count", 0)},
+        {"label": "Chunks", "value": rag_chunk_total},
+        {"label": "Com embedding", "value": rag_embedded_total},
+        {"label": "Cobertura", "value": f"{rag_coverage_pct}%"},
+        {"label": "Novos", "value": rag_reindex_status.get("new_documents", 0)},
+        {"label": "Alterados", "value": rag_reindex_status.get("changed_documents", 0)},
+        {"label": "Removidos", "value": rag_reindex_status.get("removed_documents", 0)},
+        {"label": "Sem alterações", "value": rag_reindex_status.get("unchanged_documents", 0)},
+    ]
+
     return {
         "auth_backend": getattr(services.auth_service, "backend_name", "unknown"),
+        "auth_backend_label": _backend_label(getattr(services.auth_service, "backend_name", "unknown")),
         "auth_method_label": f"Werkzeug · {PASSWORD_HASH_METHOD}",
-        "storage_backend": getattr(services.store, "backend_name", "unknown"),
+        "storage_backend": storage_backend,
+        "storage_backend_label": storage_label,
         "rag_backend": getattr(services.index_store, "backend_name", "unknown"),
+        "rag_backend_label": _backend_label(getattr(services.index_store, "backend_name", "unknown")),
         "config": {
-            "llm_ready": services.rag.can_generate(),
+            "llm_ready": llm_ready,
             "embeddings_local": services.rag._use_local_embeddings,
             "embedding_model": services.rag.embedding_model if not services.rag._use_local_embeddings else (services.rag.embedding_provider.model_name if services.rag.embedding_provider else "N/A"),
-            "weather_ready": bool(os.getenv("WEATHERAPI_KEY", "").strip()),
+            "weather_ready": weather_ready,
+            "wave_ready": wave_enabled,
+            "warnings_ready": warning_enabled,
             "ais_ready": bool(ais_status.get("configured")),
             "database_url_ready": bool(database_url),
             "migrate_on_start": os.getenv("MIGRATE_LOCAL_DATA_ON_START", "1"),
         },
         "startup_migration": services.startup_migration_status,
+        "startup_migration_status": {
+            "label": migration_label,
+            "state": migration_state,
+            "detail": migration_detail,
+        },
         "db_runtime": db_runtime,
         "db_runtime_error": db_runtime_error,
         "rag_status": rag_status,
         "rag_reindex_status": rag_reindex_status,
+        "rag_coverage_pct": rag_coverage_pct,
         "ais_status": ais_status,
+        "wave_status": wave_status,
+        "wave_status_error": wave_status_error,
+        "local_warning_status": local_warning_status,
+        "local_warning_status_error": local_warning_status_error,
         "port_activity": port_activity,
         "local_counts": local_counts,
+        "service_health": service_health,
+        "alerts": alerts,
+        "overall_status": {
+            "state": overall_state,
+            "label": {
+                "online": "Operacional",
+                "degraded": "Com avisos",
+                "offline": "Requer intervenção",
+            }[overall_state],
+        },
+        "operational_metrics": operational_metrics,
+        "db_metrics": db_metrics,
+        "rag_metrics": rag_metrics,
     }
 
 
