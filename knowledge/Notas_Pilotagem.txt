@@ -287,6 +287,62 @@ OUTROS FARÓIS:
   Tróia: 6 s — alcance 3 M.
 
 ================================================================================
+DISTÂNCIAS TOTAIS DE PERCURSO — REFERÊNCIA PARA PLANEAMENTO DE TEMPO
+================================================================================
+
+Estas distâncias são fundamentais para estimar quanto tempo demora a chegar a
+cada terminal a partir dos pontos de referência principais. A referência de
+partida é o Pilar número 2 da Barra (Bóia nº 2), que representa a entrada do
+porto. As distâncias são totais de percurso pelo canal navegável, não em linha
+recta.
+
+DA ENTRADA DA BARRA (PILAR Nº 2) ATÉ AOS TERMINAIS — CANAL NORTE:
+
+  Pilar nº 2 → TMS 2 (Terminal Multiusos Zona 2):
+    6,5 milhas náuticas pelo Canal Norte.
+
+  Pilar nº 2 → SAPEC (via canal normal, Canal Norte):
+    8,2 milhas náuticas.
+
+  Pilar nº 2 → SAPEC (via fundeadouro, passando por fora do canal):
+    7,9 milhas náuticas.
+    Esta rota alternativa pelo exterior do canal é ligeiramente mais curta.
+
+DA ENTRADA DA BARRA (PILAR Nº 2) ATÉ AOS TERMINAIS — CANAL SUL / ESTALEIRO:
+
+  Pilar nº 2 → LISNAVE (Estaleiros Mitrena, Canal Sul completo):
+    10,5 milhas náuticas pelo percurso normal do Canal Sul.
+
+  Pilar nº 2 → LISNAVE (com "corta-mato" / atalho):
+    10,0 milhas náuticas.
+    O "corta-mato" ou atalho é uma rota que encurta ligeiramente o percurso
+    ao tomar um rumo mais directo numa das secções do Canal Sul, evitando
+    percorrer o trajecto completo de todos os segmentos.
+
+DISTÂNCIAS ENTRE TERMINAIS — REFERÊNCIA PARA MUDANÇAS DE CAIS:
+
+  SAPEC → LISNAVE (mudança de cais ou saída seguida de nova entrada):
+    10,5 milhas náuticas.
+
+  TMS 2 / Centro da Cidade → LISNAVE:
+    9,0 milhas náuticas.
+
+UTILIZAÇÃO PRÁTICA DESTAS DISTÂNCIAS:
+  Para estimar o tempo de percurso, divide-se a distância pela velocidade média
+  no canal. A velocidade típica de trânsito no porto varia entre 6 e 10 nós
+  consoante o trecho e o tipo de navio.
+
+  Exemplos orientativos a 8 nós de velocidade média:
+    Pilar nº 2 → TMS 2 (6,5 NM): aproximadamente 49 minutos.
+    Pilar nº 2 → SAPEC (8,2 NM): aproximadamente 62 minutos.
+    Pilar nº 2 → LISNAVE (10,5 NM): aproximadamente 79 minutos.
+    TMS 2 → LISNAVE (9,0 NM): aproximadamente 68 minutos.
+
+  Estes tempos são estimativas — o tempo real depende de condições de maré,
+  tráfego no canal, rebocadores a estabelecer, e restrições de velocidade
+  em determinados troços.
+
+================================================================================
 ABORDAGEM ESPECÍFICA A TERMINAIS — DICAS OPERACIONAIS
 ================================================================================
 
