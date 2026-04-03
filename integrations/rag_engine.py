@@ -1106,6 +1106,7 @@ class SimpleRAGEngine:
         history: List[Dict],
         supplemental_sources: List[Dict] | None = None,
         trusted_answers: List[Dict] | None = None,
+        reviewed_answers: List[Dict] | None = None,
     ) -> Dict:
         try:
             contexts = self.retrieve(question)
@@ -1123,6 +1124,7 @@ class SimpleRAGEngine:
             sources.extend(supplemental_sources)
 
         trusted_answers = trusted_answers or []
+        reviewed_answers = reviewed_answers or []
         trusted_block = "\n\n".join(
             (
                 f"Pergunta validada: {item['question']}\n"
@@ -1131,6 +1133,15 @@ class SimpleRAGEngine:
                 f"Semelhança: {item.get('similarity', 0)}"
             )
             for item in trusted_answers[:3]
+        )
+        reviewed_block = "\n\n".join(
+            (
+                f"Pergunta em revisão: {item['question']}\n"
+                f"Resposta anterior a não repetir: {item['answer']}\n"
+                f"Nota do operador: {item.get('feedback_note') or 'Sem nota.'}\n"
+                f"Semelhança: {item.get('similarity', 0)}"
+            )
+            for item in reviewed_answers[:3]
         )
 
         history_block = "\n".join(
@@ -1150,6 +1161,9 @@ Regras:
 - Usa primeiro o contexto recuperado.
 - As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte e preserva a formulação quando fizer sentido.
+- Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
+- Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
+- Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
@@ -1167,6 +1181,9 @@ Fontes disponíveis:
 
 Memória operacional validada por feedback:
 {trusted_block or "Sem respostas aprovadas semelhantes."}
+
+Respostas anteriores marcadas para revisão:
+{reviewed_block or "Sem revisões pendentes semelhantes."}
 
 Pergunta:
 {question}

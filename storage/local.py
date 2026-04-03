@@ -880,8 +880,23 @@ class LocalStore(BaseStore):
         self._touch_conversation(conversation_id)
         return updated
 
-    def find_feedback_matches(self, username: str, question: str, limit: int = 3) -> List[Dict]:
-        """Return previously approved messages whose question best matches the given text."""
+    def find_feedback_matches(
+        self,
+        username: str,
+        question: str,
+        limit: int = 3,
+        feedback_statuses: Optional[set[str]] = None,
+    ) -> List[Dict]:
+        """Return previously reviewed messages whose question best matches the given text."""
+        allowed_statuses = {
+            (status or "").strip().lower()
+            for status in (feedback_statuses or {FEEDBACK_APPROVED})
+            if (status or "").strip()
+        }
+        allowed_statuses &= ALLOWED_FEEDBACK_STATUSES
+        if not allowed_statuses:
+            return []
+
         conversations = {
             item["id"]: item
             for item in self._read_conversations()
@@ -905,7 +920,7 @@ class LocalStore(BaseStore):
                     continue
                 if message["role"] != "assistant":
                     continue
-                if message.get("feedback_status") != FEEDBACK_APPROVED:
+                if message.get("feedback_status") not in allowed_statuses:
                     continue
                 if not previous_user:
                     continue
@@ -919,6 +934,7 @@ class LocalStore(BaseStore):
                         "question": previous_user.get("content", ""),
                         "answer": message.get("content", ""),
                         "citations": message.get("citations", []),
+                        "feedback_status": message.get("feedback_status", ""),
                         "feedback_note": message.get("feedback_note", ""),
                         "feedback_updated_at": message.get("feedback_updated_at"),
                         "similarity": round(score, 3),

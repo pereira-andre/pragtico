@@ -1548,7 +1548,22 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
             ),
         }
 
-    def find_feedback_matches(self, username: str, question: str, limit: int = 3) -> List[Dict]:
+    def find_feedback_matches(
+        self,
+        username: str,
+        question: str,
+        limit: int = 3,
+        feedback_statuses: Optional[set[str]] = None,
+    ) -> List[Dict]:
+        allowed_statuses = {
+            (status or "").strip().lower()
+            for status in (feedback_statuses or {FEEDBACK_APPROVED})
+            if (status or "").strip()
+        }
+        allowed_statuses &= ALLOWED_FEEDBACK_STATUSES
+        if not allowed_statuses:
+            return []
+
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -1558,6 +1573,7 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                         assistant.conversation_id::text AS conversation_id,
                         assistant.content AS answer,
                         assistant.citations,
+                        assistant.feedback_status,
                         assistant.feedback_note,
                         assistant.feedback_updated_at,
                         user_msg.content AS question
@@ -1574,10 +1590,10 @@ O sistema futuro deverá integrar APIs externas para marés, vento e avisos cost
                     ) user_msg ON TRUE
                     WHERE c.username = %s
                       AND assistant.role = 'assistant'
-                      AND assistant.feedback_status = %s
+                      AND assistant.feedback_status = ANY(%s)
                     ORDER BY assistant.feedback_updated_at DESC NULLS LAST, assistant.created_at DESC
                     """,
-                    (username, FEEDBACK_APPROVED),
+                    (username, sorted(allowed_statuses)),
                 )
                 rows = cur.fetchall()
 

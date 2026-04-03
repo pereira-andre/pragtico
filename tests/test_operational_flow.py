@@ -618,6 +618,140 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(payload["feedback_updated_at"])
         self.assertTrue(payload["feedback_updated_at_label"])
 
+    def test_chat_message_feedback_review_requires_note(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta operacional.",
+            )
+            response = client.post(
+                f"/api/messages/{message['id']}/feedback",
+                json={
+                    "conversation_id": conversation["id"],
+                    "feedback_status": "review",
+                    "feedback_note": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.get_json()
+        self.assertIn("indica a correção", payload["error"].lower())
+
+    def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="qual é a distancia da barra ao outão?",
+            )
+            reviewed_message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="A distância da saída da Barra até ao Outão é de 3,00 milhas náuticas.",
+            )
+            self.store.update_message_feedback(
+                "admin",
+                conversation["id"],
+                reviewed_message["id"],
+                "review",
+                "3,23 milhas náuticas = 5982 m",
+            )
+
+            with patch.object(services.rag, "answer") as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "qual é a distancia da barra ao outão?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "review_guard")
+        self.assertIn("marcada para revisão", payload["answer"].lower())
+        self.assertIn("3,23 milhas náuticas", payload["answer"])
+        answer_mock.assert_not_called()
+
+    def test_slash_rules_lists_available_rule_codes(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "/regras",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_rule")
+        self.assertIn("015", payload["answer"])
+        self.assertIn("IT-015 Fundeadouros", payload["answer"])
+        self.assertIn("062", payload["answer"])
+        self.assertNotIn("013", payload["answer"])
+
+    def test_slash_rule_without_code_lists_available_rule_codes(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "/regra",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_rule")
+        self.assertIn("Regras/instruções disponíveis", payload["answer"])
+        self.assertIn("/regra 015", payload["answer"])
+
+    def test_slash_rule_for_missing_code_returns_catalog(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "/regra 013",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_rule")
+        self.assertIn("não encontrei a regra 013", payload["answer"].lower())
+        self.assertIn("IT-015 Fundeadouros", payload["answer"])
+
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

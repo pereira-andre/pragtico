@@ -210,6 +210,7 @@ Ref: PTSET26OCEA123456
 - `/ondulacao` mostra a leitura costeira atual.
 - `/mares hoje` mostra marés para hoje ou para a data indicada.
 - `/meteorologia hoje` mostra a previsão meteorológica.
+- `/regras` lista os códigos de regras/instruções disponíveis.
 - `/regra 015` consulta uma regra operacional por código.
 
 ### Escalas

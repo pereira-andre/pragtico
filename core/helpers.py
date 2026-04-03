@@ -93,6 +93,45 @@ RULE_CODE_TITLES = {
 }
 
 
+def available_rule_code_titles() -> dict[str, str]:
+    """Return the rule-code map limited to documents actually present in the knowledge base."""
+    knowledge_dir = getattr(services, "KNOWLEDGE_DIR", "") or ""
+    if not knowledge_dir or not os.path.isdir(knowledge_dir):
+        return dict(RULE_CODE_TITLES)
+
+    available_codes = set()
+    try:
+        for entry in os.listdir(knowledge_dir):
+            match = re.match(r"IT-(\d{3})_", entry)
+            if match:
+                available_codes.add(match.group(1))
+    except OSError:
+        return dict(RULE_CODE_TITLES)
+
+    filtered = {
+        code: title
+        for code, title in RULE_CODE_TITLES.items()
+        if code in available_codes
+    }
+    return filtered or dict(RULE_CODE_TITLES)
+
+
+def build_rule_catalog_text() -> str:
+    """Return a user-facing catalog of the available operational rules by code."""
+    lines = [
+        "Regras/instruções disponíveis por código:",
+    ]
+    for code, title in sorted(available_rule_code_titles().items(), key=lambda item: item[0]):
+        lines.append(f"- {code} — {title}")
+    lines.extend(
+        [
+            "",
+            "Usa `/regra 015` para resumir uma regra específica.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Session / profile helpers
 # ---------------------------------------------------------------------------
@@ -1770,12 +1809,19 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
         code_match = re.search(r"\b(\d{3})\b", clean_argument)
         if not code_match:
             return {
-                "answer": "Usa o comando neste formato:\n/regra 015",
+                "answer": build_rule_catalog_text(),
                 "sources": [],
                 "answer_origin": "slash_rule",
             }
         code = code_match.group(1)
-        title = RULE_CODE_TITLES.get(code, f"IT-{code}")
+        available_titles = available_rule_code_titles()
+        title = available_titles.get(code)
+        if not title:
+            return {
+                "answer": f"Não encontrei a regra {code} neste ambiente.\n\n{build_rule_catalog_text()}",
+                "sources": [],
+                "answer_origin": "slash_rule",
+            }
         if not services.rag.can_generate():
             return {
                 "answer": f"Pedido da regra {title} recebido, mas o LLM está indisponível neste ambiente.",

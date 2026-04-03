@@ -38,6 +38,61 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("chat", __name__)
 
+APPROVED_MEMORY_SIMILARITY = 0.96
+REVIEW_GUARD_SIMILARITY = 0.9
+REVIEW_BLOCK_SIMILARITY = 0.97
+
+
+def _feedback_timestamp(value: dict | None) -> str:
+    if not value:
+        return ""
+    return str(value.get("feedback_updated_at") or "")
+
+
+def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
+    """Return the reviewed match that should suppress blind reuse, if any."""
+    best_review = reviewed_answers[0] if reviewed_answers else None
+    if not best_review or best_review.get("similarity", 0) < REVIEW_GUARD_SIMILARITY:
+        return None
+
+    best_trusted = trusted_answers[0] if trusted_answers else None
+    if not best_trusted:
+        return best_review
+
+    if (
+        best_trusted.get("similarity", 0) >= best_review.get("similarity", 0)
+        and _feedback_timestamp(best_trusted) >= _feedback_timestamp(best_review)
+    ):
+        return None
+    return best_review
+
+
+def _build_review_guard_answer(review_match: dict) -> dict:
+    """Build a deterministic answer when a near-identical question is still under review."""
+    feedback_note = (review_match.get("feedback_note") or "").strip()
+    if feedback_note:
+        answer = (
+            "Uma resposta anterior muito semelhante ficou marcada para revisão, "
+            "por isso não a vou repetir como validada. "
+            f"Nota de revisão registada: {feedback_note}"
+        )
+    else:
+        answer = (
+            "Uma resposta anterior muito semelhante ficou marcada para revisão, "
+            "por isso não a vou repetir como validada sem nova confirmação."
+        )
+    return {
+        "answer": answer,
+        "sources": [],
+        "answer_origin": "review_guard",
+        "review_match": {
+            "similarity": review_match.get("similarity", 0),
+            "message_id": review_match.get("message_id", ""),
+            "question": review_match.get("question", ""),
+            "feedback_note": feedback_note,
+        },
+    }
+
 
 def _conversation_shell(username: str, conversation_id: str) -> dict:
     """Return lightweight metadata for a specific conversation owned by the user."""
@@ -190,6 +245,8 @@ def api_message_feedback(message_id: str):
         return jsonify({"error": "conversation_id em falta."}), 400
     if feedback_status not in {"approved", "review"}:
         return jsonify({"error": "Estado de feedback inválido."}), 400
+    if feedback_status == "review" and not feedback_note:
+        return jsonify({"error": "Ao pedir revisão indica a correção ou o motivo."}), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,
@@ -324,7 +381,19 @@ def api_chat():
     conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
     history = services.store.list_messages(username, conversation["id"])
     existing_pending = load_pending_chat_action(username, conversation["id"])
-    trusted_answers = services.store.find_feedback_matches(username, question, limit=3)
+    trusted_answers = services.store.find_feedback_matches(
+        username,
+        question,
+        limit=3,
+        feedback_statuses={"approved"},
+    )
+    reviewed_answers = services.store.find_feedback_matches(
+        username,
+        question,
+        limit=3,
+        feedback_statuses={"review"},
+    )
+    review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
     supplemental_sources = build_operational_chat_sources(question)
     supplemental_sources.append(services.tide_service.context_for_question(question))
     if services.weather_service.enabled:
@@ -438,7 +507,9 @@ def api_chat():
             else:
                 answer = None
 
-    if answer is None and trusted_answers and trusted_answers[0].get("similarity", 0) >= 0.96:
+    if answer is None and review_guard_match and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY:
+        answer = _build_review_guard_answer(review_guard_match)
+    elif answer is None and trusted_answers and trusted_answers[0].get("similarity", 0) >= APPROVED_MEMORY_SIMILARITY and not review_guard_match:
         best_match = trusted_answers[0]
         answer = {
             "answer": best_match["answer"], "sources": best_match.get("citations", []),
@@ -451,7 +522,9 @@ def api_chat():
         answer = services.rag.answer(
             question=question, role=session.get("role", "piloto"),
             history=(history + [user_message])[-10:],
-            supplemental_sources=supplemental_sources, trusted_answers=trusted_answers,
+            supplemental_sources=supplemental_sources,
+            trusted_answers=trusted_answers,
+            reviewed_answers=reviewed_answers,
         )
         answer["answer_origin"] = "llm"
         if trusted_answers:

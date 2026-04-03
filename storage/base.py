@@ -184,8 +184,14 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_feedback_matches(self, username: str, question: str, limit: int = 3) -> List[Dict]:
-        """Return previously approved messages whose question closely matches the given text."""
+    def find_feedback_matches(
+        self,
+        username: str,
+        question: str,
+        limit: int = 3,
+        feedback_statuses: Optional[set[str]] = None,
+    ) -> List[Dict]:
+        """Return previously reviewed chat answers whose question closely matches the given text."""
         raise NotImplementedError
 
     @abstractmethod

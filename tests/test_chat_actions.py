@@ -91,6 +91,13 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["command"], "rule")
         self.assertIn("015", parsed["argument"])
 
+    def test_parse_slash_rules_returns_query_intent(self) -> None:
+        parsed = parse_slash_command("/regras", "piloto")
+
+        self.assertEqual(parsed["intent"], "query")
+        self.assertEqual(parsed["command"], "rule")
+        self.assertEqual(parsed["argument"], "")
+
     def test_parse_slash_validate_without_target_returns_template(self) -> None:
         parsed = parse_slash_command("/validar-manobra", "piloto")
 
@@ -339,6 +346,7 @@ class ChatActionsTests(unittest.TestCase):
 
         self.assertIn("/registar-escala", help_text)
         self.assertIn("/apagar-escala", help_text)
+        self.assertIn("/regras", help_text)
         self.assertIn("ID da manobra é automático", help_text)
 
     def test_build_slash_help_for_piloto_hides_edit_maneuver(self) -> None:

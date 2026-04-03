@@ -878,6 +878,19 @@ class LocalStorePortCallTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.update_message_feedback("admin", conv["id"], msg["id"], "invalid")
 
+    def test_find_feedback_matches_can_filter_reviewed_answers(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message("admin", conv["id"], "user", "Qual é a distância?")
+        msg = self.store.append_chat_message("admin", conv["id"], "assistant", "3,00 milhas náuticas.")
+        self.store.update_message_feedback("admin", conv["id"], msg["id"], "review", "Corrigir para 3,23 milhas náuticas.")
+
+        approved = self.store.find_feedback_matches("admin", "Qual é a distância?")
+        reviewed = self.store.find_feedback_matches("admin", "Qual é a distância?", feedback_statuses={"review"})
+
+        self.assertEqual(approved, [])
+        self.assertEqual(len(reviewed), 1)
+        self.assertEqual(reviewed[0]["feedback_status"], "review")
+
 
 if __name__ == "__main__":
     unittest.main()

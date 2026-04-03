@@ -94,7 +94,7 @@
                   </span>
                 </summary>
                 <div class="chatbot-feedback-body">
-                  <textarea class="feedback-note" rows="2" placeholder="Opcional: indica o que esteve bem ou o que deve ser revisto..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                  <textarea class="feedback-note" rows="2" placeholder="Ao pedir revisão, indica a correção ou o motivo..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
                   <div class="feedback-actions">
                     <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
                     <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
@@ -103,7 +103,7 @@
                     {% if msg.feedback_status %}
                       {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}.
                     {% else %}
-                      Podes aprovar a resposta ou marcar para revisão.
+                      Podes aprovar a resposta. Ao marcar para revisão, indica a correção ou o motivo.
                     {% endif %}
                   </p>
                 </div>
@@ -176,7 +176,7 @@
   }
 
   function feedbackMetaLabel(status, updatedAtLabel) {
-    if (!status) return "Podes aprovar a resposta ou marcar para revisão.";
+    if (!status) return "Podes aprovar a resposta. Ao marcar para revisão, indica a correção ou o motivo.";
     if (updatedAtLabel) return feedbackStatusLabel(status) + " em " + updatedAtLabel + ".";
     return feedbackStatusLabel(status) + ".";
   }
@@ -229,7 +229,7 @@
     const note = document.createElement("textarea");
     note.className = "feedback-note";
     note.rows = 2;
-    note.placeholder = "Opcional: indica o que esteve bem ou o que deve ser revisto...";
+    note.placeholder = "Ao pedir revisão, indica a correção ou o motivo...";
     note.dataset.feedbackNote = "1";
 
     const actions = document.createElement("div");
@@ -277,6 +277,11 @@
     const messageId = article?.dataset.messageId || "";
     const noteField = box.querySelector("[data-feedback-note]");
     if (!messageId || !conversationIdField.value || !status) return;
+    if (status === "review" && !(noteField?.value || "").trim()) {
+      chatStatus.textContent = "Ao pedir revisão indica a correção ou o motivo.";
+      noteField?.focus();
+      return;
+    }
 
     box.dataset.submitting = "1";
     box.querySelectorAll("button, textarea").forEach((control) => {

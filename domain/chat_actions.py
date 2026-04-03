@@ -326,6 +326,7 @@ SLASH_COMMAND_ALIASES = {
     "mares": "tides",
     "meteorologia": "weather",
     "regra": "rule",
+    "regras": "rule",
 }
 SLASH_COMMAND_FIELD_ALIASES = {
     "maneuver_id": [
@@ -1293,6 +1294,8 @@ def build_slash_help(role: str) -> str:
         "  mostra marés por dia ou data pedida",
         "/meteorologia hoje",
         "  mostra a previsão meteorológica",
+        "/regras",
+        "  lista os códigos de regras/instruções disponíveis",
         "/regra 015",
         "  consulta uma regra/instrução por código",
         "",
