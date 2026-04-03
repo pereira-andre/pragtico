@@ -221,6 +221,7 @@ Ref: PTSET26OCEA123456
 
 ### Manobras
 
+- `/validar-manobra` valida uma manobra com checklist determinística e leitura histórica; usa `ID da manobra` ou `Ref + Tipo`.
 - `/criar-manobra` cria `saída` ou `mudança`.
 - `/editar-manobra` altera o planeamento de uma manobra existente; usa `ID da manobra` ou `Ref + Tipo`.
 - `/apagar-manobra` remove uma manobra planeada; usa `ID da manobra` ou `Ref + Tipo`.
@@ -237,7 +238,7 @@ Ref: PTSET26OCEA123456
 - Quero criar uma saída: `/criar-manobra`
 - Quero criar uma mudança de cais: `/criar-manobra`
 - Quero rever uma hora planeada: `/editar-manobra`
-- Quero validar a manobra: `/aprovar`
+- Quero validar a manobra: `/validar-manobra`
 - Quero lançar horas reais e calado: `/registar-manobra`
 - Quero corrigir um registo já feito: `/editar-registo-manobra`
 - Quero cancelar uma manobra: `/abortar`

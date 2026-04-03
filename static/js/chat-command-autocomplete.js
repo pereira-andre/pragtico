@@ -63,6 +63,18 @@
         keywords: "regra regras instrucao instrucoes it codigo",
         template: "/regra 015",
       },
+      {
+        command: "/validar-manobra",
+        label: "Validar manobra",
+        description: "Valida uma manobra com checklist e histórico.",
+        keywords: "validar manobra checklist historico histórico",
+        template: joinLines([
+          "/validar-manobra",
+          "ID da manobra: ",
+          "Ref: ",
+          "Tipo de manobra: entrada | saída | mudança",
+        ]),
+      },
     ];
 
     if (cleanRole === "admin" || cleanRole === "agente") {
