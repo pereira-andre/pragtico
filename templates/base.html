@@ -34,7 +34,7 @@
             <nav class="portal-nav-links" aria-label="Navegação principal">
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.dashboard' else '' }}" href="{{ url_for('dashboard_bp.dashboard') }}">Quadro</a>
               {% if current_role in ["admin", "agente"] %}
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'port_calls.port_call_register' else '' }}" href="{{ url_for('port_calls.port_call_register') }}">Registar escala</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'port_calls.port_call_register' else '' }}" href="{{ url_for('port_calls.port_call_register') }}">Escalas</a>
               {% endif %}
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.maneuver_archive' else '' }}" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
@@ -54,7 +54,7 @@
                 <option value="">Escolher página...</option>
                 <option value="{{ url_for('dashboard_bp.dashboard') }}">Quadro</option>
                 {% if current_role in ["admin", "agente"] %}
-                  <option value="{{ url_for('port_calls.port_call_register') }}">Registar escala</option>
+                  <option value="{{ url_for('port_calls.port_call_register') }}">Escalas</option>
                 {% endif %}
                 <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
                 <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>

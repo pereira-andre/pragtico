@@ -4,8 +4,8 @@
   <section class="hero-card compact">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Registo de Escalas</p>
-        <h1>Nova escala e acompanhamento</h1>
+        <p class="eyebrow">Escalas</p>
+        <h1>Escalas de Navios</h1>
         <p class="lead">Regista novas escalas e acompanha as que já estão ativas. A validação e fecho das manobras fazem-se na página de cada escala.</p>
       </div>
     </div>
@@ -31,9 +31,9 @@
   <div class="planning-register-grid">
     <section class="panel ops-form-card planning-block planning-register-card">
       <div class="planning-block-heading">
-        <p class="eyebrow">Registo</p>
-        <h3>Tabela de registo de navio</h3>
-        <p class="planning-block-lead">Regista a escala e a ETA. A validação e o fecho continuam concentrados na tabela de planeamento.</p>
+        <p class="eyebrow">Nova escala</p>
+        <h3>Registo de escala</h3>
+        <p class="planning-block-lead">Regista a escala e a ETA. A validação e o fecho das manobras continuam concentrados na página de cada escala.</p>
       </div>
       <form method="post" action="{{ url_for('port_calls.create_port_call') }}" class="stack planning-form planning-register-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -64,8 +64,8 @@
             </label>
           </div>
         </div>
-        <details class="planning-optional-box" open>
-          <summary>Ficha do navio obrigatória</summary>
+        <details class="planning-optional-box">
+          <summary>Ficha do navio</summary>
           <div class="stack planning-optional-body">
             <div class="mini-grid planned-mini-grid">
               <label>
@@ -130,7 +130,7 @@
           </div>
         </details>
         <details class="planning-optional-box">
-          <summary>Dados operacionais obrigatórios</summary>
+          <summary>Dados operacionais</summary>
           <div class="stack planning-optional-body">
             <div class="mini-grid planned-mini-grid">
               <label>
@@ -166,8 +166,8 @@
           Nota operacional
           <textarea name="notes" rows="3" placeholder="Restrições, rebocadores, janela de maré..."></textarea>
         </label>
-        <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. A ficha do navio é obrigatória em todos os registos.</p>
-        <button type="submit">Guardar manobra</button>
+        <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. Se faltar algum campo obrigatório, o formulário devolve erro.</p>
+        <button type="submit">Guardar Escala</button>
       </form>
     </section>
 

@@ -84,7 +84,7 @@ def port_call_register():
         "port_call_register.html",
         port_activity=port_activity,
         tracked_scales=build_tracked_scales(port_activity),
-        title="Registo de Escalas",
+        title="Escalas",
     )
 
 
@@ -237,7 +237,7 @@ def create_port_call():
         flash("Falha inesperada ao guardar a escala.", "error")
         return redirect(url_for("dashboard_bp.dashboard"))
 
-    flash(f"Manobra registada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
+    flash(f"Escala registada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
     return redirect(url_for("dashboard_bp.dashboard"))
 
 
