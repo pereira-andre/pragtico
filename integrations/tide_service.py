@@ -5,28 +5,39 @@ import os
 import re
 from bisect import bisect_left
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from math import cos, pi
 from typing import Dict, List, Optional
+from zoneinfo import ZoneInfo
+
+
+LISBON_TZ = ZoneInfo("Europe/Lisbon")
 
 
 @dataclass
 class TideEvent:
-    date_value: date
-    hour: int
-    minute: int
+    timestamp_local: datetime
     height: float
 
     @property
     def timestamp_label(self) -> str:
-        return f"{self.date_value.isoformat()} {self.hour:02d}:{self.minute:02d}"
+        return self.timestamp_local.strftime("%Y-%m-%d %H:%M")
 
     @property
     def timestamp(self) -> datetime:
-        return datetime.combine(self.date_value, datetime.min.time()).replace(
-            hour=self.hour,
-            minute=self.minute,
-        )
+        return self.timestamp_local
+
+    @property
+    def date_value(self) -> date:
+        return self.timestamp_local.date()
+
+    @property
+    def hour(self) -> int:
+        return self.timestamp_local.hour
+
+    @property
+    def minute(self) -> int:
+        return self.timestamp_local.minute
 
     @property
     def tide_type(self) -> str:
@@ -137,7 +148,7 @@ class TideService:
         return " ".join(commands)
 
     def _relative_day_label(self, target_date: date, reference_date: Optional[date] = None) -> str:
-        ref = reference_date or datetime.now().date()
+        ref = reference_date or datetime.now(LISBON_TZ).date()
         delta = (target_date - ref).days
         if delta == -1:
             return "Ontem"
@@ -179,7 +190,7 @@ class TideService:
         reference_date: date,
         step_minutes: int = 15,
     ) -> list[dict]:
-        start_dt = datetime.combine(start_date, datetime.min.time())
+        start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=LISBON_TZ)
         end_dt = start_dt + timedelta(days=days)
         samples = []
         sample_count = int((days * 24 * 60) / step_minutes)
@@ -212,7 +223,7 @@ class TideService:
             if start_date <= item.date_value < end_date
         ]
         total_minutes = max(days * 24 * 60, 1)
-        now_local = datetime.now().astimezone()
+        now_local = datetime.now(LISBON_TZ)
         min_height = min((item.height for item in events), default=0.0)
         max_height = max((item.height for item in events), default=0.0)
         span = max(max_height - min_height, 0.4)
@@ -284,11 +295,15 @@ class TideService:
         with open(self.csv_path, "r", encoding="utf-8", errors="ignore") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
+                source_dt = datetime(
+                    *datetime.strptime(row["Date"], "%Y-%m-%d").date().timetuple()[:3],
+                    int(row["Hour"]),
+                    int(row["Minute"]),
+                    tzinfo=timezone.utc,
+                )
                 events.append(
                     TideEvent(
-                        date_value=datetime.strptime(row["Date"], "%Y-%m-%d").date(),
-                        hour=int(row["Hour"]),
-                        minute=int(row["Minute"]),
+                        timestamp_local=source_dt.astimezone(LISBON_TZ),
                         height=float(row["Height"]),
                     )
                 )
@@ -296,7 +311,7 @@ class TideService:
         return events
 
     def resolve_query_dates(self, question: str, reference_date: Optional[date] = None) -> List[date]:
-        ref = reference_date or datetime.now().date()
+        ref = reference_date or datetime.now(LISBON_TZ).date()
         question_lower = question.lower()
         dates: List[date] = []
 
