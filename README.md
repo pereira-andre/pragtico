@@ -26,11 +26,13 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 
 - Pesquisa documental com contexto vivo do portal
 - Ações operacionais via chat com confirmação, cancelamento e feedback
+- Canal WhatsApp via Cloud API com webhook, respostas inbound e feedback por reação `👍/👎`
 - Suporte multi-provider para geração LLM
 - Embeddings locais em desenvolvimento com `BAAI/bge-m3`
 - Perfil Railway com `OpenAI` para chat e embeddings, com fallback de geração por `OpenRouter`, sem `sentence-transformers` no container
 
 O CSV operacional de marés fica em `resources/tides/` e não em `knowledge/`, para não entrar na indexação documental do RAG.
+As horas do CSV são assumidas em `UTC` e apresentadas no fuso operacional `Europe/Lisbon`, incluindo mudança de hora.
 
 ### Segurança e perfis
 
@@ -98,6 +100,7 @@ O repositório já inclui `Dockerfile`, `Procfile` e `railway.toml`.
 O `Dockerfile` instala `requirements-prod.txt` por defeito, para o deploy Railway ficar abaixo do limite de imagem. O `docker compose` local continua a usar `requirements.txt`.
 
 O guia completo está em [Deploy no Railway](docs/RAILWAY_DEPLOY.md).
+Para a integração WhatsApp e geração do token Meta, ver também [Guia WhatsApp](readme_whatsapp.txt).
 
 Variáveis mínimas para produção:
 
@@ -135,6 +138,14 @@ Alterar papel de utilizador:
 python3 scripts/set_user_role.py utilizador@porto.pt admin
 ```
 
+Teste simples de envio WhatsApp:
+
+```bash
+python3 scripts/test_whatsapp_send.py --to 351962063664
+```
+
+Pré-requisitos na `.env`: `WHATSAPP_ENABLED=1`, `WHATSAPP_ACCESS_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`.
+
 Com `make`:
 
 ```bash
@@ -148,12 +159,13 @@ make create-admin EMAIL=admin@porto.pt PASSWORD=password-segura
 python3 -m unittest discover tests -v
 ```
 
-A suite atual cobre 238 testes unitários e de integração.
+A suite atual cobre 324 testes unitários e de integração.
 
 ## Documentação
 
 - [Estrutura do projeto](docs/PROJECT_STRUCTURE.md)
 - [Deploy no Railway](docs/RAILWAY_DEPLOY.md)
+- [Guia WhatsApp](readme_whatsapp.txt)
 - [Comandos do bot operacional](docs/BOT_COMMANDS.md)
 - [Alternativas ao LLM atual](docs/LLM_ALTERNATIVES.md)
   Nota: este documento é exploratório; valida preços e catálogos antes de decisões de compra.
