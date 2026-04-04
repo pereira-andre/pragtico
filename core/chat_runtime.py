@@ -173,6 +173,9 @@ def handle_chat_turn(
     conversation_id: str | None = None,
     channel: str = "web",
     allow_mutations: bool = True,
+    channel_user_id: str = "",
+    inbound_message_id: str = "",
+    inbound_message_metadata: dict | None = None,
 ) -> dict:
     """Process a single chat turn and persist the resulting messages."""
     clean_question = (question or "").strip()
@@ -206,6 +209,10 @@ def handle_chat_turn(
             conversation_id=conversation["id"],
             role="user",
             content=clean_question,
+            channel=channel,
+            channel_user_id=channel_user_id,
+            external_message_id=inbound_message_id,
+            channel_metadata=inbound_message_metadata or {},
         )
 
         answer = None
@@ -505,10 +512,14 @@ def handle_chat_turn(
             role="assistant",
             content=answer["answer"],
             citations=answer.get("sources", []),
+            channel=channel,
+            channel_user_id=channel_user_id,
+            external_reply_to_id=inbound_message_id,
         )
         return {
             **answer,
             "conversation_id": conversation["id"],
+            "user_message_id": user_message["id"],
             "message_id": assistant_message["id"],
             "created_at_label": assistant_message.get("created_at_label", ""),
         }

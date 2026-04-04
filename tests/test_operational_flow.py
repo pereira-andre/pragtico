@@ -116,14 +116,73 @@ class _StubWhatsAppService:
 
     def parse_inbound_messages(self, payload: dict | None) -> list[dict]:
         return [
-            {
-                "message_id": "wamid.TEST123",
-                "from_number": "351962063664",
-                "profile_name": "Andre",
-                "text": "teste",
-                "timestamp": "1712165400",
-            }
-        ] if payload else []
+            event
+            for event in self.parse_webhook_events(payload)
+            if event.get("event_type") == "message_text"
+        ]
+
+    def parse_webhook_events(self, payload: dict | None) -> list[dict]:
+        if not payload:
+            return []
+        parsed: list[dict] = []
+        for entry in payload.get("entry", []):
+            for change in entry.get("changes", []):
+                value = change.get("value", {})
+                contacts = value.get("contacts", [])
+                contact_map = {
+                    str(contact.get("wa_id", "")): contact
+                    for contact in contacts
+                    if contact.get("wa_id")
+                }
+                for message in value.get("messages", []):
+                    from_number = str(message.get("from", ""))
+                    profile_name = ((contact_map.get(from_number) or {}).get("profile") or {}).get("name", "")
+                    if message.get("type") == "text":
+                        parsed.append(
+                            {
+                                "event_type": "message_text",
+                                "message_id": str(message.get("id", "")),
+                                "from_number": from_number,
+                                "profile_name": profile_name,
+                                "text": str((message.get("text") or {}).get("body") or ""),
+                                "timestamp": str(message.get("timestamp") or ""),
+                                "raw": message,
+                            }
+                        )
+                    elif message.get("type") == "reaction":
+                        parsed.append(
+                            {
+                                "event_type": "message_reaction",
+                                "message_id": str(message.get("id", "")),
+                                "target_message_id": str((message.get("reaction") or {}).get("message_id") or ""),
+                                "from_number": from_number,
+                                "profile_name": profile_name,
+                                "emoji": str((message.get("reaction") or {}).get("emoji") or ""),
+                                "timestamp": str(message.get("timestamp") or ""),
+                                "raw": message,
+                            }
+                        )
+                for status in value.get("statuses", []):
+                    parsed.append(
+                        {
+                            "event_type": "message_status",
+                            "event_id": ":".join(
+                                part
+                                for part in (
+                                    str(status.get("id") or ""),
+                                    str(status.get("status") or ""),
+                                    str(status.get("timestamp") or ""),
+                                )
+                                if part
+                            ),
+                            "message_id": str(status.get("id") or ""),
+                            "status": str(status.get("status") or ""),
+                            "timestamp": str(status.get("timestamp") or ""),
+                            "recipient_id": str(status.get("recipient_id") or ""),
+                            "raw": status,
+                        }
+                    )
+        return parsed
 
     def is_allowed_number(self, number: str | None) -> bool:
         if not self.allowed_numbers:
@@ -1758,16 +1817,16 @@ class OperationalFlowTests(unittest.TestCase):
         }
 
         with patch.object(services, "whatsapp_service", whatsapp_service):
-            with patch("blueprints.whatsapp.handle_chat_turn") as mock_handle_chat_turn:
-                mock_handle_chat_turn.return_value = {
-                    "answer": "Resposta do bot",
-                    "sources": [],
-                    "conversation_id": "conv-1",
-                    "message_id": "msg-1",
-                    "created_at_label": "04/04/2026, 09:00",
-                }
-                with app.app.test_client() as client:
-                    response = client.post("/webhooks/whatsapp", json=payload)
+            with patch("core.chat_runtime.refresh_knowledge_state") as mock_refresh:
+                with patch("core.chat_runtime.answer_direct_operational_query") as mock_answer_direct:
+                    mock_refresh.return_value = None
+                    mock_answer_direct.return_value = {
+                        "answer": "Resposta do bot",
+                        "sources": [],
+                        "answer_origin": "operational_lookup",
+                    }
+                    with app.app.test_client() as client:
+                        response = client.post("/webhooks/whatsapp", json=payload)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["delivered"], 1)
@@ -1775,6 +1834,20 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(whatsapp_service.sent_messages[0]["to_number"], "351962063664")
         self.assertEqual(whatsapp_service.sent_messages[0]["text"], "Resposta do bot")
         self.assertEqual(whatsapp_service.sent_messages[0]["reply_to_message_id"], "wamid.TEST123")
+        username = "whatsapp-351962063664@pragtico.local"
+        conversations = self.store.list_conversations(username)
+        self.assertEqual(len(conversations), 1)
+        messages = self.store.list_messages(username, conversations[0]["id"])
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["external_message_id"], "wamid.TEST123")
+        self.assertEqual(messages[0]["channel"], "whatsapp")
+        self.assertEqual(messages[1]["external_message_id"], "wamid.REPLY123")
+        self.assertEqual(messages[1]["external_reply_to_id"], "wamid.TEST123")
+        self.assertEqual(messages[1]["channel_metadata"]["last_status"], "accepted")
+        channel_events = self.store._read_channel_events()
+        self.assertEqual(len(channel_events), 2)
+        self.assertEqual(channel_events[0]["event_type"], "incoming_text")
+        self.assertEqual(channel_events[1]["event_type"], "outgoing_text")
 
     def test_whatsapp_webhook_ignores_numbers_outside_whitelist(self) -> None:
         whatsapp_service = _StubWhatsAppService(allowed_numbers={"351911111111"})
@@ -1835,23 +1908,84 @@ class OperationalFlowTests(unittest.TestCase):
         }
 
         with patch.object(services, "whatsapp_service", whatsapp_service):
-            with patch("blueprints.whatsapp.handle_chat_turn") as mock_handle_chat_turn:
-                mock_handle_chat_turn.return_value = {
-                    "answer": "Resposta do bot",
-                    "sources": [],
-                    "conversation_id": "conv-1",
-                    "message_id": "msg-1",
-                    "created_at_label": "04/04/2026, 09:00",
-                }
-                with app.app.test_client() as client:
-                    first = client.post("/webhooks/whatsapp", json=payload)
-                    second = client.post("/webhooks/whatsapp", json=payload)
+            with patch("core.chat_runtime.refresh_knowledge_state") as mock_refresh:
+                with patch("core.chat_runtime.answer_direct_operational_query") as mock_answer_direct:
+                    mock_refresh.return_value = None
+                    mock_answer_direct.return_value = {
+                        "answer": "Resposta do bot",
+                        "sources": [],
+                        "answer_origin": "operational_lookup",
+                    }
+                    with app.app.test_client() as client:
+                        first = client.post("/webhooks/whatsapp", json=payload)
+                        second = client.post("/webhooks/whatsapp", json=payload)
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
         self.assertEqual(first.get_json()["delivered"], 1)
         self.assertEqual(second.get_json()["duplicates"], 1)
         self.assertEqual(len(whatsapp_service.sent_messages), 1)
+
+    def test_whatsapp_reaction_updates_feedback_on_target_message(self) -> None:
+        username = "whatsapp-351962063664@pragtico.local"
+        self.store.create_user(
+            username=username,
+            password="secret",
+            role="piloto",
+            full_name="Andre",
+            organization="WhatsApp",
+            email=username,
+            phone="+351962063664",
+        )
+        conversation = self.store.create_conversation(username)
+        message = self.store.append_chat_message(
+            username,
+            conversation["id"],
+            "assistant",
+            "Resposta do bot",
+            channel="whatsapp",
+            channel_user_id="351962063664",
+            external_message_id="wamid.REPLY123",
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.REACT123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165401",
+                                        "type": "reaction",
+                                        "reaction": {
+                                            "message_id": "wamid.REPLY123",
+                                            "emoji": "👍",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with app.app.test_client() as client:
+                response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["feedback_applied"], 1)
+        updated_messages = self.store.list_messages(username, conversation["id"])
+        updated = next(item for item in updated_messages if item["id"] == message["id"])
+        self.assertEqual(updated["feedback_status"], "approved")
+        self.assertIn("WhatsApp", updated["feedback_note"])
+        channel_events = self.store._read_channel_events()
+        self.assertEqual(channel_events[0]["event_type"], "incoming_reaction")
 
 
 class AdminDocumentPolicyTests(unittest.TestCase):

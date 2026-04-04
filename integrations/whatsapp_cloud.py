@@ -89,6 +89,13 @@ class WhatsAppCloudService:
         return "PRAGtico WhatsApp teste ativo. Mensagem recebida sem texto utilizável."
 
     def parse_inbound_messages(self, payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+        return [
+            event
+            for event in self.parse_webhook_events(payload)
+            if event.get("event_type") == "message_text"
+        ]
+
+    def parse_webhook_events(self, payload: dict[str, Any] | None) -> list[dict[str, Any]]:
         entries = payload.get("entry") if isinstance(payload, dict) else []
         parsed: list[dict[str, Any]] = []
         for entry in entries or []:
@@ -101,18 +108,54 @@ class WhatsAppCloudService:
                     if self.normalize_phone_number(contact.get("wa_id"))
                 }
                 for message in (value.get("messages") or []):
-                    if (message.get("type") or "").strip().lower() != "text":
-                        continue
                     from_number = self.normalize_phone_number(message.get("from"))
                     contact = contact_map.get(from_number, {})
                     profile = contact.get("profile") or {}
+                    message_type = (message.get("type") or "").strip().lower()
+                    if message_type == "text":
+                        parsed.append(
+                            {
+                                "event_type": "message_text",
+                                "message_id": (message.get("id") or "").strip(),
+                                "from_number": from_number,
+                                "profile_name": (profile.get("name") or "").strip(),
+                                "text": str((message.get("text") or {}).get("body") or "").strip(),
+                                "timestamp": str(message.get("timestamp") or "").strip(),
+                                "raw": message,
+                            }
+                        )
+                    elif message_type == "reaction":
+                        reaction = message.get("reaction") or {}
+                        parsed.append(
+                            {
+                                "event_type": "message_reaction",
+                                "message_id": (message.get("id") or "").strip(),
+                                "target_message_id": (reaction.get("message_id") or "").strip(),
+                                "from_number": from_number,
+                                "profile_name": (profile.get("name") or "").strip(),
+                                "emoji": str(reaction.get("emoji") or "").strip(),
+                                "timestamp": str(message.get("timestamp") or "").strip(),
+                                "raw": message,
+                            }
+                        )
+                for status in (value.get("statuses") or []):
+                    status_message_id = (status.get("id") or "").strip()
+                    status_value = (status.get("status") or "").strip().lower()
+                    status_timestamp = str(status.get("timestamp") or "").strip()
                     parsed.append(
                         {
-                            "message_id": (message.get("id") or "").strip(),
-                            "from_number": from_number,
-                            "profile_name": (profile.get("name") or "").strip(),
-                            "text": str((message.get("text") or {}).get("body") or "").strip(),
-                            "timestamp": str(message.get("timestamp") or "").strip(),
+                            "event_type": "message_status",
+                            "event_id": ":".join(
+                                part
+                                for part in (status_message_id, status_value, status_timestamp)
+                                if part
+                            ),
+                            "message_id": status_message_id,
+                            "status": status_value,
+                            "timestamp": status_timestamp,
+                            "recipient_id": self.normalize_phone_number(status.get("recipient_id")),
+                            "conversation_id": str((status.get("conversation") or {}).get("id") or "").strip(),
+                            "raw": status,
                         }
                     )
         return parsed

@@ -26,6 +26,22 @@ def _processed_inbound_key(message_id: str) -> str:
     return f"whatsapp:processed:{message_id}"
 
 
+def _reaction_feedback_status(emoji: str | None) -> str:
+    if (emoji or "").strip() == "👍":
+        return "approved"
+    if (emoji or "").strip() == "👎":
+        return "review"
+    return ""
+
+
+def _extract_outbound_message_id(payload: dict | None) -> str:
+    messages = (payload or {}).get("messages") or []
+    if not messages:
+        return ""
+    first = messages[0] or {}
+    return str(first.get("id") or "").strip()
+
+
 def _is_duplicate_inbound(message_id: str) -> bool:
     if not message_id:
         return False
@@ -84,14 +100,45 @@ def whatsapp_webhook_receive():
         return jsonify({"status": "disabled"}), 200
 
     payload = request.get_json(silent=True) or {}
-    inbound_messages = service.parse_inbound_messages(payload)
+    webhook_events = service.parse_webhook_events(payload)
     delivered = 0
     ignored = 0
     duplicates = 0
+    feedback_applied = 0
+    status_events = 0
 
-    for inbound in inbound_messages:
-        from_number = inbound.get("from_number", "")
-        message_id = (inbound.get("message_id") or "").strip()
+    for event in webhook_events:
+        event_type = (event.get("event_type") or "").strip().lower()
+        if event_type == "message_status":
+            message_id = (event.get("message_id") or "").strip()
+            matched_message = services.store.find_message_by_channel_message_id("whatsapp", message_id)
+            services.store.record_channel_event(
+                channel="whatsapp",
+                event_type="message_status",
+                payload=event.get("raw") or {},
+                username=(matched_message or {}).get("username", ""),
+                conversation_id=(matched_message or {}).get("conversation_id", ""),
+                local_message_id=(matched_message or {}).get("id", ""),
+                channel_user_id=event.get("recipient_id", ""),
+                external_event_id=(event.get("event_id") or message_id),
+                external_message_id=message_id,
+            )
+            if matched_message:
+                services.store.update_message_channel_metadata(
+                    matched_message["username"],
+                    matched_message["conversation_id"],
+                    matched_message["id"],
+                    channel_metadata={
+                        "latest_status": event.get("status", ""),
+                        "latest_status_at": event.get("timestamp", ""),
+                        "last_status_payload": event.get("raw") or {},
+                    },
+                )
+            status_events += 1
+            continue
+
+        from_number = event.get("from_number", "")
+        message_id = (event.get("message_id") or event.get("event_id") or "").strip()
         if not service.is_allowed_number(from_number):
             ignored += 1
             current_app.logger.info("WhatsApp webhook ignorado para número não autorizado: %s", from_number)
@@ -100,23 +147,105 @@ def whatsapp_webhook_receive():
             duplicates += 1
             current_app.logger.info("WhatsApp webhook duplicado ignorado: %s", message_id)
             continue
+
         try:
             profile = _ensure_whatsapp_user(
                 from_number,
-                inbound.get("profile_name", ""),
+                event.get("profile_name", ""),
                 getattr(service, "default_role", "piloto"),
             )
+
+            if event_type == "message_reaction":
+                target_message = services.store.find_message_by_channel_message_id(
+                    "whatsapp",
+                    event.get("target_message_id", ""),
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_reaction",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=(target_message or {}).get("conversation_id", ""),
+                    local_message_id=(target_message or {}).get("id", ""),
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=event.get("target_message_id", ""),
+                )
+                feedback_status = _reaction_feedback_status(event.get("emoji", ""))
+                if feedback_status and target_message and target_message.get("role") == "assistant":
+                    services.store.update_message_feedback(
+                        target_message["username"],
+                        target_message["conversation_id"],
+                        target_message["id"],
+                        feedback_status,
+                        f"Feedback via reação WhatsApp: {event.get('emoji', '')}",
+                    )
+                    feedback_applied += 1
+                _mark_inbound_processed(
+                    message_id,
+                    from_number=from_number,
+                    conversation_id=(target_message or {}).get("conversation_id", ""),
+                    answer=f"reaction:{event.get('emoji', '')}",
+                )
+                continue
+
+            text = (event.get("text") or "").strip()
+            if not text:
+                ignored += 1
+                continue
+
             result = handle_chat_turn(
                 username=profile["username"],
                 role=profile.get("role", getattr(service, "default_role", "piloto")),
-                question=inbound.get("text", ""),
+                question=text,
                 channel="whatsapp",
                 allow_mutations=False,
+                channel_user_id=from_number,
+                inbound_message_id=message_id,
+                inbound_message_metadata={
+                    "profile_name": event.get("profile_name", ""),
+                    "timestamp": event.get("timestamp", ""),
+                    "message_type": "text",
+                },
             )
-            service.send_text_message(
+            services.store.record_channel_event(
+                channel="whatsapp",
+                event_type="incoming_text",
+                payload=event.get("raw") or {},
+                username=profile["username"],
+                conversation_id=result["conversation_id"],
+                local_message_id=result.get("user_message_id", ""),
+                channel_user_id=from_number,
+                external_event_id=message_id,
+                external_message_id=message_id,
+            )
+
+            send_response = service.send_text_message(
                 from_number,
                 result["answer"],
                 reply_to_message_id=message_id,
+            )
+            outbound_message_id = _extract_outbound_message_id(send_response)
+            services.store.update_message_channel_metadata(
+                profile["username"],
+                result["conversation_id"],
+                result["message_id"],
+                external_message_id=outbound_message_id or None,
+                channel_metadata={
+                    "send_response": send_response,
+                    "last_status": "accepted",
+                },
+            )
+            services.store.record_channel_event(
+                channel="whatsapp",
+                event_type="outgoing_text",
+                payload=send_response,
+                username=profile["username"],
+                conversation_id=result["conversation_id"],
+                local_message_id=result["message_id"],
+                channel_user_id=from_number,
+                external_event_id=outbound_message_id,
+                external_message_id=outbound_message_id,
             )
             _mark_inbound_processed(
                 message_id,
@@ -130,8 +259,10 @@ def whatsapp_webhook_receive():
 
     return jsonify({
         "status": "ok",
-        "received": len(inbound_messages),
+        "received": len(webhook_events),
         "delivered": delivered,
         "ignored": ignored,
         "duplicates": duplicates,
+        "feedback_applied": feedback_applied,
+        "status_events": status_events,
     }), 200

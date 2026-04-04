@@ -305,6 +305,35 @@ ALTER TABLE messages
 ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS feedback_updated_at TIMESTAMPTZ;
 
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'web';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS channel_user_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS external_message_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS external_reply_to_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS channel_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS channel_events (
+    id UUID PRIMARY KEY,
+    channel TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    username TEXT NOT NULL DEFAULT '',
+    conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+    local_message_id UUID REFERENCES messages(id) ON DELETE SET NULL,
+    channel_user_id TEXT NOT NULL DEFAULT '',
+    external_event_id TEXT NOT NULL DEFAULT '',
+    external_message_id TEXT NOT NULL DEFAULT '',
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS app_runtime_state (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -316,6 +345,16 @@ CREATE INDEX IF NOT EXISTS conversations_username_updated_idx
 
 CREATE INDEX IF NOT EXISTS messages_conversation_created_idx
     ON messages (conversation_id, created_at ASC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS messages_channel_external_uidx
+    ON messages (channel, external_message_id)
+    WHERE external_message_id <> '';
+
+CREATE INDEX IF NOT EXISTS channel_events_channel_created_idx
+    ON channel_events (channel, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS channel_events_external_message_idx
+    ON channel_events (channel, external_message_id);
 
 CREATE INDEX IF NOT EXISTS port_calls_status_eta_idx
     ON port_calls (status, eta ASC);

@@ -202,6 +202,27 @@ class PostgresStore(BaseStore):
             "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
         }
 
+    def _row_to_chat_message_record(self, row: Optional[Dict]) -> Optional[Dict]:
+        if not row:
+            return None
+        return {
+            **row,
+            "channel": row.get("channel") or "web",
+            "channel_user_id": row.get("channel_user_id") or "",
+            "external_message_id": row.get("external_message_id") or "",
+            "external_reply_to_id": row.get("external_reply_to_id") or "",
+            "channel_metadata": row.get("channel_metadata") or {},
+            "created_at": row["created_at"].isoformat(),
+            "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
+            "feedback_updated_at": (
+                row["feedback_updated_at"].isoformat() if row.get("feedback_updated_at") else None
+            ),
+            "feedback_updated_at_label": (
+                _utc_iso_to_label(row["feedback_updated_at"].isoformat())
+                if row.get("feedback_updated_at") else ""
+            ),
+        }
+
     def _upsert_maneuver_case(self, conn, record: Dict) -> None:
         with conn.cursor() as cur:
             cur.execute(
@@ -1374,7 +1395,12 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
-                        feedback_updated_at
+                        feedback_updated_at,
+                        channel,
+                        channel_user_id,
+                        external_message_id,
+                        external_reply_to_id,
+                        channel_metadata
                     FROM messages
                     WHERE conversation_id = %s
                     ORDER BY created_at ASC
@@ -1382,21 +1408,7 @@ class PostgresStore(BaseStore):
                     (conversation_id,),
                 )
                 rows = cur.fetchall()
-        return [
-            {
-                **row,
-                "created_at": row["created_at"].isoformat(),
-                "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
-                "feedback_updated_at": (
-                    row["feedback_updated_at"].isoformat() if row["feedback_updated_at"] else None
-                ),
-                "feedback_updated_at_label": (
-                    _utc_iso_to_label(row["feedback_updated_at"].isoformat())
-                    if row["feedback_updated_at"] else ""
-                ),
-            }
-            for row in rows
-        ]
+        return [self._row_to_chat_message_record(row) for row in rows if row]
 
     def append_chat_message(
         self,
@@ -1405,6 +1417,12 @@ class PostgresStore(BaseStore):
         role: str,
         content: str,
         citations: Optional[List[Dict]] = None,
+        *,
+        channel: str = "web",
+        channel_user_id: str = "",
+        external_message_id: str = "",
+        external_reply_to_id: str = "",
+        channel_metadata: Optional[Dict] = None,
     ) -> Dict:
         conversation = self.ensure_conversation(username, conversation_id)
         if conversation["id"] != conversation_id:
@@ -1414,8 +1432,19 @@ class PostgresStore(BaseStore):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO messages (id, conversation_id, role, content, citations)
-                    VALUES (%s, %s, %s, %s, %s::jsonb)
+                    INSERT INTO messages (
+                        id,
+                        conversation_id,
+                        role,
+                        content,
+                        citations,
+                        channel,
+                        channel_user_id,
+                        external_message_id,
+                        external_reply_to_id,
+                        channel_metadata
+                    )
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s::jsonb)
                     RETURNING
                         id::text AS id,
                         conversation_id::text AS conversation_id,
@@ -1425,9 +1454,25 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
-                        feedback_updated_at
+                        feedback_updated_at,
+                        channel,
+                        channel_user_id,
+                        external_message_id,
+                        external_reply_to_id,
+                        channel_metadata
                     """,
-                    (message_id, conversation_id, role, content, json.dumps(citations or [])),
+                    (
+                        message_id,
+                        conversation_id,
+                        role,
+                        content,
+                        json.dumps(citations or []),
+                        (channel or "web").strip() or "web",
+                        (channel_user_id or "").strip(),
+                        (external_message_id or "").strip(),
+                        (external_reply_to_id or "").strip(),
+                        json.dumps(channel_metadata or {}),
+                    ),
                 )
                 row = cur.fetchone()
 
@@ -1463,18 +1508,111 @@ class PostgresStore(BaseStore):
                         (conversation_id,),
                     )
             conn.commit()
-        return {
-            **row,
-            "created_at": row["created_at"].isoformat(),
-            "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
-            "feedback_updated_at": (
-                row["feedback_updated_at"].isoformat() if row["feedback_updated_at"] else None
-            ),
-            "feedback_updated_at_label": (
-                _utc_iso_to_label(row["feedback_updated_at"].isoformat())
-                if row["feedback_updated_at"] else ""
-            ),
-        }
+        message = self._row_to_chat_message_record(row)
+        if not message:
+            raise ValueError("Falha ao gravar mensagem.")
+        return message
+
+    def update_message_channel_metadata(
+        self,
+        username: str,
+        conversation_id: str,
+        message_id: str,
+        *,
+        channel: Optional[str] = None,
+        channel_user_id: Optional[str] = None,
+        external_message_id: Optional[str] = None,
+        external_reply_to_id: Optional[str] = None,
+        channel_metadata: Optional[Dict] = None,
+    ) -> Dict:
+        conversation = self.ensure_conversation(username, conversation_id)
+        if conversation["id"] != conversation_id:
+            raise ValueError("Conversa inválida para este utilizador.")
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE messages
+                    SET
+                        channel = COALESCE(%s, channel),
+                        channel_user_id = COALESCE(%s, channel_user_id),
+                        external_message_id = COALESCE(%s, external_message_id),
+                        external_reply_to_id = COALESCE(%s, external_reply_to_id),
+                        channel_metadata = COALESCE(channel_metadata, '{}'::jsonb) || %s::jsonb
+                    WHERE id = %s AND conversation_id = %s
+                    RETURNING
+                        id::text AS id,
+                        conversation_id::text AS conversation_id,
+                        role,
+                        content,
+                        citations,
+                        created_at,
+                        feedback_status,
+                        feedback_note,
+                        feedback_updated_at,
+                        channel,
+                        channel_user_id,
+                        external_message_id,
+                        external_reply_to_id,
+                        channel_metadata
+                    """,
+                    (
+                        (channel or "").strip() or None if channel is not None else None,
+                        (channel_user_id or "").strip() if channel_user_id is not None else None,
+                        (external_message_id or "").strip() if external_message_id is not None else None,
+                        (external_reply_to_id or "").strip() if external_reply_to_id is not None else None,
+                        json.dumps(channel_metadata or {}),
+                        message_id,
+                        conversation_id,
+                    ),
+                )
+                row = cur.fetchone()
+                cur.execute(
+                    "UPDATE conversations SET updated_at = NOW() WHERE id = %s",
+                    (conversation_id,),
+                )
+            conn.commit()
+        message = self._row_to_chat_message_record(row)
+        if not message:
+            raise ValueError("Mensagem não encontrada.")
+        return message
+
+    def find_message_by_channel_message_id(self, channel: str, external_message_id: str) -> Optional[Dict]:
+        clean_channel = (channel or "").strip() or "web"
+        clean_external_id = (external_message_id or "").strip()
+        if not clean_external_id:
+            return None
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        m.id::text AS id,
+                        m.conversation_id::text AS conversation_id,
+                        c.username,
+                        m.role,
+                        m.content,
+                        m.citations,
+                        m.created_at,
+                        m.feedback_status,
+                        m.feedback_note,
+                        m.feedback_updated_at,
+                        m.channel,
+                        m.channel_user_id,
+                        m.external_message_id,
+                        m.external_reply_to_id,
+                        m.channel_metadata
+                    FROM messages m
+                    JOIN conversations c ON c.id = m.conversation_id
+                    WHERE m.channel = %s
+                      AND m.external_message_id = %s
+                    LIMIT 1
+                    """,
+                    (clean_channel, clean_external_id),
+                )
+                row = cur.fetchone()
+        return self._row_to_chat_message_record(row)
 
     def get_runtime_state(self, key: str) -> Optional[Dict]:
         with self._connect() as conn:
@@ -1512,6 +1650,70 @@ class PostgresStore(BaseStore):
                 cur.execute("DELETE FROM app_runtime_state WHERE key = %s", (key,))
             conn.commit()
 
+    def record_channel_event(
+        self,
+        *,
+        channel: str,
+        event_type: str,
+        payload: Dict,
+        username: str = "",
+        conversation_id: str = "",
+        local_message_id: str = "",
+        channel_user_id: str = "",
+        external_event_id: str = "",
+        external_message_id: str = "",
+    ) -> Dict:
+        event_id = str(uuid.uuid4())
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO channel_events (
+                        id,
+                        channel,
+                        event_type,
+                        username,
+                        conversation_id,
+                        local_message_id,
+                        channel_user_id,
+                        external_event_id,
+                        external_message_id,
+                        payload
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                    RETURNING
+                        id::text AS id,
+                        channel,
+                        event_type,
+                        username,
+                        conversation_id::text AS conversation_id,
+                        local_message_id::text AS local_message_id,
+                        channel_user_id,
+                        external_event_id,
+                        external_message_id,
+                        payload,
+                        created_at
+                    """,
+                    (
+                        event_id,
+                        (channel or "").strip() or "unknown",
+                        (event_type or "").strip() or "unknown",
+                        _normalize_username(username),
+                        conversation_id or None,
+                        local_message_id or None,
+                        (channel_user_id or "").strip(),
+                        (external_event_id or "").strip(),
+                        (external_message_id or "").strip(),
+                        json.dumps(payload or {}),
+                    ),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        return {
+            **row,
+            "created_at": row["created_at"].isoformat(),
+        }
+
     def update_message_feedback(
         self,
         username: str,
@@ -1545,7 +1747,12 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
-                        feedback_updated_at
+                        feedback_updated_at,
+                        channel,
+                        channel_user_id,
+                        external_message_id,
+                        external_reply_to_id,
+                        channel_metadata
                     """,
                     (feedback_status, feedback_note.strip(), message_id, conversation_id),
                 )
@@ -1555,15 +1762,10 @@ class PostgresStore(BaseStore):
                     (conversation_id,),
                 )
             conn.commit()
-        if not row:
+        message = self._row_to_chat_message_record(row)
+        if not message:
             raise ValueError("Mensagem não encontrada.")
-        return {
-            **row,
-            "created_at": row["created_at"].isoformat(),
-            "feedback_updated_at": (
-                row["feedback_updated_at"].isoformat() if row["feedback_updated_at"] else None
-            ),
-        }
+        return message
 
     def find_feedback_matches(
         self,

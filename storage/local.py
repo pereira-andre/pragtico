@@ -88,6 +88,7 @@ class LocalStore(BaseStore):
         self.documents_path = os.path.join(data_dir, "documents.json")
         self.conversations_path = os.path.join(data_dir, "conversations.json")
         self.messages_path = os.path.join(data_dir, "messages.json")
+        self.channel_events_path = os.path.join(data_dir, "channel_events.json")
         self.runtime_state_path = os.path.join(data_dir, "runtime_state.json")
         self.port_calls_path = os.path.join(data_dir, "port_calls.json")
         self.maneuver_cases_path = os.path.join(data_dir, "maneuver_cases.json")
@@ -168,6 +169,7 @@ class LocalStore(BaseStore):
             (self.documents_path, []),
             (self.conversations_path, []),
             (self.messages_path, []),
+            (self.channel_events_path, []),
             (self.runtime_state_path, {}),
             (self.port_calls_path, _default_port_calls()),
             (self.maneuver_cases_path, []),
@@ -249,6 +251,12 @@ class LocalStore(BaseStore):
         role: str,
         content: str,
         citations: Optional[List[Dict]] = None,
+        *,
+        channel: str = "web",
+        channel_user_id: str = "",
+        external_message_id: str = "",
+        external_reply_to_id: str = "",
+        channel_metadata: Optional[Dict] = None,
         feedback_status: Optional[str] = None,
         feedback_note: str = "",
         feedback_updated_at: Optional[str] = None,
@@ -260,9 +268,41 @@ class LocalStore(BaseStore):
             "content": content,
             "citations": citations or [],
             "created_at": iso_now(),
+            "channel": _clean_text(channel) or "web",
+            "channel_user_id": _clean_text(channel_user_id),
+            "external_message_id": _clean_text(external_message_id),
+            "external_reply_to_id": _clean_text(external_reply_to_id),
+            "channel_metadata": dict(channel_metadata or {}),
             "feedback_status": feedback_status,
             "feedback_note": feedback_note,
             "feedback_updated_at": feedback_updated_at,
+        }
+
+    def _build_channel_event_record(
+        self,
+        *,
+        channel: str,
+        event_type: str,
+        payload: Optional[Dict] = None,
+        username: str = "",
+        conversation_id: str = "",
+        local_message_id: str = "",
+        channel_user_id: str = "",
+        external_event_id: str = "",
+        external_message_id: str = "",
+    ) -> Dict:
+        return {
+            "id": str(uuid.uuid4()),
+            "channel": _clean_text(channel) or "unknown",
+            "event_type": _clean_text(event_type) or "unknown",
+            "username": _normalize_username(username),
+            "conversation_id": _clean_text(conversation_id),
+            "local_message_id": _clean_text(local_message_id),
+            "channel_user_id": _clean_text(channel_user_id),
+            "external_event_id": _clean_text(external_event_id),
+            "external_message_id": _clean_text(external_message_id),
+            "payload": payload or {},
+            "created_at": iso_now(),
         }
 
     def _read_document_records(self) -> List[Dict]:
@@ -282,6 +322,12 @@ class LocalStore(BaseStore):
 
     def _write_messages(self, records: List[Dict]) -> None:
         self._write_json(self.messages_path, records)
+
+    def _read_channel_events(self) -> List[Dict]:
+        return self._read_json(self.channel_events_path, [])
+
+    def _write_channel_events(self, records: List[Dict]) -> None:
+        self._write_json(self.channel_events_path, records)
 
     def _read_runtime_state(self) -> Dict:
         return self._read_json(self.runtime_state_path, {})
@@ -834,6 +880,11 @@ class LocalStore(BaseStore):
             message.setdefault("feedback_status", None)
             message.setdefault("feedback_note", "")
             message.setdefault("feedback_updated_at", None)
+            message.setdefault("channel", "web")
+            message.setdefault("channel_user_id", "")
+            message.setdefault("external_message_id", "")
+            message.setdefault("external_reply_to_id", "")
+            message.setdefault("channel_metadata", {})
             message["created_at_label"] = _utc_iso_to_label(message["created_at"])
             message["feedback_updated_at_label"] = (
                 _utc_iso_to_label(message["feedback_updated_at"])
@@ -848,6 +899,12 @@ class LocalStore(BaseStore):
         role: str,
         content: str,
         citations: Optional[List[Dict]] = None,
+        *,
+        channel: str = "web",
+        channel_user_id: str = "",
+        external_message_id: str = "",
+        external_reply_to_id: str = "",
+        channel_metadata: Optional[Dict] = None,
     ) -> Dict:
         """Append a chat message to the conversation and return the saved record."""
         if not self._conversation_owned_by_user(username, conversation_id):
@@ -859,6 +916,11 @@ class LocalStore(BaseStore):
             role=role,
             content=content,
             citations=citations,
+            channel=channel,
+            channel_user_id=channel_user_id,
+            external_message_id=external_message_id,
+            external_reply_to_id=external_reply_to_id,
+            channel_metadata=channel_metadata,
         )
         messages.append(message)
         self._write_messages(messages)
@@ -867,6 +929,110 @@ class LocalStore(BaseStore):
         else:
             self._touch_conversation(conversation_id)
         return message
+
+    def update_message_channel_metadata(
+        self,
+        username: str,
+        conversation_id: str,
+        message_id: str,
+        *,
+        channel: Optional[str] = None,
+        channel_user_id: Optional[str] = None,
+        external_message_id: Optional[str] = None,
+        external_reply_to_id: Optional[str] = None,
+        channel_metadata: Optional[Dict] = None,
+    ) -> Dict:
+        if not self._message_owned_by_user(username, conversation_id, message_id):
+            raise ValueError("Mensagem não encontrada.")
+
+        messages = self._read_messages()
+        updated = None
+        for message in messages:
+            if message.get("id") != message_id or message.get("conversation_id") != conversation_id:
+                continue
+            if channel is not None:
+                message["channel"] = _clean_text(channel) or message.get("channel") or "web"
+            if channel_user_id is not None:
+                message["channel_user_id"] = _clean_text(channel_user_id)
+            if external_message_id is not None:
+                message["external_message_id"] = _clean_text(external_message_id)
+            if external_reply_to_id is not None:
+                message["external_reply_to_id"] = _clean_text(external_reply_to_id)
+            merged_metadata = dict(message.get("channel_metadata") or {})
+            if channel_metadata:
+                merged_metadata.update(channel_metadata)
+            message["channel_metadata"] = merged_metadata
+            updated = message
+            break
+
+        if not updated:
+            raise ValueError("Mensagem não encontrada.")
+
+        self._write_messages(messages)
+        self._touch_conversation(conversation_id)
+        updated.setdefault("feedback_status", None)
+        updated.setdefault("feedback_note", "")
+        updated.setdefault("feedback_updated_at", None)
+        updated["created_at_label"] = _utc_iso_to_label(updated["created_at"])
+        updated["feedback_updated_at_label"] = (
+            _utc_iso_to_label(updated["feedback_updated_at"])
+            if updated.get("feedback_updated_at")
+            else ""
+        )
+        return updated
+
+    def find_message_by_channel_message_id(self, channel: str, external_message_id: str) -> Optional[Dict]:
+        clean_channel = _clean_text(channel) or "web"
+        clean_external_id = _clean_text(external_message_id)
+        if not clean_external_id:
+            return None
+        conversations = {item["id"]: item for item in self._read_conversations()}
+        for message in self._read_messages():
+            if (
+                (message.get("channel") or "web") == clean_channel
+                and (message.get("external_message_id") or "") == clean_external_id
+            ):
+                conversation = conversations.get(message.get("conversation_id"), {})
+                return {
+                    **message,
+                    "username": conversation.get("username", ""),
+                    "created_at_label": _utc_iso_to_label(message.get("created_at", "")),
+                    "feedback_updated_at_label": (
+                        _utc_iso_to_label(message["feedback_updated_at"])
+                        if message.get("feedback_updated_at")
+                        else ""
+                    ),
+                }
+        return None
+
+    def record_channel_event(
+        self,
+        *,
+        channel: str,
+        event_type: str,
+        payload: Dict,
+        username: str = "",
+        conversation_id: str = "",
+        local_message_id: str = "",
+        channel_user_id: str = "",
+        external_event_id: str = "",
+        external_message_id: str = "",
+    ) -> Dict:
+        events = self._read_channel_events()
+        event = self._build_channel_event_record(
+            channel=channel,
+            event_type=event_type,
+            payload=payload,
+            username=username,
+            conversation_id=conversation_id,
+            local_message_id=local_message_id,
+            channel_user_id=channel_user_id,
+            external_event_id=external_event_id,
+            external_message_id=external_message_id,
+        )
+        events.append(event)
+        self._write_channel_events(events)
+        return event
 
     def get_runtime_state(self, key: str) -> Optional[Dict]:
         """Return the runtime state dict stored under the given key, or None."""

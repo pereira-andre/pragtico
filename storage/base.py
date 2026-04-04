@@ -152,8 +152,52 @@ class BaseStore(ABC):
         role: str,
         content: str,
         citations: Optional[List[Dict]] = None,
+        *,
+        channel: str = "web",
+        channel_user_id: str = "",
+        external_message_id: str = "",
+        external_reply_to_id: str = "",
+        channel_metadata: Optional[Dict] = None,
     ) -> Dict:
         """Append a message to a conversation and return the saved message record."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_message_channel_metadata(
+        self,
+        username: str,
+        conversation_id: str,
+        message_id: str,
+        *,
+        channel: Optional[str] = None,
+        channel_user_id: Optional[str] = None,
+        external_message_id: Optional[str] = None,
+        external_reply_to_id: Optional[str] = None,
+        channel_metadata: Optional[Dict] = None,
+    ) -> Dict:
+        """Update transport/channel metadata for a stored chat message and return the message."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_message_by_channel_message_id(self, channel: str, external_message_id: str) -> Optional[Dict]:
+        """Return a stored message by channel/external ID, including owning username if found."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def record_channel_event(
+        self,
+        *,
+        channel: str,
+        event_type: str,
+        payload: Dict,
+        username: str = "",
+        conversation_id: str = "",
+        local_message_id: str = "",
+        channel_user_id: str = "",
+        external_event_id: str = "",
+        external_message_id: str = "",
+    ) -> Dict:
+        """Persist a raw channel event for audit/debug purposes and return the saved record."""
         raise NotImplementedError
 
     @abstractmethod

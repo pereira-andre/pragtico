@@ -935,6 +935,48 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(len(reviewed), 1)
         self.assertEqual(reviewed[0]["feedback_status"], "review")
 
+    def test_channel_metadata_and_events_are_persisted(self) -> None:
+        conv = self.store.create_conversation("admin")
+        msg = self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "assistant",
+            "Resposta WhatsApp",
+            channel="whatsapp",
+            channel_user_id="351962063664",
+            external_reply_to_id="wamid.IN123",
+            channel_metadata={"source": "webhook"},
+        )
+
+        updated = self.store.update_message_channel_metadata(
+            "admin",
+            conv["id"],
+            msg["id"],
+            external_message_id="wamid.OUT123",
+            channel_metadata={"latest_status": "accepted"},
+        )
+        found = self.store.find_message_by_channel_message_id("whatsapp", "wamid.OUT123")
+        event = self.store.record_channel_event(
+            channel="whatsapp",
+            event_type="outgoing_text",
+            payload={"messages": [{"id": "wamid.OUT123"}]},
+            username="admin",
+            conversation_id=conv["id"],
+            local_message_id=msg["id"],
+            channel_user_id="351962063664",
+            external_event_id="wamid.OUT123",
+            external_message_id="wamid.OUT123",
+        )
+
+        self.assertEqual(updated["external_message_id"], "wamid.OUT123")
+        self.assertEqual(updated["external_reply_to_id"], "wamid.IN123")
+        self.assertEqual(updated["channel_metadata"]["source"], "webhook")
+        self.assertEqual(updated["channel_metadata"]["latest_status"], "accepted")
+        self.assertIsNotNone(found)
+        self.assertEqual(found["id"], msg["id"])
+        self.assertEqual(found["username"], "admin")
+        self.assertEqual(event["external_message_id"], "wamid.OUT123")
+
 
 if __name__ == "__main__":
     unittest.main()
