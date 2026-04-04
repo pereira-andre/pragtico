@@ -27,6 +27,7 @@ from core.helpers import (
 )
 from integrations.llm_provider import create_embedding_provider, create_llm_provider
 from integrations.local_warning_service import LocalWarningService
+from integrations.whatsapp_cloud import WhatsAppCloudService
 from domain.migration_service import migrate_local_json_to_postgres
 from domain.berth_layout import BERTH_OPTIONS, TERMINAL_OPTIONS
 from integrations.rag_engine import SimpleRAGEngine
@@ -214,6 +215,7 @@ local_warning_service = LocalWarningService(
     ),
     snapshot_path=os.path.join(DATA_DIR, "local_warnings_cache.json"),
 )
+whatsapp_service = WhatsAppCloudService.from_env()
 
 # ---------------------------------------------------------------------------
 # Populate the services registry (used by helpers + blueprints)
@@ -227,6 +229,7 @@ services.weather_service = weather_service
 services.ais_service = ais_service
 services.wave_service = wave_service
 services.local_warning_service = local_warning_service
+services.whatsapp_service = whatsapp_service
 services.index_store = index_store
 services.BASE_DIR = BASE_DIR
 services.DATA_DIR = DATA_DIR
@@ -301,6 +304,7 @@ from blueprints.port_calls import bp as port_calls_bp
 from blueprints.admin import bp as admin_bp
 from blueprints.chat import bp as chat_bp
 from blueprints.api import bp as api_bp
+from blueprints.whatsapp import bp as whatsapp_bp
 
 init_csrf(app)
 
@@ -319,6 +323,7 @@ app.register_blueprint(port_calls_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(whatsapp_bp)
 
 # ---------------------------------------------------------------------------
 # Global error handler & security headers

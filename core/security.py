@@ -23,6 +23,7 @@ CSRF_FIELD = "csrf_token"
 # Endpoints whose path starts with /api/ send JSON, not form data.
 # They rely on SameSite cookies and JSON Content-Type for protection.
 _API_PREFIX = "/api/"
+_WEBHOOK_PREFIX = "/webhooks/"
 
 
 def generate_csrf_token() -> str:
@@ -54,6 +55,9 @@ def init_csrf(app):
             return None
         # JSON API endpoints are exempt — protected by SameSite + Content-Type
         if request.path.startswith(_API_PREFIX):
+            return None
+        # External provider webhooks cannot send CSRF tokens.
+        if request.path.startswith(_WEBHOOK_PREFIX):
             return None
         # Logout beacon is fire-and-forget from navigator.sendBeacon
         if request.endpoint == "auth.logout_beacon":

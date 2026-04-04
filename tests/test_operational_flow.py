@@ -96,6 +96,54 @@ class _StubWaveService:
         }
 
 
+class _StubWhatsAppService:
+    def __init__(
+        self,
+        *,
+        enabled: bool = True,
+        webhook_ready: bool = True,
+        verify_ok: bool = True,
+        allowed_numbers: set[str] | None = None,
+    ) -> None:
+        self.enabled = enabled
+        self.webhook_ready = webhook_ready
+        self.verify_ok = verify_ok
+        self.allowed_numbers = allowed_numbers or set()
+        self.sent_messages: list[dict] = []
+
+    def verify_webhook(self, mode: str | None, token: str | None) -> bool:
+        return self.verify_ok and (mode or "") == "subscribe" and bool(token)
+
+    def parse_inbound_messages(self, payload: dict | None) -> list[dict]:
+        return [
+            {
+                "message_id": "wamid.TEST123",
+                "from_number": "351962063664",
+                "profile_name": "Andre",
+                "text": "teste",
+                "timestamp": "1712165400",
+            }
+        ] if payload else []
+
+    def is_allowed_number(self, number: str | None) -> bool:
+        if not self.allowed_numbers:
+            return True
+        return str(number or "") in self.allowed_numbers
+
+    def build_test_reply(self, inbound: dict) -> str:
+        return f"reply:{inbound.get('text', '')}"
+
+    def send_text_message(self, to_number: str, text: str, *, reply_to_message_id: str = "") -> dict:
+        self.sent_messages.append(
+            {
+                "to_number": to_number,
+                "text": text,
+                "reply_to_message_id": reply_to_message_id,
+            }
+        )
+        return {"messages": [{"id": "wamid.REPLY123"}]}
+
+
 class OperationalFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -1671,6 +1719,139 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertNotIn("Ir para utilizadores", html)
         self.assertNotIn("estado sem cache local", html)
         self.assertNotIn("sem API", html)
+
+    def test_whatsapp_webhook_verification_returns_challenge(self) -> None:
+        whatsapp_service = _StubWhatsAppService()
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with app.app.test_client() as client:
+                response = client.get(
+                    "/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=test-token&hub.challenge=abc123"
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(as_text=True), "abc123")
+
+    def test_whatsapp_webhook_receives_text_and_sends_test_reply(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEST123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "teste"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with patch("blueprints.whatsapp.handle_chat_turn") as mock_handle_chat_turn:
+                mock_handle_chat_turn.return_value = {
+                    "answer": "Resposta do bot",
+                    "sources": [],
+                    "conversation_id": "conv-1",
+                    "message_id": "msg-1",
+                    "created_at_label": "04/04/2026, 09:00",
+                }
+                with app.app.test_client() as client:
+                    response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
+        self.assertEqual(whatsapp_service.sent_messages[0]["to_number"], "351962063664")
+        self.assertEqual(whatsapp_service.sent_messages[0]["text"], "Resposta do bot")
+        self.assertEqual(whatsapp_service.sent_messages[0]["reply_to_message_id"], "wamid.TEST123")
+
+    def test_whatsapp_webhook_ignores_numbers_outside_whitelist(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351911111111"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEST123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "teste"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with app.app.test_client() as client:
+                response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["ignored"], 1)
+        self.assertEqual(whatsapp_service.sent_messages, [])
+
+    def test_whatsapp_webhook_deduplicates_same_message_id(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEST123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "teste"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with patch("blueprints.whatsapp.handle_chat_turn") as mock_handle_chat_turn:
+                mock_handle_chat_turn.return_value = {
+                    "answer": "Resposta do bot",
+                    "sources": [],
+                    "conversation_id": "conv-1",
+                    "message_id": "msg-1",
+                    "created_at_label": "04/04/2026, 09:00",
+                }
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=payload)
+                    second = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["duplicates"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
 
 
 class AdminDocumentPolicyTests(unittest.TestCase):
