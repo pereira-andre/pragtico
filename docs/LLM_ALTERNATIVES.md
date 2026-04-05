@@ -37,7 +37,7 @@ Com utilização real por múltiplos utilizadores, estes limites esgotam-se rapi
 | **DeepSeek V3.2**          | $0.14     | $0.28      | Compatível com API OpenAI, muito barato     |
 | **GPT-5 Nano**             | $0.05     | $0.40      | Ultra-barato, qualidade limitada            |
 | **GPT-5 Mini**             | $0.25     | $2.00      | Bom para chatbots                           |
-| **Anthropic Haiku 4.5**       | $1.00     | $5.00      | Qualidade alta, custo moderado              |
+| **Haiku 4.5**                 | $1.00     | $5.00      | Qualidade alta, custo moderado              |
 | **Mistral 7B (hosted)**    | ~$0.05    | ~$0.05     | Self-host gratuito, hosting ~$0.05/M        |
 
 ### Embeddings
@@ -90,7 +90,7 @@ response = client.chat.completions.create(
 
 **Estratégia "router":**
 - Consultas simples → DeepSeek V3.2 ou Gemini Flash-Lite (80% do tráfego)
-- Consultas complexas/operacionais → Gemini 2.5 Flash ou Anthropic Haiku (20%)
+- Consultas complexas/operacionais → Gemini 2.5 Flash ou Haiku (20%)
 - Embeddings → Sentence Transformers local (zero custo)
 
 **Poupança estimada:** 60–80% face ao uso exclusivo de Gemini 2.5 Flash.
