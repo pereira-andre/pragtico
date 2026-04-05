@@ -1,6 +1,18 @@
+<p align="center">
+  <img src="img/icon.png" alt="PRAGtico Bot" width="180">
+</p>
+
 # PRAGtico — Portal de Coordenação Portuária
 
+<p align="center"><strong>PRAGtico Bot</strong> junta quadro operacional, RAG documental e canal WhatsApp para apoiar a coordenação portuária no Porto de Setúbal.</p>
+
 Sistema web para coordenação portuária no Porto de Setúbal, com gestão de escalas e manobras, dashboard operacional, chatbot RAG e motor de estimativa de custos de pilotagem.
+
+## PRAGtico Bot
+
+- Assistente operacional com respostas contextuais dentro do portal e por WhatsApp
+- Consulta documentação, estado operacional e dados vivos para apoiar decisões rápidas
+- Executa ações com confirmação, cancelamento e feedback no fluxo de trabalho diário
 
 ## Funcionalidades
 
