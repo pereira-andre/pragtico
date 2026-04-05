@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import requests
+
 from integrations.local_warning_service import LocalWarningService
 from integrations.wave_service import WaveService
 
@@ -152,3 +154,42 @@ class ExternalServiceCacheTests(unittest.TestCase):
             self.assertTrue(restarted.status()["stale"])
             self.assertIn("Instituto Hidrográfico", restarted.status()["error"])
             self.assertTrue(snapshot_path.exists())
+
+    def test_local_warning_service_retries_without_ssl_verification_on_ssl_error(self) -> None:
+        service = LocalWarningService(
+            endpoint="https://example.test/warnings?currentPage=1",
+            cache_ttl_seconds=0,
+            failure_backoff_seconds=3600,
+            allow_insecure_ssl_fallback=True,
+        )
+        verify_values: list[bool] = []
+
+        def fake_get(_url, timeout, verify=True):
+            verify_values.append(bool(verify))
+            if verify:
+                raise requests.exceptions.SSLError("certificate verify failed")
+            return _FakeResponse(
+                {
+                    "rows": [
+                        {
+                            "id": 1,
+                            "code": "123",
+                            "subject": "Trabalho subaquático",
+                            "locationDescription": "Setúbal",
+                            "description": "<p>Manter vigilância.</p>",
+                            "attachments": [],
+                            "entity": {"name": "Capitania do Porto de Setúbal"},
+                            "state": {"code": "promulgado", "name": "Promulgado"},
+                            "startDate": "2026-04-02T00:00:00Z",
+                            "endDate": "2026-04-03T00:00:00Z",
+                        }
+                    ],
+                    "totalPages": 1,
+                }
+            )
+
+        with patch("integrations.local_warning_service.requests.get", side_effect=fake_get):
+            warnings = service.list_warnings()
+
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(verify_values, [True, False])

@@ -84,6 +84,8 @@ Abre `http://127.0.0.1:5000` ou a porta definida em `FLASK_PORT`.
 
 `requirements.txt` mantém `sentence-transformers` para desenvolvimento local e reindexação com embeddings no teu PC.
 
+A app guarda snapshots locais de ondulação e avisos em `data/wave_conditions_cache.json` e `data/local_warnings_cache.json`, com refresh periódico configurável por `WAVE_REFRESH_INTERVAL_SECONDS` e `LOCAL_WARNING_REFRESH_INTERVAL_SECONDS`.
+
 ### Docker Compose
 
 ```bash

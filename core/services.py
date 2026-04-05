@@ -20,6 +20,8 @@ startup_migration_status = None
 reindex_thread = None
 reindex_thread_lock = None
 reindex_retry_scheduler = None
+wave_refresh_scheduler = None
+local_warning_refresh_scheduler = None
 
 # Constants (populated at startup)
 BERTH_OPTIONS = []

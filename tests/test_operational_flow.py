@@ -7,6 +7,7 @@ from unittest.mock import patch
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
 os.environ["MANEUVER_CASE_CAPTURE_ENVIRONMENT"] = "0"
+os.environ["EXTERNAL_DATA_REFRESH_ENABLED"] = "0"
 
 import app
 from core import services

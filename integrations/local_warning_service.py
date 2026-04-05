@@ -5,11 +5,13 @@ import json
 import os
 import re
 import time
+import warnings
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 import requests
+from urllib3.exceptions import InsecureRequestWarning
 
 
 PT_MONTHS = {
@@ -37,12 +39,14 @@ class LocalWarningService:
         timeout: int = 15,
         snapshot_path: str = "",
         failure_backoff_seconds: Optional[int] = None,
+        allow_insecure_ssl_fallback: bool = True,
     ) -> None:
         self.endpoint = endpoint
         self.base_url = base_url.rstrip("/")
         self.cache_ttl_seconds = max(int(cache_ttl_seconds or 0), 0)
         self.timeout = timeout
         self.snapshot_path = snapshot_path
+        self.allow_insecure_ssl_fallback = allow_insecure_ssl_fallback
         self.failure_backoff_seconds = max(
             int(failure_backoff_seconds if failure_backoff_seconds is not None else self.cache_ttl_seconds or 0),
             0,
@@ -119,7 +123,23 @@ class LocalWarningService:
             return "Ligação ao Instituto Hidrográfico indisponível neste momento."
         if "timed out" in lowered or "timeout" in lowered:
             return "O Instituto Hidrográfico não respondeu a tempo."
+        if "certificate verify failed" in lowered or "ssl" in lowered:
+            return "Falha de certificado SSL ao ligar ao Instituto Hidrográfico."
         return message
+
+    def _request_json(self, url: str) -> Dict[str, Any]:
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.SSLError:
+            if not self.allow_insecure_ssl_fallback:
+                raise
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", InsecureRequestWarning)
+                response = requests.get(url, timeout=self.timeout, verify=False)
+            response.raise_for_status()
+            return response.json()
 
     def _mark_success(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         now = time.time()
@@ -236,9 +256,7 @@ class LocalWarningService:
             url = f"{url}&currentPage={page}"
         else:
             url = f"{url}?currentPage={page}"
-        response = requests.get(url, timeout=self.timeout)
-        response.raise_for_status()
-        return response.json()
+        return self._request_json(url)
 
     def _fetch_all(self) -> List[Dict[str, Any]]:
         first_page = self._fetch_page(1)

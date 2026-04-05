@@ -31,6 +31,7 @@ from integrations.whatsapp_cloud import WhatsAppCloudService
 from domain.migration_service import migrate_local_json_to_postgres
 from domain.berth_layout import BERTH_OPTIONS, TERMINAL_OPTIONS
 from integrations.rag_engine import SimpleRAGEngine
+from core.live_data_refresh import PeriodicTaskScheduler
 from core.reindex_scheduler import DeferredTaskScheduler
 from core.security import init_csrf
 from storage import (
@@ -67,6 +68,14 @@ PROVIDER_API_KEY_ENV = {
 
 def _env_flag(name: str, default: str = "1") -> bool:
     return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _env_int(name: str, default: int) -> int:
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        return int(raw_value)
+    except ValueError:
+        return int(default)
 
 
 def _resolve_provider_name(explicit_name: str, default: str = "gemini") -> str:
@@ -191,29 +200,33 @@ weather_service = WeatherService(
     language="pt",
 )
 ais_service = create_ais_service(BASE_DIR)
+_wave_refresh_interval_seconds = _env_int("WAVE_REFRESH_INTERVAL_SECONDS", 3600)
 wave_service = WaveService(
     endpoint=os.getenv(
         "WAVE_API_URL",
         "https://www.hidrografico.pt/hmapi/ondobuoystation/?buoyID=19",
     ),
     station_name=os.getenv("WAVE_STATION_NAME", "Sines"),
-    cache_ttl_seconds=int(os.getenv("WAVE_CACHE_TTL_SECONDS", "10800")),
-    failure_backoff_seconds=int(os.getenv("WAVE_FAILURE_BACKOFF_SECONDS", os.getenv("WAVE_CACHE_TTL_SECONDS", "10800"))),
+    cache_ttl_seconds=_env_int("WAVE_CACHE_TTL_SECONDS", _wave_refresh_interval_seconds),
+    failure_backoff_seconds=_env_int(
+        "WAVE_FAILURE_BACKOFF_SECONDS",
+        _env_int("WAVE_CACHE_TTL_SECONDS", _wave_refresh_interval_seconds),
+    ),
     snapshot_path=os.path.join(DATA_DIR, "wave_conditions_cache.json"),
 )
+_local_warning_refresh_interval_seconds = _env_int("LOCAL_WARNING_REFRESH_INTERVAL_SECONDS", 3600)
 local_warning_service = LocalWarningService(
     endpoint=os.getenv(
         "LOCAL_WARNING_API_URL",
         "https://anavnetbackend.hidrografico.pt/api/v1/local-warnings?stateId=93&currentPage=1&entityId=27",
     ),
-    cache_ttl_seconds=int(os.getenv("LOCAL_WARNING_CACHE_TTL_SECONDS", "10800")),
-    failure_backoff_seconds=int(
-        os.getenv(
-            "LOCAL_WARNING_FAILURE_BACKOFF_SECONDS",
-            os.getenv("LOCAL_WARNING_CACHE_TTL_SECONDS", "10800"),
-        )
+    cache_ttl_seconds=_env_int("LOCAL_WARNING_CACHE_TTL_SECONDS", _local_warning_refresh_interval_seconds),
+    failure_backoff_seconds=_env_int(
+        "LOCAL_WARNING_FAILURE_BACKOFF_SECONDS",
+        _env_int("LOCAL_WARNING_CACHE_TTL_SECONDS", _local_warning_refresh_interval_seconds),
     ),
     snapshot_path=os.path.join(DATA_DIR, "local_warnings_cache.json"),
+    allow_insecure_ssl_fallback=_env_flag("LOCAL_WARNING_ALLOW_INSECURE_SSL_FALLBACK", default="1"),
 )
 whatsapp_service = WhatsAppCloudService.from_env()
 
@@ -268,6 +281,67 @@ app.config["MANUAL_KNOWLEDGE_AUTHORING_ENABLED"] = _env_flag(
     default="0",
 )
 
+_external_refresh_lock = threading.Lock()
+_external_refresh_started = False
+
+
+def _refresh_wave_snapshot() -> None:
+    if not getattr(services, "wave_service", None) or not services.wave_service.enabled:
+        return
+    try:
+        services.wave_service.probe_current_conditions()
+    except Exception as exc:
+        app.logger.warning("[external-refresh] Falha ao atualizar ondulação: %s", exc)
+
+
+def _refresh_local_warning_snapshot() -> None:
+    if not getattr(services, "local_warning_service", None) or not services.local_warning_service.enabled:
+        return
+    try:
+        services.local_warning_service.probe_warnings()
+    except Exception as exc:
+        app.logger.warning("[external-refresh] Falha ao atualizar avisos locais: %s", exc)
+
+
+services.wave_refresh_scheduler = PeriodicTaskScheduler(
+    name="wave-refresh-hourly",
+    callback=_refresh_wave_snapshot,
+    interval_seconds=_wave_refresh_interval_seconds,
+    run_immediately=True,
+)
+services.local_warning_refresh_scheduler = PeriodicTaskScheduler(
+    name="local-warning-refresh-hourly",
+    callback=_refresh_local_warning_snapshot,
+    interval_seconds=_local_warning_refresh_interval_seconds,
+    run_immediately=True,
+)
+
+
+def _ensure_external_refresh_started() -> None:
+    global _external_refresh_started
+
+    if app.config.get("TESTING"):
+        return
+    if not _env_flag("EXTERNAL_DATA_REFRESH_ENABLED", default="1"):
+        return
+
+    with _external_refresh_lock:
+        if _external_refresh_started:
+            return
+
+        started_labels = []
+        if services.wave_refresh_scheduler and services.wave_refresh_scheduler.start():
+            started_labels.append(f"ondulação/{_wave_refresh_interval_seconds}s")
+        if services.local_warning_refresh_scheduler and services.local_warning_refresh_scheduler.start():
+            started_labels.append(f"avisos/{_local_warning_refresh_interval_seconds}s")
+        _external_refresh_started = True
+
+    if started_labels:
+        app.logger.info(
+            "Refresh periódico de dados externos ativo: %s",
+            ", ".join(started_labels),
+        )
+
 
 def render_chat_markdown(text: str) -> Markup:
     escaped = str(escape(text or ""))
@@ -311,6 +385,7 @@ init_csrf(app)
 
 @app.before_request
 def refresh_authenticated_session():
+    _ensure_external_refresh_started()
     if not session.get("username"):
         return None
     session.permanent = True
@@ -454,6 +529,7 @@ maybe_seed_admin()
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    _ensure_external_refresh_started()
     refresh_knowledge_state(
         force_reindex=False,
         rebuild_index=os.getenv("RAG_REINDEX_ON_START", "0") == "1",
