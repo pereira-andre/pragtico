@@ -1,0 +1,728 @@
+DOCUMENTO: PORTO DE SETÚBAL — INFORMAÇÃO GERAL E NÁUTICA (ADMIRALTY PILOT)
+FONTE: Admiralty Pilot — West Coasts of Spain and Portugal (NP 67), Capítulo 5
+        e secções gerais sobre Portugal. Crown Copyright 2005.
+NATUREZA: Descrição náutica oficial do Porto de Setúbal e das costas de Portugal,
+          traduzida e adaptada para indexação vetorial RAG. Inclui posição geográfica,
+          condições de acesso, pilotagem, rebocadores, fundeadouros, cais, canais,
+          serviços portuários e condições naturais.
+AVISO DE DESATUALIZAÇÃO: Os dados operacionais (calados, comprimentos, tráfego,
+          autoridade portuária) são referentes aos anos de 2004 e 2005. Para dados
+          operacionais atuais, consultar sempre a documentação interna da APSS
+          (Administração dos Portos de Setúbal e Sesimbra, S.A.) e as instruções
+          de trabalho em vigor (série IT).
+NOTA DE NOMENCLATURA: O Admiralty Pilot utiliza designações antigas de alguns
+          terminais que foram entretanto renomeados. O Cais da Eurominas corresponde
+          ao atual Terminal Termitrena (ex-Eurominas), conforme IT-011. O Cais das
+          Pirites Alentejanas corresponde ao atual Terminal Praias do Sado (ex-Pirites),
+          conforme IT-012. O Estaleiro Mitrena referido como "Mitrena Shipyard" é o
+          atual Estaleiro LISNAVE/Mitrena, conforme IT-014.
+
+================================================================================
+PARTE I — PORTUGAL: INFORMAÇÃO GERAL
+================================================================================
+
+LOCALIZAÇÃO E TERRITÓRIO
+
+Portugal ocupa a parte sudoeste da Península Ibérica. O território continental
+tem uma forma aproximadamente retangular e é delimitado a norte e a este pela
+Espanha, e a sul e a oeste pelo Oceano Atlântico. As ilhas da Madeira e os
+Açores fazem parte do território metropolitano de Portugal para efeitos
+administrativos. A área total, incluindo as ilhas, é de aproximadamente
+92 000 quilómetros quadrados.
+
+LIMITES MARÍTIMOS
+
+Portugal, incluindo os arquipélagos dos Açores e da Madeira, reivindica uma
+faixa de mar territorial de 12 milhas náuticas e uma Zona Económica Exclusiva
+(ZEE) de 200 milhas náuticas, ambas medidas a partir de linhas de base
+retas ao longo de toda ou parte da costa.
+
+GOVERNO
+
+O Presidente da República é eleito por sufrágio universal direto para um
+mandato de cinco anos, sendo assessorado pelo Conselho de Estado. O Governo
+é chefiado pelo Primeiro-Ministro, nomeado pelo Presidente, que aprova
+igualmente a composição do Conselho de Ministros. O poder legislativo é
+exercido pela Assembleia da República, composta por 230 deputados eleitos
+por quatro anos. O poder judicial é exercido pelo Supremo Tribunal e pelos
+Tribunais de Distrito e de Recurso. Um Tribunal Constitucional fiscaliza a
+constitucionalidade da legislação. Os governos regionais eleitos dos Açores
+e da Madeira beneficiam de substancial autonomia.
+
+LÍNGUA
+
+O português é a única língua de uso corrente no país. A língua deriva
+fundamentalmente do latim, mas contém palavras de origem celta, grega, germânica
+e árabe provenientes de períodos anteriores à fundação da nação no século XII.
+O português é suficientemente próximo do espanhol para que os habitantes de
+ambos os países se entendam mutuamente, cada um falando na sua própria língua.
+
+CARACTERÍSTICAS FÍSICAS — COSTA E RIOS
+
+A costa de Portugal é baixa e arenosa desde o Rio Minho, que forma a fronteira
+norte, até Nazaré, a 137 milhas a sul. De Nazaré até Lagos, situada a 16
+milhas a este de Cabo de São Vicente, a costa é geralmente mais acidentada e
+por vezes rochosa, embora existam praias arenosas junto às barras do Rio Tejo
+e do Rio Sado. De Lagos até à foz do Guadiana, a costa volta a ser baixa e
+arenosa com alguns troços de baixos rochedos.
+
+Os principais rios navegáveis por embarcações de mar são:
+
+O Rio Douro, com 390 milhas de comprimento total, nasce em Castela (Espanha)
+e desagua no mar no Porto. É navegável por embarcações fluviais até
+aproximadamente 50 milhas acima da foz.
+
+O Rio Mondego, com 136 milhas, nasce na Serra da Estrela e é navegável
+até cerca de 53 milhas acima da foz.
+
+O Rio Tejo nasce na província de Teruel (Espanha) e desagua em Lisboa após
+um percurso de 480 milhas. É navegável pelo tráfego fluvial até 50 milhas
+acima da foz e por embarcações pequenas por mais 30 milhas a montante.
+
+O Rio Sado nasce no Alentejo e percorre 108 milhas antes de desaguar no
+mar em Setúbal. É navegável por embarcações pequenas até cerca de 27 milhas
+acima da entrada. O estuário do Sado constitui a bacia hidrográfica onde se
+desenvolve o Porto de Setúbal.
+
+O Rio Guadiana forma a fronteira sul com Espanha.
+
+INDÚSTRIA E COMÉRCIO
+
+A estrutura económica portuguesa sofreu profundas alterações desde a revolução
+de 1974. O país, anteriormente com industrialização moderada, desenvolveu e
+modernizou as suas indústrias de forma acelerada, muito estimulada pela adesão
+à União Europeia em 1986, que absorve cerca de três quartos do comércio externo
+português. As principais exportações incluem vestuário e calçado, produtos de
+cortiça, maquinaria e equipamento elétrico, papel, produtos químicos e couros.
+As principais importações incluem maquinaria, equipamento de transporte, produtos
+químicos, petróleo, têxteis e produtos agrícolas. Existem modernas siderurgias,
+dois grandes estaleiros de construção e reparação naval, e várias fábricas de
+montagem automóvel. Os produtos minerais incluem pirites, volfrâmio, estanho,
+minérios de ferro e cobre. O turismo é uma indústria em crescimento e de
+contribuição relevante para a economia nacional.
+
+PORTOS PRINCIPAIS DA COSTA OCIDENTAL PORTUGUESA
+
+Os principais portos da costa ocidental portuguesa, de norte para sul, são os
+seguintes: Viana do Castelo, porto comercial de dimensão média e centro de pesca;
+Leixões, porto comercial e pesqueiro de grande dimensão com refinaria e terminais
+de petroleiros; Porto, porto fluvial com pouca atividade comercial, inacessível
+com mau tempo; Aveiro, porto comercial e pesqueiro de dimensão média com
+estaleiros, também inacessível com mau tempo; Figueira da Foz, porto comercial e
+pesqueiro de dimensão média com estaleiros e limitações com mau tempo; Lisboa,
+porto comercial e naval de primeira grandeza com instalações completas e estaleiros
+capazes de receber navios de grandes dimensões; Setúbal, porto comercial com
+estaleiros capazes de receber navios de grandes dimensões; Sines, principal
+terminal petrolífero com instalações para carga a granel; na costa sul, Portimão
+e Faro como portos comerciais e de pesca.
+
+DIQUES SECOS — CAPACIDADES (REFERÊNCIA 2005)
+
+Lisboa dispõe de dique seco com capacidade para navios até 1 000 000 toneladas
+de porte bruto (TPB). Setúbal dispõe de dique seco com capacidade para navios
+até 700 000 toneladas de porte bruto (TPB).
+
+================================================================================
+PARTE II — PORTO DE SETÚBAL: DESCRIÇÃO NÁUTICA OFICIAL
+================================================================================
+
+POSIÇÃO E ACESSO
+
+O Porto de Setúbal está situado no interior do estuário do Rio Sado. A entrada
+no estuário é feita entre o Forte do Outão, nas coordenadas 38°29' Norte e
+8°56' Oeste, e a Ponta do Adoxe, situada a cerca de uma milha e meia a este.
+O Rio Sado nasce nas colinas da Serra do Caldeirão, na província do Alentejo,
+e percorre 108 milhas antes de entrar no mar em Setúbal.
+
+FUNÇÃO E ESTATUTO DO PORTO
+
+Em 2000, o Porto de Setúbal era classificado como o quarto porto mais importante
+de Portugal. É um grande centro industrial equipado para movimentar todo o tipo
+de cargas. É o principal porto Roll-on Roll-off (RoRo — carga por rampa) de
+Portugal, movimentando aproximadamente 90% deste tipo de tráfego nacional.
+Existem extensas instalações de construção e reparação naval, e a indústria
+pesqueira mantém importância significativa. O porto oferece uma ancoragem
+ampla, profunda e segura, abrigada dos ventos predominantes de norte.
+
+LIMITES DO PORTO
+
+Os limites do porto são definidos pelas linhas que unem as seguintes coordenadas:
+Para o lado do mar, a partir do Forte do Outão (38°29' Norte e 8°56' Oeste),
+em direção a sudoeste até ao ponto 38°26,9' Norte e 8°59,1' Oeste; daqui para
+leste até 38°26,9' Norte e 8°54,2' Oeste; daqui para norte até ao extremo
+ocidental da Península de Tróia. Para o interior do estuário, todas as águas
+delimitadas a norte pelo paralelo 38°31,98' Norte, na Ribeira da Marateca, e a
+leste pelo meridiano 8°41,58' Oeste no Canal de Alcácer do Sal.
+
+TRÁFEGO PORTUÁRIO (DADOS HISTÓRICOS)
+
+Em 2004 o porto foi utilizado por 1 682 navios, com um total de 20 872 104
+toneladas de porte bruto (TPB). Esta referência histórica ilustra o volume de
+tráfego típico do porto em período de plena atividade operacional.
+
+AUTORIDADE PORTUÁRIA
+
+A entidade portuária referida no Admiralty Pilot é a Junta Autónoma do Porto de
+Setúbal, entidade que foi posteriormente reorganizada. A autoridade portuária
+atual é a APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+
+================================================================================
+CONDIÇÕES LIMITATIVAS DE NAVEGAÇÃO
+================================================================================
+
+PROFUNDIDADE CONTROLANTE
+
+A menor profundidade hidrograficamente cartografada no acesso ao porto é de
+10,6 metros, localizada a 2 cabos (aproximadamente 370 metros) a leste do
+Marco Luminoso Número 2 (posição 38°27' Norte e 8°58' Oeste).
+
+CALADO MÁXIMO AUTORIZADO PARA ENTRADA
+
+Em 2005, o calado máximo permitido para entrada no porto era de 12,0 metros.
+Para os valores atuais, consultar a APSS e as instruções de trabalho em vigor.
+
+COMPRIMENTO MÁXIMO DOS NAVIOS
+
+Navios com comprimento total (LOA — Length Overall) até 250 metros podem ser
+recebidos nas principais áreas de fundeamento e no Cais das Fontainhas.
+
+MARÉS — AMPLITUDES DE REFERÊNCIA
+
+A amplitude média das marés de águas vivas (marés sizígias) é de
+aproximadamente 2,9 metros. A amplitude média das marés de águas mortas
+(marés de quadratura) é de aproximadamente 1,2 metros. Para valores detalhados,
+consultar as Admiralty Tide Tables. Estes valores de referência são consistentes
+com o critério operacional interno que define marés vivas quando a baixa-mar
+é inferior a 1,0 metro e a preia-mar é superior a 3,0 metros.
+
+DENSIDADE DA ÁGUA
+
+A densidade da água no porto é de 1,025 gramas por centímetro cúbico, o que
+corresponde a água salgada típica. Esta densidade é relevante para o cálculo
+do calado real dos navios em função da carga: navios com calado determinado em
+água doce ou salobra devem ajustar o valor quando operam no estuário.
+
+================================================================================
+CONDIÇÕES METEOROLÓGICAS E DE MAR LOCAIS
+================================================================================
+
+A barra de entrada do Porto de Setúbal é, na sua grande maioria, navegável ao
+longo de todo o ano. Contudo, ventos fortes de sudoeste, que ocorrem
+principalmente entre outubro e abril, podem criar condições perigosas na barra
+e torná-la intransitável, especialmente quando coincidem com uma maré de vazante
+de águas vivas. Nestas condições adversas, os navios devem obter informação
+prévia sobre as condições na barra e eventuais restrições à pilotagem antes
+de se aproximarem.
+
+Em condições de ventos fortes provenientes de qualquer direção, os navios de
+alto bordo e de baixo calado (navios leves, com grande área lateral exposta ao
+vento relativamente ao seu calado) devem ter especial cuidado ao cruzar a barra,
+de forma a manter o alinhamento dos faróis de enfiamento.
+
+Ventos fortes de sul dificultam as manobras nos cais situados na parte oriental
+do porto.
+
+Os ventos predominantes no porto sopram de norte e noroeste durante todo o ano.
+
+O nevoeiro ocorre em média cerca de 15 dias por ano. Durante os meses de
+dezembro e janeiro, o nevoeiro forma-se de noite e dissipa-se geralmente durante
+a manhã. Em agosto, tende a formar-se ao amanhecer e a dissipar-se a meio do dia.
+
+================================================================================
+CHEGADA AO PORTO — INFORMAÇÃO PARA NAVIOS
+================================================================================
+
+AVISO PRÉVIO DE HORA DE CHEGADA ESTIMADA
+
+Os navios devem enviar o Aviso de Chegada (ETA — Estimated Time of Arrival) e
+o calado com 6 horas de antecedência em relação à chegada, e confirmar esses
+dados com 2 horas de antecedência.
+
+FUNDEADOURO EXTERIOR
+
+Não existem fundeadouros estabelecidos fora dos limites do porto. Para
+informações detalhadas sobre fundeamento exterior, deve consultar-se o Capitão
+do Porto.
+
+================================================================================
+PILOTAGEM
+================================================================================
+
+REGIME E DISPONIBILIDADE
+
+A pilotagem é obrigatória no Porto de Setúbal e está disponível 24 horas por
+dia, sete dias por semana. O posto de pilotagem está situado no porto, próximo
+a leste da Doca de Recreio, nas coordenadas 38°31,3' Norte e 8°53,5' Oeste.
+
+PONTO DE EMBARQUE DO PILOTO
+
+Em condições de bom tempo, a lancha dos pilotos pode estar fundeada ou ao largo
+do Forte da Arrábida (38°28,5' Norte e 8°58,9' Oeste), aguardando os navios
+que chegam. Em condições meteorológicas favoráveis, o piloto embarca no alinhamento
+da linha de enfiamento de entrada, a cerca de 1 milha a sudoeste do Marco
+Luminoso Número 2. Em condições adversas, o piloto dirige o navio por VHF
+(Very High Frequency — rádio de muito alta frequência) e embarca dentro do
+canal de entrada, no alinhamento de enfiamento, entre o Marco Luminoso Número 4
+e a Boia Luminosa Número 3. Em caso de mau tempo proveniente de sudoeste, os
+navios que se aproximam devem obter informação prévia sobre as condições na
+barra e quaisquer restrições à pilotagem.
+
+MOVIMENTOS DENTRO DO PORTO
+
+Os navios que pretendam mudar de cais ou sair do porto devem dar 2 horas de
+pré-aviso ao posto de pilotagem.
+
+================================================================================
+REBOCADORES
+================================================================================
+
+Rebocadores estão disponíveis no Porto de Setúbal. Para as regras específicas
+de utilização obrigatória e aconselhada de rebocadores conforme o tipo de
+manobra, calado, comprimento e terminal, consultar as instruções de trabalho
+internas da APSS, nomeadamente o IT-016 (Utilização de Rebocadores) e os
+documentos específicos de cada terminal.
+
+================================================================================
+RESTRIÇÕES DE VELOCIDADE
+================================================================================
+
+A velocidade máxima permitida ao cruzar a barra ou navegar dentro do porto é
+de 10 nós (10 milhas náuticas por hora). Esta limitação aplica-se tanto ao
+cruzamento da barra de areia na entrada como à navegação nos canais e zonas
+portuárias interiores.
+
+================================================================================
+RESERVA NATURAL MARINHA
+================================================================================
+
+O estuário do Rio Sado está classificado como Reserva Natural. As autoridades
+marítimas locais fazem cumprir regulamentos especiais para garantir a conservação
+da flora, da fauna e dos seus habitats. Em 2004 foi estabelecida uma reserva
+natural marinha adicional, a sul e a este do Canal Sul. Esta área abrange a
+maior parte do fundeadouro de navios em espera (lay-up anchorage). As autoridades
+marítimas locais devem ser sempre consultadas quando se pretenda navegar ou
+fundear nas áreas afetadas por estas reservas.
+
+================================================================================
+LAYOUT GERAL DO PORTO — CANAIS E ZONAS
+================================================================================
+
+CONFIGURAÇÃO GERAL DO ESTUÁRIO
+
+A partir da entrada, o estuário do Rio Sado alarga e estende-se por 10 milhas
+em direção a sudeste. Toda a atividade comercial está concentrada na margem norte
+do rio ao longo de 9 milhas, desde a fábrica da SECIL, imediatamente a norte do
+Forte do Outão (38°29' Norte e 8°56' Oeste), até ao estuário da Ribeira da
+Marateca, o pequeno curso de água que delimita o lado leste de Setúbal. Um cais
+naval está situado na Península de Tróia (margem sul do estuário).
+
+Grande parte do estuário é ocupada por um extenso banco central (middle ground)
+de lodo e areia, que seca em partes e se estende por 5 milhas ao longo do rio
+a partir de uma posição a uma milha e três quartos a nordeste do Outão. Os canais
+navegáveis desenvolvem-se a norte e a sul deste banco central. O Canal Norte,
+assinalado por luzes de enfiamento e boias luminosas, estende-se desde as
+imediações do Cais Comercial, na margem norte do rio, até aos cais das instalações
+industriais a leste de Setúbal. O Canal Sul, assinalado por boias luminosas,
+prolonga-se ao longo do lado norte da Península de Tróia, conduzindo aos estaleiros,
+a um cais de limpeza de tanques e a um cais de minério na extremidade oriental
+do porto.
+
+SINAIS DE TEMPO TEMPESTUOSO
+
+Os sinais de mau tempo (storm signals) são exibidos a partir de um mastro situado
+na margem norte do rio, em frente ao Edifício da Capitania do Porto (38°31,4' Norte
+e 8°53,4' Oeste), e a partir do posto de pilotagem no Forte da Arrábida.
+
+================================================================================
+CONDIÇÕES NATURAIS — CORRENTES E VENTOS
+================================================================================
+
+CORRENTES DE MARÉ
+
+As correntes de maré seguem a direção dos canais. A corrente é mais intensa nas
+imediações do Outão (38°29' Norte e 8°56' Oeste), onde em marés de águas vivas
+a corrente de vazante atinge cerca de 3 nós (três milhas náuticas por hora).
+Este valor constitui uma referência crítica para o planeamento de manobras,
+especialmente para navios de grande porte, e é consistente com a prioridade
+atribuída internamente ao "reponto de maré" (aproveitamento do instante de
+estoa — corrente nula — entre marés) nos terminais onde as manobras dependem
+de corrente mínima.
+
+VENTOS
+
+Os ventos predominantes no porto sopram de norte e noroeste e ocorrem ao longo
+de todo o ano. O porto é negativamente afetado pelos ventos de sudoeste,
+particularmente no período entre outubro e abril, quando estes podem criar
+condições perigosas na barra, conforme descrito na secção de condições locais
+de tempo e mar.
+
+================================================================================
+MARCOS DE REFERÊNCIA — PONTOS NOTÁVEIS E LUZES
+================================================================================
+
+PONTOS NOTÁVEIS (LANDMARKS)
+
+O Forte da Arrábida (38°28,5' Norte e 8°58,9' Oeste) é um edifício amarelo
+situado na entrada sudoeste da baía. A Pedra da Anixa, rochedo junto à costa
+a cinco cabos a ENE (Este-Nordeste) do Forte da Arrábida, destaca-se nitidamente
+contra o fundo da praia branca. Um grupo de mastros de rádio com altitude de
+387 metros e luzes vermelhas situa-se em 38°30' Norte e 8°58' Oeste.
+
+O Marco Luminoso Número 2 (boia vermelha, retângulo vertical sobre coluna
+vermelha com cúpula branca) situa-se em 38°27' Norte e 8°58' Oeste. O Farol
+do Outão (torre branca com 11 metros de altura) situa-se em 38°29' Norte e
+8°56' Oeste. A Torre de Água de Soltróia (caixa de água conspícua com 45 metros
+de altitude) situa-se em 38°28' Norte e 8°51' Oeste. A Ponta do Adoxe
+(38°29' Norte e 8°54' Oeste) é o ponto de entrada oriental do Rio Sado, onde
+se encontram vários edifícios altos conspícuos (complexo turístico) e uma luz
+vermelha exibida de um dos edifícios. A Torre de Água da Bela Vista (estrutura
+azul conspícua) situa-se em 38°31' Norte e 8°52' Oeste. As Chaminés da Central
+Elétrica de Setúbal situam-se em 38°30' Norte e 8°51' Oeste.
+
+LUZES PRINCIPAIS
+
+Luz Azeda (38°32' Norte e 8°52' Oeste); Luz Algarve Exportador (38°31,3' Norte
+e 8°53,6' Oeste); Luz Anunciada (38°31,4' Norte e 8°54,0' Oeste); Luz Doca
+Pesca (38°31,2' Norte e 8°53,9' Oeste).
+
+O Marco Luminoso Número 2 (38°27' Norte e 8°58' Oeste) está equipado com
+transponder de radar Racon para identificação e localização por radar.
+
+================================================================================
+DIREÇÕES DE ENTRADA NO PORTO — ABORDAGEM E PASSAGEM DA BARRA
+================================================================================
+
+ABORDAGEM PELA BARRA
+
+A entrada do Rio Sado é precedida por uma barra de areia fina sujeita a
+variações batimétricas, particularmente na área entre o Marco Luminoso Número 2
+e o Marco Luminoso Número 4, onde o canal tem apenas cerca de 200 metros de
+largura. A aproximação por oeste é livre de perigos. Os navios que se aproximem
+pelo sul devem ter em atenção que a barra se estende até 3 milhas a sul da
+entrada, sendo prudente aproximar com o Marco Luminoso Número 2 em marcação
+superior a 001°.
+
+Existe um naufrágio perigoso (embarcação de pesca, posição aproximada) fora
+da isobatimétrica (linha de igual profundidade) de 20 metros, a cinco milhas
+e um quarto a ESE (Este-Sudeste) do Marco Luminoso Número 2.
+
+DERROTA RECUSANTE (CLEARING BEARING)
+
+A marcação do Farol do Forte do Cavalo (38°26' Norte e 9°07' Oeste), mantida
+apenas visível a sul do Cabo de Ares (a duas milhas e um quarto a leste), passa
+a sul da entrada da barra — ou seja, um navio que mantenha esta marcação na
+posição indicada assegura que está ao sul da zona de perigos da barra.
+
+LUZES DE ENFIAMENTO DE ENTRADA (LEADING LIGHTS)
+
+O enfiamento de entrada é definido por duas luzes alinhadas: a luz da frente
+(Luz Doca Pesca) é uma torre metálica vermelha com listas brancas e 8 metros
+de altura, exibida a partir do extremo do quebra-mar exterior da Doca de Pesca
+(38°31' Norte e 8°54' Oeste); a luz de ré (Luz Azeda) é exibida a partir de
+uma colina acima do porto (a uma milha e três quartos a nordeste da luz da
+frente). O alinhamento destas duas luzes, com marcação de 039,75° graus, conduz
+sobre a barra e para dentro do rio.
+
+A partir da posição 38°26' Norte e 8°59' Oeste, seguindo este alinhamento de
+039,75°, a derrota passa: entre o Marco Luminoso Número 2 (a três milhas a
+sudoeste) e a Boia Luminosa Número 1 (a três cabos a sudeste do marco luminoso)
+— atenção: as profundidades reduzidas estendem-se dois cabos a sul do marco
+luminoso; depois passa a sudeste do Marco Luminoso Número 4; depois passa a
+noroeste da Boia Luminosa Número 3; depois passa a sudeste do Forte do Outão
+(forte conspícuo na entrada ocidental do rio); depois passa a noroeste do Marco
+Luminoso Número 5 (triângulo verde em coluna preta, a cinco cabos e um quarto
+a este do Outão), situado no lado noroeste do Cambalhão (banco que seca e se
+estende para sudoeste a partir da entrada oriental do rio).
+
+A derrota prossegue depois para nordeste em direção às zonas de fundeamento e
+aos cais comerciais junto à cidade, passando a noroeste da Boia Luminosa João
+Farto (boia cardeal Oeste, a uma milha e um quarto a nordeste), que marca o
+extremo ocidental do banco central, e a sudeste de Albarquel (a uma milha e
+um quarto a nordeste), um edifício proeminente com luz de lanterna vermelha.
+
+AVISO: À noite, a Luz Doca Pesca é frequentemente difícil de identificar contra
+as luzes de fundo, em especial um grupo de luzes alaranjadas na área portuária.
+Não se devem confundir as luzes do Marco Luminoso Número 2 e da Boia Luminosa
+Número 1 com a Luz do Outão e o Marco Luminoso Número 5, pois estes últimos
+normalmente são visíveis a maior distância.
+
+ENTRADA DIURNA SEM LUZES DE ENFIAMENTO
+
+Se de dia os faróis de enfiamento forem difíceis de identificar com boa
+visibilidade, o alinhamento de 036,25° dos seguintes marcos conduz sobre a
+barra até às imediações do Marco Luminoso Número 4: um facho (pequena marca
+em forma de cruz branca) próximo a WNW (Oeste-Noroeste) do Farol do Outão;
+e o canto sudoeste do Castelo de São Filipe (estrutura pintada de branco, a
+duas milhas a nordeste).
+
+================================================================================
+CANAL NORTE
+================================================================================
+
+LUZES DE ENFIAMENTO DO CANAL NORTE
+
+O Canal Norte é identificado pelo alinhamento de duas luzes: a luz da frente
+é a Luz Algarve Exportador (38°31,3' Norte e 8°53,6' Oeste); a luz de ré
+está no campanário da Igreja da Anunciada (a 538 metros a WNW da luz da frente).
+O alinhamento a ré (proa oposta — seguindo a direção de 295,5°, ou seja, em
+sentido à saída) conduz pelo Canal Norte, a norte do banco central.
+
+A partir de uma posição ao largo do Cais Comercial (38°31' Norte e 8°53' Oeste),
+a cerca de dois cabos da margem norte do Military and Commercial Anchorage
+(Fundeadouro Militar e Comercial), o alinhamento de 295,5° a ré conduz pelo
+Canal Norte até às imediações do Cais da SAPEC, passando pelo troço assinalado
+por boias luminosas laterais numeradas com o sufixo CN (Canal Norte).
+
+ATENÇÃO: Os navios com calado superior a 7,5 metros são obrigados a aguardar
+pela preia-mar (alto-mar, maré cheia) antes de navegar na área de baixas
+profundidades junto à cidade. Esta restrição é crítica e deve ser verificada
+sempre que o calado do navio se aproxime deste valor limite.
+
+CANAL NORTE — SECÇÃO INTERIOR
+
+O Canal Norte prossegue como canal estreito, adequado para navios com calado
+até 4,5 metros dependendo da maré, e prolonga-se para sudeste por cerca de
+duas milhas e meia até se juntar ao Canal Sul. A entrada neste troço interior
+do canal é limitada por um banco de areia que se estende cerca de 200 metros
+a partir da margem, e é delimitada no seu lado sul pelo baixio Cabeça da Santa,
+que seca completamente.
+
+================================================================================
+CANAL SUL
+================================================================================
+
+A partir de uma posição no alinhamento de entrada, a noroeste do Marco Luminoso
+Número 5, a derrota continua para nordeste por cerca de uma milha e depois vira
+para leste para entrar no Canal Sul, que se prolonga para sudeste por cerca de
+quatro milhas entre o banco central e a Península de Tróia. O Canal Sul é
+assinalado no seu lado norte pelas Boias Luminosas Número 2, 4, 6 e 8 (mão
+de bombordo — navios que entram mantêm estas boias a boreste).
+
+A derrota passa a sul da Boia Luminosa João Farto (cardeal Oeste) e a norte
+da Ponta do Adoxe. A partir das imediações da Boia Luminosa Número 8 (a duas
+milhas a leste do Cais Naval de Tróia), o Canal Sul continua como canal de
+cerca de 300 metros de largura com profundidade mínima de 7,5 metros, assinalado
+por boias luminosas laterais. O canal conduz primeiro para ESE (Este-Sudeste),
+depois para nordeste, virando finalmente para norte em direção aos vários cais
+do Estaleiro LISNAVE (atual denominação LISNAVE/Mitrena), passando a oeste da
+Boia Luminosa Número 5-CS (mão de estibordo), fundeada no extremo das águas
+pouco profundas a três cabos a sul de Eurominas (38°29' Norte e 8°47' Oeste).
+
+ATENÇÃO: Em 2004 foram reportadas profundidades menores do que as cartografadas
+a sul do Estaleiro LISNAVE. As sondagens a bordo e os dados hidrográficos atuais
+devem ser sempre consultados antes de navegar nesta área.
+
+O Rio Sado acima do Estaleiro LISNAVE não está assinalado por boias e não deve
+ser navegado sem conhecimento local.
+
+================================================================================
+FUNDEADOUROS INTERIORES
+================================================================================
+
+FUNDEADOUROS DESIGNADOS
+
+Os fundeadouros designados no interior do porto, conforme cartografia, são os
+seguintes:
+
+Margem norte (posicionados a partir da Luz Doca Pesca em 38°31' Norte e
+8°54' Oeste): Fundeadouro Militar e Comercial, centrado a quatro cabos a
+sudeste — existe uma profundidade reduzida na parte leste deste fundeadouro.
+
+Margem sul (posicionados a partir do Cais Naval de Tróia em 38°28,4' Norte e
+8°52,2' Oeste): Fundeadouro de Espera (lay-up anchorage) com 8 posições de
+fundeamento numeradas, centrado a duas milhas a sudeste. Fundeadouro de
+Quarentena e de Cargas Perigosas, centrado a seis cabos a leste.
+
+O fundeamento fora destas zonas designadas pode ser possível mas requer
+autorização prévia da Autoridade Portuária.
+
+FUNDEADOUROS PROIBIDOS
+
+É proibido fundear, por razões de proteção de cabos e tubagens submarinas,
+numa área com três cabos de largura entre o Forte de Albarquel (38°30,7' Norte
+e 8°54,8' Oeste) e a Ponta do Adoxe (a uma milha a SSE — Sul-Sudeste). É
+igualmente proibido fundear na aproximação aos cais, berços e pontos de
+acostagem na margem norte do rio, e num raio de 300 metros do Cais Naval de
+Tróia, no Canal Sul.
+
+================================================================================
+CAIS COMERCIAIS
+================================================================================
+
+Todos os cais comerciais se encontram na margem norte do rio. As instalações
+de carga comercial compreendem três bacias e quatro cais com instalações para
+carga geral, contentores e embarcações de pesca, e sete terminais equipados
+para movimentação de cargas sólidas e líquidas a granel. Os principais cais,
+listados de mar para terra, são os seguintes:
+
+Cais Novo da SECIL: comprimento de 105 metros, profundidade de 9,3 metros junto
+ao cais, para cargas de carvão e cimento. Situa-se a uma milha e meia a oeste
+da Ponta do Adoxe.
+
+Cais das Fontainhas: comprimento total de 525 metros, dividido em três berços,
+com profundidades de 7,3 a 9,3 metros junto ao cais, para carga geral. Existe
+um berço Roll-on Roll-off (RoRo) e de contentores em terra recuperada ao mar na
+extremidade leste do Cais das Fontainhas. Situa-se a duas milhas a nordeste da
+Ponta do Adoxe.
+
+Terminal de Contentores: aproximadamente 1 000 metros de cais com profundidades
+cartografadas de 10,5 metros e 12,2 metros junto ao cais, e um berço RoRo com
+dolfins na extremidade leste. Situa-se a duas milhas a nordeste da Ponta do Adoxe.
+
+Cais das Pirites Alentejanas (denominação atual: Terminal Praias do Sado —
+ex-Pirites, conforme IT-012): comprimento de 125 metros, profundidade de 11 metros
+junto ao cais, para cargas de minério e carvão para a central elétrica. Situa-se
+a duas milhas e três quartos a ENE da Ponta do Adoxe.
+
+Cais da SAPEC: comprimento de 112 metros, profundidade de 7,5 metros junto ao
+cais, para fertilizantes e cargas químicas. Situa-se a três milhas a leste da
+Ponta do Adoxe. O Terminal SAPEC corresponde atualmente ao Terminal Portuário
+SAPEC (TPS e TGL), conforme IT-029.
+
+Cais da Socel: comprimento de 60 metros, profundidade de 4 metros junto ao cais,
+para pasta de papel e matérias-primas. Situa-se em 38°29' Norte e 8°49' Oeste.
+
+Cais da Boliden: comprimento de 260 metros, profundidade de 10 metros junto ao
+cais, para gaseificação e ocasionalmente descarga de melaços. Situa-se em
+38°28,5' Norte e 8°48,4' Oeste.
+
+Cais da Eurominas (denominação atual: Terminal Termitrena — ex-Eurominas,
+conforme IT-011): comprimento de 154 metros, profundidade de aproximadamente
+7,7 metros junto ao cais, para cargas de manganês e carvão. Situa-se em
+38°28,2' Norte e 8°47,0' Oeste.
+
+CAI NAVAL DE TRÓIA
+
+O Cais Naval de Tróia (38°28,4' Norte e 8°52,2' Oeste) situa-se na margem sul
+do rio. Trata-se de um cais de 230 metros de comprimento com profundidade de
+8 metros junto ao cais. Existem dolfins posicionados a 50 metros de ambas as
+extremidades noroeste e sudeste do cais.
+
+================================================================================
+SERVIÇOS PORTUÁRIOS
+================================================================================
+
+REPARAÇÃO NAVAL
+
+Todas as reparações podem ser efetuadas. O Estaleiro Mitrena (atualmente
+LISNAVE/Mitrena, em 38°28' Norte e 8°48' Oeste) dispõe de seis diques secos
+e seis berços de reparação e acabamento. São igualmente realizadas operações
+de limpeza e gaseificação de tanques.
+
+O maior dique seco (para reparações) tem 450 metros de comprimento, 75 metros
+de largura e capacidade para navios até 700 000 toneladas de porte bruto.
+Existe também uma carreira de alagem (slipway) na Doca de Pesca com capacidade
+para 200 toneladas.
+
+OUTROS SERVIÇOS PORTUÁRIOS
+
+Certificados de isenção de desratização são emitidos. Mergulhadores estão
+disponíveis. Existem hospitais. Existem instalações para recolha de resíduos
+oleosos.
+
+ABASTECIMENTOS
+
+Água doce está disponível em todos os cais. Combustível está disponível nos
+Berços Número 1, 2 e 3 e no Cais das Fontainhas. Víveres e sobressalentes
+estão disponíveis.
+
+COMUNICAÇÕES
+
+O aeroporto internacional mais próximo é o de Lisboa, a 50 quilómetros.
+
+================================================================================
+SECÇÃO DE PERGUNTAS E RESPOSTAS — RECUPERAÇÃO SEMÂNTICA
+================================================================================
+
+Pergunta: Qual é a função principal do Porto de Setúbal?
+Resposta: O Porto de Setúbal é um grande porto industrial e comercial capaz de
+movimentar todo o tipo de cargas. É o principal porto RoRo (Roll-on Roll-off,
+carga por rampa) de Portugal, movimentando aproximadamente 90% do tráfego RoRo
+nacional. Dispõe de extensas instalações de reparação naval, incluindo seis
+diques secos com capacidade até 700 000 toneladas de porte bruto, e mantém
+atividade pesqueira significativa.
+
+Pergunta: Qual é o calado máximo permitido para entrar no Porto de Setúbal?
+Resposta: De acordo com os dados do Admiralty Pilot (2005), o calado máximo
+permitido para entrada era de 12,0 metros. Para o limite atual, consultar sempre
+a APSS e as instruções de trabalho em vigor.
+
+Pergunta: Qual é a menor profundidade cartografada no acesso ao porto?
+Resposta: A menor profundidade cartografada é de 10,6 metros, localizada a
+dois cabos (cerca de 370 metros) a leste do Marco Luminoso Número 2.
+
+Pergunta: Qual é a velocidade máxima dentro do porto de Setúbal?
+Resposta: A velocidade máxima permitida ao cruzar a barra ou navegar dentro
+do porto é de 10 nós.
+
+Pergunta: A pilotagem é obrigatória no Porto de Setúbal?
+Resposta: Sim. A pilotagem é obrigatória e está disponível 24 horas por dia.
+O posto de pilotagem situa-se no porto, próximo a leste da Doca de Recreio.
+
+Pergunta: Onde embarca o piloto em condições de bom tempo?
+Resposta: Em condições de bom tempo, o piloto embarca no alinhamento da linha
+de enfiamento de entrada, a cerca de uma milha a sudoeste do Marco Luminoso
+Número 2. Em condições adversas, o piloto dirige o navio por VHF e embarca
+dentro do canal de entrada, entre o Marco Luminoso Número 4 e a Boia Luminosa
+Número 3.
+
+Pergunta: Com que antecedência deve o navio comunicar a hora de chegada estimada?
+Resposta: O ETA e o calado devem ser enviados com 6 horas de antecedência e
+confirmados 2 horas antes da chegada.
+
+Pergunta: Com que antecedência deve ser dado pré-aviso para mudança de cais
+ou saída?
+Resposta: Os navios em porto que pretendam mudar de cais ou sair devem dar
+2 horas de pré-aviso ao posto de pilotagem.
+
+Pergunta: Qual é a corrente máxima junto ao Outão?
+Resposta: Em marés de águas vivas, a corrente de vazante junto ao Outão
+(38°29' Norte e 8°56' Oeste) atinge cerca de 3 nós. Esta é a corrente mais
+intensa em todo o porto e ocorre no ponto de estrangulamento entre o Forte
+do Outão e a Ponta do Adoxe.
+
+Pergunta: Qual a restrição de calado para navegar no Canal Norte?
+Resposta: Os navios com calado superior a 7,5 metros são obrigados a aguardar
+a preia-mar antes de navegar na área de baixas profundidades do Canal Norte
+junto à cidade. A secção interior do Canal Norte é adequada apenas para navios
+com calado até 4,5 metros, dependendo da maré.
+
+Pergunta: O estuário do Rio Sado tem algum estatuto de proteção ambiental?
+Resposta: Sim. O estuário do Rio Sado está classificado como Reserva Natural,
+com regulamentos especiais impostos pelas autoridades marítimas locais para
+conservação da flora, fauna e habitats. Em 2004 foi estabelecida uma reserva
+natural marinha adicional a sul e a este do Canal Sul. A maioria do fundeadouro
+de navios em espera (lay-up anchorage) encontra-se dentro da reserva natural
+marinha. As autoridades locais devem ser sempre consultadas.
+
+Pergunta: Que tipo de mau tempo afeta mais a barra de Setúbal?
+Resposta: Os ventos fortes de sudoeste, que ocorrem principalmente entre outubro
+e abril, são os mais perigosos para a barra. Quando coincidem com uma maré de
+vazante de águas vivas, as condições podem tornar a barra intransitável. Os
+navios que se aproximem com mau tempo de sudoeste devem obter informação prévia
+sobre as condições na barra antes de se aproximarem.
+
+Pergunta: Qual é o comprimento máximo de navio aceite no Porto de Setúbal?
+Resposta: Navios com comprimento total (LOA) até 250 metros podem ser
+recebidos nas principais zonas de fundeamento e no Cais das Fontainhas.
+
+Pergunta: Onde se situam os cais de contentores e RoRo?
+Resposta: O Terminal de Contentores tem aproximadamente 1 000 metros de cais
+com profundidades de 10,5 e 12,2 metros, e um berço RoRo com dolfins na
+extremidade leste. O Cais das Fontainhas (525 metros divididos em três berços)
+também tem um berço RoRo e de contentores na sua extremidade leste.
+
+Pergunta: Quais são os canais principais de navegação dentro do estuário?
+Resposta: Existem dois canais principais: o Canal Norte, que passa a norte do
+banco central e serve os terminais a leste de Setúbal, assinalado por boias
+luminosas com sufixo CN; e o Canal Sul, que passa entre o banco central e a
+Península de Tróia, servindo os estaleiros LISNAVE e os terminais da margem sul,
+assinalado por boias de mão de bombordo numeradas.
+
+Pergunta: Qual é a amplitude das marés em Setúbal?
+Resposta: A amplitude média das marés de águas vivas é de cerca de 2,9 metros.
+A amplitude média das marés de águas mortas é de cerca de 1,2 metros.
+
+================================================================================
+FIM DO DOCUMENTO — ADMIRALTY PILOT PORTO DE SETÚBAL (TRADUZIDO PT-PT, RAG)
+================================================================================

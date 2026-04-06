@@ -1,0 +1,241 @@
+DOCUMENTO: NOTAS OPERACIONAIS — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA
+FONTE: Notas pessoais de Piloto — Porto de Setúbal
+NATUREZA: Critérios práticos de avaliação de condições operacionais, limites de
+trabalho, gestão de embarques e prioridades de manobra. Complementa o IT-018
+(Normas Especiais) e o P-19 (Pilotagem) com critérios operacionais concretos.
+
+================================================================================
+ESCALA DE INTENSIDADE DE VENTO — REFERÊNCIAS OPERACIONAIS
+================================================================================
+
+Os seguintes intervalos de velocidade de vento definem as categorias usadas
+operacionalmente pela pilotagem do Porto de Setúbal para avaliar a viabilidade
+e planeamento de manobras:
+
+Vento fraco:      até 5 nós — sem impacto significativo nas manobras.
+Vento normal:     10 a 15 nós — condições típicas de operação sem restrições.
+Vento moderado:   15 a 20 nós — requer atenção, especialmente em navios de
+                  grande área vélica ou calado elevado.
+Vento forte:      20 a 25 nós — condiciona manobras e pode exigir rebocadores
+                  adicionais; requer avaliação caso a caso.
+Acima dos limites praticáveis: superior a 25 nós — as manobras podem não ser
+                  executáveis. A decisão de prosseguir ou suspender cabe ao
+                  Piloto em conjunto com o Comandante, conforme o IT-018,
+                  Artigo 3 (condicionante de vento > 20 nós para navios de
+                  grande superfície vélica).
+
+NOTA: Os valores indicados são referências operacionais práticas. O limite
+formal do IT-018 para avaliação obrigatória é 20 nós. A partir dos 25 nós
+a operação torna-se geralmente inviável, mas a decisão final é sempre do Piloto
+e do Comandante em conjunto.
+
+================================================================================
+DEFINIÇÃO OPERACIONAL DE MARÉS VIVAS
+================================================================================
+
+Para efeitos de planeamento operacional no Porto de Setúbal, consideram-se
+MARÉS VIVAS as marés que apresentem simultaneamente:
+  — Baixa-mar com altura inferior a 1,0 metro.
+  — Preia-mar com altura superior a 3,0 metros.
+
+Este critério é distinto (e mais preciso operacionalmente) do critério formal
+do IT-036 (Regulação de Agulhas), que define marés mortas como PM < 3,0 m e
+marés vivas como PM ≥ 3,0 m. No contexto de planeamento de manobras, a
+condição da baixa-mar (<1,0 m) é igualmente relevante porque determina a
+intensidade da corrente de vazante, que é a mais forte e perigosa.
+
+================================================================================
+EMBARQUE DO PILOTO — CONDIÇÕES E LOCAIS ALTERNATIVOS
+================================================================================
+
+O embarque do Piloto fora da Barra é a situação normal. No entanto, as condições
+meteorológicas e de mar podem inviabilizar este embarque.
+
+AVALIAÇÃO CONJUNTA:
+  O Piloto que vai executar a manobra, em conjunto com o Mestre da Lancha dos
+  Pilotos, avalia se as condições permitem o embarque. Esta é uma decisão
+  operacional partilhada — o Mestre da Lancha tem autoridade para recusar o
+  embarque se julgar as condições inseguras para a embarcação e tripulação.
+
+SEQUÊNCIA DE ALTERNATIVAS PARA EMBARQUE:
+
+  1.ª Opção — Embarque normal fora da Barra:
+    Sempre que as condições de vento, ondulação e visibilidade o permitam,
+    o Piloto embarca fora da Barra, nas condições e limites definidos pelo
+    IT-018 e IT-041 (LOA < 145 m e calado < 7,5 m para desembarque em OUTÃO,
+    em condições normais).
+
+  2.ª Opção — Embarque depois do forte do Outão (OUTÃO):
+    Se as condições fora da Barra não permitirem o embarque em segurança, a
+    segunda opção é o embarque depois do forte do Outão, já dentro da protecção
+    da entrada do estuário. Neste local há mais abrigo das ondas e corrente do
+    que fora da Barra.
+
+  3.ª Opção — Aguardar melhoria das condições:
+    Se nem mesmo no Outão for possível embarcar com segurança, o navio deve
+    aguardar ao largo até que as condições meteorológicas e de mar melhorem o
+    suficiente para permitir o embarque.
+
+CRITÉRIO ESPECIAL — VENTO FORTE + VAZANTE + ONDULAÇÃO:
+
+  A combinação mais difícil para embarque fora da Barra ocorre quando:
+    — A maré está de VAZANTE (corrente a empurrar para fora).
+    — O vento é FORTE (superior a 20 nós).
+    — A ondulação é GRANDE (superior a 2,5 metros).
+
+  Nestas condições, o embarque fora da Barra pode ser impraticável ou
+  perigoso. A lancha de pilotos enfrenta corrente, vento e ondas
+  simultaneamente, o que dificulta a aproximação segura ao navio.
+
+  JANELA DE ENCHENTE:
+    Quando a maré está de ENCHENTE, as condições para embarque tornam-se
+    geralmente mais favoráveis, porque a corrente passa a actuar a favor
+    (de dentro para fora), reduzindo o efeito combinado adverso. Por isso,
+    quando as condições são limítrofes, por vezes vale a pena ajustar o
+    plano de manobra para aproveitar a janela de enchente e realizar o
+    embarque nesse momento.
+
+================================================================================
+REBOCADORES EM CONDIÇÕES DE VENTO FORTE
+================================================================================
+
+NAVIOS RO-RO E NAVIOS DE GRANDE CALADO (SUPERIOR A 9 METROS):
+  Quando o vento é forte (superior a 20 nós), é preferível posicionar um
+  rebocador a EMPURRAR o navio contra o cais durante a atracação. O vento
+  pode afastar o navio do cais, e um rebocador a empurrar (ao costado,
+  perpendicular ao cais) contraria este efeito de forma controlada.
+
+CONFIGURAÇÕES TÍPICAS DE REBOCADORES COM VENTO FORTE:
+
+  Configuração base (1 rebocador adicional ao habitual):
+    — 1 rebocador a puxar à proa (estabelecido em cabo).
+    — 1 rebocador a empurrar ao costado.
+
+  Configuração para graneleiros grandes ou situações de maior risco:
+    — 2 rebocadores estabelecidos (um à proa, outro à proa também, ou
+      proa e popa).
+    — 1 ou 2 rebocadores a empurrar.
+
+  O critério é ter sempre pelo menos um rebocador dedicado a empurrar
+  o navio contra o cais em condições de vento forte, especialmente para
+  navios RO-RO (que têm grande área lateral exposta ao vento) e navios
+  de calado superior a 9 metros.
+
+================================================================================
+DEFINIÇÃO DE NAVIO GRANDE
+================================================================================
+
+Para efeitos operacionais de planeamento de manobras, considera-se NAVIO GRANDE
+aquele que apresenta pelo menos uma das seguintes características:
+  — Comprimento total (LOA) igual ou superior a 180 a 200 metros.
+  — Calado igual ou superior a 9 metros.
+
+Estes navios exigem planeamento mais cuidadoso, maior antecedência de marcação,
+geralmente mais rebocadores e escolha mais criteriosa das condições de maré
+e vento.
+
+================================================================================
+NEVOEIRO — SUSPENSÃO E RETOMA DE MANOBRAS
+================================================================================
+
+Em caso de NEVOEIRO, a pilotagem é suspensa. Aplicam-se as seguintes regras:
+
+  1. Os navios devem aguardar que a pilotagem dê a situação como terminada
+     (visibilidade reposta e condições seguras restabelecidas) antes de avançar
+     para as manobras.
+
+  2. As manobras continuam a ser registadas e processadas normalmente no sistema
+     (JUL), mesmo durante o nevoeiro — ou seja, as requisições de manobra
+     continuam a entrar na fila.
+
+  3. Se as condições não permitirem a execução, as manobras aguardam até que
+     as condições sejam repostas. O Piloto nomeado não embarca nem executa
+     a manobra até ao levantamento da suspensão.
+
+  4. O volume de trabalho acumula-se durante o nevoeiro. Quando as condições
+     melhoram, as manobras retomam por ordem de prioridade (ver secção seguinte).
+     Isto pode implicar um período de grande actividade após o levantamento
+     do nevoeiro, com vários navios a aguardar manobra.
+
+================================================================================
+PRIORIDADES DE MANOBRA — ORDEM DE EXECUÇÃO
+================================================================================
+
+Quando há múltiplas manobras a aguardar execução (por exemplo após nevoeiro,
+ou em períodos de grande tráfego), as prioridades são estabelecidas pela
+seguinte ordem, da mais prioritária para a menos prioritária:
+
+1.ª PRIORIDADE — NAVIOS QUE PRECISAM DO REPONTO DE MARÉ:
+  Navios cujas manobras dependem de um reponto específico (Lisnave, Teporset,
+  Termitrena, Tanquisado, Eco-Oil, etc.). Se perderem o reponto, terão de
+  aguardar o reponto seguinte (mínimo 6 horas), o que causa atrasos
+  desproporcionados. Por isso têm sempre prioridade absoluta sobre os restantes.
+
+2.ª PRIORIDADE — NAVIOS COM CARGA DE PASSAGEIROS, ANIMAIS VIVOS OU CARGA VIVA
+  E CARGA PERECÍVEL:
+  Navios de passageiros e navios que transportem animais vivos ou outras cargas
+  vivas (por exemplo gado) e carga perecível (alimentos, produtos frescos, etc.)
+  têm prioridade sobre cargas convencionais, devido à natureza sensível da carga
+  e ao impacto humano ou de bem-estar animal de atrasos.
+
+3.ª PRIORIDADE — NAVIOS RO-RO:
+  Roll-on Roll-off, incluindo ferry e navios de carga por rampa. Têm operações
+  de carga/descarga rápidas e sensíveis ao horário.
+
+4.ª PRIORIDADE — NAVIOS DE CONTENTORES:
+  Porta-contentores, com operações também sujeitas a janelas de tempo apertadas
+  nos terminais.
+
+5.ª PRIORIDADE — OUTROS NAVIOS:
+  Graneleiros, navios tanque, carga geral e outros tipos não incluídos acima.
+
+REGRA GERAL — SAÍDAS PRIORITÁRIAS FACE A ENTRADAS:
+  Independentemente do tipo de navio, as SAÍDAS têm prioridade sobre as
+  ENTRADAS. Um navio que pretende sair de um cais tem precedência sobre um
+  navio que pretende entrar, porque a ocupação do cais e a operação portuária
+  dependem de que o navio existente saia primeiro.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: A partir de que velocidade de vento as manobras ficam condicionadas?
+Resposta: A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das
+manobras, especialmente para navios de grande superfície vélica. Acima de 25
+nós as manobras são geralmente impraticáveis.
+
+Pergunta: Quando se considera maré viva no Porto de Setúbal?
+Resposta: Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.
+
+Pergunta: O Piloto embarca sempre fora da Barra?
+Resposta: Sempre que possível. Se as condições não permitirem, embarca no Outão.
+Se nem no Outão for possível, o navio aguarda ao largo até as condições melhorarem.
+
+Pergunta: Porquê que a enchente pode ser mais favorável para embarque?
+Resposta: Com a maré de enchente, a corrente actua a favor da aproximação da
+lancha, reduzindo o efeito combinado adverso de vento forte + corrente de
+vazante + ondulação. Por isso em condições limítrofes pode valer a pena aguardar
+pela enchente para fazer o embarque.
+
+Pergunta: O que fazer quando há nevoeiro?
+Resposta: A pilotagem é suspensa. Os navios aguardam em fila de prioridade.
+As requisições continuam a ser registadas no sistema mas as manobras não se
+executam até as condições serem repostas e a pilotagem declarar o levantamento.
+
+Pergunta: Qual o critério de prioridade entre manobras?
+Resposta: 1.º navios com reponto de maré; 2.º navios com passageiros/animais/
+carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade
+de saídas sobre entradas.
+
+Pergunta: Um graneleiro e um ferry estão à espera de manobra. Qual sai primeiro?
+Resposta: O ferry (RoRo de passageiros), que é 2.ª prioridade face ao graneleiro
+que é 5.ª prioridade.
+
+Pergunta: Dois navios estão à espera: um porta-contentores a entrar e um
+graneleiro a sair. Qual manobra primeiro?
+Resposta: O graneleiro a sair, porque as saídas têm prioridade sobre as entradas
+independentemente do tipo de navio.
+
+================================================================================
+FIM DO DOCUMENTO — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA
+================================================================================
