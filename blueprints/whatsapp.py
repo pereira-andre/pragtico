@@ -231,6 +231,10 @@ def whatsapp_webhook_receive():
             continue
 
         try:
+            current_app.logger.info(
+                "WhatsApp webhook: processando %s de %s (tipo=%s)",
+                message_id, from_number, event_type,
+            )
             profile = _ensure_whatsapp_user(
                 from_number,
                 event.get("profile_name", ""),
@@ -298,6 +302,10 @@ def whatsapp_webhook_receive():
                         }
                     )
 
+            current_app.logger.info(
+                "WhatsApp: chat_turn para %s, welcome_pre=%d",
+                from_number, len(pre_response_messages),
+            )
             result = handle_chat_turn(
                 username=profile["username"],
                 role=profile.get("role", getattr(service, "default_role", "piloto")),
@@ -312,6 +320,11 @@ def whatsapp_webhook_receive():
                     "message_type": "text",
                 },
                 pre_response_messages=pre_response_messages,
+            )
+            current_app.logger.info(
+                "WhatsApp: chat_turn OK, answer_len=%d, pre_msgs=%d",
+                len(result.get("answer") or ""),
+                len(result.get("pre_response_messages") or []),
             )
             services.store.record_channel_event(
                 channel="whatsapp",
@@ -351,6 +364,7 @@ def whatsapp_webhook_receive():
                         external_message_id=pre_message_id,
                     )
 
+            current_app.logger.info("WhatsApp: a enviar resposta para %s", from_number)
             _, outbound_message_id = _send_and_record_outbound_message(
                 service,
                 username=profile["username"],
@@ -361,6 +375,9 @@ def whatsapp_webhook_receive():
                 reply_to_message_id=message_id,
                 event_type="outgoing_text",
             )
+            current_app.logger.info(
+                "WhatsApp: resposta enviada, wamid=%s", outbound_message_id,
+            )
             _mark_inbound_processed(
                 message_id,
                 from_number=from_number,
@@ -369,7 +386,11 @@ def whatsapp_webhook_receive():
             )
             delivered += 1
         except Exception:
-            current_app.logger.exception("Falha ao responder ao webhook WhatsApp.")
+            current_app.logger.exception(
+                "Falha ao responder ao webhook WhatsApp (from=%s, msg=%s).",
+                from_number,
+                message_id,
+            )
 
     return jsonify({
         "status": "ok",
