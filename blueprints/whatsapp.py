@@ -26,6 +26,10 @@ def _processed_inbound_key(message_id: str) -> str:
     return f"whatsapp:processed:{message_id}"
 
 
+def _welcome_sent_key(from_number: str) -> str:
+    return f"whatsapp:welcome:{from_number}"
+
+
 def _reaction_feedback_status(emoji: str | None) -> str:
     if (emoji or "").strip() == "👍":
         return "approved"
@@ -63,6 +67,33 @@ def _mark_inbound_processed(message_id: str, *, from_number: str, conversation_i
     )
 
 
+def _welcome_already_sent(from_number: str) -> bool:
+    if not from_number:
+        return False
+    return bool(services.store.get_runtime_state(_welcome_sent_key(from_number)))
+
+
+def _mark_welcome_sent(
+    from_number: str,
+    *,
+    conversation_id: str,
+    local_message_id: str,
+    external_message_id: str,
+) -> None:
+    if not from_number:
+        return
+    services.store.set_runtime_state(
+        _welcome_sent_key(from_number),
+        {
+            "from_number": from_number,
+            "conversation_id": conversation_id,
+            "local_message_id": local_message_id,
+            "external_message_id": external_message_id,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
 def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str) -> dict:
     username = _whatsapp_username(from_number)
     profile = services.store.get_user_profile(username)
@@ -77,6 +108,57 @@ def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str
         email=username,
         phone=f"+{from_number}",
     )
+
+
+def _send_and_record_outbound_message(
+    service,
+    *,
+    username: str,
+    conversation_id: str,
+    local_message_id: str,
+    content: str,
+    to_number: str,
+    reply_to_message_id: str,
+    event_type: str,
+    template_name: str = "",
+    template_language: str = "",
+) -> tuple[dict, str]:
+    if template_name.strip():
+        send_response = service.send_template_message(
+            to_number,
+            template_name=template_name.strip(),
+            language_code=template_language.strip() or "pt_PT",
+            reply_to_message_id=reply_to_message_id,
+        )
+    else:
+        send_response = service.send_text_message(
+            to_number,
+            content,
+            reply_to_message_id=reply_to_message_id,
+        )
+    outbound_message_id = _extract_outbound_message_id(send_response)
+    services.store.update_message_channel_metadata(
+        username,
+        conversation_id,
+        local_message_id,
+        external_message_id=outbound_message_id or None,
+        channel_metadata={
+            "send_response": send_response,
+            "last_status": "accepted",
+        },
+    )
+    services.store.record_channel_event(
+        channel="whatsapp",
+        event_type=event_type,
+        payload=send_response,
+        username=username,
+        conversation_id=conversation_id,
+        local_message_id=local_message_id,
+        channel_user_id=to_number,
+        external_event_id=outbound_message_id,
+        external_message_id=outbound_message_id,
+    )
+    return send_response, outbound_message_id
 
 
 @bp.route("/webhooks/whatsapp", methods=["GET"])
@@ -194,6 +276,28 @@ def whatsapp_webhook_receive():
                 ignored += 1
                 continue
 
+            pre_response_messages = []
+            if getattr(service, "welcome_enabled", False) and not _welcome_already_sent(from_number):
+                welcome_message = service.build_welcome_message(event)
+                if welcome_message:
+                    welcome_metadata = {
+                        "message_kind": "welcome",
+                        "welcome_auto": True,
+                    }
+                    if getattr(service, "should_send_welcome_template", lambda: False)():
+                        welcome_metadata.update(
+                            {
+                                "welcome_template_name": getattr(service, "welcome_template_name", ""),
+                                "welcome_template_language": getattr(service, "welcome_template_language", "pt_PT"),
+                            }
+                        )
+                    pre_response_messages.append(
+                        {
+                            "content": welcome_message,
+                            "channel_metadata": welcome_metadata,
+                        }
+                    )
+
             result = handle_chat_turn(
                 username=profile["username"],
                 role=profile.get("role", getattr(service, "default_role", "piloto")),
@@ -207,6 +311,7 @@ def whatsapp_webhook_receive():
                     "timestamp": event.get("timestamp", ""),
                     "message_type": "text",
                 },
+                pre_response_messages=pre_response_messages,
             )
             services.store.record_channel_event(
                 channel="whatsapp",
@@ -220,32 +325,36 @@ def whatsapp_webhook_receive():
                 external_message_id=message_id,
             )
 
-            send_response = service.send_text_message(
-                from_number,
-                result["answer"],
-                reply_to_message_id=message_id,
-            )
-            outbound_message_id = _extract_outbound_message_id(send_response)
-            services.store.update_message_channel_metadata(
-                profile["username"],
-                result["conversation_id"],
-                result["message_id"],
-                external_message_id=outbound_message_id or None,
-                channel_metadata={
-                    "send_response": send_response,
-                    "last_status": "accepted",
-                },
-            )
-            services.store.record_channel_event(
-                channel="whatsapp",
-                event_type="outgoing_text",
-                payload=send_response,
+            for pre_message in result.get("pre_response_messages") or []:
+                _, pre_message_id = _send_and_record_outbound_message(
+                    service,
+                    username=profile["username"],
+                    conversation_id=result["conversation_id"],
+                    local_message_id=pre_message["message_id"],
+                    content=pre_message["content"],
+                    to_number=from_number,
+                    reply_to_message_id=message_id,
+                    event_type="outgoing_welcome",
+                    template_name=(pre_message.get("channel_metadata") or {}).get("welcome_template_name", ""),
+                    template_language=(pre_message.get("channel_metadata") or {}).get("welcome_template_language", ""),
+                )
+                if (pre_message.get("channel_metadata") or {}).get("message_kind") == "welcome":
+                    _mark_welcome_sent(
+                        from_number,
+                        conversation_id=result["conversation_id"],
+                        local_message_id=pre_message["message_id"],
+                        external_message_id=pre_message_id,
+                    )
+
+            _, outbound_message_id = _send_and_record_outbound_message(
+                service,
                 username=profile["username"],
                 conversation_id=result["conversation_id"],
                 local_message_id=result["message_id"],
-                channel_user_id=from_number,
-                external_event_id=outbound_message_id,
-                external_message_id=outbound_message_id,
+                content=result["answer"],
+                to_number=from_number,
+                reply_to_message_id=message_id,
+                event_type="outgoing_text",
             )
             _mark_inbound_processed(
                 message_id,

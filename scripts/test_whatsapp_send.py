@@ -41,6 +41,21 @@ def _build_parser(default_target: str) -> argparse.ArgumentParser:
         default=f"Teste PRAGtico OK às {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         help="Texto a enviar.",
     )
+    parser.add_argument(
+        "--template-name",
+        default="",
+        help="Template WhatsApp a enviar. Se vazio, usa WHATSAPP_WELCOME_TEMPLATE_NAME quando existir.",
+    )
+    parser.add_argument(
+        "--template-language",
+        default="",
+        help="Idioma do template. Ex.: pt_PT (ou WHATSAPP_WELCOME_TEMPLATE_LANGUAGE).",
+    )
+    parser.add_argument(
+        "--force-text",
+        action="store_true",
+        help="Força envio em texto simples, mesmo com template configurado.",
+    )
     return parser
 
 
@@ -67,7 +82,26 @@ def main() -> int:
             missing.append("WHATSAPP_PHONE_NUMBER_ID")
         parser.error("Configuração incompleta para envio WhatsApp: " + ", ".join(missing))
 
-    response = service.send_text_message(target_number, args.message)
+    template_name = (
+        args.template_name.strip()
+        or os.getenv("WHATSAPP_TEST_TEMPLATE_NAME", "").strip()
+        or getattr(service, "welcome_template_name", "").strip()
+    )
+    template_language = (
+        args.template_language.strip()
+        or os.getenv("WHATSAPP_TEST_TEMPLATE_LANGUAGE", "").strip()
+        or getattr(service, "welcome_template_language", "pt_PT").strip()
+        or "pt_PT"
+    )
+    use_template = bool(template_name) and not args.force_text
+    if use_template:
+        response = service.send_template_message(
+            target_number,
+            template_name=template_name,
+            language_code=template_language,
+        )
+    else:
+        response = service.send_text_message(target_number, args.message)
     message_id = ""
     if isinstance(response, dict):
         messages = response.get("messages") or []
@@ -75,6 +109,9 @@ def main() -> int:
             message_id = str(messages[0].get("id") or "").strip()
 
     print("Mensagem enviada com sucesso.")
+    print(f"Modo: {'template' if use_template else 'text'}")
+    if use_template:
+        print(f"Template: {template_name} ({template_language})")
     print(f"Destino: {target_number}")
     print(f"Phone Number ID: {service.phone_number_id}")
     if message_id:
