@@ -39,6 +39,7 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 - Pesquisa documental com contexto vivo do portal
 - Ações operacionais via chat com confirmação, cancelamento e feedback
 - Canal WhatsApp via Cloud API com webhook, respostas inbound e feedback por reação `👍/👎`
+- Welcome automática no primeiro contacto WhatsApp, configurável por `.env`
 - Suporte multi-provider para geração LLM
 - Embeddings locais em desenvolvimento com `BAAI/bge-m3`
 - Perfil Railway com `OpenAI` para chat e embeddings, com fallback de geração por `OpenRouter`, sem `sentence-transformers` no container
@@ -159,6 +160,14 @@ python3 scripts/test_whatsapp_send.py --to 351962063664
 ```
 
 Pré-requisitos na `.env`: `WHATSAPP_ENABLED=1`, `WHATSAPP_ACCESS_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`.
+
+Atualizar a foto do perfil do número WhatsApp com `img/icon.png`:
+
+```bash
+python3 scripts/update_whatsapp_profile.py --show-profile
+```
+
+Opcionalmente podes incluir `--about`, `--description` e até duas vezes `--website`.
 
 Com `make`:
 

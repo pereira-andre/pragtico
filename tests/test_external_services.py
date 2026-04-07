@@ -6,6 +6,7 @@ from unittest.mock import patch
 import requests
 
 from integrations.local_warning_service import LocalWarningService
+from integrations.whatsapp_cloud import WhatsAppCloudService
 from integrations.wave_service import WaveService
 
 
@@ -21,6 +22,37 @@ class _FakeResponse:
 
 
 class ExternalServiceCacheTests(unittest.TestCase):
+    def test_whatsapp_parse_webhook_events_maps_button_reply_to_text_event(self) -> None:
+        service = WhatsAppCloudService(enabled=True)
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351965756128", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.BUTTON123",
+                                        "from": "351965756128",
+                                        "timestamp": "1712165400",
+                                        "type": "button",
+                                        "button": {"text": "Iniciar", "payload": "start"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        events = service.parse_webhook_events(payload)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "message_text")
+        self.assertEqual(events[0]["text"], "Iniciar")
+
     def test_wave_service_reuses_persisted_snapshot_after_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             snapshot_path = Path(temp_dir) / "wave_cache.json"
@@ -193,3 +225,75 @@ class ExternalServiceCacheTests(unittest.TestCase):
 
         self.assertEqual(len(warnings), 1)
         self.assertEqual(verify_values, [True, False])
+
+    def test_whatsapp_profile_picture_upload_uses_resumable_upload_flow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            picture_path = Path(temp_dir) / "icon.png"
+            picture_path.write_bytes(b"\x89PNG\r\n\x1a\npragtico")
+
+            service = WhatsAppCloudService(
+                enabled=True,
+                access_token="token-123",
+                phone_number_id="phone-123",
+            )
+            post_calls: list[dict] = []
+
+            def fake_post(url, **kwargs):
+                post_calls.append({"url": url, **kwargs})
+                if url.endswith("/app/uploads"):
+                    return _FakeResponse({"id": "upload:session-1"})
+                if url.endswith("/upload:session-1"):
+                    return _FakeResponse({"h": "handle-1"})
+                raise AssertionError(f"URL inesperada: {url}")
+
+            with patch("integrations.whatsapp_cloud.requests.post", side_effect=fake_post):
+                handle = service.upload_profile_picture(picture_path)
+
+        self.assertEqual(handle, "handle-1")
+        self.assertEqual(len(post_calls), 2)
+        self.assertEqual(post_calls[0]["params"]["file_name"], "icon.png")
+        self.assertEqual(post_calls[0]["params"]["file_type"], "image/png")
+        self.assertEqual(post_calls[0]["params"]["file_length"], len(b"\x89PNG\r\n\x1a\npragtico"))
+        self.assertEqual(post_calls[0]["headers"]["Authorization"], "OAuth token-123")
+        self.assertEqual(post_calls[1]["headers"]["Content-Type"], "image/png")
+        self.assertEqual(post_calls[1]["headers"]["file_offset"], "0")
+        self.assertEqual(post_calls[1]["data"], b"\x89PNG\r\n\x1a\npragtico")
+
+    def test_whatsapp_update_business_profile_posts_picture_handle(self) -> None:
+        service = WhatsAppCloudService(
+            enabled=True,
+            access_token="token-123",
+            phone_number_id="phone-123",
+            graph_api_version="v25.0",
+        )
+        post_calls: list[dict] = []
+
+        def fake_post(url, **kwargs):
+            post_calls.append({"url": url, **kwargs})
+            return _FakeResponse({"data": [{"id": "phone-123"}]})
+
+        with patch("integrations.whatsapp_cloud.requests.post", side_effect=fake_post):
+            response = service.update_business_profile(
+                about="PRAGtico",
+                description="Coordenação portuária",
+                profile_picture_handle="handle-1",
+                websites=["https://pragtico.test"],
+            )
+
+        self.assertEqual(response, {"data": [{"id": "phone-123"}]})
+        self.assertEqual(
+            post_calls[0]["url"],
+            "https://graph.facebook.com/v25.0/phone-123/whatsapp_business_profile",
+        )
+        self.assertEqual(post_calls[0]["headers"]["Authorization"], "Bearer token-123")
+        self.assertEqual(
+            post_calls[0]["json"],
+            {
+                "messaging_product": "whatsapp",
+                "about": "PRAGtico",
+                "description": "Coordenação portuária",
+                "profile_picture_handle": "handle-1",
+                "websites": ["https://pragtico.test"],
+            },
+        )
+

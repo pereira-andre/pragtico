@@ -170,6 +170,51 @@ class WhatsAppCloudService:
                                 "raw": message,
                             }
                         )
+                    elif message_type == "button":
+                        button_payload = message.get("button") or {}
+                        button_text = str(button_payload.get("text") or "").strip()
+                        button_reply_id = str(button_payload.get("payload") or "").strip()
+                        normalized_text = button_text or button_reply_id
+                        if normalized_text:
+                            parsed.append(
+                                {
+                                    "event_type": "message_text",
+                                    "message_id": (message.get("id") or "").strip(),
+                                    "from_number": from_number,
+                                    "profile_name": (profile.get("name") or "").strip(),
+                                    "text": normalized_text,
+                                    "timestamp": str(message.get("timestamp") or "").strip(),
+                                    "raw": message,
+                                }
+                            )
+                    elif message_type == "interactive":
+                        interactive = message.get("interactive") or {}
+                        interactive_type = str(interactive.get("type") or "").strip().lower()
+                        normalized_text = ""
+                        if interactive_type == "button_reply":
+                            button_reply = interactive.get("button_reply") or {}
+                            normalized_text = (
+                                str(button_reply.get("title") or "").strip()
+                                or str(button_reply.get("id") or "").strip()
+                            )
+                        elif interactive_type == "list_reply":
+                            list_reply = interactive.get("list_reply") or {}
+                            normalized_text = (
+                                str(list_reply.get("title") or "").strip()
+                                or str(list_reply.get("id") or "").strip()
+                            )
+                        if normalized_text:
+                            parsed.append(
+                                {
+                                    "event_type": "message_text",
+                                    "message_id": (message.get("id") or "").strip(),
+                                    "from_number": from_number,
+                                    "profile_name": (profile.get("name") or "").strip(),
+                                    "text": normalized_text,
+                                    "timestamp": str(message.get("timestamp") or "").strip(),
+                                    "raw": message,
+                                }
+                            )
                     elif message_type == "reaction":
                         reaction = message.get("reaction") or {}
                         parsed.append(

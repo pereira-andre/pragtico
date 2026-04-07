@@ -130,10 +130,13 @@ No Railway, garantir pelo menos:
 
 Se estiveres em teste controlado, tambem podes definir:
 - WHATSAPP_ALLOWED_NUMBERS=351962063664
+- WHATSAPP_WELCOME_ENABLED=1
+- WHATSAPP_WELCOME_MESSAGE=👋 Bem-vindo ao PRAGtico\n\nO teu assistente inteligente para coordenacao eficiente de manobras portuarias.\nEm que posso ajudar? 🤖
 
 Porque este passo existe:
 - Estas variaveis ligam o backend aos recursos certos da Meta.
 - Se o token estiver errado ou expirado, a rececao pode funcionar mas a resposta falha com 401.
+- A welcome automatica e enviada apenas uma vez por contacto quando a conversa arranca.
 
 
 12. Fazer redeploy do backend
@@ -164,11 +167,31 @@ Mandar uma mensagem do teu WhatsApp para o numero do PRAGtico.
 
 Resultado esperado:
 - a Meta faz POST ao webhook
+- se for o primeiro contacto, o PRAGtico envia a welcome automatica
 - o PRAGtico recebe a mensagem
 - o bot responde no WhatsApp
 
 Porque este passo existe:
 - Este e o unico teste que valida o fluxo fim a fim.
+
+Nota de operacao:
+- a welcome automatica e texto simples; o JSON de Flow tem de ser enviado explicitamente pelo backend se quiseres usar um Flow real como primeira resposta
+
+
+14A. Atualizar a foto do perfil do numero
+-----------------------------------------
+Para subir a imagem `img/icon.png` para o business profile, corre:
+
+python3 scripts/update_whatsapp_profile.py --show-profile
+
+Opcionalmente podes enviar tambem:
+- --about "..."
+- --description "..."
+- --website https://...
+
+Porque este passo existe:
+- a foto do "bot" e a foto do business profile do numero WhatsApp
+- a Meta exige upload resumable para obter um `profile_picture_handle` antes de atualizar o perfil
 
 
 15. Entender o papel dos templates

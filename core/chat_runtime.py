@@ -176,6 +176,7 @@ def handle_chat_turn(
     channel_user_id: str = "",
     inbound_message_id: str = "",
     inbound_message_metadata: dict | None = None,
+    pre_response_messages: list[dict] | None = None,
 ) -> dict:
     """Process a single chat turn and persist the resulting messages."""
     clean_question = (question or "").strip()
@@ -506,6 +507,31 @@ def handle_chat_turn(
                     "feedback_note": trusted_answers[0].get("feedback_note", ""),
                 }
 
+        persisted_pre_response_messages: list[dict] = []
+        for item in pre_response_messages or []:
+            content = str((item or {}).get("content") or "").strip()
+            if not content:
+                continue
+            pre_message = services.store.append_chat_message(
+                username=username,
+                conversation_id=conversation["id"],
+                role="assistant",
+                content=content,
+                citations=(item or {}).get("citations") or [],
+                channel=channel,
+                channel_user_id=channel_user_id,
+                external_reply_to_id=inbound_message_id,
+                channel_metadata=(item or {}).get("channel_metadata") or {},
+            )
+            persisted_pre_response_messages.append(
+                {
+                    "message_id": pre_message["id"],
+                    "content": pre_message["content"],
+                    "created_at_label": pre_message.get("created_at_label", ""),
+                    "channel_metadata": pre_message.get("channel_metadata", {}),
+                }
+            )
+
         assistant_message = services.store.append_chat_message(
             username=username,
             conversation_id=conversation["id"],
@@ -522,4 +548,5 @@ def handle_chat_turn(
             "user_message_id": user_message["id"],
             "message_id": assistant_message["id"],
             "created_at_label": assistant_message.get("created_at_label", ""),
+            "pre_response_messages": persisted_pre_response_messages,
         }

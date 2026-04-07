@@ -105,12 +105,17 @@ class _StubWhatsAppService:
         webhook_ready: bool = True,
         verify_ok: bool = True,
         allowed_numbers: set[str] | None = None,
+        welcome_enabled: bool = False,
+        welcome_message: str = "👋 Bem-vindo ao PRAGtico",
     ) -> None:
         self.enabled = enabled
         self.webhook_ready = webhook_ready
         self.verify_ok = verify_ok
         self.allowed_numbers = allowed_numbers or set()
+        self.welcome_enabled = welcome_enabled
+        self.welcome_message = welcome_message
         self.sent_messages: list[dict] = []
+        self._outbound_counter = 122
 
     def verify_webhook(self, mode: str | None, token: str | None) -> bool:
         return self.verify_ok and (mode or "") == "subscribe" and bool(token)
@@ -193,7 +198,13 @@ class _StubWhatsAppService:
     def build_test_reply(self, inbound: dict) -> str:
         return f"reply:{inbound.get('text', '')}"
 
+    def build_welcome_message(self, inbound: dict | None = None) -> str:
+        if not self.welcome_enabled:
+            return ""
+        return self.welcome_message
+
     def send_text_message(self, to_number: str, text: str, *, reply_to_message_id: str = "") -> dict:
+        self._outbound_counter += 1
         self.sent_messages.append(
             {
                 "to_number": to_number,
@@ -201,7 +212,7 @@ class _StubWhatsAppService:
                 "reply_to_message_id": reply_to_message_id,
             }
         )
-        return {"messages": [{"id": "wamid.REPLY123"}]}
+        return {"messages": [{"id": f"wamid.REPLY{self._outbound_counter}"}]}
 
 
 class OperationalFlowTests(unittest.TestCase):
@@ -1849,6 +1860,101 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(len(channel_events), 2)
         self.assertEqual(channel_events[0]["event_type"], "incoming_text")
         self.assertEqual(channel_events[1]["event_type"], "outgoing_text")
+
+    def test_whatsapp_webhook_sends_welcome_only_once_per_contact(self) -> None:
+        whatsapp_service = _StubWhatsAppService(
+            allowed_numbers={"351962063664"},
+            welcome_enabled=True,
+            welcome_message="👋 Bem-vindo ao PRAGtico\n\nEm que posso ajudar?",
+        )
+        first_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEST123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "olá"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        second_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEST124",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165401",
+                                        "type": "text",
+                                        "text": {"body": "qual é a maré?"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with patch("core.chat_runtime.refresh_knowledge_state") as mock_refresh:
+                with patch("core.chat_runtime.answer_direct_operational_query") as mock_answer_direct:
+                    mock_refresh.return_value = None
+                    mock_answer_direct.return_value = {
+                        "answer": "Resposta do bot",
+                        "sources": [],
+                        "answer_origin": "operational_lookup",
+                    }
+                    with app.app.test_client() as client:
+                        first = client.post("/webhooks/whatsapp", json=first_payload)
+                        second = client.post("/webhooks/whatsapp", json=second_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 3)
+        self.assertEqual(
+            [item["text"] for item in whatsapp_service.sent_messages],
+            [
+                "👋 Bem-vindo ao PRAGtico\n\nEm que posso ajudar?",
+                "Resposta do bot",
+                "Resposta do bot",
+            ],
+        )
+        username = "whatsapp-351962063664@pragtico.local"
+        conversations = self.store.list_conversations(username)
+        self.assertEqual(len(conversations), 1)
+        messages = self.store.list_messages(username, conversations[0]["id"])
+        self.assertEqual(len(messages), 5)
+        self.assertEqual(messages[1]["channel_metadata"]["message_kind"], "welcome")
+        channel_events = self.store._read_channel_events()
+        self.assertEqual(
+            [item["event_type"] for item in channel_events],
+            [
+                "incoming_text",
+                "outgoing_welcome",
+                "outgoing_text",
+                "incoming_text",
+                "outgoing_text",
+            ],
+        )
 
     def test_whatsapp_webhook_ignores_numbers_outside_whitelist(self) -> None:
         whatsapp_service = _StubWhatsAppService(allowed_numbers={"351911111111"})
