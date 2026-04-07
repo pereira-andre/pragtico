@@ -326,19 +326,24 @@ def whatsapp_webhook_receive():
             )
 
             for pre_message in result.get("pre_response_messages") or []:
-                _, pre_message_id = _send_and_record_outbound_message(
-                    service,
-                    username=profile["username"],
-                    conversation_id=result["conversation_id"],
-                    local_message_id=pre_message["message_id"],
-                    content=pre_message["content"],
-                    to_number=from_number,
-                    reply_to_message_id=message_id,
-                    event_type="outgoing_welcome",
-                    template_name=(pre_message.get("channel_metadata") or {}).get("welcome_template_name", ""),
-                    template_language=(pre_message.get("channel_metadata") or {}).get("welcome_template_language", ""),
-                )
-                if (pre_message.get("channel_metadata") or {}).get("message_kind") == "welcome":
+                is_welcome = (pre_message.get("channel_metadata") or {}).get("message_kind") == "welcome"
+                pre_message_id = ""
+                try:
+                    _, pre_message_id = _send_and_record_outbound_message(
+                        service,
+                        username=profile["username"],
+                        conversation_id=result["conversation_id"],
+                        local_message_id=pre_message["message_id"],
+                        content=pre_message["content"],
+                        to_number=from_number,
+                        reply_to_message_id=message_id,
+                        event_type="outgoing_welcome",
+                        template_name=(pre_message.get("channel_metadata") or {}).get("welcome_template_name", ""),
+                        template_language=(pre_message.get("channel_metadata") or {}).get("welcome_template_language", ""),
+                    )
+                except Exception:
+                    current_app.logger.exception("Falha ao enviar welcome WhatsApp para %s.", from_number)
+                if is_welcome:
                     _mark_welcome_sent(
                         from_number,
                         conversation_id=result["conversation_id"],
