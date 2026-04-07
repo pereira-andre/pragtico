@@ -2921,12 +2921,12 @@ class PostgresStore(BaseStore):
         return self._mutate_port_call(port_call_id, mutator)
 
 
-def create_store(data_dir: str, knowledge_dir: str) -> BaseStore:
+def create_store(data_dir: str, knowledge_dir: str, database_url: str = "") -> BaseStore:
     backend = os.getenv("APP_STORAGE_BACKEND", "local").strip().lower()
     if backend == "postgres":
-        database_url = os.getenv("DATABASE_URL", "").strip()
-        if not database_url:
+        resolved_url = database_url.strip() if database_url else os.getenv("DATABASE_URL", "").strip()
+        if not resolved_url:
             raise RuntimeError("Define DATABASE_URL para usar APP_STORAGE_BACKEND=postgres.")
-        return PostgresStore(database_url=database_url, knowledge_dir=knowledge_dir)
+        return PostgresStore(database_url=resolved_url, knowledge_dir=knowledge_dir)
     from .local import LocalStore
     return LocalStore(data_dir=data_dir, knowledge_dir=knowledge_dir)

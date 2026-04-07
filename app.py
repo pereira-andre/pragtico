@@ -119,7 +119,18 @@ def _resolve_fallback_provider_name(primary_name: str, explicit_name: str = "") 
 # Service initialization
 # ---------------------------------------------------------------------------
 
-store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR)
+# Construct DATABASE_URL from individual Postgres connection parameters
+_database_url = os.getenv("DATABASE_URL", "").strip()
+if not _database_url or "host" in _database_url.lower():
+    # Fallback: construct from individual parameters
+    _pghost = os.getenv("PGHOST", "localhost")
+    _pgport = os.getenv("PGPORT", "5432")
+    _pguser = os.getenv("PGUSER", "postgres")
+    _pgpassword = os.getenv("PGPASSWORD", "")
+    _pgdatabase = os.getenv("PGDATABASE", "postgres")
+    _database_url = f"postgresql://{_pguser}:{_pgpassword}@{_pghost}:{_pgport}/{_pgdatabase}"
+
+store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR, database_url=_database_url)
 auth_service = create_auth_service(store)
 index_store = create_index_store(data_dir=DATA_DIR)
 
