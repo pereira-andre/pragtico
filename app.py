@@ -119,7 +119,7 @@ def _resolve_fallback_provider_name(primary_name: str, explicit_name: str = "") 
 # Service initialization
 # ---------------------------------------------------------------------------
 
-store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR)
+store = create_store(data_dir=DATA_DIR, knowledge_dir=KNOWLEDGE_DIR, database_url=os.getenv("DATABASE_URL"))
 auth_service = create_auth_service(store)
 index_store = create_index_store(data_dir=DATA_DIR)
 
