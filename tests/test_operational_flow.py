@@ -2535,6 +2535,43 @@ class DashboardPlanningWindowTests(unittest.TestCase):
         self.assertIn("FUTURE DEPARTURE", html)
         self.assertIn(port_call["reference_code"], html)
 
+    def test_dashboard_in_port_cards_render_vessel_type_icon(self) -> None:
+        now = datetime.now(timezone.utc)
+        port_call = self.store.create_port_call(
+            vessel_name="ICONIC CARGO",
+            eta=(now - timedelta(days=1)).isoformat(),
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Sines",
+            next_port="Vigo",
+            notes="Escala com iconografia.",
+            vessel_imo="9876543",
+            vessel_call_sign="CQAB7",
+            vessel_flag="Portugal",
+            vessel_type="Contentores",
+            vessel_loa_m="142.50",
+            vessel_beam_m="21.80",
+            vessel_gt_t="8950",
+            vessel_max_draft_m="7.20",
+            vessel_dwt_t="12400",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at=(now - timedelta(hours=16)).isoformat(),
+            updated_by="admin",
+        )
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="admin", role="admin")
+            response = client.get("/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("ICONIC CARGO", html)
+        self.assertIn("Contentores", html)
+        self.assertIn("contentores.png", html)
+
 
 class PortCallJsonImportTests(unittest.TestCase):
     def setUp(self) -> None:

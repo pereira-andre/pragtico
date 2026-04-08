@@ -599,7 +599,17 @@
           </div>
           {% for vessel in berth.vessels %}
             <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
-              <strong>{{ vessel.vessel_name }}</strong>
+              <span class="berth-vessel-main">
+                {% if vessel.ship_type_icon %}
+                  <span class="berth-vessel-icon">
+                    <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.ship_type_icon) }}" alt="{{ vessel.ship_type_label }}">
+                  </span>
+                {% endif %}
+                <span class="berth-vessel-copy">
+                  <strong>{{ vessel.vessel_name }}</strong>
+                  <small>{{ vessel.ship_type_label }}</small>
+                </span>
+              </span>
               <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
             </a>
           {% endfor %}
@@ -622,7 +632,17 @@
               </div>
               {% for vessel in berth.vessels %}
                 <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
-                  <strong>{{ vessel.vessel_name }}</strong>
+                  <span class="berth-vessel-main">
+                    {% if vessel.ship_type_icon %}
+                      <span class="berth-vessel-icon">
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.ship_type_icon) }}" alt="{{ vessel.ship_type_label }}">
+                      </span>
+                    {% endif %}
+                    <span class="berth-vessel-copy">
+                      <strong>{{ vessel.vessel_name }}</strong>
+                      <small>{{ vessel.ship_type_label }}</small>
+                    </span>
+                  </span>
                   <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Sem ETD{% endif %}</span>
                 </a>
               {% endfor %}
@@ -643,7 +663,17 @@
               </div>
               {% for vessel in berth.vessels %}
                 <a class="berth-vessel-compact" href="{{ url_for('port_calls.port_call_detail', port_call_id=vessel.id) }}">
-                  <strong>{{ vessel.vessel_name }}</strong>
+                  <span class="berth-vessel-main">
+                    {% if vessel.ship_type_icon %}
+                      <span class="berth-vessel-icon">
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.ship_type_icon) }}" alt="{{ vessel.ship_type_label }}">
+                      </span>
+                    {% endif %}
+                    <span class="berth-vessel-copy">
+                      <strong>{{ vessel.vessel_name }}</strong>
+                      <small>{{ vessel.ship_type_label }}</small>
+                    </span>
+                  </span>
                   <span class="ops-tag">{% if vessel.planned_departure_label %}ETD {{ vessel.planned_departure_label }}{% else %}Em espera{% endif %}</span>
                 </a>
               {% endfor %}

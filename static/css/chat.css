@@ -866,11 +866,51 @@
 
 .berth-vessel-compact strong {
   font-size: 0.84rem;
-  flex: 1;
+  margin: 0;
+}
+
+.berth-vessel-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
+  flex: 1;
+}
+
+.berth-vessel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(10, 108, 102, 0.08);
+  border: 1px solid rgba(8, 67, 63, 0.1);
+}
+
+.berth-vessel-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.berth-vessel-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.berth-vessel-copy strong,
+.berth-vessel-copy small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.berth-vessel-copy small {
+  color: var(--muted);
+  font-size: 0.73rem;
 }
 
 .berth-vessel-compact .ops-tag {
