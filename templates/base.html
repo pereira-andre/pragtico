@@ -22,13 +22,29 @@
     <div class="page-shell">
       {% if current_user %}
         {% set current_endpoint = request.endpoint or "" %}
+        {% set nav_display_name = current_profile.full_name or (current_user.split('@')[0] if '@' in current_user else current_user) %}
+        {% set nav_org = current_profile.organization or "Porto de Setúbal" %}
+        {% set nav_parts = nav_display_name.replace('.', ' ').replace('-', ' ').split() %}
+        {% set nav_initials = namespace(value='') %}
+        {% if nav_parts %}
+          {% set nav_initials.value = nav_parts[0][0] %}
+          {% if nav_parts|length > 1 %}
+            {% set nav_initials.value = nav_initials.value + nav_parts[-1][0] %}
+          {% endif %}
+        {% endif %}
+        {% if nav_initials.value|length < 2 %}
+          {% set nav_compact_name = nav_display_name.replace(' ', '') %}
+          {% if nav_compact_name %}
+            {% set nav_initials.value = nav_compact_name[:2] %}
+          {% endif %}
+        {% endif %}
         <header class="portal-nav">
           <div class="portal-nav-main">
             <a class="portal-nav-brand" href="{{ url_for('dashboard_bp.dashboard') }}">
-              <span class="portal-nav-brand-mark">PR</span>
+              <span class="portal-nav-brand-mark">{{ (nav_initials.value or 'U')|upper }}</span>
               <span class="portal-nav-brand-copy">
-                <strong>PRAGtico</strong>
-                <small>{{ current_role or "operacional" }} · {{ current_profile.organization or "Porto de Setúbal" }}</small>
+                <strong>{{ nav_display_name }}</strong>
+                <small>{{ (current_role or "operacional")|capitalize }} · {{ nav_org }}</small>
               </span>
             </a>
             <nav class="portal-nav-links" aria-label="Navegação principal">
