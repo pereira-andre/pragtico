@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS app_users (
     organization TEXT NOT NULL DEFAULT '',
     email TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
+    whatsapp_number TEXT NOT NULL DEFAULT '',
+    whatsapp_opt_in BOOLEAN NOT NULL DEFAULT FALSE,
+    whatsapp_opt_in_at TIMESTAMPTZ,
     profile_completed_at TIMESTAMPTZ
 );
 
@@ -20,6 +23,15 @@ ALTER TABLE app_users
 
 ALTER TABLE app_users
     ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS whatsapp_number TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS whatsapp_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS whatsapp_opt_in_at TIMESTAMPTZ;
 
 ALTER TABLE app_users
     ADD COLUMN IF NOT EXISTS profile_completed_at TIMESTAMPTZ;

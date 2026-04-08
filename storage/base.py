@@ -28,6 +28,9 @@ class BaseStore(ABC):
         organization: str = "",
         email: str = "",
         phone: str = "",
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         """Create a new user with the given credentials and profile data."""
         raise NotImplementedError
@@ -60,6 +63,9 @@ class BaseStore(ABC):
         organization: str,
         email: str,
         phone: str,
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         """Update profile fields for the given user and return the updated profile."""
         raise NotImplementedError

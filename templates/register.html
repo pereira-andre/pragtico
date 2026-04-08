@@ -74,6 +74,27 @@
           </label>
         </div>
       </section>
+
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>WhatsApp</h3>
+          <p>Opcional. Se ativares o consentimento, o sistema tenta enviar automaticamente a mensagem de boas-vindas.</p>
+        </div>
+        <div class="auth-form-grid">
+          <label>
+            Número WhatsApp
+            <input type="text" name="whatsapp_number" value="{{ form_data.whatsapp_number if form_data else '' }}" placeholder="3519xxxxxxxx">
+          </label>
+          <label class="checkbox-field">
+            <span>Consentimento</span>
+            <span class="checkbox-inline">
+              <input type="checkbox" name="whatsapp_opt_in" value="1" {% if form_data and form_data.whatsapp_opt_in %}checked{% endif %}>
+              <small>Autorizo o envio de mensagens operacionais e de boas-vindas por WhatsApp.</small>
+            </span>
+          </label>
+        </div>
+        <p class="form-note">Para o número de teste da Meta, o backend ainda depende da lista de destinatários autorizados configurada no painel da Meta.</p>
+      </section>
       <button type="submit">Criar conta</button>
     </form>
     <p class="link-line"><a href="{{ url_for('auth.login') }}">Voltar ao login</a></p>

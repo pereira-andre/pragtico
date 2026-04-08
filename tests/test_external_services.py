@@ -11,10 +11,14 @@ from integrations.wave_service import WaveService
 
 
 class _FakeResponse:
-    def __init__(self, payload):
+    def __init__(self, payload, *, status_code: int = 200, text: str = ""):
         self._payload = payload
+        self.status_code = status_code
+        self.text = text or ""
 
     def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code} error", response=self)
         return None
 
     def json(self):
@@ -297,3 +301,56 @@ class ExternalServiceCacheTests(unittest.TestCase):
             },
         )
 
+    def test_whatsapp_attempt_template_message_reports_recipient_not_allowed(self) -> None:
+        service = WhatsAppCloudService(
+            enabled=True,
+            access_token="token-123",
+            phone_number_id="phone-123",
+            allowed_numbers="351968576736",
+            welcome_template_name="pragtico_welcome_v2",
+        )
+
+        with patch(
+            "integrations.whatsapp_cloud.requests.post",
+            return_value=_FakeResponse(
+                {
+                    "error": {
+                        "message": "(#131030) Recipient phone number not in allowed list",
+                        "type": "OAuthException",
+                        "code": 131030,
+                        "error_data": {
+                            "details": "O número de telemóvel do destinatário não está na lista de permissões.",
+                        },
+                    }
+                },
+                status_code=400,
+            ),
+        ):
+            result = service.attempt_template_message(
+                "351968576736",
+                template_name="pragtico_welcome_v2",
+                source="admin_verify",
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["category"], "recipient_not_allowed")
+        self.assertIn("lista de destinatários", result["summary"])
+
+    def test_whatsapp_attempt_template_message_blocks_local_denied_without_api_call(self) -> None:
+        service = WhatsAppCloudService(
+            enabled=True,
+            access_token="token-123",
+            phone_number_id="phone-123",
+            allowed_numbers="351962063664",
+        )
+
+        with patch("integrations.whatsapp_cloud.requests.post") as post_mock:
+            result = service.attempt_template_message(
+                "351968576736",
+                template_name="pragtico_welcome_v2",
+                source="admin_verify",
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["category"], "local_denied")
+        post_mock.assert_not_called()

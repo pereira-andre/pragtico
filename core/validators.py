@@ -188,6 +188,21 @@ def validate_phone(value: Optional[str], *, required: bool = True) -> str:
     return clean
 
 
+def validate_whatsapp_phone(value: Optional[str], *, required: bool = False) -> str:
+    """Validate and normalize a WhatsApp number to digits only."""
+    clean = " ".join(str(value or "").strip().split())
+    if not clean:
+        if required:
+            raise ValueError("Número WhatsApp é obrigatório.")
+        return ""
+    if not _PHONE_PATTERN.match(clean):
+        raise ValueError("Formato de número WhatsApp inválido.")
+    digits = re.sub(r"\D+", "", clean)
+    if len(digits) < 9 or len(digits) > 15:
+        raise ValueError("Número WhatsApp deve ter entre 9 e 15 dígitos.")
+    return digits
+
+
 # ---------------------------------------------------------------------------
 # Enum / choices
 # ---------------------------------------------------------------------------

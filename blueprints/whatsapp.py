@@ -107,6 +107,8 @@ def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str
         organization="WhatsApp",
         email=username,
         phone=f"+{from_number}",
+        whatsapp_number=from_number,
+        whatsapp_opt_in=True,
     )
 
 

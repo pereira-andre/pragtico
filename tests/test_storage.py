@@ -71,6 +71,39 @@ class LocalStoreUserTests(unittest.TestCase):
         self.assertEqual(updated["full_name"], "Admin User")
         self.assertEqual(updated["organization"], "Porto de Setúbal")
 
+    def test_create_user_with_whatsapp_opt_in_normalizes_number(self) -> None:
+        user = self.store.create_user(
+            "whatsapp@example.com",
+            "secret123",
+            "agente",
+            whatsapp_number="+351 968 576 736",
+            whatsapp_opt_in=True,
+        )
+        self.assertEqual(user["whatsapp_number"], "351968576736")
+        self.assertTrue(user["whatsapp_opt_in"])
+        self.assertTrue(user["whatsapp_opt_in_at"])
+
+    def test_update_user_profile_clears_whatsapp_opt_in_without_number(self) -> None:
+        self.store.create_user(
+            "whatsapp@example.com",
+            "secret123",
+            "agente",
+            whatsapp_number="351968576736",
+            whatsapp_opt_in=True,
+        )
+        updated = self.store.update_user_profile(
+            "whatsapp@example.com",
+            full_name="Teste",
+            organization="APSS",
+            email="whatsapp@example.com",
+            phone="+351 900 000 000",
+            whatsapp_number="",
+            whatsapp_opt_in=False,
+        )
+        self.assertEqual(updated["whatsapp_number"], "")
+        self.assertFalse(updated["whatsapp_opt_in"])
+        self.assertIsNone(updated["whatsapp_opt_in_at"])
+
     def test_set_user_role(self) -> None:
         self.store.create_user("test@example.com", "secret123", "agente")
         updated = self.store.set_user_role("test@example.com", "piloto")

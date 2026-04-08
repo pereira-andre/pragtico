@@ -38,6 +38,28 @@
           </label>
         </div>
       </section>
+      <section class="auth-form-section">
+        <div class="auth-form-head">
+          <h3>WhatsApp</h3>
+          <p>Opcional. O consentimento fica guardado para uso operacional e verificação admin.</p>
+        </div>
+        <div class="auth-form-grid">
+          <label>
+            Número WhatsApp
+            <input type="text" name="whatsapp_number" value="{{ profile.whatsapp_number or '' }}" placeholder="3519xxxxxxxx">
+          </label>
+          <label class="checkbox-field">
+            <span>Consentimento</span>
+            <span class="checkbox-inline">
+              <input type="checkbox" name="whatsapp_opt_in" value="1" {% if profile.whatsapp_opt_in %}checked{% endif %}>
+              <small>Autorizo o envio de mensagens operacionais por WhatsApp.</small>
+            </span>
+          </label>
+        </div>
+        {% if profile.whatsapp_opt_in_at %}
+          <p class="form-note">Consentimento registado em {{ profile.whatsapp_opt_in_at }}.</p>
+        {% endif %}
+      </section>
       <button type="submit">Guardar perfil</button>
     </form>
     <p class="muted auth-note">Se saíres desta página sem concluir, a sessão é terminada e o acesso volta ao login.</p>

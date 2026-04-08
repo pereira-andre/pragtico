@@ -2259,6 +2259,64 @@
   border-color: rgba(29, 44, 43, 0.07);
 }
 
+.admin-checkbox-field {
+  align-content: start;
+}
+
+.admin-checkbox-field .checkbox-inline {
+  min-height: 52px;
+}
+
+.admin-whatsapp-status {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background:
+    linear-gradient(180deg, rgba(10, 108, 102, 0.06), rgba(255, 255, 255, 0.04));
+}
+
+.admin-whatsapp-status-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-whatsapp-status-head strong {
+  font-size: 1rem;
+}
+
+.admin-whatsapp-status p {
+  margin: 0;
+}
+
+.admin-whatsapp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-whatsapp-note {
+  font-size: 0.88rem;
+}
+
+.admin-whatsapp-message-id {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(29, 44, 43, 0.06);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .admin-user-form-foot {
   display: flex;
   flex-wrap: wrap;

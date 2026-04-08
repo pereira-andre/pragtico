@@ -45,6 +45,19 @@ PT_MONTH_NAMES = (
 )
 USER_PROFILE_REQUIRED_ROLES = {"agente", "piloto"}
 USER_PROFILE_REQUIRED_FIELDS = ("full_name", "organization", "email", "phone")
+WHATSAPP_STATUS_UNKNOWN = "unknown"
+WHATSAPP_STATUS_NOT_OPTED_IN = "not_opted_in"
+WHATSAPP_STATUS_DISABLED = "disabled"
+WHATSAPP_STATUS_LOCAL_DENIED = "local_denied"
+WHATSAPP_STATUS_PENDING = "pending"
+WHATSAPP_STATUS_SENT = "sent"
+WHATSAPP_STATUS_RECIPIENT_NOT_ALLOWED = "recipient_not_allowed"
+WHATSAPP_STATUS_TOKEN_INVALID = "token_invalid"
+WHATSAPP_STATUS_TEMPLATE_MISSING = "template_missing"
+WHATSAPP_STATUS_INVALID_NUMBER = "invalid_number"
+WHATSAPP_STATUS_NETWORK_ERROR = "network_error"
+WHATSAPP_STATUS_API_ERROR = "api_error"
+WHATSAPP_STATUS_INTERNAL_ERROR = "internal_error"
 VESSEL_TYPE_META = (
     {
         "label": "Atividades ao largo",

@@ -2,12 +2,14 @@
 
 import logging
 import os
+import re
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 from core import services
-from core.validators import validate_phone, validate_required_text, validate_role
+from core.whatsapp_support import build_user_whatsapp_view, verify_user_whatsapp
+from core.validators import validate_phone, validate_required_text, validate_role, validate_whatsapp_phone
 from core.helpers import (
     current_reindex_status_payload,
     load_admin_status,
@@ -22,6 +24,27 @@ from domain.migration_service import migrate_local_json_to_postgres
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
+
+
+def _normalize_digits(value: str | None) -> str:
+    return re.sub(r"\D+", "", str(value or ""))
+
+
+def _resolved_whatsapp_opt_in_at(existing_user: dict | None, whatsapp_number: str, whatsapp_opt_in: bool) -> str:
+    if not whatsapp_opt_in or not whatsapp_number:
+        return ""
+    existing = existing_user or {}
+    if bool(existing.get("whatsapp_opt_in")) and _normalize_digits(existing.get("whatsapp_number")) == whatsapp_number:
+        return str(existing.get("whatsapp_opt_in_at") or "").strip()
+    return ""
+
+
+def _admin_users_payload() -> list[dict]:
+    service = getattr(services, "whatsapp_service", None)
+    return [
+        build_user_whatsapp_view(user, service, services.store)
+        for user in services.store.list_users()
+    ]
 
 
 def _manual_knowledge_authoring_enabled() -> bool:
@@ -122,7 +145,7 @@ def admin_status():
 @role_required("admin")
 def admin_users():
     """Página de gestão de utilizadores do sistema."""
-    return render_template("admin_users.html", users=services.store.list_users(), title="Utilizadores")
+    return render_template("admin_users.html", users=_admin_users_payload(), title="Utilizadores")
 
 
 @bp.route("/admin/users/<username>", methods=["POST"])
@@ -132,10 +155,17 @@ def admin_update_user(username: str):
     """Atualizar o role e os dados de perfil de um utilizador."""
     target_username = username.strip().lower()
     try:
+        existing_user = services.store.get_user_profile(target_username)
+        if not existing_user:
+            raise ValueError("Utilizador não encontrado.")
         updated_role = validate_role(request.form.get("role", ""))
         full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
         organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
         phone = validate_phone(request.form.get("phone", ""))
+        whatsapp_number = validate_whatsapp_phone(request.form.get("whatsapp_number", ""), required=False)
+        whatsapp_opt_in = request.form.get("whatsapp_opt_in", "") == "1"
+        if whatsapp_opt_in and not whatsapp_number:
+            raise ValueError("Se ativares WhatsApp, tens de indicar o respetivo número.")
 
         if updated_role == "admin" and target_username != session.get("username"):
             existing_admins = [
@@ -146,7 +176,16 @@ def admin_update_user(username: str):
                 flash("Já existe um administrador no sistema. Só pode haver 1 admin.", "error")
                 return redirect(url_for("admin.admin_users"))
 
-        services.store.update_user_profile(target_username, full_name=full_name, organization=organization, email=target_username, phone=phone)
+        services.store.update_user_profile(
+            target_username,
+            full_name=full_name,
+            organization=organization,
+            email=target_username,
+            phone=phone,
+            whatsapp_number=whatsapp_number,
+            whatsapp_opt_in=whatsapp_opt_in,
+            whatsapp_opt_in_at=_resolved_whatsapp_opt_in_at(existing_user, whatsapp_number, whatsapp_opt_in),
+        )
         updated_user = services.store.set_user_role(target_username, updated_role)
         if session.get("username") == target_username:
             session["role"] = updated_user["role"]
@@ -160,6 +199,26 @@ def admin_update_user(username: str):
 
     flash(f"Utilizador {target_username} atualizado.", "success")
     return redirect(url_for("admin.admin_users"))
+
+
+@bp.route("/admin/users/<username>/whatsapp-check", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_check_user_whatsapp(username: str):
+    target_username = username.strip().lower()
+    profile = services.store.get_user_profile(target_username)
+    if not profile:
+        return jsonify({"ok": False, "summary": "Utilizador não encontrado."}), 404
+
+    service = getattr(services, "whatsapp_service", None)
+    result = verify_user_whatsapp(profile, service, services.store, source="admin_verify")
+    refreshed_user = build_user_whatsapp_view(
+        services.store.get_user_profile(target_username) or profile,
+        service,
+        services.store,
+    )
+    http_status = 200 if result.get("ok") else 400
+    return jsonify({"ok": bool(result.get("ok")), "result": result, "user": refreshed_user}), http_status
 
 
 @bp.route("/admin/users/<username>/delete", methods=["POST"])

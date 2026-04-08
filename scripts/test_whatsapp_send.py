@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import requests
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -94,14 +95,26 @@ def main() -> int:
         or "pt_PT"
     )
     use_template = bool(template_name) and not args.force_text
-    if use_template:
-        response = service.send_template_message(
-            target_number,
-            template_name=template_name,
-            language_code=template_language,
-        )
-    else:
-        response = service.send_text_message(target_number, args.message)
+    try:
+        if use_template:
+            response = service.send_template_message(
+                target_number,
+                template_name=template_name,
+                language_code=template_language,
+            )
+        else:
+            response = service.send_text_message(target_number, args.message)
+    except requests.HTTPError as exc:
+        response = exc.response
+        print("Falha ao enviar mensagem WhatsApp.", file=sys.stderr)
+        print(f"HTTP status: {getattr(response, 'status_code', 'desconhecido')}", file=sys.stderr)
+        if response is not None:
+            try:
+                payload = response.json()
+                print(json.dumps(payload, ensure_ascii=False, indent=2), file=sys.stderr)
+            except ValueError:
+                print(response.text, file=sys.stderr)
+        return 1
     message_id = ""
     if isinstance(response, dict):
         messages = response.get("messages") or []

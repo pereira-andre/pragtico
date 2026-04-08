@@ -3,16 +3,31 @@ from __future__ import annotations
 import mimetypes
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import requests
+from storage.constants import (
+    WHATSAPP_STATUS_API_ERROR,
+    WHATSAPP_STATUS_DISABLED,
+    WHATSAPP_STATUS_INTERNAL_ERROR,
+    WHATSAPP_STATUS_INVALID_NUMBER,
+    WHATSAPP_STATUS_LOCAL_DENIED,
+    WHATSAPP_STATUS_NETWORK_ERROR,
+    WHATSAPP_STATUS_RECIPIENT_NOT_ALLOWED,
+    WHATSAPP_STATUS_SENT,
+    WHATSAPP_STATUS_TEMPLATE_MISSING,
+    WHATSAPP_STATUS_TOKEN_INVALID,
+)
 
 DEFAULT_WELCOME_MESSAGE = (
     "👋 Bem-vindo ao PRAGtico\n\n"
     "O teu assistente inteligente para coordenação eficiente de manobras portuárias.\n"
     "Em que posso ajudar? 🤖"
 )
+
+WHATSAPP_STATUS_STATE_PREFIX = "whatsapp:status:"
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -24,6 +39,10 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 def _normalize_multiline_env(value: str | None) -> str:
     return str(value or "").replace("\\n", "\n").strip()
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class WhatsAppCloudService:
@@ -89,6 +108,19 @@ class WhatsAppCloudService:
     def normalize_phone_number(value: str | None) -> str:
         return re.sub(r"\D+", "", str(value or ""))
 
+    @classmethod
+    def status_state_key(cls, number: str | None) -> str:
+        normalized = cls.normalize_phone_number(number)
+        return f"{WHATSAPP_STATUS_STATE_PREFIX}{normalized}" if normalized else ""
+
+    @staticmethod
+    def extract_message_id(payload: dict[str, Any] | None) -> str:
+        messages = (payload or {}).get("messages") or []
+        if not messages:
+            return ""
+        first = messages[0] or {}
+        return str(first.get("id") or "").strip()
+
     @property
     def webhook_ready(self) -> bool:
         return self.enabled and bool(self.verify_token)
@@ -133,6 +165,180 @@ class WhatsAppCloudService:
 
     def should_send_welcome_template(self) -> bool:
         return self.welcome_enabled and bool(self.welcome_template_name)
+
+    @staticmethod
+    def _safe_response_json(response: requests.Response | None) -> dict[str, Any]:
+        if response is None:
+            return {}
+        try:
+            payload = response.json()
+        except ValueError:
+            return {}
+        return payload if isinstance(payload, dict) else {}
+
+    def describe_exception(self, exc: Exception) -> dict[str, Any]:
+        if isinstance(exc, requests.HTTPError):
+            response = getattr(exc, "response", None)
+            payload = self._safe_response_json(response)
+            error = payload.get("error") if isinstance(payload, dict) else {}
+            error_data = error.get("error_data") if isinstance(error, dict) else {}
+            message = str((error or {}).get("message") or "").strip()
+            details = str((error_data or {}).get("details") or "").strip()
+            combined = " ".join(part for part in (message, details) if part).lower()
+            meta_code = int(error.get("code") or 0) if str(error.get("code") or "").isdigit() else error.get("code")
+            http_status = getattr(response, "status_code", 0) or 0
+
+            category = WHATSAPP_STATUS_API_ERROR
+            summary = "Falha na Meta ao validar ou enviar WhatsApp."
+            if http_status in {401, 403} or meta_code == 190 or "access token" in combined or "token" in combined:
+                category = WHATSAPP_STATUS_TOKEN_INVALID
+                summary = "Token WhatsApp inválido ou expirado."
+            elif meta_code == 131030 or "allowed list" in combined or "lista de permiss" in combined:
+                category = WHATSAPP_STATUS_RECIPIENT_NOT_ALLOWED
+                summary = "Número não autorizado na lista de destinatários da Meta."
+            elif (
+                meta_code in {132001, 132007, 132012, 132015}
+                or ("template" in combined and any(token in combined for token in ("not exist", "não existe", "paused", "disabled", "invalid")))
+            ):
+                category = WHATSAPP_STATUS_TEMPLATE_MISSING
+                summary = "Template WhatsApp em falta, inválido ou indisponível."
+            elif meta_code == 100 or "invalid" in combined or "inválido" in combined:
+                category = WHATSAPP_STATUS_INVALID_NUMBER
+                summary = "Parâmetros inválidos para o envio WhatsApp."
+
+            return {
+                "ok": False,
+                "category": category,
+                "summary": summary,
+                "details": details or message or "Erro devolvido pela Meta sem detalhe adicional.",
+                "http_status": http_status,
+                "meta_code": meta_code or "",
+                "meta_type": str((error or {}).get("type") or "").strip(),
+                "fbtrace_id": str((error or {}).get("fbtrace_id") or "").strip(),
+                "meta_message": message,
+                "meta_payload": payload,
+            }
+
+        if isinstance(exc, requests.RequestException):
+            summary = "Falha de rede ao contactar a WhatsApp Cloud API."
+            if isinstance(exc, requests.Timeout):
+                summary = "Timeout ao contactar a WhatsApp Cloud API."
+            return {
+                "ok": False,
+                "category": WHATSAPP_STATUS_NETWORK_ERROR,
+                "summary": summary,
+                "details": str(exc).strip() or "Erro de rede sem detalhe adicional.",
+                "http_status": 0,
+                "meta_code": "",
+                "meta_type": "",
+                "fbtrace_id": "",
+                "meta_message": "",
+                "meta_payload": {},
+            }
+
+        return {
+            "ok": False,
+            "category": WHATSAPP_STATUS_INTERNAL_ERROR,
+            "summary": "Falha interna ao preparar o envio WhatsApp.",
+            "details": str(exc).strip() or repr(exc),
+            "http_status": 0,
+            "meta_code": "",
+            "meta_type": "",
+            "fbtrace_id": "",
+            "meta_message": "",
+            "meta_payload": {},
+        }
+
+    def attempt_template_message(
+        self,
+        to_number: str,
+        *,
+        template_name: str,
+        language_code: str = "pt_PT",
+        reply_to_message_id: str = "",
+        source: str = "manual",
+    ) -> dict[str, Any]:
+        target_number = self.normalize_phone_number(to_number)
+        local_allowed = bool(target_number) and self.is_allowed_number(target_number)
+        payload = {
+            "checked_at": _utc_now_iso(),
+            "to_number": target_number,
+            "source": str(source or "manual").strip() or "manual",
+            "template_name": str(template_name or "").strip(),
+            "template_language": str(language_code or "pt_PT").strip() or "pt_PT",
+            "local_allowed": local_allowed,
+            "send_ready": self.send_ready,
+            "enabled": self.enabled,
+        }
+        if not self.enabled:
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_DISABLED,
+                "summary": "WhatsApp está desativado na configuração atual.",
+                "details": "Define WHATSAPP_ENABLED=1 para permitir envios.",
+            }
+        if not target_number:
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_INVALID_NUMBER,
+                "summary": "Número WhatsApp inválido.",
+                "details": "Indica um número em formato internacional, por exemplo 3519xxxxxxxx.",
+            }
+        if not self.access_token.strip():
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_TOKEN_INVALID,
+                "summary": "WHATSAPP_ACCESS_TOKEN em falta.",
+                "details": "Sem access token não é possível validar nem enviar mensagens.",
+            }
+        if not self.phone_number_id.strip():
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_API_ERROR,
+                "summary": "WHATSAPP_PHONE_NUMBER_ID em falta.",
+                "details": "Sem phone number id a API da Meta não sabe qual é o número emissor.",
+            }
+        if not payload["template_name"]:
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_TEMPLATE_MISSING,
+                "summary": "Template de verificação não configurado.",
+                "details": "Define WHATSAPP_WELCOME_TEMPLATE_NAME ou indica um template válido.",
+            }
+        if not local_allowed:
+            return {
+                **payload,
+                "ok": False,
+                "category": WHATSAPP_STATUS_LOCAL_DENIED,
+                "summary": "Número não autorizado pela whitelist local do backend.",
+                "details": "Atualiza WHATSAPP_ALLOWED_NUMBERS para permitir este destino neste ambiente.",
+            }
+        try:
+            response = self.send_template_message(
+                target_number,
+                template_name=payload["template_name"],
+                language_code=payload["template_language"],
+                reply_to_message_id=reply_to_message_id,
+            )
+        except Exception as exc:
+            return {
+                **payload,
+                **self.describe_exception(exc),
+            }
+        return {
+            **payload,
+            "ok": True,
+            "category": WHATSAPP_STATUS_SENT,
+            "summary": "Template enviado com sucesso pela Meta.",
+            "details": "O número respondeu positivamente à validação de envio.",
+            "message_id": self.extract_message_id(response),
+            "meta_payload": response,
+        }
 
     def parse_inbound_messages(self, payload: dict[str, Any] | None) -> list[dict[str, Any]]:
         return [

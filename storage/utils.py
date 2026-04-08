@@ -130,6 +130,23 @@ def _normalize_phone(value: Optional[str]) -> str:
     return _clean_text(value)
 
 
+def _normalize_whatsapp_number(value: Optional[str]) -> str:
+    return re.sub(r"\D+", "", str(value or ""))
+
+
+def _normalize_bool(value: object, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    clean = str(value).strip().lower()
+    if not clean:
+        return default
+    return clean not in {"0", "false", "no", "off", "nao", "não"}
+
+
 def _normalize_user_profile_payload(
     record: Optional[Dict],
     *,
@@ -140,6 +157,16 @@ def _normalize_user_profile_payload(
     normalized_role = (payload.get("role") or role or "piloto").strip().lower()
     if normalized_role not in {"admin", "agente", "piloto"}:
         normalized_role = "piloto"
+    normalized_whatsapp_number = _normalize_whatsapp_number(payload.get("whatsapp_number"))
+    normalized_whatsapp_opt_in = bool(normalized_whatsapp_number) and _normalize_bool(
+        payload.get("whatsapp_opt_in"),
+        default=False,
+    )
+    whatsapp_opt_in_at = payload.get("whatsapp_opt_in_at")
+    if normalized_whatsapp_opt_in:
+        whatsapp_opt_in_at = whatsapp_opt_in_at or iso_now()
+    else:
+        whatsapp_opt_in_at = None
     profile = {
         "username": _normalize_username(payload.get("username") or username),
         "role": normalized_role,
@@ -147,6 +174,9 @@ def _normalize_user_profile_payload(
         "organization": _clean_text(payload.get("organization")),
         "email": _normalize_email(payload.get("email")),
         "phone": _normalize_phone(payload.get("phone")),
+        "whatsapp_number": normalized_whatsapp_number,
+        "whatsapp_opt_in": normalized_whatsapp_opt_in,
+        "whatsapp_opt_in_at": whatsapp_opt_in_at,
         "profile_completed_at": payload.get("profile_completed_at"),
     }
     if is_user_profile_complete(profile):

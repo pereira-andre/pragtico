@@ -875,7 +875,9 @@ class PostgresStore(BaseStore):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT username, role, full_name, organization, email, phone, profile_completed_at
+                    SELECT
+                        username, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     FROM app_users
                     ORDER BY username
                     """
@@ -892,6 +894,9 @@ class PostgresStore(BaseStore):
         organization: str = "",
         email: str = "",
         phone: str = "",
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         username = _normalize_username(username)
         if len(username) < 3:
@@ -908,6 +913,9 @@ class PostgresStore(BaseStore):
                 "organization": organization,
                 "email": email,
                 "phone": phone,
+                "whatsapp_number": whatsapp_number,
+                "whatsapp_opt_in": whatsapp_opt_in,
+                "whatsapp_opt_in_at": whatsapp_opt_in_at,
             }
         )
         with self._connect() as conn:
@@ -918,9 +926,10 @@ class PostgresStore(BaseStore):
                 cur.execute(
                     """
                     INSERT INTO app_users (
-                        username, password_hash, role, full_name, organization, email, phone, profile_completed_at
+                        username, password_hash, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         username,
@@ -930,6 +939,9 @@ class PostgresStore(BaseStore):
                         profile["organization"],
                         profile["email"],
                         profile["phone"],
+                        profile["whatsapp_number"],
+                        profile["whatsapp_opt_in"],
+                        profile["whatsapp_opt_in_at"],
                         profile["profile_completed_at"],
                     ),
                 )
@@ -941,7 +953,9 @@ class PostgresStore(BaseStore):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT username, password_hash, role, full_name, organization, email, phone, profile_completed_at
+                    SELECT
+                        username, password_hash, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     FROM app_users
                     WHERE username = %s
                     """,
@@ -957,7 +971,9 @@ class PostgresStore(BaseStore):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT username, role, full_name, organization, email, phone, profile_completed_at
+                    SELECT
+                        username, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     FROM app_users
                     WHERE username = %s
                     """,
@@ -985,7 +1001,9 @@ class PostgresStore(BaseStore):
                             ELSE NULL
                         END
                     WHERE username = %s
-                    RETURNING username, role, full_name, organization, email, phone, profile_completed_at
+                    RETURNING
+                        username, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     """,
                     (role, username),
                 )
@@ -1039,6 +1057,9 @@ class PostgresStore(BaseStore):
         organization: str,
         email: str,
         phone: str,
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         profile = _normalize_user_profile_payload(
             {
@@ -1047,6 +1068,9 @@ class PostgresStore(BaseStore):
                 "organization": organization,
                 "email": email,
                 "phone": phone,
+                "whatsapp_number": whatsapp_number,
+                "whatsapp_opt_in": whatsapp_opt_in,
+                "whatsapp_opt_in_at": whatsapp_opt_in_at,
                 "role": (self.get_user_profile(username) or {}).get("role", "piloto"),
             }
         )
@@ -1060,15 +1084,23 @@ class PostgresStore(BaseStore):
                         organization = %s,
                         email = %s,
                         phone = %s,
+                        whatsapp_number = %s,
+                        whatsapp_opt_in = %s,
+                        whatsapp_opt_in_at = %s,
                         profile_completed_at = %s
                     WHERE username = %s
-                    RETURNING username, role, full_name, organization, email, phone, profile_completed_at
+                    RETURNING
+                        username, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
                     """,
                     (
                         profile["full_name"],
                         profile["organization"],
                         profile["email"],
                         profile["phone"],
+                        profile["whatsapp_number"],
+                        profile["whatsapp_opt_in"],
+                        profile["whatsapp_opt_in_at"],
                         profile["profile_completed_at"],
                         _normalize_username(username),
                     ),

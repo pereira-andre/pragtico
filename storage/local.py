@@ -215,6 +215,9 @@ class LocalStore(BaseStore):
         organization: str = "",
         email: str = "",
         phone: str = "",
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         return {
             "password_hash": generate_password_hash(password, method=PASSWORD_HASH_METHOD),
@@ -226,6 +229,9 @@ class LocalStore(BaseStore):
                     "organization": organization,
                     "email": email,
                     "phone": phone,
+                    "whatsapp_number": whatsapp_number,
+                    "whatsapp_opt_in": whatsapp_opt_in,
+                    "whatsapp_opt_in_at": whatsapp_opt_in_at,
                 }
             ),
         }
@@ -508,6 +514,9 @@ class LocalStore(BaseStore):
         organization: str = "",
         email: str = "",
         phone: str = "",
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         """Create a new user record in the local JSON store and return it without the password hash."""
         username = _normalize_username(username)
@@ -530,6 +539,9 @@ class LocalStore(BaseStore):
             organization=organization,
             email=email,
             phone=phone,
+            whatsapp_number=whatsapp_number,
+            whatsapp_opt_in=whatsapp_opt_in,
+            whatsapp_opt_in_at=whatsapp_opt_in_at,
         )
         users.append(user)
         self._write_users(users)
@@ -616,6 +628,9 @@ class LocalStore(BaseStore):
         organization: str,
         email: str,
         phone: str,
+        whatsapp_number: str = "",
+        whatsapp_opt_in: bool = False,
+        whatsapp_opt_in_at: str = "",
     ) -> Dict:
         """Update profile contact fields for the user and return the updated record."""
         users = self._read_users()
@@ -627,6 +642,17 @@ class LocalStore(BaseStore):
             user["organization"] = _clean_text(organization)
             user["email"] = _normalize_email(email)
             user["phone"] = _normalize_phone(phone)
+            normalized_profile = _normalize_user_profile_payload(
+                {
+                    **user,
+                    "whatsapp_number": whatsapp_number,
+                    "whatsapp_opt_in": whatsapp_opt_in,
+                    "whatsapp_opt_in_at": whatsapp_opt_in_at,
+                }
+            )
+            user["whatsapp_number"] = normalized_profile["whatsapp_number"]
+            user["whatsapp_opt_in"] = normalized_profile["whatsapp_opt_in"]
+            user["whatsapp_opt_in_at"] = normalized_profile["whatsapp_opt_in_at"]
             user["profile_completed_at"] = iso_now() if is_user_profile_complete(user) else None
             updated = user
             break

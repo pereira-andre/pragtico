@@ -39,6 +39,9 @@ class LocalAuthService(BaseAuthService):
             organization=payload.get("organization", ""),
             email=payload.get("email", ""),
             phone=payload.get("phone", ""),
+            whatsapp_number=payload.get("whatsapp_number", ""),
+            whatsapp_opt_in=bool(payload.get("whatsapp_opt_in", False)),
+            whatsapp_opt_in_at=payload.get("whatsapp_opt_in_at", ""),
         )
 
 
