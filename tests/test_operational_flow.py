@@ -2304,6 +2304,105 @@ class PortalLiveNotificationTests(unittest.TestCase):
         self.assertEqual([item["message"] for item in payload["items"]], ["Visivel"])
 
 
+class AgentPortActivityVisibilityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
+        self.original_store = services.store
+        services.store = self.store
+        self.store.create_user(
+            "agencia@example.com",
+            "secret123",
+            "agente",
+            full_name="Agencia X",
+            organization="Agencia X",
+            email="agencia@example.com",
+            phone="+351 900 000 111",
+        )
+        self.store.create_user(
+            "outra@example.com",
+            "secret123",
+            "agente",
+            full_name="Agencia Y",
+            organization="Agencia Y",
+            email="outra@example.com",
+            phone="+351 900 000 222",
+        )
+
+    def tearDown(self) -> None:
+        services.store = self.original_store
+        self.temp_dir.cleanup()
+
+    def _set_session(self, client, *, username: str, role: str) -> str:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = username
+            flask_session["role"] = role
+            flask_session["_csrf_token"] = "scope-token"
+        return "scope-token"
+
+    def _create_port_call(self, *, vessel_name: str, created_by: str, eta: str) -> dict:
+        return self.store.create_port_call(
+            vessel_name=vessel_name,
+            eta=eta,
+            created_by=created_by,
+            berth="TMS 2",
+            last_port="Sines",
+            next_port="Vigo",
+            notes="Escala de teste.",
+            vessel_imo="9876543",
+            vessel_call_sign="CQAB7",
+            vessel_flag="Portugal",
+            vessel_type="General Cargo",
+            vessel_loa_m="142.50",
+            vessel_beam_m="21.80",
+            vessel_gt_t="8950",
+            vessel_max_draft_m="7.20",
+            vessel_dwt_t="12400",
+        )
+
+    def test_dashboard_is_shared_for_agents_but_scale_registry_remains_scoped(self) -> None:
+        self._create_port_call(
+            vessel_name="AGENCY STAR",
+            created_by="agencia@example.com",
+            eta="2026-04-09T08:00:00+00:00",
+        )
+        self._create_port_call(
+            vessel_name="OTHER PLANNER",
+            created_by="outra@example.com",
+            eta="2026-04-09T09:00:00+00:00",
+        )
+        other_in_port = self._create_port_call(
+            vessel_name="OTHER QUAY",
+            created_by="outra@example.com",
+            eta="2026-04-09T07:00:00+00:00",
+        )
+        self.store.approve_port_call(other_in_port["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            other_in_port["id"],
+            arrived_at="2026-04-09T07:30:00+00:00",
+            updated_by="admin",
+        )
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="agencia@example.com", role="agente")
+            dashboard_response = client.get("/dashboard")
+            register_response = client.get("/port-calls/register")
+
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertEqual(register_response.status_code, 200)
+
+        dashboard_html = dashboard_response.get_data(as_text=True)
+        self.assertIn("AGENCY STAR", dashboard_html)
+        self.assertIn("OTHER PLANNER", dashboard_html)
+        self.assertIn("OTHER QUAY", dashboard_html)
+
+        register_html = register_response.get_data(as_text=True)
+        self.assertIn("AGENCY STAR", register_html)
+        self.assertNotIn("OTHER PLANNER", register_html)
+        self.assertNotIn("OTHER QUAY", register_html)
+
+
 class PortCallJsonImportTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
