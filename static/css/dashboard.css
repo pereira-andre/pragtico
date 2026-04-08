@@ -979,6 +979,35 @@
   padding: 0 14px 14px;
 }
 
+.planning-json-import-body {
+  gap: 14px;
+}
+
+.planning-json-import-form {
+  gap: 12px;
+}
+
+.planning-json-textarea,
+.planning-json-template {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.88rem;
+}
+
+.planning-json-template-block {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-json-template {
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(8, 67, 63, 0.12);
+  background: rgba(9, 24, 44, 0.08);
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
 .planned-table-wrap {
   overflow: auto;
   border-radius: 20px;

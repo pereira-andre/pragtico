@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
@@ -2301,6 +2302,120 @@ class PortalLiveNotificationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
         self.assertEqual([item["message"] for item in payload["items"]], ["Visivel"])
+
+
+class PortCallJsonImportTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
+        self.original_store = services.store
+        services.store = self.store
+
+    def tearDown(self) -> None:
+        services.store = self.original_store
+        self.temp_dir.cleanup()
+
+    def _set_admin_session(self, client) -> str:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = "admin"
+            flask_session["role"] = "admin"
+            flask_session["_csrf_token"] = "json-token"
+        return "json-token"
+
+    def test_import_port_call_json_from_textarea(self) -> None:
+        payload = """
+        {
+          "vessel_name": "MSC Lyria",
+          "eta": "2026-04-09T14:30:00+01:00",
+          "berth": "Secil W",
+          "last_port": "Sines",
+          "next_port": "Vigo",
+          "vessel_imo": "9723345",
+          "vessel_call_sign": "CQAN7",
+          "vessel_flag": "Madeira",
+          "vessel_type": "Graneis sólidos",
+          "vessel_loa_m": "189.9",
+          "vessel_beam_m": "32.2",
+          "vessel_gt_t": "32540",
+          "vessel_dwt_t": "38600",
+          "vessel_max_draft_m": "11.8",
+          "vessel_bow_thruster": true,
+          "vessel_stern_thruster": "unknown",
+          "booking": "2026-04-09T13:45:00+01:00",
+          "draft_m": "11.2",
+          "tug_count": 2,
+          "constraints": ["daylight"],
+          "notes": "Janela de maré confirmada com agente."
+        }
+        """
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/port-calls/import-json",
+                data={
+                    "csrf_token": csrf_token,
+                    "payload_json": payload,
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        activity = self.store.get_port_activity_snapshot(window_days=30)
+        created = next(item for item in activity["arrivals"] if item["vessel_name"] == "MSC Lyria")
+        self.assertEqual(created["berth"], "Secil W")
+        current = self.store.get_port_call(created["id"])
+        self.assertEqual(current["vessel_imo"], "9723345")
+        self.assertEqual(current["vessel_bow_thruster"], "yes")
+
+    def test_import_port_call_json_from_file_accepts_nested_scale_object(self) -> None:
+        payload = b"""
+        {
+            "scale": {
+                "vessel_name": "Atlantic Trader",
+                "eta_local": "2026-04-10T08:15",
+                "berth": "TMS 2",
+                "last_port": "Leixoes",
+                "next_port": "Casablanca",
+            "vessel_imo": "9152923",
+            "vessel_call_sign": "D5OC2",
+            "vessel_flag": "Liberia",
+            "vessel_type": "Roll-on/Roll-off",
+            "vessel_loa_m": "179.23",
+            "vessel_beam_m": "25.3",
+            "vessel_gt_t": "16281",
+            "vessel_dwt_t": "22330",
+            "vessel_max_draft_m": "9.94",
+            "vessel_bow_thruster": "no",
+            "vessel_stern_thruster": "yes",
+            "booking_local": "2026-04-10T07:30",
+            "draft_m": "9.5",
+            "tug_count": 1,
+            "constraints": ["gas"],
+            "notes": "Operacao sensivel."
+          }
+        }
+        """
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/port-calls/import-json",
+                data={
+                    "csrf_token": csrf_token,
+                    "payload_file": (BytesIO(payload), "escala.json"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 302)
+        activity = self.store.get_port_activity_snapshot(window_days=30)
+        created = next(item for item in activity["arrivals"] if item["vessel_name"] == "Atlantic Trader")
+        current = self.store.get_port_call(created["id"])
+        self.assertEqual(current["berth"], "TMS 2")
+        self.assertEqual(current["vessel_stern_thruster"], "yes")
+        entry = next(item for item in current["maneuver_history"] if item["type"] == "entry")
+        self.assertIn("Operacao sensivel.", entry["plan_note"])
 
 
 if __name__ == "__main__":

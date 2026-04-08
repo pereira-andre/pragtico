@@ -1,5 +1,6 @@
 """Port calls blueprint — CRUD, approvals, maneuver plans, reports."""
 
+import json
 import logging
 from datetime import datetime
 
@@ -44,6 +45,30 @@ from core.validators import (
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("port_calls", __name__)
+
+PORT_CALL_JSON_TEMPLATE = {
+    "vessel_name": "MSC Lyria",
+    "eta": "2026-04-09T14:30:00+01:00",
+    "berth": "Secil W",
+    "last_port": "Sines",
+    "next_port": "Vigo",
+    "vessel_imo": "9723345",
+    "vessel_call_sign": "CQAN7",
+    "vessel_flag": "Madeira",
+    "vessel_type": "Graneis sólidos",
+    "vessel_loa_m": "189.9",
+    "vessel_beam_m": "32.2",
+    "vessel_gt_t": "32540",
+    "vessel_dwt_t": "38600",
+    "vessel_max_draft_m": "11.8",
+    "vessel_bow_thruster": "yes",
+    "vessel_stern_thruster": "unknown",
+    "booking": "2026-04-09T13:45:00+01:00",
+    "draft_m": "11.2",
+    "tug_count": 2,
+    "constraints": ["daylight"],
+    "notes": "Janela de maré confirmada com agente.",
+}
 
 
 def _emit_maneuver_notification(
@@ -101,6 +126,113 @@ def _build_scale_edit_defaults(port_call: dict) -> dict:
     }
 
 
+def _first_payload_value(payload: dict, *keys: str, default=""):
+    for key in keys:
+        if key in payload and payload.get(key) is not None:
+            return payload.get(key)
+    return default
+
+
+def _string_payload_value(payload: dict, *keys: str, default: str = "") -> str:
+    value = _first_payload_value(payload, *keys, default=default)
+    if value is None:
+        return default
+    return str(value).strip()
+
+
+def _coerce_port_call_payload(payload: dict) -> dict:
+    return {
+        "vessel_name": _string_payload_value(payload, "vessel_name"),
+        "vessel_short_name": _string_payload_value(payload, "vessel_short_name"),
+        "vessel_imo": _string_payload_value(payload, "vessel_imo"),
+        "vessel_call_sign": _string_payload_value(payload, "vessel_call_sign"),
+        "vessel_flag": _string_payload_value(payload, "vessel_flag"),
+        "vessel_type": _string_payload_value(payload, "vessel_type"),
+        "vessel_loa_m": _string_payload_value(payload, "vessel_loa_m"),
+        "vessel_beam_m": _string_payload_value(payload, "vessel_beam_m"),
+        "vessel_gt_t": _string_payload_value(payload, "vessel_gt_t"),
+        "vessel_max_draft_m": _string_payload_value(payload, "vessel_max_draft_m"),
+        "vessel_dwt_t": _string_payload_value(payload, "vessel_dwt_t"),
+        "vessel_bow_thruster": _first_payload_value(payload, "vessel_bow_thruster", default="unknown"),
+        "vessel_stern_thruster": _first_payload_value(payload, "vessel_stern_thruster", default="unknown"),
+        "eta_local": _string_payload_value(payload, "eta_local", "eta"),
+        "berth": _string_payload_value(payload, "berth"),
+        "last_port": _string_payload_value(payload, "last_port"),
+        "next_port": _string_payload_value(payload, "next_port"),
+        "booking_local": _string_payload_value(payload, "booking_local", "booking"),
+        "draft_m": _string_payload_value(payload, "draft_m"),
+        "constraints": _first_payload_value(payload, "constraints", default=[]),
+        "tug_count": _string_payload_value(payload, "tug_count"),
+        "notes": _string_payload_value(payload, "notes"),
+    }
+
+
+def _create_port_call_from_payload(form_data: dict, *, created_by: str) -> dict:
+    eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
+    validate_not_past_datetime(eta, "ETA")
+    parse_local_datetime_input(form_data["booking_local"], "Marcação")
+    berth = normalize_portal_berth(form_data["berth"], "Cais previsto")
+    last_port = require_form_text(form_data["last_port"], "Porto anterior")
+    next_port = require_form_text(form_data["next_port"], "Próximo destino")
+    draft_m = validate_positive_number(form_data["draft_m"], "Calado (m)", max_value=30.0)
+    tug_count = validate_tug_count(form_data["tug_count"])
+    validate_imo(form_data["vessel_imo"])
+    form_data["constraints"] = normalize_constraint_codes(form_data.get("constraints"))
+    validated_dims = validate_vessel_dimensions(form_data)
+    form_data.update(validated_dims)
+    form_data["vessel_bow_thruster"] = normalize_thruster_state(form_data.get("vessel_bow_thruster"), "Bow thruster")
+    form_data["vessel_stern_thruster"] = normalize_thruster_state(form_data.get("vessel_stern_thruster"), "Stern thruster")
+    return services.store.create_port_call(
+        vessel_name=form_data["vessel_name"],
+        eta=eta,
+        created_by=created_by,
+        constraints=form_data["constraints"],
+        berth=berth,
+        last_port=last_port,
+        next_port=next_port,
+        vessel_short_name=form_data["vessel_short_name"],
+        vessel_imo=form_data["vessel_imo"],
+        vessel_call_sign=form_data["vessel_call_sign"],
+        vessel_flag=form_data["vessel_flag"],
+        vessel_type=form_data["vessel_type"],
+        vessel_loa_m=form_data["vessel_loa_m"],
+        vessel_beam_m=form_data["vessel_beam_m"],
+        vessel_gt_t=form_data["vessel_gt_t"],
+        vessel_max_draft_m=form_data["vessel_max_draft_m"],
+        vessel_dwt_t=form_data["vessel_dwt_t"],
+        vessel_bow_thruster=form_data["vessel_bow_thruster"],
+        vessel_stern_thruster=form_data["vessel_stern_thruster"],
+        notes=build_entry_request_note({**form_data, "draft_m": draft_m, "tug_count": tug_count}),
+    )
+
+
+def _load_port_call_json_payload() -> dict:
+    uploaded_file = request.files.get("payload_file")
+    raw_payload = ""
+    if uploaded_file and uploaded_file.filename:
+        raw_payload = uploaded_file.read().decode("utf-8-sig")
+    if not raw_payload.strip():
+        raw_payload = request.form.get("payload_json", "")
+    if not raw_payload.strip():
+        raise ValueError("Indica o JSON da escala ou carrega um ficheiro .json.")
+    try:
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
+
+    if isinstance(payload, list):
+        if len(payload) != 1 or not isinstance(payload[0], dict):
+            raise ValueError("O JSON tem de conter um único objeto de escala.")
+        payload = payload[0]
+    if isinstance(payload, dict) and isinstance(payload.get("scale"), dict):
+        payload = payload["scale"]
+    elif isinstance(payload, dict) and isinstance(payload.get("port_call"), dict):
+        payload = payload["port_call"]
+    if not isinstance(payload, dict):
+        raise ValueError("O JSON da escala tem de ser um objeto.")
+    return payload
+
+
 @bp.route("/port-calls/register")
 @login_required
 @role_required("admin", "agente")
@@ -113,6 +245,7 @@ def port_call_register():
         "port_call_register.html",
         port_activity=port_activity,
         tracked_scales=build_tracked_scales(port_activity),
+        port_call_json_template=json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
         title="Escalas",
     )
 
@@ -201,63 +334,35 @@ def update_maneuver_case_feedback(port_call_id: str, maneuver_id: str):
 @role_required("admin", "agente")
 def create_port_call():
     """Criar uma nova escala portuária a partir do formulário de registo."""
-    form_data = {
-        "vessel_name": request.form.get("vessel_name", "").strip(),
-        "vessel_short_name": "",
-        "vessel_imo": request.form.get("vessel_imo", "").strip(),
-        "vessel_call_sign": request.form.get("vessel_call_sign", "").strip(),
-        "vessel_flag": request.form.get("vessel_flag", "").strip(),
-        "vessel_type": request.form.get("vessel_type", "").strip(),
-        "vessel_loa_m": request.form.get("vessel_loa_m", "").strip(),
-        "vessel_beam_m": request.form.get("vessel_beam_m", "").strip(),
-        "vessel_gt_t": request.form.get("vessel_gt_t", "").strip(),
-        "vessel_max_draft_m": request.form.get("vessel_max_draft_m", "").strip(),
-        "vessel_dwt_t": request.form.get("vessel_dwt_t", "").strip(),
-        "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown").strip(),
-        "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown").strip(),
-        "eta_local": request.form.get("eta_local", "").strip(),
-        "berth": request.form.get("berth", "").strip(),
-        "last_port": request.form.get("last_port", "").strip(),
-        "next_port": request.form.get("next_port", "").strip(),
-        "booking_local": request.form.get("booking_local", "").strip(),
-        "draft_m": request.form.get("draft_m", "").strip(),
-        "constraints": request.form.getlist("constraints"),
-        "tug_count": request.form.get("tug_count", "").strip(),
-        "notes": request.form.get("notes", "").strip(),
-    }
+    form_data = _coerce_port_call_payload(
+        {
+            "vessel_name": request.form.get("vessel_name", ""),
+            "vessel_short_name": "",
+            "vessel_imo": request.form.get("vessel_imo", ""),
+            "vessel_call_sign": request.form.get("vessel_call_sign", ""),
+            "vessel_flag": request.form.get("vessel_flag", ""),
+            "vessel_type": request.form.get("vessel_type", ""),
+            "vessel_loa_m": request.form.get("vessel_loa_m", ""),
+            "vessel_beam_m": request.form.get("vessel_beam_m", ""),
+            "vessel_gt_t": request.form.get("vessel_gt_t", ""),
+            "vessel_max_draft_m": request.form.get("vessel_max_draft_m", ""),
+            "vessel_dwt_t": request.form.get("vessel_dwt_t", ""),
+            "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown"),
+            "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown"),
+            "eta_local": request.form.get("eta_local", ""),
+            "berth": request.form.get("berth", ""),
+            "last_port": request.form.get("last_port", ""),
+            "next_port": request.form.get("next_port", ""),
+            "booking_local": request.form.get("booking_local", ""),
+            "draft_m": request.form.get("draft_m", ""),
+            "constraints": request.form.getlist("constraints"),
+            "tug_count": request.form.get("tug_count", ""),
+            "notes": request.form.get("notes", ""),
+        }
+    )
 
     try:
-        eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
-        validate_not_past_datetime(eta, "ETA")
-        parse_local_datetime_input(form_data["booking_local"], "Marcação")
-        berth = normalize_portal_berth(form_data["berth"], "Cais previsto")
-        last_port = require_form_text(form_data["last_port"], "Porto anterior")
-        next_port = require_form_text(form_data["next_port"], "Próximo destino")
-        draft_m = validate_positive_number(form_data["draft_m"], "Calado (m)", max_value=30.0)
-        tug_count = validate_tug_count(form_data["tug_count"])
-        validate_imo(form_data["vessel_imo"])
-        validated_dims = validate_vessel_dimensions(form_data)
-        form_data.update(validated_dims)
-        form_data["vessel_bow_thruster"] = normalize_thruster_state(form_data.get("vessel_bow_thruster"), "Bow thruster")
-        form_data["vessel_stern_thruster"] = normalize_thruster_state(form_data.get("vessel_stern_thruster"), "Stern thruster")
-        port_call = services.store.create_port_call(
-            vessel_name=form_data["vessel_name"], eta=eta,
-            created_by=session["username"], constraints=form_data["constraints"],
-            berth=berth, last_port=last_port, next_port=next_port,
-            vessel_short_name=form_data["vessel_short_name"],
-            vessel_imo=form_data["vessel_imo"],
-            vessel_call_sign=form_data["vessel_call_sign"],
-            vessel_flag=form_data["vessel_flag"],
-            vessel_type=form_data["vessel_type"],
-            vessel_loa_m=form_data["vessel_loa_m"],
-            vessel_beam_m=form_data["vessel_beam_m"],
-            vessel_gt_t=form_data["vessel_gt_t"],
-            vessel_max_draft_m=form_data["vessel_max_draft_m"],
-            vessel_dwt_t=form_data["vessel_dwt_t"],
-            vessel_bow_thruster=form_data["vessel_bow_thruster"],
-            vessel_stern_thruster=form_data["vessel_stern_thruster"],
-            notes=build_entry_request_note({**form_data, "draft_m": draft_m, "tug_count": tug_count}),
-        )
+        port_call = _create_port_call_from_payload(form_data, created_by=session["username"])
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("dashboard_bp.dashboard"))
@@ -274,6 +379,35 @@ def create_port_call():
         actor_username=session["username"],
     )
     return redirect(url_for("dashboard_bp.dashboard"))
+
+
+@bp.route("/port-calls/import-json", methods=["POST"])
+@login_required
+@role_required("admin", "agente")
+def import_port_call_json():
+    """Criar uma nova escala a partir de um payload JSON colado ou carregado no browser."""
+    try:
+        payload = _load_port_call_json_payload()
+        port_call = _create_port_call_from_payload(
+            _coerce_port_call_payload(payload),
+            created_by=session["username"],
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("port_calls.port_call_register"))
+    except Exception:
+        logger.exception("Falha inesperada ao importar escala por JSON para %s.", session.get("username"))
+        flash("Falha inesperada ao importar a escala por JSON.", "error")
+        return redirect(url_for("port_calls.port_call_register"))
+
+    flash(f"Escala importada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "entry"),
+        event_type="created",
+        actor_username=session["username"],
+    )
+    return redirect(url_for("port_calls.port_call_register"))
 
 
 @bp.route("/port-calls/<port_call_id>/edit", methods=["POST"])

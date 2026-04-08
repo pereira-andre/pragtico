@@ -169,6 +169,36 @@
         <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. Se faltar algum campo obrigatório, o formulário devolve erro.</p>
         <button type="submit">Guardar Escala</button>
       </form>
+      <details class="planning-optional-box planning-json-import-box">
+        <summary>Importar escala por JSON</summary>
+        <div class="stack planning-optional-body planning-json-import-body">
+          <p class="muted">Podes colar um objeto JSON ou carregar um ficheiro <code>.json</code>. A validação é a mesma do formulário manual.</p>
+          <form
+            method="post"
+            action="{{ url_for('port_calls.import_port_call_json') }}"
+            enctype="multipart/form-data"
+            class="stack planning-form planning-json-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Ficheiro JSON
+              <input type="file" name="payload_file" accept=".json,application/json">
+            </label>
+            <label>
+              JSON da escala
+              <textarea
+                name="payload_json"
+                rows="14"
+                class="planning-json-textarea"
+                placeholder='{"vessel_name":"MSC Lyria", ...}'></textarea>
+            </label>
+            <button type="submit">Importar Escala por JSON</button>
+          </form>
+          <div class="planning-json-template-block">
+            <span class="mini-label">Modelo</span>
+            <pre class="planning-json-template">{{ port_call_json_template }}</pre>
+          </div>
+        </div>
+      </details>
     </section>
 
     <section class="panel ops-form-card planning-block planning-block-secondary planning-register-card">
