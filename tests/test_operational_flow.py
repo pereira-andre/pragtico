@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from io import BytesIO
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 os.environ["APP_STORAGE_BACKEND"] = "local"
@@ -2401,6 +2402,68 @@ class AgentPortActivityVisibilityTests(unittest.TestCase):
         self.assertIn("AGENCY STAR", register_html)
         self.assertNotIn("OTHER PLANNER", register_html)
         self.assertNotIn("OTHER QUAY", register_html)
+
+
+class DashboardPlanningWindowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
+        self.original_store = services.store
+        services.store = self.store
+
+    def tearDown(self) -> None:
+        services.store = self.original_store
+        self.temp_dir.cleanup()
+
+    def _set_session(self, client, *, username: str, role: str) -> None:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = username
+            flask_session["role"] = role
+            flask_session["_csrf_token"] = "dashboard-token"
+
+    def test_dashboard_planning_includes_active_departures_beyond_traffic_window(self) -> None:
+        now = datetime.now(timezone.utc)
+        eta = (now - timedelta(days=1)).isoformat()
+        ata = (now - timedelta(hours=20)).isoformat()
+        planned_departure = (now + timedelta(days=12)).isoformat()
+
+        port_call = self.store.create_port_call(
+            vessel_name="LONG STAY",
+            eta=eta,
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Sines",
+            next_port="Vigo",
+            notes="Escala de longa estadia.",
+            vessel_imo="9876543",
+            vessel_call_sign="CQAB7",
+            vessel_flag="Portugal",
+            vessel_type="General Cargo",
+            vessel_loa_m="142.50",
+            vessel_beam_m="21.80",
+            vessel_gt_t="8950",
+            vessel_max_draft_m="7.20",
+            vessel_dwt_t="12400",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(port_call["id"], arrived_at=ata, updated_by="admin")
+        planned = self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at=planned_departure,
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        departure = next(item for item in planned["maneuver_history"] if item["type"] == "departure")
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="admin", role="admin")
+            response = client.get("/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("LONG STAY", html)
+        self.assertIn(f"/port-calls/{port_call['id']}/maneuvers/{departure['id']}", html)
 
 
 class PortCallJsonImportTests(unittest.TestCase):

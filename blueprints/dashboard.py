@@ -729,8 +729,16 @@ def dashboard():
     """Painel principal com atividade portuária, marés e condições meteorológicas."""
     refresh_knowledge_state(force_reindex=False)
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
+    planning_activity = services.store.get_port_activity_snapshot(window_days=3650)
     # The dashboard is the shared operational picture for the whole port.
     # Agent scoping remains enforced on scale-specific pages and detail routes.
+    port_activity["planned_maneuvers"] = planning_activity.get("planned_maneuvers", [])
+    port_activity["planned_groups"] = planning_activity.get("planned_groups", [])
+    port_activity["stats"] = {
+        **(port_activity.get("stats") or {}),
+        "planned_count": planning_activity.get("stats", {}).get("planned_count", 0),
+        "pending_count": planning_activity.get("stats", {}).get("pending_count", 0),
+    }
 
     today = date.today()
     tide_window = services.tide_service.window_summary(today - timedelta(days=2), days=5)
