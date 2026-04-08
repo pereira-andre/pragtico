@@ -79,6 +79,7 @@
                 <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
                 <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>
                 <option value="{{ url_for('dashboard_bp.local_warnings') }}">Avisos locais</option>
+                <option value="{{ url_for('dashboard_bp.contact') }}">Contacto e suporte</option>
                 {% if current_role == "admin" %}
                   <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
                   <option value="{{ url_for('admin.admin_status') }}">Estado da plataforma</option>

@@ -2240,6 +2240,7 @@ class PortalLiveNotificationTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn('href="/contact"', html)
         self.assertIn("2202880@estudante.uab.pt", html)
+        self.assertIn('value="/contact"', html)
 
     def test_contact_page_renders_support_email_and_academic_scope(self) -> None:
         with app.app.test_client() as client:
@@ -2484,6 +2485,55 @@ class DashboardPlanningWindowTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("LONG STAY", html)
         self.assertIn(f"/port-calls/{port_call['id']}/maneuvers/{departure['id']}", html)
+
+    def test_dashboard_recent_departures_includes_completed_future_departures_within_window(self) -> None:
+        now = datetime.now(timezone.utc)
+        eta = (now - timedelta(days=1)).isoformat()
+        ata = (now - timedelta(hours=20)).isoformat()
+        departed_at = (now + timedelta(days=1)).isoformat()
+
+        port_call = self.store.create_port_call(
+            vessel_name="FUTURE DEPARTURE",
+            eta=eta,
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Sines",
+            next_port="Vigo",
+            notes="Escala de teste.",
+            vessel_imo="9876543",
+            vessel_call_sign="CQAB7",
+            vessel_flag="Portugal",
+            vessel_type="General Cargo",
+            vessel_loa_m="142.50",
+            vessel_beam_m="21.80",
+            vessel_gt_t="8950",
+            vessel_max_draft_m="7.20",
+            vessel_dwt_t="12400",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(port_call["id"], arrived_at=ata, updated_by="admin")
+        self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at=departed_at,
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_departed(
+            port_call["id"],
+            departed_at=departed_at,
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="admin", role="admin")
+            response = client.get("/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("FUTURE DEPARTURE", html)
+        self.assertIn(port_call["reference_code"], html)
 
 
 class PortCallJsonImportTests(unittest.TestCase):
