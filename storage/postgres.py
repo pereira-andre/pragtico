@@ -59,6 +59,8 @@ from .port_call_helpers import (
     _latest_reportable_maneuver,
     _normalize_maneuver_record,
     _normalize_port_call_record,
+    _remove_embedded_report_note,
+    _replace_embedded_report_note,
     _sync_port_call_from_history,
     _append_maneuver_change_log,
 )
@@ -2592,9 +2594,11 @@ class PostgresStore(BaseStore):
                 raise ValueError("Manobra não encontrada na escala.")
             if target.get("state") != "completed":
                 raise ValueError("Só podes editar o registo de manobras já concluídas.")
+            previous_note = target.get("report_note", "")
             target["report_note"] = (notes or "").strip()
             target["execution_started_at"] = maneuver_started_at
             target["execution_finished_at"] = maneuver_finished_at
+            target["completed_at"] = maneuver_finished_at
             target["reported_draft_m"] = draft_m.strip()
             target["reported_by"] = target.get("reported_by") or actor_username
             target["reported_by_profile"] = target.get("reported_by_profile") or _build_actor_snapshot(actor_profile, username=actor_username)
@@ -2606,6 +2610,11 @@ class PostgresStore(BaseStore):
                 actor_profile=actor_profile,
                 reason=change_reason,
                 summary=f"Registo revisto. Calado: {draft_m}.",
+            )
+            current["notes"] = _replace_embedded_report_note(
+                current.get("notes", ""),
+                previous_note,
+                target["report_note"],
             )
             return current
 
@@ -2647,6 +2656,7 @@ class PostgresStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada.")
+            previous_note = target.get("report_note", "")
             target["report_note"] = ""
             target["execution_started_at"] = None
             target["execution_finished_at"] = None
@@ -2655,6 +2665,7 @@ class PostgresStore(BaseStore):
             target["reported_by_profile"] = _build_actor_snapshot(None)
             target["reported_at"] = None
             target["updated_at"] = iso_now()
+            current["notes"] = _remove_embedded_report_note(current.get("notes", ""), previous_note)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)

@@ -205,6 +205,30 @@ def _extract_labeled_report(note: str, label: str) -> str:
     return ""
 
 
+def _replace_embedded_report_note(scale_notes: str, previous_note: str, next_note: str) -> str:
+    clean_notes = (scale_notes or "").strip()
+    clean_previous = (previous_note or "").strip()
+    clean_next = (next_note or "").strip()
+    if clean_previous and clean_previous in clean_notes:
+        updated = clean_notes.replace(clean_previous, clean_next, 1)
+    elif clean_next and clean_next not in clean_notes:
+        updated = f"{clean_notes}\n\n{clean_next}".strip()
+    else:
+        updated = clean_notes
+    return re.sub(r"\n{3,}", "\n\n", updated).strip()
+
+
+def _remove_embedded_report_note(scale_notes: str, previous_note: str) -> str:
+    clean_notes = (scale_notes or "").strip()
+    clean_previous = (previous_note or "").strip()
+    if not clean_previous or clean_previous not in clean_notes:
+        return clean_notes
+    updated = clean_notes.replace(clean_previous, "", 1)
+    updated = re.sub(r"\n{3,}", "\n\n", updated)
+    updated = re.sub(r"[ \t]+\n", "\n", updated)
+    return updated.strip()
+
+
 def _compose_abort_note(base_note: str, prefix: str, reason: str) -> str:
     clean_note = (base_note or "").strip()
     clean_reason = " ".join((reason or "").strip().split())

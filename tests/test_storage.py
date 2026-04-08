@@ -881,6 +881,70 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(entry["derived_standby_hours_label"], "1,5 h")
         self.assertGreater(entry["estimated_cost"], base_cost)
 
+    def test_edit_maneuver_report_recalculates_archived_scale_costs_and_updates_notes(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:35:00+00:00",
+            maneuver_finished_at="2026-03-24T06:00:00+00:00",
+            draft_m="9.94",
+            notes="Registo simplificado de pilotagem · Entrada\nFim da manobra: 24/03/2026 06:00",
+        )
+        self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at="2026-03-25T10:00:00+00:00",
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_departed(
+            port_call["id"],
+            departed_at="2026-03-25T10:30:00+00:00",
+            updated_by="admin",
+        )
+        departed = self.store.attach_departure_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-25T09:50:00+00:00",
+            maneuver_finished_at="2026-03-25T10:30:00+00:00",
+            draft_m="9.80",
+            notes="Registo simplificado de pilotagem · Saída\nFim da manobra: 25/03/2026 10:30",
+        )
+        departure = next(item for item in departed["maneuver_history"] if item["type"] == "departure")
+
+        snapshot_before = self.store.get_port_activity_snapshot(window_days=3650)
+        scale_before = next(item for item in snapshot_before["archived_scales"] if item["port_call_id"] == port_call["id"])
+
+        updated = self.store.edit_maneuver_report(
+            port_call["id"],
+            departure["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-27T09:50:00+00:00",
+            maneuver_finished_at="2026-03-27T10:30:00+00:00",
+            draft_m="9.80",
+            notes="Registo simplificado de pilotagem · Saída\nFim da manobra: 27/03/2026 10:30",
+            change_reason="Correção histórica do registo.",
+        )
+
+        snapshot_after = self.store.get_port_activity_snapshot(window_days=3650)
+        scale_after = next(item for item in snapshot_after["archived_scales"] if item["port_call_id"] == port_call["id"])
+        updated_departure = next(item for item in updated["maneuver_history"] if item["id"] == departure["id"])
+
+        self.assertEqual(updated["departure_at"], "2026-03-27T10:30:00+00:00")
+        self.assertEqual(updated_departure["completed_at"], "2026-03-27T10:30:00+00:00")
+        self.assertNotEqual(scale_before["stay_days"], scale_after["stay_days"])
+        self.assertNotEqual(scale_before["estimated_tup"], scale_after["estimated_tup"])
+        self.assertNotEqual(scale_before["estimated_grand_total"], scale_after["estimated_grand_total"])
+        self.assertIn("27/03/2026 10:30", updated["notes"])
+        self.assertNotIn("25/03/2026 10:30", updated["notes"])
+
     def test_edit_port_call_updates_vessel_and_operational_fields(self) -> None:
         pc = self._create_entry()
         updated = self.store.edit_port_call(
@@ -943,6 +1007,7 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(updated_entry["reported_draft_m"], "")
         self.assertFalse(updated_entry["execution_started_at"])
         self.assertFalse(updated_entry["execution_finished_at"])
+        self.assertNotIn("Sem incidentes.", cleared["notes"])
 
     def test_attach_shift_report_can_target_specific_maneuver_id(self) -> None:
         pc = self._create_entry()
