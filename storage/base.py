@@ -212,6 +212,17 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_channel_events(
+        self,
+        *,
+        channel: str,
+        since: str = "",
+        limit: int = 20,
+    ) -> List[Dict]:
+        """Return channel events for the given channel ordered from oldest to newest."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_runtime_state(self, key: str) -> Optional[Dict]:
         """Return the runtime state dict stored under the given key, or None."""
         raise NotImplementedError

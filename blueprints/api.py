@@ -1,8 +1,12 @@
 """API blueprint — cost estimation endpoints."""
 
+import unicodedata
+
 from flask import Blueprint, jsonify, request
+from flask import session
 
 from core import services
+from core.helpers import current_user_profile
 from domain.cost_engine import (
     ManoeuvreInput,
     ManoeuvreType,
@@ -13,6 +17,7 @@ from domain.cost_engine import (
     quick_estimate,
 )
 from core.helpers import login_required
+from core.portal_notifications import PORTAL_NOTIFICATION_CHANNEL
 
 bp = Blueprint("api", __name__)
 
@@ -31,6 +36,15 @@ def _coerce_non_negative_float(value, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return max(parsed, 0.0)
+
+
+def _scope_key(value: str | None) -> str:
+    clean = " ".join((value or "").strip().split())
+    if not clean:
+        return ""
+    normalized = unicodedata.normalize("NFKD", clean)
+    ascii_only = "".join(char for char in normalized if not unicodedata.combining(char))
+    return ascii_only.casefold()
 
 
 @bp.route("/api/cost/estimate", methods=["POST"])
@@ -111,3 +125,44 @@ def api_cost_quick():
         return jsonify({"error": "GT tem de ser positivo."}), 400
     m_type = request.args.get("type", "entry").strip()
     return jsonify(quick_estimate(gt, m_type))
+
+
+@bp.route("/api/portal-live-feed", methods=["GET"])
+@login_required
+def api_portal_live_feed():
+    """Return unseen portal live notifications for the current authenticated session."""
+    since = (request.args.get("since") or "").strip()
+    try:
+        limit = max(1, min(int(request.args.get("limit", 10)), 20))
+    except (TypeError, ValueError):
+        limit = 10
+
+    items = []
+    latest_created_at = ""
+    agent_scope_key = ""
+    if (session.get("role") or "").strip().lower() == "agente":
+        profile = current_user_profile() or {}
+        agent_scope_key = _scope_key(profile.get("organization"))
+
+    for event in services.store.list_channel_events(
+        channel=PORTAL_NOTIFICATION_CHANNEL,
+        since=since,
+        limit=limit,
+    ):
+        payload = dict(event.get("payload") or {})
+        if agent_scope_key and payload.get("scope_organization_key") != agent_scope_key:
+            continue
+        created_at = event.get("created_at") or ""
+        items.append(
+            {
+                "id": event.get("id", ""),
+                "event_type": event.get("event_type", ""),
+                "message": payload.get("message", ""),
+                "url": payload.get("url", ""),
+                "created_at": created_at,
+            }
+        )
+        if created_at and created_at > latest_created_at:
+            latest_created_at = created_at
+
+    return jsonify({"items": items, "latest_created_at": latest_created_at})

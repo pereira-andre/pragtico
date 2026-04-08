@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
@@ -1126,6 +1127,45 @@ class LocalStore(BaseStore):
         events.append(event)
         self._write_channel_events(events)
         return event
+
+    def list_channel_events(
+        self,
+        *,
+        channel: str,
+        since: str = "",
+        limit: int = 20,
+    ) -> List[Dict]:
+        clean_channel = _clean_text(channel) or "unknown"
+        max_items = max(1, min(int(limit or 20), 100))
+        since_dt = None
+        if since:
+            try:
+                since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError:
+                since_dt = None
+
+        def _event_created_at(record: Dict) -> datetime | None:
+            value = record.get("created_at")
+            if not value:
+                return None
+            try:
+                return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except ValueError:
+                return None
+
+        events = [
+            event
+            for event in self._read_channel_events()
+            if (_clean_text(event.get("channel")) or "unknown") == clean_channel
+        ]
+        if since_dt is not None:
+            events = [
+                event
+                for event in events
+                if (_event_created_at(event) and _event_created_at(event) > since_dt)
+            ]
+        events.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return events[:max_items]
 
     def get_runtime_state(self, key: str) -> Optional[Dict]:
         """Return the runtime state dict stored under the given key, or None."""

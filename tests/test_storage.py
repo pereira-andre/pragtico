@@ -1029,6 +1029,32 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(found["username"], "admin")
         self.assertEqual(event["external_message_id"], "wamid.OUT123")
 
+    def test_list_channel_events_filters_by_channel_and_since(self) -> None:
+        first = self.store.record_channel_event(
+            channel="portal_live",
+            event_type="maneuver_created",
+            payload={"message": "Primeiro"},
+        )
+        second = self.store.record_channel_event(
+            channel="portal_live",
+            event_type="maneuver_approved",
+            payload={"message": "Segundo"},
+        )
+        self.store.record_channel_event(
+            channel="whatsapp",
+            event_type="incoming_text",
+            payload={"message": "Ignorar"},
+        )
+
+        filtered = self.store.list_channel_events(
+            channel="portal_live",
+            since=first["created_at"],
+            limit=10,
+        )
+
+        self.assertEqual([item["id"] for item in filtered], [second["id"]])
+        self.assertTrue(all(item["channel"] == "portal_live" for item in filtered))
+
 
 if __name__ == "__main__":
     unittest.main()

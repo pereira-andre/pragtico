@@ -40,13 +40,17 @@
         {% endif %}
         <header class="portal-nav">
           <div class="portal-nav-main">
-            <a class="portal-nav-brand" href="{{ url_for('dashboard_bp.dashboard') }}">
-              <span class="portal-nav-brand-mark">{{ (nav_initials.value or 'U')|upper }}</span>
-              <span class="portal-nav-brand-copy">
+            <div class="portal-nav-brand">
+              <a
+                class="portal-nav-brand-mark portal-nav-brand-mark-link"
+                href="{{ url_for('auth.profile') }}"
+                aria-label="Abrir perfil de {{ nav_display_name }}"
+              >{{ (nav_initials.value or 'U')|upper }}</a>
+              <a class="portal-nav-brand-copy portal-nav-brand-copy-link" href="{{ url_for('dashboard_bp.dashboard') }}">
                 <strong>{{ nav_display_name }}</strong>
                 <small>{{ (current_role or "operacional")|capitalize }} · {{ nav_org }}</small>
-              </span>
-            </a>
+              </a>
+            </div>
             <nav class="portal-nav-links" aria-label="Navegação principal">
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.dashboard' else '' }}" href="{{ url_for('dashboard_bp.dashboard') }}">Quadro</a>
               {% if current_role in ["admin", "agente"] %}
@@ -96,6 +100,9 @@
           </div>
         {% endif %}
       {% endwith %}
+      {% if current_user %}
+        <div class="portal-toast-stack" id="portal-toast-stack" aria-live="polite" aria-relevant="additions"></div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
     <datalist id="berth-options">
@@ -117,6 +124,10 @@
     <script>
     (function() {
       const loader = document.getElementById("site-loader");
+      const toastStack = document.getElementById("portal-toast-stack");
+      const liveFeedUrl = {{ (url_for('api.api_portal_live_feed') if current_user else '')|tojson }};
+      const seenPortalEventIds = new Set();
+      let lastPortalEventAt = new Date().toISOString();
       if (!loader) return;
       const pageJump = document.querySelector("[data-page-jump]");
       if (pageJump) {
@@ -124,10 +135,93 @@
           if (this.value) window.location.href = this.value;
         });
       }
+      const removeToast = (toast) => {
+        if (!toast || toast.dataset.closing === "1") return;
+        toast.dataset.closing = "1";
+        toast.classList.remove("is-visible");
+        window.setTimeout(() => toast.remove(), 220);
+      };
+      const showToast = (item) => {
+        if (!toastStack || !item || !item.message) return;
+        const toast = document.createElement("article");
+        toast.className = "portal-toast";
+
+        const content = item.url ? document.createElement("a") : document.createElement("div");
+        content.className = "portal-toast-body";
+        if (item.url) {
+          content.href = item.url;
+        }
+
+        const message = document.createElement("p");
+        message.textContent = item.message;
+        content.appendChild(message);
+
+        const meta = document.createElement("small");
+        meta.textContent = item.url ? "Abrir detalhe" : "Atualizacao operacional";
+        content.appendChild(meta);
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "portal-toast-close";
+        closeButton.setAttribute("aria-label", "Fechar aviso");
+        closeButton.textContent = "x";
+        closeButton.addEventListener("click", () => removeToast(toast));
+
+        toast.appendChild(content);
+        toast.appendChild(closeButton);
+        toastStack.appendChild(toast);
+
+        const visibleToasts = Array.from(toastStack.querySelectorAll(".portal-toast"));
+        if (visibleToasts.length > 4) {
+          removeToast(visibleToasts[0]);
+        }
+
+        window.requestAnimationFrame(() => toast.classList.add("is-visible"));
+        window.setTimeout(() => removeToast(toast), 9500);
+      };
+      const pollPortalFeed = async () => {
+        if (!toastStack || !liveFeedUrl || document.visibilityState === "hidden") return;
+        try {
+          const response = await fetch(
+            liveFeedUrl + "?since=" + encodeURIComponent(lastPortalEventAt),
+            {
+              headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "fetch",
+              },
+              credentials: "same-origin",
+            }
+          );
+          if (!response.ok) return;
+          const payload = await response.json();
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          items.forEach((item) => {
+            if (item.created_at && item.created_at > lastPortalEventAt) {
+              lastPortalEventAt = item.created_at;
+            }
+            if (!item.id || seenPortalEventIds.has(item.id)) return;
+            seenPortalEventIds.add(item.id);
+            showToast(item);
+          });
+          if (payload.latest_created_at && payload.latest_created_at > lastPortalEventAt) {
+            lastPortalEventAt = payload.latest_created_at;
+          }
+        } catch (_error) {
+          // Silent failure: this feed is auxiliary to the main portal flow.
+        }
+      };
       const hideLoader = () => {
         loader.classList.add("is-hidden");
         window.setTimeout(() => loader.remove(), 320);
       };
+      if (toastStack && liveFeedUrl) {
+        window.setInterval(pollPortalFeed, 15000);
+        document.addEventListener("visibilitychange", function() {
+          if (document.visibilityState === "visible") {
+            pollPortalFeed();
+          }
+        });
+      }
       if (document.readyState === "complete") {
         window.setTimeout(hideLoader, 220);
       } else {

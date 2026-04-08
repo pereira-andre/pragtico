@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import uuid
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from werkzeug.datastructures import FileStorage
@@ -1840,6 +1841,62 @@ class PostgresStore(BaseStore):
             **row,
             "created_at": row["created_at"].isoformat(),
         }
+
+    def list_channel_events(
+        self,
+        *,
+        channel: str,
+        since: str = "",
+        limit: int = 20,
+    ) -> List[Dict]:
+        clean_channel = (channel or "").strip() or "unknown"
+        max_items = max(1, min(int(limit or 20), 100))
+        since_dt = None
+        if since:
+            try:
+                since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError:
+                since_dt = None
+
+        where_since = ""
+        params: list[object] = [clean_channel]
+        if since_dt is not None:
+            where_since = "AND created_at > %s"
+            params.append(since_dt)
+        params.append(max_items)
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        id::text AS id,
+                        channel,
+                        event_type,
+                        username,
+                        conversation_id::text AS conversation_id,
+                        local_message_id::text AS local_message_id,
+                        channel_user_id,
+                        external_event_id,
+                        external_message_id,
+                        payload,
+                        created_at
+                    FROM channel_events
+                    WHERE channel = %s
+                      {where_since}
+                    ORDER BY created_at ASC, id ASC
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                rows = cur.fetchall()
+        return [
+            {
+                **row,
+                "created_at": row["created_at"].isoformat(),
+            }
+            for row in rows
+        ]
 
     def update_message_feedback(
         self,

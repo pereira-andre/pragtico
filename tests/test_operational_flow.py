@@ -2193,5 +2193,115 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertIn("Documentos indexados", html)
 
 
+class PortalLiveNotificationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        base = Path(self.temp_dir.name)
+        self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
+        self.original_store = services.store
+        services.store = self.store
+        self.store.update_user_profile(
+            "admin",
+            full_name="Andre Pereira",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 900 000 001",
+        )
+
+    def tearDown(self) -> None:
+        services.store = self.original_store
+        self.temp_dir.cleanup()
+
+    def _set_session(self, client, *, username: str, role: str) -> str:
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = username
+            flask_session["role"] = role
+            flask_session["_csrf_token"] = "portal-token"
+        return "portal-token"
+
+    def test_dashboard_nav_initials_link_points_to_profile(self) -> None:
+        with app.app.test_client() as client:
+            self._set_session(client, username="admin", role="admin")
+            response = client.get("/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('href="/profile"', html)
+        self.assertIn('aria-label="Abrir perfil de Andre Pereira"', html)
+
+    def test_approve_route_emits_live_notification_in_feed(self) -> None:
+        port_call = self.store.create_port_call(
+            vessel_name="BELITAKI",
+            eta="2026-03-24T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            notes="Entrada planeada.",
+            vessel_imo="9152923",
+            vessel_call_sign="D5OC2",
+            vessel_flag="Liberia",
+            vessel_type="Porta-contentores",
+            vessel_loa_m="179.23",
+            vessel_beam_m="25.3",
+            vessel_gt_t="16281",
+            vessel_max_draft_m="9.94",
+            vessel_dwt_t="22330",
+        )
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_session(client, username="admin", role="admin")
+            approve = client.post(
+                f"/port-calls/{port_call['id']}/approve",
+                data={"csrf_token": csrf_token},
+            )
+            feed = client.get("/api/portal-live-feed?since=2000-01-01T00:00:00+00:00")
+
+        self.assertEqual(approve.status_code, 302)
+        self.assertEqual(feed.status_code, 200)
+        payload = feed.get_json()
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertIn("aprovada - APSS", payload["items"][0]["message"])
+        self.assertIn("BELITAKI", payload["items"][0]["message"])
+        self.assertIn(f"/port-calls/{port_call['id']}/maneuvers/", payload["items"][0]["url"])
+
+    def test_agent_feed_only_returns_notifications_for_same_agency_scope(self) -> None:
+        self.store.create_user(
+            "agencia@example.com",
+            "secret123",
+            "agente",
+            full_name="Agencia X",
+            organization="Agencia X",
+            email="agencia@example.com",
+            phone="+351 900 000 111",
+        )
+        self.store.record_channel_event(
+            channel="portal_live",
+            event_type="maneuver_created",
+            payload={
+                "message": "Visivel",
+                "scope_organization_key": "agencia x",
+                "url": "/dashboard",
+            },
+        )
+        self.store.record_channel_event(
+            channel="portal_live",
+            event_type="maneuver_created",
+            payload={
+                "message": "Oculta",
+                "scope_organization_key": "outra agencia",
+                "url": "/dashboard",
+            },
+        )
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="agencia@example.com", role="agente")
+            response = client.get("/api/portal-live-feed?since=2000-01-01T00:00:00+00:00")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual([item["message"] for item in payload["items"]], ["Visivel"])
+
+
 if __name__ == "__main__":
     unittest.main()

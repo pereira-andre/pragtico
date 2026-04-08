@@ -22,6 +22,11 @@ from core.helpers import (
     require_form_text,
     role_required,
 )
+from core.portal_notifications import (
+    latest_maneuver_by_type,
+    maneuver_by_id,
+    record_maneuver_notification,
+)
 from storage import normalize_constraint_codes
 from core.validators import (
     validate_datetime_range,
@@ -39,6 +44,30 @@ from core.validators import (
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("port_calls", __name__)
+
+
+def _emit_maneuver_notification(
+    *,
+    port_call: dict,
+    maneuver: dict | None,
+    event_type: str,
+    actor_username: str,
+    previous_maneuver: dict | None = None,
+) -> None:
+    try:
+        record_maneuver_notification(
+            port_call=port_call,
+            maneuver=maneuver,
+            event_type=event_type,
+            actor_username=actor_username,
+            previous_maneuver=previous_maneuver,
+        )
+    except Exception:
+        logger.exception(
+            "Falha inesperada ao publicar notificacao live para %s/%s.",
+            port_call.get("id"),
+            event_type,
+        )
 
 
 def _iso_to_local_input_value(value: str | None) -> str:
@@ -238,6 +267,12 @@ def create_port_call():
         return redirect(url_for("dashboard_bp.dashboard"))
 
     flash(f"Escala registada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "entry"),
+        event_type="created",
+        actor_username=session["username"],
+    )
     return redirect(url_for("dashboard_bp.dashboard"))
 
 
@@ -322,6 +357,8 @@ def edit_port_call(port_call_id: str):
 def approve_port_call(port_call_id: str):
     """Aprovar a manobra de entrada ou saída pendente de uma escala."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        target_type = "entry" if current.get("status") == "scheduled" else "departure"
         port_call = services.store.approve_port_call(
             port_call_id=port_call_id, decided_by=session["username"],
             approval_note=request.form.get("approval_note", "").strip(),
@@ -330,6 +367,12 @@ def approve_port_call(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Manobra aprovada para {port_call['vessel_name']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, target_type),
+        event_type="approved",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -380,6 +423,12 @@ def schedule_departure_plan(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Saída planeada para {port_call['vessel_name']} às {port_call['planned_departure_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "departure"),
+        event_type="created",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -432,6 +481,12 @@ def schedule_shift_plan(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança planeada para {port_call['vessel_name']} às {port_call['planned_shift_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "shift"),
+        event_type="created",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -449,6 +504,12 @@ def approve_shift_plan(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança aprovada para {port_call['vessel_name']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "shift"),
+        event_type="approved",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -492,6 +553,12 @@ def mark_shift_completed(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança concluída para {port_call['vessel_name']} às {port_call['shift_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "shift"),
+        event_type="completed",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -517,6 +584,12 @@ def mark_port_call_arrived(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Entrada confirmada para {port_call['vessel_name']} às {port_call['ata_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "entry"),
+        event_type="completed",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -536,6 +609,12 @@ def mark_port_call_departed(port_call_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Saída registada para {port_call['vessel_name']} às {port_call['departure_label']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=latest_maneuver_by_type(port_call, "departure"),
+        event_type="completed",
+        actor_username=session["username"],
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -604,6 +683,7 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
     """Editar o planeamento de uma manobra existente e registar o motivo da alteração."""
     try:
         port_call = services.store.get_port_call(port_call_id)
+        previous_maneuver = dict(maneuver_by_id(port_call, maneuver_id) or {})
         maneuver_context = build_maneuver_context(port_call, maneuver_id)
         maneuver_type = maneuver_context["maneuver"]["type"]
         origin = require_form_text(request.form.get("origin", "").strip(), "Origem")
@@ -636,6 +716,13 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
         flash("Falha inesperada ao editar a manobra.", "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Planeamento atualizado para {port_call['vessel_name']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=maneuver_by_id(port_call, maneuver_id),
+        event_type="updated",
+        actor_username=session["username"],
+        previous_maneuver=previous_maneuver,
+    )
     return redirect_to_portal_target(port_call_id)
 
 
@@ -645,6 +732,8 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
 def edit_maneuver_report(port_call_id: str, maneuver_id: str):
     """Rever o registo operacional de uma manobra concluída e registar o motivo da alteração."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        previous_maneuver = dict(maneuver_by_id(current, maneuver_id) or {})
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
@@ -661,4 +750,11 @@ def edit_maneuver_report(port_call_id: str, maneuver_id: str):
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Registo revisto para {port_call['vessel_name']}.", "success")
+    _emit_maneuver_notification(
+        port_call=port_call,
+        maneuver=maneuver_by_id(port_call, maneuver_id),
+        event_type="report_updated",
+        actor_username=session["username"],
+        previous_maneuver=previous_maneuver,
+    )
     return redirect_to_portal_target(port_call_id)
