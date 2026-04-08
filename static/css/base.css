@@ -867,3 +867,56 @@ body {
 .ops-inline-form {
   padding: 0 14px 14px;
 }
+
+.site-footer {
+  margin-top: 28px;
+  padding: 20px 22px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.site-footer-copy {
+  display: grid;
+  gap: 6px;
+  max-width: 760px;
+}
+
+.site-footer-copy strong {
+  color: var(--ink);
+}
+
+.site-footer-copy p {
+  margin: 0;
+}
+
+.site-footer-links {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  text-align: right;
+}
+
+.site-footer a {
+  color: var(--accent-strong);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 860px) {
+  .site-footer {
+    flex-direction: column;
+  }
+
+  .site-footer-links {
+    justify-items: start;
+    text-align: left;
+  }
+}

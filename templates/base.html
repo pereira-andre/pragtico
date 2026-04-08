@@ -104,6 +104,16 @@
         <div class="portal-toast-stack" id="portal-toast-stack" aria-live="polite" aria-relevant="additions"></div>
       {% endif %}
       {% block content %}{% endblock %}
+      <footer class="site-footer">
+        <div class="site-footer-copy">
+          <strong>PRAGtico</strong>
+          <p>Projeto académico desenvolvido para fins educacionais no âmbito universitário. Não constitui uma plataforma oficial de operação portuária.</p>
+        </div>
+        <div class="site-footer-links">
+          <a href="{{ url_for('dashboard_bp.contact') }}">Contacto e suporte</a>
+          <a href="mailto:2202880@estudante.uab.pt">2202880@estudante.uab.pt</a>
+        </div>
+      </footer>
     </div>
     <datalist id="berth-options">
       {% for berth in berth_options %}

@@ -711,6 +711,16 @@ def healthz():
     })
 
 
+@bp.route("/contact")
+def contact():
+    """Página simples de contacto e enquadramento académico do projeto."""
+    return render_template(
+        "contact.html",
+        support_email="2202880@estudante.uab.pt",
+        title="Contacto",
+    )
+
+
 @bp.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_exc):
     """Mostrar mensagem de erro amigável quando o ficheiro excede o tamanho máximo permitido."""

@@ -2231,6 +2231,26 @@ class PortalLiveNotificationTests(unittest.TestCase):
         self.assertIn('href="/profile"', html)
         self.assertIn('aria-label="Abrir perfil de Andre Pereira"', html)
 
+    def test_dashboard_footer_exposes_contact_link(self) -> None:
+        with app.app.test_client() as client:
+            self._set_session(client, username="admin", role="admin")
+            response = client.get("/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('href="/contact"', html)
+        self.assertIn("2202880@estudante.uab.pt", html)
+
+    def test_contact_page_renders_support_email_and_academic_scope(self) -> None:
+        with app.app.test_client() as client:
+            response = client.get("/contact")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("2202880@estudante.uab.pt", html)
+        self.assertIn("Projeto académico", html)
+        self.assertIn("Universidade Aberta", html)
+
     def test_approve_route_emits_live_notification_in_feed(self) -> None:
         port_call = self.store.create_port_call(
             vessel_name="BELITAKI",

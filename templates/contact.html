@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact contact-card">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Contacto</p>
+        <h1>Enquadramento e suporte</h1>
+        <p class="lead">Esta plataforma foi desenvolvida para fins educacionais no contexto universitário. Se encontrares um bug ou precisares de reportar um problema, usa o contacto abaixo.</p>
+      </div>
+    </div>
+    <div class="hero-meta-grid contact-meta-grid">
+      <article class="hero-stat">
+        <span>Contexto</span>
+        <strong>Projeto académico</strong>
+        <small>Uso educacional e demonstração funcional</small>
+      </article>
+      <article class="hero-stat">
+        <span>Instituição</span>
+        <strong>Universidade Aberta</strong>
+        <small>Desenvolvimento no âmbito universitário</small>
+      </article>
+      <article class="hero-stat">
+        <span>Contacto</span>
+        <strong><a class="inline-link" href="mailto:{{ support_email }}">{{ support_email }}</a></strong>
+        <small>Canal para bugs, dúvidas e feedback</small>
+      </article>
+    </div>
+  </section>
+</main>
+{% endblock %}
