@@ -316,13 +316,17 @@ def login_required(view):
     """Decorator that redirects unauthenticated requests to the login page."""
     @wraps(view)
     def wrapped(*args, **kwargs):
-        is_api = request.path.startswith("/api/")
+        wants_json = (
+            request.path.startswith("/api/")
+            or request.accept_mimetypes.best == "application/json"
+            or request.headers.get("X-Requested-With") in {"fetch", "XMLHttpRequest"}
+        )
         if not session.get("username"):
-            if is_api:
+            if wants_json:
                 return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
             return redirect(url_for("auth.login"))
         if not ensure_session_user_profile():
-            if is_api:
+            if wants_json:
                 return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
             flash("Sessao expirada. Inicia sessao novamente.", "error")
             return redirect(url_for("auth.login"))
@@ -330,7 +334,7 @@ def login_required(view):
             session_profile_incomplete()
             and request.endpoint not in {"auth.profile", "auth.logout", "static", "dashboard_bp.image_asset"}
         ):
-            if is_api:
+            if wants_json:
                 return jsonify({"error": "Completa o teu perfil antes de usar o sistema."}), 403
             return redirect(url_for("auth.profile", next=request.full_path if request.query_string else request.path))
         return view(*args, **kwargs)
@@ -343,6 +347,13 @@ def role_required(*roles):
         @wraps(view)
         def wrapped(*args, **kwargs):
             if session.get("role") not in roles:
+                wants_json = (
+                    request.path.startswith("/api/")
+                    or request.accept_mimetypes.best == "application/json"
+                    or request.headers.get("X-Requested-With") in {"fetch", "XMLHttpRequest"}
+                )
+                if wants_json:
+                    return jsonify({"error": "Nao tens permissao para esta acao."}), 403
                 flash("Nao tens permissao para esta acao.", "error")
                 return redirect(url_for("dashboard_bp.dashboard"))
             return view(*args, **kwargs)

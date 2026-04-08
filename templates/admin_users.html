@@ -294,12 +294,26 @@
             headers: {
               "Accept": "application/json",
               "Content-Type": "application/json",
-              "X-CSRFToken": csrfToken,
+              "X-CSRF-Token": csrfToken,
               "X-Requested-With": "fetch"
             },
             body: "{}"
           });
-          const payload = await response.json();
+          const contentType = response.headers.get("content-type") || "";
+          let payload = null;
+          if (contentType.includes("application/json")) {
+            payload = await response.json();
+          } else {
+            const rawText = await response.text();
+            payload = {
+              ok: false,
+              result: {
+                category: "request_error",
+                summary: "O backend devolveu uma resposta não JSON.",
+                details: rawText.slice(0, 240) || "Sem detalhe adicional."
+              }
+            };
+          }
           updateWhatsAppStatus(payload.user || null, payload.result || payload || null);
         } catch (error) {
           updateWhatsAppStatus(null, {
