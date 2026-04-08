@@ -3,9 +3,11 @@
 import json
 import math
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
 os.environ["APP_STORAGE_BACKEND"] = "local"
 os.environ["RAG_INDEX_BACKEND"] = "local"
@@ -13,7 +15,7 @@ os.environ["MANEUVER_CASE_CAPTURE_ENVIRONMENT"] = "0"
 
 from domain.berth_layout import slot_berth_options
 from domain.cost_engine import UP_NORMAL, calculate_tup
-from storage import LocalStore
+from storage import LocalStore, PostgresStore
 
 
 class LocalStoreUserTests(unittest.TestCase):
@@ -284,6 +286,47 @@ class LocalStoreDocumentTests(unittest.TestCase):
 
         self.assertFalse((knowledge_dir / legacy_name).exists())
         self.assertIsNone(self.store.get_document(legacy_name))
+
+
+class PostgresStoreQueryShapeTests(unittest.TestCase):
+    def test_create_port_call_insert_uses_same_placeholder_count_as_parameters(self) -> None:
+        cursor = MagicMock()
+        connection = MagicMock()
+        connection.__enter__.return_value = connection
+        connection.__exit__.return_value = False
+        connection.cursor.return_value.__enter__.return_value = cursor
+
+        store = object.__new__(PostgresStore)
+        store.get_user_profile = MagicMock(return_value=None)
+        store._connect = MagicMock(return_value=connection)
+        store._sync_maneuver_cases_for_port_call = MagicMock()
+        store.get_port_call = MagicMock(return_value={"id": "port-call-1"})
+
+        store.create_port_call(
+            vessel_name="ARKLOW GLOBE",
+            eta="2026-04-09T11:15:00+01:00",
+            created_by="admin",
+            constraints=[],
+            berth="Secil W",
+            last_port="Sines",
+            next_port="Vigo",
+            notes="Janela de maré confirmada com pilotos.",
+            vessel_imo="9874105",
+            vessel_call_sign="PGWG",
+            vessel_flag="Rotterdam",
+            vessel_type="Graneis sólidos",
+            vessel_loa_m="87.4",
+            vessel_beam_m="15",
+            vessel_gt_t="2999",
+            vessel_max_draft_m="6,26",
+            vessel_dwt_t="5150",
+            vessel_bow_thruster="yes",
+            vessel_stern_thruster="no",
+        )
+
+        query, params = cursor.execute.call_args[0]
+        placeholder_count = len(re.findall(r"%s(?:::\\w+)?", query))
+        self.assertEqual(placeholder_count, len(params))
 
 
 class LocalStorePortCallTests(unittest.TestCase):
