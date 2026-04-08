@@ -85,6 +85,10 @@
 
               <div class="admin-user-grid">
                 <label>
+                  Email de acesso
+                  <input type="email" name="login_email" value="{{ user.username }}" placeholder="utilizador@porto.pt" disabled data-lockable>
+                </label>
+                <label>
                   Nome completo
                   <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Nome do utilizador" disabled data-lockable>
                 </label>
@@ -106,6 +110,10 @@
                     <input type="checkbox" name="whatsapp_opt_in" value="1" {% if user.whatsapp_opt_in %}checked{% endif %} disabled data-lockable>
                     <small>{% if user.whatsapp_opt_in_at %}Opt-in registado em {{ user.whatsapp_opt_in_at }}{% else %}Ativar envio e verificação remota{% endif %}</small>
                   </span>
+                </label>
+                <label>
+                  Nova password
+                  <input type="password" name="new_password" value="" placeholder="Opcional: redefine a password" disabled data-lockable>
                 </label>
                 <label>
                   Papel

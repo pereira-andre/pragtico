@@ -122,6 +122,14 @@ def _normalize_username(value: Optional[str]) -> str:
     return _clean_text(value).lower()
 
 
+def _infer_whatsapp_number_from_username(value: Optional[str]) -> str:
+    clean = _normalize_username(value)
+    match = re.fullmatch(r"whatsapp-(\d+)@pragtico\.local", clean)
+    if not match:
+        return ""
+    return match.group(1)
+
+
 def _normalize_email(value: Optional[str]) -> str:
     return _clean_text(value).lower()
 
@@ -157,7 +165,10 @@ def _normalize_user_profile_payload(
     normalized_role = (payload.get("role") or role or "piloto").strip().lower()
     if normalized_role not in {"admin", "agente", "piloto"}:
         normalized_role = "piloto"
-    normalized_whatsapp_number = _normalize_whatsapp_number(payload.get("whatsapp_number"))
+    normalized_whatsapp_number = (
+        _normalize_whatsapp_number(payload.get("whatsapp_number"))
+        or _infer_whatsapp_number_from_username(payload.get("username") or username)
+    )
     normalized_whatsapp_opt_in = bool(normalized_whatsapp_number) and _normalize_bool(
         payload.get("whatsapp_opt_in"),
         default=False,

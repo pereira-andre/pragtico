@@ -982,6 +982,101 @@ class PostgresStore(BaseStore):
                 row = cur.fetchone()
         return _normalize_user_profile_payload(row) if row else None
 
+    def rename_user(self, username: str, new_username: str) -> Dict:
+        current_username = _normalize_username(username)
+        target_username = _normalize_username(new_username)
+        if len(target_username) < 3:
+            raise ValueError("O email de acesso deve ter pelo menos 3 caracteres.")
+        if current_username == target_username:
+            profile = self.get_user_profile(current_username)
+            if not profile:
+                raise ValueError("Utilizador não encontrado.")
+            return profile
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        username, password_hash, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
+                    FROM app_users
+                    WHERE username = %s
+                    """,
+                    (current_username,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    raise ValueError("Utilizador não encontrado.")
+
+                cur.execute("SELECT 1 FROM app_users WHERE username = %s", (target_username,))
+                if cur.fetchone():
+                    raise ValueError("Esse utilizador já existe.")
+
+                cur.execute(
+                    """
+                    INSERT INTO app_users (
+                        username, password_hash, role, full_name, organization, email, phone,
+                        whatsapp_number, whatsapp_opt_in, whatsapp_opt_in_at, profile_completed_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        target_username,
+                        row["password_hash"],
+                        row["role"],
+                        row["full_name"],
+                        row["organization"],
+                        target_username,
+                        row["phone"],
+                        row["whatsapp_number"],
+                        row["whatsapp_opt_in"],
+                        row["whatsapp_opt_in_at"],
+                        row["profile_completed_at"],
+                    ),
+                )
+                cur.execute(
+                    "UPDATE conversations SET username = %s WHERE username = %s",
+                    (target_username, current_username),
+                )
+                cur.execute(
+                    "UPDATE channel_events SET username = %s WHERE username = %s",
+                    (target_username, current_username),
+                )
+                cur.execute(
+                    """
+                    SELECT key, value
+                    FROM app_runtime_state
+                    WHERE key LIKE %s
+                    """,
+                    (f"chat_pending_action:{current_username}:%",),
+                )
+                runtime_rows = cur.fetchall()
+                for runtime_row in runtime_rows:
+                    source_key = runtime_row["key"]
+                    target_key = source_key.replace(
+                        f"chat_pending_action:{current_username}:",
+                        f"chat_pending_action:{target_username}:",
+                        1,
+                    )
+                    payload = runtime_row["value"] if isinstance(runtime_row["value"], dict) else {}
+                    if payload.get("username") == current_username:
+                        payload = {**payload, "username": target_username}
+                    cur.execute(
+                        """
+                        INSERT INTO app_runtime_state (key, value, updated_at)
+                        VALUES (%s, %s::jsonb, NOW())
+                        ON CONFLICT (key)
+                        DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+                        """,
+                        (target_key, json.dumps(payload)),
+                    )
+                    cur.execute("DELETE FROM app_runtime_state WHERE key = %s", (source_key,))
+
+                cur.execute("DELETE FROM app_users WHERE username = %s", (current_username,))
+            conn.commit()
+        return self.get_user_profile(target_username) or {}
+
     def set_user_role(self, username: str, role: str) -> Dict:
         username = _normalize_username(username)
         if role not in {"admin", "agente", "piloto"}:

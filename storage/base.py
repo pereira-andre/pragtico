@@ -46,6 +46,11 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def rename_user(self, username: str, new_username: str) -> Dict:
+        """Rename the user's login identifier and return the updated profile."""
+        raise NotImplementedError
+
+    @abstractmethod
     def set_user_role(self, username: str, role: str) -> Dict:
         """Update the role for the given user and return the updated profile."""
         raise NotImplementedError

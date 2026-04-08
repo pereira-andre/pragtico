@@ -565,6 +565,73 @@ class LocalStore(BaseStore):
                 return {key: user[key] for key in user if key != "password_hash"}
         return None
 
+    def rename_user(self, username: str, new_username: str) -> Dict:
+        """Rename a user's login identifier and reassign related local records."""
+        current_username = _normalize_username(username)
+        target_username = _normalize_username(new_username)
+        if len(target_username) < 3:
+            raise ValueError("O email de acesso deve ter pelo menos 3 caracteres.")
+        if current_username == target_username:
+            profile = self.get_user_profile(current_username)
+            if not profile:
+                raise ValueError("Utilizador não encontrado.")
+            return profile
+
+        users = self._read_users()
+        if any(user["username"] == target_username for user in users):
+            raise ValueError("Esse utilizador já existe.")
+
+        updated = None
+        for user in users:
+            if user["username"] != current_username:
+                continue
+            user["username"] = target_username
+            user["email"] = target_username
+            updated = user
+            break
+        if not updated:
+            raise ValueError("Utilizador não encontrado.")
+        self._write_users(users)
+
+        conversations = self._read_conversations()
+        changed_conversations = False
+        for conversation in conversations:
+            if conversation.get("username") == current_username:
+                conversation["username"] = target_username
+                changed_conversations = True
+        if changed_conversations:
+            self._write_conversations(conversations)
+
+        events = self._read_channel_events()
+        changed_events = False
+        for event in events:
+            if event.get("username") == current_username:
+                event["username"] = target_username
+                changed_events = True
+        if changed_events:
+            self._write_channel_events(events)
+
+        runtime_state = self._read_runtime_state()
+        moved_runtime_state: dict = {}
+        removed_keys: list[str] = []
+        prefix = f"chat_pending_action:{current_username}:"
+        replacement = f"chat_pending_action:{target_username}:"
+        for key, value in runtime_state.items():
+            if not key.startswith(prefix):
+                continue
+            next_value = dict(value or {}) if isinstance(value, dict) else value
+            if isinstance(next_value, dict) and next_value.get("username") == current_username:
+                next_value["username"] = target_username
+            moved_runtime_state[key.replace(prefix, replacement, 1)] = next_value
+            removed_keys.append(key)
+        if removed_keys:
+            for key in removed_keys:
+                runtime_state.pop(key, None)
+            runtime_state.update(moved_runtime_state)
+            self._write_runtime_state(runtime_state)
+
+        return {key: updated[key] for key in updated if key != "password_hash"}
+
     def set_user_role(self, username: str, role: str) -> Dict:
         """Update the role for the given user and return the updated profile."""
         username = _normalize_username(username)

@@ -9,7 +9,7 @@ from flask import Blueprint, abort, current_app, flash, jsonify, redirect, rende
 
 from core import services
 from core.whatsapp_support import build_user_whatsapp_view, verify_user_whatsapp
-from core.validators import validate_phone, validate_required_text, validate_role, validate_whatsapp_phone
+from core.validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role, validate_whatsapp_phone
 from core.helpers import (
     current_reindex_status_payload,
     load_admin_status,
@@ -158,16 +158,21 @@ def admin_update_user(username: str):
         existing_user = services.store.get_user_profile(target_username)
         if not existing_user:
             raise ValueError("Utilizador não encontrado.")
+        login_email = validate_email(request.form.get("login_email", ""))
         updated_role = validate_role(request.form.get("role", ""))
         full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
         organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
         phone = validate_phone(request.form.get("phone", ""))
         whatsapp_number = validate_whatsapp_phone(request.form.get("whatsapp_number", ""), required=False)
         whatsapp_opt_in = request.form.get("whatsapp_opt_in", "") == "1"
+        new_password_raw = request.form.get("new_password", "")
+        new_password = validate_password(new_password_raw) if new_password_raw.strip() else ""
         if whatsapp_opt_in and not whatsapp_number:
             raise ValueError("Se ativares WhatsApp, tens de indicar o respetivo número.")
 
-        if updated_role == "admin" and target_username != session.get("username"):
+        effective_target_username = login_email
+
+        if updated_role == "admin" and effective_target_username != session.get("username"):
             existing_admins = [
                 u for u in services.store.list_users()
                 if (u.get("role") or "").strip().lower() == "admin" and u.get("username") != target_username
@@ -176,18 +181,25 @@ def admin_update_user(username: str):
                 flash("Já existe um administrador no sistema. Só pode haver 1 admin.", "error")
                 return redirect(url_for("admin.admin_users"))
 
+        if login_email != target_username:
+            existing_user = services.store.rename_user(target_username, login_email)
+            effective_target_username = existing_user["username"]
+
         services.store.update_user_profile(
-            target_username,
+            effective_target_username,
             full_name=full_name,
             organization=organization,
-            email=target_username,
+            email=effective_target_username,
             phone=phone,
             whatsapp_number=whatsapp_number,
             whatsapp_opt_in=whatsapp_opt_in,
             whatsapp_opt_in_at=_resolved_whatsapp_opt_in_at(existing_user, whatsapp_number, whatsapp_opt_in),
         )
-        updated_user = services.store.set_user_role(target_username, updated_role)
+        updated_user = services.store.set_user_role(effective_target_username, updated_role)
+        if new_password:
+            services.store.reset_user_password(effective_target_username, new_password)
         if session.get("username") == target_username:
+            session["username"] = effective_target_username
             session["role"] = updated_user["role"]
     except ValueError as exc:
         flash(str(exc), "error")
@@ -197,7 +209,7 @@ def admin_update_user(username: str):
         flash("Falha inesperada ao atualizar o utilizador.", "error")
         return redirect(url_for("admin.admin_users"))
 
-    flash(f"Utilizador {target_username} atualizado.", "success")
+    flash(f"Utilizador {effective_target_username} atualizado.", "success")
     return redirect(url_for("admin.admin_users"))
 
 

@@ -104,6 +104,25 @@ class LocalStoreUserTests(unittest.TestCase):
         self.assertFalse(updated["whatsapp_opt_in"])
         self.assertIsNone(updated["whatsapp_opt_in_at"])
 
+    def test_create_user_infers_whatsapp_number_from_shadow_username(self) -> None:
+        user = self.store.create_user(
+            "whatsapp-351962063664@pragtico.local",
+            "secret123",
+            "agente",
+        )
+        self.assertEqual(user["whatsapp_number"], "351962063664")
+
+    def test_rename_user_updates_conversations(self) -> None:
+        user = self.store.create_user("old@example.com", "secret123", "agente")
+        conversation = self.store.create_conversation(user["username"])
+
+        renamed = self.store.rename_user("old@example.com", "new@example.com")
+
+        self.assertEqual(renamed["username"], "new@example.com")
+        conversations = self.store.list_conversations("new@example.com")
+        self.assertEqual(len(conversations), 1)
+        self.assertEqual(conversations[0]["id"], conversation["id"])
+
     def test_set_user_role(self) -> None:
         self.store.create_user("test@example.com", "secret123", "agente")
         updated = self.store.set_user_role("test@example.com", "piloto")
