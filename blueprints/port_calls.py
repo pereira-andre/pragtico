@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -215,8 +216,11 @@ def _load_port_call_json_payload() -> dict:
         raw_payload = request.form.get("payload_json", "")
     if not raw_payload.strip():
         raise ValueError("Indica o JSON da escala ou carrega um ficheiro .json.")
+    relaxed_payload = raw_payload
+    relaxed_payload = re.sub(r'("constraints"\s*:\s*)(?=(,|\}))', r"\1[]", relaxed_payload)
+    relaxed_payload = re.sub(r",(\s*[}\]])", r"\1", relaxed_payload)
     try:
-        payload = json.loads(raw_payload)
+        payload = json.loads(relaxed_payload)
     except json.JSONDecodeError as exc:
         raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
 
@@ -395,9 +399,13 @@ def import_port_call_json():
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("port_calls.port_call_register"))
-    except Exception:
+    except Exception as exc:
         logger.exception("Falha inesperada ao importar escala por JSON para %s.", session.get("username"))
-        flash("Falha inesperada ao importar a escala por JSON.", "error")
+        detail = " ".join(str(exc).strip().split())
+        if detail:
+            flash(f"Falha inesperada ao importar a escala por JSON: {detail}", "error")
+        else:
+            flash("Falha inesperada ao importar a escala por JSON.", "error")
         return redirect(url_for("port_calls.port_call_register"))
 
     flash(f"Escala importada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")

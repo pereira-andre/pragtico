@@ -2371,7 +2371,7 @@ class PortCallJsonImportTests(unittest.TestCase):
     def test_import_port_call_json_from_file_accepts_nested_scale_object(self) -> None:
         payload = b"""
         {
-            "scale": {
+          "scale": {
                 "vessel_name": "Atlantic Trader",
                 "eta_local": "2026-04-10T08:15",
                 "berth": "TMS 2",
@@ -2416,6 +2416,50 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertEqual(current["vessel_stern_thruster"], "yes")
         entry = next(item for item in current["maneuver_history"] if item["type"] == "entry")
         self.assertIn("Operacao sensivel.", entry["plan_note"])
+
+    def test_import_port_call_json_accepts_blank_constraints_and_trailing_comma(self) -> None:
+        payload = """
+        {
+          "vessel_name": "ARKLOW GLOBE",
+          "eta": "2026-04-09T11:15:00+01:00",
+          "berth": "Secil W",
+          "last_port": "Sines",
+          "next_port": "Vigo",
+          "vessel_imo": "9874105",
+          "vessel_call_sign": "PGWG",
+          "vessel_flag": "Rotterdam",
+          "vessel_type": "Graneis sólidos",
+          "vessel_loa_m": "87.4",
+          "vessel_beam_m": "15",
+          "vessel_gt_t": "2999",
+          "vessel_dwt_t": "5150",
+          "vessel_max_draft_m": "6,26",
+          "vessel_bow_thruster": "yes",
+          "vessel_stern_thruster": "no",
+          "booking": "2026-04-09T11:15:00+01:00",
+          "draft_m": "4",
+          "tug_count": 0,
+          "constraints": ,
+          "notes": "Janela de maré confirmada com pilotos.",
+        }
+        """
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/port-calls/import-json",
+                data={
+                    "csrf_token": csrf_token,
+                    "payload_json": payload,
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        activity = self.store.get_port_activity_snapshot(window_days=30)
+        created = next(item for item in activity["arrivals"] if item["vessel_name"] == "ARKLOW GLOBE")
+        current = self.store.get_port_call(created["id"])
+        entry = next(item for item in current["maneuver_history"] if item["type"] == "entry")
+        self.assertEqual(entry["constraints"], [])
 
 
 if __name__ == "__main__":
