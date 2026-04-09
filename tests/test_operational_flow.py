@@ -976,6 +976,107 @@ class OperationalFlowTests(unittest.TestCase):
         )
         self.assertEqual(payload["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
 
+    def test_chat_message_feedback_review_creates_operator_eval_case(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            )
+            message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta incompleta.",
+                citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+            )
+            response = client.post(
+                f"/api/messages/{message['id']}/feedback",
+                json={
+                    "conversation_id": conversation["id"],
+                    "feedback_status": "review",
+                    "feedback_note": "Faltou o limite de LOA.",
+                    "feedback_correction": "À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        eval_path = Path(self.store.knowledge_dir) / "evals" / "operator_feedback_correction_evals.json"
+        payload = json.loads(eval_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["document"], "IT-036_RegulacaoAgulhas.txt")
+        self.assertEqual(payload[0]["source"], "web")
+        self.assertEqual(payload[0]["source_message_id"], message["id"])
+
+    def test_chat_message_feedback_approved_removes_operator_eval_case(self) -> None:
+        eval_dir = Path(self.store.knowledge_dir) / "evals"
+        eval_dir.mkdir(parents=True, exist_ok=True)
+        eval_path = eval_dir / "operator_feedback_correction_evals.json"
+        eval_path.write_text(
+            json.dumps(
+                [
+                    {
+                        "document": "IT-036_RegulacaoAgulhas.txt",
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                        "expected_answer": "À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                        "expected_substrings": ["225 metros"],
+                        "source": "web",
+                        "source_message_id": "msg-keep",
+                    }
+                ],
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            )
+            message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta corrigida.",
+                citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+            )
+            self.store.update_message_feedback(
+                "admin",
+                conversation["id"],
+                message["id"],
+                "review",
+                "Faltou o limite de LOA.",
+                feedback_correction="À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                feedback_updated_by="admin",
+            )
+            response = client.post(
+                f"/api/messages/{message['id']}/feedback",
+                json={
+                    "conversation_id": conversation["id"],
+                    "feedback_status": "approved",
+                    "feedback_note": "Agora está certo.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(eval_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload, [])
+
     def test_chat_message_feedback_review_requires_note(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:
@@ -2498,6 +2599,14 @@ class OperationalFlowTests(unittest.TestCase):
             phone="+351962063664",
         )
         conversation = self.store.create_conversation(username)
+        self.store.append_chat_message(
+            username,
+            conversation["id"],
+            "user",
+            "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            channel="whatsapp",
+            channel_user_id="351962063664",
+        )
         message = self.store.append_chat_message(
             username,
             conversation["id"],
@@ -2559,6 +2668,14 @@ class OperationalFlowTests(unittest.TestCase):
             phone="+351962063664",
         )
         conversation = self.store.create_conversation(username)
+        self.store.append_chat_message(
+            username,
+            conversation["id"],
+            "user",
+            "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            channel="whatsapp",
+            channel_user_id="351962063664",
+        )
         message = self.store.append_chat_message(
             username,
             conversation["id"],
@@ -2632,6 +2749,11 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(updated["feedback_status"], "review")
         self.assertIn("225 metros", updated["feedback_correction"])
         self.assertEqual(updated["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
+        eval_path = Path(self.store.knowledge_dir) / "evals" / "operator_feedback_correction_evals.json"
+        eval_payload = json.loads(eval_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(eval_payload), 1)
+        self.assertEqual(eval_payload[0]["source"], "whatsapp")
+        self.assertEqual(eval_payload[0]["source_message_id"], message["id"])
         self.assertIsNone(
             self.store.get_runtime_state("whatsapp:feedback-correction:351962063664")
         )

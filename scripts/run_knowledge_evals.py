@@ -10,12 +10,12 @@ def main() -> int:
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
-    from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases
+    from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases_from_dir
 
     knowledge_dir = repo_root / "knowledge"
-    cases_path = knowledge_dir / "evals" / "critical_document_companion_evals.json"
+    cases_path = knowledge_dir / "evals"
 
-    cases = load_eval_cases(cases_path)
+    cases = load_eval_cases_from_dir(cases_path)
     results = evaluate_companion_cases(cases, knowledge_dir)
     passed = sum(1 for item in results if item["passed"])
     failed = [item for item in results if not item["passed"]]

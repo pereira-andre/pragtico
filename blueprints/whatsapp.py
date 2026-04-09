@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from core import services
+from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
 
 bp = Blueprint("whatsapp", __name__)
@@ -285,6 +286,13 @@ def whatsapp_webhook_receive():
                         f"Feedback via reação WhatsApp: {event.get('emoji', '')}",
                         feedback_updated_by=profile["username"],
                     )
+                    sync_feedback_correction_eval_case(
+                        services.store,
+                        target_message["username"],
+                        target_message["conversation_id"],
+                        target_message["id"],
+                        source="whatsapp",
+                    )
                     feedback_applied += 1
                     if feedback_status == "review":
                         services.store.set_runtime_state(
@@ -396,6 +404,13 @@ def whatsapp_webhook_receive():
                         str(pending_feedback_correction.get("feedback_note") or "").strip(),
                         feedback_correction=text,
                         feedback_updated_by=profile["username"],
+                    )
+                    sync_feedback_correction_eval_case(
+                        services.store,
+                        correction_username,
+                        correction_conversation_id,
+                        correction_message_id,
+                        source="whatsapp",
                     )
                     correction_reply = (
                         "Correção guardada. Vou usá-la como referência forte em perguntas semelhantes, "

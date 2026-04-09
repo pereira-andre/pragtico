@@ -9,6 +9,7 @@ from textwrap import wrap
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 from core import services
+from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
 from domain.chat_actions import (
     build_action_reply_template,
@@ -446,6 +447,13 @@ def api_message_feedback(message_id: str):
             feedback_correction=feedback_correction,
             feedback_correction_document=feedback_correction_document,
             feedback_updated_by=session["username"],
+        )
+        sync_feedback_correction_eval_case(
+            services.store,
+            session["username"],
+            conversation_id,
+            message_id,
+            source="web",
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
