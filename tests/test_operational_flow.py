@@ -2133,6 +2133,50 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("live_planner", retrieval_modes)
         self.assertIn("document_companion", retrieval_modes)
 
+    def test_chat_weather_followup_about_tug_sufficiency_uses_llm_with_history(self) -> None:
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                conversation = self.store.ensure_conversation(username="admin")
+                self.store.append_chat_message(
+                    username="admin",
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content="Vai entrar agora um navio roro com 176 m comprimento e 8,3m de calado. Quantos reboques me recomendarias?",
+                )
+                self.store.append_chat_message(
+                    username="admin",
+                    conversation_id=conversation["id"],
+                    role="assistant",
+                    content="Recomendaria 2 rebocadores pequenos, salvo confirmação adicional do vento atual e dos thrusters.",
+                )
+
+                with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                    services.rag,
+                    "answer",
+                    return_value={"answer": "Com o vento atual, dois rebocadores parecem suficientes.", "sources": []},
+                ) as answer_mock:
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "conversation_id": conversation["id"],
+                            "question": "Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes.",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        self.assertIn("dois rebocadores", payload["answer"])
+        answer_mock.assert_called_once()
+        supplemental_sources = answer_mock.call_args.kwargs["supplemental_sources"]
+        documents = {str(item.get("document") or "") for item in supplemental_sources}
+        history = answer_mock.call_args.kwargs["history"]
+        self.assertIn("Meteorologia live", documents)
+        self.assertEqual(history[-1]["content"], "Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes.")
+        self.assertEqual(history[-2]["role"], "assistant")
+        self.assertIn("2 rebocadores", history[-2]["content"])
+
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

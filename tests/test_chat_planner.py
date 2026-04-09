@@ -35,3 +35,15 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertTrue(plan.requires_live_reasoning)
         self.assertTrue(plan.requires_llm_synthesis)
         self.assertFalse(plan.should_answer_directly)
+
+    def test_weather_followup_about_tug_sufficiency_uses_live_reasoning(self) -> None:
+        plan = build_chat_execution_plan(
+            "Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes."
+        )
+
+        self.assertEqual(plan.primary_intent, "live_reasoning")
+        self.assertEqual(plan.live_facets, ("weather",))
+        self.assertEqual(plan.weather_mode, "current")
+        self.assertTrue(plan.requires_live_reasoning)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertFalse(plan.should_answer_directly)

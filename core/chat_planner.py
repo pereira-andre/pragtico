@@ -10,7 +10,9 @@ TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-m
 WEATHER_QUERY_RE = re.compile(
     r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|humidade|temperatura|chuva)\b"
 )
-CURRENT_WEATHER_RE = re.compile(r"\b(atual|atuais|agora|neste momento|corrente|correntes|hoje)\b")
+CURRENT_WEATHER_RE = re.compile(
+    r"\b(atual|atuais|atualmente|actualmente|agora|neste momento|corrente|correntes|hoje)\b"
+)
 WEATHER_TIMELINE_RE = re.compile(
     r"\b(ao longo do dia|durante o dia|resto do dia|nas proximas horas|nas próximas horas|"
     r"ate|até|ate as|até as|ate ao|até ao)\b"
@@ -29,10 +31,13 @@ DOCUMENT_QUERY_RE = re.compile(
 )
 RULE_CODE_RE = re.compile(r"\bit[\s\-_]?0*(\d{1,3})\b", flags=re.IGNORECASE)
 LIVE_REASONING_RE = re.compile(
-    r"\b(deve|devemos|pode|podemos|marcar|embarcar|trazer|autorizar|aprovar|viavel|viável)\b"
+    r"\b(avalia|avaliar|considera|considerarias|recomenda|recomendarias|recomendaria|"
+    r"deve|devemos|pode|podemos|marcar|embarcar|trazer|autorizar|aprovar|"
+    r"viavel|viável|suficiente|suficientes|basta|bastam|chega|achas)\b"
 )
 OPERATIONAL_DECISION_RE = re.compile(
-    r"\b(piloto|manobra|navio|entrada|saida|saída|doca|lisnave|cais|porto)\b"
+    r"\b(piloto|manobra|navio|entrada|saida|saída|doca|lisnave|cais|"
+    r"reboque|reboques|rebocador|rebocadores|thruster|calado|loa)\b"
 )
 
 
