@@ -97,6 +97,10 @@ WEATHER_QUERY_RE = re.compile(
     r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|humidade|temperatura|chuva)\b"
 )
 CURRENT_WEATHER_RE = re.compile(r"\b(atual|atuais|agora|neste momento|corrente|correntes|hoje)\b")
+WEATHER_TIMELINE_RE = re.compile(
+    r"\b(ao longo do dia|durante o dia|resto do dia|nas proximas horas|nas próximas horas|"
+    r"ate|até|ate as|até as|ate ao|até ao)\b"
+)
 WAVE_QUERY_RE = re.compile(
     r"\b(ondulacao|ondulação|leitura costeira|altura significativa|periodo medio|período médio|estado do mar|"
     r"mar fora da barra|ondulacao na barra|ondulação na barra|condicoes na barra|condições na barra|"
@@ -1422,6 +1426,10 @@ def _build_weather_lookup_answer(question: str, clean_question: str) -> tuple[st
 
     location = forecast.get("location", {})
     current = forecast.get("current", {})
+    timeline_answer = _build_weather_timeline_answer(question, forecast, weather_service)
+    if timeline_answer:
+        text, sources = timeline_answer
+        return text, sources
     if CURRENT_WEATHER_RE.search(clean_question):
         lines = [
             f"Condições meteorológicas atuais em {location.get('name', 'Setúbal')} ({location.get('localtime', '--')}):",
@@ -1441,6 +1449,96 @@ def _build_weather_lookup_answer(question: str, clean_question: str) -> tuple[st
     if context:
         return context.get("text") or context.get("snippet", ""), [context]
     return "Não consegui obter a previsão meteorológica pedida.", []
+
+
+def _parse_weather_reference_datetime(forecast: dict) -> datetime | None:
+    localtime = str((forecast.get("location") or {}).get("localtime") or "").strip()
+    if not localtime:
+        return None
+    try:
+        return datetime.strptime(localtime, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+
+
+def _build_weather_timeline_answer(question: str, forecast: dict, weather_service) -> tuple[str, list[dict]] | None:
+    clean_question = _operational_lookup_key(question)
+    if not (CURRENT_WEATHER_RE.search(clean_question) and WEATHER_TIMELINE_RE.search(clean_question)):
+        return None
+
+    reference_dt = _parse_weather_reference_datetime(forecast)
+    if not reference_dt:
+        return None
+
+    target_dates: list[str] = []
+    target_times: list[str] = []
+    try:
+        if hasattr(weather_service, "_resolve_query_dates"):
+            target_dates = list(weather_service._resolve_query_dates(question, reference_dt.date()))
+        if hasattr(weather_service, "_resolve_query_times"):
+            target_times = list(weather_service._resolve_query_times(question))
+    except Exception:
+        target_dates = []
+        target_times = []
+
+    if target_dates:
+        end_date = max(target_dates)
+    else:
+        end_date = reference_dt.date().isoformat()
+
+    end_time = target_times[-1] if target_times else "23:59"
+    try:
+        end_dt = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+
+    if end_dt <= reference_dt:
+        return None
+
+    timeline = build_weather_timeline(forecast, max_hours=72)
+    selected_slots: list[dict] = []
+    for item in timeline:
+        timestamp = str(item.get("timestamp") or "").strip()
+        if not timestamp:
+            continue
+        try:
+            item_dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        if reference_dt <= item_dt <= end_dt:
+            selected_slots.append(item)
+
+    if not selected_slots:
+        return None
+
+    current = forecast.get("current", {})
+    location = forecast.get("location", {})
+    lines = [
+        f"Condições meteorológicas atuais em {location.get('name', 'Setúbal')} ({location.get('localtime', '--')}):",
+        f"- Estado do tempo: {current.get('condition', '--')}",
+        f"- Temperatura: {current.get('temp_c', '--')} °C",
+        f"- Vento: {current.get('wind_kts', '--')} kts de {current.get('wind_dir', '--')}",
+        f"- Rajadas: {current.get('gust_kts', '--')} kts",
+        f"- Humidade: {current.get('humidity', '--')}%",
+        f"- Visibilidade: {current.get('vis_km', '--')} km",
+        f"- Precipitação: {current.get('precip_mm', '--')} mm",
+        "",
+        f"Evolução prevista até {end_dt.strftime('%d/%m/%Y %H:%M')}:",
+    ]
+    for slot in selected_slots[:14]:
+        lines.append(
+            f"- {slot.get('date_label', slot.get('date', '--'))} {slot.get('time', '--')} | "
+            f"{slot.get('condition', '--')} | {slot.get('temp_c', '--')} °C | "
+            f"vento {slot.get('wind_kts', '--')} kts {slot.get('wind_dir', '--')} | "
+            f"chuva {slot.get('chance_of_rain', '--')}%"
+        )
+    remaining = len(selected_slots) - 14
+    if remaining > 0:
+        lines.append(f"- +{remaining} slot(s) horários adicionais até ao fim da janela pedida.")
+
+    context = weather_service.context_for_question(question)
+    sources = [context] if context else []
+    return "\n".join(lines), sources
 
 
 def _answer_live_environment_query(question: str, clean_question: str) -> dict | None:

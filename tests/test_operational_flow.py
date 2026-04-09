@@ -138,7 +138,7 @@ class _StubWeatherService:
         return {
             "location": {
                 "name": "Setúbal",
-                "localtime": "2026-04-09 13:04",
+                "localtime": "2026-04-09 13:07",
             },
             "current": {
                 "condition": "Parcialmente nublado",
@@ -150,6 +150,56 @@ class _StubWeatherService:
                 "vis_km": 10,
                 "precip_mm": 0.0,
             },
+            "hourly_groups": [
+                {
+                    "date": "2026-04-09",
+                    "date_label": "09/04/2026",
+                    "hours": [
+                        {
+                            "time": "14:00",
+                            "timestamp": "2026-04-09 14:00",
+                            "condition": "Parcialmente nublado",
+                            "temp_c": 18.5,
+                            "wind_kts": 13.0,
+                            "wind_dir": "NNE",
+                            "chance_of_rain": 0,
+                        },
+                        {
+                            "time": "18:00",
+                            "timestamp": "2026-04-09 18:00",
+                            "condition": "Nublado",
+                            "temp_c": 17.0,
+                            "wind_kts": 11.0,
+                            "wind_dir": "N",
+                            "chance_of_rain": 5,
+                        },
+                        {
+                            "time": "23:00",
+                            "timestamp": "2026-04-09 23:00",
+                            "condition": "Encoberto",
+                            "temp_c": 15.2,
+                            "wind_kts": 8.0,
+                            "wind_dir": "NNW",
+                            "chance_of_rain": 10,
+                        },
+                    ],
+                },
+                {
+                    "date": "2026-04-10",
+                    "date_label": "10/04/2026",
+                    "hours": [
+                        {
+                            "time": "00:00",
+                            "timestamp": "2026-04-10 00:00",
+                            "condition": "Encoberto",
+                            "temp_c": 14.8,
+                            "wind_kts": 7.5,
+                            "wind_dir": "NW",
+                            "chance_of_rain": 10,
+                        }
+                    ],
+                },
+            ],
         }
 
     def context_source(self):
@@ -166,6 +216,17 @@ class _StubWeatherService:
     def context_for_question(self, question: str):
         del question
         return self.context_source()
+
+    def _resolve_query_dates(self, question: str, reference_date):
+        del reference_date
+        if "10 abril" in question.lower():
+            return ["2026-04-10"]
+        return ["2026-04-09"]
+
+    def _resolve_query_times(self, question: str):
+        if "00:00" in question:
+            return ["00:00"]
+        return []
 
 
 class _StubWhatsAppService:
@@ -1351,6 +1412,29 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["answer_origin"], "operational_live")
         self.assertIn("Condições meteorológicas atuais em Setúbal", payload["answer"])
         self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
+        answer_mock.assert_not_called()
+
+    def test_chat_weather_current_with_horizon_returns_timeline_not_only_snapshot(self) -> None:
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "E as condições meteorológicas atuais no porto ao longo do dia (até as 00:00 dia 10 abril)?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Evolução prevista até 10/04/2026 00:00", payload["answer"])
+        self.assertIn("09/04/2026 18:00", payload["answer"])
+        self.assertIn("10/04/2026 00:00", payload["answer"])
         answer_mock.assert_not_called()
 
     def test_chat_wave_question_prefers_live_operational_answer(self) -> None:
