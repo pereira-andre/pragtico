@@ -3,7 +3,7 @@ FONTE: Notas pessoais de Piloto sobre a Carta de Setúbal + Notas de Pilotagem
 NATUREZA: Conhecimento operacional prático acumulado em contexto de pilotagem
 real. Complementa as regras formais das IT com distâncias, proas, correntes,
 marcas e dicas operacionais não documentadas nas instruções de trabalho oficiais.
-UNIDADES: Distâncias em milhas náuticas (') e metros (m). Rumos em graus (°).
+UNIDADES: Distâncias em milhas náuticas (NM) e metros (m). Rumos em graus (°).
 
 ================================================================================
 CANAL DA BARRA — DIMENSÕES E RESGUARDOS CRÍTICOS
@@ -13,474 +13,574 @@ O corredor dragado na Barra tem menos de 200 metros de largura e 12 metros de
 profundidade. É um canal estreito que exige atenção permanente ao alinhamento.
 
 RESGUARDO DOS PILARES 2 E 4:
-  Manter sempre pelo menos 0,2 milhas náuticas (370 m) de distância dos Pilares
-  número 2 e número 4. Quando o Convento do Bom Jesus estiver ao través (ângulo
-  reto com o eixo do navio), o navio encontra-se na parte mais baixa e perigosa
-  do canal entre os pilares — zona de menor profundidade. Atenção redobrada neste
-  ponto.
+Manter sempre pelo menos 0,2 milhas náuticas (370 metros) de distância dos
+Pilares número 2 e número 4. Quando o Convento do Bom Jesus estiver ao través
+(ângulo reto com o eixo do navio), o navio encontra-se na parte mais baixa e
+perigosa do canal entre os pilares — zona de menor profundidade. Atenção
+redobrada neste ponto.
 
 BÓIA NÚMERO 5:
-  Não passar a menos de 0,2 milhas náuticas da Bóia número 5, pois há pouca
-  profundidade nas suas imediações.
+Não passar a menos de 0,2 milhas náuticas da Bóia número 5, pois há pouca
+profundidade nas suas imediações.
 
 OUTÃO — PASSAGEM E RESGUARDO:
-  Distância entre o Outão e o enfiamento da Barra: 0,08 milhas náuticas.
-  Passar com 0,13 milhas náuticas de resguardo do Outão, o que coincide com o
-  limite sul até onde a Barra está dragada.
-  Largura máxima da passagem no Outão: 0,33 milhas náuticas.
+Distância entre o Outão e o enfiamento da Barra: 0,08 milhas náuticas.
+Passar com 0,13 milhas náuticas de resguardo do Outão, o que coincide com o
+limite sul até onde a Barra está dragada. Largura máxima da passagem no Outão:
+0,33 milhas náuticas.
 
 "0,2 MILHAS NÁUTICAS É O NÚMERO MÁGICO PARA TUDO EM SETÚBAL":
-  — 0,2 NM é o resguardo a manter das bóias na Barra.
-  — 0,2 NM é o resguardo a manter de terra/cais no Canal Norte.
-  — 0,2 NM é a distância a manter da costa no Canal Sul.
+O valor de 0,2 NM de resguardo aplica-se consistentemente a três contextos: é o
+resguardo a manter das bóias na Barra; é o resguardo a manter de terra e de cais
+no Canal Norte; e é a distância a manter da costa no Canal Sul.
 
 RECOMENDAÇÃO GERAL DE POSICIONAMENTO NA BARRA:
-  É sempre bom passar a sul do enfiamento e depois corrigir. As rochas e pedras
-  na costa do parque de Setúbal actuam como amortecedores por causa da corrente
-  forte do Canal Sul.
+É sempre bom passar a sul do enfiamento e depois corrigir. As rochas e pedras
+na costa do parque de Setúbal actuam como amortecedores por causa da corrente
+forte do Canal Sul.
 
 ================================================================================
 PROAS E DISTÂNCIAS — BARRA ATÉ CANAL NORTE ATÉ SAPEC LÍQUIDOS (ENTRADA)
 ================================================================================
 
-Segmento 1:  Proa 040° × 5,00 NM  = 9.260 m  (Barra até curva Canal Norte)
-Segmento 2:  Proa 073° × 0,73 NM  = 1.352 m
-Segmento 3:  Proa 090° × 0,40 NM  =   740 m
-Segmento 4:  Proa 122° × 1,30 NM  = 2.407 m
-Segmento 5:  Proa 112° × 0,25 NM  =   463 m
-Segmento 6:  Proa 128° × 0,30 NM  =   555 m
+Segmento 1:  Proa 040° × 5,00 NM  =  9.260 m  (Barra até curva Canal Norte)
+Segmento 2:  Proa 073° × 0,73 NM  =  1.352 m
+Segmento 3:  Proa 090° × 0,40 NM  =    740 m
+Segmento 4:  Proa 122° × 1,30 NM  =  2.407 m
+Segmento 5:  Proa 112° × 0,25 NM  =    463 m
+Segmento 6:  Proa 128° × 0,30 NM  =    555 m
 
-Desvios finais para terminais SAPEC:
-  SAPEC Granéis Sólidos (TPS):  0,22 NM / 407 m do alinhamento principal
-  SAPEC Granéis Líquidos (TGL): 0,34 NM / 629 m do alinhamento principal
+Desvios finais para terminais SAPEC: o Terminal SAPEC Granéis Sólidos (TPS)
+fica a 0,22 NM (407 metros) do alinhamento principal. O Terminal SAPEC Granéis
+Líquidos (TGL) fica a 0,34 NM (629 metros) do alinhamento principal.
 
 ================================================================================
 PROAS E DISTÂNCIAS — SAPEC LÍQUIDOS ATÉ SAÍDA DA BARRA (SAÍDA)
 ================================================================================
 
-Segmento 1:  Proa 308° × 0,30 NM  =   555 m
-Segmento 2:  Proa 292° × 0,25 NM  =   463 m
-Segmento 3:  Proa 302° × 1,30 NM  = 2.407 m
-Segmento 4:  Proa 270° × 0,40 NM  =   740 m
-Segmento 5:  Proa 253° × 0,73 NM  = 1.352 m
-Segmento 6:  Proa 220° × 5,14 NM  = 9.519 m  (Canal Norte até saída da Barra)
+Segmento 1:  Proa 308° × 0,30 NM  =    555 m
+Segmento 2:  Proa 292° × 0,25 NM  =    463 m
+Segmento 3:  Proa 302° × 1,30 NM  =  2.407 m
+Segmento 4:  Proa 270° × 0,40 NM  =    740 m
+Segmento 5:  Proa 253° × 0,73 NM  =  1.352 m
+Segmento 6:  Proa 220° × 5,14 NM  =  9.519 m  (Canal Norte até saída da Barra)
 
 ================================================================================
 PROAS E DISTÂNCIAS — BARRA ATÉ CANAL SUL ATÉ TERMITRENA/TANQUISADO (ENTRADA)
 ================================================================================
 
-Segmento 1:  Proa 040° × 3,70 NM  = 6.852 m
-Segmento 2:  Proa 067° × 0,86 NM  = 1.593 m
-Segmento 3:  Proa 105° × 0,86 NM  = 1.593 m
-Segmento 4:  Proa 131° × 1,45 NM  = 2.685 m
-Segmento 5:  Proa 120° × 1,10 NM  = 2.037 m
-Segmento 6:  Proa 110° × 1,00 NM  = 1.852 m  (até bóias 8CS e 1CS)
-Segmento 7:  Proa 115° × 0,64 NM  = 1.185 m
-Segmento 8:  Proa 100° × 0,45 NM  =   833 m
-Segmento 9:  Proa 067° × 0,40 NM  =   741 m
+Segmento 1:  Proa 040° × 3,70 NM  =  6.852 m
+Segmento 2:  Proa 067° × 0,86 NM  =  1.593 m
+Segmento 3:  Proa 105° × 0,86 NM  =  1.593 m
+Segmento 4:  Proa 131° × 1,45 NM  =  2.685 m
+Segmento 5:  Proa 120° × 1,10 NM  =  2.037 m
+Segmento 6:  Proa 110° × 1,00 NM  =  1.852 m  (até bóias 8CS e 1CS)
+Segmento 7:  Proa 115° × 0,64 NM  =  1.185 m
+Segmento 8:  Proa 100° × 0,45 NM  =    833 m
+Segmento 9:  Proa 067° × 0,40 NM  =    741 m
 
-Desvios finais para terminais:
-  Tanquisado:  Proa 307° × 0,68 NM
-  Termitrena:  Proa 053° × 0,86 NM
-  Margem de manobra fora do estaleiro: 0,37 NM = 685 m
-  Resguardo Tanquisado — entrada: 0,14 NM = 259 m
-  Resguardo Tanquisado — cais perto da bóia: 0,03 NM = 56 m
+Desvios finais: o Terminal Tanquisado fica a Proa 307° × 0,68 NM do ponto de
+inflexão final. O Terminal Termitrena fica a Proa 053° × 0,86 NM. A margem de
+manobra fora do estaleiro é de 0,37 NM (685 metros). O resguardo na entrada do
+Tanquisado é de 0,14 NM (259 metros) e junto ao cais próximo à bóia é de
+0,03 NM (56 metros).
 
 ================================================================================
 PROAS E DISTÂNCIAS — CANAL SUL / TERMITRENA ATÉ SAÍDA DA BARRA (SAÍDA)
 ================================================================================
 
-Segmento inicial (do terminal):
-  Tanquisado: Proa 127° × 0,68 NM ou
-  Termitrena: Proa 233° × 0,86 NM
+Segmento inicial (do terminal): a partir do Tanquisado, Proa 127° × 0,68 NM;
+a partir do Termitrena, Proa 233° × 0,86 NM.
 
-Segmento 1:  Proa 247° × 0,40 NM  =   741 m
-Segmento 2:  Proa 280° × 0,45 NM  =   833 m
-Segmento 3:  Proa 295° × 0,64 NM  = 1.185 m
-Segmento 4:  Proa 290° × 1,00 NM  = 1.852 m  (até bóias 8CS e 1CS)
-Segmento 5:  Proa 300° × 1,10 NM  = 2.037 m
-Segmento 6:  Proa 311° × 1,45 NM  = 2.685 m
-Segmento 7:  Proa 285° × 0,86 NM  = 1.593 m
-Segmento 8:  Proa 247° × 0,86 NM  = 1.593 m
-Segmento 9:  Proa 220° × 3,70 NM  = 6.852 m
+Segmento 1:  Proa 247° × 0,40 NM  =    741 m
+Segmento 2:  Proa 280° × 0,45 NM  =    833 m
+Segmento 3:  Proa 295° × 0,64 NM  =  1.185 m
+Segmento 4:  Proa 290° × 1,00 NM  =  1.852 m  (até bóias 8CS e 1CS)
+Segmento 5:  Proa 300° × 1,10 NM  =  2.037 m
+Segmento 6:  Proa 311° × 1,45 NM  =  2.685 m
+Segmento 7:  Proa 285° × 0,86 NM  =  1.593 m
+Segmento 8:  Proa 247° × 0,86 NM  =  1.593 m
+Segmento 9:  Proa 220° × 3,70 NM  =  6.852 m
 
 ================================================================================
 PROA E DISTÂNCIA — BARRA AO OUTÃO (ENTRADA PRINCIPAL)
 ================================================================================
 
-Proa 040° × 3,23 NM = 5.982 m
-(do enfiamento da Barra até ao Outão, comprimento do eixo do canal de entrada)
+Proa 040° × 3,23 NM = 5.982 metros. Esta é a distância ao longo do eixo do
+canal de entrada, desde o enfiamento da Barra até ao Outão.
 
 ================================================================================
 DISTÂNCIAS DE REFERÊNCIA NO CANAL PRINCIPAL
 ================================================================================
 
-Outão → Estação de Pilotos:               2,78 NM
-Outão → Saída da Barra:                   3,00 NM
-Outão → Cais Secil Oeste (proa 024/ret.204): 0,22 NM
-Outão → Cais Secil meio:                  0,28 NM
-Outão → Cais Secil Este (proa 040/ret.220):  0,33 NM
+Outão para a Estação de Pilotos: 2,78 NM.
+Outão para a saída da Barra: 3,00 NM.
+Outão para o Cais SECIL Oeste (proa 024°, retorno 204°): 0,22 NM.
+Outão para o Cais SECIL a meio: 0,28 NM.
+Outão para o Cais SECIL Este (proa 040°, retorno 220°): 0,33 NM.
 
-Pilar 2 → Pilar 4:                        0,91 NM
-Pilar 4 → Bóia 3:                         0,78 NM
-Bóia 3  → Outão:                          1,15 NM
-Outão   → Bóia João Farto:                1,40 NM
-Bóia João Farto → Bóia 5CC (pelo fundeadouro): 1,34 NM
-Bóia João Farto → Bóia 5CC (pelo canal):       1,70 NM
+Pilar 2 para Pilar 4: 0,91 NM.
+Pilar 4 para Bóia 3: 0,78 NM.
+Bóia 3 para Outão: 1,15 NM.
+Outão para Bóia João Farto: 1,40 NM.
+Bóia João Farto para Bóia 5CC pelo fundeadouro: 1,34 NM.
+Bóia João Farto para Bóia 5CC pelo canal: 1,70 NM.
 
-Bóias Barra → Bóia "Nº 1CC":
-  Distância das bóias da Barra até à Bóia nº 1CC: 5,00 NM.
-  Com o limite extra de profundidade pouco antes das bóias nº1 e nº2: 5,14 NM
-  (= 9.519 m).
+Da entrada da Barra (bóias) até à Bóia número 1CC: 5,00 NM.
+Com o limite extra de profundidade pouco antes das bóias número 1 e número 2:
+5,14 NM (equivalente a 9.519 metros).
 
 ================================================================================
 DISTÂNCIAS DA BÓIA JOÃO FARTO ATÉ TERMINAIS (CANAL NORTE)
 ================================================================================
 
-João Farto → Doca Pesca:              1,00 NM — proa 078° / retorno 258°
-João Farto → TMS I (Terminal Multiusos Zona 1):     1,54 NM — proa 106° / retorno 286°
-João Farto → TMS I Cais 8 (extremo):  1,90 NM — proa 152° / retorno 332°
-João Farto → TMS II (Terminal Multiusos Zona 2):    2,00 NM — proa 121° / retorno 301°
-João Farto → Auto Europa:             2,50 NM — proa 121° / retorno 301°
-João Farto → Praias do Sado:          3,15 NM — proa 125° / retorno 305°
-João Farto → SAPEC Sólidos:           3,75 NM — proa 140° / retorno 320°
+João Farto para Doca Pesca: 1,00 NM — proa 078° / retorno 258°.
+João Farto para TMS I (Terminal Multiusos Setúbal Zona 1): 1,54 NM — proa 106° / retorno 286°.
+João Farto para TMS I Cais 8 (extremo): 1,90 NM — proa 152° / retorno 332°.
+João Farto para TMS II (Terminal Multiusos Setúbal Zona 2): 2,00 NM — proa 121° / retorno 301°.
+João Farto para Auto Europa: 2,50 NM — proa 121° / retorno 301°.
+João Farto para Praias do Sado: 3,15 NM — proa 125° / retorno 305°.
+João Farto para SAPEC Sólidos: 3,75 NM — proa 140° / retorno 320°.
 
 AVISO CRÍTICO SOBRE A BÓIA JOÃO FARTO:
-  Nunca passar a Este da Bóia João Farto. A João Farto é uma Bóia Cardeal Oeste,
-  o que significa que o navio deve passar pelo lado oeste (a oeste da bóia). Passar
-  a este equivale a navegar para o lado perigoso da marca.
-  Dar 0,1 NM de resguardo à João Farto para ficar seguro da batimétrica dos 10 m.
+Nunca passar a este da Bóia João Farto. A João Farto é uma Bóia Cardeal Oeste,
+o que significa que o navio deve passar pelo lado oeste — ou seja, a bóia fica
+a estibordo do navio que entra. Passar a leste equivale a navegar para o lado
+perigoso da marca. Dar 0,1 NM de resguardo à João Farto para ficar seguro
+relativamente à batimétrica dos 10 metros.
 
 ================================================================================
 LARGURAS DO CANAL NORTE (ENTRE BÓIAS E MARGENS)
 ================================================================================
 
-João Farto / Albarquel:                0,39 NM
-Bóia 1CC / Doca Pesca:                0,22 NM
-Bóia 3CC (frente à Estação dos Pilotos) / Cais: 0,24 NM
-Bóia 5CC / TMS I:                     0,21 NM
-Bóia 7CC / TMS II:                    0,22 NM
-Bóia 9CC / Auto Europa:               0,19 NM
+João Farto / Albarquel: 0,39 NM.
+Bóia 1CC / Doca Pesca: 0,22 NM.
+Bóia 3CC (frente à Estação dos Pilotos) / Cais: 0,24 NM.
+Bóia 5CC / TMS I: 0,21 NM.
+Bóia 7CC / TMS II: 0,22 NM.
+Bóia 9CC / Auto Europa: 0,19 NM.
 
-Bóia 1CN / Bóia 2CN:                  0,10 NM
-Bóia 3CN / Bóia 4CN:                  0,12 NM
-Bóia 6CN / Bóia 5CN:                  0,10 NM
-Bóia 4CN / Pirites (ou Pirites / Bóia 2CN): 0,20 NM
+Bóia 1CN / Bóia 2CN: 0,10 NM.
+Bóia 3CN / Bóia 4CN: 0,12 NM.
+Bóia 6CN / Bóia 5CN: 0,10 NM.
+Bóia 4CN / Pirites (ou Pirites / Bóia 2CN): 0,20 NM.
 
 RESGUARDO MÁXIMO JUNTO À CIDADE:
-  0,17 NM de resguardo a chegar à cidade (margem norte) até ao cais.
-  O valor máximo a passar perto da cidade é 150 metros.
+O resguardo máximo a manter ao aproximar da cidade (margem norte) é de 0,17 NM.
+O valor máximo de aproximação ao cais é de 150 metros.
 
 ================================================================================
 BACIAS DE MANOBRA
 ================================================================================
 
-Pirites Alentejanas: 0,20 NM de diâmetro útil de manobra.
-SAPEC: 0,20 NM de diâmetro útil de manobra.
+Terminal Pirites Alentejanas (atual Praias do Sado): bacia de manobra com
+diâmetro útil de 0,20 NM.
+Terminal SAPEC: bacia de manobra com diâmetro útil de 0,20 NM.
 
 ================================================================================
 CORRENTES — VALORES POR LOCALIZAÇÃO
 ================================================================================
 
-Bóias nº 1 e nº 2 (entrada da Barra):
-  Enchente: 0,6 nós, direcção ENE.
-  Vazante: 0,6 nós, direcção WSW.
+BÓIAS NÚMERO 1 E NÚMERO 2 (ENTRADA DA BARRA):
+Enchente: 0,6 nós, direção ENE (Este-Nordeste).
+Vazante: 0,6 nós, direção WSW (Oeste-Sudoeste).
 
-Bóia João Farto / Canal Sul:
-  Enchente: 1,6 nós, direcção ESE.
-  Vazante: 1,9 nós, direcção WNW.
-  NOTA: A corrente de vazante é a mais forte e perigosa neste local.
+BÓIA JOÃO FARTO / CANAL SUL:
+Enchente: 1,6 nós, direção ESE (Este-Sudeste).
+Vazante: 1,9 nós, direção WNW (Oeste-Noroeste).
+Nota: a corrente de vazante é a mais forte e perigosa neste local.
 
-Canal Norte perto do Fundeadouro Norte:
-  Enchente: 1,3 nós, direcção E.
-  Vazante: 1,3 nós, direcção W.
+CANAL NORTE PERTO DO FUNDEADOURO NORTE:
+Enchente: 1,3 nós, direção E.
+Vazante: 1,3 nós, direção W.
 
-Pirites Alentejanas:
-  Enchente: 0,8 nós, direcção SE.
-  Vazante: 1,3 nós, direcção NNW.
+TERMINAL PIRITES ALENTEJANAS (PRAIAS DO SADO):
+Enchente: 0,8 nós, direção SE.
+Vazante: 1,3 nós, direção NNW (Norte-Noroeste).
 
 COMPORTAMENTO DA CORRENTE NO OUTÃO:
-  No Outão forma-se um remoinho em sentido horário que é perigoso. A corrente de
-  enchente no Outão suga o navio para terra. A corrente de vazante empurra para fora.
-  As marés vivas de vazante são as mais perigosas e as mais fortes neste ponto.
+No Outão forma-se um remoinho em sentido horário que é perigoso. A corrente de
+enchente no Outão suga o navio para terra. A corrente de vazante empurra para
+fora. As marés vivas de vazante são as mais perigosas e as mais fortes neste
+ponto.
 
 CORRENTE EM FUNÇÃO DO TIPO DE CAIS:
-  Cais normal (maré de enchente): empurra o navio para o cais.
-    Se o navio estiver virado para fora do cais (popa ao cais), a popa abre.
-    De vazante: a popa encosta.
-  Cais com pilares por baixo (TMS II e RoRo): maré de enchente empurra para fora;
-    maré de vazante também empurra para fora.
+Em cais normal com maré de enchente, a corrente empurra o navio para o cais.
+Se o navio estiver virado com a popa ao cais, a popa abre em enchente; em
+vazante a popa encosta. Em cais com pilares por baixo, como o TMS II e o RoRo,
+tanto a maré de enchente como a de vazante empurram o navio para fora do cais.
 
 NOTA SOBRE CHUVA FORTE:
-  Com chuva forte, o rio ganha uma densidade diferente e as correntes mudam de
-  sentido/direcção. Podem inclusive ficar com sentidos opostos ao normal.
+Com chuva forte, o rio ganha uma densidade diferente das águas salgadas e as
+correntes podem mudar de sentido e direção, podendo inclusive apresentar sentidos
+opostos ao normal. Esta alteração deve ser considerada em planeamento de manobra
+em condições de chuva intensa e prolongada.
 
 NOTA SOBRE O CANAL SUL:
-  Depois da Bóia 3 do Canal Sul não há tanta corrente lateral.
+Depois da Bóia número 3 do Canal Sul não há tanta corrente lateral.
 
 ================================================================================
 ALTURAS DE MARÉ — REFERÊNCIAS PARA O PORTO DE SETÚBAL
 ================================================================================
 
+As alturas de maré de referência para o Porto de Setúbal são as seguintes:
 Preia-mar máxima absoluta: 3,8 a 4,0 metros.
-MHWS (Preia-Mar Média de Marés Vivas — Mean High Water Springs): 3,3 a 3,5 m.
-MHWN (Preia-Mar Média de Marés Mortas — Mean High Water Neaps): 2,6 a 2,8 m.
-MSL (Nível Médio do Mar — Mean Sea Level): 2,0 a 2,1 m.
-MLWN (Baixa-Mar Média de Marés Mortas — Mean Low Water Neaps): 1,3 a 1,4 m.
-MLWS (Baixa-Mar Média de Marés Vivas — Mean Low Water Springs): 0,6 m.
+MHWS (Preia-Mar Média de Marés Vivas — Mean High Water Springs): 3,3 a 3,5 metros.
+MHWN (Preia-Mar Média de Marés Mortas — Mean High Water Neaps): 2,6 a 2,8 metros.
+MSL (Nível Médio do Mar — Mean Sea Level): 2,0 a 2,1 metros.
+MLWN (Baixa-Mar Média de Marés Mortas — Mean Low Water Neaps): 1,3 a 1,4 metros.
+MLWS (Baixa-Mar Média de Marés Vivas — Mean Low Water Springs): 0,6 metros.
 
-NOTA SOBRE O ESTALEIRO:
-  As alturas de maré no Estaleiro Lisnave / Estaleiros Mitrena têm sempre mais
-  20 centímetros do que em Sesimbra, Outão ou no cais comercial de Setúbal. Esta
-  diferença deve ser considerada ao calcular calados para o estaleiro.
+NOTA SOBRE O ESTALEIRO LISNAVE/MITRENA:
+As alturas de maré no Estaleiro LISNAVE/Mitrena têm sempre mais 20 centímetros
+do que em Sesimbra, Outão ou no cais comercial de Setúbal. Esta diferença de
+20 centímetros deve ser considerada ao calcular os calados para manobras no
+estaleiro, tanto para entradas como para saídas.
 
 ================================================================================
 DECLINAÇÃO MAGNÉTICA — PORTO DE SETÚBAL
 ================================================================================
 
-Fora da Barra:
-  D = 3° 40' W (com variação de 8' E por ano, em 2008) → D = 1° 48' W em 2022.
+Fora da Barra: declinação D = 3° 40' Oeste em 2008, com variação de 8' Este
+por ano, o que resulta numa declinação estimada de D = 1° 48' Oeste em 2022.
 
-Perto do Estaleiro:
-  D = 3° 35' W (com variação de 7' E por ano, em 2008) → D = 1° 57' W em 2022.
+Perto do Estaleiro LISNAVE/Mitrena: declinação D = 3° 35' Oeste em 2008, com
+variação de 7' Este por ano, resultando em D = 1° 57' Oeste em 2022.
+
+Estes valores devem ser atualizados para o ano de operação consultando as tabelas
+de declinação magnética vigentes.
 
 ================================================================================
 BALIZAGEM DO PORTO — SINALIZAÇÕES DE REFERÊNCIA
 ================================================================================
 
 ENFIAMENTO DA BARRA:
-  Farol da Azeda (traseiro):  Iso.Y.6s — 61 m de altura — 22 M de alcance.
-  Doca Pesca (dianteiro):     Iso.Y.6s — 14 m de altura — 22 M de alcance.
+Farol da Azeda (traseiro): Iso.Y.6s — 61 metros de altura — 22 milhas de alcance.
+Doca Pesca (dianteiro): Iso.Y.6s — 14 metros de altura — 22 milhas de alcance.
 
 FARÓIS DA BARRA:
-  Outão:     Oc.R.6s — 34 m — 12 M de alcance.
-  Albarquel: Iso.R.2s — 18 m — 6 M de alcance.
+Outão: Oc.R.6s — 34 metros de altura — 12 milhas de alcance.
+Albarquel: Iso.R.2s — 18 metros de altura — 6 milhas de alcance.
 
 BÓIAS DA BARRA:
-  Bóia nº 1: verde cónica — Fl.G.3s — 5 M.
-  Bóia nº 2 (Pilar 2): pilar vermelho cilíndrico — Fl(2)R.10s — 14 m — 9 M —
-    Racon (B) morse letra B (−···). Este sinal RACON permite identificação radar.
-  Bóia nº 3: verde cónica — Fl(3)G.5s — 4 M.
-  Bóia nº 4 (Pilar 4): pilar vermelho cilíndrico — Fl.R.4s — 14 m — 4 M.
-  Bóia nº 5: pilar verde cónico — Fl.G.4s — 14 m — 4 M (à frente do Outão, a Este).
-  João Farto: bóia cardeal Oeste — Q(9)15s — 3 M.
+Bóia número 1: verde cónica — Fl.G.3s — 5 milhas de alcance.
+Bóia número 2 (Pilar 2): pilar vermelho cilíndrico — Fl(2)R.10s — 14 metros
+de altura — 9 milhas de alcance — Racon (B), sinal morse letra B (–···). Este
+sinal Racon permite identificação por radar, sendo fundamental para localização
+do Pilar 2 em condições de visibilidade reduzida.
+Bóia número 3: verde cónica — Fl(3)G.5s — 4 milhas de alcance.
+Bóia número 4 (Pilar 4): pilar vermelho cilíndrico — Fl.R.4s — 14 metros de altura — 4 milhas de alcance.
+Bóia número 5: pilar verde cónico — Fl.G.4s — 14 metros de altura — 4 milhas
+de alcance. Situa-se à frente do Outão, a este.
+Bóia João Farto: bóia cardeal Oeste — Q(9)15s — 3 milhas de alcance.
 
 FARÓIS DO CANAL NORTE / CIDADE:
-  Moinho (Bela Vista): Iso.G.W.R.2s — 67 m — 4 M de alcance.
-    Sector Vermelho (Iso.R): entre 076° e 078°.
-    Sector Branco (Iso.W): entre 071° e 076°.
-    Sector Verde (Iso.G): entre 068° e 071°.
+Moinho (Bela Vista): Iso.G.W.R.2s — 67 metros de altura — 4 milhas de alcance.
+Setor Vermelho (Iso.R): entre 076° e 078°. Setor Branco (Iso.W): entre 071° e
+076°. Setor Verde (Iso.G): entre 068° e 071°.
 
 ENFIAMENTO SAPEC: rumo 116,5°.
-  Anunciada: Iso.R.4s — 24 m — 15 M (2 M de alcance diurno).
-  Algarve Exportador: Oc.R.4s — 15 m — 15 M (2 M de alcance diurno).
+Luz Anunciada: Iso.R.4s — 24 metros de altura — 15 milhas de alcance (2 milhas
+de alcance diurno).
+Luz Algarve Exportador: Oc.R.4s — 15 metros de altura — 15 milhas de alcance
+(2 milhas de alcance diurno).
 
-REFERÊNCIAS TMS 2 E AUTO EUROPA:
-  Quando se manobra nos terminais TMS 2 e Auto Europa, é muito importante manter
-  o navio a norte do enfiamento SAPEC (rumo 116,5°). É uma boa referência
-  relativamente às bóias verdes.
+Quando se manobra nos terminais TMS 2 e Auto Europa, é muito importante manter
+o navio a norte do enfiamento SAPEC (rumo 116,5°). As bóias verdes constituem
+uma boa referência visual para este posicionamento.
 
 OUTROS FARÓIS:
-  Farol Doca Pesca: amarelo — 6 s.
-  Clube Naval (entrada): 4 s — alcance 3 M.
-  Fontainhas: 6 s — alcance 3 M.
-  Tróia: 6 s — alcance 3 M.
+Farol Doca Pesca: amarelo — período 6 segundos.
+Clube Naval (entrada): período 4 segundos — alcance 3 milhas.
+Fontainhas: período 6 segundos — alcance 3 milhas.
+Tróia: período 6 segundos — alcance 3 milhas.
 
 ================================================================================
 DISTÂNCIAS TOTAIS DE PERCURSO — REFERÊNCIA PARA PLANEAMENTO DE TEMPO
 ================================================================================
 
-Estas distâncias são fundamentais para estimar quanto tempo demora a chegar a
-cada terminal a partir dos pontos de referência principais. A referência de
-partida é o Pilar número 2 da Barra (Bóia nº 2), que representa a entrada do
-porto. As distâncias são totais de percurso pelo canal navegável, não em linha
-recta.
+Estas distâncias são fundamentais para estimar a duração das manobras e o
+planeamento de chegadas e saídas. O ponto de referência de partida é o Pilar
+número 2 da Barra (Bóia número 2), que representa a entrada efetiva do porto.
+Todas as distâncias são medidas ao longo do canal navegável, e não em linha reta.
 
-DA ENTRADA DA BARRA (PILAR Nº 2) ATÉ AOS TERMINAIS — CANAL NORTE:
+DA ENTRADA DA BARRA (PILAR NÚMERO 2) ATÉ AOS FUNDEADOUROS:
 
-  Pilar nº 2 → TMS 2 (Terminal Multiusos Zona 2):
-    6,5 milhas náuticas pelo Canal Norte.
+Pilar número 2 até ao Fundeadouro Norte: 5,0 milhas náuticas. O Fundeadouro
+Norte está situado na margem norte do estuário, na zona de fundeamento militar
+e comercial, e é o fundeadouro mais próximo da entrada para navios em Canal Norte.
 
-  Pilar nº 2 → SAPEC (via canal normal, Canal Norte):
-    8,2 milhas náuticas.
+Pilar número 2 até ao Fundeadouro Sul: 8,0 milhas náuticas. O Fundeadouro Sul
+está situado na margem sul, próximo da Península de Tróia, e inclui o fundeadouro
+de espera com oito posições numeradas (lay-up anchorage) e o fundeadouro de
+quarentena e cargas perigosas. A maior distância ao Fundeadouro Sul reflete o
+percurso pelo Canal Sul até ao centro do estuário, mais distante da entrada.
 
-  Pilar nº 2 → SAPEC (via fundeadouro, passando por fora do canal):
-    7,9 milhas náuticas.
-    Esta rota alternativa pelo exterior do canal é ligeiramente mais curta.
+DOS FUNDEADOUROS ATÉ AO ESTALEIRO LISNAVE/MITRENA:
 
-DA ENTRADA DA BARRA (PILAR Nº 2) ATÉ AOS TERMINAIS — CANAL SUL / ESTALEIRO:
+Fundeadouro Sul até ao Estaleiro LISNAVE/Mitrena: 2,6 milhas náuticas. Esta
+distância reduzida torna o Fundeadouro Sul o ponto de espera preferencial para
+navios que aguardam condições de maré (reponto) para entrar no estaleiro. A
+proximidade ao estaleiro permite partir do fundeadouro e chegar ao cais dentro
+de uma janela de estoa relativamente estreita.
 
-  Pilar nº 2 → LISNAVE (Estaleiros Mitrena, Canal Sul completo):
-    10,5 milhas náuticas pelo percurso normal do Canal Sul.
+Fundeadouro Norte até ao Estaleiro LISNAVE/Mitrena: 7,0 milhas náuticas. A
+distância significativamente maior do Fundeadouro Norte ao estaleiro exige um
+planeamento mais antecipado da partida, pois o trânsito pode demorar 50 a 70
+minutos a velocidade de canal, o que deve ser considerado ao calcular o instante
+de partida em função do reponto de maré previsto para a entrada no estaleiro.
 
-  Pilar nº 2 → LISNAVE (com "corta-mato" / atalho):
-    10,0 milhas náuticas.
-    O "corta-mato" ou atalho é uma rota que encurta ligeiramente o percurso
-    ao tomar um rumo mais directo numa das secções do Canal Sul, evitando
-    percorrer o trajecto completo de todos os segmentos.
+DA ENTRADA DA BARRA (PILAR NÚMERO 2) ATÉ AOS TERMINAIS — CANAL NORTE:
+
+Pilar número 2 até ao TMS 2 (Terminal Multiusos Setúbal Zona 2): 6,5 milhas
+náuticas pelo Canal Norte.
+
+Pilar número 2 até ao SAPEC (via canal normal, Canal Norte): 8,2 milhas náuticas.
+
+Pilar número 2 até ao SAPEC (via fundeadouro, passando por fora do canal): 7,9
+milhas náuticas. Esta rota alternativa pelo exterior do canal é ligeiramente mais
+curta em cerca de 0,3 milhas.
+
+DA ENTRADA DA BARRA (PILAR NÚMERO 2) ATÉ AOS TERMINAIS — CANAL SUL / ESTALEIRO:
+
+Pilar número 2 até ao Estaleiro LISNAVE/Mitrena (percurso normal do Canal Sul):
+10,5 milhas náuticas.
+
+Pilar número 2 até ao Estaleiro LISNAVE/Mitrena (com atalho — "corta-mato"):
+10,0 milhas náuticas. O atalho é uma rota que encurta ligeiramente o percurso
+ao tomar um rumo mais direto numa das secções do Canal Sul, evitando percorrer
+a totalidade dos segmentos do canal.
 
 DISTÂNCIAS ENTRE TERMINAIS — REFERÊNCIA PARA MUDANÇAS DE CAIS:
 
-  SAPEC → LISNAVE (mudança de cais ou saída seguida de nova entrada):
-    10,5 milhas náuticas.
+SAPEC até ao Estaleiro LISNAVE/Mitrena: 10,5 milhas náuticas.
+TMS 2 / Centro da Cidade até ao Estaleiro LISNAVE/Mitrena: 9,0 milhas náuticas.
 
-  TMS 2 / Centro da Cidade → LISNAVE:
-    9,0 milhas náuticas.
+TABELA RESUMO DE DISTÂNCIAS A PARTIR DO PILAR NÚMERO 2:
 
-UTILIZAÇÃO PRÁTICA DESTAS DISTÂNCIAS:
-  Para estimar o tempo de percurso, divide-se a distância pela velocidade média
-  no canal. A velocidade típica de trânsito no porto varia entre 6 e 10 nós
-  consoante o trecho e o tipo de navio.
+Pilar 2 → Fundeadouro Norte:    5,0 NM
+Pilar 2 → Fundeadouro Sul:      8,0 NM
+Pilar 2 → TMS 2:                6,5 NM
+Pilar 2 → SAPEC (canal):        8,2 NM
+Pilar 2 → SAPEC (fundeadouro):  7,9 NM
+Pilar 2 → LISNAVE (normal):    10,5 NM
+Pilar 2 → LISNAVE (atalho):    10,0 NM
+Fundeadouro Sul → LISNAVE:      2,6 NM
+Fundeadouro Norte → LISNAVE:    7,0 NM
+SAPEC → LISNAVE:               10,5 NM
+TMS 2 → LISNAVE:                9,0 NM
 
-  Exemplos orientativos a 8 nós de velocidade média:
-    Pilar nº 2 → TMS 2 (6,5 NM): aproximadamente 49 minutos.
-    Pilar nº 2 → SAPEC (8,2 NM): aproximadamente 62 minutos.
-    Pilar nº 2 → LISNAVE (10,5 NM): aproximadamente 79 minutos.
-    TMS 2 → LISNAVE (9,0 NM): aproximadamente 68 minutos.
+ESTIMATIVAS DE TEMPO DE PERCURSO A 8 NÓS DE VELOCIDADE MÉDIA:
 
-  Estes tempos são estimativas — o tempo real depende de condições de maré,
-  tráfego no canal, rebocadores a estabelecer, e restrições de velocidade
-  em determinados troços.
+A velocidade típica de trânsito no porto varia entre 6 e 10 nós consoante o
+trecho e o tipo de navio. Os exemplos seguintes utilizam uma velocidade média
+de 8 nós como referência de planeamento.
+
+Pilar número 2 até ao Fundeadouro Norte (5,0 NM): aproximadamente 38 minutos.
+Pilar número 2 até ao Fundeadouro Sul (8,0 NM): aproximadamente 60 minutos.
+Pilar número 2 até ao TMS 2 (6,5 NM): aproximadamente 49 minutos.
+Pilar número 2 até ao SAPEC (8,2 NM): aproximadamente 62 minutos.
+Pilar número 2 até ao LISNAVE (10,5 NM): aproximadamente 79 minutos.
+TMS 2 até ao LISNAVE (9,0 NM): aproximadamente 68 minutos.
+Fundeadouro Sul até ao LISNAVE (2,6 NM): aproximadamente 20 minutos.
+Fundeadouro Norte até ao LISNAVE (7,0 NM): aproximadamente 53 minutos.
+
+Estes tempos são estimativas de planeamento. O tempo real depende de condições
+de maré, tráfego no canal, operações de reboque a estabelecer, e restrições de
+velocidade em determinados troços.
 
 ================================================================================
 ABORDAGEM ESPECÍFICA A TERMINAIS — DICAS OPERACIONAIS
 ================================================================================
 
 CANAL DA SAPEC:
-  Entrar no Canal da SAPEC à velocidade de 5 nós.
-  Os rebocadores para SAPEC/Pirites Alentejanas estabelecem perto da Doca de
-  Comércio (fim da cidade para montante) com bom tempo.
+Entrar no Canal da SAPEC à velocidade de 5 nós. Os rebocadores para SAPEC e
+Pirites Alentejanas estabelecem perto da Doca de Comércio (fim da cidade, para
+montante) com bom tempo.
 
-PIRITES ALENTEJANAS:
-  Calado máximo: 7,5 metros mais o valor da maré.
-  Bacia de manobra: 0,20 NM.
-  Aproximação: 3,5 nós, perpendicular ao cais. Atenção à bóia antes de guinar.
-  Com vento de Norte: a lancha leva os dois espringues ou então um curto à popa.
-  Raramente se atraca por estibordo (SB), só se o navio tiver hélice de passo esquerdo.
-  Não há muito efeito de corrente — zona abrigada.
+PIRITES ALENTEJANAS (TERMINAL PRAIAS DO SADO):
+Calado máximo: 7,5 metros mais o valor da altura de maré no momento. Bacia de
+manobra: 0,20 NM. Aproximação: 3,5 nós, perpendicular ao cais; atenção à bóia
+antes de guinar. Com vento de Norte: a lancha de amarração leva os dois
+espringues, ou então um curto à popa. Raramente se atraca por estibordo, só se
+o navio tiver hélice de passo esquerdo. Não há muito efeito de corrente nesta
+zona — é uma área abrigada.
 
 EUROMINAS / TERMITRENA:
-  Rumo de aproximação ao cais: 090°.
-  Ter ferros prontos a largar antes de entrar.
-  Percurso: seguir a Bóia João Farto, depois entrar no canal sul aproado à bóia
-  vermelha nº 2. Guinar para o canal com os barracões Alstom à vista.
-  Guinar para o estaleiro ou Eurominas com o cais da NATO ao través.
-  A "Caldeira" é uma abertura ou baía em Tróia antes do estaleiro e da NATO.
+Rumo de aproximação ao cais: 090°. Ter ferros prontos a largar antes de entrar.
+Percurso de acesso: seguir até à Bóia João Farto, depois entrar no Canal Sul
+aproado à bóia vermelha número 2. Guinar para o canal com os barracões ALSTOM
+à vista. Guinar para o estaleiro ou Eurominas com o cais da NATO ao través. A
+"Caldeira" é uma abertura ou baía na Península de Tróia antes do estaleiro e
+da NATO, que serve como referência visual.
 
 CAIS DA NATO:
-  Convém atracar por bombordo (BB) com navio de hélice de passo direito.
-  Ligar reboques proa e popa depois de guinar na NATO e antes de entrar no canal
-  para a Eurominas/Termitrena.
+Convém atracar por bombordo com navio de hélice de passo direito. Ligar os
+cabos de reboque à proa e à popa depois de guinar na NATO e antes de entrar
+no canal para a Eurominas/Termitrena.
 
-APROXIMAÇÃO GERAL AO ESTALEIRO (TERMITRENA/EUROMINAS):
-  A 0,8 NM: parar a máquina para reduzir abaixo de 6 nós. Avisar VHF se o leme
-  não manobrar.
-  A sul do estaleiro: leme todo a estibordo (hard to port — atenção: "hard to port"
-  é vir à esquerda; confirmar convenção de ordens de leme com o Comandante),
-  máquina parada. O navio vai ter movimento e isso ajuda na aproximação.
-  Mandar espringues e cabos por lanchinha, um de cada vez, para ajudar a encostar.
-  Atenção: todos os porões devem ficar dentro do comprimento do cais para que os
-  estivadores possam trabalhar.
-  Em regra, só se vem ao cais com pelo menos 2 metros de altura de água para
-  passar cabos com calma.
-  Calado máximo para o estaleiro interno (entrada na eclusa): 5,5 metros.
+APROXIMAÇÃO GERAL AO ESTALEIRO LISNAVE/MITRENA (TERMITRENA/EUROMINAS):
+A 0,8 NM do cais, parar a máquina para reduzir a velocidade para abaixo de
+6 nós. Avisar por VHF caso o leme não manobre. A sul do estaleiro, meter leme
+todo a estibordo com máquina parada — o navio conserva movimento e isso ajuda
+na aproximação. Mandar espringues e cabos por lancha, um de cada vez, para
+ajudar a encostar. Todos os porões do navio devem ficar dentro do comprimento
+do cais para que os estivadores possam trabalhar. Em regra, só se vem ao cais
+com pelo menos 2 metros de altura de água para passar cabos com segurança e
+calma. O calado máximo para o estaleiro interno (entrada na eclusa): 5,5 metros.
 
-ALAGENS (ESTALEIRO):
-  Alagens são cabos de aço com pontas de cabo maleável que movimentam os navios
-  dentro da eclusa/estaleiro. As pontas de cabo maleável existem para que os cabos
-  não fiquem quebradiços pela variação de tensões.
+ALAGENS (ESTALEIRO LISNAVE/MITRENA):
+Alagens são cabos de aço com pontas de cabo maleável que movimentam os navios
+dentro da eclusa e do estaleiro. As pontas de cabo maleável existem para que
+os cabos de aço não fiquem quebradiços pela variação cíclica de tensões.
 
 FUNDEADOURO NORTE:
-  Ao fundear no Fundeadouro Norte, dar resguardo de 0,2 NM e evitar fundear na
-  zona mais funda, para segurança dos navios de grande calado que possam entrar.
+Ao fundear no Fundeadouro Norte, dar resguardo de 0,2 NM e evitar fundear na
+zona mais funda, reservando essa área de maior profundidade para navios de
+grande calado que possam necessitar de entrar ou sair.
 
 ================================================================================
 REBOCADORES — DICAS OPERACIONAIS
 ================================================================================
 
-Velocidade máxima para estabelecer cabo de rebocador: 8 nós (posição popa).
-  Rebocadores convencionais só travam eficazmente a 3 nós.
-  Rebocadores com azipodes (ex: "Lisboa", "Danado", "Cabo da Roca") conseguem
-  travar o navio até 6 nós.
+A velocidade máxima para estabelecer cabo de rebocador é de 8 nós, em posição
+de popa. Rebocadores convencionais só travam eficazmente a 3 nós. Rebocadores
+com sistemas azipode (por exemplo os rebocadores "Lisboa", "Danado" e "Cabo da
+Roca") conseguem travar o navio até 6 nós.
 
-Rebocador "Lisboa": não vai para a proa com 6 nós pois fica desgovernado. É mais
-  eficaz à popa, tem azipodes e força. Rebocador tractor com 2× shuttles azipodes.
+O rebocador "Lisboa" não opera eficazmente à proa a 6 nós, pois fica
+desgovernado. É mais eficaz à popa, tendo azipodes e força significativa.
+É um rebocador tractor com dois propulsores tipo azipode.
 
-Com muitos rebocadores: fazer esquema do navio com nomes dos rebocadores e mestres.
-  Ser educado e, se tiver dúvidas, falar com os mestres — por vezes têm melhor
-  visibilidade sobre obstáculos.
+Com múltiplos rebocadores em operação simultânea, é recomendado fazer um
+esquema do navio com os nomes dos rebocadores e dos respetivos mestres. Ser
+educado no rádio e, em caso de dúvida, falar com os mestres — por vezes têm
+melhor visibilidade sobre obstáculos ou condições não visíveis da ponte.
 
 ================================================================================
 COMUNICAÇÃO E PROTOCOLO A BORDO
 ================================================================================
 
-Canais VHF:
-  Canal 12 → Canal 10 (combinar com amarradores e rebocadores, dar ordens simples
-  e claras).
+CANAIS VHF:
+Canal 12 para comunicações gerais; Canal 10 para combinar com amarradores e
+rebocadores, dar ordens simples e claras.
 
-Informação a transmitir ao Comandante na chegada à ponte:
-  Vento (força e direcção).
-  Maré (estado e altura).
-  Corrente (intensidade e direcção na zona de manobra).
-  Visibilidade.
-  Cais e cabeços disponíveis.
-  Tráfego no porto.
-  Meios de propulsão do navio (confirmar bow thruster, stern thruster, máquina).
-  Acordar plano de manobra com o Comandante.
-  Ter ferros prontos (especialmente ao lume de água — o ferro do bordo oposto
-  ao cais de atracação no caso de falhar o bow thruster).
-  Combinar canal com amarradores e rebocadores.
-  Arranjos de amarração (primeiras e últimas linhas).
+INFORMAÇÃO A TRANSMITIR AO COMANDANTE NA CHEGADA À PONTE:
+Vento (força e direção). Maré (estado e altura). Corrente (intensidade e direção
+na zona de manobra). Visibilidade. Disponibilidade de cais e cabeços. Tráfego
+no porto. Meios de propulsão do navio — confirmar bow thruster (hélice de proa),
+stern thruster (hélice de popa), e máquina. Acordar o plano de manobra com o
+Comandante. Ter ferros prontos (especialmente ao lume de água — o ferro do bordo
+oposto ao cais de atracação, no caso de falhar o bow thruster). Combinar canais
+VHF com amarradores e rebocadores. Definir arranjos de amarração (primeiras e
+últimas linhas).
 
-Postura a bordo:
-  Falar com o Comandante olhos nos olhos, apertar a mão e cumprimentar o pessoal
-  da ponte. Falar alto e claro, incluindo ao rádio. Língua aproxima as pessoas —
-  tentar comunicar na língua do Comandante quando possível.
-  Em qualquer momento o Comandante pode discordar e intervir — o Piloto está a
-  trabalhar em colaboração, não a comandar exclusivamente.
-  Não falar só com o timoneiro — as ordens devem ser ouvidas e compreendidas pela
-  ponte toda.
-  Consultar IMO SMCP (Standard Marine Communication Phrases) para comunicações
-  padronizadas.
+POSTURA A BORDO:
+Falar com o Comandante olhos nos olhos, apertar a mão e cumprimentar o pessoal
+da ponte. Falar alto e claro, incluindo ao rádio. A língua aproxima as pessoas
+— tentar comunicar na língua do Comandante quando possível. Em qualquer momento
+o Comandante pode discordar e intervir — o Piloto está a trabalhar em
+colaboração, não a comandar exclusivamente. Não falar só com o timoneiro — as
+ordens devem ser ouvidas e compreendidas por toda a ponte. Consultar o IMO SMCP
+(Standard Marine Communication Phrases — Frases de Comunicação Marítima
+Padronizadas da Organização Marítima Internacional) para comunicações
+padronizadas.
 
-Antecedência mínima para serviços:
-  Embarques para saída do cais: podem ser marcados com 1 hora de antecedência.
-  Chegada à barra: marcados com 2 horas de antecedência.
+ANTECEDÊNCIA MÍNIMA PARA MARCAÇÃO DE SERVIÇOS:
+Embarques para saída do cais: podem ser marcados com 1 hora de antecedência.
+Chegada à barra: devem ser marcados com 2 horas de antecedência.
 
 ================================================================================
 DICAS GERAIS DE MANOBRA
 ================================================================================
 
 Manobra com navios de grande calado ou carregados: usar mais máquina (e bow
-  thruster) e mais leme. Estes navios tendem a parar muito rapidamente e levam
-  tempo a ganhar movimento. Se não tiverem leme funcional, usar rebocador.
+thruster) e mais leme. Estes navios tendem a parar muito rapidamente e levam
+tempo a ganhar movimento. Se não tiverem leme funcional, usar rebocador.
 
-Preferência por popa ao cais: se possível, manobrar com a popa pelo cais —
-  é mais seguro.
+Preferência por popa ao cais: se possível, manobrar com a popa pelo cais — é
+mais seguro e permite melhor controlo da posição lateral do navio.
 
-Velocidade no porto: não há limite de velocidade definido no Porto de Setúbal.
-
-Navios reactivos: navios que aumentam velocidade rapidamente também param
-  rapidamente. Ter isso em consideração ao embarcar — são mais reactivos.
+Navios reativos: navios que aumentam velocidade rapidamente também param
+rapidamente. Ter isso em consideração ao embarcar — são mais reativos às ordens
+de máquina.
 
 Tendência do navio em conservar o rumo: quando um navio segue com um determinado
-  rumo, tende a mantê-lo mesmo que se guine, rode ou abata. O corte feito pelo
-  seu movimento na água vai condicioná-lo a seguir o rumo anterior. Prever este
-  efeito ao planear mudanças de rumo em canal.
+rumo, tende a mantê-lo mesmo após guinadas. O corte feito pelo seu movimento na
+água vai condicioná-lo a conservar o rumo anterior. Prever este efeito ao planear
+mudanças de rumo em canal estreito.
 
-Margem de segurança nas manobras: fazer manobras com mais margem, evitar
-  proximidade excessiva a bóias ou tráfego sempre que possível.
+Margem de segurança nas manobras: fazer manobras com mais margem do necessário,
+evitar proximidade excessiva a bóias ou a tráfego cruzado sempre que possível.
 
-A bordo: confirmar erros de GPS, gyro, radar, ECDIS e verificações visuais.
-  Ter a certeza que as ordens dadas são cumpridas, incluindo ordens de leme.
+Verificação de instrumentos: confirmar erros de GPS, gyrocompasso, radar, ECDIS
+e efetuar verificações visuais cruzadas. Ter a certeza que as ordens dadas são
+cumpridas, incluindo as ordens de leme — confirmar execução.
 
-Marcos visuais de referência úteis:
-  "Pintelheira ao través, Castelo de São Filipe pelos capelinhos" — referência
-  visual clássica para posicionamento no Canal Norte.
+MARCOS VISUAIS DE REFERÊNCIA ÚTEIS:
+"Pintelheira ao través, Castelo de São Filipe pelos capelinhos" — referência
+visual clássica para posicionamento no Canal Norte.
+Para os terminais TMS 2 e Auto Europa: manter o navio a norte do enfiamento
+SAPEC (116,5°), usando as bóias verdes como referência de posicionamento lateral.
 
-Referência para posicionamento nos terminais TMS 2 e Auto Europa:
-  Manter o navio a norte do enfiamento SAPEC (116,5°) usando as bóias verdes
-  como referência.
+================================================================================
+SECÇÃO DE PERGUNTAS E RESPOSTAS — RECUPERAÇÃO SEMÂNTICA
+================================================================================
+
+Pergunta: Qual a distância do Pilar 2 ao Fundeadouro Norte?
+Resposta: 5,0 milhas náuticas. A este ritmo de 8 nós, o percurso demora
+aproximadamente 38 minutos.
+
+Pergunta: Qual a distância do Pilar 2 ao Fundeadouro Sul?
+Resposta: 8,0 milhas náuticas, pelo Canal Sul. A este ritmo de 8 nós, o percurso
+demora aproximadamente 60 minutos.
+
+Pergunta: Qual a distância do Fundeadouro Sul ao estaleiro LISNAVE?
+Resposta: 2,6 milhas náuticas. Esta proximidade torna o Fundeadouro Sul o ponto
+de espera preferencial para navios com manobras dependentes do reponto de maré
+no estaleiro, pois permite partir e chegar ao cais dentro de uma janela de estoa
+relativamente estreita (cerca de 20 minutos a 8 nós).
+
+Pergunta: Qual a distância do Fundeadouro Norte ao estaleiro LISNAVE?
+Resposta: 7,0 milhas náuticas — uma distância significativamente maior que a do
+Fundeadouro Sul. O trânsito a 8 nós demora aproximadamente 53 minutos, o que
+exige partir do Fundeadouro Norte com maior antecedência em relação ao reponto.
+
+Pergunta: Qual o resguardo a manter dos Pilares 2 e 4?
+Resposta: Mínimo de 0,2 milhas náuticas (370 metros). O "número mágico" de 0,2 NM
+aplica-se igualmente às bóias da Barra, ao Canal Norte (resguardo de terra) e
+ao Canal Sul (resguardo da costa).
+
+Pergunta: O que é a Bóia João Farto e como se deve passar junto a ela?
+Resposta: É uma bóia cardeal Oeste, identificada pela marcação Q(9)15s. Deve
+passar-se pelo seu lado oeste (a bóia fica a estibordo do navio que entra).
+Passar a leste é navegar para o lado perigoso. O resguardo recomendado é de
+0,1 NM para ficar seguro da batimétrica dos 10 metros.
+
+Pergunta: Qual é a corrente de vazante junto à Bóia João Farto?
+Resposta: 1,9 nós em direção WNW. É a corrente mais forte e perigosa neste local,
+superior à corrente de enchente (1,6 nós em direção ESE).
+
+Pergunta: Qual a diferença de altura de maré entre o estaleiro e o cais comercial?
+Resposta: O Estaleiro LISNAVE/Mitrena tem sempre mais 20 centímetros de altura
+de maré do que em Sesimbra, Outão ou no cais comercial de Setúbal. Esta diferença
+deve ser incorporada no cálculo de calados para manobras no estaleiro.
+
+Pergunta: Qual a velocidade máxima a que se pode estabelecer um cabo de rebocador?
+Resposta: 8 nós (posição de popa). Os rebocadores convencionais só travam
+eficazmente a 3 nós. Os rebocadores com azipodes (como o "Lisboa", "Danado" e
+"Cabo da Roca") conseguem travar até 6 nós.
+
+Pergunta: Qual a distância do Pilar 2 ao LISNAVE pelo percurso normal?
+Resposta: 10,5 milhas náuticas pelo Canal Sul. Com o atalho (corta-mato), são
+10,0 milhas náuticas. A 8 nós o percurso normal demora aproximadamente 79 minutos.
+
+Pergunta: Qual o canal VHF para combinar com rebocadores e amarradores?
+Resposta: Canal 10.
+
+Pergunta: Qual a largura do corredor dragado na Barra?
+Resposta: Menos de 200 metros, com 12 metros de profundidade. É um canal estreito
+que exige atenção permanente ao alinhamento de enfiamento.
 
 ================================================================================
 FIM DAS NOTAS OPERACIONAIS DE PILOTAGEM — PORTO DE SETÚBAL
