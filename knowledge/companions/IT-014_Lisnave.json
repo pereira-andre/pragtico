@@ -21,6 +21,18 @@
   ],
   "faq": [
     {
+      "question": "Qual é o comprimento máximo que um navio pode manobrar durante a noite na LISNAVE?",
+      "answer": "280 metros. Na LISNAVE, navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite. Acima de 280 metros, as manobras ficam limitadas ao período diurno.",
+      "keywords": [
+        "comprimento máximo",
+        "loa máxima",
+        "noite",
+        "lisnave",
+        "manobrar",
+        "280 metros"
+      ]
+    },
+    {
       "question": "Por que razão todas as manobras no LISNAVE se fazem nos repontos",
       "answer": "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré. Com corrente ativa, esta atua lateralmente sobre o navio, tornando a manobra incontrolável. Só no reponto, com corrente nula, é possível manobrar com segurança.",
       "keywords": [

@@ -56,3 +56,16 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIn("LOA igual ou superior a 225 metros", answer)
         self.assertIn("0,7 milhas", answer)
+
+    def test_it014_companion_answers_generic_lisnave_night_length_question(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
+            companion,
+        )
+
+        self.assertIn("280 metros", answer)
+        self.assertIn("período diurno", answer)
+        self.assertNotIn("Não.", answer[:6])

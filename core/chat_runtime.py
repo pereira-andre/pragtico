@@ -183,6 +183,32 @@ def _build_review_correction_answer(review_match: dict) -> dict:
     }
 
 
+def _review_correction_targets_document(
+    review_match: dict | None,
+    targeted_document_context: dict | None,
+    global_companion_match: dict | None = None,
+) -> bool:
+    if not review_match:
+        return False
+
+    correction_document = str(review_match.get("feedback_correction_document") or "").strip()
+    cited_documents = {
+        str((citation or {}).get("document") or "").strip()
+        for citation in (review_match.get("citations") or [])
+        if str((citation or {}).get("document") or "").strip()
+    }
+    target_document = str(((targeted_document_context or {}).get("record") or {}).get("name") or "").strip()
+    global_document = str((((global_companion_match or {}).get("companion") or {}).get("document") or "")).strip()
+
+    if not correction_document and not cited_documents:
+        return True
+    if target_document and (correction_document == target_document or target_document in cited_documents):
+        return True
+    if global_document and (correction_document == global_document or global_document in cited_documents):
+        return True
+    return not target_document and not global_document
+
+
 def _build_review_guard_answer(review_match: dict) -> dict:
     """Build a deterministic answer when a near-identical question is still under review."""
     feedback_note = (review_match.get("feedback_note") or "").strip()
@@ -842,22 +868,40 @@ def handle_chat_turn(
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
             if targeted_document_context["companion_answer"]:
-                answer = {
-                    "answer": targeted_document_context["companion_answer"],
-                    "sources": supplemental_sources,
-                    "answer_origin": "document_companion",
-                }
+                if _review_correction_targets_document(
+                    review_correction_match,
+                    targeted_document_context,
+                    None,
+                ):
+                    answer = _build_review_correction_answer(review_correction_match)
+                    if supplemental_sources:
+                        answer["sources"] = supplemental_sources
+                else:
+                    answer = {
+                        "answer": targeted_document_context["companion_answer"],
+                        "sources": supplemental_sources,
+                        "answer_origin": "document_companion",
+                    }
             else:
                 global_companion_match = find_best_global_companion_match(
                     clean_question,
                     _active_knowledge_dir(),
                 )
                 if global_companion_match:
-                    answer = {
-                        "answer": global_companion_match["answer"],
-                        "sources": global_companion_match["sources"],
-                        "answer_origin": "document_companion_global",
-                    }
+                    if _review_correction_targets_document(
+                        review_correction_match,
+                        targeted_document_context,
+                        global_companion_match,
+                    ):
+                        answer = _build_review_correction_answer(review_correction_match)
+                        if global_companion_match.get("sources"):
+                            answer["sources"] = global_companion_match["sources"]
+                    else:
+                        answer = {
+                            "answer": global_companion_match["answer"],
+                            "sources": global_companion_match["sources"],
+                            "answer_origin": "document_companion_global",
+                        }
                 elif review_correction_match:
                     answer = _build_review_correction_answer(review_correction_match)
                 else:
