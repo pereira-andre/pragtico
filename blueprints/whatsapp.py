@@ -30,6 +30,10 @@ def _welcome_sent_key(from_number: str) -> str:
     return f"whatsapp:welcome:{from_number}"
 
 
+def _pending_feedback_correction_key(from_number: str) -> str:
+    return f"whatsapp:feedback-correction:{from_number}"
+
+
 def _reaction_feedback_status(emoji: str | None) -> str:
     if (emoji or "").strip() == "👍":
         return "approved"
@@ -92,6 +96,18 @@ def _mark_welcome_sent(
             "sent_at": datetime.now(timezone.utc).isoformat(),
         },
     )
+
+
+def _feedback_correction_skip_requested(text: str) -> bool:
+    clean = (text or "").strip().lower()
+    return clean in {
+        "ignorar",
+        "cancelar",
+        "saltar",
+        "sem correcao",
+        "sem correção",
+        "sem resposta",
+    }
 
 
 def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str) -> dict:
@@ -267,8 +283,55 @@ def whatsapp_webhook_receive():
                         target_message["id"],
                         feedback_status,
                         f"Feedback via reação WhatsApp: {event.get('emoji', '')}",
+                        feedback_updated_by=profile["username"],
                     )
                     feedback_applied += 1
+                    if feedback_status == "review":
+                        services.store.set_runtime_state(
+                            _pending_feedback_correction_key(from_number),
+                            {
+                                "username": target_message["username"],
+                                "conversation_id": target_message["conversation_id"],
+                                "message_id": target_message["id"],
+                                "target_external_message_id": event.get("target_message_id", ""),
+                                "feedback_note": f"Feedback via reação WhatsApp: {event.get('emoji', '')}",
+                                "requested_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                        )
+                        correction_prompt = (
+                            "Registei esta resposta para revisão. "
+                            "Qual seria a resposta correta? "
+                            "Se não quiseres guardar correção, responde `ignorar`."
+                        )
+                        prompt_message = services.store.append_chat_message(
+                            username=profile["username"],
+                            conversation_id=target_message["conversation_id"],
+                            role="assistant",
+                            content=correction_prompt,
+                            channel="whatsapp",
+                            channel_user_id=from_number,
+                            external_reply_to_id=event.get("target_message_id", ""),
+                            channel_metadata={"message_kind": "feedback_correction_prompt"},
+                        )
+                        try:
+                            _send_and_record_outbound_message(
+                                service,
+                                username=profile["username"],
+                                conversation_id=target_message["conversation_id"],
+                                local_message_id=prompt_message["id"],
+                                content=correction_prompt,
+                                to_number=from_number,
+                                reply_to_message_id=event.get("target_message_id", ""),
+                                event_type="outgoing_feedback_correction_prompt",
+                            )
+                            delivered += 1
+                        except Exception:
+                            current_app.logger.exception(
+                                "Falha ao enviar prompt de correção WhatsApp para %s.",
+                                from_number,
+                            )
+                    else:
+                        services.store.delete_runtime_state(_pending_feedback_correction_key(from_number))
                 _mark_inbound_processed(
                     message_id,
                     from_number=from_number,
@@ -281,6 +344,101 @@ def whatsapp_webhook_receive():
             if not text:
                 ignored += 1
                 continue
+
+            pending_feedback_correction = services.store.get_runtime_state(
+                _pending_feedback_correction_key(from_number)
+            ) or {}
+            if pending_feedback_correction:
+                correction_conversation_id = str(
+                    pending_feedback_correction.get("conversation_id") or ""
+                ).strip()
+                correction_username = str(
+                    pending_feedback_correction.get("username") or profile["username"] or ""
+                ).strip()
+                correction_message_id = str(
+                    pending_feedback_correction.get("message_id") or ""
+                ).strip()
+                user_correction_message = services.store.append_chat_message(
+                    username=correction_username,
+                    conversation_id=correction_conversation_id,
+                    role="user",
+                    content=text,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "feedback_correction",
+                        "feedback_target_message_id": correction_message_id,
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_feedback_correction",
+                    payload=event.get("raw") or {},
+                    username=correction_username,
+                    conversation_id=correction_conversation_id,
+                    local_message_id=user_correction_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+
+                if _feedback_correction_skip_requested(text):
+                    correction_reply = (
+                        "Mantive a resposta em revisão sem correção adicional."
+                    )
+                else:
+                    services.store.update_message_feedback(
+                        correction_username,
+                        correction_conversation_id,
+                        correction_message_id,
+                        "review",
+                        str(pending_feedback_correction.get("feedback_note") or "").strip(),
+                        feedback_correction=text,
+                        feedback_updated_by=profile["username"],
+                    )
+                    correction_reply = (
+                        "Correção guardada. Vou usá-la como referência forte em perguntas semelhantes, "
+                        "conciliando-a com os documentos disponíveis."
+                    )
+
+                services.store.delete_runtime_state(_pending_feedback_correction_key(from_number))
+                reply_message = services.store.append_chat_message(
+                    username=correction_username,
+                    conversation_id=correction_conversation_id,
+                    role="assistant",
+                    content=correction_reply,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_reply_to_id=message_id,
+                    channel_metadata={"message_kind": "feedback_correction_ack"},
+                )
+                try:
+                    _send_and_record_outbound_message(
+                        service,
+                        username=correction_username,
+                        conversation_id=correction_conversation_id,
+                        local_message_id=reply_message["id"],
+                        content=correction_reply,
+                        to_number=from_number,
+                        reply_to_message_id=message_id,
+                        event_type="outgoing_feedback_correction_ack",
+                    )
+                    _mark_inbound_processed(
+                        message_id,
+                        from_number=from_number,
+                        conversation_id=correction_conversation_id,
+                        answer=correction_reply,
+                    )
+                    delivered += 1
+                    continue
+                except Exception:
+                    current_app.logger.exception(
+                        "Falha ao responder ao fluxo de correção WhatsApp (from=%s, msg=%s).",
+                        from_number,
+                        message_id,
+                    )
+                    continue
 
             pre_response_messages = []
             if getattr(service, "welcome_enabled", False) and not _welcome_already_sent(from_number):

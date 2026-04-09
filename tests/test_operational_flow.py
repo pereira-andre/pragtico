@@ -943,6 +943,39 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(payload["feedback_updated_at"])
         self.assertTrue(payload["feedback_updated_at_label"])
 
+    def test_chat_message_feedback_review_accepts_corrected_answer(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta operacional.",
+                citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+            )
+            response = client.post(
+                f"/api/messages/{message['id']}/feedback",
+                json={
+                    "conversation_id": conversation["id"],
+                    "feedback_status": "review",
+                    "feedback_note": "",
+                    "feedback_correction": "A resposta correta deve mencionar o limite de 225 m.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["feedback_status"], "review")
+        self.assertEqual(
+            payload["feedback_correction"],
+            "A resposta correta deve mencionar o limite de 225 m.",
+        )
+        self.assertEqual(payload["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
+
     def test_chat_message_feedback_review_requires_note(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:
@@ -967,7 +1000,51 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         payload = response.get_json()
-        self.assertIn("indica a correção", payload["error"].lower())
+        self.assertIn("resposta corrigida", payload["error"].lower())
+
+    def test_repeat_question_uses_reviewed_correction_when_available(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="qual é a distancia da barra ao outão?",
+            )
+            reviewed_message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="A distância da saída da Barra até ao Outão é de 3,00 milhas náuticas.",
+            )
+            self.store.update_message_feedback(
+                "admin",
+                conversation["id"],
+                reviewed_message["id"],
+                "review",
+                "Valor anterior incorreto.",
+                feedback_correction="A distância da saída da Barra até ao Outão é de 3,23 milhas náuticas.",
+                feedback_updated_by="admin",
+            )
+
+            with patch.object(services.rag, "answer") as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "qual é a distancia da barra ao outão?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "review_correction_memory")
+        self.assertIn("3,23 milhas náuticas", payload["answer"])
+        answer_mock.assert_not_called()
 
     def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
         with app.app.test_client() as client:
@@ -2469,6 +2546,98 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("WhatsApp", updated["feedback_note"])
         channel_events = self.store._read_channel_events()
         self.assertEqual(channel_events[0]["event_type"], "incoming_reaction")
+
+    def test_whatsapp_review_reaction_collects_followup_correction(self) -> None:
+        username = "whatsapp-351962063664@pragtico.local"
+        self.store.create_user(
+            username=username,
+            password="secret",
+            role="piloto",
+            full_name="Andre",
+            organization="WhatsApp",
+            email=username,
+            phone="+351962063664",
+        )
+        conversation = self.store.create_conversation(username)
+        message = self.store.append_chat_message(
+            username,
+            conversation["id"],
+            "assistant",
+            "Resposta do bot",
+            channel="whatsapp",
+            channel_user_id="351962063664",
+            external_message_id="wamid.REPLY123",
+            citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        reaction_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.REACT124",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165401",
+                                        "type": "reaction",
+                                        "reaction": {
+                                            "message_id": "wamid.REPLY123",
+                                            "emoji": "👎",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        correction_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.TEXT125",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165410",
+                                        "type": "text",
+                                        "text": {
+                                            "body": "À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros."
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with app.app.test_client() as client:
+                reaction_response = client.post("/webhooks/whatsapp", json=reaction_payload)
+                correction_response = client.post("/webhooks/whatsapp", json=correction_payload)
+
+        self.assertEqual(reaction_response.status_code, 200)
+        self.assertEqual(correction_response.status_code, 200)
+        updated_messages = self.store.list_messages(username, conversation["id"])
+        updated = next(item for item in updated_messages if item["id"] == message["id"])
+        self.assertEqual(updated["feedback_status"], "review")
+        self.assertIn("225 metros", updated["feedback_correction"])
+        self.assertEqual(updated["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
+        self.assertIsNone(
+            self.store.get_runtime_state("whatsapp:feedback-correction:351962063664")
+        )
+        self.assertEqual(len(whatsapp_service.sent_messages), 2)
+        self.assertIn("Qual seria a resposta correta", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("Correção guardada", whatsapp_service.sent_messages[1]["text"])
 
 
 class AdminDocumentPolicyTests(unittest.TestCase):

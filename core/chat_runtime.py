@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
+REVIEW_CORRECTION_SIMILARITY = 0.94
 TRUSTED_DOCUMENT_HINT_SIMILARITY = 0.82
 TRUSTED_DOCUMENT_HINT_GAP = 0.08
 DOCUMENT_FOLLOW_UP_RE = re.compile(
@@ -114,7 +115,15 @@ def _feedback_timestamp(value: dict | None) -> str:
 
 def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
     """Return the reviewed match that should suppress blind reuse, if any."""
-    best_review = reviewed_answers[0] if reviewed_answers else None
+    best_review = next(
+        (
+            item
+            for item in reviewed_answers
+            if item.get("similarity", 0) >= REVIEW_GUARD_SIMILARITY
+            and not (item.get("feedback_correction") or "").strip()
+        ),
+        None,
+    )
     if not best_review or best_review.get("similarity", 0) < REVIEW_GUARD_SIMILARITY:
         return None
 
@@ -128,6 +137,50 @@ def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: li
     ):
         return None
     return best_review
+
+
+def _select_review_correction_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
+    best_review = next(
+        (
+            item
+            for item in reviewed_answers
+            if item.get("similarity", 0) >= REVIEW_CORRECTION_SIMILARITY
+            and (item.get("feedback_correction") or "").strip()
+        ),
+        None,
+    )
+    if not best_review or best_review.get("similarity", 0) < REVIEW_CORRECTION_SIMILARITY:
+        return None
+
+    best_trusted = trusted_answers[0] if trusted_answers else None
+    if not best_trusted:
+        return best_review
+
+    if (
+        best_trusted.get("similarity", 0) >= best_review.get("similarity", 0)
+        and _feedback_timestamp(best_trusted) >= _feedback_timestamp(best_review)
+    ):
+        return None
+    return best_review
+
+
+def _build_review_correction_answer(review_match: dict) -> dict:
+    correction = (review_match.get("feedback_correction") or "").strip()
+    if not correction:
+        raise ValueError("Correção vazia.")
+    return {
+        "answer": correction,
+        "sources": review_match.get("citations") or [],
+        "answer_origin": "review_correction_memory",
+        "review_match": {
+            "similarity": review_match.get("similarity", 0),
+            "message_id": review_match.get("message_id", ""),
+            "question": review_match.get("question", ""),
+            "feedback_note": (review_match.get("feedback_note") or "").strip(),
+            "feedback_correction": correction,
+            "feedback_correction_document": (review_match.get("feedback_correction_document") or "").strip(),
+        },
+    }
 
 
 def _build_review_guard_answer(review_match: dict) -> dict:
@@ -284,17 +337,20 @@ def _looks_like_document_follow_up(question: str) -> bool:
     return bool(DOCUMENT_FOLLOW_UP_RE.search(str(question or "")))
 
 
-def _resolve_feedback_target_document(trusted_answers: list[dict], documents: list[dict]) -> dict | None:
-    if not trusted_answers or not documents:
+def _resolve_feedback_target_document(feedback_matches: list[dict], documents: list[dict]) -> dict | None:
+    if not feedback_matches or not documents:
         return None
 
     documents_by_name = {str(item.get("name") or ""): item for item in documents}
     candidates: list[dict] = []
-    for match in trusted_answers:
+    for match in feedback_matches:
         similarity = float(match.get("similarity") or 0.0)
         if similarity < TRUSTED_DOCUMENT_HINT_SIMILARITY:
             continue
         cited_documents = []
+        explicit_document = str(match.get("feedback_correction_document") or "").strip()
+        if explicit_document in documents_by_name:
+            cited_documents.append(explicit_document)
         for citation in match.get("citations") or []:
             document_name = str(citation.get("document") or "")
             if document_name in documents_by_name:
@@ -325,7 +381,12 @@ def _resolve_feedback_target_document(trusted_answers: list[dict], documents: li
     return best_match["record"]
 
 
-def _resolve_target_knowledge_document(question: str, history: list[dict], trusted_answers: list[dict] | None = None) -> dict | None:
+def _resolve_target_knowledge_document(
+    question: str,
+    history: list[dict],
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
+) -> dict | None:
     try:
         documents = services.store.list_documents()
     except Exception:
@@ -348,7 +409,13 @@ def _resolve_target_knowledge_document(question: str, history: list[dict], trust
             if history_match:
                 return history_match
 
-    return _resolve_feedback_target_document(trusted_answers or [], documents)
+    feedback_matches = list(trusted_answers or [])
+    feedback_matches.extend(
+        match
+        for match in (reviewed_answers or [])
+        if (match.get("feedback_correction") or "").strip()
+    )
+    return _resolve_feedback_target_document(feedback_matches, documents)
 
 
 def _document_lookup_query(question: str, history: list[dict], record: dict) -> str:
@@ -365,8 +432,13 @@ def _document_lookup_query(question: str, history: list[dict], record: dict) -> 
     return "\n".join(part for part in parts if part)
 
 
-def _build_targeted_document_context(question: str, history: list[dict], trusted_answers: list[dict] | None = None) -> dict:
-    record = _resolve_target_knowledge_document(question, history, trusted_answers)
+def _build_targeted_document_context(
+    question: str,
+    history: list[dict],
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
+) -> dict:
+    record = _resolve_target_knowledge_document(question, history, trusted_answers, reviewed_answers)
     if not record:
         return {
             "record": None,
@@ -494,6 +566,7 @@ def handle_chat_turn(
             limit=3,
             feedback_statuses={"review"},
         )
+        review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
         user_message = services.store.append_chat_message(
             username=username,
@@ -758,7 +831,12 @@ def handle_chat_turn(
                     answer = None
 
         if answer is None:
-            targeted_document_context = _build_targeted_document_context(clean_question, history, trusted_answers)
+            targeted_document_context = _build_targeted_document_context(
+                clean_question,
+                history,
+                trusted_answers,
+                reviewed_answers,
+            )
             supplemental_sources = _build_supplemental_sources(clean_question)
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
@@ -780,6 +858,8 @@ def handle_chat_turn(
                         "sources": global_companion_match["sources"],
                         "answer_origin": "document_companion_global",
                     }
+                elif review_correction_match:
+                    answer = _build_review_correction_answer(review_correction_match)
                 else:
                     if (
                         review_guard_match
@@ -802,6 +882,8 @@ def handle_chat_turn(
                                 "message_id": best_match["message_id"],
                                 "question": best_match["question"],
                                 "feedback_note": best_match.get("feedback_note", ""),
+                                "feedback_correction": best_match.get("feedback_correction", ""),
+                                "feedback_correction_document": best_match.get("feedback_correction_document", ""),
                             },
                         }
                     else:
@@ -823,6 +905,8 @@ def handle_chat_turn(
                                 "message_id": trusted_answers[0]["message_id"],
                                 "question": trusted_answers[0]["question"],
                                 "feedback_note": trusted_answers[0].get("feedback_note", ""),
+                                "feedback_correction": trusted_answers[0].get("feedback_correction", ""),
+                                "feedback_correction_document": trusted_answers[0].get("feedback_correction_document", ""),
                             }
 
         persisted_pre_response_messages: list[dict] = []

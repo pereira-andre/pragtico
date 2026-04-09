@@ -89,7 +89,7 @@
     <div class="chat-page-log" id="chat-page-log">
       {% if messages %}
         {% for msg in messages %}
-          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
+          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-correction="{{ msg.feedback_correction or '' }}" data-feedback-correction-document="{{ msg.feedback_correction_document or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
             <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
             <div class="chatbot-bubble-meta">
               <span>{{ msg.created_at_label }}</span>
@@ -111,16 +111,18 @@
                   </span>
                 </summary>
                 <div class="chatbot-feedback-body">
-                  <textarea class="feedback-note" rows="2" placeholder="Ao pedir revisão, indica a correção ou o motivo..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                  <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                  <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
+                  <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
                   <div class="feedback-actions">
                     <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
                     <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
                   </div>
                   <p class="chatbot-feedback-meta" data-feedback-meta>
                     {% if msg.feedback_status %}
-                      {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}.
+                      {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
                     {% else %}
-                      Podes aprovar a resposta. Ao marcar para revisão, indica a correção ou o motivo.
+                      Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.
                     {% endif %}
                   </p>
                 </div>
@@ -192,8 +194,15 @@
     return "Sem feedback";
   }
 
-  function feedbackMetaLabel(status, updatedAtLabel) {
-    if (!status) return "Podes aprovar a resposta. Ao marcar para revisão, indica a correção ou o motivo.";
+  function feedbackMetaLabel(status, updatedAtLabel, correction) {
+    if (!status) return "Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.";
+    const hasCorrection = String(correction || "").trim().length > 0;
+    if (status === "review" && hasCorrection && updatedAtLabel) {
+      return "Rever em " + updatedAtLabel + ". Correção guardada.";
+    }
+    if (status === "review" && hasCorrection) {
+      return "Rever. Correção guardada.";
+    }
     if (updatedAtLabel) return feedbackStatusLabel(status) + " em " + updatedAtLabel + ".";
     return feedbackStatusLabel(status) + ".";
   }
@@ -202,9 +211,13 @@
     if (!box) return;
     const status = String(state?.status || "").trim().toLowerCase();
     const note = String(state?.note || "");
+    const correction = String(state?.correction || "");
+    const correctionDocument = String(state?.correctionDocument || "");
     const updatedAtLabel = String(state?.updatedAtLabel || "");
     const statusBadge = box.querySelector("[data-feedback-status-label]");
     const noteField = box.querySelector("[data-feedback-note]");
+    const correctionField = box.querySelector("[data-feedback-correction]");
+    const correctionDocumentField = box.querySelector("[data-feedback-correction-document]");
     const meta = box.querySelector("[data-feedback-meta]");
     const article = box.closest("[data-message-id]");
 
@@ -215,13 +228,19 @@
       statusBadge.className = "feedback-status" + (status ? " is-" + status : "");
     }
     if (noteField && noteField.value !== note) noteField.value = note;
-    if (meta) meta.textContent = feedbackMetaLabel(status, updatedAtLabel);
+    if (correctionField && correctionField.value !== correction) correctionField.value = correction;
+    if (correctionDocumentField && correctionDocumentField.value !== correctionDocument) {
+      correctionDocumentField.value = correctionDocument;
+    }
+    if (meta) meta.textContent = feedbackMetaLabel(status, updatedAtLabel, correction);
     box.querySelectorAll("[data-feedback-choice]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.feedbackChoice === status);
     });
     if (article) {
       article.dataset.feedbackStatus = status;
       article.dataset.feedbackNote = note;
+      article.dataset.feedbackCorrection = correction;
+      article.dataset.feedbackCorrectionDocument = correctionDocument;
       article.dataset.feedbackUpdatedAtLabel = updatedAtLabel;
     }
   }
@@ -246,8 +265,20 @@
     const note = document.createElement("textarea");
     note.className = "feedback-note";
     note.rows = 2;
-    note.placeholder = "Ao pedir revisão, indica a correção ou o motivo...";
+    note.placeholder = "Motivo da revisão ou nuance a corrigir...";
     note.dataset.feedbackNote = "1";
+
+    const correction = document.createElement("textarea");
+    correction.className = "feedback-correction";
+    correction.rows = 3;
+    correction.placeholder = "Resposta corrigida que o bot deve usar como referência...";
+    correction.dataset.feedbackCorrection = "1";
+
+    const correctionDocument = document.createElement("input");
+    correctionDocument.className = "feedback-correction-document";
+    correctionDocument.type = "text";
+    correctionDocument.placeholder = "Documento base opcional, ex.: IT-036";
+    correctionDocument.dataset.feedbackCorrectionDocument = "1";
 
     const actions = document.createElement("div");
     actions.className = "feedback-actions";
@@ -267,7 +298,7 @@
     meta.className = "chatbot-feedback-meta";
     meta.dataset.feedbackMeta = "1";
 
-    body.append(note, actions, meta);
+    body.append(note, correction, correctionDocument, actions, meta);
     details.append(summary, body);
     setFeedbackState(details, initialState);
     return details;
@@ -279,6 +310,8 @@
     const state = initialState || {
       status: article.dataset.feedbackStatus || "",
       note: article.dataset.feedbackNote || "",
+      correction: article.dataset.feedbackCorrection || "",
+      correctionDocument: article.dataset.feedbackCorrectionDocument || "",
       updatedAtLabel: article.dataset.feedbackUpdatedAtLabel || "",
     };
     if (existingBox) {
@@ -293,15 +326,17 @@
     const article = box.closest("[data-message-id]");
     const messageId = article?.dataset.messageId || "";
     const noteField = box.querySelector("[data-feedback-note]");
+    const correctionField = box.querySelector("[data-feedback-correction]");
+    const correctionDocumentField = box.querySelector("[data-feedback-correction-document]");
     if (!messageId || !conversationIdField.value || !status) return;
-    if (status === "review" && !(noteField?.value || "").trim()) {
-      chatStatus.textContent = "Ao pedir revisão indica a correção ou o motivo.";
-      noteField?.focus();
+    if (status === "review" && !(noteField?.value || "").trim() && !(correctionField?.value || "").trim()) {
+      chatStatus.textContent = "Ao pedir revisão indica o motivo ou a resposta corrigida.";
+      correctionField?.focus();
       return;
     }
 
     box.dataset.submitting = "1";
-    box.querySelectorAll("button, textarea").forEach((control) => {
+    box.querySelectorAll("button, textarea, input").forEach((control) => {
       control.disabled = true;
     });
     try {
@@ -312,6 +347,8 @@
           conversation_id: conversationIdField.value,
           feedback_status: status,
           feedback_note: noteField?.value || "",
+          feedback_correction: correctionField?.value || "",
+          feedback_correction_document: correctionDocumentField?.value || "",
         }),
       });
       const payload = await response.json();
@@ -319,6 +356,8 @@
       setFeedbackState(box, {
         status: payload.feedback_status || "",
         note: payload.feedback_note || "",
+        correction: payload.feedback_correction || "",
+        correctionDocument: payload.feedback_correction_document || "",
         updatedAtLabel: payload.feedback_updated_at_label || "",
       });
       chatStatus.textContent = "Feedback guardado.";
@@ -326,7 +365,7 @@
       chatStatus.textContent = "Erro ao guardar feedback: " + error.message;
     } finally {
       delete box.dataset.submitting;
-      box.querySelectorAll("button, textarea").forEach((control) => {
+      box.querySelectorAll("button, textarea, input").forEach((control) => {
         control.disabled = false;
       });
     }

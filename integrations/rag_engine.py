@@ -1184,6 +1184,8 @@ class SimpleRAGEngine:
                 f"Pergunta em revisão: {item['question']}\n"
                 f"Resposta anterior a não repetir: {item['answer']}\n"
                 f"Nota do operador: {item.get('feedback_note') or 'Sem nota.'}\n"
+                f"Resposta corrigida sugerida: {item.get('feedback_correction') or 'Sem resposta corrigida.'}\n"
+                f"Documento base sugerido: {item.get('feedback_correction_document') or 'Sem documento indicado.'}\n"
                 f"Semelhança: {item.get('similarity', 0)}"
             )
             for item in reviewed_answers[:3]
@@ -1208,6 +1210,7 @@ Regras:
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte e preserva a formulação quando fizer sentido.
 - Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
 - Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
+- Se existir uma resposta corrigida sugerida pelo operador para uma pergunta muito semelhante, usa-a como referência forte e reconcilia-a com os documentos disponíveis.
 - Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
 - Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
 - Se existirem excertos de um documento-alvo, nunca digas que o documento não está disponível ou que não tens acesso a ele.

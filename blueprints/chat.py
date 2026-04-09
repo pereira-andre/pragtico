@@ -94,7 +94,13 @@ def _conversation_export_text(conversation: dict, messages: list[dict]) -> str:
         if feedback_status:
             feedback_label = "Aprovada" if feedback_status == "approved" else "Rever"
             feedback_note = (message.get("feedback_note") or "").strip()
-            suffix = f" | Nota: {feedback_note}" if feedback_note else ""
+            feedback_correction = (message.get("feedback_correction") or "").strip()
+            parts = []
+            if feedback_note:
+                parts.append(f"Nota: {feedback_note}")
+            if feedback_correction:
+                parts.append(f"Correção: {feedback_correction}")
+            suffix = f" | {' | '.join(parts)}" if parts else ""
             lines.append(f"Feedback: {feedback_label}{suffix}")
         lines.append("")
     return "\n".join(lines).strip() + "\n"
@@ -423,16 +429,23 @@ def api_message_feedback(message_id: str):
     conversation_id = (payload.get("conversation_id") or "").strip()
     feedback_status = (payload.get("feedback_status") or "").strip().lower()
     feedback_note = (payload.get("feedback_note") or "").strip()
+    feedback_correction = (payload.get("feedback_correction") or "").strip()
+    feedback_correction_document = (payload.get("feedback_correction_document") or "").strip()
     if not conversation_id:
         return jsonify({"error": "conversation_id em falta."}), 400
     if feedback_status not in {"approved", "review"}:
         return jsonify({"error": "Estado de feedback inválido."}), 400
-    if feedback_status == "review" and not feedback_note:
-        return jsonify({"error": "Ao pedir revisão indica a correção ou o motivo."}), 400
+    if feedback_status == "review" and not feedback_note and not feedback_correction:
+        return jsonify({"error": "Ao pedir revisão indica o motivo ou a resposta corrigida."}), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,
-            message_id=message_id, feedback_status=feedback_status, feedback_note=feedback_note,
+            message_id=message_id,
+            feedback_status=feedback_status,
+            feedback_note=feedback_note,
+            feedback_correction=feedback_correction,
+            feedback_correction_document=feedback_correction_document,
+            feedback_updated_by=session["username"],
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400

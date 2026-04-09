@@ -81,6 +81,25 @@ from .utils import (
 from core.validators import validate_operational_feedback_status
 
 
+def _unique_citation_documents(message: Dict) -> list[str]:
+    documents: list[str] = []
+    for citation in message.get("citations") or []:
+        document_name = _clean_text((citation or {}).get("document"))
+        if document_name and document_name not in documents:
+            documents.append(document_name)
+    return documents
+
+
+def _infer_feedback_correction_document(message: Dict, explicit_document: str = "") -> str:
+    clean_document = _clean_text(explicit_document)
+    if clean_document:
+        return clean_document
+    cited_documents = _unique_citation_documents(message)
+    if len(cited_documents) == 1:
+        return cited_documents[0]
+    return ""
+
+
 class LocalStore(BaseStore):
     backend_name = "local"
 
@@ -268,6 +287,9 @@ class LocalStore(BaseStore):
         channel_metadata: Optional[Dict] = None,
         feedback_status: Optional[str] = None,
         feedback_note: str = "",
+        feedback_correction: str = "",
+        feedback_correction_document: str = "",
+        feedback_updated_by: str = "",
         feedback_updated_at: Optional[str] = None,
     ) -> Dict:
         return {
@@ -284,6 +306,9 @@ class LocalStore(BaseStore):
             "channel_metadata": dict(channel_metadata or {}),
             "feedback_status": feedback_status,
             "feedback_note": feedback_note,
+            "feedback_correction": feedback_correction,
+            "feedback_correction_document": feedback_correction_document,
+            "feedback_updated_by": feedback_updated_by,
             "feedback_updated_at": feedback_updated_at,
         }
 
@@ -975,6 +1000,9 @@ class LocalStore(BaseStore):
         for message in messages:
             message.setdefault("feedback_status", None)
             message.setdefault("feedback_note", "")
+            message.setdefault("feedback_correction", "")
+            message.setdefault("feedback_correction_document", "")
+            message.setdefault("feedback_updated_by", "")
             message.setdefault("feedback_updated_at", None)
             message.setdefault("channel", "web")
             message.setdefault("channel_user_id", "")
@@ -1068,6 +1096,9 @@ class LocalStore(BaseStore):
         self._touch_conversation(conversation_id)
         updated.setdefault("feedback_status", None)
         updated.setdefault("feedback_note", "")
+        updated.setdefault("feedback_correction", "")
+        updated.setdefault("feedback_correction_document", "")
+        updated.setdefault("feedback_updated_by", "")
         updated.setdefault("feedback_updated_at", None)
         updated["created_at_label"] = _utc_iso_to_label(updated["created_at"])
         updated["feedback_updated_at_label"] = (
@@ -1093,6 +1124,9 @@ class LocalStore(BaseStore):
                     **message,
                     "username": conversation.get("username", ""),
                     "created_at_label": _utc_iso_to_label(message.get("created_at", "")),
+                    "feedback_correction": message.get("feedback_correction", ""),
+                    "feedback_correction_document": message.get("feedback_correction_document", ""),
+                    "feedback_updated_by": message.get("feedback_updated_by", ""),
                     "feedback_updated_at_label": (
                         _utc_iso_to_label(message["feedback_updated_at"])
                         if message.get("feedback_updated_at")
@@ -1196,8 +1230,11 @@ class LocalStore(BaseStore):
         message_id: str,
         feedback_status: str,
         feedback_note: str = "",
+        feedback_correction: str = "",
+        feedback_correction_document: str = "",
+        feedback_updated_by: str = "",
     ) -> Dict:
-        """Update feedback status and note for a chat message and return the updated record."""
+        """Update feedback metadata for a chat message and return the updated record."""
         if feedback_status not in ALLOWED_FEEDBACK_STATUSES:
             raise ValueError("Estado de feedback inválido.")
         if not self._message_owned_by_user(username, conversation_id, message_id):
@@ -1210,8 +1247,16 @@ class LocalStore(BaseStore):
                 continue
             if message["role"] != "assistant":
                 raise ValueError("Só podes classificar respostas do assistente.")
+            correction_text = feedback_correction.strip() if feedback_status == "review" else ""
             message["feedback_status"] = feedback_status
             message["feedback_note"] = feedback_note.strip()
+            message["feedback_correction"] = correction_text
+            message["feedback_correction_document"] = (
+                _infer_feedback_correction_document(message, feedback_correction_document)
+                if correction_text
+                else ""
+            )
+            message["feedback_updated_by"] = feedback_updated_by.strip()
             message["feedback_updated_at"] = iso_now()
             updated = message
             break
@@ -1279,6 +1324,9 @@ class LocalStore(BaseStore):
                         "citations": message.get("citations", []),
                         "feedback_status": message.get("feedback_status", ""),
                         "feedback_note": message.get("feedback_note", ""),
+                        "feedback_correction": message.get("feedback_correction", ""),
+                        "feedback_correction_document": message.get("feedback_correction_document", ""),
+                        "feedback_updated_by": message.get("feedback_updated_by", ""),
                         "feedback_updated_at": message.get("feedback_updated_at"),
                         "similarity": round(score, 3),
                     }

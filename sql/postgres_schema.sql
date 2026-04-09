@@ -305,6 +305,17 @@ CREATE TABLE IF NOT EXISTS messages (
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
     citations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    feedback_status TEXT,
+    feedback_note TEXT NOT NULL DEFAULT '',
+    feedback_correction TEXT NOT NULL DEFAULT '',
+    feedback_correction_document TEXT NOT NULL DEFAULT '',
+    feedback_updated_by TEXT NOT NULL DEFAULT '',
+    feedback_updated_at TIMESTAMPTZ,
+    channel TEXT NOT NULL DEFAULT 'web',
+    channel_user_id TEXT NOT NULL DEFAULT '',
+    external_message_id TEXT NOT NULL DEFAULT '',
+    external_reply_to_id TEXT NOT NULL DEFAULT '',
+    channel_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -313,6 +324,15 @@ ALTER TABLE messages
 
 ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS feedback_note TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_correction TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_correction_document TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_updated_by TEXT NOT NULL DEFAULT '';
 
 ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS feedback_updated_at TIMESTAMPTZ;

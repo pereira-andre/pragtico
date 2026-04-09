@@ -81,6 +81,25 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
+def _unique_citation_documents(message: Dict) -> list[str]:
+    documents: list[str] = []
+    for citation in message.get("citations") or []:
+        document_name = _clean_text((citation or {}).get("document"))
+        if document_name and document_name not in documents:
+            documents.append(document_name)
+    return documents
+
+
+def _infer_feedback_correction_document(message: Dict, explicit_document: str = "") -> str:
+    clean_document = _clean_text(explicit_document)
+    if clean_document:
+        return clean_document
+    cited_documents = _unique_citation_documents(message)
+    if len(cited_documents) == 1:
+        return cited_documents[0]
+    return ""
+
+
 class PostgresStore(BaseStore):
     backend_name = "postgres"
 
@@ -215,6 +234,9 @@ class PostgresStore(BaseStore):
             "external_message_id": row.get("external_message_id") or "",
             "external_reply_to_id": row.get("external_reply_to_id") or "",
             "channel_metadata": row.get("channel_metadata") or {},
+            "feedback_correction": row.get("feedback_correction") or "",
+            "feedback_correction_document": row.get("feedback_correction_document") or "",
+            "feedback_updated_by": row.get("feedback_updated_by") or "",
             "created_at": row["created_at"].isoformat(),
             "created_at_label": _utc_iso_to_label(row["created_at"].isoformat()),
             "feedback_updated_at": (
@@ -1525,6 +1547,9 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
+                        feedback_correction,
+                        feedback_correction_document,
+                        feedback_updated_by,
                         feedback_updated_at,
                         channel,
                         channel_user_id,
@@ -1584,6 +1609,9 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
+                        feedback_correction,
+                        feedback_correction_document,
+                        feedback_updated_by,
                         feedback_updated_at,
                         channel,
                         channel_user_id,
@@ -1680,6 +1708,9 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
+                        feedback_correction,
+                        feedback_correction_document,
+                        feedback_updated_by,
                         feedback_updated_at,
                         channel,
                         channel_user_id,
@@ -1727,6 +1758,9 @@ class PostgresStore(BaseStore):
                         m.created_at,
                         m.feedback_status,
                         m.feedback_note,
+                        m.feedback_correction,
+                        m.feedback_correction_document,
+                        m.feedback_updated_by,
                         m.feedback_updated_at,
                         m.channel,
                         m.channel_user_id,
@@ -1907,6 +1941,9 @@ class PostgresStore(BaseStore):
         message_id: str,
         feedback_status: str,
         feedback_note: str = "",
+        feedback_correction: str = "",
+        feedback_correction_document: str = "",
+        feedback_updated_by: str = "",
     ) -> Dict:
         if feedback_status not in ALLOWED_FEEDBACK_STATUSES:
             raise ValueError("Estado de feedback inválido.")
@@ -1914,14 +1951,39 @@ class PostgresStore(BaseStore):
         if conversation["id"] != conversation_id:
             raise ValueError("Conversa inválida para este utilizador.")
 
+        correction_text = feedback_correction.strip() if feedback_status == "review" else ""
+        updated_by = feedback_updated_by.strip()
+
         with self._connect() as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT citations
+                    FROM messages
+                    WHERE id = %s AND conversation_id = %s AND role = 'assistant'
+                    """,
+                    (message_id, conversation_id),
+                )
+                message_row = cur.fetchone()
+                if not message_row:
+                    raise ValueError("Mensagem não encontrada.")
+                correction_document = (
+                    _infer_feedback_correction_document(
+                        {"citations": message_row.get("citations") or []},
+                        feedback_correction_document,
+                    )
+                    if correction_text
+                    else ""
+                )
                 cur.execute(
                     """
                     UPDATE messages
                     SET
                         feedback_status = %s,
                         feedback_note = %s,
+                        feedback_correction = %s,
+                        feedback_correction_document = %s,
+                        feedback_updated_by = %s,
                         feedback_updated_at = NOW()
                     WHERE id = %s AND conversation_id = %s AND role = 'assistant'
                     RETURNING
@@ -1933,6 +1995,9 @@ class PostgresStore(BaseStore):
                         created_at,
                         feedback_status,
                         feedback_note,
+                        feedback_correction,
+                        feedback_correction_document,
+                        feedback_updated_by,
                         feedback_updated_at,
                         channel,
                         channel_user_id,
@@ -1940,7 +2005,15 @@ class PostgresStore(BaseStore):
                         external_reply_to_id,
                         channel_metadata
                     """,
-                    (feedback_status, feedback_note.strip(), message_id, conversation_id),
+                    (
+                        feedback_status,
+                        feedback_note.strip(),
+                        correction_text,
+                        correction_document,
+                        updated_by,
+                        message_id,
+                        conversation_id,
+                    ),
                 )
                 row = cur.fetchone()
                 cur.execute(
@@ -1980,6 +2053,9 @@ class PostgresStore(BaseStore):
                         assistant.citations,
                         assistant.feedback_status,
                         assistant.feedback_note,
+                        assistant.feedback_correction,
+                        assistant.feedback_correction_document,
+                        assistant.feedback_updated_by,
                         assistant.feedback_updated_at,
                         user_msg.content AS question
                     FROM messages assistant

@@ -1132,9 +1132,36 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.store.append_chat_message("admin", conv["id"], "user", "Pergunta")
         msg = self.store.append_chat_message("admin", conv["id"], "assistant", "Resposta")
         updated = self.store.update_message_feedback(
-            "admin", conv["id"], msg["id"], "approved", "Boa resposta",
+            "admin", conv["id"], msg["id"], "approved", "Boa resposta", feedback_updated_by="admin",
         )
         self.assertEqual(updated["feedback_status"], "approved")
+        self.assertEqual(updated["feedback_updated_by"], "admin")
+
+    def test_message_feedback_review_can_store_corrected_answer(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message("admin", conv["id"], "user", "Qual é a distância?")
+        msg = self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "assistant",
+            "A distância é 3,00 milhas náuticas.",
+            citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+        )
+
+        updated = self.store.update_message_feedback(
+            "admin",
+            conv["id"],
+            msg["id"],
+            "review",
+            "Valor anterior incorreto.",
+            feedback_correction="A distância correta é 3,23 milhas náuticas.",
+            feedback_updated_by="admin",
+        )
+
+        self.assertEqual(updated["feedback_status"], "review")
+        self.assertEqual(updated["feedback_correction"], "A distância correta é 3,23 milhas náuticas.")
+        self.assertEqual(updated["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
+        self.assertEqual(updated["feedback_updated_by"], "admin")
 
     def test_message_feedback_invalid_status_raises(self) -> None:
         conv = self.store.create_conversation("admin")
@@ -1154,6 +1181,7 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(approved, [])
         self.assertEqual(len(reviewed), 1)
         self.assertEqual(reviewed[0]["feedback_status"], "review")
+        self.assertIn("feedback_correction", reviewed[0])
 
     def test_channel_metadata_and_events_are_persisted(self) -> None:
         conv = self.store.create_conversation("admin")

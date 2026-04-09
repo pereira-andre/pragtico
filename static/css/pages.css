@@ -3017,10 +3017,21 @@ button:hover {
   color: #9f371f;
 }
 
-.feedback-note {
+.feedback-note,
+.feedback-correction {
   min-height: 64px;
   resize: vertical;
   background: rgba(255, 255, 255, 0.05);
+}
+
+.feedback-correction-document {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
 }
 
 .user-row {

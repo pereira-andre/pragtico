@@ -245,8 +245,11 @@ class BaseStore(ABC):
         message_id: str,
         feedback_status: str,
         feedback_note: str = "",
+        feedback_correction: str = "",
+        feedback_correction_document: str = "",
+        feedback_updated_by: str = "",
     ) -> Dict:
-        """Update feedback status and note for a chat message and return the updated record."""
+        """Update feedback metadata for a chat message and return the updated record."""
         raise NotImplementedError
 
     @abstractmethod
