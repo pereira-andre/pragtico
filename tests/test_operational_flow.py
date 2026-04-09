@@ -1414,6 +1414,28 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
         answer_mock.assert_not_called()
 
+    def test_chat_weather_timeline_without_current_marker_uses_forecast_horizon(self) -> None:
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "Como vai estar a meteorologia no porto até às 00:00 dia 10 abril?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Evolução prevista até 10/04/2026 00:00", payload["answer"])
+        self.assertNotIn("Condições meteorológicas atuais", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_weather_current_with_horizon_returns_timeline_not_only_snapshot(self) -> None:
         with patch.object(services, "weather_service", _StubWeatherService()):
             with patch.object(services.rag, "answer") as answer_mock:
@@ -1979,6 +2001,63 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Segundo o IT-036 Regulação de Agulhas", payload["answer"])
         self.assertIn("Pontos principais", payload["answer"])
         answer_mock.assert_not_called()
+
+    def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
+        document_name = "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\nDe noite, a RA não se efetua com LOA igual ou superior a 225 metros.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-036 Regulação de Agulhas",
+                "aliases": ["IT-036", "IT-36", "regulação de agulhas"],
+                "summary": "define os limites de LOA, maré e espaço livre para a regulação de agulhas.",
+                "key_points": [
+                    "De noite a RA não se efetua com LOA igual ou superior a 225 metros."
+                ],
+                "faq": [
+                    {
+                        "question": "O que diz o IT-036 sobre regulação de agulhas à noite?",
+                        "answer": "De noite, a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                        "keywords": ["IT-036", "agulhas", "noite"],
+                    }
+                ],
+            },
+        )
+        self.store.list_documents()
+
+        with patch.object(services, "tide_service", _StubTideService()):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                conversation = self.store.ensure_conversation(username="admin")
+                with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                    services.rag,
+                    "answer",
+                    return_value={"answer": "Resposta combinada.", "sources": []},
+                ) as answer_mock:
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "conversation_id": conversation["id"],
+                            "question": "Quais são as marés para hoje e o que diz o IT-036 sobre regulação de agulhas à noite?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        answer_mock.assert_called_once()
+        supplemental_sources = answer_mock.call_args.kwargs["supplemental_sources"]
+        documents = {str(item.get("document") or "") for item in supplemental_sources}
+        retrieval_modes = {str(item.get("retrieval_mode") or "") for item in supplemental_sources}
+        self.assertIn("Marés live", documents)
+        self.assertIn(document_name, documents)
+        self.assertIn("live_planner", retrieval_modes)
+        self.assertIn("document_companion", retrieval_modes)
 
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:

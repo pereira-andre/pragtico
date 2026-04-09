@@ -12,10 +12,12 @@ from typing import Iterator
 from flask import session
 
 from core import services
+from core.chat_planner import ChatExecutionPlan, build_chat_execution_plan
 from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
     answer_slash_validation,
+    build_live_operational_sources,
     build_operational_chat_sources,
     clear_pending_chat_action,
     current_resolvable_port_calls,
@@ -240,42 +242,12 @@ def _build_review_guard_answer(review_match: dict) -> dict:
     }
 
 
-def _build_supplemental_sources(question: str) -> list[dict]:
+def _build_supplemental_sources(
+    question: str,
+    plan: ChatExecutionPlan | None = None,
+) -> list[dict]:
     supplemental_sources = build_operational_chat_sources(question)
-    supplemental_sources.append(services.tide_service.context_for_question(question))
-    if services.weather_service.enabled:
-        try:
-            weather_context = services.weather_service.context_for_question(question)
-            if weather_context:
-                supplemental_sources.append(weather_context)
-        except Exception:
-            pass
-    if re.search(r"\b(aviso|avisos|anav|capitania)\b", question, flags=re.IGNORECASE):
-        try:
-            warnings_context = (
-                services.local_warning_service.context_source()
-                if getattr(services, "local_warning_service", None)
-                else None
-            )
-            if warnings_context:
-                supplemental_sources.append(warnings_context)
-        except Exception:
-            pass
-    if re.search(
-        r"\b(ondulacao|ondulação|leitura costeira|altura significativa|periodo medio|período médio|temp\.? agua|temperatura da agua|temperatura da água)\b",
-        question,
-        flags=re.IGNORECASE,
-    ):
-        try:
-            wave_context = (
-                services.wave_service.context_source()
-                if getattr(services, "wave_service", None)
-                else None
-            )
-            if wave_context:
-                supplemental_sources.append(wave_context)
-        except Exception:
-            pass
+    supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
     return supplemental_sources
 
 
@@ -579,6 +551,7 @@ def handle_chat_turn(
         refresh_knowledge_state(force_reindex=False)
         conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
         history = services.store.list_messages(username, conversation["id"])
+        execution_plan = build_chat_execution_plan(clean_question)
         existing_pending = load_pending_chat_action(username, conversation["id"])
         if existing_pending and not allow_mutations:
             clear_pending_chat_action(username, conversation["id"])
@@ -698,7 +671,7 @@ def handle_chat_turn(
                         "answer_origin": "slash_rejected",
                     }
         else:
-            answer = answer_direct_operational_query(clean_question)
+            answer = answer_direct_operational_query(clean_question, plan=execution_plan)
 
         if answer is None:
             if existing_pending:
@@ -867,11 +840,12 @@ def handle_chat_turn(
                 trusted_answers,
                 reviewed_answers,
             )
-            supplemental_sources = _build_supplemental_sources(clean_question)
+            supplemental_sources = _build_supplemental_sources(clean_question, plan=execution_plan)
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
-            if targeted_document_context["companion_answer"]:
+            allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+            if targeted_document_context["companion_answer"] and allow_companion_shortcut:
                 if _review_correction_targets_document(
                     review_correction_match,
                     targeted_document_context,
@@ -891,7 +865,9 @@ def handle_chat_turn(
                     clean_question,
                     _active_knowledge_dir(),
                 )
-                if global_companion_match:
+                if global_companion_match and not allow_companion_shortcut:
+                    supplemental_sources.extend(global_companion_match.get("sources") or [])
+                if global_companion_match and allow_companion_shortcut:
                     if _review_correction_targets_document(
                         review_correction_match,
                         targeted_document_context,
@@ -906,7 +882,7 @@ def handle_chat_turn(
                             "sources": global_companion_match["sources"],
                             "answer_origin": "document_companion_global",
                         }
-                elif review_correction_match:
+                elif review_correction_match and not execution_plan.requires_llm_synthesis:
                     answer = _build_review_correction_answer(review_correction_match)
                 else:
                     if (
