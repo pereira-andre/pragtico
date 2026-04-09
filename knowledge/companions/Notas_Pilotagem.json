@@ -4,13 +4,49 @@
   "aliases": [
     "Notas_Pilotagem.txt",
     "Notas_Pilotagem",
-    "NOTAS OPERACIONAIS DE PILOTAGEM — PORTO DE SETÚBAL"
+    "NOTAS OPERACIONAIS DE PILOTAGEM — PORTO DE SETÚBAL",
+    "distancias operacionais",
+    "distancia barra lisnave",
+    "entrada da barra lisnave",
+    "pilar 2 lisnave"
   ],
   "summary": "real. Complementa as regras formais das IT com distâncias, proas, correntes, marcas e dicas operacionais não documentadas nas instruções de trabalho oficiais. O corredor dragado na Barra tem menos de 200 metros de largura e 12 metros de profundidade. É um canal estreito que exige atenção permanente ao alinhamento.",
   "key_points": [
     "0,2 NM é o resguardo a manter das bóias na Barra.",
     "0,2 NM é o resguardo a manter de terra/cais no Canal Norte.",
-    "0,2 NM é a distância a manter da costa no Canal Sul."
+    "0,2 NM é a distância a manter da costa no Canal Sul.",
+    "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são 10,5 NM pelo Canal Sul completo.",
+    "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são cerca de 10,0 NM pelo atalho/corta-mato."
   ],
-  "faq": []
+  "faq": [
+    {
+      "question": "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
+      "answer": "Tomando como referência operacional o Pilar n.º 2 da Barra (Bóia n.º 2), a distância total até à LISNAVE pelo Canal Sul completo é de 10,5 milhas náuticas. Pelo atalho ou corta-mato, fica em cerca de 10,0 milhas náuticas.",
+      "keywords": [
+        "distancia",
+        "entrada da barra",
+        "barra",
+        "lisnave",
+        "estaleiro",
+        "mitrena",
+        "pilar 2",
+        "boia 2",
+        "milhas nauticas"
+      ]
+    },
+    {
+      "question": "Fora da Barra do porto até ao estaleiro da LISNAVE são quantas milhas náuticas?",
+      "answer": "Usando a referência operacional da entrada da Barra, no Pilar n.º 2 / Bóia n.º 2, até à LISNAVE são cerca de 10,5 milhas náuticas pelo percurso normal do Canal Sul, ou cerca de 10,0 milhas pelo atalho.",
+      "keywords": [
+        "fora da barra",
+        "barra",
+        "porto",
+        "lisnave",
+        "estaleiro",
+        "milhas nauticas",
+        "canal sul",
+        "pilar 2"
+      ]
+    }
+  ]
 }

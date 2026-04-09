@@ -2002,6 +2002,80 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Pontos principais", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_lisnave_distance_question_prefers_operational_notes_companion(self) -> None:
+        lisnave_document = "IT-014_Lisnave.txt"
+        notas_document = "Notas_Pilotagem.txt"
+        (Path(self.store.knowledge_dir) / lisnave_document).write_text(
+            (
+                "DOCUMENTO: IT-014 — ESTALEIRO LISNAVE\n"
+                "Distância do Duque d'Alba da Ponte-Cais I até à boia número 14: 1000 metros.\n"
+            ),
+            encoding="utf-8",
+        )
+        (Path(self.store.knowledge_dir) / notas_document).write_text(
+            (
+                "DISTÂNCIAS TOTAIS DE PERCURSO\n"
+                "Pilar nº 2 → LISNAVE (Estaleiros Mitrena, Canal Sul completo): 10,5 milhas náuticas.\n"
+                "Pilar nº 2 → LISNAVE (com corta-mato / atalho): 10,0 milhas náuticas.\n"
+            ),
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            notas_document,
+            {
+                "document": notas_document,
+                "title": "NOTAS OPERACIONAIS DE PILOTAGEM — PORTO DE SETÚBAL",
+                "aliases": [
+                    "Notas_Pilotagem",
+                    "distancia barra lisnave",
+                    "entrada da barra lisnave",
+                    "pilar 2 lisnave",
+                ],
+                "summary": "distâncias totais de percurso usadas para planeamento de tempo.",
+                "key_points": [
+                    "Da entrada da Barra até à LISNAVE são 10,5 NM pelo Canal Sul completo."
+                ],
+                "faq": [
+                    {
+                        "question": "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
+                        "answer": "Tomando como referência operacional o Pilar n.º 2 da Barra, até à LISNAVE são 10,5 milhas náuticas pelo Canal Sul completo e cerca de 10,0 milhas pelo atalho.",
+                        "keywords": [
+                            "distancia",
+                            "barra",
+                            "lisnave",
+                            "estaleiro",
+                            "pilar 2",
+                            "milhas nauticas",
+                        ],
+                    }
+                ],
+            },
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion_global")
+        self.assertIn("10,5", payload["answer"])
+        self.assertIn("10,0", payload["answer"])
+        self.assertNotIn("1000 metros", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"
         knowledge_path = Path(self.store.knowledge_dir) / document_name

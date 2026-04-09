@@ -69,3 +69,16 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("280 metros", answer)
         self.assertIn("período diurno", answer)
         self.assertNotIn("Não.", answer[:6])
+
+    def test_notas_pilotagem_companion_answers_lisnave_distance_question(self) -> None:
+        companion = load_document_companion("Notas_Pilotagem.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
+            companion,
+        )
+
+        self.assertIn("10,5", answer)
+        self.assertIn("10,0", answer)
+        self.assertNotIn("1000 metros", answer)

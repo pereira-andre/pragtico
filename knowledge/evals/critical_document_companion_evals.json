@@ -25,6 +25,11 @@
     "expected_substrings": ["4 milhas", "Baliza número 2"]
   },
   {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
+    "expected_substrings": ["10,5", "10,0"]
+  },
+  {
     "document": "RG-14_RegulamentoInterno.txt",
     "question": "O Piloto Coordenador pode aceitar uma saída com 30 minutos de antecedência?",
     "expected_substrings": ["menos de 1 hora", "anuência"]
