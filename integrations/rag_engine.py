@@ -40,6 +40,10 @@ def lexical_score(query: str, text: str) -> float:
     return len(overlap) / len(query_tokens)
 
 
+def _normalize_whitespace(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
 class SimpleRAGEngine:
     def __init__(
         self,
@@ -1075,6 +1079,46 @@ class SimpleRAGEngine:
             f"Detalhe técnico: {error_message}"
         )
 
+    def _targeted_document_sources(self, sources: List[Dict]) -> List[Dict]:
+        return [item for item in sources if item.get("retrieval_mode") == "document_target" and item.get("snippet")]
+
+    def _looks_like_document_evasion(self, answer_text: str) -> bool:
+        clean = _normalize_whitespace(answer_text).lower()
+        if not clean:
+            return True
+        patterns = (
+            r"não (?:tenho|tinha) .*acesso",
+            r"não (?:está|esta) disponível no contexto",
+            r"não .*disponível .*consulta direta",
+            r"não consigo .*consultar .*document",
+            r"não posso fornecer .*document",
+            r"recomendo consultar diretamente",
+            r"consulta diretamente o documento",
+        )
+        return any(re.search(pattern, clean) for pattern in patterns)
+
+    def _build_targeted_document_answer(self, question: str, sources: List[Dict]) -> str:
+        targeted_sources = self._targeted_document_sources(sources)
+        if not targeted_sources:
+            return ""
+
+        document_name = str(targeted_sources[0].get("document") or "documento").replace("_", " ")
+        document_name = re.sub(r"\.[a-z0-9]+$", "", document_name, flags=re.IGNORECASE).strip()
+        document_name = re.sub(r"(?<=[a-zà-ÿ])(?=[A-ZÀ-Ý])", " ", document_name)
+        snippets: list[str] = []
+        for item in targeted_sources[:2]:
+            snippet = _normalize_whitespace(item.get("snippet", ""))
+            if snippet and snippet not in snippets:
+                snippets.append(snippet)
+        if not snippets:
+            return ""
+
+        lead = f"Segundo o {document_name},"
+        question_clean = _normalize_whitespace(question).lower()
+        if re.search(r"\b(resume|resumo|o que diz|diz me|qual e|qual é|regra)\b", question_clean):
+            return f"{lead} {' '.join(snippets)}"
+        return " ".join(snippets)
+
     def generate_text(self, prompt: str):
         if not self.can_generate():
             raise RuntimeError(
@@ -1166,6 +1210,7 @@ Regras:
 - Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
 - Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
 - Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
+- Se existirem excertos de um documento-alvo, nunca digas que o documento não está disponível ou que não tens acesso a ele.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
@@ -1199,6 +1244,11 @@ Pergunta:
             answer_text = gen_result.text or "Sem resposta do modelo."
         except Exception as exc:
             answer_text = self._build_fallback_answer(sources, str(exc))
+
+        if self._targeted_document_sources(sources) and self._looks_like_document_evasion(answer_text):
+            extractive_answer = self._build_targeted_document_answer(question, sources)
+            if extractive_answer:
+                answer_text = extractive_answer
 
         return {
             "answer": answer_text,

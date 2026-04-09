@@ -431,6 +431,43 @@ class SimpleRAGEngineTests(unittest.TestCase):
         retrieve_mock.assert_called_once_with("IT-036 Regulação de Agulhas período noturno")
         self.assertEqual(answer["answer"], "Resposta documental.")
 
+    def test_answer_overrides_document_evasion_when_targeted_sources_exist(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+        engine.rebuild_index(force=True)
+        provider = _StubProvider(
+            "gemini",
+            generation_text=(
+                "O documento IT-036 não está disponível no contexto atual. "
+                "Recomendo consultar diretamente esse documento."
+            ),
+        )
+        engine.provider = provider
+        engine.generation_model = "gemini-test"
+        engine._generation_candidates = [(provider, engine.generation_model)]
+
+        answer = engine.answer(
+            question="Diz me o que diz esse documento sff",
+            role="piloto",
+            history=[],
+            supplemental_sources=[
+                {
+                    "source_id": "KD1",
+                    "document": "IT-036_RegulacaoAgulhas.txt",
+                    "chunk_id": 1,
+                    "score": 0.99,
+                    "retrieval_mode": "document_target",
+                    "snippet": "Não se efetua RA de noite com navios de LOA superior a 225 metros.",
+                }
+            ],
+            trusted_answers=[],
+            retrieval_question="IT-036 Regulação de Agulhas período noturno",
+        )
+
+        self.assertIn("Segundo o IT-036 Regulacao Agulhas", answer["answer"])
+        self.assertIn("LOA superior a 225 metros", answer["answer"])
+        self.assertNotIn("não está disponível", answer["answer"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()
