@@ -1107,9 +1107,10 @@ class SimpleRAGEngine:
         supplemental_sources: List[Dict] | None = None,
         trusted_answers: List[Dict] | None = None,
         reviewed_answers: List[Dict] | None = None,
+        retrieval_question: str | None = None,
     ) -> Dict:
         try:
-            contexts = self.retrieve(question)
+            contexts = self.retrieve((retrieval_question or question or "").strip())
         except Exception as exc:
             return {
                 "answer": (
@@ -1164,6 +1165,7 @@ Regras:
 - Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
 - Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
 - Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
+- Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".

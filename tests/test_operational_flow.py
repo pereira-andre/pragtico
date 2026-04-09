@@ -1069,6 +1069,147 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("não encontrei a regra 013", payload["answer"].lower())
         self.assertIn("IT-015 Fundeadouros", payload["answer"])
 
+    def test_chat_explicit_rule_code_targets_matching_knowledge_document(self) -> None:
+        knowledge_path = Path(self.store.knowledge_dir) / "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path.write_text(
+            (
+                "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
+                "Período noturno:\n"
+                "RA permitida: LOA < 225 m.\n"
+                "RA proibida: LOA >= 225 m.\n"
+            ),
+            encoding="utf-8",
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                return_value={"answer": "Resumo documental.", "sources": []},
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Resume a regra IT-36 sobre regulação de agulhas à noite.",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        kwargs = answer_mock.call_args.kwargs
+        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
+        doc_sources = [
+            item for item in kwargs["supplemental_sources"]
+            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
+        ]
+        self.assertTrue(doc_sources)
+        self.assertIn("LOA >= 225 m", "\n".join(item.get("snippet", "") for item in doc_sources))
+
+    def test_chat_rule_question_about_agulhas_targets_matching_knowledge_document(self) -> None:
+        knowledge_path = Path(self.store.knowledge_dir) / "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path.write_text(
+            (
+                "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
+                "PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:\n"
+                "Não se efetua RA de noite com navios de LOA superior a 225 metros.\n"
+            ),
+            encoding="utf-8",
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                return_value={"answer": "Resumo documental.", "sources": []},
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        kwargs = answer_mock.call_args.kwargs
+        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
+        doc_sources = [
+            item for item in kwargs["supplemental_sources"]
+            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
+        ]
+        self.assertTrue(doc_sources)
+        self.assertIn("LOA superior a 225 metros", "\n".join(item.get("snippet", "") for item in doc_sources))
+
+    def test_chat_document_follow_up_reuses_last_cited_knowledge_document(self) -> None:
+        knowledge_path = Path(self.store.knowledge_dir) / "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path.write_text(
+            (
+                "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
+                "PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:\n"
+                "Não se efetua RA de noite com navios de LOA superior a 225 metros.\n"
+            ),
+            encoding="utf-8",
+        )
+        self.store.list_documents()
+
+        conversation = self.store.ensure_conversation(username="admin")
+        self.store.append_chat_message(
+            username="admin",
+            conversation_id=conversation["id"],
+            role="assistant",
+            content="A regra está no IT-036.",
+            citations=[
+                {
+                    "source_id": "S1",
+                    "document": "IT-036_RegulacaoAgulhas.txt",
+                    "chunk_id": 1,
+                    "score": 0.99,
+                    "retrieval_mode": "semantic",
+                    "snippet": "Não se efetua RA de noite com navios de LOA superior a 225 metros.",
+                }
+            ],
+        )
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                return_value={"answer": "Resumo documental.", "sources": []},
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Diz me o que diz esse documento sff",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        kwargs = answer_mock.call_args.kwargs
+        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
+        doc_sources = [
+            item for item in kwargs["supplemental_sources"]
+            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
+        ]
+        self.assertTrue(doc_sources)
+        self.assertIn("LOA superior a 225 metros", "\n".join(item.get("snippet", "") for item in doc_sources))
+
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

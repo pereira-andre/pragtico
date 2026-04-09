@@ -409,6 +409,28 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertEqual(fallback.generate_calls, 1)
         self.assertEqual(answer["answer"], "Resposta via fallback OpenRouter.")
 
+    def test_answer_uses_explicit_retrieval_question_when_provided(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+        engine.rebuild_index(force=True)
+        provider = _StubProvider("gemini", generation_text="Resposta documental.")
+        engine.provider = provider
+        engine.generation_model = "gemini-test"
+        engine._generation_candidates = [(provider, engine.generation_model)]
+
+        with patch.object(engine, "retrieve", return_value=[]) as retrieve_mock:
+            answer = engine.answer(
+                question="Diz-me o que diz esse documento.",
+                retrieval_question="IT-036 Regulação de Agulhas período noturno",
+                role="piloto",
+                history=[],
+                supplemental_sources=[],
+                trusted_answers=[],
+            )
+
+        retrieve_mock.assert_called_once_with("IT-036 Regulação de Agulhas período noturno")
+        self.assertEqual(answer["answer"], "Resposta documental.")
+
 
 if __name__ == "__main__":
     unittest.main()

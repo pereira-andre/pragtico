@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
+import unicodedata
 from contextlib import contextmanager
 from typing import Iterator
 
@@ -31,12 +33,40 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from integrations.rag_engine import chunk_text, lexical_score
 
 logger = logging.getLogger(__name__)
 
 APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
+DOCUMENT_FOLLOW_UP_RE = re.compile(
+    r"\b(?:esse|essa|este|esta|o|a)\s+(?:documento|doc|ficheiro|regra|instrucao|instrução)\b"
+    r"|\bo que diz(?:\s+(?:esse|essa|este|esta|o|a))?\s+"
+    r"(?:documento|doc|ficheiro|regra|instrucao|instrução)\b"
+    r"|\bresume(?:\s+(?:esse|essa|este|esta|o|a))?\s+"
+    r"(?:documento|doc|ficheiro|regra|instrucao|instrução)?\b",
+    flags=re.IGNORECASE,
+)
+DOCUMENT_MATCH_STOPWORDS = {
+    "apss",
+    "documento",
+    "porto",
+    "setubal",
+    "sesimbra",
+    "instrucao",
+    "regras",
+    "regra",
+    "normas",
+    "norma",
+    "interna",
+    "interno",
+    "it",
+    "txt",
+    "pdf",
+    "docx",
+    "md",
+}
 
 
 @contextmanager
@@ -149,6 +179,179 @@ def _build_supplemental_sources(question: str) -> list[dict]:
         except Exception:
             pass
     return supplemental_sources
+
+
+def _normalize_lookup_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
+
+
+def _extract_rule_codes(text: str) -> list[str]:
+    codes: set[str] = set()
+    raw_text = str(text or "")
+    for pattern in (
+        r"\bit[\s\-_]?0*(\d{1,3})\b",
+        r"\b(?:regra|documento|doc|instrucao|instrução)\s*(?:it[\s\-_]?)?0*(\d{1,3})\b",
+    ):
+        for match in re.finditer(pattern, raw_text, flags=re.IGNORECASE):
+            codes.add(match.group(1).zfill(3))
+    return sorted(codes)
+
+
+def _document_alias_texts(record: dict) -> list[str]:
+    aliases: list[str] = []
+    for raw_value in (record.get("name"), record.get("original_name")):
+        value = str(raw_value or "").strip()
+        if not value:
+            continue
+        aliases.append(value)
+        stem = os.path.splitext(value)[0].replace("_", " ")
+        aliases.append(stem)
+        aliases.append(re.sub(r"(?<=[a-zà-ÿ])(?=[A-ZÀ-Ý])", " ", stem))
+    return [item for item in dict.fromkeys(aliases) if item]
+
+
+def _match_document_from_text(text: str, documents: list[dict]) -> dict | None:
+    if not text or not documents:
+        return None
+
+    code_matches = set(_extract_rule_codes(text))
+    if code_matches:
+        for record in documents:
+            name = str(record.get("name") or "")
+            code_match = re.match(r"IT-(\d{3})_", name, flags=re.IGNORECASE)
+            if code_match and code_match.group(1) in code_matches:
+                return record
+
+    normalized_text = _normalize_lookup_text(text)
+    if not normalized_text:
+        return None
+    question_tokens = {
+        token
+        for token in normalized_text.split()
+        if len(token) > 2 and token not in DOCUMENT_MATCH_STOPWORDS and not token.isdigit()
+    }
+    if not question_tokens:
+        return None
+
+    best_match: dict | None = None
+    best_score = 0.0
+    best_overlap: set[str] = set()
+    for record in documents:
+        alias_tokens: set[str] = set()
+        for alias in _document_alias_texts(record):
+            alias_tokens.update(
+                token
+                for token in _normalize_lookup_text(alias).split()
+                if len(token) > 2 and token not in DOCUMENT_MATCH_STOPWORDS and not token.isdigit()
+            )
+        if not alias_tokens:
+            continue
+        overlap = question_tokens & alias_tokens
+        if not overlap:
+            continue
+        overlap_score = len(overlap) / len(alias_tokens)
+        if overlap_score > best_score:
+            best_match = record
+            best_score = overlap_score
+            best_overlap = overlap
+
+    if not best_match:
+        return None
+    longest_overlap = max((len(token) for token in best_overlap), default=0)
+    if len(best_overlap) >= 2 or longest_overlap >= 6:
+        return best_match
+    return None
+
+
+def _looks_like_document_follow_up(question: str) -> bool:
+    return bool(DOCUMENT_FOLLOW_UP_RE.search(str(question or "")))
+
+
+def _resolve_target_knowledge_document(question: str, history: list[dict]) -> dict | None:
+    try:
+        documents = services.store.list_documents()
+    except Exception:
+        return None
+    if not documents:
+        return None
+
+    direct_match = _match_document_from_text(question, documents)
+    if direct_match:
+        return direct_match
+
+    if not _looks_like_document_follow_up(question):
+        return None
+
+    documents_by_name = {str(item.get("name") or ""): item for item in documents}
+    for entry in reversed(history):
+        for citation in reversed(entry.get("citations") or []):
+            document_name = str(citation.get("document") or "")
+            if document_name in documents_by_name:
+                return documents_by_name[document_name]
+        history_match = _match_document_from_text(entry.get("content", ""), documents)
+        if history_match:
+            return history_match
+    return None
+
+
+def _document_lookup_query(question: str, history: list[dict], record: dict) -> str:
+    parts = [str(question or "").strip()]
+    for entry in reversed(history):
+        if (entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if not content or content == question:
+            continue
+        parts.append(content)
+        break
+    parts.extend(_document_alias_texts(record))
+    return "\n".join(part for part in parts if part)
+
+
+def _build_targeted_document_sources(question: str, history: list[dict]) -> tuple[str | None, list[dict]]:
+    record = _resolve_target_knowledge_document(question, history)
+    if not record:
+        return None, []
+
+    try:
+        document_text = services.store.get_document_text(record["name"])
+    except Exception:
+        return None, []
+
+    raw_chunks = chunk_text(document_text, chunk_size=900, overlap=160)
+    if not raw_chunks:
+        return None, []
+
+    lookup_query = _document_lookup_query(question, history, record)
+    ranked_chunks: list[tuple[float, int, str]] = []
+    for chunk_index, chunk in enumerate(raw_chunks, start=1):
+        chunk_for_score = f"{' '.join(_document_alias_texts(record))}\n{chunk}"
+        score = lexical_score(lookup_query, chunk_for_score)
+        if chunk_index == 1:
+            score += 0.05
+        ranked_chunks.append((score, chunk_index, chunk))
+    ranked_chunks.sort(key=lambda item: (item[0], -item[1]), reverse=True)
+
+    selected = [item for item in ranked_chunks if item[0] > 0][:2]
+    if not selected:
+        selected = ranked_chunks[:2]
+
+    supplemental_sources: list[dict] = []
+    for source_index, (score, chunk_index, chunk) in enumerate(selected, start=1):
+        supplemental_sources.append(
+            {
+                "source_id": f"KD{source_index}",
+                "document": record["name"],
+                "chunk_id": chunk_index,
+                "score": round(score, 3) if score > 0 else 0.001,
+                "retrieval_mode": "document_target",
+                "snippet": chunk,
+            }
+        )
+    retrieval_question = f"{lookup_query}\nDocumento alvo: {record['name']}"
+    return retrieval_question, supplemental_sources
 
 
 def _blocked_mutation_answer(channel: str) -> dict:
@@ -490,11 +693,15 @@ def handle_chat_turn(
         elif answer is None:
             if not services.rag.can_generate():
                 raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+            retrieval_question, document_sources = _build_targeted_document_sources(clean_question, history)
+            supplemental_sources = _build_supplemental_sources(clean_question)
+            supplemental_sources.extend(document_sources)
             answer = services.rag.answer(
                 question=clean_question,
+                retrieval_question=retrieval_question,
                 role=role,
                 history=(history + [user_message])[-10:],
-                supplemental_sources=_build_supplemental_sources(clean_question),
+                supplemental_sources=supplemental_sources,
                 trusted_answers=trusted_answers,
                 reviewed_answers=reviewed_answers,
             )
