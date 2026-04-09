@@ -1,108 +1,63 @@
 {
   "document": "RG-14_RegulamentoInterno.txt",
-  "title": "RG-14 — REGULAMENTO INTERNO DE PILOTAGEM — PORTO DE SETÚBAL",
+  "title": "RG-14 — Regulamento Interno de Pilotagem — Porto de Setúbal",
   "aliases": [
     "RG-14_RegulamentoInterno.txt",
     "RG-14_RegulamentoInterno",
-    "RG-14 — REGULAMENTO INTERNO DE PILOTAGEM — PORTO DE SETÚBAL"
+    "RG-14",
+    "regulamento interno",
+    "regulamento interno de pilotagem",
+    "piloto coordenador",
+    "pc"
   ],
-  "summary": "DATA: 15 de junho de 2002. Assinado pelo Comandante Manuel Pedreiro. NOTA: Extraído apenas o conteúdo operacionalmente relevante para pilotos, agentes de navegação e utilizadores do sistema. Conteúdo de recursos humanos (férias, folgas, licenças, regime de trabalho) omitido.",
+  "summary": "O RG-14 fixa regras internas de funcionamento operacional da Pilotagem de Setúbal, incluindo escuta VHF, distribuição de serviços, limites de antecedência para requisições, competências do Diretor de Pilotagem e protocolo de resposta a emergências.",
   "key_points": [
-    "Canal VHF 14.",
-    "2 horas antes da hora requisitada (dentro do horário de expediente).",
-    "1 hora antes da hora requisitada (dentro do horário de expediente).",
-    "Não, em regra. O PC não aceita requisições de saída ou serviços no rio com menos de 1 hora de antecedência, salvo com anuência do Piloto que vai fazer o serviço e sem alterar a...",
-    "O Diretor de Pilotagem.",
-    "É uma emergência. O primeiro Piloto da escala segue de imediato. Se não for contactável, seguem os restantes por ordem de escala, depois o PC e, por último, o Diretor de Pilotagem."
+    "O Piloto Coordenador mantém escuta permanente nos canais VHF 14 e 13 e o Piloto embarcado mantém escuta obrigatória no VHF 14.",
+    "Dentro do horário de expediente, entradas são distribuídas 2 horas antes e saídas ou serviços no rio 1 hora antes da hora requisitada.",
+    "O PC não aceita, em regra, saídas ou serviços no rio com menos de 1 hora de antecedência sem anuência do Piloto e sem alterar a escala.",
+    "O Diretor de Pilotagem decide manobras fora da rotina estabelecida e dúvidas ou casos omissos relevantes.",
+    "Nas emergências, o primeiro Piloto da escala segue de imediato; se não estiver contactável seguem os restantes, depois o PC e por fim o Diretor."
   ],
   "faq": [
     {
-      "question": "Qual o canal VHF obrigatório para pilotos embarcados?",
-      "answer": "Canal VHF 14.",
-      "keywords": [
-        "canal",
-        "embarcados",
-        "obrigatorio",
-        "pilotos",
-        "vhf"
-      ]
+      "question": "Qual é o canal VHF obrigatório para pilotos embarcados?",
+      "answer": "O canal VHF obrigatório para o Piloto embarcado é o VHF 14.",
+      "keywords": ["vhf 14", "piloto embarcado", "canal obrigatorio"]
     },
     {
       "question": "Com que antecedência é distribuído um serviço de entrada?",
-      "answer": "2 horas antes da hora requisitada (dentro do horário de expediente).",
-      "keywords": [
-        "antecedencia",
-        "distribuido",
-        "entrada",
-        "servico"
-      ]
+      "answer": "Dentro do horário de expediente, um serviço de entrada é distribuído 2 horas antes da hora requisitada.",
+      "keywords": ["entrada", "2 horas", "distribuido", "antecedencia"]
     },
     {
-      "question": "Com que antecedência é distribuído um serviço de saída ou rio?",
-      "answer": "1 hora antes da hora requisitada (dentro do horário de expediente).",
-      "keywords": [
-        "antecedencia",
-        "distribuido",
-        "rio",
-        "saida",
-        "servico"
-      ]
+      "question": "Com que antecedência é distribuído um serviço de saída ou de rio?",
+      "answer": "Dentro do horário de expediente, saídas e serviços no rio são distribuídos 1 hora antes da hora requisitada.",
+      "keywords": ["saida", "rio", "1 hora", "distribuido"]
     },
     {
-      "question": "O PC pode aceitar uma requisição de saída com 30 minutos de antecedência?",
-      "answer": "Não, em regra. O PC não aceita requisições de saída ou serviços no rio com menos de 1 hora de antecedência, salvo com anuência do Piloto que vai fazer o serviço e sem alterar a escala.",
-      "keywords": [
-        "aceitar",
-        "antecedencia",
-        "minutos",
-        "pode",
-        "requisicao",
-        "saida"
-      ]
+      "question": "O Piloto Coordenador pode aceitar uma saída com 30 minutos de antecedência?",
+      "answer": "Em regra, não. O PC não aceita requisições de saída ou serviços no rio com menos de 1 hora de antecedência, salvo com anuência do Piloto que vai executar o serviço e sem alteração da escala.",
+      "keywords": ["30 minutos", "saida", "piloto coordenador", "antecedencia"]
     },
     {
-      "question": "Quem decide sobre manobras fora da rotina estabelecida?",
-      "answer": "O Diretor de Pilotagem.",
-      "keywords": [
-        "decide",
-        "estabelecida",
-        "fora",
-        "manobras",
-        "quem",
-        "rotina",
-        "sobre"
-      ]
+      "question": "Quem decide as manobras fora da rotina estabelecida?",
+      "answer": "As manobras que saem da rotina estabelecida são decididas pelo Diretor de Pilotagem.",
+      "keywords": ["fora da rotina", "diretor de pilotagem", "quem decide"]
+    },
+    {
+      "question": "O Piloto Coordenador está disponível fora do horário de expediente?",
+      "answer": "Sim. O serviço do Piloto Coordenador é permanente 24 horas por dia, embora fora do horário de expediente aceite apenas casos excecionais e de emergência.",
+      "keywords": ["24 horas", "fora do horario", "pc", "disponivel"]
     },
     {
       "question": "O que acontece quando há um navio com fogo a bordo?",
-      "answer": "É uma emergência. O primeiro Piloto da escala segue de imediato. Se não for contactável, seguem os restantes por ordem de escala, depois o PC e, por último, o Diretor de Pilotagem.",
-      "keywords": [
-        "acontece",
-        "bordo",
-        "fogo",
-        "navio",
-        "quando"
-      ]
+      "answer": "É tratado como emergência. Segue de imediato o primeiro Piloto da escala; se não for contactável, seguem os restantes por ordem, depois o Piloto Coordenador e por fim o Diretor de Pilotagem.",
+      "keywords": ["fogo a bordo", "emergencia", "escala", "piloto coordenador"]
     },
     {
-      "question": "Qual o horário de expediente da pilotagem aos sábados?",
-      "answer": "Das 09h00 às 13h00.",
-      "keywords": [
-        "expediente",
-        "horario",
-        "pilotagem",
-        "sabados"
-      ]
-    },
-    {
-      "question": "O PC está disponível fora do horário de expediente?",
-      "answer": "Sim. O serviço do PC é permanente 24 horas, mas fora do horário de expediente aceita apenas requisições em casos excepcionais e de emergência.",
-      "keywords": [
-        "disponivel",
-        "expediente",
-        "fora",
-        "horario"
-      ]
+      "question": "Qual é o horário de expediente da Pilotagem aos sábados, domingos e feriados?",
+      "answer": "Aos sábados, domingos e feriados, o horário de expediente indicado é das 09h00 às 13h00.",
+      "keywords": ["sabados", "domingos", "feriados", "horario de expediente"]
     }
   ]
 }

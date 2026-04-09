@@ -1,138 +1,64 @@
 {
   "document": "IT-041_EntradaSaida.txt",
-  "title": "IT-041 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL",
+  "title": "IT-041 — Entrada e Saída de Navios no Porto de Setúbal",
   "aliases": [
     "IT-041_EntradaSaida.txt",
     "IT-041_EntradaSaida",
-    "IT-041 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL",
     "IT-041",
     "IT-41",
-    "041",
-    "ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL"
+    "entrada e saída",
+    "entrada e saida",
+    "vts",
+    "ovts"
   ],
-  "summary": "Este documento define as regras e procedimentos de entrada e saída de navios no Porto de Setúbal, estabelecendo as responsabilidades e comunicações entre os Operadores de VTS (OVTS) e os Pilotos, e delimitando as áreas de jurisdição de cada serviço.",
+  "summary": "A IT-041 define a articulação operacional entre OVTS e Pilotagem na entrada e saída de navios, fixa as áreas de responsabilidade de VTS e Pilotagem Obrigatória e descreve as posições de referência para embarque e desembarque do piloto.",
   "key_points": [
-    "Do interior do porto até ao arco de 4 milhas centrado na Baliza número 2.",
-    "Até ao limite exterior de 5 milhas centrado no farol do Outão.",
-    "A entre 2 e 3 milhas da entrada da Barra, próximo da linha do enfiamento, sob controlo do OVTS.",
-    "Canal VHF 14.",
-    "O Piloto, quando navega na lancha em direção ao navio.",
-    "Junto ou fora da linha Baliza 2/Boia 1, informando depois o OVTS."
+    "O VTS Portuário de Setúbal controla a zona interior até ao arco de 4 milhas centrado na Baliza n.º 2; a oeste dessa fronteira a responsabilidade passa ao VTS Costeiro.",
+    "A área de Pilotagem Obrigatória estende-se até ao limite exterior de 5 milhas centrado no farol do Outão.",
+    "Uma hora antes do embarque do piloto, o navio deve estar entre 2 e 3 milhas da entrada da barra, próximo do enfiamento.",
+    "A transferência formal de responsabilidade entre OVTS e Piloto faz-se em VHF 14 por iniciativa do Piloto.",
+    "Na saída, o desembarque do piloto varia entre Baliza 2/Boia 1, Outão/Boia 3 ou o troço entre Outão e João Farto, consoante as condições."
   ],
   "faq": [
     {
       "question": "Até onde vai a área de responsabilidade do VTS Portuário de Setúbal?",
-      "answer": "Do interior do porto até ao arco de 4 milhas centrado na Baliza número 2. A oeste desse arco é área do VTS Costeiro.",
-      "keywords": [
-        "area",
-        "ate",
-        "onde",
-        "portuario",
-        "responsabilidade",
-        "setubal",
-        "vai",
-        "vts"
-      ]
+      "answer": "Vai do interior do porto até ao arco de 4 milhas centrado na Baliza número 2. A oeste desse arco a responsabilidade passa ao VTS Costeiro.",
+      "keywords": ["vts portuario", "4 milhas", "baliza 2", "responsabilidade"]
     },
     {
-      "question": "Até onde se estende a área de Pilotagem Obrigatória?",
-      "answer": "Até ao limite exterior de 5 milhas centrado no farol do Outão.",
-      "keywords": [
-        "area",
-        "ate",
-        "estende",
-        "obrigatoria",
-        "onde",
-        "pilotagem"
-      ]
+      "question": "Até onde se estende a área de pilotagem obrigatória?",
+      "answer": "Estende-se até ao limite exterior de 5 milhas centrado no farol do Outão.",
+      "keywords": ["pilotagem obrigatoria", "5 milhas", "outao"]
     },
     {
-      "question": "Onde deve estar o navio 1 hora antes de receber o Piloto?",
-      "answer": "A entre 2 e 3 milhas da entrada da Barra, próximo da linha do enfiamento, sob controlo do OVTS.",
-      "keywords": [
-        "antes",
-        "deve",
-        "estar",
-        "hora",
-        "navio",
-        "onde",
-        "piloto",
-        "receber"
-      ]
+      "question": "Onde deve estar o navio uma hora antes de receber o piloto?",
+      "answer": "Deve estar entre 2 e 3 milhas da entrada da Barra, próximo da linha do enfiamento, sob controlo do OVTS.",
+      "keywords": ["uma hora antes", "2 e 3 milhas", "enfiamento", "piloto"]
     },
     {
-      "question": "Em que canal VHF se faz a transferência de responsabilidade de OVTS",
-      "answer": "Canal VHF 14.",
-      "keywords": [
-        "canal",
-        "faz",
-        "ovts",
-        "responsabilidade",
-        "transferencia",
-        "vhf"
-      ]
+      "question": "Em que canal VHF se faz a transferência de responsabilidade entre OVTS e Piloto?",
+      "answer": "A transferência formal faz-se no canal VHF 14.",
+      "keywords": ["vhf 14", "transferencia", "ovts", "piloto"]
     },
     {
-      "question": "Quem toma a iniciativa de contactar para transferir a responsabilidade?",
-      "answer": "O Piloto, quando navega na lancha em direção ao navio.",
-      "keywords": [
-        "contactar",
-        "iniciativa",
-        "quem",
-        "responsabilidade",
-        "toma",
-        "transferir"
-      ]
+      "question": "Quem toma a iniciativa da transferência de responsabilidade?",
+      "answer": "A iniciativa é do Piloto, quando segue na lancha em direção ao navio.",
+      "keywords": ["iniciativa", "piloto", "transferencia"]
     },
     {
       "question": "Onde desembarca normalmente o Piloto na saída?",
-      "answer": "Junto ou fora da linha Baliza 2/Boia 1, informando depois o OVTS.",
-      "keywords": [
-        "desembarca",
-        "normalmente",
-        "onde",
-        "piloto",
-        "saida"
-      ]
+      "answer": "Na saída padrão, desembarca junto ou fora da linha Baliza 2 / Boia 1, informando depois o OVTS.",
+      "keywords": ["desembarque", "saida", "baliza 2", "boia 1"]
     },
     {
-      "question": "Em que condições pode o Piloto desembarcar em OUTÃO/Boia 3 na saída?",
-      "answer": "Com normais condições de tempo, com acordo do Comandante, e desde que o navio tenha LOA inferior a 145 m e calado inferior a 7,5 m (conforme IT-018).",
-      "keywords": [
-        "boia",
-        "condicoes",
-        "desembarcar",
-        "outao",
-        "piloto",
-        "pode",
-        "saida"
-      ]
+      "question": "Quando pode o Piloto desembarcar em Outão ou Boia 3?",
+      "answer": "Em condições normais de tempo, com acordo do Comandante e salvaguarda da segurança, desde que o navio cumpra a referência de LOA inferior a 145 m e calado inferior a 7,5 m definida na IT-018.",
+      "keywords": ["outao", "boia 3", "145 m", "7,5 m", "desembarcar"]
     },
     {
-      "question": "O que acontece ao navio depois do desembarque do Piloto em mau tempo?",
-      "answer": "Um Piloto em terra, na consola de coordenação, acompanha o navio por radar até aos limites da Barra, conforme o procedimento de Pilotagem Assistida do IT-017.",
-      "keywords": [
-        "acontece",
-        "depois",
-        "desembarque",
-        "mau",
-        "navio",
-        "piloto",
-        "tempo"
-      ]
-    },
-    {
-      "question": "Onde pode o Piloto desembarcar em condições de Pilotagem Assistida?",
-      "answer": "Entre o OUTÃO e a Boia de João Farto.",
-      "keywords": [
-        "assistida",
-        "condicoes",
-        "desembarcar",
-        "onde",
-        "pilotagem",
-        "piloto",
-        "pode"
-      ]
+      "question": "O que acontece em situação de pilotagem assistida na saída?",
+      "answer": "Com pilotagem assistida por mau tempo, o Piloto pode desembarcar entre Outão e a Boia de João Farto e, a partir daí, um Piloto em terra acompanha o navio por radar até aos limites da Barra.",
+      "keywords": ["pilotagem assistida", "joao farto", "mau tempo", "radar"]
     }
   ]
 }

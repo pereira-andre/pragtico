@@ -1,89 +1,53 @@
 {
   "document": "P-13_PlaneamentoGestao.txt",
-  "title": "P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA",
+  "title": "P-13 — Planeamento e Gestão Portuária",
   "aliases": [
     "P-13_PlaneamentoGestao.txt",
     "P-13_PlaneamentoGestao",
-    "P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA"
+    "P-13",
+    "planeamento e gestão portuária",
+    "planeamento portuário",
+    "jul",
+    "prioridade de acostagem"
   ],
-  "summary": "Este procedimento aplica-se ao planeamento das manobras com embarcações no Porto de Setúbal.",
+  "summary": "O P-13 estabelece o processo de planeamento das escalas e manobras no Porto de Setúbal, distribuindo responsabilidades entre Agente de Navegação, DePCP, Direção de Pilotagem e concessionários, com registo centralizado na JUL.",
   "key_points": [
-    "O primeiro a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, monitorizado pelo VTS.",
-    "A competência para autorizar manobras está atribuída ao DePCP (para as situações correntes).",
-    "Diretamente à Direção de Pilotagem (DP).",
-    "Na JUL (Janela Única Logística), em resposta ao Pedido de Manobra.",
-    "O DePCP valida o local, mas apenas após indicação prévia do Concessionário que gere esses terminais.",
-    "Não. Embarcações militares destinadas ao cais da NATO estão excluídas deste procedimento, assim como as embarcações da Doca Pesca e as de tráfego local."
+    "O anúncio da escala é introduzido pelo Agente de Navegação na JUL e fica disponível para os utilizadores autorizados.",
+    "O DePCP analisa a viabilidade das escalas, define prioridades de acostagem e regista o local de acostagem na JUL.",
+    "Quando dois navios têm o mesmo destino de acostagem, a prioridade baseia-se na hora de chegada em frente da barra, definida operacionalmente como o arco de 8 milhas centrado na Baliza n.º 2.",
+    "Sem Pedido de Manobra prévio na JUL não pode ser atribuído local de acostagem.",
+    "Em TMS-1 e TMS-2 o DePCP valida o local de acostagem após indicação prévia do concessionário."
   ],
   "faq": [
     {
       "question": "Quando dois navios pretendem o mesmo cais, qual tem prioridade?",
-      "answer": "O primeiro a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, monitorizado pelo VTS. A prioridade baseia-se na hora de chegada \"em frente da barra\", conforme o Artigo 16.º n.º 1 do Regulamento de Exploração do Porto de Setúbal.",
-      "keywords": [
-        "cais",
-        "dois",
-        "mesmo",
-        "navios",
-        "pretendem",
-        "prioridade",
-        "quando",
-        "tem"
-      ]
+      "answer": "Tem prioridade o primeiro navio a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, salvo se existir impedimento técnico. É esta a definição operacional de chegada em frente da barra para efeitos de prioridade.",
+      "keywords": ["mesmo cais", "prioridade", "8 milhas", "baliza 2", "frente da barra"]
     },
     {
       "question": "Quem autoriza as manobras no Porto de Setúbal?",
-      "answer": "A competência para autorizar manobras está atribuída ao DePCP (para as situações correntes). Pedidos atípicos sobem ao DGC e depois ao CA.",
-      "keywords": [
-        "autoriza",
-        "manobras",
-        "porto",
-        "quem",
-        "setubal"
-      ]
+      "answer": "Nas situações correntes, a competência operacional para autorizar manobras está atribuída ao DePCP. Pedidos atípicos podem subir ao DGC e ao Conselho de Administração.",
+      "keywords": ["quem autoriza", "manobras", "depcp", "pedidos atipicos"]
     },
     {
-      "question": "Para questões de calado, a quem se dirige o pedido?",
-      "answer": "Diretamente à Direção de Pilotagem (DP).",
-      "keywords": [
-        "calado",
-        "dirige",
-        "pedido",
-        "quem",
-        "questoes"
-      ]
+      "question": "Para questões de calado, a quem deve ser dirigido o pedido?",
+      "answer": "Quando o pedido está relacionado com navegação, como questões de calado, deve ser dirigido diretamente à Direção de Pilotagem.",
+      "keywords": ["calado", "direcao de pilotagem", "pedido", "navegacao"]
     },
     {
-      "question": "Onde se regista o local de acostagem atribuído a um navio?",
-      "answer": "Na JUL (Janela Única Logística), em resposta ao Pedido de Manobra. Sem Pedido de Manobra prévio na JUL, o DePCP não pode atribuir local de acostagem.",
-      "keywords": [
-        "acostagem",
-        "atribuido",
-        "local",
-        "navio",
-        "onde",
-        "regista"
-      ]
+      "question": "Onde é registado o local de acostagem atribuído ao navio?",
+      "answer": "É registado na JUL, em resposta ao Pedido de Manobra. Sem Pedido de Manobra prévio na JUL não pode ser atribuído local de acostagem.",
+      "keywords": ["jul", "local de acostagem", "pedido de manobra", "registo"]
     },
     {
-      "question": "Quem define o local de acostagem no TMS-1 ou TMS-2?",
-      "answer": "O DePCP valida o local, mas apenas após indicação prévia do Concessionário que gere esses terminais.",
-      "keywords": [
-        "acostagem",
-        "define",
-        "local",
-        "quem",
-        "tms"
-      ]
+      "question": "Quem define o local de acostagem no TMS-1 e no TMS-2?",
+      "answer": "O concessionário indica previamente o local e o DePCP valida essa indicação. O contacto e a validação ficam formalizados na JUL.",
+      "keywords": ["tms-1", "tms-2", "concessionario", "depcp", "local de acostagem"]
     },
     {
-      "question": "O procedimento P-13 aplica-se a navios militares?",
-      "answer": "Não. Embarcações militares destinadas ao cais da NATO estão excluídas deste procedimento, assim como as embarcações da Doca Pesca e as de tráfego local.",
-      "keywords": [
-        "aplica",
-        "militares",
-        "navios",
-        "procedimento"
-      ]
+      "question": "O procedimento P-13 aplica-se a navios militares ou tráfego local?",
+      "answer": "Não. Estão excluídas as embarcações destinadas à Doca de Pesca, as embarcações militares destinadas ao cais da NATO e as embarcações de tráfego local.",
+      "keywords": ["navios militares", "trafego local", "excluidos", "p-13"]
     }
   ]
 }

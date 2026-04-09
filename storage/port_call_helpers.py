@@ -638,6 +638,17 @@ def _parse_gt_for_cost(value: Optional[str]) -> float:
         return 0.0
 
 
+def _parse_numeric_for_cost(value: Optional[str]) -> float:
+    raw = (value or "").strip()
+    if not raw:
+        return 0.0
+    clean = raw.replace(" ", "").replace(",", ".")
+    try:
+        return float(clean)
+    except ValueError:
+        return 0.0
+
+
 def _cost_vessel_type_key(value: Optional[str]) -> str:
     label_key = _lookup_key(_resolve_vessel_type_meta(value).get("label"))
     if label_key in {"contentores", "porta contentores"}:
@@ -649,6 +660,22 @@ def _cost_vessel_type_key(value: Optional[str]) -> str:
     if label_key == "graneis liquidos":
         return "tanque"
     return "restantes"
+
+
+def _tup_context_for_port_call(port_call: Dict, gt: float) -> Dict[str, object]:
+    label_key = _lookup_key(_resolve_vessel_type_meta(port_call.get("vessel_type")).get("label"))
+    context: Dict[str, object] = {}
+    if label_key == "rebocadores":
+        context["tugboat"] = True
+    if label_key == "navios de guerra":
+        context["exempt"] = True
+    if gt <= 0 and label_key in {"estruturas diversas", "batelao s propulsao"}:
+        context["loa_m"] = _parse_numeric_for_cost(port_call.get("vessel_loa_m"))
+        context["beam_m"] = _parse_numeric_for_cost(port_call.get("vessel_beam_m"))
+        context["draft_m"] = _parse_numeric_for_cost(
+            port_call.get("draft_m") or port_call.get("vessel_max_draft_m")
+        )
+    return context
 
 
 def _maneuver_type_to_cost_engine(value: Optional[str]) -> ManoeuvreType:
@@ -718,7 +745,15 @@ def _build_archived_scale_summary(port_call: Dict, archived_rows: List[Dict], no
     )
     gt = _parse_gt_for_cost(port_call.get("vessel_gt_t") or ordered_rows[0].get("vessel_gt"))
     stay_days = _estimate_scale_stay_days(port_call, ordered_rows, now)
-    include_tup = gt > 0 and stay_days > 0 and port_call.get("status") in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}
+    tup_context = _tup_context_for_port_call(port_call, gt)
+    has_structural_basis = bool(
+        tup_context.get("loa_m") and tup_context.get("beam_m") and tup_context.get("draft_m")
+    )
+    include_tup = (
+        stay_days > 0
+        and port_call.get("status") in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}
+        and (gt > 0 or has_structural_basis or bool(tup_context.get("exempt")))
+    )
 
     estimated_rows: List[Dict] = []
     pilotage_total = None
@@ -726,7 +761,7 @@ def _build_archived_scale_summary(port_call: Dict, archived_rows: List[Dict], no
     grand_total = None
     notes: List[str] = []
 
-    if gt > 0 and ordered_rows:
+    if (gt > 0 or has_structural_basis or bool(tup_context.get("exempt"))) and ordered_rows:
         estimate = calculate_scale_cost(
             vessel_name=port_call.get("vessel_name", "Navio"),
             gt=gt,
@@ -741,6 +776,7 @@ def _build_archived_scale_summary(port_call: Dict, archived_rows: List[Dict], no
             ],
             stay_days=stay_days or 1.0,
             include_tup=include_tup,
+            tup_context=tup_context,
         )
         pilotage_total = estimate.pilotage_total
         tup_estimate = estimate.tup_estimate if include_tup else 0.0

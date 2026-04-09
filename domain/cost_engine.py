@@ -54,6 +54,20 @@ TUP_RATES = {
     "tanque": (0.1459, 0.0274),
     "restantes": (0.1459, 0.0274),
 }
+TUP_SPECIAL_RATE = 0.1506  # €/√GT or €/m² per 24h for local traffic, leisure and tugboats
+TUP_REGULAR_LINE_TIERED = {  # Art. 10º reductions for TUP, not the same as pilotage
+    6: 0.10,
+    25: 0.25,
+    53: 0.30,
+    101: 0.40,
+}
+TUP_TECHNICAL_CALL_REDUCTION = 0.40
+TUP_GREEN_AWARD_REDUCTION = 0.03
+TUP_SHORT_SEA_REDUCTION = 0.10
+TUP_SHORT_SEA_CALL_THRESHOLD = 24
+TUP_CABOTAGE_REDUCTION = 0.15
+TUP_CABOTAGE_CALL_THRESHOLD = 6
+TUP_STRATEGIC_INTEREST_MAX_REDUCTION = 0.40
 
 # Cancellation fee schedule — Art. 15º, nº 7
 # Values represent the percentage of the base manoeuvre cost that remains payable.
@@ -281,7 +295,78 @@ def calculate_manoeuvre_cost(manoeuvre: ManoeuvreInput) -> ManoeuvreResult:
     )
 
 
-def calculate_tup(gt: float, vessel_type: str, stay_days: float) -> float:
+def _billable_24h_periods(stay_days: float) -> int:
+    clean_days = max(float(stay_days or 0.0), 0.0)
+    return max(int(math.ceil(clean_days)), 1)
+
+
+def _normalized_tup_vessel_type(vessel_type: str) -> str:
+    vt = (vessel_type or "").lower().strip()
+    if vt not in TUP_RATES:
+        vt = "restantes"
+    return vt
+
+
+def _regular_line_tup_reduction(regular_line_calls: Optional[int]) -> float:
+    if regular_line_calls is None:
+        return 0.0
+    reduction = 0.0
+    for threshold, pct in sorted(TUP_REGULAR_LINE_TIERED.items()):
+        if regular_line_calls >= threshold:
+            reduction = pct
+    return reduction
+
+
+def _tup_non_cumulative_reduction(
+    *,
+    technical_call: bool,
+    regular_line_calls: Optional[int],
+    short_sea_calls: Optional[int],
+    cabotage_calls: Optional[int],
+    strategic_interest_reduction: float,
+) -> float:
+    candidates = [0.0]
+    if technical_call:
+        candidates.append(TUP_TECHNICAL_CALL_REDUCTION)
+
+    regular_line_reduction = _regular_line_tup_reduction(regular_line_calls)
+    if regular_line_reduction > 0:
+        candidates.append(regular_line_reduction)
+
+    if short_sea_calls is not None and short_sea_calls >= TUP_SHORT_SEA_CALL_THRESHOLD:
+        candidates.append(TUP_SHORT_SEA_REDUCTION)
+
+    if cabotage_calls is not None and cabotage_calls >= TUP_CABOTAGE_CALL_THRESHOLD:
+        candidates.append(TUP_CABOTAGE_REDUCTION)
+
+    capped_strategic = max(0.0, min(float(strategic_interest_reduction or 0.0), TUP_STRATEGIC_INTEREST_MAX_REDUCTION))
+    if capped_strategic > 0:
+        candidates.append(capped_strategic)
+
+    return max(candidates)
+
+
+def calculate_tup(
+    gt: float,
+    vessel_type: str,
+    stay_days: float,
+    *,
+    reduced_gt: Optional[float] = None,
+    loa_m: Optional[float] = None,
+    beam_m: Optional[float] = None,
+    draft_m: Optional[float] = None,
+    tugboat: bool = False,
+    local_traffic: bool = False,
+    recreational: bool = False,
+    maritime_tourism: bool = False,
+    technical_call: bool = False,
+    green_award: bool = False,
+    regular_line_calls: Optional[int] = None,
+    short_sea_calls: Optional[int] = None,
+    cabotage_calls: Optional[int] = None,
+    strategic_interest_reduction: float = 0.0,
+    exempt: bool = False,
+) -> float:
     """Calculate Port Usage Tariff (TUP) according to Art. 9º.
 
     Parameters:
@@ -289,36 +374,72 @@ def calculate_tup(gt: float, vessel_type: str, stay_days: float) -> float:
         vessel_type: One of 'contentores', 'roll-on_roll-off', 'passageiros',
                      'tanque', 'restantes'.
         stay_days: Number of days (or fraction) in port.
+        reduced_gt: GT to use for special tanker cases with certified reduced GT.
+        loa_m: Length overall in metres for non-GT or area-based special cases.
+        beam_m: Maximum beam in metres for non-GT or area-based special cases.
+        draft_m: Draft in metres for structure-without-GT cases.
+        tugboat: Use the special local-traffic/rebocador formula based on √GT.
+        local_traffic: Use the special local-traffic formula based on √GT.
+        recreational: Use the leisure-vessel formula based on LOA × beam.
+        maritime_tourism: Use the maritime-tourism formula based on LOA × beam.
+        technical_call: Apply the 40% technical-call reduction.
+        green_award: Apply the 3% environmental reduction, stacking with the
+                     best other applicable reduction.
+        regular_line_calls: Number of calls in the last 365 days for TUP tiers.
+        short_sea_calls: Number of short-sea calls in the last 365 days.
+        cabotage_calls: Number of cabotage calls in the last 365 days.
+        strategic_interest_reduction: Explicit strategic-interest reduction
+                                      fraction, capped at 40%.
+        exempt: Whether the scale is exempt from TUP.
 
     Returns:
         TUP cost in euros.
     """
-    # Normalize vessel type
-    vt = vessel_type.lower().strip()
-    if vt not in TUP_RATES:
-        vt = "restantes"
-    first_rate, subsequent_rate = TUP_RATES[vt]
+    if exempt:
+        return 0.0
 
-    if stay_days <= 1.0:
-        # First period only
-        tup = first_rate * gt
+    periods = _billable_24h_periods(stay_days)
+    effective_gt = max(float(reduced_gt if reduced_gt and reduced_gt > 0 else gt), 0.0)
+    loa_value = max(float(loa_m or 0.0), 0.0)
+    beam_value = max(float(beam_m or 0.0), 0.0)
+    draft_value = max(float(draft_m or 0.0), 0.0)
+
+    if tugboat or local_traffic:
+        if effective_gt <= 0:
+            return 0.0
+        base_tup = math.sqrt(effective_gt) * TUP_SPECIAL_RATE * periods
+    elif recreational or maritime_tourism:
+        if loa_value <= 0 or beam_value <= 0:
+            return 0.0
+        base_tup = (loa_value * beam_value) * TUP_SPECIAL_RATE * periods
     else:
-        full_days = int(stay_days)  # integer part
-        fraction = stay_days - full_days
-        # First day
-        total = first_rate * gt
-        # Full subsequent days
-        total += subsequent_rate * gt * (full_days - 1)
-        # Partial last day (if any) – charge as a full subsequent day (períodos indivisíveis)
-        if fraction > 0:
-            total += subsequent_rate * gt
-        tup = total
-    return round(tup, 2)
+        vt = _normalized_tup_vessel_type(vessel_type)
+        first_rate, subsequent_rate = TUP_RATES[vt]
+        effective_basis = effective_gt
+        if effective_basis <= 0 and loa_value > 0 and beam_value > 0 and draft_value > 0:
+            effective_basis = loa_value * beam_value * draft_value
+        if effective_basis <= 0:
+            return 0.0
+        base_tup = first_rate * effective_basis
+        if periods > 1:
+            base_tup += subsequent_rate * effective_basis * (periods - 1)
+
+    best_non_cumulative = _tup_non_cumulative_reduction(
+        technical_call=technical_call,
+        regular_line_calls=regular_line_calls,
+        short_sea_calls=short_sea_calls,
+        cabotage_calls=cabotage_calls,
+        strategic_interest_reduction=strategic_interest_reduction,
+    )
+    reduction_factor = 1.0 - best_non_cumulative
+    if green_award:
+        reduction_factor *= 1.0 - TUP_GREEN_AWARD_REDUCTION
+    return round(base_tup * max(reduction_factor, 0.0), 2)
 
 
-def estimate_tup(gt: float, vessel_type: str, stay_days: float = 1.0) -> float:
+def estimate_tup(gt: float, vessel_type: str, stay_days: float = 1.0, **kwargs) -> float:
     """Alias for calculate_tup."""
-    return calculate_tup(gt, vessel_type, stay_days)
+    return calculate_tup(gt, vessel_type, stay_days, **kwargs)
 
 
 def calculate_cancellation_fee(base_manoeuvre_cost: float,
@@ -353,6 +474,7 @@ def calculate_scale_cost(
     manoeuvres: List[ManoeuvreInput],
     stay_days: float = 1.0,
     include_tup: bool = True,
+    tup_context: Optional[dict] = None,
 ) -> ScaleCostEstimate:
     """Calculate complete cost estimate for a port call.
 
@@ -363,6 +485,7 @@ def calculate_scale_cost(
         manoeuvres: List of manoeuvre inputs to calculate.
         stay_days: Estimated days in port (for TUP calculation).
         include_tup: Whether to include TUP estimate.
+        tup_context: Optional keyword arguments forwarded to calculate_tup.
 
     Returns:
         ScaleCostEstimate with full breakdown.
@@ -375,7 +498,7 @@ def calculate_scale_cost(
         results.append(result)
         pilotage_total += result.total_cost
 
-    tup = calculate_tup(gt, vessel_type, stay_days) if include_tup else 0.0
+    tup = calculate_tup(gt, vessel_type, stay_days, **(tup_context or {})) if include_tup else 0.0
     grand_total = pilotage_total + tup
 
     notes = [

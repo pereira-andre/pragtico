@@ -881,6 +881,66 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(entry["derived_standby_hours_label"], "1,5 h")
         self.assertGreater(entry["estimated_cost"], base_cost)
 
+    def test_archived_scale_estimate_uses_tugboat_tup_formula(self) -> None:
+        port_call = self.store.create_port_call(
+            vessel_name="PORT TUG",
+            eta="2026-03-24T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Setubal",
+            next_port="Setubal",
+            notes="Rebocador de teste.",
+            vessel_imo="9152999",
+            vessel_call_sign="D5TG2",
+            vessel_flag="Portugal",
+            vessel_type="Rebocadores",
+            vessel_loa_m="30.0",
+            vessel_beam_m="10.0",
+            vessel_gt_t="100",
+            vessel_max_draft_m="4.0",
+            vessel_dwt_t="1",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            port_call["id"],
+            arrived_at="2026-03-24T06:00:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-24T05:45:00+00:00",
+            maneuver_finished_at="2026-03-24T06:00:00+00:00",
+            draft_m="4.0",
+            notes="Entrada concluída.",
+        )
+        self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at="2026-03-25T08:00:00+00:00",
+            updated_by="admin",
+            next_port="Setubal",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_departed(
+            port_call["id"],
+            departed_at="2026-03-25T08:00:00+00:00",
+            updated_by="admin",
+        )
+        self.store.attach_departure_report(
+            port_call["id"],
+            updated_by="admin",
+            maneuver_started_at="2026-03-25T07:50:00+00:00",
+            maneuver_finished_at="2026-03-25T08:00:00+00:00",
+            draft_m="4.0",
+            notes="Saída concluída.",
+        )
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        scale = next(item for item in snapshot["archived_scales"] if item["port_call_id"] == port_call["id"])
+        expected_tup = calculate_tup(100, "restantes", scale["stay_days"], tugboat=True)
+
+        self.assertAlmostEqual(scale["estimated_tup"], expected_tup, places=2)
+
     def test_edit_maneuver_report_recalculates_archived_scale_costs_and_updates_notes(self) -> None:
         port_call = self._create_entry()
         self.store.approve_port_call(port_call["id"], decided_by="admin")

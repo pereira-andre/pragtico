@@ -193,6 +193,49 @@ class TestTUPByVesselType(unittest.TestCase):
     def test_estimate_tup_alias(self):
         assert estimate_tup(20000, "contentores", 1.0) == calculate_tup(20000, "contentores", 1.0)
 
+    def test_contentores_example_matches_tariff_note(self):
+        tup = calculate_tup(18292, "contentores", 2.0)
+        assert tup == 2573.68
+
+    def test_tugboat_uses_special_sqrt_rate_per_period(self):
+        tup = calculate_tup(10000, "restantes", 2.4, tugboat=True)
+        expected = math.sqrt(10000) * 0.1506 * 3
+        assert tup == round(expected, 2)
+
+    def test_structure_without_gt_uses_loa_beam_draft_basis(self):
+        tup = calculate_tup(
+            0,
+            "restantes",
+            1.0,
+            loa_m=80.0,
+            beam_m=20.0,
+            draft_m=5.0,
+        )
+        assert tup == round((80.0 * 20.0 * 5.0) * 0.1459, 2)
+
+    def test_tanker_can_use_reduced_gt(self):
+        tup = calculate_tup(50000, "tanque", 1.0, reduced_gt=42000)
+        assert tup == round(42000 * 0.1459, 2)
+
+    def test_regular_line_tup_reduction_uses_tup_tiers(self):
+        tup = calculate_tup(20000, "contentores", 1.0, regular_line_calls=60)
+        base = 0.1144 * 20000
+        assert tup == round(base * 0.70, 2)
+
+    def test_green_award_stacks_with_best_other_tup_reduction(self):
+        tup = calculate_tup(20000, "contentores", 1.0, regular_line_calls=60, green_award=True)
+        base = 0.1144 * 20000
+        expected = base * 0.70 * 0.97
+        assert tup == round(expected, 2)
+
+    def test_technical_call_uses_40pct_reduction(self):
+        tup = calculate_tup(20000, "restantes", 1.0, technical_call=True)
+        base = 0.1459 * 20000
+        assert tup == round(base * 0.60, 2)
+
+    def test_exempt_scale_returns_zero(self):
+        assert calculate_tup(20000, "restantes", 1.0, exempt=True) == 0.0
+
 
 class TestCancellation(unittest.TestCase):
     def test_2h_before(self):

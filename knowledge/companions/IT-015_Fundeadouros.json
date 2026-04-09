@@ -1,103 +1,59 @@
 {
   "document": "IT-015_Fundeadouros.txt",
-  "title": "IT-015 — DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL",
+  "title": "IT-015 — Definição das Zonas de Fundeadouro do Porto de Setúbal",
   "aliases": [
     "IT-015_Fundeadouros.txt",
     "IT-015_Fundeadouros",
-    "IT-015 — DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL",
     "IT-015",
     "IT-15",
-    "015",
-    "DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL"
+    "fundeadouros",
+    "fundeadouro norte",
+    "fundeadouro de troia",
+    "fundeadouro de tráfego local"
   ],
-  "summary": "Este documento caracteriza e delimita geograficamente as zonas de fundeio do Porto de Setúbal.",
+  "summary": "A IT-015 define e delimita as quatro zonas de fundeadouro do Porto de Setúbal e identifica os sistemas de coordenadas usados para a sua representação operacional.",
   "key_points": [
-    "Existem quatro zonas de fundeio definidas: Fundeadouro Norte, Fundeadouro de Troia 1ª Zona, Fundeadouro de Troia 2ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
-    "O Fundeadouro Norte, localizado a norte da entrada do porto, delimitado pelos vértices A a H.",
-    "Sim. O Vértice F (Latitude 38° 30,70' N, Longitude 008° 53,43' W) é um ponto comum às duas zonas.",
-    "Sim. Partilham o Vértice K (Latitude 38° 27,60' N, Longitude 008° 51,00' W), que é o ponto de fronteira entre as duas zonas.",
-    "Exclusivamente a embarcações de tráfego local ao serviço portuário, como lanchas de cabos, rebocadores e embarcações de pilotos.",
-    "As coordenadas estão fornecidas em dois sistemas: WGS84 (latitude e longitude em graus e minutos decimais, compatível com GPS) e Datum 73 (coordenadas planimétricas portuguesas em metros, sistema X/Y)."
+    "Existem quatro zonas de fundeio: Fundeadouro Norte, Tróia 1.ª Zona, Tróia 2.ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
+    "O Fundeadouro Norte é a zona principal de espera de navios para acesso ao porto.",
+    "As zonas de Tróia são contíguas e partilham o vértice K como fronteira comum.",
+    "O fundeadouro de tráfego local destina-se apenas a embarcações auxiliares do porto, como lanchas, rebocadores, embarcações de pilotos e outras embarcações de apoio.",
+    "As coordenadas são fornecidas em WGS84 e Datum 73."
   ],
   "faq": [
     {
       "question": "Quantos fundeadouros existem no Porto de Setúbal?",
-      "answer": "Existem quatro zonas de fundeio definidas: Fundeadouro Norte, Fundeadouro de Troia 1ª Zona, Fundeadouro de Troia 2ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
-      "keywords": [
-        "existem",
-        "fundeadouros",
-        "porto",
-        "quantos",
-        "setubal"
-      ]
+      "answer": "Existem quatro zonas de fundeio definidas: Fundeadouro Norte, Fundeadouro de Tróia 1.ª Zona, Fundeadouro de Tróia 2.ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
+      "keywords": ["fundeadouros", "quantos", "setubal", "porto"]
     },
     {
       "question": "Qual é o fundeadouro principal para navios em espera de cais?",
-      "answer": "O Fundeadouro Norte, localizado a norte da entrada do porto, delimitado pelos vértices A a H.",
-      "keywords": [
-        "cais",
-        "espera",
-        "fundeadouro",
-        "navios",
-        "principal"
-      ]
+      "answer": "O fundeadouro principal é o Fundeadouro Norte, situado a norte da entrada do porto e delimitado pelos vértices A a H.",
+      "keywords": ["fundeadouro norte", "espera de cais", "navios", "principal"]
     },
     {
-      "question": "O Fundeadouro Norte e o Fundeadouro de Tráfego Local têm limites",
-      "answer": "Sim. O Vértice F (Latitude 38° 30,70' N, Longitude 008° 53,43' W) é um ponto comum às duas zonas.",
-      "keywords": [
-        "fundeadouro",
-        "limites",
-        "local",
-        "norte",
-        "tem",
-        "trafego"
-      ]
+      "question": "As duas zonas de Tróia são contíguas?",
+      "answer": "Sim. O Fundeadouro de Tróia 1.ª Zona e o Fundeadouro de Tróia 2.ª Zona partilham o vértice K, que funciona como fronteira comum entre ambas.",
+      "keywords": ["troia", "contiguas", "vertice k", "zonas"]
     },
     {
-      "question": "As duas zonas de Troia são contíguas?",
-      "answer": "Sim. Partilham o Vértice K (Latitude 38° 27,60' N, Longitude 008° 51,00' W), que é o ponto de fronteira entre as duas zonas.",
-      "keywords": [
-        "contiguas",
-        "duas",
-        "sao",
-        "troia",
-        "zonas"
-      ]
+      "question": "O Fundeadouro Norte e o fundeadouro de tráfego local têm limite comum?",
+      "answer": "Sim. As duas zonas partilham o vértice F, que é ponto comum às duas delimitações.",
+      "keywords": ["fundeadouro norte", "trafego local", "vertice f", "limite comum"]
     },
     {
-      "question": "Para que tipo de embarcações se destina o quarto fundeadouro?",
-      "answer": "Exclusivamente a embarcações de tráfego local ao serviço portuário, como lanchas de cabos, rebocadores e embarcações de pilotos. Não se destina a navios de grande porte.",
-      "keywords": [
-        "destina",
-        "embarcacoes",
-        "fundeadouro",
-        "quarto",
-        "tipo"
-      ]
+      "question": "Para que embarcações serve o fundeadouro de tráfego local?",
+      "answer": "Destina-se exclusivamente a embarcações de tráfego local ao serviço portuário, como lanchas de cabos, rebocadores, embarcações de pilotos, barcaças e outras embarcações auxiliares. Não se destina a navios de grande porte em espera de cais.",
+      "keywords": ["trafego local", "rebocadores", "embarcacoes auxiliares", "destina-se"]
     },
     {
       "question": "Em que sistema de coordenadas estão definidos os fundeadouros?",
-      "answer": "As coordenadas estão fornecidas em dois sistemas: WGS84 (latitude e longitude em graus e minutos decimais, compatível com GPS) e Datum 73 (coordenadas planimétricas portuguesas em metros, sistema X/Y).",
-      "keywords": [
-        "coordenadas",
-        "definidos",
-        "estao",
-        "fundeadouros",
-        "sistema"
-      ]
+      "answer": "As coordenadas estão definidas em dois sistemas: WGS84, em latitude e longitude, e Datum 73, em coordenadas planimétricas portuguesas X/Y.",
+      "keywords": ["coordenadas", "wgs84", "datum 73", "sistema"]
     },
     {
       "question": "Quem valida as requisições de manobra relacionadas com fundeadouros?",
-      "answer": "O Piloto Coordenador, quando aplicável.",
-      "keywords": [
-        "fundeadouros",
-        "manobra",
-        "quem",
-        "relacionadas",
-        "requisicoes",
-        "valida"
-      ]
+      "answer": "Compete ao Piloto Coordenador validar as requisições de manobra relacionadas com fundeadouros, quando aplicável.",
+      "keywords": ["piloto coordenador", "requisicoes", "manobra", "fundeadouros"]
     }
   ]
 }

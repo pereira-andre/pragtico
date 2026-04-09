@@ -1,141 +1,64 @@
 {
   "document": "IT-018_NormasEspeciais.txt",
-  "title": "IT-018 — REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL",
+  "title": "IT-018 — Regras Aplicáveis a Manobras — Normas Especiais do Porto de Setúbal",
   "aliases": [
     "IT-018_NormasEspeciais.txt",
     "IT-018_NormasEspeciais",
-    "IT-018 — REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL",
     "IT-018",
     "IT-18",
-    "018",
-    "REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL"
+    "normas especiais",
+    "calado barra",
+    "mitrena",
+    "correr ao longo do cais"
   ],
-  "summary": "Este documento contém regras de aplicação geral ao Porto de Setúbal, transversais a todos os terminais e operações, complementando as regras específicas de cada terminal (IT-005 a IT-015).",
+  "summary": "A IT-018 reúne as regras operacionais transversais do Porto de Setúbal sobre calados, rebocador obrigatório em casos especiais, vento, pilotagem assistida, embarque e desembarque em Outão, cruzamentos, percursos navegáveis e condições especiais na Mitrena.",
   "key_points": [
-    "O calado máximo absoluto é 12,0 metros.",
-    "Não. Com maré de 0,5 m: calado máximo = 10,30 + 0,50 = 10,80 m. O navio com 11,0 m de calado excede este valor. Necessita de aguardar maré de pelo menos 0,70 m para ter calado m...",
-    "7,50 metros (calado máximo específico para o Estaleiro da Mitrena).",
-    "Sim. Navios com mais de 220 metros com destino à Mitrena são assistidos por pelo menos um rebocador durante todo o percurso no porto.",
-    "Com navio de comprimento inferior a 145 m, calado inferior a 7,5 m e condições de tempo e mar regulares.",
-    "Não. Navios com DWT superior a 60.000 não devem sair em vazante de marés vivas quando a preia-mar foi superior a 3 metros."
+    "O calado praticável na Barra e no Canal Norte é 10,30 m mais a altura de maré, com teto absoluto de 12,0 m e validade para ondulação inferior a 1 metro.",
+    "Navios com mais de 220 m destinados à Mitrena e navios com dificuldades de máquina ou de governo devem ser assistidos por rebocador em todo o percurso no porto.",
+    "Com vento superior a 20 nós, a viabilidade da manobra é decidida pelo Piloto nomeado em articulação com o Comandante.",
+    "Em condições normais, o embarque ou desembarque do piloto em Outão exige simultaneamente LOA inferior a 145 m, calado inferior a 7,5 m e tempo e mar regulares.",
+    "A manobra de correr ao longo do cais exige parecer prévio da Pilotagem."
   ],
   "faq": [
     {
-      "question": "Qual o calado máximo na Barra do Porto de Setúbal?",
-      "answer": "O calado máximo absoluto é 12,0 metros. A qualquer hora está garantido um calado de pelo menos 10,5 metros. O calado praticável em cada momento é 10,30 m + altura de maré, com teto de 12,0 m, válido para ondulação < 1 m.",
-      "keywords": [
-        "barra",
-        "calado",
-        "maximo",
-        "porto",
-        "setubal"
-      ]
+      "question": "Qual é o calado máximo na barra do Porto de Setúbal?",
+      "answer": "O calado máximo absoluto é 12,0 metros. Operacionalmente, o calado praticável é 10,30 m mais a altura de maré, com esse teto máximo, e só é válido para ondulação inferior a 1 metro.",
+      "keywords": ["calado", "barra", "12,0", "mare", "canal norte"]
     },
     {
       "question": "Um navio com 11,0 m de calado pode entrar com maré de 0,5 m?",
-      "answer": "Não. Com maré de 0,5 m: calado máximo = 10,30 + 0,50 = 10,80 m. O navio com 11,0 m de calado excede este valor. Necessita de aguardar maré de pelo menos 0,70 m para ter calado máximo = 11,0 m.",
-      "keywords": [
-        "calado",
-        "entrar",
-        "mare",
-        "navio",
-        "pode"
-      ]
+      "answer": "Não. Com maré de 0,5 m, o calado praticável é 10,80 m. Um navio com 11,0 m excede esse valor e tem de aguardar uma maré de pelo menos 0,70 m para atingir 11,0 m de calado praticável.",
+      "keywords": ["11,0 m", "mare 0,5", "entrar", "calado praticavel"]
     },
     {
-      "question": "Qual o calado máximo para entrar no Estaleiro da Mitrena?",
-      "answer": "7,50 metros (calado máximo específico para o Estaleiro da Mitrena).",
-      "keywords": [
-        "calado",
-        "entrar",
-        "estaleiro",
-        "maximo",
-        "mitrena"
-      ]
+      "question": "Quando é obrigatório rebocador em todo o percurso no porto?",
+      "answer": "É obrigatório pelo menos um rebocador em todo o percurso para navios com LOA superior a 220 metros com destino à Mitrena e para qualquer navio com dificuldades de máquina ou de governo.",
+      "keywords": ["rebocador obrigatorio", "todo o percurso", "220 metros", "mitrena", "dificuldades de maquina"]
     },
     {
-      "question": "Um navio de 250 metros com destino à Mitrena precisa de rebocador",
-      "answer": "Sim. Navios com mais de 220 metros com destino à Mitrena são assistidos por pelo menos um rebocador durante todo o percurso no porto.",
-      "keywords": [
-        "destino",
-        "metros",
-        "mitrena",
-        "navio",
-        "precisa",
-        "rebocador"
-      ]
+      "question": "O que acontece quando o vento está acima de 20 nós?",
+      "answer": "Quando o vento é superior a 20 nós, o Piloto nomeado, de acordo com o Comandante, decide a viabilidade da manobra a executar.",
+      "keywords": ["vento", "20 nos", "viabilidade", "manobra"]
     },
     {
-      "question": "Em que condições pode o Piloto embarcar/desembarcar em OUTÃO?",
-      "answer": "Com navio de comprimento inferior a 145 m, calado inferior a 7,5 m e condições de tempo e mar regulares. Com mau tempo usa-se o método do IT-017.",
-      "keywords": [
-        "condicoes",
-        "desembarcar",
-        "embarcar",
-        "outao",
-        "piloto",
-        "pode"
-      ]
+      "question": "Em que condições o piloto pode embarcar ou desembarcar em Outão?",
+      "answer": "Em condições normais, só quando o navio tem comprimento inferior a 145 metros, calado inferior a 7,5 metros e tempo e mar regulares, além de o Comandante e o Piloto considerarem a operação segura.",
+      "keywords": ["outao", "embarcar", "desembarcar", "145 m", "7,5 m"]
     },
     {
-      "question": "Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena durante uma",
-      "answer": "Não. Navios com DWT superior a 60.000 não devem sair em vazante de marés vivas quando a preia-mar foi superior a 3 metros.",
-      "keywords": [
-        "durante",
-        "dwt",
-        "estaleiro",
-        "mitrena",
-        "navio",
-        "pode",
-        "sair"
-      ]
+      "question": "Onde são evitados cruzamentos de navios?",
+      "answer": "Evitam-se cruzamentos no troço entre os pilares 2 e 4 do Canal da Barra e também nos canais da SAPEC, MAGUE e LISNAVE.",
+      "keywords": ["cruzamentos", "pilares 2 e 4", "sapec", "mague", "lisnave"]
     },
     {
-      "question": "Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena a qualquer",
-      "answer": "Sim. Navios entre 60.000 e 100.000 DWT podem sair a qualquer hora durante marés mortas.",
-      "keywords": [
-        "dwt",
-        "estaleiro",
-        "mitrena",
-        "navio",
-        "pode",
-        "qualquer",
-        "sair"
-      ]
+      "question": "Quais são as regras de saída de navios da Mitrena por DWT?",
+      "answer": "Navios com mais de 60.000 DWT não devem sair em vazante de marés vivas quando a preia-mar precedente excedeu 3 m. Entre 60.000 e 100.000 DWT podem sair a qualquer hora em marés mortas. Acima de 100.000 DWT podem sair em vazante de marés mortas, mas passando Outão até 1,5 horas após a preia-mar.",
+      "keywords": ["mitrena", "dwt", "marés vivas", "marés mortas", "outao"]
     },
     {
-      "question": "Um navio de 120.000 DWT pode sair do Estaleiro da Mitrena em vazante?",
-      "answer": "Sim, mas apenas em marés mortas e desde que passe OUTÃO até 1,5 horas após a preia-mar.",
-      "keywords": [
-        "dwt",
-        "estaleiro",
-        "mitrena",
-        "navio",
-        "pode",
-        "sair",
-        "vazante"
-      ]
-    },
-    {
-      "question": "O que é a Manobra de Correr ao Longo do Cais?",
-      "answer": "É a manobra em que o navio desliza ao longo da estrutura de atracação mantendo contacto, desde o laborar do primeiro cabo até todos os cabos estarem com volta. Requer parecer prévio da Pilotagem. Se o vento (referência: 10 nós) puder causar perda de contacto, é designado um Piloto.",
-      "keywords": [
-        "cais",
-        "correr",
-        "longo",
-        "manobra"
-      ]
-    },
-    {
-      "question": "Qual a situação normalizada de atracação em termos de corrente?",
-      "answer": "Atracar com a corrente de maré na proa (de frente). Outras situações são analisadas caso a caso.",
-      "keywords": [
-        "atracacao",
-        "corrente",
-        "normalizada",
-        "situacao",
-        "termos"
-      ]
+      "question": "O que é a manobra de correr ao longo do cais?",
+      "answer": "É a manobra em que o navio desliza ao longo da estrutura de atracação sem perder contacto com ela, desde o laborar do primeiro cabo até todos os cabos estarem com volta. Esta manobra exige parecer prévio da Pilotagem.",
+      "keywords": ["correr ao longo do cais", "parecer previo", "contacto com a estrutura"]
     }
   ]
 }

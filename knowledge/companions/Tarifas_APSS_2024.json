@@ -1,141 +1,74 @@
 {
   "document": "Tarifas_APSS_2024.txt",
-  "title": "PROJETO DE REGULAMENTO DE TARIFAS DA APSS, S.A. PARA 2024",
+  "title": "RG.01 — Projeto de Regulamento de Tarifas da APSS para 2024",
   "aliases": [
     "Tarifas_APSS_2024.txt",
     "Tarifas_APSS_2024",
-    "PROJETO DE REGULAMENTO DE TARIFAS DA APSS, S.A. PARA 2024"
+    "RG.01",
+    "regulamento de tarifas",
+    "tarifas 2024",
+    "tup",
+    "tarifa de uso do porto",
+    "taxa de pilotagem"
   ],
-  "summary": "CÓDIGO: RG.01 — Edição/versão 1.00 VIGÊNCIA: Em vigor a partir de 1 de janeiro de 2024. NOTA: Todas as taxas e valores indicados são acrescidos de IVA nos termos da legislação em vigor. As unidades de medida são indivisíveis com arredondamento por excesso. A tarifa de pilotagem é devida pelos serviços prestados ao navio à entrada, saída",
+  "summary": "O regulamento tarifário APSS 2024 define os valores e regras de cálculo da pilotagem, da TUP, das reduções e isenções aplicáveis, das penalizações por cancelamento, das taxas de passageiros e da taxa indireta de resíduos incluída no primeiro período da TUP.",
   "key_points": [
-    "T = UP × √GT (unidade de pilotagem multiplicada pela RAIZ QUADRADA do GT, não pelo GT directo).",
-    "€ 9,2578 por unidade de √GT.",
-    "€ 3,3628 por unidade de √GT.",
-    "T = 9,2578 × √25.000 = 9,2578 × 158,11 = aproximadamente € 1.464.",
-    "No máximo 24 horas e no mínimo 2 horas antes da hora pretendida.",
-    "30% da taxa normal (redução de 70%), pois o cancelamento ocorreu dentro das 2 horas antes da hora requisitada."
+    "Pilotagem normal calcula-se por T = UP × √GT, com UP de 9,2578 nos serviços normais e 3,3628 nas manobras de correr ao longo do cais.",
+    "A TUP é cobrada por períodos indivisíveis de 24 horas e varia por tipo de navio entre primeiro período e períodos seguintes.",
+    "Para contentores, a TUP é 0,1144 €/GT no primeiro período e 0,0263 €/GT nos períodos seguintes.",
+    "Para rebocadores, tráfego local e certas embarcações especiais, a TUP usa 0,1506 por unidade de √GT por período de 24 horas.",
+    "As reduções da TUP por linha regular não coincidem com as reduções da pilotagem por linha regular."
   ],
   "faq": [
     {
-      "question": "Qual a fórmula de cálculo da taxa de pilotagem?",
-      "answer": "T = UP × √GT (unidade de pilotagem multiplicada pela RAIZ QUADRADA do GT, não pelo GT directo).",
-      "keywords": [
-        "calculo",
-        "formula",
-        "pilotagem",
-        "taxa"
-      ]
+      "question": "Qual é a fórmula de cálculo da taxa de pilotagem?",
+      "answer": "A fórmula de pilotagem é T = UP × √GT. Nos serviços normais usa-se UP 9,2578 e nas manobras de correr ao longo do cais usa-se UP 3,3628.",
+      "keywords": ["formula", "taxa de pilotagem", "up", "sqrt gt"]
     },
     {
-      "question": "Qual o valor de UP para uma manobra normal de entrada ou saída?",
-      "answer": "€ 9,2578 por unidade de √GT.",
-      "keywords": [
-        "entrada",
-        "manobra",
-        "normal",
-        "saida",
-        "valor"
-      ]
+      "question": "Qual é a fórmula da TUP para um navio de contentores?",
+      "answer": "Para contentores, a TUP é calculada por períodos indivisíveis de 24 horas: no primeiro período aplica-se 0,1144 €/GT e nos períodos seguintes 0,0263 €/GT.",
+      "keywords": ["tup", "contentores", "0,1144", "0,0263", "24 horas"]
     },
     {
-      "question": "Qual o valor de UP para uma manobra de correr ao longo do cais?",
-      "answer": "€ 3,3628 por unidade de √GT.",
-      "keywords": [
-        "cais",
-        "correr",
-        "longo",
-        "manobra",
-        "valor"
-      ]
+      "question": "Como se calcula a TUP de rebocadores e tráfego local?",
+      "answer": "Para rebocadores, embarcações de tráfego local e casos equivalentes previstos, a TUP é calculada a 0,1506 por unidade de raiz quadrada do GT por cada período indivisível de 24 horas.",
+      "keywords": ["rebocadores", "trafego local", "0,1506", "sqrt gt", "tup"]
     },
     {
-      "question": "Qual a taxa de pilotagem para um navio de 25.000 GT numa manobra",
-      "answer": "T = 9,2578 × √25.000 = 9,2578 × 158,11 = aproximadamente € 1.464.",
-      "keywords": [
-        "manobra",
-        "navio",
-        "numa",
-        "pilotagem",
-        "taxa"
-      ]
+      "question": "Quanto paga de TUP um navio de contentores com 18.292 GT durante 2 dias sem reduções?",
+      "answer": "No primeiro dia paga 18.292 × 0,1144 = 2.092,60 €. No segundo período paga 18.292 × 0,0263 = 481,08 €. O total para 2 dias é 2.573,68 €.",
+      "keywords": ["18.292 gt", "2 dias", "2.573,68", "contentores", "tup"]
     },
     {
-      "question": "Com quanto tempo de antecedência se deve requisitar o serviço de",
-      "answer": "No máximo 24 horas e no mínimo 2 horas antes da hora pretendida.",
-      "keywords": [
-        "antecedencia",
-        "deve",
-        "quanto",
-        "requisitar",
-        "servico",
-        "tempo"
-      ]
+      "question": "A redução de linha regular da TUP é igual à da pilotagem?",
+      "answer": "Não. Na TUP, as reduções de linha regular são 10% para 6 a 24 escalas, 25% para 25 a 52, 30% para 53 a 100 e 40% para mais de 100. Na pilotagem os escalões intermédios são mais baixos.",
+      "keywords": ["linha regular", "tup", "pilotagem", "reducoes", "escalas"]
     },
     {
-      "question": "Quanto se paga se se cancelar o serviço 30 minutos antes da hora",
-      "answer": "30% da taxa normal (redução de 70%), pois o cancelamento ocorreu dentro das 2 horas antes da hora requisitada.",
-      "keywords": [
-        "antes",
-        "cancelar",
-        "hora",
-        "minutos",
-        "paga",
-        "quanto",
-        "servico"
-      ]
+      "question": "Qual é a redução de TUP para um navio com 60 escalas em linha regular?",
+      "answer": "Com 60 escalas nos últimos 365 dias, a redução de TUP por linha regular é 30%, porque fica no escalão de 53 a 100 escalas.",
+      "keywords": ["60 escalas", "30%", "linha regular", "tup"]
     },
     {
-      "question": "Quanto se paga se o serviço for cancelado com o piloto já embarcado",
-      "answer": "25% da taxa normal (redução de 75%).",
-      "keywords": [
-        "cancelado",
-        "embarcado",
-        "for",
-        "paga",
-        "piloto",
-        "quanto",
-        "servico"
-      ]
+      "question": "Existe redução ambiental na TUP?",
+      "answer": "Sim. O regulamento prevê redução de 3% para navios com Green Award, ISO 14001, propulsão a LNG ou scrubbers em circuito fechado, nos termos indicados no artigo 10.º.",
+      "keywords": ["green award", "iso 14001", "3%", "ambiental", "tup"]
     },
     {
-      "question": "Qual a redução de pilotagem para um navio em linha regular com 60",
-      "answer": "Redução de 20% (escalão 53 a 100 escalas).",
-      "keywords": [
-        "linha",
-        "navio",
-        "pilotagem",
-        "reducao",
-        "regular"
-      ]
+      "question": "Qual é a redução de TUP numa escala técnica?",
+      "answer": "Para escalas técnicas enquadradas no artigo 10.º, a redução base indicada é de 40%.",
+      "keywords": ["escala tecnica", "40%", "reducao", "tup"]
     },
     {
-      "question": "Qual a redução de TUP para o mesmo navio com 60 escalas?",
-      "answer": "Redução de 30% na TUP (os escalões da TUP são diferentes dos da pilotagem).",
-      "keywords": [
-        "escalas",
-        "mesmo",
-        "navio",
-        "reducao",
-        "tup"
-      ]
+      "question": "Quanto se paga se o serviço de pilotagem for cancelado 30 minutos antes da hora requisitada?",
+      "answer": "Cobra-se 30% da taxa normal de pilotagem, porque o cancelamento dentro das 2 horas anteriores beneficia de uma redução de 70%.",
+      "keywords": ["cancelamento", "30 minutos", "30%", "pilotagem"]
     },
     {
-      "question": "Qual a taxa de passageiro em trânsito?",
-      "answer": "€ 2,4908 por passageiro + taxa de carbono de € 2,0000 (se navio movido a energia fóssil), totalizando € 4,4908 por passageiro em trânsito.",
-      "keywords": [
-        "passageiro",
-        "taxa",
-        "transito"
-      ]
-    },
-    {
-      "question": "A TUP aplica-se a rebocadores?",
-      "answer": "Sim, a rebocadores com GT superior a 5, à taxa de € 0,1506/√GT/24h.",
-      "keywords": [
-        "aplica",
-        "rebocadores",
-        "tup"
-      ]
+      "question": "A taxa indireta de resíduos está incluída na TUP?",
+      "answer": "Sim. A taxa indireta de resíduos de 0,0088 €/GT por escala já está incorporada no valor do primeiro período da TUP.",
+      "keywords": ["residuos", "0,0088", "primeiro periodo", "tup"]
     }
   ]
 }
