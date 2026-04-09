@@ -396,7 +396,7 @@ def whatsapp_webhook_receive():
                         "Mantive a resposta em revisão sem correção adicional."
                     )
                 else:
-                    services.store.update_message_feedback(
+                    updated_message = services.store.update_message_feedback(
                         correction_username,
                         correction_conversation_id,
                         correction_message_id,
@@ -412,10 +412,16 @@ def whatsapp_webhook_receive():
                         correction_message_id,
                         source="whatsapp",
                     )
-                    correction_reply = (
-                        "Correção guardada. Vou usá-la como referência forte em perguntas semelhantes, "
-                        "conciliando-a com os documentos disponíveis."
-                    )
+                    if str(updated_message.get("feedback_correction") or "").strip():
+                        correction_reply = (
+                            "Correção guardada. Vou usá-la como referência forte em perguntas semelhantes, "
+                            "conciliando-a com os documentos disponíveis."
+                        )
+                    else:
+                        correction_reply = (
+                            "Registei a tua nota de revisão, mas não a vou reutilizar como resposta final "
+                            "sem uma formulação canónica."
+                        )
 
                 services.store.delete_runtime_state(_pending_feedback_correction_key(from_number))
                 reply_message = services.store.append_chat_message(

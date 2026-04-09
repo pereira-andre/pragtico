@@ -100,6 +100,74 @@ class _StubWaveService:
         }
 
 
+class _StubTideService:
+    def resolve_query_dates(self, question: str):
+        del question
+        return [datetime(2026, 4, 9).date()]
+
+    def summary_for_date(self, target_date):
+        del target_date
+        return {
+            "date": "2026-04-09",
+            "date_label": "09/04/2026",
+            "location": "Setúbal / Tróia",
+            "events": [
+                {"time": "01:48", "type": "Baixa-mar", "height_m": 1.3},
+                {"time": "08:02", "type": "Preia-mar", "height_m": 2.4},
+            ],
+        }
+
+    def context_for_question(self, question: str):
+        del question
+        return {
+            "source_id": "T1",
+            "document": "Marés Setúbal / Tróia",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "structured",
+            "snippet": "Marés para 09/04/2026 em Setúbal / Tróia.",
+            "text": "Marés para 09/04/2026 em Setúbal / Tróia.",
+        }
+
+
+class _StubWeatherService:
+    enabled = True
+
+    def get_forecast(self, days: int = 3):
+        del days
+        return {
+            "location": {
+                "name": "Setúbal",
+                "localtime": "2026-04-09 13:04",
+            },
+            "current": {
+                "condition": "Parcialmente nublado",
+                "temp_c": 18.0,
+                "wind_kts": 12.0,
+                "gust_kts": 18.0,
+                "wind_dir": "NW",
+                "humidity": 67,
+                "vis_km": 10,
+                "precip_mm": 0.0,
+            },
+        }
+
+    def context_source(self):
+        return {
+            "source_id": "W1",
+            "document": "WeatherAPI Setúbal",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "live_api",
+            "snippet": "Meteorologia atual para Setúbal.",
+            "text": "Meteorologia atual para Setúbal.",
+        }
+
+    def context_for_question(self, question: str):
+        del question
+        return self.context_source()
+
+
 class _StubWhatsAppService:
     def __init__(
         self,
@@ -1238,6 +1306,52 @@ class OperationalFlowTests(unittest.TestCase):
             payload["answer"],
             "O comprimento máximo de um navio permitido para manobrar à noite na LISNAVE é 280 m.",
         )
+
+    def test_chat_weather_and_tides_question_prefers_live_operational_answer(self) -> None:
+        with patch.object(services, "tide_service", _StubTideService()):
+            with patch.object(services, "weather_service", _StubWeatherService()):
+                with patch.object(services.rag, "answer") as answer_mock:
+                    with app.app.test_client() as client:
+                        with client.session_transaction() as flask_session:
+                            flask_session["username"] = "admin"
+                            flask_session["role"] = "admin"
+
+                        response = client.post(
+                            "/api/chat",
+                            json={
+                                "question": "Quais são as marés para hoje e as condições meteorológicas?",
+                            },
+                        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Marés para 09/04/2026", payload["answer"])
+        self.assertIn("Condições meteorológicas atuais em Setúbal", payload["answer"])
+        self.assertIn("Parcialmente nublado", payload["answer"])
+        answer_mock.assert_not_called()
+
+    def test_chat_current_weather_follow_up_prefers_live_operational_answer(self) -> None:
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "E as condições meteorológicas atuais no porto?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Condições meteorológicas atuais em Setúbal", payload["answer"])
+        self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
+        answer_mock.assert_not_called()
 
     def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
         with app.app.test_client() as client:

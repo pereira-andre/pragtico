@@ -1198,6 +1198,33 @@ class LocalStorePortCallTests(unittest.TestCase):
         )
         self.assertEqual(updated["feedback_correction_document"], "IT-014_Lisnave.txt")
 
+    def test_message_feedback_review_discards_instructional_note_for_factual_question(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "user",
+            "E as condições meteorológicas atuais no porto?",
+        )
+        msg = self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "assistant",
+            "Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.",
+        )
+
+        updated = self.store.update_message_feedback(
+            "admin",
+            conv["id"],
+            msg["id"],
+            "review",
+            "A resposta anterior não respondia à pergunta.",
+            feedback_correction="Verificar as condições meteorológicas de acordo com o que é pedido.",
+            feedback_updated_by="admin",
+        )
+
+        self.assertEqual(updated["feedback_correction"], "")
+
     def test_message_feedback_invalid_status_raises(self) -> None:
         conv = self.store.create_conversation("admin")
         msg = self.store.append_chat_message("admin", conv["id"], "assistant", "Resposta")

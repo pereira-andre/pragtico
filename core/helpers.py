@@ -92,6 +92,12 @@ RULE_CODE_TITLES = {
     "062": "IT-062 Cais da Teporset",
 }
 
+TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-mar)\b")
+WEATHER_QUERY_RE = re.compile(
+    r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|humidade|temperatura|chuva)\b"
+)
+CURRENT_WEATHER_RE = re.compile(r"\b(atual|atuais|agora|neste momento|corrente|correntes|hoje)\b")
+
 
 def available_rule_code_titles() -> dict[str, str]:
     """Return the rule-code map limited to documents actually present in the knowledge base."""
@@ -1312,6 +1318,9 @@ def build_operational_chat_sources(question: str) -> list[dict]:
 def answer_direct_operational_query(question: str) -> dict | None:
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     clean_question = _operational_lookup_key(question)
+    live_environment_answer = _answer_live_environment_query(question, clean_question)
+    if live_environment_answer:
+        return live_environment_answer
     port_calls = current_resolvable_port_calls()
     matched_port_call = _match_port_call_from_question(question, port_calls)
 
@@ -1367,6 +1376,102 @@ def answer_direct_operational_query(question: str) -> dict | None:
             }
         ],
         "answer_origin": "operational_lookup",
+    }
+
+
+def _build_tide_lookup_answer(question: str) -> tuple[str, list[dict]]:
+    summaries = [
+        services.tide_service.summary_for_date(target_date)
+        for target_date in services.tide_service.resolve_query_dates(question)
+    ]
+    if not summaries:
+        return "", []
+
+    lines: list[str] = []
+    for summary in summaries:
+        lines.append(f"Marés para {summary.get('date_label', summary.get('date', 'a data pedida'))} em {summary.get('location', 'Setúbal / Tróia')}:")
+        events = summary.get("events") or []
+        if not events:
+            lines.append("- Sem eventos de maré registados.")
+            continue
+        for item in events:
+            lines.append(
+                f"- {item.get('time', '--')} — {item.get('type', '--')} de {item.get('height_m', '--')} m"
+            )
+    context = services.tide_service.context_for_question(question)
+    sources = [context] if context else []
+    return "\n".join(lines), sources
+
+
+def _build_weather_lookup_answer(question: str, clean_question: str) -> tuple[str, list[dict]]:
+    weather_service = getattr(services, "weather_service", None)
+    if not weather_service or not weather_service.enabled:
+        return "A meteorologia live não está configurada neste ambiente.", []
+
+    forecast = weather_service.get_forecast(days=3)
+    if not forecast:
+        return "Não consegui obter as condições meteorológicas atuais.", []
+
+    location = forecast.get("location", {})
+    current = forecast.get("current", {})
+    if CURRENT_WEATHER_RE.search(clean_question):
+        lines = [
+            f"Condições meteorológicas atuais em {location.get('name', 'Setúbal')} ({location.get('localtime', '--')}):",
+            f"- Estado do tempo: {current.get('condition', '--')}",
+            f"- Temperatura: {current.get('temp_c', '--')} °C",
+            f"- Vento: {current.get('wind_kts', '--')} kts de {current.get('wind_dir', '--')}",
+            f"- Rajadas: {current.get('gust_kts', '--')} kts",
+            f"- Humidade: {current.get('humidity', '--')}%",
+            f"- Visibilidade: {current.get('vis_km', '--')} km",
+            f"- Precipitação: {current.get('precip_mm', '--')} mm",
+        ]
+        context = weather_service.context_source()
+        sources = [context] if context else []
+        return "\n".join(lines), sources
+
+    context = weather_service.context_for_question(question)
+    if context:
+        return context.get("text") or context.get("snippet", ""), [context]
+    return "Não consegui obter a previsão meteorológica pedida.", []
+
+
+def _answer_live_environment_query(question: str, clean_question: str) -> dict | None:
+    wants_tides = bool(TIDE_QUERY_RE.search(clean_question))
+    wants_weather = bool(WEATHER_QUERY_RE.search(clean_question))
+    if not wants_tides and not wants_weather:
+        return None
+
+    answer_parts: list[str] = []
+    sources: list[dict] = []
+
+    if wants_tides:
+        try:
+            tide_answer, tide_sources = _build_tide_lookup_answer(question)
+        except Exception as exc:
+            logger.exception("Falha ao obter marés para consulta direta.")
+            tide_answer = f"Falha ao obter marés: {exc}"
+            tide_sources = []
+        if tide_answer:
+            answer_parts.append(tide_answer)
+            sources.extend(tide_sources)
+
+    if wants_weather:
+        try:
+            weather_answer, weather_sources = _build_weather_lookup_answer(question, clean_question)
+        except Exception as exc:
+            logger.exception("Falha ao obter meteorologia para consulta direta.")
+            weather_answer = f"Falha ao obter meteorologia: {exc}"
+            weather_sources = []
+        if weather_answer:
+            answer_parts.append(weather_answer)
+            sources.extend(weather_sources)
+
+    if not answer_parts:
+        return None
+    return {
+        "answer": "\n\n".join(answer_parts),
+        "sources": sources,
+        "answer_origin": "operational_live",
     }
 
 

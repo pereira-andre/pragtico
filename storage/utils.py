@@ -148,6 +148,21 @@ def _declarative_subject_from_question(question: Optional[str]) -> str:
     return ""
 
 
+def _is_factual_feedback_question(question: Optional[str]) -> bool:
+    clean_question = _clean_text(question).lower()
+    return bool(
+        re.match(r"^(qual|quais|quando|onde|quanto|quantos|e\s+as|e\s+os|e\s+o|e\s+a)\b", clean_question)
+    )
+
+
+def _looks_like_instructional_feedback(text: str) -> bool:
+    clean_text = _clean_text(text).lower()
+    return bool(
+        re.match(r"^(verificar|consultar|confirmar|validar|rever|analisar|ver|obter|usar|ir\s+buscar)\b", clean_text)
+        and re.search(r"\b(pedido|pergunta|pedido do utilizador|conforme pedido|de acordo com)\b", clean_text)
+    )
+
+
 def normalize_feedback_correction(question: Optional[str], correction_text: Optional[str]) -> str:
     raw_text = _clean_text(correction_text)
     if not raw_text:
@@ -165,6 +180,9 @@ def normalize_feedback_correction(question: Optional[str], correction_text: Opti
         if match:
             text = _clean_text(match.group(1)).strip(" \"'“”‘’")
             break
+
+    if _is_factual_feedback_question(question) and _looks_like_instructional_feedback(text):
+        return ""
 
     subject = _declarative_subject_from_question(question)
     concise_value_match = re.fullmatch(
