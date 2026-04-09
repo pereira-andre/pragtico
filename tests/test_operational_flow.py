@@ -1182,6 +1182,63 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("280 metros", payload["answer"])
         self.assertIn("período diurno", payload["answer"])
 
+    def test_legacy_review_correction_commentary_is_normalized_before_reuse(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
+            )
+            reviewed_message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Não. Navios com comprimento superior a 280 metros só podem manobrar durante o dia.",
+                citations=[{"document": "IT-014_Lisnave.txt"}],
+            )
+            self.store.update_message_feedback(
+                "admin",
+                conversation["id"],
+                reviewed_message["id"],
+                "review",
+                "A formulação estava enviesada.",
+                feedback_correction="280 m.",
+                feedback_correction_document="IT-014_Lisnave.txt",
+                feedback_updated_by="admin",
+            )
+
+            messages = self.store._read_messages()
+            for item in messages:
+                if item["id"] == reviewed_message["id"]:
+                    item["feedback_correction"] = (
+                        "Resposta está correta mas eu não especifiquei nenhum comprimento para dizeres não. "
+                        "Mas sim o comprimento máximo de um navio permitido para manobrar à noite na LISNAVE e 280 m."
+                    )
+                    break
+            self.store._write_messages(messages)
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": "Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "review_correction_memory")
+        self.assertEqual(
+            payload["answer"],
+            "O comprimento máximo de um navio permitido para manobrar à noite na LISNAVE é 280 m.",
+        )
+
     def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

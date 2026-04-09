@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from domain.knowledge_evals import _extract_expected_substrings
+from storage.utils import _question_for_assistant_message, normalize_feedback_correction
 
 
 def _infer_feedback_document(message: dict) -> str:
@@ -17,21 +18,6 @@ def _infer_feedback_document(message: dict) -> str:
     if len(cited_documents) == 1:
         return cited_documents[0]
     return ""
-
-
-def _question_for_assistant_message(messages: list[dict], message_id: str) -> str:
-    target_index = next(
-        (index for index, item in enumerate(messages) if str(item.get("id") or "") == str(message_id)),
-        -1,
-    )
-    if target_index < 0:
-        return ""
-    for index in range(target_index - 1, -1, -1):
-        if (messages[index].get("role") or "").strip().lower() == "user":
-            return str(messages[index].get("content") or "").strip()
-    return ""
-
-
 def sync_feedback_correction_eval_case(store, username: str, conversation_id: str, message_id: str, *, source: str) -> dict | None:
     if not hasattr(store, "upsert_feedback_eval_case") or not hasattr(store, "delete_feedback_eval_case"):
         return None
@@ -46,7 +32,10 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
 
     document_name = _infer_feedback_document(target_message)
     question = _question_for_assistant_message(messages, message_id)
-    corrected_answer = str(target_message.get("feedback_correction") or "").strip()
+    corrected_answer = normalize_feedback_correction(
+        question,
+        str(target_message.get("feedback_correction") or "").strip(),
+    )
     should_register = (
         (target_message.get("feedback_status") or "").strip().lower() == "review"
         and bool(corrected_answer)

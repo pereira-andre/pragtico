@@ -118,6 +118,86 @@ def _clean_text(value: Optional[str]) -> str:
     return " ".join((value or "").strip().split())
 
 
+def _question_for_assistant_message(messages: List[Dict], message_id: str) -> str:
+    target_index = next(
+        (index for index, item in enumerate(messages) if str(item.get("id") or "") == str(message_id)),
+        -1,
+    )
+    if target_index < 0:
+        return ""
+    for index in range(target_index - 1, -1, -1):
+        if _clean_text(messages[index].get("role", "")).lower() == "user":
+            return _clean_text(messages[index].get("content"))
+    return ""
+
+
+def _declarative_subject_from_question(question: Optional[str]) -> str:
+    clean_question = _clean_text(question).rstrip("?.! ")
+    if not clean_question:
+        return ""
+    subject_match = re.match(r"^qual\s+é\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        subject = subject_match.group(1).strip()
+        return subject[:1].upper() + subject[1:] if subject else ""
+    subject_match = re.match(r"^qual\s+o\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        return f"O {subject_match.group(1).strip()}"
+    subject_match = re.match(r"^qual\s+a\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        return f"A {subject_match.group(1).strip()}"
+    return ""
+
+
+def normalize_feedback_correction(question: Optional[str], correction_text: Optional[str]) -> str:
+    raw_text = _clean_text(correction_text)
+    if not raw_text:
+        return ""
+
+    text = raw_text.strip(" \"'“”‘’")
+    capture_patterns = (
+        r"(?:^|[.?!]\s*)(?:a\s+)?resposta\s+(?:correta|certa)\s+(?:deve\s+ser|seria|é)\s*[:\-]?\s*(.+)$",
+        r"(?:^|[.?!]\s*)(?:o\s+correto\s+é|o\s+certo\s+é|o\s+correto\s+seria|o\s+certo\s+seria)\s*[:\-]?\s*(.+)$",
+        r"(?:^|[.?!]\s*)(?:corrige\s+para|corrigir\s+para|deve\s+dizer|deve\s+responder)\s*[:\-]?\s*(.+)$",
+        r"(?:^|[.?!]\s*)mas\s+sim\s+(.+)$",
+    )
+    for pattern in capture_patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            text = _clean_text(match.group(1)).strip(" \"'“”‘’")
+            break
+
+    subject = _declarative_subject_from_question(question)
+    concise_value_match = re.fullmatch(
+        r"([0-9][0-9.,]*(?:\s*(?:m|metros?|milhas(?:\s+náuticas)?|horas?|dias?|minutos?|%))?)\.?",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if concise_value_match and subject:
+        return f"{subject} é {concise_value_match.group(1).strip()}."
+
+    article_clause_match = re.fullmatch(
+        r"(o|a|os|as)\s+(.+?)\s+e\s+([0-9][^.?!]*)\.?",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if article_clause_match and " é " not in text.lower():
+        article = article_clause_match.group(1).capitalize()
+        clause = article_clause_match.group(2).strip()
+        value = article_clause_match.group(3).strip()
+        return f"{article} {clause} é {value}."
+
+    if subject and text.lower().startswith(subject.lower()) and " é " not in text.lower():
+        trailing_value_match = re.search(
+            r"\b([0-9][0-9.,]*(?:\s*(?:m|metros?|milhas(?:\s+náuticas)?|horas?|dias?|minutos?|%)))\.?$",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if trailing_value_match:
+            return f"{subject} é {trailing_value_match.group(1).strip()}."
+
+    return text
+
+
 def _normalize_username(value: Optional[str]) -> str:
     return _clean_text(value).lower()
 

@@ -1163,6 +1163,41 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(updated["feedback_correction_document"], "IT-036_RegulacaoAgulhas.txt")
         self.assertEqual(updated["feedback_updated_by"], "admin")
 
+    def test_message_feedback_review_normalizes_meta_commentary_into_canonical_answer(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "user",
+            "Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
+        )
+        msg = self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "assistant",
+            "Não. Navios com comprimento superior a 280 metros só podem manobrar durante o dia.",
+            citations=[{"document": "IT-014_Lisnave.txt"}],
+        )
+
+        updated = self.store.update_message_feedback(
+            "admin",
+            conv["id"],
+            msg["id"],
+            "review",
+            "",
+            feedback_correction=(
+                "Resposta está correta mas eu não especifiquei nenhum comprimento para dizeres não. "
+                "Mas sim o comprimento máximo de um navio permitido para manobrar à noite na LISNAVE e 280 m."
+            ),
+            feedback_updated_by="admin",
+        )
+
+        self.assertEqual(
+            updated["feedback_correction"],
+            "O comprimento máximo de um navio permitido para manobrar à noite na LISNAVE é 280 m.",
+        )
+        self.assertEqual(updated["feedback_correction_document"], "IT-014_Lisnave.txt")
+
     def test_message_feedback_invalid_status_raises(self) -> None:
         conv = self.store.create_conversation("admin")
         msg = self.store.append_chat_message("admin", conv["id"], "assistant", "Resposta")

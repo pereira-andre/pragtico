@@ -41,6 +41,7 @@ from domain.knowledge_companions import (
     load_document_companion,
 )
 from integrations.rag_engine import chunk_text, lexical_score
+from storage.utils import normalize_feedback_correction
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,10 @@ def _select_review_correction_match(reviewed_answers: list[dict], trusted_answer
 
 
 def _build_review_correction_answer(review_match: dict) -> dict:
-    correction = (review_match.get("feedback_correction") or "").strip()
+    correction = normalize_feedback_correction(
+        review_match.get("question"),
+        (review_match.get("feedback_correction") or "").strip(),
+    )
     if not correction:
         raise ValueError("Correção vazia.")
     return {

@@ -66,6 +66,7 @@ from .utils import (
     _build_actor_snapshot,
     _clean_text,
     _conversation_title_from_text,
+    _question_for_assistant_message,
     _normalize_email,
     _normalize_phone,
     _normalize_user_profile_payload,
@@ -76,6 +77,7 @@ from .utils import (
     _validate_required_vessel_profile,
     is_user_profile_complete,
     is_legacy_system_markdown_document,
+    normalize_feedback_correction,
     normalize_constraint_codes,
 )
 from core.validators import validate_operational_feedback_status
@@ -1254,12 +1256,20 @@ class LocalStore(BaseStore):
 
         messages = self._read_messages()
         updated = None
+        feedback_question = _question_for_assistant_message(
+            [item for item in messages if item.get("conversation_id") == conversation_id],
+            message_id,
+        )
         for message in messages:
             if message["id"] != message_id or message["conversation_id"] != conversation_id:
                 continue
             if message["role"] != "assistant":
                 raise ValueError("Só podes classificar respostas do assistente.")
-            correction_text = feedback_correction.strip() if feedback_status == "review" else ""
+            correction_text = (
+                normalize_feedback_correction(feedback_question, feedback_correction)
+                if feedback_status == "review"
+                else ""
+            )
             message["feedback_status"] = feedback_status
             message["feedback_note"] = feedback_note.strip()
             message["feedback_correction"] = correction_text

@@ -68,6 +68,7 @@ from .utils import (
     _build_actor_snapshot,
     _clean_text,
     _conversation_title_from_text,
+    _question_for_assistant_message,
     _normalize_user_profile_payload,
     _normalize_username,
     _text_similarity,
@@ -75,6 +76,7 @@ from .utils import (
     _validate_required_operational_profile,
     _validate_required_vessel_profile,
     is_legacy_system_markdown_document,
+    normalize_feedback_correction,
     normalize_constraint_codes,
 )
 
@@ -1965,22 +1967,36 @@ class PostgresStore(BaseStore):
         if conversation["id"] != conversation_id:
             raise ValueError("Conversa inválida para este utilizador.")
 
-        correction_text = feedback_correction.strip() if feedback_status == "review" else ""
         updated_by = feedback_updated_by.strip()
 
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT citations
+                    SELECT id::text AS id, role, content, citations
                     FROM messages
-                    WHERE id = %s AND conversation_id = %s AND role = 'assistant'
+                    WHERE conversation_id = %s
+                    ORDER BY created_at ASC
                     """,
-                    (message_id, conversation_id),
+                    (conversation_id,),
                 )
-                message_row = cur.fetchone()
+                message_rows = cur.fetchall()
+                message_row = next(
+                    (
+                        row
+                        for row in message_rows
+                        if row.get("id") == message_id and row.get("role") == "assistant"
+                    ),
+                    None,
+                )
                 if not message_row:
                     raise ValueError("Mensagem não encontrada.")
+                feedback_question = _question_for_assistant_message(message_rows, message_id)
+                correction_text = (
+                    normalize_feedback_correction(feedback_question, feedback_correction)
+                    if feedback_status == "review"
+                    else ""
+                )
                 correction_document = (
                     _infer_feedback_correction_document(
                         {"citations": message_row.get("citations") or []},
