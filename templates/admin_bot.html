@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell admin-status-page admin-bot-page">
+  <section class="hero-card admin-status-hero admin-bot-hero">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Qualidade do assistente</p>
+        <h1>Bot e evals</h1>
+        <p class="lead">Leitura viva do comportamento documental do PRAGtico: cobertura dos companions, casos supervisionados e desvios ainda por fechar.</p>
+      </div>
+      <div class="admin-status-hero-tools">
+        <span class="admin-status-badge is-{{ bot.state }}">{{ bot.state_label }}</span>
+        <a class="outline-link" href="{{ url_for('chat.chat_archive') }}">Abrir conversas</a>
+        <a class="outline-link" href="{{ url_for('admin.admin_documents') }}">Ver documentos</a>
+      </div>
+    </div>
+
+    <div class="hero-meta-grid admin-status-hero-grid">
+      <article class="hero-stat">
+        <span>Pass rate</span>
+        <strong>{{ bot.pass_rate_pct }}%</strong>
+        <small>{{ bot.passed_cases_total }} / {{ bot.active_cases_total }} casos ativos</small>
+      </article>
+      <article class="hero-stat">
+        <span>Correções persistidas</span>
+        <strong>{{ bot.feedback_cases_total }}</strong>
+        <small>vindas do site e do WhatsApp</small>
+      </article>
+      <article class="hero-stat">
+        <span>Companions resolvidos</span>
+        <strong>{{ bot.resolved_companions_total }}</strong>
+        <small>{{ bot.manual_companions_total }} manuais no repositório</small>
+      </article>
+      <article class="hero-stat">
+        <span>Última correção</span>
+        <strong>{{ bot.latest_feedback_updated_at_label }}</strong>
+        <small>último reforço supervisionado</small>
+      </article>
+    </div>
+
+    <p class="admin-status-note admin-bot-summary">{{ bot.summary }}</p>
+  </section>
+
+  <div class="admin-status-layout">
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Régua atual</p>
+          <h2>Estado dos casos de avaliação</h2>
+        </div>
+      </div>
+      <div class="admin-status-split">
+        <article class="admin-status-surface">
+          <div class="admin-status-surface-head">
+            <strong>Conjunto medido</strong>
+            <span class="admin-status-badge is-{{ bot.state }}">{{ bot.state_label }}</span>
+          </div>
+          <div class="admin-status-compact-grid">
+            <div class="admin-status-fact">
+              <span>Casos estáticos</span>
+              <strong>{{ bot.static_cases_total }}</strong>
+            </div>
+            <div class="admin-status-fact">
+              <span>Casos corrigidos</span>
+              <strong>{{ bot.feedback_cases_total }}</strong>
+            </div>
+            <div class="admin-status-fact">
+              <span>Ativos após dedupe</span>
+              <strong>{{ bot.active_cases_total }}</strong>
+            </div>
+            <div class="admin-status-fact">
+              <span>Falhas atuais</span>
+              <strong>{{ bot.failed_cases_total }}</strong>
+            </div>
+            <div class="admin-status-fact">
+              <span>Documentos cobertos</span>
+              <strong>{{ bot.documents_covered_total }}</strong>
+            </div>
+          </div>
+          <p class="admin-status-note">
+            O runner atual combina evals versionados em `knowledge/evals` com correções persistidas no storage aplicacional.
+          </p>
+        </article>
+
+        <article class="admin-status-surface">
+          <div class="admin-status-surface-head">
+            <strong>Origem das correções</strong>
+            <span class="admin-status-badge is-{{ 'online' if bot.feedback_cases_total else 'degraded' }}">{{ bot.feedback_cases_total }}</span>
+          </div>
+          {% if bot.source_rows %}
+            <div class="admin-status-compact-grid">
+              {% for item in bot.source_rows %}
+                <div class="admin-status-fact">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.count }}</strong>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="admin-status-note">Ainda não existem correções persistidas por operadores.</p>
+          {% endif %}
+          <div class="admin-status-fact">
+            <span>Documentos de conhecimento</span>
+            <strong>{{ bot.knowledge_documents_total }}</strong>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Desvios</p>
+          <h2>Casos que ainda falham</h2>
+        </div>
+      </div>
+      {% if bot.failure_rows %}
+        <div class="admin-bot-case-grid">
+          {% for item in bot.failure_rows %}
+            <article class="admin-bot-case admin-bot-case-fail">
+              <div class="admin-bot-case-head">
+                <strong>{{ item.document }}</strong>
+                <span class="admin-status-badge is-degraded">A rever</span>
+              </div>
+              <p class="admin-bot-case-question">{{ item.question }}</p>
+              <p class="admin-bot-case-meta"><strong>Em falta:</strong> {{ item.missing_summary }}</p>
+              <p class="admin-bot-case-answer">{{ item.answer_preview }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="admin-status-note">Não há falhas ativas no conjunto atual de evals.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Aprendizagem supervisionada</p>
+          <h2>Correções recentes de operadores</h2>
+        </div>
+      </div>
+      {% if bot.recent_feedback_cases %}
+        <div class="admin-bot-case-grid">
+          {% for item in bot.recent_feedback_cases %}
+            <article class="admin-bot-case">
+              <div class="admin-bot-case-head">
+                <strong>{{ item.document }}</strong>
+                <span class="admin-status-badge is-online">{{ item.source_label }}</span>
+              </div>
+              <p class="admin-bot-case-question">{{ item.question }}</p>
+              <p class="admin-bot-case-answer">{{ item.expected_answer_preview }}</p>
+              {% if item.feedback_note_preview %}
+                <p class="admin-bot-case-meta"><strong>Nota:</strong> {{ item.feedback_note_preview }}</p>
+              {% endif %}
+              <p class="admin-bot-case-meta"><strong>Atualizado por:</strong> {{ item.updated_by or "Operador" }} · {{ item.updated_at_label }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="admin-status-note">Ainda não há correções supervisionadas guardadas para alimentar a memória corrigida do bot.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Cobertura</p>
+          <h2>Documentos acompanhados por evals</h2>
+        </div>
+      </div>
+      {% if bot.document_rows %}
+        <div class="admin-bot-document-grid">
+          {% for item in bot.document_rows %}
+            <article class="admin-status-surface admin-bot-document-card">
+              <div class="admin-status-surface-head">
+                <strong>{{ item.document }}</strong>
+                <span class="admin-status-badge is-{{ item.state }}">{{ item.coverage_pct }}%</span>
+              </div>
+              <div class="admin-status-compact-grid">
+                <div class="admin-status-fact">
+                  <span>Casos</span>
+                  <strong>{{ item.total_cases }}</strong>
+                </div>
+                <div class="admin-status-fact">
+                  <span>Passam</span>
+                  <strong>{{ item.passed_cases }}</strong>
+                </div>
+                <div class="admin-status-fact">
+                  <span>Falham</span>
+                  <strong>{{ item.failed_cases }}</strong>
+                </div>
+                <div class="admin-status-fact">
+                  <span>Correções</span>
+                  <strong>{{ item.feedback_cases }}</strong>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="admin-status-note">Nenhum documento tem ainda casos de avaliação associados.</p>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

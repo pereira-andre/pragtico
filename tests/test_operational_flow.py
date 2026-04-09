@@ -2845,6 +2845,69 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertIn("Eliminar selecionados", html)
         self.assertIn("Documentos indexados", html)
 
+    def test_admin_bot_page_renders_eval_progress_and_recent_feedback(self) -> None:
+        knowledge_dir = Path(self.store.knowledge_dir)
+        (knowledge_dir / "evals").mkdir(parents=True, exist_ok=True)
+        (knowledge_dir / "companions").mkdir(parents=True, exist_ok=True)
+        (knowledge_dir / "IT-036_RegulacaoAgulhas.txt").write_text(
+            "IT-036 Regulacao de Agulhas\n\nRegras operacionais.",
+            encoding="utf-8",
+        )
+        (knowledge_dir / "companions" / "IT-036_RegulacaoAgulhas.json").write_text(
+            json.dumps(
+                {
+                    "title": "IT-036 - Regulacao de Agulhas",
+                    "summary": "Regras aplicaveis a RA no Porto de Setubal.",
+                    "faq": [
+                        {
+                            "question": "Qual e a regra para compensacao de agulhas dentro do Porto a noite?",
+                            "answer": "A noite a RA nao se efetua com navios de LOA igual ou superior a 225 metros.",
+                            "keywords": ["agulhas", "noite", "225", "loa"],
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        (knowledge_dir / "evals" / "critical_document_companion_evals.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "document": "IT-036_RegulacaoAgulhas.txt",
+                        "question": "Qual e a regra para compensacao de agulhas dentro do Porto a noite?",
+                        "expected_answer": "A noite a RA nao se efetua com navios de LOA igual ou superior a 225 metros.",
+                        "expected_substrings": ["225 metros"],
+                    }
+                ],
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        self.store.upsert_feedback_eval_case(
+            source_message_id="msg-123",
+            document="IT-036_RegulacaoAgulhas.txt",
+            question="Qual e a regra para compensacao de agulhas dentro do Porto a noite?",
+            expected_answer="A noite a RA nao se efetua com navios de LOA igual ou superior a 225 metros.",
+            expected_substrings=["225 metros"],
+            feedback_note="Resposta corrigida manualmente.",
+            updated_by="admin",
+            source="whatsapp",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Bot e evals", html)
+        self.assertIn("IT-036_RegulacaoAgulhas.txt", html)
+        self.assertIn("WhatsApp", html)
+        self.assertIn("225 metros", html)
+
 
 class PortalLiveNotificationTests(unittest.TestCase):
     def setUp(self) -> None:

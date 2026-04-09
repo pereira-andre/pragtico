@@ -1,5 +1,6 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
+from collections import Counter
 import logging
 import os
 import re
@@ -10,6 +11,8 @@ from flask import Blueprint, abort, current_app, flash, jsonify, redirect, rende
 from core import services
 from core.whatsapp_support import build_user_whatsapp_view, verify_user_whatsapp
 from core.validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role, validate_whatsapp_phone
+from domain.knowledge_companions import companion_directory, load_document_companion
+from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases_from_dir, load_eval_cases_from_store
 from core.helpers import (
     current_reindex_status_payload,
     load_admin_status,
@@ -20,6 +23,7 @@ from core.helpers import (
     start_reindex_job,
 )
 from domain.migration_service import migrate_local_json_to_postgres
+from storage.utils import _local_iso_to_label
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,217 @@ def _admin_users_payload() -> list[dict]:
 
 def _manual_knowledge_authoring_enabled() -> bool:
     return bool(current_app.config.get("MANUAL_KNOWLEDGE_AUTHORING_ENABLED", False))
+
+
+def _dedupe_eval_cases(cases: list[dict]) -> list[dict]:
+    unique: list[dict] = []
+    seen: set[str] = set()
+    for item in cases:
+        key = (
+            str(item.get("source_message_id") or "").strip()
+            or f"{str(item.get('document') or '').strip().lower()}::{str(item.get('question') or '').strip().lower()}"
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return unique
+
+
+def _feedback_source_label(source: str) -> str:
+    clean_source = str(source or "").strip().lower()
+    if clean_source == "whatsapp":
+        return "WhatsApp"
+    if clean_source == "web":
+        return "Site"
+    return "Operador"
+
+
+def _preview_text(value: str, limit: int = 220) -> str:
+    clean = " ".join(str(value or "").split())
+    if len(clean) <= limit:
+        return clean
+    return clean[: limit - 1].rstrip() + "…"
+
+
+def _build_admin_bot_payload() -> dict:
+    knowledge_dir = getattr(services.store, "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "")
+    documents = services.store.list_documents()
+    manual_companion_files: list[str] = []
+    companions_dir = companion_directory(knowledge_dir) if knowledge_dir else ""
+    if companions_dir and os.path.isdir(companions_dir):
+        manual_companion_files = sorted(
+            name
+            for name in os.listdir(companions_dir)
+            if name.lower().endswith(".json")
+        )
+
+    resolved_companions_total = 0
+    for document in documents:
+        try:
+            if load_document_companion(document.get("name", ""), knowledge_dir):
+                resolved_companions_total += 1
+        except Exception:
+            logger.exception("Falha ao resolver companion para %s.", document.get("name", ""))
+
+    static_cases = load_eval_cases_from_dir(os.path.join(knowledge_dir, "evals")) if knowledge_dir else []
+    feedback_cases = load_eval_cases_from_store(services.store)
+    active_cases = _dedupe_eval_cases(static_cases + feedback_cases)
+    results = evaluate_companion_cases(active_cases, knowledge_dir) if active_cases else []
+    passed_cases = sum(1 for item in results if item.get("passed"))
+    failed_cases = [item for item in results if not item.get("passed")]
+    pass_rate_pct = round((passed_cases / len(results)) * 100) if results else 0
+
+    source_counter = Counter(_feedback_source_label(item.get("source", "")) for item in feedback_cases)
+    source_rows = [
+        {"label": label, "count": count}
+        for label, count in sorted(source_counter.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    latest_feedback_updated_at = ""
+    if feedback_cases:
+        latest_feedback_updated_at = max(
+            (str(item.get("updated_at") or "").strip() for item in feedback_cases),
+            default="",
+        )
+
+    document_summary: dict[str, dict] = {}
+    for case in active_cases:
+        name = str(case.get("document") or "").strip()
+        if not name:
+            continue
+        bucket = document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total_cases": 0,
+                "passed_cases": 0,
+                "failed_cases": 0,
+                "feedback_cases": 0,
+            },
+        )
+        bucket["total_cases"] += 1
+    for result in results:
+        name = str(result.get("document") or "").strip()
+        if not name:
+            continue
+        bucket = document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total_cases": 0,
+                "passed_cases": 0,
+                "failed_cases": 0,
+                "feedback_cases": 0,
+            },
+        )
+        if result.get("passed"):
+            bucket["passed_cases"] += 1
+        else:
+            bucket["failed_cases"] += 1
+    for case in feedback_cases:
+        name = str(case.get("document") or "").strip()
+        if not name:
+            continue
+        bucket = document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total_cases": 0,
+                "passed_cases": 0,
+                "failed_cases": 0,
+                "feedback_cases": 0,
+            },
+        )
+        bucket["feedback_cases"] += 1
+
+    document_rows = []
+    for item in document_summary.values():
+        total_cases = item["total_cases"]
+        passed = item["passed_cases"]
+        failed = item["failed_cases"]
+        coverage_pct = round((passed / total_cases) * 100) if total_cases else 0
+        state = "online" if failed == 0 and total_cases else "degraded" if total_cases else "offline"
+        document_rows.append(
+            {
+                **item,
+                "coverage_pct": coverage_pct,
+                "state": state,
+            }
+        )
+    document_rows.sort(
+        key=lambda item: (
+            -item["failed_cases"],
+            -item["feedback_cases"],
+            item["document"],
+        )
+    )
+
+    failure_rows = []
+    for item in failed_cases[:12]:
+        missing_bits = list(item.get("missing_substrings") or [])
+        if not missing_bits:
+            missing_bits = list(item.get("missing_terms") or [])[:4]
+        failure_rows.append(
+            {
+                "document": item.get("document", ""),
+                "question": item.get("question", ""),
+                "missing_summary": ", ".join(missing_bits) or "Resposta vazia ou desalinhada com o esperado.",
+                "answer_preview": _preview_text(item.get("answer", ""), limit=260) or "Sem resposta gerada.",
+            }
+        )
+
+    recent_feedback_cases = []
+    for item in sorted(
+        feedback_cases,
+        key=lambda record: str(record.get("updated_at") or ""),
+        reverse=True,
+    )[:12]:
+        recent_feedback_cases.append(
+            {
+                **item,
+                "source_label": _feedback_source_label(item.get("source", "")),
+                "updated_at_label": _local_iso_to_label(item.get("updated_at")),
+                "expected_answer_preview": _preview_text(item.get("expected_answer", ""), limit=260),
+                "feedback_note_preview": _preview_text(item.get("feedback_note", ""), limit=160),
+            }
+        )
+
+    if not results:
+        state = "offline"
+        state_label = "Sem régua"
+        summary = "Ainda não existem casos de avaliação carregados para medir o comportamento do bot."
+    elif failed_cases:
+        state = "degraded"
+        state_label = "Com desvios"
+        summary = f"Existem {len(failed_cases)} caso(s) a rever no conjunto atual de evals."
+    else:
+        state = "online"
+        state_label = "Conforme"
+        summary = "Todos os casos ativos passam com os companions e correções atualmente carregados."
+
+    return {
+        "state": state,
+        "state_label": state_label,
+        "summary": summary,
+        "knowledge_documents_total": len(documents),
+        "manual_companions_total": len(manual_companion_files),
+        "resolved_companions_total": resolved_companions_total,
+        "static_cases_total": len(static_cases),
+        "feedback_cases_total": len(feedback_cases),
+        "active_cases_total": len(active_cases),
+        "passed_cases_total": passed_cases,
+        "failed_cases_total": len(failed_cases),
+        "pass_rate_pct": pass_rate_pct,
+        "documents_covered_total": len(document_rows),
+        "latest_feedback_updated_at_label": (
+            _local_iso_to_label(latest_feedback_updated_at) if latest_feedback_updated_at else "Nunca"
+        ),
+        "source_rows": source_rows,
+        "recent_feedback_cases": recent_feedback_cases,
+        "failure_rows": failure_rows,
+        "document_rows": document_rows[:16],
+    }
 
 
 def _safe_return_to(value: str | None) -> str:
@@ -138,6 +353,15 @@ def admin_status():
     """Painel de estado do sistema para administradores."""
     refresh_knowledge_state(force_reindex=False)
     return render_template("admin_status.html", admin=load_admin_status())
+
+
+@bp.route("/admin/bot")
+@login_required
+@role_required("admin")
+def admin_bot():
+    """Painel de acompanhamento do bot, evals e correções supervisionadas."""
+    refresh_knowledge_state(force_reindex=False)
+    return render_template("admin_bot.html", bot=_build_admin_bot_payload(), title="Bot e evals")
 
 
 @bp.route("/admin/users")

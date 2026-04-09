@@ -1979,6 +1979,71 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.admin-bot-hero {
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 24%),
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(9, 24, 38, 0.98), rgba(16, 27, 41, 0.96));
+}
+
+.admin-bot-summary {
+  margin-top: 18px;
+  color: rgba(239, 247, 243, 0.88);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-bot-case-grid,
+.admin-bot-document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-bot-case {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-bot-case-fail {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08), rgba(255, 255, 255, 0.04));
+}
+
+.admin-bot-case-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-bot-case-head strong,
+.admin-bot-case-question {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.admin-bot-case-question,
+.admin-bot-case-meta,
+.admin-bot-case-answer {
+  margin: 0;
+}
+
+.admin-bot-case-question {
+  font-size: 1.02rem;
+}
+
+.admin-bot-case-answer,
+.admin-bot-case-meta {
+  color: var(--muted);
+}
+
+.admin-bot-document-card .admin-status-compact-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .admin-traffic-grid {
   margin-top: 14px;
 }
@@ -3182,7 +3247,9 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
-  .admin-status-split {
+  .admin-status-split,
+  .admin-bot-case-grid,
+  .admin-bot-document-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -3225,13 +3292,16 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
-  .admin-status-split {
+  .admin-status-split,
+  .admin-bot-case-grid,
+  .admin-bot-document-grid {
     grid-template-columns: 1fr;
   }
 
   .admin-status-hero-tools,
   .system-state-head,
-  .admin-status-surface-head {
+  .admin-status-surface-head,
+  .admin-bot-case-head {
     align-items: flex-start;
     flex-direction: column;
   }
