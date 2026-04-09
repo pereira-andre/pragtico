@@ -97,6 +97,14 @@ WEATHER_QUERY_RE = re.compile(
     r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|humidade|temperatura|chuva)\b"
 )
 CURRENT_WEATHER_RE = re.compile(r"\b(atual|atuais|agora|neste momento|corrente|correntes|hoje)\b")
+WAVE_QUERY_RE = re.compile(
+    r"\b(ondulacao|ondulação|leitura costeira|altura significativa|periodo medio|período médio|estado do mar|"
+    r"mar fora da barra|ondulacao na barra|ondulação na barra|condicoes na barra|condições na barra|"
+    r"temperatura da agua|temperatura da água)\b"
+)
+WARNING_QUERY_RE = re.compile(
+    r"\b(aviso local|avisos locais|avisos em vigor|avisos da capitania|anav|capitania|avisos?)\b"
+)
 
 
 def available_rule_code_titles() -> dict[str, str]:
@@ -1438,7 +1446,9 @@ def _build_weather_lookup_answer(question: str, clean_question: str) -> tuple[st
 def _answer_live_environment_query(question: str, clean_question: str) -> dict | None:
     wants_tides = bool(TIDE_QUERY_RE.search(clean_question))
     wants_weather = bool(WEATHER_QUERY_RE.search(clean_question))
-    if not wants_tides and not wants_weather:
+    wants_waves = bool(WAVE_QUERY_RE.search(clean_question))
+    wants_warnings = bool(WARNING_QUERY_RE.search(clean_question))
+    if not wants_tides and not wants_weather and not wants_waves and not wants_warnings:
         return None
 
     answer_parts: list[str] = []
@@ -1466,6 +1476,28 @@ def _answer_live_environment_query(question: str, clean_question: str) -> dict |
             answer_parts.append(weather_answer)
             sources.extend(weather_sources)
 
+    if wants_waves:
+        try:
+            wave_answer, wave_sources = _build_wave_lookup_answer()
+        except Exception as exc:
+            logger.exception("Falha ao obter ondulação para consulta direta.")
+            wave_answer = f"Falha ao obter leitura costeira: {exc}"
+            wave_sources = []
+        if wave_answer:
+            answer_parts.append(wave_answer)
+            sources.extend(wave_sources)
+
+    if wants_warnings:
+        try:
+            warning_answer, warning_sources = _build_local_warning_lookup_answer()
+        except Exception as exc:
+            logger.exception("Falha ao obter avisos locais para consulta direta.")
+            warning_answer = f"Falha ao obter avisos locais: {exc}"
+            warning_sources = []
+        if warning_answer:
+            answer_parts.append(warning_answer)
+            sources.extend(warning_sources)
+
     if not answer_parts:
         return None
     return {
@@ -1473,6 +1505,62 @@ def _answer_live_environment_query(question: str, clean_question: str) -> dict |
         "sources": sources,
         "answer_origin": "operational_live",
     }
+
+
+def _build_wave_lookup_answer() -> tuple[str, list[dict]]:
+    wave_service = getattr(services, "wave_service", None)
+    if not wave_service or not getattr(wave_service, "enabled", False):
+        return "A leitura costeira/ondulação live não está configurada neste ambiente.", []
+
+    if hasattr(wave_service, "get_current_conditions"):
+        conditions = wave_service.get_current_conditions()
+    else:
+        conditions = wave_service.probe_current_conditions()
+    if not conditions:
+        return "Não consegui obter a leitura costeira atual.", []
+
+    lines = [
+        "Leitura costeira atual:",
+        f"- Última leitura: {conditions.get('last_reading_label', '--')}",
+        f"- Altura significativa: {conditions.get('significant_height_label', '--')}",
+        f"- Altura máxima: {conditions.get('max_height_label', '--')}",
+        f"- Período médio: {conditions.get('mean_period_label', '--')}",
+        f"- Período máx. obs.: {conditions.get('max_observed_period_label', '--')}",
+        f"- Direção da ondulação: {conditions.get('direction', '--')}",
+        f"- Temperatura da água: {conditions.get('water_temp_label', '--')}",
+    ]
+    if conditions.get("cache_stale") and conditions.get("source_error"):
+        lines.append(f"- Nota: leitura em cache; origem live com erro: {conditions.get('source_error')}")
+    context = wave_service.context_source() if hasattr(wave_service, "context_source") else None
+    sources = [context] if context else []
+    return "\n".join(lines), sources
+
+
+def _build_local_warning_lookup_answer(limit: int = 5) -> tuple[str, list[dict]]:
+    warning_service = getattr(services, "local_warning_service", None)
+    if not warning_service or not getattr(warning_service, "enabled", False):
+        return "Os avisos locais live não estão configurados neste ambiente.", []
+
+    warnings = warning_service.list_warnings()
+    status = warning_service.status() if hasattr(warning_service, "status") else {}
+    if not warnings:
+        if status.get("error"):
+            return f"Não consegui obter avisos locais em vigor: {status.get('error')}", []
+        return "Sem avisos locais em vigor.", []
+
+    lines = ["Avisos locais em vigor:"]
+    for item in warnings[:limit]:
+        lines.append(
+            f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+        )
+    remaining = len(warnings) - limit
+    if remaining > 0:
+        lines.append(f"- +{remaining} aviso(s) adicionais em vigor.")
+    if status.get("stale") and status.get("error"):
+        lines.append(f"- Nota: snapshot em cache; origem live com erro: {status.get('error')}")
+    context = warning_service.context_source(limit=limit) if hasattr(warning_service, "context_source") else None
+    sources = [context] if context else []
+    return "\n".join(lines), sources
 
 
 def _select_validation_maneuver(scale_context: dict, port_call: dict, target: dict) -> tuple[dict | None, list[dict]]:

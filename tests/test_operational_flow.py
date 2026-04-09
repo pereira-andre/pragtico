@@ -1353,6 +1353,75 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
         answer_mock.assert_not_called()
 
+    def test_chat_wave_question_prefers_live_operational_answer(self) -> None:
+        wave_service = _StubWaveService(
+            probe_payload={
+                "last_reading_label": "09/04/2026, 13:10",
+                "significant_height_label": "1.25m",
+                "max_height_label": "2.10m",
+                "mean_period_label": "7.8s",
+                "max_observed_period_label": "9.4s",
+                "direction": "W",
+                "water_temp_label": "16.8°C",
+            }
+        )
+        with patch.object(services, "wave_service", wave_service):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "Como está a ondulação na barra neste momento?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Leitura costeira atual", payload["answer"])
+        self.assertIn("Altura significativa: 1.25m", payload["answer"])
+        self.assertIn("Direção da ondulação: W", payload["answer"])
+        answer_mock.assert_not_called()
+
+    def test_chat_local_warnings_question_prefers_live_operational_answer(self) -> None:
+        warnings = [
+            {
+                "display_code": "Anav nr 102",
+                "subject": "Corrente forte na barra",
+                "location": "Barra de Setúbal",
+            },
+            {
+                "display_code": "Anav nr 103",
+                "subject": "Trabalhos subaquáticos",
+                "location": "Canal Norte",
+            },
+        ]
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "Quais são os avisos locais em vigor?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Avisos locais em vigor", payload["answer"])
+        self.assertIn("Anav nr 102", payload["answer"])
+        self.assertIn("Corrente forte na barra", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:
