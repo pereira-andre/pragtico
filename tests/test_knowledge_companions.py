@@ -44,3 +44,15 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIn("8 milhas", answer)
         self.assertIn("Baliza número 2", answer)
+
+    def test_it036_companion_answers_generic_night_question_conditionally(self) -> None:
+        companion = load_document_companion("IT-036_RegulacaoAgulhas.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Tenho um navio para fazer regulação de agulhas à noite, o que dizem as regras sobre isso?",
+            companion,
+        )
+
+        self.assertIn("LOA igual ou superior a 225 metros", answer)
+        self.assertIn("0,7 milhas", answer)

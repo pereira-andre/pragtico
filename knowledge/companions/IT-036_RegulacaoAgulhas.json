@@ -21,6 +21,18 @@
   ],
   "faq": [
     {
+      "question": "Tenho um navio para fazer regulação de agulhas à noite, o que dizem as regras sobre isso?",
+      "answer": "Depende do LOA, da maré e do espaço livre. De noite, a RA não se efetua com navios de LOA igual ou superior a 225 metros. Se o navio tiver LOA inferior a 225 metros, continua a ser necessário não existirem navios fundeados a menos de 0,7 milhas e escolher uma condição de maré admissível: reponto de maré, corrente em marés mortas, ou corrente em marés vivas apenas para LOA inferior a 120 metros.",
+      "keywords": [
+        "agulhas",
+        "noite",
+        "regulacao",
+        "regras",
+        "loa",
+        "mare"
+      ]
+    },
+    {
       "question": "O que é a Regulação de Agulhas?",
       "answer": "É a operação de calibração da bússola magnética do navio, que consiste em rodar o navio 360 graus na área dos fundeadouros enquanto se medem e corrigem os desvios da agulha magnética.",
       "keywords": [
