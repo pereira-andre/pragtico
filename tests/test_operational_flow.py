@@ -1254,6 +1254,75 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("LOA superior a 225 metros", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_document_companion_bypasses_review_guard_when_grounded_answer_exists(self) -> None:
+        document_name = "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\nNão se efetua RA de noite com navios de LOA superior a 225 metros.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-036 Regulação de Agulhas",
+                "aliases": ["IT-036", "IT-36", "regulação de agulhas"],
+                "summary": "resume as condições operacionais da regulação de agulhas no Porto de Setúbal.",
+                "key_points": [
+                    "De noite a RA não se efetua com LOA igual ou superior a 225 m."
+                ],
+                "faq": [
+                    {
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                        "answer": "De noite, a RA não se efetua com navios de LOA igual ou superior a 225 metros. Abaixo desse limite continuam a aplicar-se as restantes condições de maré e espaço livre.",
+                        "keywords": ["agulhas", "noite", "loa", "maré"]
+                    }
+                ]
+            },
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="user",
+                content="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            )
+            reviewed_message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=conversation["id"],
+                role="assistant",
+                content="Resposta antiga errada.",
+            )
+            self.store.update_message_feedback(
+                "admin",
+                conversation["id"],
+                reviewed_message["id"],
+                "review",
+                "Feedback via reação WhatsApp: 👎",
+            )
+
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("LOA igual ou superior a 225 metros", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_document_companion_summarizes_targeted_document_request(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"
         knowledge_path = Path(self.store.knowledge_dir) / document_name

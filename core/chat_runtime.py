@@ -715,9 +715,7 @@ def handle_chat_turn(
                 else:
                     answer = None
 
-        if answer is None and review_guard_match and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY:
-            answer = _build_review_guard_answer(review_guard_match)
-        elif (
+        if (
             answer is None
             and trusted_answers
             and trusted_answers[0].get("similarity", 0) >= APPROVED_MEMORY_SIMILARITY
@@ -740,6 +738,7 @@ def handle_chat_turn(
             supplemental_sources = _build_supplemental_sources(clean_question)
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
+            global_companion_match = None
             if targeted_document_context["companion_answer"]:
                 answer = {
                     "answer": targeted_document_context["companion_answer"],
@@ -758,25 +757,32 @@ def handle_chat_turn(
                         "answer_origin": "document_companion_global",
                     }
                 else:
-                    if not services.rag.can_generate():
-                        raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
-                    answer = services.rag.answer(
-                        question=clean_question,
-                        retrieval_question=targeted_document_context["retrieval_question"],
-                        role=role,
-                        history=(history + [user_message])[-10:],
-                        supplemental_sources=supplemental_sources,
-                        trusted_answers=trusted_answers,
-                        reviewed_answers=reviewed_answers,
-                    )
-                    answer["answer_origin"] = "llm"
-                    if trusted_answers:
-                        answer["feedback_match"] = {
-                            "similarity": trusted_answers[0]["similarity"],
-                            "message_id": trusted_answers[0]["message_id"],
-                            "question": trusted_answers[0]["question"],
-                            "feedback_note": trusted_answers[0].get("feedback_note", ""),
-                        }
+                    if (
+                        review_guard_match
+                        and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY
+                        and not targeted_document_context["document_sources"]
+                    ):
+                        answer = _build_review_guard_answer(review_guard_match)
+                    else:
+                        if not services.rag.can_generate():
+                            raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+                        answer = services.rag.answer(
+                            question=clean_question,
+                            retrieval_question=targeted_document_context["retrieval_question"],
+                            role=role,
+                            history=(history + [user_message])[-10:],
+                            supplemental_sources=supplemental_sources,
+                            trusted_answers=trusted_answers,
+                            reviewed_answers=reviewed_answers,
+                        )
+                        answer["answer_origin"] = "llm"
+                        if trusted_answers:
+                            answer["feedback_match"] = {
+                                "similarity": trusted_answers[0]["similarity"],
+                                "message_id": trusted_answers[0]["message_id"],
+                                "question": trusted_answers[0]["question"],
+                                "feedback_note": trusted_answers[0].get("feedback_note", ""),
+                            }
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:
