@@ -1,0 +1,125 @@
+{
+  "document": "IT-005_TMS1.txt",
+  "title": "IT-005 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 1 (TMS1)",
+  "aliases": [
+    "IT-005_TMS1.txt",
+    "IT-005_TMS1",
+    "IT-005 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 1 (TMS1)",
+    "IT-005",
+    "IT-5",
+    "005",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 1 (TMS1)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e às manobras de navios no Terminal Multiusos — Zona 1 (também designado TMS1) do Porto de Setúbal.",
+  "key_points": [
+    "8,8 metros, praticável em qualquer maré.",
+    "Entre os cabeços 10 e 20 o calado operacional é 9,8 metros.",
+    "10,0 metros (zona dos cabeços 20 a 38).",
+    "10,0 metros, praticável em qualquer maré.",
+    "10,0 metros, praticável em qualquer maré.",
+    "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1."
+  ],
+  "faq": [
+    {
+      "question": "Qual o calado máximo operacional no Cais 4 (cabeços 1 a 10)?",
+      "answer": "8,8 metros, praticável em qualquer maré.",
+      "keywords": [
+        "cabecos",
+        "cais",
+        "calado",
+        "maximo",
+        "operacional"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo operacional no Cais 5 (cabeços 10 a 17)?",
+      "answer": "Entre os cabeços 10 e 20 o calado operacional é 9,8 metros. A fronteira entre o Cais 5 e o Cais 6 situa-se no cabeço 17, mas a zona de calado de 9,8 m vai até ao cabeço 20.",
+      "keywords": [
+        "cabecos",
+        "cais",
+        "calado",
+        "maximo",
+        "operacional"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo operacional no Cais 6 (cabeços 17 a 26)?",
+      "answer": "10,0 metros (zona dos cabeços 20 a 38). Entre o cabeço 17 e o cabeço 20 o calado operacional é 9,8 metros. Entre o cabeço 20 e o cabeço 26 o calado operacional é 10,0 metros.",
+      "keywords": [
+        "cabecos",
+        "cais",
+        "calado",
+        "maximo",
+        "operacional"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo operacional no Cais 7 (cabeços 26 a 30)?",
+      "answer": "10,0 metros, praticável em qualquer maré.",
+      "keywords": [
+        "cabecos",
+        "cais",
+        "calado",
+        "maximo",
+        "operacional"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo operacional no Cais 8 (cabeços 30 a 38)?",
+      "answer": "10,0 metros, praticável em qualquer maré.",
+      "keywords": [
+        "cabecos",
+        "cais",
+        "calado",
+        "maximo",
+        "operacional"
+      ]
+    },
+    {
+      "question": "Posso atracar um navio com 12 metros de calado no TMS1?",
+      "answer": "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1.",
+      "keywords": [
+        "atracar",
+        "calado",
+        "metros",
+        "navio",
+        "posso",
+        "tms1"
+      ]
+    },
+    {
+      "question": "Quando é obrigatório usar rebocador no Cais 8?",
+      "answer": "Não é obrigatório, mas é fortemente recomendado em condições de vazante de marés vivas, caso o navio esteja condicionado a atracar pelo bordo de estibordo.",
+      "keywords": [
+        "cais",
+        "obrigatorio",
+        "quando",
+        "rebocador",
+        "usar"
+      ]
+    },
+    {
+      "question": "Qual a separação mínima entre navios na rampa do TMS1?",
+      "answer": "30 metros em relação ao navio a jusante.",
+      "keywords": [
+        "entre",
+        "minima",
+        "navios",
+        "rampa",
+        "separacao",
+        "tms1"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no TMS1?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "requisicoes",
+        "tms1",
+        "valida"
+      ]
+    }
+  ]
+}

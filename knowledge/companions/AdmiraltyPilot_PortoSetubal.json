@@ -1,0 +1,202 @@
+{
+  "document": "AdmiraltyPilot_PortoSetubal.txt",
+  "title": "PORTO DE SETÚBAL — INFORMAÇÃO GERAL E NÁUTICA (ADMIRALTY PILOT)",
+  "aliases": [
+    "AdmiraltyPilot_PortoSetubal.txt",
+    "AdmiraltyPilot_PortoSetubal",
+    "PORTO DE SETÚBAL — INFORMAÇÃO GERAL E NÁUTICA (ADMIRALTY PILOT)"
+  ],
+  "summary": "e secções gerais sobre Portugal. Crown Copyright 2005. traduzida e adaptada para indexação vetorial RAG. Inclui posição geográfica, condições de acesso, pilotagem, rebocadores, fundeadouros, cais, canais, serviços portuários e condições naturais. AVISO DE DESATUALIZAÇÃO: Os dados operacionais (calados, comprimentos, tráfego,",
+  "key_points": [
+    "O Porto de Setúbal é um grande porto industrial e comercial capaz de movimentar todo o tipo de cargas.",
+    "De acordo com os dados do Admiralty Pilot (2005), o calado máximo permitido para entrada era de 12,0 metros.",
+    "A menor profundidade cartografada é de 10,6 metros, localizada a dois cabos (cerca de 370 metros) a leste do Marco Luminoso Número 2.",
+    "A velocidade máxima permitida ao cruzar a barra ou navegar dentro do porto é de 10 nós.",
+    "Sim. A pilotagem é obrigatória e está disponível 24 horas por dia. O posto de pilotagem situa-se no porto, próximo a leste da Doca de Recreio.",
+    "Em condições de bom tempo, o piloto embarca no alinhamento da linha de enfiamento de entrada, a cerca de uma milha a sudoeste do Marco Luminoso Número 2."
+  ],
+  "faq": [
+    {
+      "question": "Qual é a função principal do Porto de Setúbal?",
+      "answer": "O Porto de Setúbal é um grande porto industrial e comercial capaz de movimentar todo o tipo de cargas. É o principal porto RoRo (Roll-on Roll-off, carga por rampa) de Portugal, movimentando aproximadamente 90% do tráfego RoRo nacional. Dispõe de extensas instalações de reparação naval, incluindo seis diques secos com capacidade até 700 000 toneladas de porte bruto, e mantém atividade pesqueira significativa.",
+      "keywords": [
+        "funcao",
+        "porto",
+        "principal",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Qual é o calado máximo permitido para entrar no Porto de Setúbal?",
+      "answer": "De acordo com os dados do Admiralty Pilot (2005), o calado máximo permitido para entrada era de 12,0 metros. Para o limite atual, consultar sempre a APSS e as instruções de trabalho em vigor.",
+      "keywords": [
+        "calado",
+        "entrar",
+        "maximo",
+        "permitido",
+        "porto",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Qual é a menor profundidade cartografada no acesso ao porto?",
+      "answer": "A menor profundidade cartografada é de 10,6 metros, localizada a dois cabos (cerca de 370 metros) a leste do Marco Luminoso Número 2.",
+      "keywords": [
+        "acesso",
+        "cartografada",
+        "menor",
+        "porto",
+        "profundidade"
+      ]
+    },
+    {
+      "question": "Qual é a velocidade máxima dentro do porto de Setúbal?",
+      "answer": "A velocidade máxima permitida ao cruzar a barra ou navegar dentro do porto é de 10 nós.",
+      "keywords": [
+        "maxima",
+        "porto",
+        "setubal",
+        "velocidade"
+      ]
+    },
+    {
+      "question": "A pilotagem é obrigatória no Porto de Setúbal?",
+      "answer": "Sim. A pilotagem é obrigatória e está disponível 24 horas por dia. O posto de pilotagem situa-se no porto, próximo a leste da Doca de Recreio.",
+      "keywords": [
+        "obrigatoria",
+        "pilotagem",
+        "porto",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Onde embarca o piloto em condições de bom tempo?",
+      "answer": "Em condições de bom tempo, o piloto embarca no alinhamento da linha de enfiamento de entrada, a cerca de uma milha a sudoeste do Marco Luminoso Número 2. Em condições adversas, o piloto dirige o navio por VHF e embarca dentro do canal de entrada, entre o Marco Luminoso Número 4 e a Boia Luminosa Número 3.",
+      "keywords": [
+        "bom",
+        "condicoes",
+        "embarca",
+        "onde",
+        "piloto",
+        "tempo"
+      ]
+    },
+    {
+      "question": "Com que antecedência deve o navio comunicar a hora de chegada estimada?",
+      "answer": "O ETA e o calado devem ser enviados com 6 horas de antecedência e confirmados 2 horas antes da chegada.",
+      "keywords": [
+        "antecedencia",
+        "chegada",
+        "comunicar",
+        "deve",
+        "estimada",
+        "hora",
+        "navio"
+      ]
+    },
+    {
+      "question": "Com que antecedência deve ser dado pré-aviso para mudança de cais",
+      "answer": "Os navios em porto que pretendam mudar de cais ou sair devem dar 2 horas de pré-aviso ao posto de pilotagem.",
+      "keywords": [
+        "antecedencia",
+        "aviso",
+        "cais",
+        "dado",
+        "deve",
+        "mudanca",
+        "pre",
+        "ser"
+      ]
+    },
+    {
+      "question": "Qual é a corrente máxima junto ao Outão?",
+      "answer": "Em marés de águas vivas, a corrente de vazante junto ao Outão (38°29' Norte e 8°56' Oeste) atinge cerca de 3 nós. Esta é a corrente mais intensa em todo o porto e ocorre no ponto de estrangulamento entre o Forte do Outão e a Ponta do Adoxe.",
+      "keywords": [
+        "corrente",
+        "junto",
+        "maxima",
+        "outao"
+      ]
+    },
+    {
+      "question": "Qual a restrição de calado para navegar no Canal Norte?",
+      "answer": "Os navios com calado superior a 7,5 metros são obrigados a aguardar a preia-mar antes de navegar na área de baixas profundidades do Canal Norte junto à cidade. A secção interior do Canal Norte é adequada apenas para navios com calado até 4,5 metros, dependendo da maré.",
+      "keywords": [
+        "calado",
+        "canal",
+        "navegar",
+        "norte",
+        "restricao"
+      ]
+    },
+    {
+      "question": "O estuário do Rio Sado tem algum estatuto de proteção ambiental?",
+      "answer": "Sim. O estuário do Rio Sado está classificado como Reserva Natural, com regulamentos especiais impostos pelas autoridades marítimas locais para conservação da flora, fauna e habitats. Em 2004 foi estabelecida uma reserva natural marinha adicional a sul e a este do Canal Sul. A maioria do fundeadouro de navios em espera (lay-up anchorage) encontra-se dentro da reserva natural marinha. As autoridades locais devem ser sempre consultadas.",
+      "keywords": [
+        "algum",
+        "ambiental",
+        "estatuto",
+        "estuario",
+        "protecao",
+        "rio",
+        "sado",
+        "tem"
+      ]
+    },
+    {
+      "question": "Que tipo de mau tempo afeta mais a barra de Setúbal?",
+      "answer": "Os ventos fortes de sudoeste, que ocorrem principalmente entre outubro e abril, são os mais perigosos para a barra. Quando coincidem com uma maré de vazante de águas vivas, as condições podem tornar a barra intransitável. Os navios que se aproximem com mau tempo de sudoeste devem obter informação prévia sobre as condições na barra antes de se aproximarem.",
+      "keywords": [
+        "afeta",
+        "barra",
+        "mau",
+        "setubal",
+        "tempo",
+        "tipo"
+      ]
+    },
+    {
+      "question": "Qual é o comprimento máximo de navio aceite no Porto de Setúbal?",
+      "answer": "Navios com comprimento total (LOA) até 250 metros podem ser recebidos nas principais zonas de fundeamento e no Cais das Fontainhas.",
+      "keywords": [
+        "aceite",
+        "comprimento",
+        "maximo",
+        "navio",
+        "porto",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Onde se situam os cais de contentores e RoRo?",
+      "answer": "O Terminal de Contentores tem aproximadamente 1 000 metros de cais com profundidades de 10,5 e 12,2 metros, e um berço RoRo com dolfins na extremidade leste. O Cais das Fontainhas (525 metros divididos em três berços) também tem um berço RoRo e de contentores na sua extremidade leste.",
+      "keywords": [
+        "cais",
+        "contentores",
+        "onde",
+        "roro",
+        "situam"
+      ]
+    },
+    {
+      "question": "Quais são os canais principais de navegação dentro do estuário?",
+      "answer": "Existem dois canais principais: o Canal Norte, que passa a norte do banco central e serve os terminais a leste de Setúbal, assinalado por boias luminosas com sufixo CN; e o Canal Sul, que passa entre o banco central e a Península de Tróia, servindo os estaleiros LISNAVE e os terminais da margem sul, assinalado por boias de mão de bombordo numeradas.",
+      "keywords": [
+        "canais",
+        "estuario",
+        "navegacao",
+        "principais",
+        "sao"
+      ]
+    },
+    {
+      "question": "Qual é a amplitude das marés em Setúbal?",
+      "answer": "A amplitude média das marés de águas vivas é de cerca de 2,9 metros. A amplitude média das marés de águas mortas é de cerca de 1,2 metros.",
+      "keywords": [
+        "amplitude",
+        "mares",
+        "setubal"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "document": "IT-018_NormasEspeciais.txt",
+  "title": "IT-018 — REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL",
+  "aliases": [
+    "IT-018_NormasEspeciais.txt",
+    "IT-018_NormasEspeciais",
+    "IT-018 — REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL",
+    "IT-018",
+    "IT-18",
+    "018",
+    "REGRAS APLICÁVEIS A MANOBRAS — NORMAS ESPECIAIS DO PORTO DE SETÚBAL"
+  ],
+  "summary": "Este documento contém regras de aplicação geral ao Porto de Setúbal, transversais a todos os terminais e operações, complementando as regras específicas de cada terminal (IT-005 a IT-015).",
+  "key_points": [
+    "O calado máximo absoluto é 12,0 metros.",
+    "Não. Com maré de 0,5 m: calado máximo = 10,30 + 0,50 = 10,80 m. O navio com 11,0 m de calado excede este valor. Necessita de aguardar maré de pelo menos 0,70 m para ter calado m...",
+    "7,50 metros (calado máximo específico para o Estaleiro da Mitrena).",
+    "Sim. Navios com mais de 220 metros com destino à Mitrena são assistidos por pelo menos um rebocador durante todo o percurso no porto.",
+    "Com navio de comprimento inferior a 145 m, calado inferior a 7,5 m e condições de tempo e mar regulares.",
+    "Não. Navios com DWT superior a 60.000 não devem sair em vazante de marés vivas quando a preia-mar foi superior a 3 metros."
+  ],
+  "faq": [
+    {
+      "question": "Qual o calado máximo na Barra do Porto de Setúbal?",
+      "answer": "O calado máximo absoluto é 12,0 metros. A qualquer hora está garantido um calado de pelo menos 10,5 metros. O calado praticável em cada momento é 10,30 m + altura de maré, com teto de 12,0 m, válido para ondulação < 1 m.",
+      "keywords": [
+        "barra",
+        "calado",
+        "maximo",
+        "porto",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Um navio com 11,0 m de calado pode entrar com maré de 0,5 m?",
+      "answer": "Não. Com maré de 0,5 m: calado máximo = 10,30 + 0,50 = 10,80 m. O navio com 11,0 m de calado excede este valor. Necessita de aguardar maré de pelo menos 0,70 m para ter calado máximo = 11,0 m.",
+      "keywords": [
+        "calado",
+        "entrar",
+        "mare",
+        "navio",
+        "pode"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para entrar no Estaleiro da Mitrena?",
+      "answer": "7,50 metros (calado máximo específico para o Estaleiro da Mitrena).",
+      "keywords": [
+        "calado",
+        "entrar",
+        "estaleiro",
+        "maximo",
+        "mitrena"
+      ]
+    },
+    {
+      "question": "Um navio de 250 metros com destino à Mitrena precisa de rebocador",
+      "answer": "Sim. Navios com mais de 220 metros com destino à Mitrena são assistidos por pelo menos um rebocador durante todo o percurso no porto.",
+      "keywords": [
+        "destino",
+        "metros",
+        "mitrena",
+        "navio",
+        "precisa",
+        "rebocador"
+      ]
+    },
+    {
+      "question": "Em que condições pode o Piloto embarcar/desembarcar em OUTÃO?",
+      "answer": "Com navio de comprimento inferior a 145 m, calado inferior a 7,5 m e condições de tempo e mar regulares. Com mau tempo usa-se o método do IT-017.",
+      "keywords": [
+        "condicoes",
+        "desembarcar",
+        "embarcar",
+        "outao",
+        "piloto",
+        "pode"
+      ]
+    },
+    {
+      "question": "Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena durante uma",
+      "answer": "Não. Navios com DWT superior a 60.000 não devem sair em vazante de marés vivas quando a preia-mar foi superior a 3 metros.",
+      "keywords": [
+        "durante",
+        "dwt",
+        "estaleiro",
+        "mitrena",
+        "navio",
+        "pode",
+        "sair"
+      ]
+    },
+    {
+      "question": "Um navio de 80.000 DWT pode sair do Estaleiro da Mitrena a qualquer",
+      "answer": "Sim. Navios entre 60.000 e 100.000 DWT podem sair a qualquer hora durante marés mortas.",
+      "keywords": [
+        "dwt",
+        "estaleiro",
+        "mitrena",
+        "navio",
+        "pode",
+        "qualquer",
+        "sair"
+      ]
+    },
+    {
+      "question": "Um navio de 120.000 DWT pode sair do Estaleiro da Mitrena em vazante?",
+      "answer": "Sim, mas apenas em marés mortas e desde que passe OUTÃO até 1,5 horas após a preia-mar.",
+      "keywords": [
+        "dwt",
+        "estaleiro",
+        "mitrena",
+        "navio",
+        "pode",
+        "sair",
+        "vazante"
+      ]
+    },
+    {
+      "question": "O que é a Manobra de Correr ao Longo do Cais?",
+      "answer": "É a manobra em que o navio desliza ao longo da estrutura de atracação mantendo contacto, desde o laborar do primeiro cabo até todos os cabos estarem com volta. Requer parecer prévio da Pilotagem. Se o vento (referência: 10 nós) puder causar perda de contacto, é designado um Piloto.",
+      "keywords": [
+        "cais",
+        "correr",
+        "longo",
+        "manobra"
+      ]
+    },
+    {
+      "question": "Qual a situação normalizada de atracação em termos de corrente?",
+      "answer": "Atracar com a corrente de maré na proa (de frente). Outras situações são analisadas caso a caso.",
+      "keywords": [
+        "atracacao",
+        "corrente",
+        "normalizada",
+        "situacao",
+        "termos"
+      ]
+    }
+  ]
+}

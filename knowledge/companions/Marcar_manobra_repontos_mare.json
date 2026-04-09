@@ -1,0 +1,135 @@
+{
+  "document": "Marcar_manobra_repontos_mare.txt",
+  "title": "REGRAS DE MARCAÇÃO DE MANOBRAS COM REPONTO DE MARÉ E PREIA-MAR",
+  "aliases": [
+    "Marcar_manobra_repontos_mare.txt",
+    "Marcar_manobra_repontos_mare",
+    "REGRAS DE MARCAÇÃO DE MANOBRAS COM REPONTO DE MARÉ E PREIA-MAR"
+  ],
+  "summary": "que dependem de condições de maré. Complementa as regras dos terminais (IT-010, IT-011, IT-014, IT-062) com os tempos de antecedência específicos necessários para cada tipo de operação. Determinados terminais do Porto de Setúbal exigem que as manobras sejam executadas próximo do reponto de maré (momento em que a corrente é praticamente",
+  "key_points": [
+    "2 horas antes do reponto de maré pretendido.",
+    "1 hora antes do reponto de maré.",
+    "1 hora e 30 minutos antes do reponto de maré.",
+    "2 horas antes da preia-mar.",
+    "2 horas antes da preia-mar.",
+    "Entre 1 hora e 1 hora e 30 minutos antes da preia-mar, dependendo do calado exacto."
+  ],
+  "faq": [
+    {
+      "question": "Com quanto tempo de antecedência se marca uma entrada de fora da barra",
+      "answer": "2 horas antes do reponto de maré pretendido.",
+      "keywords": [
+        "antecedencia",
+        "barra",
+        "entrada",
+        "fora",
+        "marca",
+        "quanto",
+        "tempo"
+      ]
+    },
+    {
+      "question": "Um navio fundeado em Tróia quer ir para o Lisnave. Com que antecedência",
+      "answer": "1 hora antes do reponto de maré.",
+      "keywords": [
+        "antecedencia",
+        "fundeado",
+        "lisnave",
+        "navio",
+        "quer",
+        "troia"
+      ]
+    },
+    {
+      "question": "Um navio fundeado no Fundeadouro Norte quer ir para a Termitrena. Com",
+      "answer": "1 hora e 30 minutos antes do reponto de maré.",
+      "keywords": [
+        "fundeado",
+        "fundeadouro",
+        "navio",
+        "norte",
+        "quer",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "Um navio quer sair da Doca 22 do Lisnave. Quando se marca?",
+      "answer": "2 horas antes da preia-mar.",
+      "keywords": [
+        "doca",
+        "lisnave",
+        "marca",
+        "navio",
+        "quando",
+        "quer",
+        "sair"
+      ]
+    },
+    {
+      "question": "Um navio está no Tanquisado e quer mudar para a Doca 21. Quando se marca?",
+      "answer": "2 horas antes da preia-mar.",
+      "keywords": [
+        "doca",
+        "marca",
+        "mudar",
+        "navio",
+        "quando",
+        "quer",
+        "tanquisado"
+      ]
+    },
+    {
+      "question": "Um navio com 10,5 m de calado quer entrar no TMS 1. Quando se marca?",
+      "answer": "Entre 1 hora e 1 hora e 30 minutos antes da preia-mar, dependendo do calado exacto. Para 10,5 m, aproximar de 1h30 antes da preia-mar.",
+      "keywords": [
+        "calado",
+        "entrar",
+        "marca",
+        "navio",
+        "quando",
+        "quer",
+        "tms"
+      ]
+    },
+    {
+      "question": "Um navio com 10 m de calado quer entrar no SAPEC Sólidos. Quando se marca?",
+      "answer": "1 hora e 30 minutos antes da preia-mar.",
+      "keywords": [
+        "calado",
+        "entrar",
+        "marca",
+        "navio",
+        "quando",
+        "quer",
+        "sapec",
+        "solidos"
+      ]
+    },
+    {
+      "question": "Um navio quer sair do Cais de Reparação II do Lisnave (Ponte-Cais II).",
+      "answer": "1 hora antes do reponto de maré. (Os cais de reparação do Lisnave, excepto as Docas 21 e 22, saem no reponto com 1 hora de antecedência.)",
+      "keywords": [
+        "cais",
+        "lisnave",
+        "navio",
+        "ponte",
+        "quer",
+        "reparacao",
+        "sair"
+      ]
+    },
+    {
+      "question": "Qual a diferença entre marcar para o reponto e marcar para a preia-mar?",
+      "answer": "Marcar para o reponto significa que a manobra se executa no momento de corrente nula (mudança de sentido da maré). Marcar para a preia-mar significa que a manobra precisa do nível máximo de água para ter profundidade suficiente. Os terminais Lisnave/Teporset/Termitrena usam o reponto (corrente nula). As saídas das docas secas e os navios de grande calado nos TMS e SAPEC usam a preia-mar (profundidade máxima).",
+      "keywords": [
+        "diferenca",
+        "entre",
+        "mar",
+        "marcar",
+        "preia",
+        "reponto"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "document": "IT-007_AutoEuropa.txt",
+  "title": "IT-007 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL AUTO-EUROPA",
+  "aliases": [
+    "IT-007_AutoEuropa.txt",
+    "IT-007_AutoEuropa",
+    "IT-007 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL AUTO-EUROPA",
+    "IT-007",
+    "IT-7",
+    "007",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL AUTO-EUROPA"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da AUTO-EUROPA, no Porto de Setúbal.",
+  "key_points": [
+    "O Cais 10 (terminal principal) tem 363 metros de comprimento.",
+    "10,0 metros.",
+    "10,0 metros.",
+    "172 metros (comprimento de referência para o módulo navio-rampa).",
+    "A manobra pode ser feita com enchente ou com vazante.",
+    "Não. Depende das condições de maré (evitar meias-marés vivas), da capacidade do navio e do uso ou não de rebocadores. O navio deve ainda ser capaz de se manter atracado em segur..."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento do cais principal do Terminal AUTO-EUROPA?",
+      "answer": "O Cais 10 (terminal principal) tem 363 metros de comprimento.",
+      "keywords": [
+        "auto",
+        "cais",
+        "comprimento",
+        "europa",
+        "principal",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo no Cais 10 do Terminal AUTO-EUROPA?",
+      "answer": "10,0 metros.",
+      "keywords": [
+        "auto",
+        "cais",
+        "calado",
+        "europa",
+        "maximo",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo na Rampa do Terminal AUTO-EUROPA (Cais 11)?",
+      "answer": "10,0 metros.",
+      "keywords": [
+        "auto",
+        "cais",
+        "calado",
+        "europa",
+        "maximo",
+        "rampa",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o comprimento máximo de referência para um navio operar na rampa",
+      "answer": "172 metros (comprimento de referência para o módulo navio-rampa).",
+      "keywords": [
+        "comprimento",
+        "maximo",
+        "navio",
+        "operar",
+        "rampa",
+        "referencia"
+      ]
+    },
+    {
+      "question": "Em que condições de maré se pode manobrar na rampa do Terminal",
+      "answer": "A manobra pode ser feita com enchente ou com vazante. Deve evitar-se manobrar nas meias-marés vivas, pois a corrente é mais intensa e torna a atracação à rampa mais difícil.",
+      "keywords": [
+        "condicoes",
+        "manobrar",
+        "mare",
+        "pode",
+        "rampa",
+        "terminal"
+      ]
+    },
+    {
+      "question": "É sempre possível atracar na rampa do Terminal AUTO-EUROPA?",
+      "answer": "Não. Depende das condições de maré (evitar meias-marés vivas), da capacidade do navio e do uso ou não de rebocadores. O navio deve ainda ser capaz de se manter atracado em segurança com um só cabo de lançante à boia de amarração.",
+      "keywords": [
+        "atracar",
+        "auto",
+        "europa",
+        "possivel",
+        "rampa",
+        "sempre",
+        "terminal"
+      ]
+    },
+    {
+      "question": "O Terminal AUTO-EUROPA tem cais para ro-ro?",
+      "answer": "Sim. O Cais 11 é a rampa ro-ro do Terminal AUTO-EUROPA, com comprimento de referência de 172 metros e calado máximo de 10,0 metros.",
+      "keywords": [
+        "auto",
+        "cais",
+        "europa",
+        "tem",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Terminal AUTO-EUROPA?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "auto",
+        "europa",
+        "manobra",
+        "quem",
+        "requisicoes",
+        "terminal",
+        "valida"
+      ]
+    }
+  ]
+}

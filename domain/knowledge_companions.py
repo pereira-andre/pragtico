@@ -4,7 +4,9 @@ import json
 import os
 import re
 import unicodedata
-from typing import Dict, List
+from typing import List
+
+from domain.document_processing import extract_text_from_path, is_allowed_document
 
 
 PORTUGUESE_STOPWORDS = {
@@ -28,6 +30,7 @@ PORTUGUESE_STOPWORDS = {
     "este",
     "isso",
     "isto",
+    "mais",
     "me",
     "na",
     "nas",
@@ -51,6 +54,8 @@ SUMMARY_REQUEST_RE = re.compile(
     r"\b(o que diz|resume|resumo|sumario|sumário|explica|diz me|diz-me|quais sao|quais são|qual e a regra|qual é a regra)\b",
     flags=re.IGNORECASE,
 )
+QUESTION_LINE_RE = re.compile(r"^Pergunta:\s*(.+)$", flags=re.IGNORECASE)
+ANSWER_LINE_RE = re.compile(r"^Resposta:\s*(.+)$", flags=re.IGNORECASE)
 
 
 def companion_directory(knowledge_dir: str) -> str:
@@ -90,9 +95,11 @@ def _candidate_companion_paths(document_name: str, knowledge_dir: str) -> list[s
     companions_dir = companion_directory(knowledge_dir)
     stem = _document_stem(document_name)
     candidates = [os.path.join(companions_dir, f"{stem}.json")]
-    code_match = re.match(r"IT-(\d{3})_", str(document_name or ""), flags=re.IGNORECASE)
+    code_match = re.match(r"([A-Z]{1,3})-(\d{3})_", str(document_name or ""), flags=re.IGNORECASE)
     if code_match:
-        candidates.append(os.path.join(companions_dir, f"IT-{code_match.group(1)}.json"))
+        prefix = code_match.group(1).upper()
+        code = code_match.group(2)
+        candidates.append(os.path.join(companions_dir, f"{prefix}-{code}.json"))
     return list(dict.fromkeys(candidates))
 
 
@@ -101,25 +108,43 @@ def _normalize_faq_entry(item: dict) -> dict | None:
     answer = _clean_text(item.get("answer"))
     if not question or not answer:
         return None
+    keywords = _clean_list(item.get("keywords"))
+    if not keywords:
+        keywords = sorted(_tokenize(question))[:8]
     return {
         "question": question,
         "answer": answer,
-        "keywords": _clean_list(item.get("keywords")),
+        "keywords": keywords,
     }
+
+
+def _derive_aliases(document_name: str, title: str) -> list[str]:
+    code_match = re.match(r"([A-Z]{1,3})-(\d{3})", document_name, flags=re.IGNORECASE)
+    aliases = [
+        document_name,
+        _document_stem(document_name),
+        title,
+    ]
+    if code_match:
+        prefix = code_match.group(1).upper()
+        code = code_match.group(2)
+        aliases.append(f"{prefix}-{code}")
+        aliases.append(f"{prefix}-{int(code)}")
+        aliases.append(code)
+    if code_match and "—" in title:
+        _left, right = title.split("—", 1)
+        aliases.append(right.strip())
+    if code_match and "-" in title:
+        left, right = title.split("-", 1)
+        if re.match(r"^[A-Z]{1,3}\s*\d+", left.strip(), flags=re.IGNORECASE):
+            aliases.append(right.strip())
+    return [item for item in dict.fromkeys(_clean_text(alias) for alias in aliases) if item]
 
 
 def _normalize_companion(payload: dict, document_name: str) -> dict:
     title = _clean_text(payload.get("title")) or _document_stem(document_name).replace("_", " ")
     aliases = _clean_list(payload.get("aliases"))
-    aliases.extend(
-        item
-        for item in (
-            document_name,
-            _document_stem(document_name),
-            title,
-        )
-        if _clean_text(item)
-    )
+    aliases.extend(_derive_aliases(document_name, title))
     faq_items = []
     for raw_item in payload.get("faq", []) or []:
         if not isinstance(raw_item, dict):
@@ -137,6 +162,195 @@ def _normalize_companion(payload: dict, document_name: str) -> dict:
     }
 
 
+def _read_document_text(document_name: str, knowledge_dir: str) -> str:
+    path = os.path.join(knowledge_dir, document_name)
+    if not os.path.isfile(path):
+        return ""
+    return extract_text_from_path(path)
+
+
+def _parse_document_title(text: str, document_name: str) -> str:
+    for raw_line in text.splitlines():
+        line = _clean_text(raw_line)
+        if not line:
+            continue
+        if line.lower().startswith("documento:"):
+            return line.split(":", 1)[1].strip()
+        return line
+    return _document_stem(document_name).replace("_", " ")
+
+
+def _is_separator_line(line: str) -> bool:
+    clean = _clean_text(line)
+    return bool(clean) and len(set(clean)) == 1 and clean[0] in {"=", "-", "_"}
+
+
+def _is_heading_line(line: str) -> bool:
+    clean = _clean_text(line)
+    if not clean or _is_separator_line(clean):
+        return False
+    alpha_chars = [char for char in clean if char.isalpha()]
+    return bool(alpha_chars) and clean == clean.upper()
+
+
+def _extract_section_paragraph(text: str, heading_pattern: str) -> str:
+    lines = [_clean_text(line) for line in text.splitlines()]
+    capture = False
+    paragraph_lines: list[str] = []
+    for line in lines:
+        if not line:
+            if capture and paragraph_lines:
+                break
+            continue
+        if re.search(heading_pattern, line, flags=re.IGNORECASE):
+            capture = True
+            if ":" in line:
+                _label, remainder = line.split(":", 1)
+                remainder = _clean_text(remainder)
+                if remainder:
+                    paragraph_lines.append(remainder)
+            continue
+        if not capture:
+            continue
+        if _is_separator_line(line):
+            continue
+        if _is_heading_line(line):
+            break
+        paragraph_lines.append(line)
+    return _clean_text(" ".join(paragraph_lines))
+
+
+def _extract_intro_summary(text: str) -> str:
+    summary = _extract_section_paragraph(text, r"\bÂMBITO\b|\bAMBITO\b")
+    if summary:
+        return summary
+
+    lines = [_clean_text(line) for line in text.splitlines()]
+    collected: list[str] = []
+    title_line = _parse_document_title(text, "")
+    for line in lines:
+        if not line or _is_separator_line(line):
+            continue
+        if line == title_line:
+            continue
+        if line.lower().startswith(("documento:", "fonte:", "entidade", "revisão", "revisao", "natureza:", "unidades:")):
+            continue
+        if _is_heading_line(line):
+            continue
+        collected.append(line)
+        if len(" ".join(collected)) >= 260:
+            break
+    return _clean_text(" ".join(collected))
+
+
+def _first_sentence(value: str) -> str:
+    clean = _clean_text(value)
+    if not clean:
+        return ""
+    match = re.match(r"(.+?[.!?])(?:\s|$)", clean)
+    if match:
+        return match.group(1).strip()
+    return clean
+
+
+def _best_key_point(value: str) -> str:
+    first = _first_sentence(value)
+    if len(first) >= 18 and len(first.split()) >= 4:
+        return first
+    clean = _clean_text(value)
+    if len(clean) <= 180:
+        return clean
+    return clean[:177].rstrip() + "..."
+
+
+def _extract_plaintext_points(text: str, limit: int = 5) -> list[str]:
+    points: list[str] = []
+    for raw_line in text.splitlines():
+        line = _clean_text(raw_line)
+        if not line:
+            continue
+        if re.match(r"^(?:\d+[\.\)]|[a-z]\.)\s+", line, flags=re.IGNORECASE):
+            point = re.sub(r"^(?:\d+[\.\)]|[a-z]\.)\s+", "", line, count=1, flags=re.IGNORECASE).strip()
+            if point and not point.endswith(":"):
+                points.append(point)
+        elif line.startswith(("—", "-", "*")):
+            point = line[1:].strip()
+            if point and not point.endswith(":"):
+                points.append(point)
+        if len(points) >= limit:
+            break
+    return points
+
+
+def _extract_faq_items(text: str) -> list[dict]:
+    faq: list[dict] = []
+    current_question = ""
+    current_answer_lines: list[str] = []
+    collecting_answer = False
+
+    def flush() -> None:
+        nonlocal current_question, current_answer_lines, collecting_answer
+        answer = _clean_text(" ".join(current_answer_lines))
+        if current_question and answer:
+            faq.append(
+                {
+                    "question": current_question,
+                    "answer": answer,
+                    "keywords": sorted(_tokenize(current_question))[:8],
+                }
+            )
+        current_question = ""
+        current_answer_lines = []
+        collecting_answer = False
+
+    for raw_line in text.splitlines():
+        line = _clean_text(raw_line)
+        if not line:
+            if collecting_answer and current_answer_lines:
+                current_answer_lines.append("")
+            continue
+        if _is_separator_line(line):
+            continue
+        if line.upper().startswith("FIM DO DOCUMENTO"):
+            break
+        question_match = QUESTION_LINE_RE.match(line)
+        if question_match:
+            flush()
+            current_question = question_match.group(1).strip()
+            continue
+        answer_match = ANSWER_LINE_RE.match(line)
+        if answer_match:
+            collecting_answer = True
+            current_answer_lines.append(answer_match.group(1).strip())
+            continue
+        if collecting_answer:
+            current_answer_lines.append(line)
+    flush()
+    return faq
+
+
+def auto_build_document_companion(document_name: str, knowledge_dir: str) -> dict | None:
+    text = _read_document_text(document_name, knowledge_dir)
+    if not text:
+        return None
+    title = _parse_document_title(text, document_name)
+    faq = _extract_faq_items(text)
+    key_points = []
+    if faq:
+        key_points = [_best_key_point(item["answer"]) for item in faq[:6] if _best_key_point(item["answer"])]
+    if not key_points:
+        key_points = _extract_plaintext_points(text, limit=6)
+    payload = {
+        "document": document_name,
+        "title": title,
+        "aliases": _derive_aliases(document_name, title),
+        "summary": _extract_intro_summary(text),
+        "key_points": key_points,
+        "faq": faq,
+    }
+    return _normalize_companion(payload, document_name)
+
+
 def load_document_companion(document_name: str, knowledge_dir: str) -> dict | None:
     for path in _candidate_companion_paths(document_name, knowledge_dir):
         if not os.path.isfile(path):
@@ -149,7 +363,20 @@ def load_document_companion(document_name: str, knowledge_dir: str) -> dict | No
         if not isinstance(payload, dict):
             return None
         return _normalize_companion(payload, document_name)
-    return None
+    return auto_build_document_companion(document_name, knowledge_dir)
+
+
+def list_document_companions(knowledge_dir: str) -> list[dict]:
+    companions: list[dict] = []
+    if not os.path.isdir(knowledge_dir):
+        return companions
+    for entry in sorted(os.listdir(knowledge_dir)):
+        if not is_allowed_document(entry):
+            continue
+        companion = load_document_companion(entry, knowledge_dir)
+        if companion:
+            companions.append(companion)
+    return companions
 
 
 def build_companion_scaffold(document_name: str, *, title: str = "") -> dict:
@@ -157,20 +384,10 @@ def build_companion_scaffold(document_name: str, *, title: str = "") -> dict:
     return {
         "document": document_name,
         "title": clean_title,
-        "aliases": [
-            _document_stem(document_name),
-        ],
+        "aliases": [_document_stem(document_name)],
         "summary": "",
-        "key_points": [
-            "",
-        ],
-        "faq": [
-            {
-                "question": "",
-                "answer": "",
-                "keywords": [],
-            }
-        ],
+        "key_points": [""],
+        "faq": [{"question": "", "answer": "", "keywords": []}],
     }
 
 
@@ -200,6 +417,36 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
     if not best_match or best_score < 0.34:
         return None
     return best_match
+
+
+def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict | None:
+    scored_matches = []
+    for companion in list_document_companions(knowledge_dir):
+        faq_match = find_best_companion_faq(question, companion)
+        if faq_match:
+            scored_matches.append(
+                {
+                    "companion": companion,
+                    "faq_match": faq_match,
+                    "score": faq_match["score"],
+                }
+            )
+    if not scored_matches:
+        return None
+    scored_matches.sort(key=lambda item: item["score"], reverse=True)
+    best_match = scored_matches[0]
+    second_best = scored_matches[1] if len(scored_matches) > 1 else None
+    if best_match["score"] < 0.72:
+        return None
+    if second_best and (best_match["score"] - second_best["score"]) < 0.14:
+        return None
+    companion = best_match["companion"]
+    return {
+        "answer": best_match["faq_match"]["answer"],
+        "sources": build_companion_sources(companion, question),
+        "companion": companion,
+        "faq_match": best_match["faq_match"],
+    }
 
 
 def build_companion_sources(companion: dict, question: str) -> list[dict]:

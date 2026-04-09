@@ -1,0 +1,106 @@
+{
+  "document": "IT-016_Rebocadores.txt",
+  "title": "IT-016 — REGRAS APLICÁVEIS A MANOBRAS — REBOCADORES",
+  "aliases": [
+    "IT-016_Rebocadores.txt",
+    "IT-016_Rebocadores",
+    "IT-016 — REGRAS APLICÁVEIS A MANOBRAS — REBOCADORES",
+    "IT-016",
+    "IT-16",
+    "016",
+    "REGRAS APLICÁVEIS A MANOBRAS — REBOCADORES"
+  ],
+  "summary": "Este documento descreve as regras aplicáveis ao uso de rebocadores no Porto de Setúbal, incluindo a tabela de utilização de rebocadores por tipo de navio e operação, as regras especiais para navios com destino à Lisnave-Mitrena, e o protocolo operacional de segurança para estabelecimento de cabos de reboque.",
+  "key_points": [
+    "Não na generalidade — são orientativos e a decisão final cabe ao Piloto e ao Comandante.",
+    "Rebocador grande (G) tem bollard pull igual ou superior a 25 toneladas.",
+    "2 grandes + 1 pequeno (GGp).",
+    "7,0 metros, com 2 rebocadores de assistência na Barra.",
+    "5 nós sobre a água.",
+    "Sim. Se a velocidade do navio exceder os limites definidos, o Mestre pode questionar e recusar o estabelecimento do cabo. Em má visibilidade, mesmo com solicitação do Piloto da..."
+  ],
+  "faq": [
+    {
+      "question": "Os valores da tabela de rebocadores são obrigatórios?",
+      "answer": "Não na generalidade — são orientativos e a decisão final cabe ao Piloto e ao Comandante. Excepção: para navios de cargas perigosas com LOA superior a 70 metros, os valores são mínimos obrigatórios.",
+      "keywords": [
+        "obrigatorios",
+        "rebocadores",
+        "sao",
+        "tabela",
+        "valores"
+      ]
+    },
+    {
+      "question": "Qual a diferença entre rebocador grande e rebocador pequeno?",
+      "answer": "Rebocador grande (G) tem bollard pull igual ou superior a 25 toneladas. Rebocador pequeno (p) tem bollard pull inferior a 25 toneladas.",
+      "keywords": [
+        "diferenca",
+        "entre",
+        "grande",
+        "pequeno",
+        "rebocador"
+      ]
+    },
+    {
+      "question": "Quantos rebocadores são necessários para atracar carregado um navio",
+      "answer": "2 grandes + 1 pequeno (GGp). São mínimos obrigatórios se LOA > 70 m.",
+      "keywords": [
+        "atracar",
+        "carregado",
+        "navio",
+        "necessarios",
+        "quantos",
+        "rebocadores",
+        "sao"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo na Barra para um navio de 100.000 DWT com",
+      "answer": "7,0 metros, com 2 rebocadores de assistência na Barra.",
+      "keywords": [
+        "barra",
+        "calado",
+        "dwt",
+        "maximo",
+        "navio"
+      ]
+    },
+    {
+      "question": "Qual a velocidade máxima do navio quando o rebocador está a estabelecer",
+      "answer": "5 nós sobre a água.",
+      "keywords": [
+        "estabelecer",
+        "maxima",
+        "navio",
+        "quando",
+        "rebocador",
+        "velocidade"
+      ]
+    },
+    {
+      "question": "O Mestre do rebocador pode recusar estabelecer cabo?",
+      "answer": "Sim. Se a velocidade do navio exceder os limites definidos, o Mestre pode questionar e recusar o estabelecimento do cabo. Em má visibilidade, mesmo com solicitação do Piloto da Barra, pode recusar se julgar as condições inseguras.",
+      "keywords": [
+        "cabo",
+        "estabelecer",
+        "mestre",
+        "pode",
+        "rebocador",
+        "recusar"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra relativas a rebocadores?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "rebocadores",
+        "relativas",
+        "requisicoes",
+        "valida"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "document": "IT-038_Alstom.txt",
+  "title": "IT-038 — REGRAS APLICÁVEIS A MANOBRAS — CAIS ALSTOM",
+  "aliases": [
+    "IT-038_Alstom.txt",
+    "IT-038_Alstom",
+    "IT-038 — REGRAS APLICÁVEIS A MANOBRAS — CAIS ALSTOM",
+    "IT-038",
+    "IT-38",
+    "038",
+    "REGRAS APLICÁVEIS A MANOBRAS — CAIS ALSTOM"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Cais da ALSTOM, no Porto de Setúbal.",
+  "key_points": [
+    "91 metros.",
+    "7,0 metros (LOA ≤ 110 m → calado máximo 7,0 m).",
+    "7,0 — ((116 — 110) × 0,1) = 7,0 — 0,6 = 6,4 metros.",
+    "Não. O LOA máximo aceite no Cais ALSTOM é 120 metros.",
+    "5 + 1,0 = 6,0 metros.",
+    "Com vento igual ou inferior a 15 nós."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento do Cais ALSTOM?",
+      "answer": "91 metros.",
+      "keywords": [
+        "alstom",
+        "cais",
+        "comprimento"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo no Cais ALSTOM para um navio de 100 metros de LOA?",
+      "answer": "7,0 metros (LOA ≤ 110 m → calado máximo 7,0 m).",
+      "keywords": [
+        "alstom",
+        "cais",
+        "calado",
+        "loa",
+        "maximo",
+        "metros",
+        "navio"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para um navio de 116 metros de LOA no Cais ALSTOM?",
+      "answer": "7,0 — ((116 — 110) × 0,1) = 7,0 — 0,6 = 6,4 metros.",
+      "keywords": [
+        "alstom",
+        "cais",
+        "calado",
+        "loa",
+        "maximo",
+        "metros",
+        "navio"
+      ]
+    },
+    {
+      "question": "Um navio com LOA de 125 metros pode atracar no Cais ALSTOM?",
+      "answer": "Não. O LOA máximo aceite no Cais ALSTOM é 120 metros.",
+      "keywords": [
+        "alstom",
+        "atracar",
+        "cais",
+        "loa",
+        "metros",
+        "navio",
+        "pode"
+      ]
+    },
+    {
+      "question": "Qual a profundidade disponível no Canal ABB-ALSTOM com maré de 1,0 m?",
+      "answer": "5 + 1,0 = 6,0 metros.",
+      "keywords": [
+        "abb",
+        "alstom",
+        "canal",
+        "disponivel",
+        "mare",
+        "profundidade"
+      ]
+    },
+    {
+      "question": "Com que condições de vento se pode transitar no Canal ABB-ALSTOM?",
+      "answer": "Com vento igual ou inferior a 15 nós.",
+      "keywords": [
+        "abb",
+        "alstom",
+        "canal",
+        "condicoes",
+        "pode",
+        "transitar",
+        "vento"
+      ]
+    },
+    {
+      "question": "Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?",
+      "answer": "Não. Navios com LOA superior a 90 metros só podem entrar durante o período diurno. Podem sair de noite.",
+      "keywords": [
+        "alstom",
+        "cais",
+        "entrar",
+        "loa",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?",
+      "answer": "Sim. A restrição de entrada diurna aplica-se apenas a navios com LOA superior a 90 metros.",
+      "keywords": [
+        "alstom",
+        "cais",
+        "entrar",
+        "loa",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Cais ALSTOM?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "alstom",
+        "cais",
+        "manobra",
+        "quem",
+        "requisicoes",
+        "valida"
+      ]
+    }
+  ]
+}

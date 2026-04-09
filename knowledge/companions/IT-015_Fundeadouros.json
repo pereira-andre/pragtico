@@ -1,0 +1,103 @@
+{
+  "document": "IT-015_Fundeadouros.txt",
+  "title": "IT-015 — DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL",
+  "aliases": [
+    "IT-015_Fundeadouros.txt",
+    "IT-015_Fundeadouros",
+    "IT-015 — DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL",
+    "IT-015",
+    "IT-15",
+    "015",
+    "DEFINIÇÃO DAS ZONAS DE FUNDEADOURO DO PORTO DE SETÚBAL"
+  ],
+  "summary": "Este documento caracteriza e delimita geograficamente as zonas de fundeio do Porto de Setúbal.",
+  "key_points": [
+    "Existem quatro zonas de fundeio definidas: Fundeadouro Norte, Fundeadouro de Troia 1ª Zona, Fundeadouro de Troia 2ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
+    "O Fundeadouro Norte, localizado a norte da entrada do porto, delimitado pelos vértices A a H.",
+    "Sim. O Vértice F (Latitude 38° 30,70' N, Longitude 008° 53,43' W) é um ponto comum às duas zonas.",
+    "Sim. Partilham o Vértice K (Latitude 38° 27,60' N, Longitude 008° 51,00' W), que é o ponto de fronteira entre as duas zonas.",
+    "Exclusivamente a embarcações de tráfego local ao serviço portuário, como lanchas de cabos, rebocadores e embarcações de pilotos.",
+    "As coordenadas estão fornecidas em dois sistemas: WGS84 (latitude e longitude em graus e minutos decimais, compatível com GPS) e Datum 73 (coordenadas planimétricas portuguesas em metros, sistema X/Y)."
+  ],
+  "faq": [
+    {
+      "question": "Quantos fundeadouros existem no Porto de Setúbal?",
+      "answer": "Existem quatro zonas de fundeio definidas: Fundeadouro Norte, Fundeadouro de Troia 1ª Zona, Fundeadouro de Troia 2ª Zona e Fundeadouro para Embarcações de Tráfego Local ao Serviço Portuário.",
+      "keywords": [
+        "existem",
+        "fundeadouros",
+        "porto",
+        "quantos",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Qual é o fundeadouro principal para navios em espera de cais?",
+      "answer": "O Fundeadouro Norte, localizado a norte da entrada do porto, delimitado pelos vértices A a H.",
+      "keywords": [
+        "cais",
+        "espera",
+        "fundeadouro",
+        "navios",
+        "principal"
+      ]
+    },
+    {
+      "question": "O Fundeadouro Norte e o Fundeadouro de Tráfego Local têm limites",
+      "answer": "Sim. O Vértice F (Latitude 38° 30,70' N, Longitude 008° 53,43' W) é um ponto comum às duas zonas.",
+      "keywords": [
+        "fundeadouro",
+        "limites",
+        "local",
+        "norte",
+        "tem",
+        "trafego"
+      ]
+    },
+    {
+      "question": "As duas zonas de Troia são contíguas?",
+      "answer": "Sim. Partilham o Vértice K (Latitude 38° 27,60' N, Longitude 008° 51,00' W), que é o ponto de fronteira entre as duas zonas.",
+      "keywords": [
+        "contiguas",
+        "duas",
+        "sao",
+        "troia",
+        "zonas"
+      ]
+    },
+    {
+      "question": "Para que tipo de embarcações se destina o quarto fundeadouro?",
+      "answer": "Exclusivamente a embarcações de tráfego local ao serviço portuário, como lanchas de cabos, rebocadores e embarcações de pilotos. Não se destina a navios de grande porte.",
+      "keywords": [
+        "destina",
+        "embarcacoes",
+        "fundeadouro",
+        "quarto",
+        "tipo"
+      ]
+    },
+    {
+      "question": "Em que sistema de coordenadas estão definidos os fundeadouros?",
+      "answer": "As coordenadas estão fornecidas em dois sistemas: WGS84 (latitude e longitude em graus e minutos decimais, compatível com GPS) e Datum 73 (coordenadas planimétricas portuguesas em metros, sistema X/Y).",
+      "keywords": [
+        "coordenadas",
+        "definidos",
+        "estao",
+        "fundeadouros",
+        "sistema"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra relacionadas com fundeadouros?",
+      "answer": "O Piloto Coordenador, quando aplicável.",
+      "keywords": [
+        "fundeadouros",
+        "manobra",
+        "quem",
+        "relacionadas",
+        "requisicoes",
+        "valida"
+      ]
+    }
+  ]
+}

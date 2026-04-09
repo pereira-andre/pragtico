@@ -1,0 +1,136 @@
+{
+  "document": "P-19_Pilotagem.txt",
+  "title": "P-19 — PILOTAGEM",
+  "aliases": [
+    "P-19_Pilotagem.txt",
+    "P-19_Pilotagem",
+    "P-19 — PILOTAGEM"
+  ],
+  "summary": "Este procedimento aplica-se à prestação do serviço de pilotagem na área de jurisdição da APSS. Extraído apenas o conteúdo operacionalmente relevante.",
+  "key_points": [
+    "Normalmente duas horas antes da hora para a qual o serviço foi requisitado na JUL.",
+    "Não. Para saídas, o PC verifica apenas as normas das IT e experiência local, sem necessidade de autorização prévia do Planeamento.",
+    "Formalmente o Comandante do Navio, mas é o Piloto que assegura essa comunicação, diretamente ou por assessoria ao Comandante.",
+    "A hora de embarque do Piloto, a hora de atracação ou fundeio, e a hora de desembarque do Piloto.",
+    "A hora de embarque do Piloto, a hora de largada do navio, e a hora de desembarque do Piloto.",
+    "No prazo máximo de 6 horas após a ocorrência."
+  ],
+  "faq": [
+    {
+      "question": "Com quanto tempo de antecedência é convocado o Piloto?",
+      "answer": "Normalmente duas horas antes da hora para a qual o serviço foi requisitado na JUL.",
+      "keywords": [
+        "antecedencia",
+        "convocado",
+        "piloto",
+        "quanto",
+        "tempo"
+      ]
+    },
+    {
+      "question": "Para uma saída, é necessária autorização do Planeamento (DePCP)?",
+      "answer": "Não. Para saídas, o PC verifica apenas as normas das IT e experiência local, sem necessidade de autorização prévia do Planeamento.",
+      "keywords": [
+        "autorizacao",
+        "depcp",
+        "necessaria",
+        "planeamento",
+        "saida"
+      ]
+    },
+    {
+      "question": "Quem é formalmente responsável pela comunicação ao OVTS?",
+      "answer": "Formalmente o Comandante do Navio, mas é o Piloto que assegura essa comunicação, diretamente ou por assessoria ao Comandante.",
+      "keywords": [
+        "comunicacao",
+        "formalmente",
+        "ovts",
+        "pela",
+        "quem",
+        "responsavel"
+      ]
+    },
+    {
+      "question": "O que comunica o Piloto ao OVTS quando um navio entra?",
+      "answer": "A hora de embarque do Piloto, a hora de atracação ou fundeio, e a hora de desembarque do Piloto.",
+      "keywords": [
+        "comunica",
+        "entra",
+        "navio",
+        "ovts",
+        "piloto",
+        "quando"
+      ]
+    },
+    {
+      "question": "O que comunica o Piloto ao OVTS quando um navio sai?",
+      "answer": "A hora de embarque do Piloto, a hora de largada do navio, e a hora de desembarque do Piloto.",
+      "keywords": [
+        "comunica",
+        "navio",
+        "ovts",
+        "piloto",
+        "quando",
+        "sai"
+      ]
+    },
+    {
+      "question": "Em quanto tempo deve ser notificado o GAMA após um acidente grave?",
+      "answer": "No prazo máximo de 6 horas após a ocorrência.",
+      "keywords": [
+        "acidente",
+        "apos",
+        "deve",
+        "gama",
+        "grave",
+        "notificado",
+        "quanto",
+        "ser"
+      ]
+    },
+    {
+      "question": "Qual o prazo de notificação ao GAMA para incidentes não graves?",
+      "answer": "No prazo máximo de 48 horas após a ocorrência.",
+      "keywords": [
+        "gama",
+        "graves",
+        "incidentes",
+        "nao",
+        "notificacao",
+        "prazo"
+      ]
+    },
+    {
+      "question": "Qual o número de telefone da Capitania do Porto de Setúbal?",
+      "answer": "(+351) 265 548 270, 275 ou 276.",
+      "keywords": [
+        "capitania",
+        "numero",
+        "porto",
+        "setubal",
+        "telefone"
+      ]
+    },
+    {
+      "question": "Qual o número de telefone do OVTS da APSS?",
+      "answer": "(+351) 968 576 705 ou (+351) 265 531 700.",
+      "keywords": [
+        "apss",
+        "numero",
+        "ovts",
+        "telefone"
+      ]
+    },
+    {
+      "question": "Qual o número de telefone da Direção de Pilotagem da APSS?",
+      "answer": "(+351) 968 576 713 ou (+351) 968 576 732.",
+      "keywords": [
+        "apss",
+        "direcao",
+        "numero",
+        "pilotagem",
+        "telefone"
+      ]
+    }
+  ]
+}

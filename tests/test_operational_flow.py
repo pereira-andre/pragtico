@@ -1082,6 +1082,8 @@ class OperationalFlowTests(unittest.TestCase):
         knowledge_path.write_text(
             (
                 "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
+                "Pergunta: Qual é a regra para compensação de agulhas dentro do Porto à noite?\n"
+                "Resposta: À noite, a regulação de agulhas não se efetua com navios de LOA superior a 225 metros.\n"
                 "Período noturno:\n"
                 "RA permitida: LOA < 225 m.\n"
                 "RA proibida: LOA >= 225 m.\n"
@@ -1096,10 +1098,9 @@ class OperationalFlowTests(unittest.TestCase):
                 flask_session["role"] = "admin"
 
             conversation = self.store.ensure_conversation(username="admin")
-            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
                 services.rag,
                 "answer",
-                return_value={"answer": "Resumo documental.", "sources": []},
             ) as answer_mock:
                 response = client.post(
                     "/api/chat",
@@ -1110,22 +1111,18 @@ class OperationalFlowTests(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 200)
-        kwargs = answer_mock.call_args.kwargs
-        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
-        doc_sources = [
-            item for item in kwargs["supplemental_sources"]
-            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
-        ]
-        self.assertTrue(doc_sources)
-        self.assertIn("LOA >= 225 m", "\n".join(item.get("snippet", "") for item in doc_sources))
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("LOA superior a 225 metros", payload["answer"])
+        answer_mock.assert_not_called()
 
     def test_chat_rule_question_about_agulhas_targets_matching_knowledge_document(self) -> None:
         knowledge_path = Path(self.store.knowledge_dir) / "IT-036_RegulacaoAgulhas.txt"
         knowledge_path.write_text(
             (
                 "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
-                "PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:\n"
-                "Não se efetua RA de noite com navios de LOA superior a 225 metros.\n"
+                "Pergunta: Qual é a regra para compensação de agulhas dentro do Porto à noite?\n"
+                "Resposta: À noite, a regulação de agulhas não se efetua com navios de LOA superior a 225 metros.\n"
             ),
             encoding="utf-8",
         )
@@ -1137,10 +1134,9 @@ class OperationalFlowTests(unittest.TestCase):
                 flask_session["role"] = "admin"
 
             conversation = self.store.ensure_conversation(username="admin")
-            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
                 services.rag,
                 "answer",
-                return_value={"answer": "Resumo documental.", "sources": []},
             ) as answer_mock:
                 response = client.post(
                     "/api/chat",
@@ -1151,22 +1147,18 @@ class OperationalFlowTests(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 200)
-        kwargs = answer_mock.call_args.kwargs
-        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
-        doc_sources = [
-            item for item in kwargs["supplemental_sources"]
-            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
-        ]
-        self.assertTrue(doc_sources)
-        self.assertIn("LOA superior a 225 metros", "\n".join(item.get("snippet", "") for item in doc_sources))
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("LOA superior a 225 metros", payload["answer"])
+        answer_mock.assert_not_called()
 
     def test_chat_document_follow_up_reuses_last_cited_knowledge_document(self) -> None:
         knowledge_path = Path(self.store.knowledge_dir) / "IT-036_RegulacaoAgulhas.txt"
         knowledge_path.write_text(
             (
                 "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\n"
-                "PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:\n"
-                "Não se efetua RA de noite com navios de LOA superior a 225 metros.\n"
+                "Pergunta: Qual é a regra para compensação de agulhas dentro do Porto à noite?\n"
+                "Resposta: À noite, a regulação de agulhas não se efetua com navios de LOA superior a 225 metros.\n"
             ),
             encoding="utf-8",
         )
@@ -1195,10 +1187,9 @@ class OperationalFlowTests(unittest.TestCase):
                 flask_session["username"] = "admin"
                 flask_session["role"] = "admin"
 
-            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
                 services.rag,
                 "answer",
-                return_value={"answer": "Resumo documental.", "sources": []},
             ) as answer_mock:
                 response = client.post(
                     "/api/chat",
@@ -1209,14 +1200,10 @@ class OperationalFlowTests(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 200)
-        kwargs = answer_mock.call_args.kwargs
-        self.assertIn("IT-036_RegulacaoAgulhas.txt", kwargs["retrieval_question"])
-        doc_sources = [
-            item for item in kwargs["supplemental_sources"]
-            if item.get("document") == "IT-036_RegulacaoAgulhas.txt"
-        ]
-        self.assertTrue(doc_sources)
-        self.assertIn("LOA superior a 225 metros", "\n".join(item.get("snippet", "") for item in doc_sources))
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("LOA superior a 225 metros", payload["answer"])
+        answer_mock.assert_not_called()
 
     def test_chat_document_companion_answers_without_llm(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"

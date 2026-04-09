@@ -1,0 +1,125 @@
+{
+  "document": "IT-010_Tanquisado.txt",
+  "title": "IT-010 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL DA TANQUISADO",
+  "aliases": [
+    "IT-010_Tanquisado.txt",
+    "IT-010_Tanquisado",
+    "IT-010 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL DA TANQUISADO",
+    "IT-010",
+    "IT-10",
+    "010",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL DA TANQUISADO"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da TANQUISADO, no Porto de Setúbal.",
+  "key_points": [
+    "463 metros, incluindo o cais (75 m) e os dois duques d'alba.",
+    "9,5 metros. Nunca pode ser excedido independentemente da maré.",
+    "10 metros.",
+    "Somar 6,3 metros à altura da maré no momento, com teto de 9,5 m.",
+    "Sim. Navios com comprimento inferior a 110 metros podem atracar de noite no Terminal da TANQUISADO.",
+    "Apenas nos dias em que as duas preia-mares diárias recaiam exclusivamente no período noturno, e condicionado ao calado de 4,8 m mais a altura de água, com teto máximo de 8,0 metros."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento total operacional do Terminal da TANQUISADO?",
+      "answer": "463 metros, incluindo o cais (75 m) e os dois duques d'alba.",
+      "keywords": [
+        "comprimento",
+        "operacional",
+        "tanquisado",
+        "terminal",
+        "total"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo absoluto no Terminal da TANQUISADO?",
+      "answer": "9,5 metros. Nunca pode ser excedido independentemente da maré.",
+      "keywords": [
+        "absoluto",
+        "calado",
+        "maximo",
+        "tanquisado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual a sonda ao ZH no Terminal da TANQUISADO?",
+      "answer": "10 metros.",
+      "keywords": [
+        "sonda",
+        "tanquisado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Como se calcula o calado máximo praticável durante o dia?",
+      "answer": "Somar 6,3 metros à altura da maré no momento, com teto de 9,5 m. Por exemplo, com maré de 2,0 m: calado máximo = 6,3 + 2,0 = 8,3 m.",
+      "keywords": [
+        "calado",
+        "calcula",
+        "dia",
+        "durante",
+        "maximo",
+        "praticavel"
+      ]
+    },
+    {
+      "question": "Um navio com 80 metros de comprimento pode atracar de noite?",
+      "answer": "Sim. Navios com comprimento inferior a 110 metros podem atracar de noite no Terminal da TANQUISADO.",
+      "keywords": [
+        "atracar",
+        "comprimento",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Um navio com 150 metros pode atracar de noite?",
+      "answer": "Apenas nos dias em que as duas preia-mares diárias recaiam exclusivamente no período noturno, e condicionado ao calado de 4,8 m mais a altura de água, com teto máximo de 8,0 metros.",
+      "keywords": [
+        "atracar",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Quando se pode sair do Terminal da TANQUISADO sem ser no reponto?",
+      "answer": "Em maré de vazante, desde que a preia-mar precedente tenha sido igual ou inferior a 3 metros de altura.",
+      "keywords": [
+        "pode",
+        "quando",
+        "reponto",
+        "sair",
+        "ser",
+        "tanquisado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para uma saída noturna?",
+      "answer": "4,8 metros mais a altura de água no momento da manobra de saída.",
+      "keywords": [
+        "calado",
+        "maximo",
+        "noturna",
+        "saida"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Terminal da TANQUISADO?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "requisicoes",
+        "tanquisado",
+        "terminal",
+        "valida"
+      ]
+    }
+  ]
+}

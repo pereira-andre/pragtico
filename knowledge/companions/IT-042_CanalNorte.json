@@ -1,0 +1,73 @@
+{
+  "document": "IT-042_CanalNorte.txt",
+  "title": "IT-042 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL — CANAL NORTE",
+  "aliases": [
+    "IT-042_CanalNorte.txt",
+    "IT-042_CanalNorte",
+    "IT-042 — ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL — CANAL NORTE",
+    "IT-042",
+    "IT-42",
+    "042",
+    "ENTRADA E SAÍDA DE NAVIOS NO PORTO DE SETÚBAL — CANAL NORTE"
+  ],
+  "summary": "Este documento descreve as recomendações aplicáveis à passagem de navios no Canal Norte, especificamente na zona de curva deste canal, no Porto de Setúbal.",
+  "key_points": [
+    "Existem três recomendações: (1) quando possível, usar dois rebocadores à popa para criar binário de forças e controlar a guinada, evitando guinada ao passo; (2) evitar dar máquina a ré na zona de canal e curva; (3) manter uma distância de 0,15' (cerca de 278 metros) da linha norte da costa na zona de curva.",
+    "Para criar um binário de forças que aumenta o controlo de guinada do navio, evitando a guinada ao passo — um efeito indesejado do hélice que pode fazer o navio guinar de forma não controlada numa zona de canal estreito.",
+    "0,15 minutos de milha, equivalente a aproximadamente 278 metros.",
+    "Porque a marcha-atrás de um hélice convencional gera uma força lateral brusca (efeito de pá) que pode lançar a popa do navio lateralmente de forma imprevisível, colocando o navio fora do canal numa zona em que a margem de erro é reduzida."
+  ],
+  "faq": [
+    {
+      "question": "Quais as recomendações para navegar na zona de curva do Canal Norte?",
+      "answer": "Existem três recomendações: (1) quando possível, usar dois rebocadores à popa para criar binário de forças e controlar a guinada, evitando guinada ao passo; (2) evitar dar máquina a ré na zona de canal e curva; (3) manter uma distância de 0,15' (cerca de 278 metros) da linha norte da costa na zona de curva.",
+      "keywords": [
+        "canal",
+        "curva",
+        "navegar",
+        "norte",
+        "recomendacoes",
+        "zona"
+      ]
+    },
+    {
+      "question": "Por que razão se usam dois rebocadores à popa na curva do Canal Norte?",
+      "answer": "Para criar um binário de forças que aumenta o controlo de guinada do navio, evitando a guinada ao passo — um efeito indesejado do hélice que pode fazer o navio guinar de forma não controlada numa zona de canal estreito.",
+      "keywords": [
+        "canal",
+        "curva",
+        "dois",
+        "norte",
+        "popa",
+        "razao",
+        "rebocadores",
+        "usam"
+      ]
+    },
+    {
+      "question": "Qual a distância recomendada à margem norte na curva do Canal Norte?",
+      "answer": "0,15 minutos de milha, equivalente a aproximadamente 278 metros.",
+      "keywords": [
+        "canal",
+        "curva",
+        "distancia",
+        "margem",
+        "norte",
+        "recomendada"
+      ]
+    },
+    {
+      "question": "Porque se deve evitar máquina a ré na curva do Canal Norte?",
+      "answer": "Porque a marcha-atrás de um hélice convencional gera uma força lateral brusca (efeito de pá) que pode lançar a popa do navio lateralmente de forma imprevisível, colocando o navio fora do canal numa zona em que a margem de erro é reduzida.",
+      "keywords": [
+        "canal",
+        "curva",
+        "deve",
+        "evitar",
+        "maquina",
+        "norte",
+        "porque"
+      ]
+    }
+  ]
+}

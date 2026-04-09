@@ -1,0 +1,146 @@
+{
+  "document": "IT-008_EcoOil.txt",
+  "title": "IT-008 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL ECO-OIL (ECOIL)",
+  "aliases": [
+    "IT-008_EcoOil.txt",
+    "IT-008_EcoOil",
+    "IT-008 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL ECO-OIL (ECOIL)",
+    "IT-008",
+    "IT-8",
+    "008",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL ECO-OIL (ECOIL)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da ECO-OIL, no Porto de Setúbal.",
+  "key_points": [
+    "Próximo dos repontos de maré, ou seja, no momento em que a maré muda de sentido e a corrente é mínima.",
+    "7,5 metros. Nenhum navio com calado superior pode operar neste terminal.",
+    "7,0 metros.",
+    "5,5 metros.",
+    "Não. O comprimento máximo absoluto para atracação e desatracação no ECO-OIL é de 255 metros, e apenas em condições específicas (baixa-mar com BM >= 0,9 m, ou preia-mar noturna p...",
+    "Não. A atracação noturna está proibida em qualquer condição."
+  ],
+  "faq": [
+    {
+      "question": "Quando se executam as manobras no Terminal ECO-OIL?",
+      "answer": "Próximo dos repontos de maré, ou seja, no momento em que a maré muda de sentido e a corrente é mínima.",
+      "keywords": [
+        "eco",
+        "executam",
+        "manobras",
+        "oil",
+        "quando",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo absoluto para estacionamento no ECO-OIL?",
+      "answer": "7,5 metros. Nenhum navio com calado superior pode operar neste terminal.",
+      "keywords": [
+        "absoluto",
+        "calado",
+        "eco",
+        "estacionamento",
+        "maximo",
+        "oil"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para manobrar na preia-mar no ECO-OIL?",
+      "answer": "7,0 metros.",
+      "keywords": [
+        "calado",
+        "eco",
+        "manobrar",
+        "mar",
+        "maximo",
+        "oil",
+        "preia"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para manobrar na baixa-mar no ECO-OIL?",
+      "answer": "5,5 metros.",
+      "keywords": [
+        "baixa",
+        "calado",
+        "eco",
+        "manobrar",
+        "mar",
+        "maximo",
+        "oil"
+      ]
+    },
+    {
+      "question": "Pode um navio de 260 metros atracar no ECO-OIL?",
+      "answer": "Não. O comprimento máximo absoluto para atracação e desatracação no ECO-OIL é de 255 metros, e apenas em condições específicas (baixa-mar com BM >= 0,9 m, ou preia-mar noturna para desatracação). Para atracação sem restrições, o limite é 250 metros em baixa-mar diurna ou sem limite na preia-mar diurna.",
+      "keywords": [
+        "atracar",
+        "eco",
+        "metros",
+        "navio",
+        "oil",
+        "pode"
+      ]
+    },
+    {
+      "question": "É possível atracar de noite no ECO-OIL?",
+      "answer": "Não. A atracação noturna está proibida em qualquer condição.",
+      "keywords": [
+        "atracar",
+        "eco",
+        "noite",
+        "oil",
+        "possivel"
+      ]
+    },
+    {
+      "question": "É possível desatracar de noite no ECO-OIL?",
+      "answer": "Sim, mas apenas na preia-mar e para navios com comprimento até 255 metros. Na baixa-mar noturna não há desatracação.",
+      "keywords": [
+        "desatracar",
+        "eco",
+        "noite",
+        "oil",
+        "possivel"
+      ]
+    },
+    {
+      "question": "Qual a altura da lança da grua no ECO-OIL?",
+      "answer": "55 metros.",
+      "keywords": [
+        "altura",
+        "eco",
+        "grua",
+        "lanca",
+        "oil"
+      ]
+    },
+    {
+      "question": "O que é necessário verificar num navio com bordo livre baixo antes",
+      "answer": "Verificar se a borda do navio ficará ao nível ou abaixo das defensas durante a atracação ou o estacionamento, pois as características das defensas do terminal podem causar avarias em navios de bordo livre baixo ou frágil.",
+      "keywords": [
+        "antes",
+        "baixo",
+        "bordo",
+        "livre",
+        "navio",
+        "necessario",
+        "num",
+        "verificar"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Terminal ECO-OIL?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "eco",
+        "manobra",
+        "oil",
+        "quem",
+        "requisicoes",
+        "terminal",
+        "valida"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "document": "IT-017_PilotagemAssistida.txt",
+  "title": "IT-017 — PILOTAGEM ASSISTIDA",
+  "aliases": [
+    "IT-017_PilotagemAssistida.txt",
+    "IT-017_PilotagemAssistida",
+    "IT-017 — PILOTAGEM ASSISTIDA",
+    "IT-017",
+    "IT-17",
+    "017",
+    "PILOTAGEM ASSISTIDA"
+  ],
+  "summary": "Este documento descreve as regras aplicáveis à Pilotagem Assistida no Porto de Setúbal.",
+  "key_points": [
+    "É uma modalidade em que um Piloto experiente em terra guia o navio por radar durante a passagem da Barra, em vez de estar fisicamente a bordo.",
+    "Canal VHF 10.",
+    "200 manobras de entrada ou saída no Porto de Setúbal com o tipo de navio em causa, ou com navios similares ou de comprimento superior.",
+    "Não. O Piloto experiente que executa a Pilotagem Assistida pode não ser o Piloto Coordenador.",
+    "Rumo 040, com velocidade não inferior a 10 nós.",
+    "4 milhas da entrada da Barra."
+  ],
+  "faq": [
+    {
+      "question": "O que é a Pilotagem Assistida?",
+      "answer": "É uma modalidade em que um Piloto experiente em terra guia o navio por radar durante a passagem da Barra, em vez de estar fisicamente a bordo. O Piloto embarca ou desembarca em OUTÃO, sendo o restante percurso da Barra coberto pelo Piloto de terra via radar.",
+      "keywords": [
+        "assistida",
+        "pilotagem"
+      ]
+    },
+    {
+      "question": "Qual é o canal de comunicação usado na Pilotagem Assistida?",
+      "answer": "Canal VHF 10.",
+      "keywords": [
+        "assistida",
+        "canal",
+        "comunicacao",
+        "pilotagem",
+        "usado"
+      ]
+    },
+    {
+      "question": "Qual é o mínimo de manobras para um Piloto ser considerado experiente",
+      "answer": "200 manobras de entrada ou saída no Porto de Setúbal com o tipo de navio em causa, ou com navios similares ou de comprimento superior.",
+      "keywords": [
+        "considerado",
+        "experiente",
+        "manobras",
+        "minimo",
+        "piloto",
+        "ser"
+      ]
+    },
+    {
+      "question": "O Piloto Coordenador é sempre o Piloto experiente na Pilotagem Assistida?",
+      "answer": "Não. O Piloto experiente que executa a Pilotagem Assistida pode não ser o Piloto Coordenador.",
+      "keywords": [
+        "assistida",
+        "coordenador",
+        "experiente",
+        "pilotagem",
+        "piloto",
+        "sempre"
+      ]
+    },
+    {
+      "question": "Qual o rumo de entrada na Barra indicado na Pilotagem Assistida?",
+      "answer": "Rumo 040, com velocidade não inferior a 10 nós.",
+      "keywords": [
+        "assistida",
+        "barra",
+        "entrada",
+        "indicado",
+        "pilotagem",
+        "rumo"
+      ]
+    },
+    {
+      "question": "A que distância da Barra o VTS inicia a aquisição do navio?",
+      "answer": "4 milhas da entrada da Barra.",
+      "keywords": [
+        "aquisicao",
+        "barra",
+        "distancia",
+        "inicia",
+        "navio",
+        "vts"
+      ]
+    },
+    {
+      "question": "A que distância da Barra o navio toma o enfiamento?",
+      "answer": "A 2 milhas de distância da Barra.",
+      "keywords": [
+        "barra",
+        "distancia",
+        "enfiamento",
+        "navio",
+        "toma"
+      ]
+    },
+    {
+      "question": "Onde desembarca o Piloto na saída com Pilotagem Assistida?",
+      "answer": "Em OUTÃO, que é o local de transferência de pilotos na entrada do porto.",
+      "keywords": [
+        "assistida",
+        "desembarca",
+        "onde",
+        "pilotagem",
+        "piloto",
+        "saida"
+      ]
+    },
+    {
+      "question": "Podem dois navios cruzar-se no canal durante a Pilotagem Assistida?",
+      "answer": "Não. Não há cruzamento de navios sem Piloto a bordo.",
+      "keywords": [
+        "assistida",
+        "canal",
+        "cruzar",
+        "dois",
+        "durante",
+        "navios",
+        "pilotagem",
+        "podem"
+      ]
+    },
+    {
+      "question": "As instruções do Piloto de terra são ordens obrigatórias?",
+      "answer": "Têm caráter de recomendação (ADVICE). São instruções a cumprir mas com natureza consultiva, indicando rumo e velocidade adequados às características do navio e às condições da passagem.",
+      "keywords": [
+        "instrucoes",
+        "obrigatorias",
+        "ordens",
+        "piloto",
+        "sao",
+        "terra"
+      ]
+    },
+    {
+      "question": "Onde é efetuada a Pilotagem Assistida?",
+      "answer": "Normalmente na sala de coordenação de Pilotagem, por um Piloto experiente em concordância com o Piloto distribuído para o navio.",
+      "keywords": [
+        "assistida",
+        "efetuada",
+        "onde",
+        "pilotagem"
+      ]
+    }
+  ]
+}

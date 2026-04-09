@@ -1,0 +1,129 @@
+{
+  "document": "IT-014_Lisnave.txt",
+  "title": "IT-014 — REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)",
+  "aliases": [
+    "IT-014_Lisnave.txt",
+    "IT-014_Lisnave",
+    "IT-014 — REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)",
+    "IT-014",
+    "IT-14",
+    "014",
+    "REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras nos Terminais da LISNAVE, designados Estaleiros Mitrena, no Porto de Setúbal.",
+  "key_points": [
+    "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré.",
+    "Não. Navios com comprimento superior a 280 metros só podem manobrar durante o dia.",
+    "Sim. Navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite.",
+    "6,10 metros (20 pés ao ZH).",
+    "O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.",
+    "Sim, para navios com considerável área vélica."
+  ],
+  "faq": [
+    {
+      "question": "Por que razão todas as manobras no LISNAVE se fazem nos repontos",
+      "answer": "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré. Com corrente ativa, esta atua lateralmente sobre o navio, tornando a manobra incontrolável. Só no reponto, com corrente nula, é possível manobrar com segurança.",
+      "keywords": [
+        "fazem",
+        "lisnave",
+        "manobras",
+        "razao",
+        "repontos",
+        "todas"
+      ]
+    },
+    {
+      "question": "Um navio com 300 metros de LOA pode entrar no LISNAVE de noite?",
+      "answer": "Não. Navios com comprimento superior a 280 metros só podem manobrar durante o dia.",
+      "keywords": [
+        "entrar",
+        "lisnave",
+        "loa",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Um navio com 250 metros de LOA pode entrar no LISNAVE de noite?",
+      "answer": "Sim. Navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite.",
+      "keywords": [
+        "entrar",
+        "lisnave",
+        "loa",
+        "metros",
+        "navio",
+        "noite",
+        "pode"
+      ]
+    },
+    {
+      "question": "Qual a profundidade disponível na entrada da Doca 21 com a comporta",
+      "answer": "6,10 metros (20 pés ao ZH). Com a comporta fechada (descida), a profundidade na entrada reduz-se para 5,49 metros (18 pés).",
+      "keywords": [
+        "comporta",
+        "disponivel",
+        "doca",
+        "entrada",
+        "profundidade"
+      ]
+    },
+    {
+      "question": "Qual o cais do LISNAVE com maior profundidade disponível?",
+      "answer": "O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.",
+      "keywords": [
+        "cais",
+        "disponivel",
+        "lisnave",
+        "maior",
+        "profundidade"
+      ]
+    },
+    {
+      "question": "O vento condiciona as manobras no LISNAVE?",
+      "answer": "Sim, para navios com considerável área vélica. Estes só devem manobrar com vento até cerca de 20 km/h.",
+      "keywords": [
+        "condiciona",
+        "lisnave",
+        "manobras",
+        "vento"
+      ]
+    },
+    {
+      "question": "Podem dois navios grandes manobrar ao mesmo tempo no LISNAVE?",
+      "answer": "Em marés vivas, recomenda-se uma manobra por reponto quando houver necessidade de ocupar a mesma bacia em simultâneo, especialmente com navios de LOA superior a 200 metros.",
+      "keywords": [
+        "dois",
+        "grandes",
+        "lisnave",
+        "manobrar",
+        "mesmo",
+        "navios",
+        "podem",
+        "tempo"
+      ]
+    },
+    {
+      "question": "Qual a boca máxima para as Plataformas 31, 32 e 33 do LISNAVE?",
+      "answer": "32 metros.",
+      "keywords": [
+        "boca",
+        "lisnave",
+        "maxima",
+        "plataformas"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no LISNAVE?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "lisnave",
+        "manobra",
+        "quem",
+        "requisicoes",
+        "valida"
+      ]
+    }
+  ]
+}

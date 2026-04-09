@@ -1,0 +1,16 @@
+{
+  "document": "00_abortar.txt",
+  "title": "Abortar Manobras depois de Marcadas a Previsto:",
+  "aliases": [
+    "00_abortar.txt",
+    "00_abortar",
+    "Abortar Manobras depois de Marcadas a Previsto:"
+  ],
+  "summary": "O procedimento na JUL a ter quando uma manobra pedida pelo agente e marcada pelo piloto coordenador não se realizou conforme prevista, tendo o piloto ido a bordo, obrigando consequentemente a registo de pilotagem passa a ser o seguinte: 1. As funções \"CANCELAR\" e \"ANULAR\" deixam de ser utilizadas. Apenas se utiliza a função \"ABORTAR\" para",
+  "key_points": [
+    "As funções \"CANCELAR\" e \"ANULAR\" deixam de ser utilizadas. Apenas se utiliza a função \"ABORTAR\" para",
+    "Manobra inicialmente marcada como de saída do estaleiro e que tem de fundear ou atracar no",
+    "Manobra inicialmente marcada, mas já com piloto a bordo não se inicia por motivos meteorológicos,"
+  ],
+  "faq": []
+}

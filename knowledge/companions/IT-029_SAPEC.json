@@ -1,0 +1,134 @@
+{
+  "document": "IT-029_SAPEC.txt",
+  "title": "IT-029 — REGRAS APLICÁVEIS A MANOBRAS — CAIS DA SAPEC (TPS e TGL)",
+  "aliases": [
+    "IT-029_SAPEC.txt",
+    "IT-029_SAPEC",
+    "IT-029 — REGRAS APLICÁVEIS A MANOBRAS — CAIS DA SAPEC (TPS e TGL)",
+    "IT-029",
+    "IT-29",
+    "029",
+    "REGRAS APLICÁVEIS A MANOBRAS — CAIS DA SAPEC (TPS e TGL)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras nos dois terminais da SAPEC no Porto de Setúbal:",
+  "key_points": [
+    "9,5 metros.",
+    "10,0 metros de referência (calculado para PM mínimo de 2,4 m).",
+    "7,6 + 1,8 = 9,4 metros.",
+    "8,8 + 0,3 = 9,1 metros.",
+    "Inferior a 5 nós, para evitar squat elevado.",
+    "10,0 metros."
+  ],
+  "faq": [
+    {
+      "question": "Qual o calado máximo para um navio tanque com carga IMO no TPS?",
+      "answer": "9,5 metros.",
+      "keywords": [
+        "calado",
+        "carga",
+        "imo",
+        "maximo",
+        "navio",
+        "tanque",
+        "tps"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo para um navio de granéis sólidos (sem carga IMO)",
+      "answer": "10,0 metros de referência (calculado para PM mínimo de 2,4 m). Calados ligeiramente superiores podem ser admitidos caso a caso.",
+      "keywords": [
+        "calado",
+        "carga",
+        "graneis",
+        "imo",
+        "maximo",
+        "navio",
+        "solidos"
+      ]
+    },
+    {
+      "question": "Qual o calado praticável no TPS com altura de água de 1,8 m para carga",
+      "answer": "7,6 + 1,8 = 9,4 metros.",
+      "keywords": [
+        "agua",
+        "altura",
+        "calado",
+        "carga",
+        "praticavel",
+        "tps"
+      ]
+    },
+    {
+      "question": "Com baixa-mar de 0,3 m, a partir de que calado é obrigatório usar",
+      "answer": "8,8 + 0,3 = 9,1 metros. Navios com calado superior a 9,1 m devem atracar às defensas afastadoras (carochas).",
+      "keywords": [
+        "baixa",
+        "calado",
+        "mar",
+        "obrigatorio",
+        "partir",
+        "usar"
+      ]
+    },
+    {
+      "question": "Qual a velocidade máxima recomendada no canal de acesso ao TPS?",
+      "answer": "Inferior a 5 nós, para evitar squat elevado.",
+      "keywords": [
+        "acesso",
+        "canal",
+        "maxima",
+        "recomendada",
+        "tps",
+        "velocidade"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo no TGL com carga não IMO?",
+      "answer": "10,0 metros.",
+      "keywords": [
+        "calado",
+        "carga",
+        "imo",
+        "maximo",
+        "nao",
+        "tgl"
+      ]
+    },
+    {
+      "question": "Qual a distância entre os duques d'alba extremos do TGL?",
+      "answer": "70 metros.",
+      "keywords": [
+        "alba",
+        "distancia",
+        "duques",
+        "entre",
+        "extremos",
+        "tgl"
+      ]
+    },
+    {
+      "question": "As fórmulas de calado do TPS e do TGL são iguais?",
+      "answer": "Sim. Ambos usam 7,6 m + altura de água para carga não IMO e 7,1 m + altura de água para carga IMO.",
+      "keywords": [
+        "calado",
+        "formulas",
+        "iguais",
+        "sao",
+        "tgl",
+        "tps"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no TPS e no TGL?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "requisicoes",
+        "tgl",
+        "tps",
+        "valida"
+      ]
+    }
+  ]
+}

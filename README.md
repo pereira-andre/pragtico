@@ -46,7 +46,7 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 
 O CSV operacional de marés fica em `resources/tides/` e não em `knowledge/`, para não entrar na indexação documental do RAG.
 As horas do CSV são assumidas em `UTC` e apresentadas no fuso operacional `Europe/Lisbon`, incluindo mudança de hora.
-Companions estruturados podem ser guardados em `knowledge/companions/*.json` para FAQs canónicas e resumos operacionais por documento.
+Companions estruturados podem ser guardados em `knowledge/companions/*.json` para FAQs canónicas e resumos operacionais por documento. Se não existir JSON, o portal tenta gerar um companion-base a partir do próprio texto do documento.
 
 ### Segurança e perfis
 
@@ -155,10 +155,16 @@ Alterar papel de utilizador:
 python3 scripts/set_user_role.py utilizador@porto.pt admin
 ```
 
-Gerar esqueleto de companion para um documento:
+Gerar companion automático para um documento:
 
 ```bash
 python3 scripts/generate_knowledge_companion.py IT-036_RegulacaoAgulhas.txt
+```
+
+Gerar ou refrescar companions para todos os documentos:
+
+```bash
+python3 scripts/generate_knowledge_companion.py --all --force
 ```
 
 Teste simples de envio WhatsApp:

@@ -1,0 +1,113 @@
+{
+  "document": "IT-062_Teporset.txt",
+  "title": "IT-062 — CAIS DA TEPORSET",
+  "aliases": [
+    "IT-062_Teporset.txt",
+    "IT-062_Teporset",
+    "IT-062 — CAIS DA TEPORSET",
+    "IT-062",
+    "IT-62",
+    "062",
+    "CAIS DA TEPORSET"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal TEPORSET, no Porto de Setúbal.",
+  "key_points": [
+    "164 metros de comprimento físico.",
+    "200 metros (comprimento máximo de referência).",
+    "11,0 metros.",
+    "Somam-se 7,4 metros à altura da preia-mar prevista para o dia, com teto de 11,0 metros.",
+    "Sim, desde que a preia-mar do dia seja igual ou superior a 2,6 m (7,4 + 2,6 = 10,0 m).",
+    "7,4 metros (correspondente a preia-mar ao nível do Zero Hidrográfico)."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento do Cais da TEPORSET?",
+      "answer": "164 metros de comprimento físico.",
+      "keywords": [
+        "cais",
+        "comprimento",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Qual o comprimento máximo de navio no Cais da TEPORSET?",
+      "answer": "200 metros (comprimento máximo de referência).",
+      "keywords": [
+        "cais",
+        "comprimento",
+        "maximo",
+        "navio",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo absoluto no Cais da TEPORSET?",
+      "answer": "11,0 metros.",
+      "keywords": [
+        "absoluto",
+        "cais",
+        "calado",
+        "maximo",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Como se calcula o calado máximo na TEPORSET?",
+      "answer": "Somam-se 7,4 metros à altura da preia-mar prevista para o dia, com teto de 11,0 metros. Por exemplo, com preia-mar de 2,5 m: calado máximo = 7,4 + 2,5 = 9,9 metros.",
+      "keywords": [
+        "calado",
+        "calcula",
+        "maximo",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Um navio com 10,0 m de calado pode operar na TEPORSET?",
+      "answer": "Sim, desde que a preia-mar do dia seja igual ou superior a 2,6 m (7,4 + 2,6 = 10,0 m).",
+      "keywords": [
+        "calado",
+        "navio",
+        "operar",
+        "pode",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Qual o calado mínimo praticável na TEPORSET independentemente da maré?",
+      "answer": "7,4 metros (correspondente a preia-mar ao nível do Zero Hidrográfico).",
+      "keywords": [
+        "calado",
+        "independentemente",
+        "mare",
+        "minimo",
+        "praticavel",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Quando foi feito o levantamento hidrográfico de referência da TEPORSET?",
+      "answer": "Foram feitos dois levantamentos pelo Instituto Hidrográfico (IH): um em julho de 2022 e outro em outubro de 2022.",
+      "keywords": [
+        "feito",
+        "foi",
+        "hidrografico",
+        "levantamento",
+        "quando",
+        "referencia",
+        "teporset"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Cais da TEPORSET?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "cais",
+        "manobra",
+        "quem",
+        "requisicoes",
+        "teporset",
+        "valida"
+      ]
+    }
+  ]
+}

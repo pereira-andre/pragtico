@@ -1,0 +1,96 @@
+{
+  "document": "IT-006_TMS2.txt",
+  "title": "IT-006 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 2 (TMS2)",
+  "aliases": [
+    "IT-006_TMS2.txt",
+    "IT-006_TMS2",
+    "IT-006 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 2 (TMS2)",
+    "IT-006",
+    "IT-6",
+    "006",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 2 (TMS2)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e às manobras de navios no Terminal Multiusos — Zona 2 (também designado TMS2) do Porto de Setúbal.",
+  "key_points": [
+    "O TMS2 abrange os cabeços 40 a 63.",
+    "723 metros.",
+    "12 metros, aplicável de forma uniforme a todo o terminal.",
+    "Cada navio deve ter um intervalo de 10% do seu próprio comprimento para cada lado.",
+    "É necessário calcular o espaço total ocupado.",
+    "O Piloto Coordenador."
+  ],
+  "faq": [
+    {
+      "question": "Quais são os cabeços do TMS2?",
+      "answer": "O TMS2 abrange os cabeços 40 a 63.",
+      "keywords": [
+        "cabecos",
+        "sao",
+        "tms2"
+      ]
+    },
+    {
+      "question": "Qual é o comprimento total do TMS2?",
+      "answer": "723 metros.",
+      "keywords": [
+        "comprimento",
+        "tms2",
+        "total"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo permitido no TMS2?",
+      "answer": "12 metros, aplicável de forma uniforme a todo o terminal.",
+      "keywords": [
+        "calado",
+        "maximo",
+        "permitido",
+        "tms2"
+      ]
+    },
+    {
+      "question": "Qual a separação mínima entre navios no TMS2?",
+      "answer": "Cada navio deve ter um intervalo de 10% do seu próprio comprimento para cada lado. Por exemplo, um navio de 150 metros necessita de 15 metros livres de cada bordo.",
+      "keywords": [
+        "entre",
+        "minima",
+        "navios",
+        "separacao",
+        "tms2"
+      ]
+    },
+    {
+      "question": "Um navio de 200 metros pode atracar no TMS2 se já houver um navio de",
+      "answer": "É necessário calcular o espaço total ocupado. O navio de 150 metros ocupa 180 metros (15 + 150 + 15). O navio de 200 metros ocupa 240 metros (20 + 200 + 20). No entanto, as margens de separação entre os dois navios podem ser partilhadas: a margem de ré de um e a margem de vante do outro devem satisfazer individualmente os 10% de cada navio. O espaço total necessário para os dois navios juntos seria de pelo menos 15 + 150 + 20 + 200 + 20 = 405 metros, o que é inferior a 723 metros, sendo portanto possível em termos de comprimento disponível, desde que se respeitem os intervalos individuais de cada navio.",
+      "keywords": [
+        "atracar",
+        "houver",
+        "metros",
+        "navio",
+        "pode",
+        "tms2"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no TMS2?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "requisicoes",
+        "tms2",
+        "valida"
+      ]
+    },
+    {
+      "question": "Qual a diferença entre o TMS1 e o TMS2?",
+      "answer": "O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m) e regras de resguardo fixo de 30 metros. O TMS2 abrange os cabeços 40 a 63, tem um único espaço contínuo de 723 metros, calado máximo uniforme de 12 metros e regra de separação de 10% do comprimento do navio para cada lado.",
+      "keywords": [
+        "diferenca",
+        "entre",
+        "tms1",
+        "tms2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "document": "Condicoes_Meteorologicas_Prioridades.txt",
+  "title": "NOTAS OPERACIONAIS — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA",
+  "aliases": [
+    "Condicoes_Meteorologicas_Prioridades.txt",
+    "Condicoes_Meteorologicas_Prioridades",
+    "NOTAS OPERACIONAIS — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA"
+  ],
+  "summary": "trabalho, gestão de embarques e prioridades de manobra. Complementa o IT-018 (Normas Especiais) e o P-19 (Pilotagem) com critérios operacionais concretos. Os seguintes intervalos de velocidade de vento definem as categorias usadas operacionalmente pela pilotagem do Porto de Setúbal para avaliar a viabilidade",
+  "key_points": [
+    "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica.",
+    "Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.",
+    "Sempre que possível. Se as condições não permitirem, embarca no Outão. Se nem no Outão for possível, o navio aguarda ao largo até as condições melhorarem.",
+    "Com a maré de enchente, a corrente actua a favor da aproximação da lancha, reduzindo o efeito combinado adverso de vento forte + corrente de vazante + ondulação.",
+    "A pilotagem é suspensa.",
+    "1.º navios com reponto de maré; 2.º navios com passageiros/animais/ carga perecível; 3.º RoRo; 4.º contentores; 5.º outros."
+  ],
+  "faq": [
+    {
+      "question": "A partir de que velocidade de vento as manobras ficam condicionadas?",
+      "answer": "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica. Acima de 25 nós as manobras são geralmente impraticáveis.",
+      "keywords": [
+        "condicionadas",
+        "ficam",
+        "manobras",
+        "partir",
+        "velocidade",
+        "vento"
+      ]
+    },
+    {
+      "question": "Quando se considera maré viva no Porto de Setúbal?",
+      "answer": "Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.",
+      "keywords": [
+        "considera",
+        "mare",
+        "porto",
+        "quando",
+        "setubal",
+        "viva"
+      ]
+    },
+    {
+      "question": "O Piloto embarca sempre fora da Barra?",
+      "answer": "Sempre que possível. Se as condições não permitirem, embarca no Outão. Se nem no Outão for possível, o navio aguarda ao largo até as condições melhorarem.",
+      "keywords": [
+        "barra",
+        "embarca",
+        "fora",
+        "piloto",
+        "sempre"
+      ]
+    },
+    {
+      "question": "Porquê que a enchente pode ser mais favorável para embarque?",
+      "answer": "Com a maré de enchente, a corrente actua a favor da aproximação da lancha, reduzindo o efeito combinado adverso de vento forte + corrente de vazante + ondulação. Por isso em condições limítrofes pode valer a pena aguardar pela enchente para fazer o embarque.",
+      "keywords": [
+        "embarque",
+        "enchente",
+        "favoravel",
+        "pode",
+        "porque",
+        "ser"
+      ]
+    },
+    {
+      "question": "O que fazer quando há nevoeiro?",
+      "answer": "A pilotagem é suspensa. Os navios aguardam em fila de prioridade. As requisições continuam a ser registadas no sistema mas as manobras não se executam até as condições serem repostas e a pilotagem declarar o levantamento.",
+      "keywords": [
+        "fazer",
+        "nevoeiro",
+        "quando"
+      ]
+    },
+    {
+      "question": "Qual o critério de prioridade entre manobras?",
+      "answer": "1.º navios com reponto de maré; 2.º navios com passageiros/animais/ carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade de saídas sobre entradas.",
+      "keywords": [
+        "criterio",
+        "entre",
+        "manobras",
+        "prioridade"
+      ]
+    },
+    {
+      "question": "Um graneleiro e um ferry estão à espera de manobra. Qual sai primeiro?",
+      "answer": "O ferry (RoRo de passageiros), que é 2.ª prioridade face ao graneleiro que é 5.ª prioridade.",
+      "keywords": [
+        "espera",
+        "estao",
+        "ferry",
+        "graneleiro",
+        "manobra",
+        "primeiro",
+        "sai"
+      ]
+    },
+    {
+      "question": "Dois navios estão à espera: um porta-contentores a entrar e um",
+      "answer": "O graneleiro a sair, porque as saídas têm prioridade sobre as entradas independentemente do tipo de navio.",
+      "keywords": [
+        "contentores",
+        "dois",
+        "entrar",
+        "espera",
+        "estao",
+        "navios",
+        "porta"
+      ]
+    }
+  ]
+}

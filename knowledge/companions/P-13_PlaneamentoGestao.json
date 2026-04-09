@@ -1,0 +1,89 @@
+{
+  "document": "P-13_PlaneamentoGestao.txt",
+  "title": "P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA",
+  "aliases": [
+    "P-13_PlaneamentoGestao.txt",
+    "P-13_PlaneamentoGestao",
+    "P-13 — PLANEAMENTO E GESTÃO PORTUÁRIA"
+  ],
+  "summary": "Este procedimento aplica-se ao planeamento das manobras com embarcações no Porto de Setúbal.",
+  "key_points": [
+    "O primeiro a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, monitorizado pelo VTS.",
+    "A competência para autorizar manobras está atribuída ao DePCP (para as situações correntes).",
+    "Diretamente à Direção de Pilotagem (DP).",
+    "Na JUL (Janela Única Logística), em resposta ao Pedido de Manobra.",
+    "O DePCP valida o local, mas apenas após indicação prévia do Concessionário que gere esses terminais.",
+    "Não. Embarcações militares destinadas ao cais da NATO estão excluídas deste procedimento, assim como as embarcações da Doca Pesca e as de tráfego local."
+  ],
+  "faq": [
+    {
+      "question": "Quando dois navios pretendem o mesmo cais, qual tem prioridade?",
+      "answer": "O primeiro a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, monitorizado pelo VTS. A prioridade baseia-se na hora de chegada \"em frente da barra\", conforme o Artigo 16.º n.º 1 do Regulamento de Exploração do Porto de Setúbal.",
+      "keywords": [
+        "cais",
+        "dois",
+        "mesmo",
+        "navios",
+        "pretendem",
+        "prioridade",
+        "quando",
+        "tem"
+      ]
+    },
+    {
+      "question": "Quem autoriza as manobras no Porto de Setúbal?",
+      "answer": "A competência para autorizar manobras está atribuída ao DePCP (para as situações correntes). Pedidos atípicos sobem ao DGC e depois ao CA.",
+      "keywords": [
+        "autoriza",
+        "manobras",
+        "porto",
+        "quem",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Para questões de calado, a quem se dirige o pedido?",
+      "answer": "Diretamente à Direção de Pilotagem (DP).",
+      "keywords": [
+        "calado",
+        "dirige",
+        "pedido",
+        "quem",
+        "questoes"
+      ]
+    },
+    {
+      "question": "Onde se regista o local de acostagem atribuído a um navio?",
+      "answer": "Na JUL (Janela Única Logística), em resposta ao Pedido de Manobra. Sem Pedido de Manobra prévio na JUL, o DePCP não pode atribuir local de acostagem.",
+      "keywords": [
+        "acostagem",
+        "atribuido",
+        "local",
+        "navio",
+        "onde",
+        "regista"
+      ]
+    },
+    {
+      "question": "Quem define o local de acostagem no TMS-1 ou TMS-2?",
+      "answer": "O DePCP valida o local, mas apenas após indicação prévia do Concessionário que gere esses terminais.",
+      "keywords": [
+        "acostagem",
+        "define",
+        "local",
+        "quem",
+        "tms"
+      ]
+    },
+    {
+      "question": "O procedimento P-13 aplica-se a navios militares?",
+      "answer": "Não. Embarcações militares destinadas ao cais da NATO estão excluídas deste procedimento, assim como as embarcações da Doca Pesca e as de tráfego local.",
+      "keywords": [
+        "aplica",
+        "militares",
+        "navios",
+        "procedimento"
+      ]
+    }
+  ]
+}

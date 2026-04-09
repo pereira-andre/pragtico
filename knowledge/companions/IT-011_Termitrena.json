@@ -1,0 +1,122 @@
+{
+  "document": "IT-011_Termitrena.txt",
+  "title": "IT-011 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL TERMITRENA (EX-EUROMINAS)",
+  "aliases": [
+    "IT-011_Termitrena.txt",
+    "IT-011_Termitrena",
+    "IT-011 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL TERMITRENA (EX-EUROMINAS)",
+    "IT-011",
+    "IT-11",
+    "011",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL TERMITRENA (EX-EUROMINAS)"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da TERMITRENA, no Porto de Setúbal.",
+  "key_points": [
+    "154 metros.",
+    "200 metros de LOA.",
+    "10,0 metros. Nunca pode ser excedido.",
+    "Somar 8,8 metros à altura da baixa-mar de referência, com teto de 10,0 metros.",
+    "É a baixa-mar imediatamente após a preia-mar de atracação, ou as seguintes se o navio não iniciar a descarga em tempo.",
+    "É a baixa-mar que antecede a preia-mar para a qual existe a certeza de largada do cais."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento físico do Cais da TERMITRENA?",
+      "answer": "154 metros.",
+      "keywords": [
+        "cais",
+        "comprimento",
+        "fisico",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "Qual o comprimento máximo de navio permitido na TERMITRENA?",
+      "answer": "200 metros de LOA.",
+      "keywords": [
+        "comprimento",
+        "maximo",
+        "navio",
+        "permitido",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo absoluto na TERMITRENA?",
+      "answer": "10,0 metros. Nunca pode ser excedido.",
+      "keywords": [
+        "absoluto",
+        "calado",
+        "maximo",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "Como se calcula o calado máximo na TERMITRENA?",
+      "answer": "Somar 8,8 metros à altura da baixa-mar de referência, com teto de 10,0 metros. Por exemplo, com baixa-mar de 0,8 m: calado máximo = 8,8 + 0,8 = 9,6 m.",
+      "keywords": [
+        "calado",
+        "calcula",
+        "maximo",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "O que é a baixa-mar de referência para um navio que chega a descarregar?",
+      "answer": "É a baixa-mar imediatamente após a preia-mar de atracação, ou as seguintes se o navio não iniciar a descarga em tempo. É a primeira vez que a maré vai descer com o navio ainda com carga, o que determina se o calado de chegada é seguro.",
+      "keywords": [
+        "baixa",
+        "chega",
+        "descarregar",
+        "mar",
+        "navio",
+        "referencia"
+      ]
+    },
+    {
+      "question": "O que é a baixa-mar de referência para um navio que está a carregar?",
+      "answer": "É a baixa-mar que antecede a preia-mar para a qual existe a certeza de largada do cais. É o ponto mais crítico: navio pesado + maré mais baixa antes de partir.",
+      "keywords": [
+        "baixa",
+        "carregar",
+        "mar",
+        "navio",
+        "referencia"
+      ]
+    },
+    {
+      "question": "A que altura de água se deve tentar atracar na TERMITRENA?",
+      "answer": "Cerca de 2 metros acima do Zero Hidrográfico, para facilitar a amarração dos cabos lançantes exteriores pela lancha e pessoal de cabos.",
+      "keywords": [
+        "agua",
+        "altura",
+        "atracar",
+        "deve",
+        "tentar",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "O Terminal TERMITRENA e o Terminal Eurominas são o mesmo?",
+      "answer": "Sim. O terminal anteriormente designado Eurominas passou a chamar-se TERMITRENA a partir de março de 2011. Trata-se da mesma instalação.",
+      "keywords": [
+        "eurominas",
+        "mesmo",
+        "sao",
+        "terminal",
+        "termitrena"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra na TERMITRENA?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "quem",
+        "requisicoes",
+        "termitrena",
+        "valida"
+      ]
+    }
+  ]
+}

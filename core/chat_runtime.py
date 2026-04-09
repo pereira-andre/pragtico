@@ -37,6 +37,7 @@ from domain.knowledge_companions import (
     build_companion_answer,
     build_companion_sources,
     companion_lookup_terms,
+    find_best_global_companion_match,
     load_document_companion,
 )
 from integrations.rag_engine import chunk_text, lexical_score
@@ -746,25 +747,36 @@ def handle_chat_turn(
                     "answer_origin": "document_companion",
                 }
             else:
-                if not services.rag.can_generate():
-                    raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
-                answer = services.rag.answer(
-                    question=clean_question,
-                    retrieval_question=targeted_document_context["retrieval_question"],
-                    role=role,
-                    history=(history + [user_message])[-10:],
-                    supplemental_sources=supplemental_sources,
-                    trusted_answers=trusted_answers,
-                    reviewed_answers=reviewed_answers,
+                global_companion_match = find_best_global_companion_match(
+                    clean_question,
+                    _active_knowledge_dir(),
                 )
-                answer["answer_origin"] = "llm"
-                if trusted_answers:
-                    answer["feedback_match"] = {
-                        "similarity": trusted_answers[0]["similarity"],
-                        "message_id": trusted_answers[0]["message_id"],
-                        "question": trusted_answers[0]["question"],
-                        "feedback_note": trusted_answers[0].get("feedback_note", ""),
+                if global_companion_match:
+                    answer = {
+                        "answer": global_companion_match["answer"],
+                        "sources": global_companion_match["sources"],
+                        "answer_origin": "document_companion_global",
                     }
+                else:
+                    if not services.rag.can_generate():
+                        raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+                    answer = services.rag.answer(
+                        question=clean_question,
+                        retrieval_question=targeted_document_context["retrieval_question"],
+                        role=role,
+                        history=(history + [user_message])[-10:],
+                        supplemental_sources=supplemental_sources,
+                        trusted_answers=trusted_answers,
+                        reviewed_answers=reviewed_answers,
+                    )
+                    answer["answer_origin"] = "llm"
+                    if trusted_answers:
+                        answer["feedback_match"] = {
+                            "similarity": trusted_answers[0]["similarity"],
+                            "message_id": trusted_answers[0]["message_id"],
+                            "question": trusted_answers[0]["question"],
+                            "feedback_note": trusted_answers[0].get("feedback_note", ""),
+                        }
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:

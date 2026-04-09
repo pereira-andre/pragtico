@@ -1,0 +1,110 @@
+{
+  "document": "IT-012_PraiasSado.txt",
+  "title": "IT-012 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL PRAIAS DO SADO",
+  "aliases": [
+    "IT-012_PraiasSado.txt",
+    "IT-012_PraiasSado",
+    "IT-012 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL PRAIAS DO SADO",
+    "IT-012",
+    "IT-12",
+    "012",
+    "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL PRAIAS DO SADO"
+  ],
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e às manobras no Terminal Praias do Sado, no Porto de Setúbal.",
+  "key_points": [
+    "125 metros.",
+    "200 metros (valor aconselhável, não máximo absoluto).",
+    "10,0 metros.",
+    "Existem duas fórmulas que devem ser calculadas separadamente.",
+    "Não. Fórmula de percurso: 7,40 + 1,0 = 8,40 m. Fórmula de estacionamento: 8,7 + 0,5 = 9,2 m. Calado possível = MIN(8,40 ; 9,20) = 8,40 m. O navio tem 9,0 m de calado, que excede...",
+    "Sim. O terminal anteriormente designado Terminal Pirites passou a chamar-se Terminal Praias do Sado em abril de 2015. É a mesma instalação."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento físico do cais do Terminal Praias do Sado?",
+      "answer": "125 metros.",
+      "keywords": [
+        "cais",
+        "comprimento",
+        "fisico",
+        "praias",
+        "sado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o comprimento máximo de navio no Terminal Praias do Sado?",
+      "answer": "200 metros (valor aconselhável, não máximo absoluto).",
+      "keywords": [
+        "comprimento",
+        "maximo",
+        "navio",
+        "praias",
+        "sado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Qual o calado máximo absoluto no Terminal Praias do Sado?",
+      "answer": "10,0 metros.",
+      "keywords": [
+        "absoluto",
+        "calado",
+        "maximo",
+        "praias",
+        "sado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Como se calcula o calado praticável no Terminal Praias do Sado?",
+      "answer": "Existem duas fórmulas que devem ser calculadas separadamente. O calado praticável é o menor dos dois resultados, com teto de 10,0 m. Fórmula 1 (estacionamento): 8,7 m + altura da baixa-mar. Fórmula 2 (percurso/bacia de manobra): 7,40 m + altura de água no momento.",
+      "keywords": [
+        "calado",
+        "calcula",
+        "praias",
+        "praticavel",
+        "sado",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Um navio com 9,0 metros de calado pode entrar com altura de água de",
+      "answer": "Não. Fórmula de percurso: 7,40 + 1,0 = 8,40 m. Fórmula de estacionamento: 8,7 + 0,5 = 9,2 m. Calado possível = MIN(8,40 ; 9,20) = 8,40 m. O navio tem 9,0 m de calado, que excede 8,40 m. A manobra não é permitida nestas condições.",
+      "keywords": [
+        "agua",
+        "altura",
+        "calado",
+        "entrar",
+        "metros",
+        "navio",
+        "pode"
+      ]
+    },
+    {
+      "question": "O Terminal Praias do Sado e o Terminal Pirites são o mesmo?",
+      "answer": "Sim. O terminal anteriormente designado Terminal Pirites passou a chamar-se Terminal Praias do Sado em abril de 2015. É a mesma instalação.",
+      "keywords": [
+        "mesmo",
+        "pirites",
+        "praias",
+        "sado",
+        "sao",
+        "terminal"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra no Terminal Praias do Sado?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": [
+        "manobra",
+        "praias",
+        "quem",
+        "requisicoes",
+        "sado",
+        "terminal",
+        "valida"
+      ]
+    }
+  ]
+}
