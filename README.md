@@ -37,9 +37,11 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 ### Chatbot RAG
 
 - Planner leve de execução para decidir primeiro que fontes consultar antes de responder
+- Extração de estado conversacional para follow-ups de avaliação e recomendação
 - Pesquisa documental com contexto vivo do portal
 - Ações operacionais via chat com confirmação, cancelamento e feedback
 - Prioridade a dados live para meteorologia, marés, ondulação e avisos, com síntese por LLM quando a pergunta exige raciocínio operacional
+- Segunda passagem interna curta em perguntas de decisão quando a primeira resposta sai como simples dump de dados live
 - Canal WhatsApp via Cloud API com webhook, respostas inbound e feedback por reação `👍/👎`
 - Welcome automática no primeiro contacto WhatsApp, configurável por `.env`
 - Suporte multi-provider para geração LLM

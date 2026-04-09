@@ -60,6 +60,8 @@ class ChatExecutionPlan:
     maneuver_lookup_type: str = ""
     requires_live_reasoning: bool = False
     requires_llm_synthesis: bool = False
+    needs_history_state: bool = False
+    needs_answer_critic: bool = False
 
     @property
     def has_live_facets(self) -> bool:
@@ -82,6 +84,8 @@ class ChatExecutionPlan:
             "maneuver_lookup_type": self.maneuver_lookup_type,
             "requires_live_reasoning": self.requires_live_reasoning,
             "requires_llm_synthesis": self.requires_llm_synthesis,
+            "needs_history_state": self.needs_history_state,
+            "needs_answer_critic": self.needs_answer_critic,
             "should_answer_directly": self.should_answer_directly,
         }
 
@@ -130,6 +134,10 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
         LIVE_REASONING_RE.search(clean_question) and OPERATIONAL_DECISION_RE.search(clean_question)
     )
     requires_llm_synthesis = requires_live_reasoning or (bool(live_facets) and wants_documents)
+    needs_history_state = requires_live_reasoning or bool(
+        re.search(r"\b(os dois|ambos|essas|esses|isso|isto|a mesma|o mesmo)\b", clean_question)
+    )
+    needs_answer_critic = requires_live_reasoning
 
     if wants_operational_lookup:
         primary_intent = "operational_lookup"
@@ -154,4 +162,6 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
         maneuver_lookup_type=maneuver_lookup_type,
         requires_live_reasoning=requires_live_reasoning,
         requires_llm_synthesis=requires_llm_synthesis,
+        needs_history_state=needs_history_state,
+        needs_answer_critic=needs_answer_critic,
     )

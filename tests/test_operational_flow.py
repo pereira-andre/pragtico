@@ -2171,8 +2171,17 @@ class OperationalFlowTests(unittest.TestCase):
         answer_mock.assert_called_once()
         supplemental_sources = answer_mock.call_args.kwargs["supplemental_sources"]
         documents = {str(item.get("document") or "") for item in supplemental_sources}
+        retrieval_modes = {str(item.get("retrieval_mode") or "") for item in supplemental_sources}
         history = answer_mock.call_args.kwargs["history"]
+        conversation_state = answer_mock.call_args.kwargs["conversation_state"]
+        execution_plan = answer_mock.call_args.kwargs["execution_plan"]
         self.assertIn("Meteorologia live", documents)
+        self.assertIn("Estado conversacional", documents)
+        self.assertIn("conversation_state", retrieval_modes)
+        self.assertEqual(execution_plan["primary_intent"], "live_reasoning")
+        self.assertTrue(execution_plan["needs_answer_critic"])
+        self.assertIn("Ro-Ro", conversation_state["summary"])
+        self.assertIn("2 rebocador", conversation_state["summary"])
         self.assertEqual(history[-1]["content"], "Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes.")
         self.assertEqual(history[-2]["role"], "assistant")
         self.assertIn("2 rebocadores", history[-2]["content"])

@@ -37,6 +37,7 @@ Serve para:
 
 O fluxo principal esta em core/chat_runtime.py, na funcao handle_chat_turn(...).
 O planeamento da pergunta esta em core/chat_planner.py.
+A extração de estado conversacional para follow-ups esta em core/chat_reasoning.py.
 
 A ordem de decisao atual e esta:
 
@@ -58,7 +59,18 @@ A ordem de decisao atual e esta:
   - raciocinio operacional com dados live como input
 - este passo evita que perguntas de decisao operacional caiam num simples snapshot live
 
-3.3 Memoria por feedback anterior
+3.3 Estado conversacional
+- para perguntas de avaliacao, recomendacao ou follow-up
+- extrai do historico recente fatos operacionais relevantes
+- exemplos:
+  - tipo de navio
+  - LOA / comprimento
+  - calado
+  - rebocadores recomendados antes
+  - referencias a thrusters
+- este estado passa ao LLM como contexto estruturado e como fonte interna
+
+3.4 Memoria por feedback anterior
 - procura respostas aprovadas semelhantes
 - procura respostas revistas semelhantes
 - calcula tres mecanismos:
@@ -66,7 +78,7 @@ A ordem de decisao atual e esta:
   - review_guard
   - review_correction_memory
 
-3.4 Comandos slash e acoes operacionais
+3.5 Comandos slash e acoes operacionais
 - /help
 - /query
 - /validar-...
@@ -87,7 +99,7 @@ No WhatsApp:
 - mutacoes continuam bloqueadas
 - o bot responde em modo consulta, validacao e apoio
 
-3.5 Resposta operacional direta
+3.6 Resposta operacional direta
 - antes de ir para LLM, tenta consultas operacionais deterministicas
 - exemplos:
   - IDs de manobras
@@ -99,34 +111,44 @@ No WhatsApp:
   - por exemplo "a que horas deve embarcar piloto?"
   - o planner ja nao devolve logo o snapshot; encaminha para sintese com LLM
 
-3.6 Targeting documental
+3.7 Targeting documental
 - tenta identificar o documento certo quando a pergunta aponta para:
   - codigo tipo IT-036, RG-14, P-13
   - titulo/alias do documento
   - follow-up tipo "esse documento" / "o que diz o documento"
   - pistas vindas de respostas aprovadas com citacoes
 
-3.7 Companions
+3.8 Companions
 - se houver companion aplicavel, o bot tenta responder antes do LLM
 - isto torna a resposta muito mais previsivel
 - ha dois niveis:
   - companion manual, curada em knowledge/companions/*.json
   - companion auto-gerada a partir do proprio texto do documento
 
-3.8 Guardas de feedback
+3.9 Guardas de feedback
 - se existir correcao supervisionada suficientemente semelhante, ela pode ser reutilizada
 - se existir apenas revisao sem resposta corrigida, o review_guard bloqueia a repeticao cega
 - se houver grounding documental, o bot prefere responder com base nos documentos em vez de se refugiar no review_guard
 
-3.9 LLM + RAG
+3.10 LLM + RAG
 - se os passos anteriores nao resolverem a pergunta:
   - o motor RAG recupera contexto documental
   - injeta tambem contexto suplementar operacional
   - quando a pergunta e mista, injeta tambem contexto live recolhido pelo planner
+  - quando a pergunta e follow-up de decisao, injeta tambem o estado conversacional extraido
   - passa trusted_answers e reviewed_answers para o prompt
   - tenta reconciliar respostas antigas, documentos e correcoes do operador
 
-3.10 Persistencia
+3.11 Critic final
+- em perguntas de decisao operacional mais sensiveis
+- se a primeira resposta sair como dump de meteorologia/marés sem conclusao
+- o bot faz uma segunda passagem interna curta
+- essa passagem obriga a:
+  - responder diretamente ao que foi pedido
+  - concluir se o meio/proposta parece suficiente, insuficiente ou condicional
+  - usar os dados live como base e nao como fim
+
+3.12 Persistencia
 - guarda a mensagem do utilizador
 - guarda respostas intermédias quando existirem
 - guarda resposta final do assistente
@@ -271,6 +293,8 @@ Fluxo atual:
 - planeamento de fontes antes de responder
 - distinguir live direto de live usado como input para raciocinio
 - combinar contexto live com documento quando a pergunta pede os dois
+- extrair estado da conversa para follow-ups operacionais
+- reler internamente respostas de decisao quando a primeira versao nao fecha a conclusao
 - reutilizacao de respostas aprovadas
 - bloqueio de respostas revistas sem validacao
 - aproveitamento de correcoes do operador

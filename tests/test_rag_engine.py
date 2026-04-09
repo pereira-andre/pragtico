@@ -108,6 +108,17 @@ class _StubProvider:
         return EmbeddingResult(vectors=vectors, model=model)
 
 
+class _SequencedProvider(_StubProvider):
+    def __init__(self, provider_name: str, outputs: list[str]) -> None:
+        super().__init__(provider_name)
+        self._outputs = list(outputs)
+
+    def generate(self, prompt: str, model: str, **kwargs) -> GenerationResult:
+        self.generate_calls += 1
+        text = self._outputs.pop(0) if self._outputs else ""
+        return GenerationResult(text=text, model=model, usage={})
+
+
 class SimpleRAGEngineTests(unittest.TestCase):
     def _make_engine(
         self,
@@ -467,6 +478,72 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertIn("Segundo o IT-036 Regulacao Agulhas", answer["answer"])
         self.assertIn("LOA superior a 225 metros", answer["answer"])
         self.assertNotIn("não está disponível", answer["answer"].lower())
+
+    def test_answer_retries_when_decision_question_receives_live_data_dump(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+        engine.rebuild_index(force=True)
+        provider = _SequencedProvider(
+            "gemini",
+            [
+                "Meteorologia para Setúbal em 2026-04-09 18:43: vento 6.6 kts de E.",
+                "Com o vento atual, dois rebocadores parecem suficientes para esta entrada, mantendo confirmação operacional do momento.",
+            ],
+        )
+        engine.provider = provider
+        engine.generation_model = "gemini-test"
+        engine._generation_candidates = [(provider, engine.generation_model)]
+
+        answer = engine.answer(
+            question="Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes.",
+            role="piloto",
+            history=[
+                {
+                    "role": "user",
+                    "content": "Vai entrar agora um navio roro com 176 m comprimento e 8,3m de calado. Quantos reboques me recomendarias?",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Recomendaria 2 rebocadores pequenos, salvo confirmação adicional do vento atual e dos thrusters.",
+                },
+                {
+                    "role": "user",
+                    "content": "Avalia o vento que está atualmente em porto e diz me se os dois reboques são suficientes.",
+                },
+            ],
+            supplemental_sources=[
+                {
+                    "source_id": "LIVE1",
+                    "document": "Meteorologia live",
+                    "chunk_id": 0,
+                    "score": 1.0,
+                    "retrieval_mode": "live_planner",
+                    "snippet": "Condições meteorológicas atuais em Setúbal: vento 6.6 kts de E.",
+                },
+                {
+                    "source_id": "CONV1",
+                    "document": "Estado conversacional",
+                    "chunk_id": 0,
+                    "score": 1.0,
+                    "retrieval_mode": "conversation_state",
+                    "snippet": "Fatos extraídos: Tipo de navio Ro-Ro. LOA 176 m. Calado 8,3 m. Recomendação anterior: 2 rebocadores.",
+                },
+            ],
+            trusted_answers=[],
+            execution_plan={
+                "primary_intent": "live_reasoning",
+                "live_facets": ["weather"],
+                "weather_mode": "current",
+                "needs_history_state": True,
+                "needs_answer_critic": True,
+            },
+            conversation_state={
+                "summary": "Tipo de navio: Ro-Ro. LOA: 176 m. Calado: 8,3 m. Recomendação anterior: 2 rebocadores.",
+            },
+        )
+
+        self.assertEqual(provider.generate_calls, 2)
+        self.assertIn("dois rebocadores parecem suficientes", answer["answer"].lower())
 
 
 if __name__ == "__main__":

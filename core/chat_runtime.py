@@ -13,6 +13,7 @@ from flask import session
 
 from core import services
 from core.chat_planner import ChatExecutionPlan, build_chat_execution_plan
+from core.chat_reasoning import build_conversation_reasoning_state
 from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
@@ -245,9 +246,12 @@ def _build_review_guard_answer(review_match: dict) -> dict:
 def _build_supplemental_sources(
     question: str,
     plan: ChatExecutionPlan | None = None,
+    conversation_state: dict | None = None,
 ) -> list[dict]:
     supplemental_sources = build_operational_chat_sources(question)
     supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
+    if conversation_state and conversation_state.get("source"):
+        supplemental_sources.append(conversation_state["source"])
     return supplemental_sources
 
 
@@ -834,13 +838,23 @@ def handle_chat_turn(
                     answer = None
 
         if answer is None:
+            runtime_history = history + [user_message]
+            conversation_state = build_conversation_reasoning_state(
+                clean_question,
+                runtime_history,
+                execution_plan,
+            )
             targeted_document_context = _build_targeted_document_context(
                 clean_question,
                 history,
                 trusted_answers,
                 reviewed_answers,
             )
-            supplemental_sources = _build_supplemental_sources(clean_question, plan=execution_plan)
+            supplemental_sources = _build_supplemental_sources(
+                clean_question,
+                plan=execution_plan,
+                conversation_state=conversation_state,
+            )
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
@@ -917,10 +931,12 @@ def handle_chat_turn(
                             question=clean_question,
                             retrieval_question=targeted_document_context["retrieval_question"],
                             role=role,
-                            history=(history + [user_message])[-10:],
+                            history=runtime_history[-10:],
                             supplemental_sources=supplemental_sources,
                             trusted_answers=trusted_answers,
                             reviewed_answers=reviewed_answers,
+                            execution_plan=execution_plan.to_dict(),
+                            conversation_state=conversation_state,
                         )
                         answer["answer_origin"] = "llm"
                         if trusted_answers:

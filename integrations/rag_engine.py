@@ -44,6 +44,19 @@ def _normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
+def _format_plan_block(plan: Dict | None) -> str:
+    if not plan:
+        return "Sem plano estruturado."
+    parts = [
+        f"intent={plan.get('primary_intent') or '--'}",
+        f"live_facets={', '.join(plan.get('live_facets') or []) or '--'}",
+        f"weather_mode={plan.get('weather_mode') or '--'}",
+        f"needs_history_state={bool(plan.get('needs_history_state'))}",
+        f"needs_answer_critic={bool(plan.get('needs_answer_critic'))}",
+    ]
+    return " | ".join(parts)
+
+
 class SimpleRAGEngine:
     def __init__(
         self,
@@ -1152,6 +1165,8 @@ class SimpleRAGEngine:
         trusted_answers: List[Dict] | None = None,
         reviewed_answers: List[Dict] | None = None,
         retrieval_question: str | None = None,
+        execution_plan: Dict | None = None,
+        conversation_state: Dict | None = None,
     ) -> Dict:
         try:
             contexts = self.retrieve((retrieval_question or question or "").strip())
@@ -1194,6 +1209,11 @@ class SimpleRAGEngine:
         history_block = "\n".join(
             f"{entry['role']}: {entry['content']}" for entry in history[-10:]
         )
+        plan_block = _format_plan_block(execution_plan)
+        conversation_state_block = (
+            str((conversation_state or {}).get("summary") or "").strip()
+            or "Sem estado conversacional estruturado."
+        )
         context_block = "\n\n".join(
             f"[{source['source_id']}] Documento: {source['document']} | chunk {source['chunk_id']} | score {source['score']} | modo {source['retrieval_mode']}\nExcerto: {source['snippet']}"
             for source in sources
@@ -1222,9 +1242,18 @@ Regras:
 - Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots de cais ocupados.
 - Não digas que um navio "não cabe" num cais só porque a extensão nominal do cais é menor do que o LOA do navio.
 - Se a pergunta for sobre dimensões do cais ou do navio, limita-te aos factos documentais disponíveis e evita conclusões automáticas de incompatibilidade.
+- Quando o plano interno indicar `live_reasoning`, usa os dados live como evidência para responder a uma decisão operacional.
+- Em perguntas de avaliação ou suficiência, começa pela conclusão prática e só depois justifica.
+- Não respondas a uma pergunta de avaliação com um dump de meteorologia, marés, ondulação ou avisos sem concluir algo operacional.
 
 Histórico recente:
 {history_block or "Sem histórico anterior."}
+
+Plano interno:
+{plan_block}
+
+Estado conversacional extraído:
+{conversation_state_block}
 
 Fontes disponíveis:
 {context_block or "Sem contexto recuperado."}
@@ -1248,6 +1277,40 @@ Pergunta:
         except Exception as exc:
             answer_text = self._build_fallback_answer(sources, str(exc))
 
+        if self._needs_answer_critic(execution_plan) and self._looks_like_unresolved_decision_answer(question, answer_text):
+            retry_prompt = f"""
+És o mesmo assistente operacional e a tua primeira resposta não fechou a decisão pedida.
+
+Pergunta original:
+{question}
+
+Plano interno:
+{plan_block}
+
+Estado conversacional:
+{conversation_state_block}
+
+Fontes disponíveis:
+{context_block or "Sem contexto recuperado."}
+
+Resposta preliminar a corrigir:
+{answer_text}
+
+Reformula para responder diretamente à decisão operacional pedida.
+Regras:
+- Começa por uma conclusão curta e explícita.
+- Usa os dados live apenas como base da conclusão.
+- Se a pergunta fala de meios já propostos (por exemplo, dois rebocadores), diz claramente se parecem suficientes, insuficientes ou se a resposta fica condicionada.
+- Evita despejar previsões ou listas de observação sem concluir.
+""".strip()
+            try:
+                retry_result = self.generate_text(retry_prompt)
+                retry_text = (retry_result.text or "").strip()
+                if retry_text:
+                    answer_text = retry_text
+            except Exception:
+                pass
+
         if self._targeted_document_sources(sources) and self._looks_like_document_evasion(answer_text):
             extractive_answer = self._build_targeted_document_answer(question, sources)
             if extractive_answer:
@@ -1257,3 +1320,52 @@ Pergunta:
             "answer": answer_text,
             "sources": sources,
         }
+
+    @staticmethod
+    def _needs_answer_critic(execution_plan: Dict | None) -> bool:
+        return bool((execution_plan or {}).get("needs_answer_critic"))
+
+    @staticmethod
+    def _looks_like_unresolved_decision_answer(question: str, answer_text: str) -> bool:
+        clean_question = _normalize_whitespace(question).lower()
+        clean_answer = _normalize_whitespace(answer_text).lower()
+        if not clean_answer:
+            return True
+        asks_decision = any(
+            token in clean_question
+            for token in (
+                "suficiente",
+                "suficientes",
+                "recomend",
+                "avalia",
+                "avaliar",
+                "achas",
+                "parece",
+                "basta",
+                "chega",
+            )
+        )
+        if not asks_decision:
+            return False
+        has_conclusion = any(
+            token in clean_answer
+            for token in (
+                "recomendo",
+                "recomendaria",
+                "aconselho",
+                "parece suficiente",
+                "parecem suficientes",
+                "não parecem suficientes",
+                "nao parecem suficientes",
+                "são suficientes",
+                "sao suficientes",
+                "não chegam",
+                "nao chegam",
+                "diria que",
+                "manteria",
+            )
+        )
+        looks_like_data_dump = clean_answer.startswith("meteorologia para ") or (
+            "condições meteorológicas atuais" in clean_answer and not has_conclusion
+        )
+        return looks_like_data_dump or not has_conclusion

@@ -46,4 +46,6 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertEqual(plan.weather_mode, "current")
         self.assertTrue(plan.requires_live_reasoning)
         self.assertTrue(plan.requires_llm_synthesis)
+        self.assertTrue(plan.needs_history_state)
+        self.assertTrue(plan.needs_answer_critic)
         self.assertFalse(plan.should_answer_directly)
