@@ -36,8 +36,10 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 
 ### Chatbot RAG
 
+- Planner leve de execução para decidir primeiro que fontes consultar antes de responder
 - Pesquisa documental com contexto vivo do portal
 - Ações operacionais via chat com confirmação, cancelamento e feedback
+- Prioridade a dados live para meteorologia, marés, ondulação e avisos, com síntese por LLM quando a pergunta exige raciocínio operacional
 - Canal WhatsApp via Cloud API com webhook, respostas inbound e feedback por reação `👍/👎`
 - Welcome automática no primeiro contacto WhatsApp, configurável por `.env`
 - Suporte multi-provider para geração LLM
@@ -196,13 +198,15 @@ make create-admin EMAIL=admin@porto.pt PASSWORD=password-segura
 python3 -m unittest discover tests -v
 ```
 
-A suite atual cobre 324 testes unitários e de integração.
+A suite cobre testes unitários e de integração para portal, storage, custos, WhatsApp, companions e fluxo conversacional.
 
 ## Documentação
 
 - [Estrutura do projeto](docs/PROJECT_STRUCTURE.md)
 - [Deploy no Railway](docs/RAILWAY_DEPLOY.md)
 - [Guia WhatsApp](readme_whatsapp.txt)
+- [Bot operacional](readme_bot.txt)
+- [Base de dados](readme_database.txt)
 - [Comandos do bot operacional](docs/BOT_COMMANDS.md)
 - [Alternativas ao LLM atual](docs/LLM_ALTERNATIVES.md)
   Nota: este documento é exploratório; valida preços e catálogos antes de decisões de compra.

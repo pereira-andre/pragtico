@@ -36,6 +36,7 @@ Serve para:
 3. FLUXO BASE DE UMA PERGUNTA
 
 O fluxo principal esta em core/chat_runtime.py, na funcao handle_chat_turn(...).
+O planeamento da pergunta esta em core/chat_planner.py.
 
 A ordem de decisao atual e esta:
 
@@ -45,7 +46,19 @@ A ordem de decisao atual e esta:
 - refresca estado do conhecimento
 - projeta o utilizador/role atual no contexto do turno
 
-3.2 Memoria por feedback anterior
+3.2 Planner de execucao
+- normaliza a pergunta
+- identifica a intencao principal
+- decide se a pergunta quer:
+  - dados live diretos
+  - dados live com horizonte temporal
+  - consulta documental
+  - lookup operacional deterministico
+  - sintese entre live + documentos
+  - raciocinio operacional com dados live como input
+- este passo evita que perguntas de decisao operacional caiam num simples snapshot live
+
+3.3 Memoria por feedback anterior
 - procura respostas aprovadas semelhantes
 - procura respostas revistas semelhantes
 - calcula tres mecanismos:
@@ -53,7 +66,7 @@ A ordem de decisao atual e esta:
   - review_guard
   - review_correction_memory
 
-3.3 Comandos slash e acoes operacionais
+3.4 Comandos slash e acoes operacionais
 - /help
 - /query
 - /validar-...
@@ -74,37 +87,46 @@ No WhatsApp:
 - mutacoes continuam bloqueadas
 - o bot responde em modo consulta, validacao e apoio
 
-3.4 Resposta operacional direta
+3.5 Resposta operacional direta
 - antes de ir para LLM, tenta consultas operacionais deterministicas
-- exemplo: perguntas sobre estado da escala, mar, meteorologia, marés, avisos, etc.
+- exemplos:
+  - IDs de manobras
+  - marés para uma data
+  - meteorologia atual
+  - previsao meteo ate uma hora pedida
+  - ondulacao e avisos locais
+- se a pergunta usar dados live para decidir algo operacional
+  - por exemplo "a que horas deve embarcar piloto?"
+  - o planner ja nao devolve logo o snapshot; encaminha para sintese com LLM
 
-3.5 Targeting documental
+3.6 Targeting documental
 - tenta identificar o documento certo quando a pergunta aponta para:
   - codigo tipo IT-036, RG-14, P-13
   - titulo/alias do documento
   - follow-up tipo "esse documento" / "o que diz o documento"
   - pistas vindas de respostas aprovadas com citacoes
 
-3.6 Companions
+3.7 Companions
 - se houver companion aplicavel, o bot tenta responder antes do LLM
 - isto torna a resposta muito mais previsivel
 - ha dois niveis:
   - companion manual, curada em knowledge/companions/*.json
   - companion auto-gerada a partir do proprio texto do documento
 
-3.7 Guardas de feedback
+3.8 Guardas de feedback
 - se existir correcao supervisionada suficientemente semelhante, ela pode ser reutilizada
 - se existir apenas revisao sem resposta corrigida, o review_guard bloqueia a repeticao cega
 - se houver grounding documental, o bot prefere responder com base nos documentos em vez de se refugiar no review_guard
 
-3.8 LLM + RAG
+3.9 LLM + RAG
 - se os passos anteriores nao resolverem a pergunta:
   - o motor RAG recupera contexto documental
   - injeta tambem contexto suplementar operacional
+  - quando a pergunta e mista, injeta tambem contexto live recolhido pelo planner
   - passa trusted_answers e reviewed_answers para o prompt
   - tenta reconciliar respostas antigas, documentos e correcoes do operador
 
-3.9 Persistencia
+3.10 Persistencia
 - guarda a mensagem do utilizador
 - guarda respostas intermédias quando existirem
 - guarda resposta final do assistente
@@ -119,6 +141,7 @@ Exemplos relevantes:
 - slash_template
 - slash_proposal
 - pending_action_confirmed
+- operational_live
 - operational_lookup
 - document_companion
 - document_companion_global
@@ -245,6 +268,9 @@ Fluxo atual:
 - perguntas sobre regras com documento bem identificado
 - follow-ups do tipo "o que diz o IT-036?"
 - respostas baseadas em companions curados
+- planeamento de fontes antes de responder
+- distinguir live direto de live usado como input para raciocinio
+- combinar contexto live com documento quando a pergunta pede os dois
 - reutilizacao de respostas aprovadas
 - bloqueio de respostas revistas sem validacao
 - aproveitamento de correcoes do operador
@@ -255,6 +281,7 @@ Fluxo atual:
 
 - documentos sem companion manual continuam mais dependentes do fallback automatico
 - perguntas muito ambiguas podem precisar de mais aliases/FAQ
+- algumas perguntas complexas ainda podem beneficiar de mais afinacao do planner
 - quando um documento muda de conteudo, o companion manual pode precisar de ser revisto
 - o caminho RAG continua a depender de indice atualizado para o fallback semantico
 - correcoes do operador devem continuar reconciliadas com o documento base
