@@ -5,9 +5,9 @@ from pathlib import Path
 from domain.knowledge_evals import (
     evaluate_companion_cases,
     load_eval_cases_from_dir,
-    register_feedback_correction_eval,
-    remove_feedback_correction_eval,
+    load_eval_cases_from_store,
 )
+from storage import LocalStore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -29,27 +29,23 @@ class CriticalDocumentEvalTests(unittest.TestCase):
 
 
 class FeedbackCorrectionEvalRegistryTests(unittest.TestCase):
-    def test_register_and_remove_feedback_correction_eval(self) -> None:
+    def test_load_eval_cases_from_store_includes_feedback_eval_records(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             knowledge_dir = Path(temp_dir) / "knowledge"
-            knowledge_dir.mkdir(parents=True, exist_ok=True)
-
-            case = register_feedback_correction_eval(
-                knowledge_dir,
+            data_dir = Path(temp_dir) / "data"
+            store = LocalStore(data_dir=str(data_dir), knowledge_dir=str(knowledge_dir))
+            store.upsert_feedback_eval_case(
+                source_message_id="msg-123",
                 document="IT-036_RegulacaoAgulhas.txt",
                 question="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
-                corrected_answer="À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                expected_answer="À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+                expected_substrings=["225 metros"],
                 feedback_note="Faltava o limite de LOA.",
                 updated_by="admin",
                 source="web",
-                source_message_id="msg-123",
             )
 
-            self.assertEqual(case["document"], "IT-036_RegulacaoAgulhas.txt")
-            self.assertTrue((knowledge_dir / "evals" / "operator_feedback_correction_evals.json").exists())
-
-            removed = remove_feedback_correction_eval(
-                knowledge_dir,
-                source_message_id="msg-123",
-            )
-            self.assertEqual(removed, 1)
+            cases = load_eval_cases_from_store(store)
+            self.assertEqual(len(cases), 1)
+            self.assertEqual(cases[0]["document"], "IT-036_RegulacaoAgulhas.txt")
+            self.assertEqual(cases[0]["source_message_id"], "msg-123")

@@ -100,6 +100,10 @@ def _infer_feedback_correction_document(message: Dict, explicit_document: str = 
     return ""
 
 
+def _feedback_eval_identity_key(document: str, question: str) -> str:
+    return f"{_clean_text(document).lower()}::{_clean_text(question).lower()}"
+
+
 class PostgresStore(BaseStore):
     backend_name = "postgres"
 
@@ -246,6 +250,16 @@ class PostgresStore(BaseStore):
                 _utc_iso_to_label(row["feedback_updated_at"].isoformat())
                 if row.get("feedback_updated_at") else ""
             ),
+        }
+
+    def _row_to_feedback_eval_case_record(self, row: Optional[Dict]) -> Optional[Dict]:
+        if not row:
+            return None
+        return {
+            **row,
+            "expected_substrings": list(row.get("expected_substrings") or []),
+            "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+            "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
         }
 
     def _upsert_maneuver_case(self, conn, record: Dict) -> None:
@@ -2100,6 +2114,202 @@ class PostgresStore(BaseStore):
             reverse=True,
         )
         return matches[:limit]
+
+    def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
+        params: list[object] = []
+        where_clause = ""
+        clean_source = _clean_text(source)
+        if clean_source:
+            where_clause = "WHERE source = %s"
+            params.append(clean_source)
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        id::text AS id,
+                        source_message_id,
+                        document,
+                        question,
+                        expected_answer,
+                        expected_substrings,
+                        feedback_note,
+                        updated_by,
+                        source,
+                        created_at,
+                        updated_at
+                    FROM feedback_eval_cases
+                    {where_clause}
+                    ORDER BY document ASC, question ASC, updated_at ASC
+                    """,
+                    tuple(params),
+                )
+                rows = cur.fetchall()
+        return [self._row_to_feedback_eval_case_record(row) for row in rows if row]
+
+    def upsert_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str,
+        document: str,
+        question: str,
+        expected_answer: str,
+        expected_substrings: List[str],
+        feedback_note: str = "",
+        updated_by: str = "",
+        source: str = "",
+    ) -> Dict:
+        clean_source_message_id = _clean_text(source_message_id)
+        clean_document = _clean_text(document)
+        clean_question = _clean_text(question)
+        clean_answer = str(expected_answer or "").strip()
+        if not clean_document or not clean_question or not clean_answer:
+            raise ValueError("Documento, pergunta e resposta esperada são obrigatórios.")
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                existing_row = None
+                if clean_source_message_id:
+                    cur.execute(
+                        """
+                        SELECT id::text AS id, created_at
+                        FROM feedback_eval_cases
+                        WHERE source_message_id = %s
+                        LIMIT 1
+                        """,
+                        (clean_source_message_id,),
+                    )
+                    existing_row = cur.fetchone()
+                if not existing_row:
+                    cur.execute(
+                        """
+                        SELECT id::text AS id, created_at
+                        FROM feedback_eval_cases
+                        WHERE document = %s AND question = %s
+                        LIMIT 1
+                        """,
+                        (clean_document, clean_question),
+                    )
+                    existing_row = cur.fetchone()
+
+                if existing_row:
+                    cur.execute(
+                        """
+                        UPDATE feedback_eval_cases
+                        SET
+                            source_message_id = %s,
+                            document = %s,
+                            question = %s,
+                            expected_answer = %s,
+                            expected_substrings = %s::jsonb,
+                            feedback_note = %s,
+                            updated_by = %s,
+                            source = %s,
+                            updated_at = NOW()
+                        WHERE id = %s
+                        RETURNING
+                            id::text AS id,
+                            source_message_id,
+                            document,
+                            question,
+                            expected_answer,
+                            expected_substrings,
+                            feedback_note,
+                            updated_by,
+                            source,
+                            created_at,
+                            updated_at
+                        """,
+                        (
+                            clean_source_message_id,
+                            clean_document,
+                            clean_question,
+                            clean_answer,
+                            json.dumps([str(item).strip() for item in expected_substrings if str(item).strip()]),
+                            str(feedback_note or "").strip(),
+                            str(updated_by or "").strip(),
+                            _clean_text(source),
+                            existing_row["id"],
+                        ),
+                    )
+                    row = cur.fetchone()
+                else:
+                    record_id = str(uuid.uuid4())
+                    cur.execute(
+                        """
+                        INSERT INTO feedback_eval_cases (
+                            id,
+                            source_message_id,
+                            document,
+                            question,
+                            expected_answer,
+                            expected_substrings,
+                            feedback_note,
+                            updated_by,
+                            source
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+                        RETURNING
+                            id::text AS id,
+                            source_message_id,
+                            document,
+                            question,
+                            expected_answer,
+                            expected_substrings,
+                            feedback_note,
+                            updated_by,
+                            source,
+                            created_at,
+                            updated_at
+                        """,
+                        (
+                            record_id,
+                            clean_source_message_id,
+                            clean_document,
+                            clean_question,
+                            clean_answer,
+                            json.dumps([str(item).strip() for item in expected_substrings if str(item).strip()]),
+                            str(feedback_note or "").strip(),
+                            str(updated_by or "").strip(),
+                            _clean_text(source),
+                        ),
+                    )
+                    row = cur.fetchone()
+            conn.commit()
+        record = self._row_to_feedback_eval_case_record(row)
+        if not record:
+            raise ValueError("Falha ao guardar caso de avaliação.")
+        return record
+
+    def delete_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str = "",
+        document: str = "",
+        question: str = "",
+    ) -> int:
+        clean_source_message_id = _clean_text(source_message_id)
+        clean_document = _clean_text(document)
+        clean_question = _clean_text(question)
+        where_clauses: list[str] = []
+        params: list[object] = []
+        if clean_source_message_id:
+            where_clauses.append("source_message_id = %s")
+            params.append(clean_source_message_id)
+        if clean_document and clean_question:
+            where_clauses.append("(document = %s AND question = %s)")
+            params.extend([clean_document, clean_question])
+        if not where_clauses:
+            return 0
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM feedback_eval_cases WHERE {' OR '.join(where_clauses)}",
+                    tuple(params),
+                )
+                removed = cur.rowcount or 0
+            conn.commit()
+        return int(removed)
 
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
         with self._connect() as conn:

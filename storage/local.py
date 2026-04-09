@@ -100,6 +100,10 @@ def _infer_feedback_correction_document(message: Dict, explicit_document: str = 
     return ""
 
 
+def _feedback_eval_identity_key(document: str, question: str) -> str:
+    return f"{_clean_text(document).lower()}::{_clean_text(question).lower()}"
+
+
 class LocalStore(BaseStore):
     backend_name = "local"
 
@@ -110,6 +114,7 @@ class LocalStore(BaseStore):
         self.documents_path = os.path.join(data_dir, "documents.json")
         self.conversations_path = os.path.join(data_dir, "conversations.json")
         self.messages_path = os.path.join(data_dir, "messages.json")
+        self.feedback_eval_cases_path = os.path.join(data_dir, "feedback_eval_cases.json")
         self.channel_events_path = os.path.join(data_dir, "channel_events.json")
         self.runtime_state_path = os.path.join(data_dir, "runtime_state.json")
         self.port_calls_path = os.path.join(data_dir, "port_calls.json")
@@ -191,6 +196,7 @@ class LocalStore(BaseStore):
             (self.documents_path, []),
             (self.conversations_path, []),
             (self.messages_path, []),
+            (self.feedback_eval_cases_path, []),
             (self.channel_events_path, []),
             (self.runtime_state_path, {}),
             (self.port_calls_path, _default_port_calls()),
@@ -356,6 +362,12 @@ class LocalStore(BaseStore):
 
     def _write_messages(self, records: List[Dict]) -> None:
         self._write_json(self.messages_path, records)
+
+    def _read_feedback_eval_cases(self) -> List[Dict]:
+        return self._read_json(self.feedback_eval_cases_path, [])
+
+    def _write_feedback_eval_cases(self, records: List[Dict]) -> None:
+        self._write_json(self.feedback_eval_cases_path, records)
 
     def _read_channel_events(self) -> List[Dict]:
         return self._read_json(self.channel_events_path, [])
@@ -1340,6 +1352,115 @@ class LocalStore(BaseStore):
             reverse=True,
         )
         return matches[:limit]
+
+    def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
+        clean_source = _clean_text(source).lower()
+        items = []
+        for item in self._read_feedback_eval_cases():
+            if clean_source and _clean_text(item.get("source")).lower() != clean_source:
+                continue
+            items.append(
+                {
+                    **item,
+                    "expected_substrings": list(item.get("expected_substrings") or []),
+                }
+            )
+        items.sort(
+            key=lambda item: (
+                item.get("document", ""),
+                item.get("question", ""),
+                item.get("updated_at", ""),
+            )
+        )
+        return items
+
+    def upsert_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str,
+        document: str,
+        question: str,
+        expected_answer: str,
+        expected_substrings: List[str],
+        feedback_note: str = "",
+        updated_by: str = "",
+        source: str = "",
+    ) -> Dict:
+        clean_document = _clean_text(document)
+        clean_question = _clean_text(question)
+        clean_answer = str(expected_answer or "").strip()
+        if not clean_document or not clean_question or not clean_answer:
+            raise ValueError("Documento, pergunta e resposta esperada são obrigatórios.")
+
+        now = iso_now()
+        clean_source_message_id = _clean_text(source_message_id)
+        identity_key = _feedback_eval_identity_key(clean_document, clean_question)
+        record = {
+            "id": str(uuid.uuid4()),
+            "source_message_id": clean_source_message_id,
+            "document": clean_document,
+            "question": clean_question,
+            "expected_answer": clean_answer,
+            "expected_substrings": [str(item).strip() for item in expected_substrings if str(item).strip()],
+            "feedback_note": str(feedback_note or "").strip(),
+            "updated_by": str(updated_by or "").strip(),
+            "source": _clean_text(source),
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        items = self._read_feedback_eval_cases()
+        replacement_index = None
+        for index, item in enumerate(items):
+            existing_source_message_id = _clean_text(item.get("source_message_id"))
+            if clean_source_message_id and existing_source_message_id == clean_source_message_id:
+                replacement_index = index
+                record["id"] = item.get("id") or record["id"]
+                record["created_at"] = item.get("created_at") or now
+                break
+            if _feedback_eval_identity_key(item.get("document", ""), item.get("question", "")) == identity_key:
+                replacement_index = index
+                record["id"] = item.get("id") or record["id"]
+                record["created_at"] = item.get("created_at") or now
+                break
+
+        if replacement_index is None:
+            items.append(record)
+        else:
+            items[replacement_index] = record
+
+        self._write_feedback_eval_cases(items)
+        return record
+
+    def delete_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str = "",
+        document: str = "",
+        question: str = "",
+    ) -> int:
+        clean_source_message_id = _clean_text(source_message_id)
+        identity_key = (
+            _feedback_eval_identity_key(document, question)
+            if _clean_text(document) and _clean_text(question)
+            else ""
+        )
+        items = self._read_feedback_eval_cases()
+        kept = []
+        removed = 0
+        for item in items:
+            existing_source_message_id = _clean_text(item.get("source_message_id"))
+            existing_identity = _feedback_eval_identity_key(item.get("document", ""), item.get("question", ""))
+            if clean_source_message_id and existing_source_message_id == clean_source_message_id:
+                removed += 1
+                continue
+            if identity_key and existing_identity == identity_key:
+                removed += 1
+                continue
+            kept.append(item)
+        if removed:
+            self._write_feedback_eval_cases(kept)
+        return removed
 
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
         """Return a decorated port activity snapshot covering the specified number of days."""

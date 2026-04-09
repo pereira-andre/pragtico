@@ -264,6 +264,38 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
+        """Return stored supervised eval cases derived from operator feedback."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def upsert_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str,
+        document: str,
+        question: str,
+        expected_answer: str,
+        expected_substrings: List[str],
+        feedback_note: str = "",
+        updated_by: str = "",
+        source: str = "",
+    ) -> Dict:
+        """Create or update a supervised eval case derived from corrected feedback."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_feedback_eval_case(
+        self,
+        *,
+        source_message_id: str = "",
+        document: str = "",
+        question: str = "",
+    ) -> int:
+        """Delete stored supervised eval cases and return the number removed."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_port_activity_snapshot(self, window_days: int = 5) -> Dict:
         """Return a snapshot of port activity covering the specified number of days."""
         raise NotImplementedError

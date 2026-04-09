@@ -145,6 +145,34 @@ def load_eval_cases_from_dir(path: str | Path) -> list[dict]:
     return cases
 
 
+def load_eval_cases_from_store(store, *, source: str = "") -> list[dict]:
+    if not store or not hasattr(store, "list_feedback_eval_cases"):
+        return []
+    cases: list[dict] = []
+    for item in store.list_feedback_eval_cases(source=source):
+        document = str(item.get("document") or "").strip()
+        question = str(item.get("question") or "").strip()
+        expected_answer = str(item.get("expected_answer") or "").strip()
+        expected_substrings = [
+            str(value).strip()
+            for value in (item.get("expected_substrings") or [])
+            if str(value or "").strip()
+        ]
+        if document and question and (expected_substrings or expected_answer):
+            cases.append(
+                {
+                    "document": document,
+                    "question": question,
+                    "expected_substrings": expected_substrings,
+                    "expected_answer": expected_answer,
+                    "source": str(item.get("source") or "").strip(),
+                    "updated_by": str(item.get("updated_by") or "").strip(),
+                    "source_message_id": str(item.get("source_message_id") or "").strip(),
+                }
+            )
+    return cases
+
+
 def register_feedback_correction_eval(
     knowledge_dir: str | Path,
     *,

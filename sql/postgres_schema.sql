@@ -372,6 +372,27 @@ CREATE TABLE IF NOT EXISTS app_runtime_state (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS feedback_eval_cases (
+    id UUID PRIMARY KEY,
+    source_message_id TEXT NOT NULL DEFAULT '',
+    document TEXT NOT NULL,
+    question TEXT NOT NULL,
+    expected_answer TEXT NOT NULL,
+    expected_substrings JSONB NOT NULL DEFAULT '[]'::jsonb,
+    feedback_note TEXT NOT NULL DEFAULT '',
+    updated_by TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS feedback_eval_cases_source_message_id_idx
+    ON feedback_eval_cases (source_message_id)
+    WHERE source_message_id <> '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS feedback_eval_cases_document_question_idx
+    ON feedback_eval_cases (document, question);
+
 CREATE INDEX IF NOT EXISTS conversations_username_updated_idx
     ON conversations (username, updated_at DESC);
 

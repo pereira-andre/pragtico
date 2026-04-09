@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from domain.knowledge_evals import register_feedback_correction_eval, remove_feedback_correction_eval
+from domain.knowledge_evals import _extract_expected_substrings
 
 
 def _infer_feedback_document(message: dict) -> str:
@@ -33,8 +33,7 @@ def _question_for_assistant_message(messages: list[dict], message_id: str) -> st
 
 
 def sync_feedback_correction_eval_case(store, username: str, conversation_id: str, message_id: str, *, source: str) -> dict | None:
-    knowledge_dir = getattr(store, "knowledge_dir", "") or ""
-    if not knowledge_dir:
+    if not hasattr(store, "upsert_feedback_eval_case") or not hasattr(store, "delete_feedback_eval_case"):
         return None
 
     messages = store.list_messages(username, conversation_id)
@@ -55,19 +54,18 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
         and bool(question)
     )
     if should_register:
-        return register_feedback_correction_eval(
-            knowledge_dir,
+        return store.upsert_feedback_eval_case(
+            source_message_id=message_id,
             document=document_name,
             question=question,
-            corrected_answer=corrected_answer,
+            expected_answer=corrected_answer,
+            expected_substrings=_extract_expected_substrings(corrected_answer),
             feedback_note=str(target_message.get("feedback_note") or "").strip(),
             updated_by=str(target_message.get("feedback_updated_by") or "").strip(),
             source=source,
-            source_message_id=message_id,
         )
 
-    remove_feedback_correction_eval(
-        knowledge_dir,
+    store.delete_feedback_eval_case(
         source_message_id=message_id,
         document=document_name,
         question=question,

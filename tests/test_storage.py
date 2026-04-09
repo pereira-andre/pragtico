@@ -1183,6 +1183,39 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(reviewed[0]["feedback_status"], "review")
         self.assertIn("feedback_correction", reviewed[0])
 
+    def test_feedback_eval_case_crud(self) -> None:
+        created = self.store.upsert_feedback_eval_case(
+            source_message_id="msg-1",
+            document="IT-036_RegulacaoAgulhas.txt",
+            question="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            expected_answer="À noite a RA não se efetua com navios de LOA igual ou superior a 225 metros.",
+            expected_substrings=["225 metros"],
+            feedback_note="Faltou o limite de LOA.",
+            updated_by="admin",
+            source="web",
+        )
+
+        listed = self.store.list_feedback_eval_cases()
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0]["id"], created["id"])
+        self.assertEqual(listed[0]["source_message_id"], "msg-1")
+
+        updated = self.store.upsert_feedback_eval_case(
+            source_message_id="msg-1",
+            document="IT-036_RegulacaoAgulhas.txt",
+            question="Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+            expected_answer="À noite a RA depende do LOA e do espaço livre.",
+            expected_substrings=["LOA"],
+            updated_by="admin",
+            source="whatsapp",
+        )
+        self.assertEqual(updated["id"], created["id"])
+        self.assertEqual(self.store.list_feedback_eval_cases(source="whatsapp")[0]["source"], "whatsapp")
+
+        removed = self.store.delete_feedback_eval_case(source_message_id="msg-1")
+        self.assertEqual(removed, 1)
+        self.assertEqual(self.store.list_feedback_eval_cases(), [])
+
     def test_channel_metadata_and_events_are_persisted(self) -> None:
         conv = self.store.create_conversation("admin")
         msg = self.store.append_chat_message(
