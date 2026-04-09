@@ -19,5 +19,7 @@ data/
 knowledge/*
 !knowledge/.gitkeep
 !knowledge/*.txt
+!knowledge/companions/
+!knowledge/companions/*.json
 contas.txt
 static/styles.css.bak

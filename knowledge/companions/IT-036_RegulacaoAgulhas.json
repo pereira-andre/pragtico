@@ -1,0 +1,85 @@
+{
+  "document": "IT-036_RegulacaoAgulhas.txt",
+  "title": "IT-036 Regulação de Agulhas",
+  "aliases": [
+    "IT-036",
+    "IT-36",
+    "Regulação de Agulhas",
+    "Regulacao de Agulhas",
+    "compensação de agulhas",
+    "compensacao de agulhas",
+    "swing de agulha",
+    "desvio de agulha",
+    "RA"
+  ],
+  "summary": "a regulação de agulhas no Porto de Setúbal realiza-se na área dos fundeadouros e depende do LOA do navio, da condição de maré e da existência de espaço livre. De noite, a operação é proibida para navios com LOA superior a 225 metros.",
+  "key_points": [
+    "A regulação de agulhas é a operação de calibração e compensação da bússola magnética do navio.",
+    "A validação das requisições de manobra compete ao Piloto Coordenador.",
+    "Nos repontos de maré a operação é permitida para navios com LOA inferior a 250 m.",
+    "Com corrente em marés mortas a operação é permitida para navios com LOA inferior a 225 m.",
+    "Com corrente em marés vivas a operação é permitida apenas para navios com LOA inferior a 120 m.",
+    "Não se efetua regulação de agulhas se existirem navios fundeados num raio de 0,7 milhas náuticas.",
+    "De noite não se efetua regulação de agulhas com navios de LOA superior a 225 m."
+  ],
+  "faq": [
+    {
+      "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+      "answer": "À noite, a regulação de agulhas não se efetua com navios de LOA superior a 225 metros. Para navios com LOA igual ou inferior a 225 metros, a operação pode realizar-se desde que as restantes condições aplicáveis também estejam cumpridas, nomeadamente espaço livre de navios fundeados num raio de 0,7 milhas e condição de maré compatível com o LOA.",
+      "keywords": [
+        "compensação de agulhas",
+        "compensacao de agulhas",
+        "agulhas",
+        "noite",
+        "noturno",
+        "noturna",
+        "regulação de agulhas"
+      ]
+    },
+    {
+      "question": "Quem valida as requisições de manobra para regulação de agulhas?",
+      "answer": "As requisições de manobra para regulação de agulhas são validadas pelo Piloto Coordenador.",
+      "keywords": [
+        "quem valida",
+        "piloto coordenador",
+        "requisição",
+        "requisicao",
+        "regulação de agulhas"
+      ]
+    },
+    {
+      "question": "Onde se realiza a regulação de agulhas no Porto de Setúbal?",
+      "answer": "A regulação de agulhas realiza-se na área dos fundeadouros do Porto de Setúbal.",
+      "keywords": [
+        "onde",
+        "fundeadouros",
+        "porto de setúbal",
+        "porto de setubal"
+      ]
+    },
+    {
+      "question": "Quais são os limites de LOA por condição de maré na regulação de agulhas?",
+      "answer": "Nos repontos de maré a operação é permitida para LOA inferior a 250 m. Com corrente em marés mortas é permitida para LOA inferior a 225 m. Com corrente em marés vivas é permitida apenas para LOA inferior a 120 m.",
+      "keywords": [
+        "limite",
+        "LOA",
+        "maré",
+        "mare",
+        "marés mortas",
+        "marés vivas",
+        "reponto"
+      ]
+    },
+    {
+      "question": "Quando é proibida a regulação de agulhas por proximidade de outros navios?",
+      "answer": "A regulação de agulhas não se efetua se existirem navios fundeados num raio de 0,7 milhas náuticas.",
+      "keywords": [
+        "0,7 milhas",
+        "0.7 milhas",
+        "navios fundeados",
+        "proximidade",
+        "raio"
+      ]
+    }
+  ]
+}

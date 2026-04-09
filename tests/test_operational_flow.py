@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import unittest
 from io import BytesIO
@@ -304,6 +305,13 @@ class OperationalFlowTests(unittest.TestCase):
         with client.session_transaction() as flask_session:
             flask_session["username"] = "admin"
             flask_session["role"] = "admin"
+
+    def _write_knowledge_companion(self, document_name: str, payload: dict) -> Path:
+        companion_dir = Path(self.store.knowledge_dir) / "companions"
+        companion_dir.mkdir(parents=True, exist_ok=True)
+        path = companion_dir / f"{Path(document_name).stem}.json"
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return path
 
     def test_complete_entry_with_real_times_only_confirms_maneuver(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
@@ -1209,6 +1217,101 @@ class OperationalFlowTests(unittest.TestCase):
         ]
         self.assertTrue(doc_sources)
         self.assertIn("LOA superior a 225 metros", "\n".join(item.get("snippet", "") for item in doc_sources))
+
+    def test_chat_document_companion_answers_without_llm(self) -> None:
+        document_name = "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\nNão se efetua RA de noite com navios de LOA superior a 225 metros.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-036 Regulação de Agulhas",
+                "aliases": ["IT-036", "IT-36", "compensação de agulhas"],
+                "summary": "resume as condições operacionais da regulação de agulhas no Porto de Setúbal.",
+                "key_points": [
+                    "De noite a operação é proibida para LOA superior a 225 m."
+                ],
+                "faq": [
+                    {
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                        "answer": "À noite, a regulação de agulhas não se efetua com navios de LOA superior a 225 metros.",
+                        "keywords": ["agulhas", "noite", "compensação de agulhas"]
+                    }
+                ]
+            },
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Qual é a regra para compensação de agulhas dentro do Porto à noite?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("LOA superior a 225 metros", payload["answer"])
+        answer_mock.assert_not_called()
+
+    def test_chat_document_companion_summarizes_targeted_document_request(self) -> None:
+        document_name = "IT-036_RegulacaoAgulhas.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-036 — REGULAÇÃO DE AGULHAS\nResumo operacional.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-036 Regulação de Agulhas",
+                "aliases": ["IT-036", "IT-36", "Regulação de Agulhas"],
+                "summary": "a operação realiza-se nos fundeadouros e depende do LOA, da maré e do espaço livre.",
+                "key_points": [
+                    "Nos repontos de maré o limite é LOA inferior a 250 m.",
+                    "Com corrente em marés mortas o limite é LOA inferior a 225 m.",
+                    "De noite o limite crítico é LOA superior a 225 m."
+                ],
+                "faq": []
+            },
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Diz me o que diz o IT-036 sff",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("Segundo o IT-036 Regulação de Agulhas", payload["answer"])
+        self.assertIn("Pontos principais", payload["answer"])
+        answer_mock.assert_not_called()
 
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:

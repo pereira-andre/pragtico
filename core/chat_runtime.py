@@ -33,6 +33,12 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from domain.knowledge_companions import (
+    build_companion_answer,
+    build_companion_sources,
+    companion_lookup_terms,
+    load_document_companion,
+)
 from integrations.rag_engine import chunk_text, lexical_score
 
 logger = logging.getLogger(__name__)
@@ -67,6 +73,12 @@ DOCUMENT_MATCH_STOPWORDS = {
     "docx",
     "md",
 }
+
+
+def _active_knowledge_dir() -> str:
+    return (
+        getattr(getattr(services, "store", None), "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "") or ""
+    )
 
 
 @contextmanager
@@ -310,21 +322,47 @@ def _document_lookup_query(question: str, history: list[dict], record: dict) -> 
     return "\n".join(part for part in parts if part)
 
 
-def _build_targeted_document_sources(question: str, history: list[dict]) -> tuple[str | None, list[dict]]:
+def _build_targeted_document_context(question: str, history: list[dict]) -> dict:
     record = _resolve_target_knowledge_document(question, history)
     if not record:
-        return None, []
+        return {
+            "record": None,
+            "retrieval_question": None,
+            "document_sources": [],
+            "companion_sources": [],
+            "companion_answer": "",
+        }
+
+    companion = load_document_companion(record["name"], _active_knowledge_dir())
+    companion_sources = build_companion_sources(companion, question) if companion else []
+    companion_answer = build_companion_answer(question, companion) if companion else ""
 
     try:
         document_text = services.store.get_document_text(record["name"])
     except Exception:
-        return None, []
+        return {
+            "record": record,
+            "retrieval_question": None,
+            "document_sources": [],
+            "companion_sources": companion_sources,
+            "companion_answer": companion_answer,
+        }
 
     raw_chunks = chunk_text(document_text, chunk_size=900, overlap=160)
     if not raw_chunks:
-        return None, []
+        return {
+            "record": record,
+            "retrieval_question": None,
+            "document_sources": [],
+            "companion_sources": companion_sources,
+            "companion_answer": companion_answer,
+        }
 
     lookup_query = _document_lookup_query(question, history, record)
+    if companion:
+        companion_terms = companion_lookup_terms(companion)
+        if companion_terms:
+            lookup_query = "\n".join([lookup_query, *companion_terms[:6]])
     ranked_chunks: list[tuple[float, int, str]] = []
     for chunk_index, chunk in enumerate(raw_chunks, start=1):
         chunk_for_score = f"{' '.join(_document_alias_texts(record))}\n{chunk}"
@@ -351,7 +389,13 @@ def _build_targeted_document_sources(question: str, history: list[dict]) -> tupl
             }
         )
     retrieval_question = f"{lookup_query}\nDocumento alvo: {record['name']}"
-    return retrieval_question, supplemental_sources
+    return {
+        "record": record,
+        "retrieval_question": retrieval_question,
+        "document_sources": supplemental_sources,
+        "companion_sources": companion_sources,
+        "companion_answer": companion_answer,
+    }
 
 
 def _blocked_mutation_answer(channel: str) -> dict:
@@ -691,28 +735,36 @@ def handle_chat_turn(
                 },
             }
         elif answer is None:
-            if not services.rag.can_generate():
-                raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
-            retrieval_question, document_sources = _build_targeted_document_sources(clean_question, history)
+            targeted_document_context = _build_targeted_document_context(clean_question, history)
             supplemental_sources = _build_supplemental_sources(clean_question)
-            supplemental_sources.extend(document_sources)
-            answer = services.rag.answer(
-                question=clean_question,
-                retrieval_question=retrieval_question,
-                role=role,
-                history=(history + [user_message])[-10:],
-                supplemental_sources=supplemental_sources,
-                trusted_answers=trusted_answers,
-                reviewed_answers=reviewed_answers,
-            )
-            answer["answer_origin"] = "llm"
-            if trusted_answers:
-                answer["feedback_match"] = {
-                    "similarity": trusted_answers[0]["similarity"],
-                    "message_id": trusted_answers[0]["message_id"],
-                    "question": trusted_answers[0]["question"],
-                    "feedback_note": trusted_answers[0].get("feedback_note", ""),
+            supplemental_sources.extend(targeted_document_context["companion_sources"])
+            supplemental_sources.extend(targeted_document_context["document_sources"])
+            if targeted_document_context["companion_answer"]:
+                answer = {
+                    "answer": targeted_document_context["companion_answer"],
+                    "sources": supplemental_sources,
+                    "answer_origin": "document_companion",
                 }
+            else:
+                if not services.rag.can_generate():
+                    raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+                answer = services.rag.answer(
+                    question=clean_question,
+                    retrieval_question=targeted_document_context["retrieval_question"],
+                    role=role,
+                    history=(history + [user_message])[-10:],
+                    supplemental_sources=supplemental_sources,
+                    trusted_answers=trusted_answers,
+                    reviewed_answers=reviewed_answers,
+                )
+                answer["answer_origin"] = "llm"
+                if trusted_answers:
+                    answer["feedback_match"] = {
+                        "similarity": trusted_answers[0]["similarity"],
+                        "message_id": trusted_answers[0]["message_id"],
+                        "question": trusted_answers[0]["question"],
+                        "feedback_note": trusted_answers[0].get("feedback_note", ""),
+                    }
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:

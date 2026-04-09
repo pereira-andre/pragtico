@@ -46,6 +46,7 @@ Sistema web para coordenação portuária no Porto de Setúbal, com gestão de e
 
 O CSV operacional de marés fica em `resources/tides/` e não em `knowledge/`, para não entrar na indexação documental do RAG.
 As horas do CSV são assumidas em `UTC` e apresentadas no fuso operacional `Europe/Lisbon`, incluindo mudança de hora.
+Companions estruturados podem ser guardados em `knowledge/companions/*.json` para FAQs canónicas e resumos operacionais por documento.
 
 ### Segurança e perfis
 
@@ -80,6 +81,7 @@ Resumo por pasta:
 - `domain/`: regras de negócio e parsing documental
 - `integrations/`: LLM, RAG, AIS, marés, meteo, ondulação e avisos locais
 - `storage/`: persistência local/PostgreSQL
+- `knowledge/companions/`: sidecars JSON opcionais com resumo e FAQ canónica por documento
 
 Detalhe adicional em [Estrutura do projeto](docs/PROJECT_STRUCTURE.md).
 
@@ -151,6 +153,12 @@ Alterar papel de utilizador:
 
 ```bash
 python3 scripts/set_user_role.py utilizador@porto.pt admin
+```
+
+Gerar esqueleto de companion para um documento:
+
+```bash
+python3 scripts/generate_knowledge_companion.py IT-036_RegulacaoAgulhas.txt
 ```
 
 Teste simples de envio WhatsApp:
