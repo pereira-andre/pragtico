@@ -21,5 +21,7 @@ knowledge/*
 !knowledge/*.txt
 !knowledge/companions/
 !knowledge/companions/*.json
+!knowledge/evals/
+!knowledge/evals/*.json
 contas.txt
 static/styles.css.bak

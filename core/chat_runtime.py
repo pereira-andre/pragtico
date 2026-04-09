@@ -47,6 +47,8 @@ logger = logging.getLogger(__name__)
 APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
+TRUSTED_DOCUMENT_HINT_SIMILARITY = 0.82
+TRUSTED_DOCUMENT_HINT_GAP = 0.08
 DOCUMENT_FOLLOW_UP_RE = re.compile(
     r"\b(?:esse|essa|este|esta|o|a)\s+(?:documento|doc|ficheiro|regra|instrucao|instrução)\b"
     r"|\bo que diz(?:\s+(?:esse|essa|este|esta|o|a))?\s+"
@@ -282,7 +284,48 @@ def _looks_like_document_follow_up(question: str) -> bool:
     return bool(DOCUMENT_FOLLOW_UP_RE.search(str(question or "")))
 
 
-def _resolve_target_knowledge_document(question: str, history: list[dict]) -> dict | None:
+def _resolve_feedback_target_document(trusted_answers: list[dict], documents: list[dict]) -> dict | None:
+    if not trusted_answers or not documents:
+        return None
+
+    documents_by_name = {str(item.get("name") or ""): item for item in documents}
+    candidates: list[dict] = []
+    for match in trusted_answers:
+        similarity = float(match.get("similarity") or 0.0)
+        if similarity < TRUSTED_DOCUMENT_HINT_SIMILARITY:
+            continue
+        cited_documents = []
+        for citation in match.get("citations") or []:
+            document_name = str(citation.get("document") or "")
+            if document_name in documents_by_name:
+                cited_documents.append(document_name)
+        unique_cited_documents = list(dict.fromkeys(cited_documents))
+        if len(unique_cited_documents) != 1:
+            continue
+        document_name = unique_cited_documents[0]
+        candidates.append(
+            {
+                "record": documents_by_name[document_name],
+                "score": similarity,
+            }
+        )
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    best_match = candidates[0]
+    second_best = candidates[1] if len(candidates) > 1 else None
+    if (
+        second_best
+        and str(second_best["record"].get("name") or "") != str(best_match["record"].get("name") or "")
+        and (best_match["score"] - second_best["score"]) < TRUSTED_DOCUMENT_HINT_GAP
+    ):
+        return None
+    return best_match["record"]
+
+
+def _resolve_target_knowledge_document(question: str, history: list[dict], trusted_answers: list[dict] | None = None) -> dict | None:
     try:
         documents = services.store.list_documents()
     except Exception:
@@ -294,19 +337,18 @@ def _resolve_target_knowledge_document(question: str, history: list[dict]) -> di
     if direct_match:
         return direct_match
 
-    if not _looks_like_document_follow_up(question):
-        return None
-
     documents_by_name = {str(item.get("name") or ""): item for item in documents}
-    for entry in reversed(history):
-        for citation in reversed(entry.get("citations") or []):
-            document_name = str(citation.get("document") or "")
-            if document_name in documents_by_name:
-                return documents_by_name[document_name]
-        history_match = _match_document_from_text(entry.get("content", ""), documents)
-        if history_match:
-            return history_match
-    return None
+    if _looks_like_document_follow_up(question):
+        for entry in reversed(history):
+            for citation in reversed(entry.get("citations") or []):
+                document_name = str(citation.get("document") or "")
+                if document_name in documents_by_name:
+                    return documents_by_name[document_name]
+            history_match = _match_document_from_text(entry.get("content", ""), documents)
+            if history_match:
+                return history_match
+
+    return _resolve_feedback_target_document(trusted_answers or [], documents)
 
 
 def _document_lookup_query(question: str, history: list[dict], record: dict) -> str:
@@ -323,8 +365,8 @@ def _document_lookup_query(question: str, history: list[dict], record: dict) -> 
     return "\n".join(part for part in parts if part)
 
 
-def _build_targeted_document_context(question: str, history: list[dict]) -> dict:
-    record = _resolve_target_knowledge_document(question, history)
+def _build_targeted_document_context(question: str, history: list[dict], trusted_answers: list[dict] | None = None) -> dict:
+    record = _resolve_target_knowledge_document(question, history, trusted_answers)
     if not record:
         return {
             "record": None,
@@ -715,26 +757,8 @@ def handle_chat_turn(
                 else:
                     answer = None
 
-        if (
-            answer is None
-            and trusted_answers
-            and trusted_answers[0].get("similarity", 0) >= APPROVED_MEMORY_SIMILARITY
-            and not review_guard_match
-        ):
-            best_match = trusted_answers[0]
-            answer = {
-                "answer": best_match["answer"],
-                "sources": best_match.get("citations", []),
-                "answer_origin": "approved_memory",
-                "feedback_match": {
-                    "similarity": best_match["similarity"],
-                    "message_id": best_match["message_id"],
-                    "question": best_match["question"],
-                    "feedback_note": best_match.get("feedback_note", ""),
-                },
-            }
-        elif answer is None:
-            targeted_document_context = _build_targeted_document_context(clean_question, history)
+        if answer is None:
+            targeted_document_context = _build_targeted_document_context(clean_question, history, trusted_answers)
             supplemental_sources = _build_supplemental_sources(clean_question)
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
@@ -763,6 +787,23 @@ def handle_chat_turn(
                         and not targeted_document_context["document_sources"]
                     ):
                         answer = _build_review_guard_answer(review_guard_match)
+                    elif (
+                        trusted_answers
+                        and trusted_answers[0].get("similarity", 0) >= APPROVED_MEMORY_SIMILARITY
+                        and not review_guard_match
+                    ):
+                        best_match = trusted_answers[0]
+                        answer = {
+                            "answer": best_match["answer"],
+                            "sources": best_match.get("citations", []),
+                            "answer_origin": "approved_memory",
+                            "feedback_match": {
+                                "similarity": best_match["similarity"],
+                                "message_id": best_match["message_id"],
+                                "question": best_match["question"],
+                                "feedback_note": best_match.get("feedback_note", ""),
+                            },
+                        }
                     else:
                         if not services.rag.can_generate():
                             raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")

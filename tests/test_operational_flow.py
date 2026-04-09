@@ -1323,6 +1323,80 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("LOA igual ou superior a 225 metros", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_approved_feedback_can_hint_target_document_for_summary_request(self) -> None:
+        document_name = "IT-099_XQJ.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-099 — XQJ\nRegra noturna: requer autorização expressa do Piloto Coordenador.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-099 XQJ",
+                "aliases": ["IT-099", "IT-99", "XQJ"],
+                "summary": "a operação XQJ à noite exige autorização expressa do Piloto Coordenador.",
+                "key_points": [
+                    "A operação noturna só avança com autorização expressa do Piloto Coordenador."
+                ],
+                "faq": []
+            },
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            prior_conversation = self.store.ensure_conversation(username="admin")
+            self.store.append_chat_message(
+                username="admin",
+                conversation_id=prior_conversation["id"],
+                role="user",
+                content="Explica as limitações dessa manobra à noite.",
+            )
+            approved_message = self.store.append_chat_message(
+                username="admin",
+                conversation_id=prior_conversation["id"],
+                role="assistant",
+                content="À noite, a operação XQJ exige autorização expressa do Piloto Coordenador.",
+                citations=[
+                    {
+                        "source_id": "S1",
+                        "document": document_name,
+                        "chunk_id": 1,
+                        "score": 0.99,
+                        "retrieval_mode": "document_companion",
+                        "snippet": "A operação XQJ à noite exige autorização expressa do Piloto Coordenador.",
+                    }
+                ],
+            )
+            self.store.update_message_feedback(
+                "admin",
+                prior_conversation["id"],
+                approved_message["id"],
+                "approved",
+                "Resposta validada pelo operador.",
+            )
+
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Explica as limitações dessa manobra à noite.",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "document_companion")
+        self.assertIn("autorização expressa do Piloto Coordenador", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_document_companion_summarizes_targeted_document_request(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"
         knowledge_path = Path(self.store.knowledge_dir) / document_name

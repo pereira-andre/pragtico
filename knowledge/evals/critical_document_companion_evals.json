@@ -1,0 +1,42 @@
+[
+  {
+    "document": "IT-015_Fundeadouros.txt",
+    "question": "Qual é o fundeadouro principal para navios em espera de cais?",
+    "expected_substrings": ["Fundeadouro Norte"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "A tabela de rebocadores é obrigatória?",
+    "expected_substrings": ["mínimos obrigatórios", "cargas perigosas"]
+  },
+  {
+    "document": "IT-018_NormasEspeciais.txt",
+    "question": "Qual é o calado máximo na barra do Porto de Setúbal?",
+    "expected_substrings": ["10,30", "12,0"]
+  },
+  {
+    "document": "IT-036_RegulacaoAgulhas.txt",
+    "question": "Tenho um navio para fazer regulação de agulhas à noite, o que dizem as regras sobre isso?",
+    "expected_substrings": ["225 metros", "0,7 milhas"]
+  },
+  {
+    "document": "IT-041_EntradaSaida.txt",
+    "question": "Até onde vai a área de responsabilidade do VTS Portuário de Setúbal?",
+    "expected_substrings": ["4 milhas", "Baliza número 2"]
+  },
+  {
+    "document": "RG-14_RegulamentoInterno.txt",
+    "question": "O Piloto Coordenador pode aceitar uma saída com 30 minutos de antecedência?",
+    "expected_substrings": ["menos de 1 hora", "anuência"]
+  },
+  {
+    "document": "P-13_PlaneamentoGestao.txt",
+    "question": "Quando dois navios pretendem o mesmo cais, qual tem prioridade?",
+    "expected_substrings": ["8 milhas", "Baliza número 2"]
+  },
+  {
+    "document": "Tarifas_APSS_2024.txt",
+    "question": "Qual é a fórmula da TUP para um navio de contentores?",
+    "expected_substrings": ["0,1144", "0,0263"]
+  }
+]
