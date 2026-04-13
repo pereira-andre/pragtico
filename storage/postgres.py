@@ -2131,6 +2131,78 @@ class PostgresStore(BaseStore):
         )
         return matches[:limit]
 
+    def list_reviewable_chat_messages(
+        self,
+        *,
+        limit: int = 100,
+        feedback_status: Optional[str] = None,
+    ) -> List[Dict]:
+        clean_feedback_status = (feedback_status or "").strip().lower()
+        where_feedback = ""
+        params: list[object] = []
+        if clean_feedback_status == "pending":
+            where_feedback = "AND COALESCE(m.feedback_status, '') = ''"
+        elif clean_feedback_status in ALLOWED_FEEDBACK_STATUSES:
+            where_feedback = "AND m.feedback_status = %s"
+            params.append(clean_feedback_status)
+
+        params.append(max(limit, 0))
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        m.id::text AS id,
+                        m.conversation_id::text AS conversation_id,
+                        c.username,
+                        c.title AS conversation_title,
+                        m.role,
+                        m.content,
+                        m.citations,
+                        m.created_at,
+                        m.feedback_status,
+                        m.feedback_note,
+                        m.feedback_correction,
+                        m.feedback_correction_document,
+                        m.feedback_updated_by,
+                        m.feedback_updated_at,
+                        m.channel,
+                        m.channel_user_id,
+                        m.external_message_id,
+                        m.external_reply_to_id,
+                        m.channel_metadata,
+                        (
+                            SELECT prev.content
+                            FROM messages prev
+                            WHERE prev.conversation_id = m.conversation_id
+                              AND prev.role = 'user'
+                              AND prev.created_at <= m.created_at
+                            ORDER BY prev.created_at DESC
+                            LIMIT 1
+                        ) AS question
+                    FROM messages m
+                    JOIN conversations c ON c.id = m.conversation_id
+                    WHERE m.role = 'assistant'
+                      {where_feedback}
+                    ORDER BY COALESCE(m.feedback_updated_at, m.created_at) DESC, m.created_at DESC
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                rows = cur.fetchall()
+
+        items = []
+        for row in rows:
+            message = self._row_to_chat_message_record(row)
+            if not message:
+                continue
+            message["feedback_status"] = (message.get("feedback_status") or "").strip().lower()
+            message["question"] = row.get("question") or ""
+            message["conversation_title"] = row.get("conversation_title") or DEFAULT_CONVERSATION_TITLE
+            message["citation_documents"] = _unique_citation_documents(message)
+            items.append(message)
+        return items
+
     def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
         params: list[object] = []
         where_clause = ""
@@ -2404,6 +2476,8 @@ class PostgresStore(BaseStore):
         bow_thruster: str = "",
         stern_thruster: str = "",
         tug_count: str = "",
+        environment_signature: Optional[Dict] = None,
+        strict_route: bool = True,
         limit: int = 5,
     ) -> List[Dict]:
         with self._connect() as conn:
@@ -2418,6 +2492,8 @@ class PostgresStore(BaseStore):
             bow_thruster=bow_thruster,
             stern_thruster=stern_thruster,
             tug_count=tug_count,
+            environment_signature=environment_signature,
+            strict_route=strict_route,
             limit=limit,
         )
 

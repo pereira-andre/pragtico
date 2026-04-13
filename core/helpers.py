@@ -77,6 +77,7 @@ from storage import (
     is_user_profile_complete,
     normalize_constraint_codes,
 )
+from storage.maneuver_case_helpers import build_case_environment_signature
 
 logger = logging.getLogger(__name__)
 RULE_CODE_TITLES = {
@@ -1876,6 +1877,7 @@ def _format_maneuver_case_flags(flags: list[str] | None) -> list[str]:
 
 def _format_case_feedback_label(value: str | None) -> str:
     return {
+        "observed": "correlação observada",
         "approved": "referência positiva",
         "avoid": "evitar como padrão",
         "review": "rever caso",
@@ -1939,7 +1941,7 @@ def _format_operational_opinion_answer(
         )
         lines.append(base_line)
         if top_case.get("feedback_status_label"):
-            lines.append(f"- Feedback validado do caso mais próximo: {top_case['feedback_status_label']}.")
+            lines.append(f"- Estado do caso mais próximo: {top_case['feedback_status_label']}.")
     else:
         lines.append("- Histórico semelhante: sem casos suficientes para comparação.")
     lines.append("- Base documental: não foi invocada regra específica nesta leitura; pede regra/norma se precisares de enquadramento normativo.")
@@ -2215,6 +2217,16 @@ def _extract_case_decision_excerpt(case: dict) -> str:
 
 
 def _build_similar_case_cards(port_call: dict, maneuver: dict, limit: int = 3) -> list[dict]:
+    environment_signature = None
+    maneuver_id = (maneuver.get("id") or "").strip()
+    if maneuver_id and hasattr(services.store, "get_maneuver_case"):
+        try:
+            current_case = services.store.get_maneuver_case(maneuver_id)
+            if current_case:
+                environment_signature = build_case_environment_signature(current_case)
+        except Exception:
+            logger.exception("Falha ao recolher assinatura ambiental da manobra %s.", maneuver_id)
+
     try:
         ranked_cases = services.store.find_similar_maneuver_cases(
             maneuver_type=maneuver.get("type", ""),
@@ -2225,6 +2237,7 @@ def _build_similar_case_cards(port_call: dict, maneuver: dict, limit: int = 3) -
             bow_thruster=port_call.get("vessel_bow_thruster", ""),
             stern_thruster=port_call.get("vessel_stern_thruster", ""),
             tug_count=maneuver.get("tug_count", ""),
+            environment_signature=environment_signature,
             limit=max(limit + 1, 4),
         )
     except Exception:
@@ -2285,6 +2298,7 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
     completed = sum(1 for item in similar_cases if item.get("status_class") == "completed")
     aborted = sum(1 for item in similar_cases if item.get("status_class") == "aborted")
     approved_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "approved")
+    observed_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "observed")
     avoid_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "avoid")
     review_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "review")
     wave_related = sum(
@@ -2310,6 +2324,9 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
     elif approved_feedback and avoid_feedback == 0:
         status_key = "positive"
         title = "Feedback validado favorável"
+    elif observed_feedback and approved_feedback == 0 and avoid_feedback == 0:
+        status_key = "neutral"
+        title = "Correlação observada, sem validação final"
     elif completed and aborted == 0:
         status_key = "positive"
         title = "Histórico favorável"
@@ -2331,6 +2348,8 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         recommendation_parts.append(f"ondulação relevante em {wave_related} caso(s)")
     if approved_feedback:
         recommendation_parts.append(f"feedback positivo validado em {approved_feedback} caso(s)")
+    if observed_feedback:
+        recommendation_parts.append(f"correlação observada em {observed_feedback} caso(s)")
     if avoid_feedback:
         recommendation_parts.append(f"feedback a evitar em {avoid_feedback} caso(s)")
     if review_feedback:
@@ -2340,6 +2359,8 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         summary = "Casos semelhantes foram sinalizados para evitar este padrão sem validação reforçada."
     elif approved_feedback and avoid_feedback == 0:
         summary = "Casos semelhantes com feedback validado apoiam esta abordagem, mantendo confirmação humana."
+    elif observed_feedback and approved_feedback == 0:
+        summary = "Há correlações observadas em casos parecidos, mas ainda sem experiência validada para recomendar este padrão por si só."
     elif status_key == "caution":
         summary = "Pede validação mais conservadora antes de confirmar esta manobra."
     elif status_key == "positive":
@@ -3664,6 +3685,13 @@ def build_scale_context(port_call: dict) -> dict:
             "execution_started_input_value": item.get("execution_started_input_value", ""),
             "execution_finished_label": item.get("execution_finished_label"),
             "execution_finished_input_value": item.get("execution_finished_input_value", ""),
+            "sort_at": (
+                item.get("execution_finished_at")
+                or item.get("completed_at")
+                or item.get("planned_at")
+                or item.get("created_at")
+                or ""
+            ),
             "draft": item.get("reported_draft_m") or item.get("planned_draft_m") or (port_call["ship_max_draft_label"] if port_call.get("vessel_max_draft_m") else "--"),
             "tug_count": item.get("tug_count") or "",
             "origin": item.get("origin") or "--",
@@ -3702,6 +3730,13 @@ def build_scale_context(port_call: dict) -> dict:
                 "reason": log.get("reason") or "--",
                 "summary": log.get("summary") or "--",
             })
+    maneuvers.sort(
+        key=lambda item: (
+            {"pending": 3, "approved": 3, "completed": 2, "aborted": 1}.get(item.get("status_key"), 0),
+            item.get("sort_at") or "",
+        ),
+        reverse=True,
+    )
     entry_report_exists = bool(entry and entry.get("state") == "completed" and entry.get("report_note"))
     departure_report_exists = bool(completed_departure and completed_departure.get("report_note"))
     shift_report_exists = bool(completed_shift and completed_shift.get("report_note"))

@@ -8,10 +8,30 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 from core import services
-from domain.berth_layout import canonicalize_berth_label, is_anchorage_berth
+from domain.berth_layout import canonicalize_berth_label, is_anchorage_berth, is_known_berth_label
 from domain.document_processing import iso_now
 
 from .utils import _clean_text, _local_iso_to_label, _normalize_maneuver_type, _parse_iso_datetime
+
+
+_COMPASS_TO_DEGREES = {
+    "N": 0.0,
+    "NNE": 22.5,
+    "NE": 45.0,
+    "ENE": 67.5,
+    "E": 90.0,
+    "ESE": 112.5,
+    "SE": 135.0,
+    "SSE": 157.5,
+    "S": 180.0,
+    "SSW": 202.5,
+    "SW": 225.0,
+    "WSW": 247.5,
+    "W": 270.0,
+    "WNW": 292.5,
+    "NW": 315.0,
+    "NNW": 337.5,
+}
 
 
 def _case_key(value: Optional[str]) -> str:
@@ -29,12 +49,218 @@ def _safe_float(value: Any) -> Optional[float]:
         return None
 
 
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value not in (None, "", {}, []):
+            return value
+    return None
+
+
+def _kph_to_kts(value: Any) -> Optional[float]:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return None
+    return round(numeric / 1.852, 1)
+
+
+def _mph_to_kts(value: Any) -> Optional[float]:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return None
+    return round(numeric * 0.868976, 1)
+
+
+def _direction_degrees(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) % 360
+    clean = str(value).strip().upper().replace("º", "")
+    if not clean:
+        return None
+    if clean in _COMPASS_TO_DEGREES:
+        return _COMPASS_TO_DEGREES[clean]
+    numeric = _safe_float(clean)
+    return numeric % 360 if numeric is not None else None
+
+
+def _direction_quadrant(value: Any) -> str:
+    degrees = _direction_degrees(value)
+    if degrees is None:
+        return ""
+    quadrants = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    return quadrants[int(((degrees + 22.5) % 360) // 45)]
+
+
+def _wind_force_kts(payload: Dict[str, Any]) -> Optional[float]:
+    wind_kts = _safe_float(
+        _first_present(
+            payload.get("wind_kts"),
+            payload.get("wind_kt"),
+            payload.get("wind_knots"),
+            payload.get("wind_speed_kts"),
+            payload.get("wind_speed_kt"),
+            payload.get("wind_speed_knots"),
+        )
+    )
+    if wind_kts is None:
+        wind_kts = _kph_to_kts(_first_present(payload.get("wind_kph"), payload.get("wind_speed_kph")))
+    if wind_kts is None:
+        wind_kts = _mph_to_kts(_first_present(payload.get("wind_mph"), payload.get("wind_speed_mph")))
+
+    gust_kts = _safe_float(
+        _first_present(
+            payload.get("gust_kts"),
+            payload.get("gust_kt"),
+            payload.get("gust_knots"),
+            payload.get("gust_speed_kts"),
+            payload.get("gust_speed_kt"),
+            payload.get("gust_speed_knots"),
+        )
+    )
+    if gust_kts is None:
+        gust_kts = _kph_to_kts(_first_present(payload.get("gust_kph"), payload.get("gust_speed_kph")))
+    if gust_kts is None:
+        gust_kts = _mph_to_kts(_first_present(payload.get("gust_mph"), payload.get("gust_speed_mph")))
+
+    values = [value for value in (wind_kts, gust_kts) if value is not None]
+    return round(max(values), 1) if values else None
+
+
+def _wind_band(value: Optional[float]) -> str:
+    if value is None:
+        return ""
+    if value < 10:
+        return "light"
+    if value <= 20:
+        return "moderate"
+    if value <= 30:
+        return "strong"
+    return "severe"
+
+
+def _wave_height_m(payload: Dict[str, Any]) -> Optional[float]:
+    return _safe_float(
+        _first_present(
+            payload.get("significant_height_m"),
+            payload.get("significant_height"),
+            payload.get("wave_height_m"),
+            payload.get("wave_m"),
+            payload.get("height_m"),
+        )
+    )
+
+
+def _wave_period_s(payload: Dict[str, Any]) -> Optional[float]:
+    return _safe_float(
+        _first_present(
+            payload.get("mean_period_s"),
+            payload.get("period_s"),
+            payload.get("mean_period"),
+            payload.get("wave_period_s"),
+            payload.get("max_observed_period_s"),
+            payload.get("t02"),
+        )
+    )
+
+
+def _wave_height_band(value: Optional[float]) -> str:
+    if value is None:
+        return ""
+    if value < 1:
+        return "lt_1m"
+    if value < 2:
+        return "1_2m"
+    if value < 3:
+        return "2_3m"
+    return "gte_3m"
+
+
+def _wave_period_band(value: Optional[float]) -> str:
+    if value is None:
+        return ""
+    if value < 6:
+        return "lt_6s"
+    if value <= 10:
+        return "6_10s"
+    return "gt_10s"
+
+
+def _environment_signature_from_snapshot(snapshot: Optional[Dict], *, wave_sensitive: bool) -> Dict:
+    snapshot = snapshot or {}
+    weather_block = snapshot.get("weather") or {}
+    weather = weather_block.get("closest_hour") or weather_block.get("current") or {}
+    wave_block = snapshot.get("wave") or {}
+    wave = wave_block.get("current") or wave_block
+    if not isinstance(weather, dict):
+        weather = {}
+    if not isinstance(wave, dict):
+        wave = {}
+
+    wind_force_kts = _wind_force_kts(weather)
+    wave_height_m = _wave_height_m(wave) if wave_sensitive else None
+    if wave_height_m is None and wave_sensitive:
+        wave_height_m = _wave_height_m(weather)
+    wave_period_s = _wave_period_s(wave) if wave_sensitive else None
+    if wave_period_s is None and wave_sensitive:
+        wave_period_s = _wave_period_s(weather)
+
+    return {
+        "available": bool(snapshot),
+        "captured": (snapshot.get("status") or "").strip().lower() == "captured",
+        "phase": snapshot.get("phase", ""),
+        "wave_sensitive": bool(wave_sensitive),
+        "wind_force_kts": wind_force_kts,
+        "wind_band": _wind_band(wind_force_kts),
+        "wind_quadrant": _direction_quadrant(
+            _first_present(
+                weather.get("wind_degree"),
+                weather.get("wind_direction_deg"),
+                weather.get("wind_direction"),
+                weather.get("wind_dir"),
+            )
+        ),
+        "wave_height_m": wave_height_m,
+        "wave_height_band": _wave_height_band(wave_height_m) if wave_sensitive else "",
+        "wave_period_s": wave_period_s,
+        "wave_period_band": _wave_period_band(wave_period_s) if wave_sensitive else "",
+        "wave_direction_quadrant": _direction_quadrant(
+            _first_present(
+                wave.get("direction_deg"),
+                wave.get("wave_degree"),
+                wave.get("direction"),
+            )
+        ),
+    }
+
+
+def build_case_environment_signature(case: Dict) -> Dict:
+    existing = case.get("environment_signature")
+    if isinstance(existing, dict) and existing:
+        return existing
+
+    features = case.get("feature_snapshot") or {}
+    environment = case.get("environment_snapshot") or {}
+    latest_snapshot = (
+        environment.get("latest")
+        or environment.get("execution")
+        or environment.get("decision")
+        or environment.get("planning")
+        or {}
+    )
+    return _environment_signature_from_snapshot(
+        latest_snapshot,
+        wave_sensitive=bool(features.get("wave_sensitive")),
+    )
+
+
 def _is_wave_sensitive_maneuver(maneuver_type: Optional[str]) -> bool:
     return _normalize_maneuver_type(maneuver_type) in {"entry", "departure"}
 
 
 def _feedback_status_label(value: Optional[str]) -> str:
     return {
+        "observed": "Correlação observada",
         "approved": "Referência positiva",
         "avoid": "Evitar como padrão",
         "review": "Rever caso",
@@ -234,6 +460,8 @@ def _feature_snapshot(port_call: Dict, maneuver: Dict) -> Dict:
         "destination_key": _case_key(canonical_destination),
         "origin_is_anchorage": is_anchorage_berth(canonical_origin),
         "destination_is_anchorage": is_anchorage_berth(canonical_destination),
+        "origin_is_known_berth": is_known_berth_label(canonical_origin),
+        "destination_is_known_berth": is_known_berth_label(canonical_destination),
         "vessel_type": _clean_text(port_call.get("vessel_type") or port_call.get("ship_type_label")),
         "vessel_type_key": _case_key(port_call.get("vessel_type") or port_call.get("ship_type_label")),
         "vessel_loa_m": _safe_float(port_call.get("vessel_loa_m")),
@@ -412,7 +640,57 @@ def decorate_maneuver_case(case: Dict) -> Dict:
         "feedback_status_label": _feedback_status_label(case.get("feedback_status")),
         "feedback_updated_at_label": _local_iso_to_label(case.get("feedback_updated_at")),
         "has_validated_feedback": bool((case.get("feedback_status") or "").strip()),
+        "environment_signature": build_case_environment_signature(case),
     }
+
+
+def _primary_route_key(clean_type: str, *, origin: str, destination: str, origin_key: str, destination_key: str) -> tuple[str, str, bool]:
+    if clean_type == "entry":
+        return destination_key, destination, is_known_berth_label(destination)
+    if clean_type == "departure":
+        return origin_key, origin, is_known_berth_label(origin)
+    if clean_type == "shift":
+        if destination_key:
+            return destination_key, destination, is_known_berth_label(destination)
+        return origin_key, origin, is_known_berth_label(origin)
+    if destination_key:
+        return destination_key, destination, is_known_berth_label(destination)
+    return origin_key, origin, is_known_berth_label(origin)
+
+
+def _case_feedback_rank(value: str) -> int:
+    clean = (value or "").strip().lower()
+    if clean == "approved":
+        return 3
+    if clean == "observed":
+        return 1
+    if clean == "review":
+        return -1
+    if clean == "avoid":
+        return -2
+    return 0
+
+
+def _experience_meta(
+    *,
+    feedback_status: str,
+    route_match_strength: int,
+    environment_match_count: int,
+) -> tuple[str, str]:
+    clean = (feedback_status or "").strip().lower()
+    if clean == "approved":
+        return "Experiência validada", "online"
+    if clean == "observed":
+        return "Correlação observada", "neutral"
+    if clean == "avoid":
+        return "Usar com reserva", "degraded"
+    if clean == "review":
+        return "Caso em revisão", "degraded"
+    if route_match_strength >= 2 and environment_match_count > 0:
+        return "Correlação forte", "neutral"
+    if route_match_strength >= 1:
+        return "Semelhança operacional", "neutral"
+    return "Semelhança parcial", "neutral"
 
 
 def rank_similar_maneuver_cases(
@@ -426,6 +704,8 @@ def rank_similar_maneuver_cases(
     bow_thruster: str = "",
     stern_thruster: str = "",
     tug_count: str = "",
+    environment_signature: Optional[Dict] = None,
+    strict_route: bool = True,
     limit: int = 5,
 ) -> List[Dict]:
     clean_type = _normalize_maneuver_type(maneuver_type)
@@ -439,6 +719,14 @@ def rank_similar_maneuver_cases(
     stern_key = (stern_thruster or "").strip().lower()
     tug_key = _clean_text(tug_count)
     loa_value = _safe_float(vessel_loa_m)
+    target_environment = environment_signature or {}
+    target_primary_key, _target_primary_label, target_primary_is_berth = _primary_route_key(
+        clean_type,
+        origin=origin,
+        destination=destination,
+        origin_key=origin_key,
+        destination_key=destination_key,
+    )
 
     ranked: List[Dict] = []
     for raw_case in cases:
@@ -451,13 +739,43 @@ def rank_similar_maneuver_cases(
         features = case.get("feature_snapshot") or {}
         score = 0.0
         reasons: List[str] = []
+        environment_match_count = 0
 
-        if destination_key and features.get("destination_key") == destination_key:
-            score += 35
-            reasons.append("mesmo destino")
-        if origin_key and features.get("origin_key") == origin_key:
-            score += 20
-            reasons.append("mesma origem")
+        case_origin_key = features.get("origin_key") or _case_key(features.get("origin"))
+        case_destination_key = features.get("destination_key") or _case_key(features.get("destination"))
+        case_primary_key, _case_primary_label, _case_primary_is_berth = _primary_route_key(
+            clean_type,
+            origin=features.get("origin") or case.get("origin_label", ""),
+            destination=features.get("destination") or case.get("destination_label", ""),
+            origin_key=case_origin_key,
+            destination_key=case_destination_key,
+        )
+        same_origin = bool(origin_key and case_origin_key == origin_key)
+        same_destination = bool(destination_key and case_destination_key == destination_key)
+        primary_matches = bool(target_primary_key and case_primary_key == target_primary_key)
+        route_match_strength = 0
+
+        if strict_route and target_primary_key and target_primary_is_berth and not primary_matches:
+            continue
+
+        if same_origin and same_destination and origin_key and destination_key:
+            score += 72
+            reasons.append("mesma rota operacional")
+            route_match_strength = 2
+        else:
+            if primary_matches:
+                score += 42
+                reasons.append("mesmo cais operacional" if target_primary_is_berth else "mesmo ponto operacional")
+                route_match_strength = 1
+            if same_destination and clean_type != "entry":
+                score += 18
+                reasons.append("mesmo destino")
+                route_match_strength = max(route_match_strength, 1)
+            if same_origin and clean_type != "departure":
+                score += 16
+                reasons.append("mesma origem")
+                route_match_strength = max(route_match_strength, 1)
+
         if vessel_type_key and features.get("vessel_type_key") == vessel_type_key:
             score += 18
             reasons.append("mesmo tipo de navio")
@@ -479,24 +797,73 @@ def rank_similar_maneuver_cases(
         if tug_key and features.get("tug_count") == tug_key:
             score += 5
             reasons.append("mesmos rebocadores")
+
+        case_environment = build_case_environment_signature(case)
+        if target_environment.get("wind_band") and case_environment.get("wind_band") == target_environment.get("wind_band"):
+            score += 10
+            reasons.append("mesma faixa de vento")
+            environment_match_count += 1
+        if target_environment.get("wind_quadrant") and case_environment.get("wind_quadrant") == target_environment.get("wind_quadrant"):
+            score += 4
+            reasons.append("mesmo quadrante de vento")
+            environment_match_count += 1
+        if target_environment.get("wave_sensitive") and target_environment.get("wave_height_band"):
+            if case_environment.get("wave_height_band") == target_environment.get("wave_height_band"):
+                score += 12
+                reasons.append("mesma faixa de ondulação")
+                environment_match_count += 1
+        if target_environment.get("wave_sensitive") and target_environment.get("wave_period_band"):
+            if case_environment.get("wave_period_band") == target_environment.get("wave_period_band"):
+                score += 5
+                reasons.append("mesmo período de ondulação")
+                environment_match_count += 1
+        if target_environment.get("wave_sensitive") and target_environment.get("wave_direction_quadrant"):
+            if case_environment.get("wave_direction_quadrant") == target_environment.get("wave_direction_quadrant"):
+                score += 3
+                reasons.append("mesma direção de ondulação")
+                environment_match_count += 1
+
+        feedback_status = (case.get("feedback_status") or "").strip().lower()
+        if feedback_status == "approved":
+            score += 14
+            reasons.append("referência validada")
+        elif feedback_status == "observed":
+            score += 5
+            reasons.append("correlação observada")
+        elif feedback_status == "review":
+            score -= 8
+            reasons.append("caso em revisão")
+        elif feedback_status == "avoid":
+            score -= 16
+            reasons.append("caso marcado para evitar")
         if not destination_key and not origin_key and not vessel_type_key and loa_value is None:
             score += 1
 
         if score <= 0:
             continue
 
+        experience_label, experience_badge = _experience_meta(
+            feedback_status=feedback_status,
+            route_match_strength=route_match_strength,
+            environment_match_count=environment_match_count,
+        )
+
         ranked.append(
             {
                 **case,
                 "similarity_score": round(score, 1),
                 "similarity_reasons": reasons,
+                "route_match_strength": route_match_strength,
+                "environment_match_count": environment_match_count,
+                "experience_label": experience_label,
+                "experience_badge": experience_badge,
             }
         )
 
     ranked.sort(
         key=lambda item: (
             item.get("similarity_score", 0.0),
-            1 if item.get("has_validated_feedback") else 0,
+            _case_feedback_rank(item.get("feedback_status", "")),
             (_parse_iso_datetime(item.get("latest_event_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
         ),
         reverse=True,

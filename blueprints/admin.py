@@ -10,7 +10,16 @@ from flask import Blueprint, abort, current_app, flash, jsonify, redirect, rende
 
 from core import services
 from core.whatsapp_support import build_user_whatsapp_view, verify_user_whatsapp
-from core.validators import validate_email, validate_password, validate_phone, validate_required_text, validate_role, validate_whatsapp_phone
+from core.validators import (
+    validate_email,
+    validate_feedback_status,
+    validate_operational_feedback_status,
+    validate_password,
+    validate_phone,
+    validate_required_text,
+    validate_role,
+    validate_whatsapp_phone,
+)
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases_from_dir, load_eval_cases_from_store
 from core.helpers import (
@@ -22,7 +31,9 @@ from core.helpers import (
     safe_rebuild_index,
     start_reindex_job,
 )
+from core.chat_feedback import sync_feedback_correction_eval_case
 from domain.migration_service import migrate_local_json_to_postgres
+from storage.maneuver_case_helpers import build_case_environment_signature, rank_similar_maneuver_cases
 from storage.utils import _local_iso_to_label
 
 logger = logging.getLogger(__name__)
@@ -346,6 +357,281 @@ def _filter_documents(docs: list[dict], filters: dict) -> list[dict]:
     return [item for item in docs if _document_matches_filters(item, filters)]
 
 
+def _admin_casebooks_return_to() -> str:
+    if request.query_string:
+        return f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
+    return request.path
+
+
+def _normalized_filter_value(value: str | None, allowed: set[str], default: str) -> str:
+    clean = (value or "").strip().lower()
+    return clean if clean in allowed else default
+
+
+def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
+    clean = (value or "").strip().lower()
+    if clean == "approved":
+        return "Aprovada para reutilização", "online"
+    if clean == "review":
+        return "Bloqueada / rever", "degraded"
+    return "Por rever", "neutral"
+
+
+def _case_feedback_state_meta(value: str | None) -> tuple[str, str]:
+    clean = (value or "").strip().lower()
+    if clean == "observed":
+        return "Correlação observada", "neutral"
+    if clean == "approved":
+        return "Experiência validada", "online"
+    if clean == "avoid":
+        return "Evitar como padrão", "degraded"
+    if clean == "review":
+        return "Rever caso", "degraded"
+    return "Sem validação", "neutral"
+
+
+def _case_governance_meta(value: str | None) -> tuple[str, str, str, str]:
+    clean = (value or "").strip().lower()
+    if clean == "approved":
+        return (
+            "governed",
+            "Experiência validada",
+            "Pode sustentar recomendação histórica, sempre com validação operacional do momento.",
+            "online",
+        )
+    if clean == "observed":
+        return (
+            "observation",
+            "Correlação observada",
+            "Existe padrão útil, mas ainda não sobe a experiência recomendável sem mais validação.",
+            "neutral",
+        )
+    if clean == "avoid":
+        return (
+            "governed",
+            "Padrão a evitar",
+            "Este caso foi mantido como memória útil, mas como contraexemplo operacional.",
+            "degraded",
+        )
+    if clean == "review":
+        return (
+            "governed",
+            "Caso em revisão",
+            "Há sinal relevante, mas a leitura operacional ainda precisa de decisão final.",
+            "degraded",
+        )
+    return (
+        "observation",
+        "Por validar",
+        "O sistema encontrou uma correlação, mas ainda não houve decisão humana sobre o seu valor operacional.",
+        "neutral",
+    )
+
+
+def _casebook_feature_label(case: dict) -> str:
+    features = case.get("feature_snapshot") or {}
+    vessel_type = (features.get("vessel_type") or "").strip() or "Tipo não identificado"
+    parts = [f"{case.get('origin_label') or '--'} -> {case.get('destination_label') or '--'}", vessel_type]
+    loa_value = features.get("vessel_loa_m")
+    if isinstance(loa_value, (int, float)):
+        parts.append(f"LOA {loa_value:.1f} m")
+    tug_count = (features.get("tug_count") or "").strip()
+    if tug_count:
+        parts.append(f"rebocadores {tug_count}")
+    return " | ".join(parts)
+
+
+def _build_casebook_match_rows(case: dict, case_pool: list[dict], limit: int = 3) -> list[dict]:
+    features = case.get("feature_snapshot") or {}
+    environment_signature = build_case_environment_signature(case)
+    ranked = rank_similar_maneuver_cases(
+        case_pool,
+        maneuver_type=case.get("maneuver_type", ""),
+        origin=features.get("origin") or case.get("origin_label", ""),
+        destination=features.get("destination") or case.get("destination_label", ""),
+        vessel_type=features.get("vessel_type", ""),
+        vessel_loa_m=str(features.get("vessel_loa_m") or ""),
+        bow_thruster=features.get("bow_thruster", ""),
+        stern_thruster=features.get("stern_thruster", ""),
+        tug_count=features.get("tug_count", ""),
+        environment_signature=environment_signature,
+        limit=max(limit + 1, 4),
+    )
+
+    rows = []
+    for match in ranked:
+        if match.get("maneuver_id") == case.get("maneuver_id"):
+            continue
+        label, badge = _case_feedback_state_meta(match.get("feedback_status"))
+        rows.append(
+            {
+                "maneuver_id": match.get("maneuver_id", ""),
+                "port_call_id": match.get("port_call_id", ""),
+                "reference_code": match.get("reference_code", "--"),
+                "vessel_name": match.get("vessel_name", "--"),
+                "route_label": f"{match.get('origin_label') or '--'} -> {match.get('destination_label') or '--'}",
+                "latest_event_label": match.get("latest_event_label", "--"),
+                "state_label": match.get("current_state_label", "--"),
+                "similarity_score": match.get("similarity_score", 0),
+                "reasons_label": ", ".join(match.get("similarity_reasons") or []) or "perfil semelhante",
+                "experience_label": match.get("experience_label", "Semelhança operacional"),
+                "experience_badge": match.get("experience_badge", "neutral"),
+                "feedback_status_label": label,
+                "feedback_badge": badge,
+            }
+        )
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def _build_admin_casebooks_payload() -> dict:
+    chat_feedback_allowed = {"all", "pending", "approved", "review"}
+    case_feedback_allowed = {"all", "pending", "observed", "approved", "avoid", "review"}
+    case_type_allowed = {"", "entry", "departure", "shift"}
+    chat_feedback = _normalized_filter_value(request.args.get("chat_feedback"), chat_feedback_allowed, "pending")
+    case_feedback = _normalized_filter_value(request.args.get("case_feedback"), case_feedback_allowed, "pending")
+    case_type = _normalized_filter_value(request.args.get("case_type"), case_type_allowed, "")
+
+    all_chat_messages = services.store.list_reviewable_chat_messages(limit=240)
+    all_cases = services.store.list_maneuver_cases(limit=240)
+    all_cases.sort(
+        key=lambda item: (
+            item.get("latest_event_at") or "",
+            item.get("updated_at") or "",
+        ),
+        reverse=True,
+    )
+
+    def _message_visible(item: dict) -> bool:
+        status = (item.get("feedback_status") or "").strip().lower()
+        if chat_feedback == "pending":
+            return not status
+        if chat_feedback in {"approved", "review"}:
+            return status == chat_feedback
+        return True
+
+    def _case_visible(item: dict) -> bool:
+        status = (item.get("feedback_status") or "").strip().lower()
+        if case_type and (item.get("maneuver_type") or "").strip().lower() != case_type:
+            return False
+        if case_feedback == "pending":
+            return not status
+        if case_feedback in {"observed", "approved", "avoid", "review"}:
+            return status == case_feedback
+        return True
+
+    visible_chat_messages = [item for item in all_chat_messages if _message_visible(item)]
+    visible_cases = [item for item in all_cases if _case_visible(item)]
+
+    chat_rows = []
+    for item in visible_chat_messages[:16]:
+        status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
+        answer = str(item.get("content") or "")
+        question = str(item.get("question") or "")
+        chat_rows.append(
+            {
+                "id": item.get("id", ""),
+                "conversation_id": item.get("conversation_id", ""),
+                "owner_username": item.get("username", ""),
+                "conversation_title": item.get("conversation_title", "Conversa"),
+                "question": question,
+                "question_preview": _preview_text(question, limit=220) or "Sem pergunta anterior identificada.",
+                "answer": answer,
+                "answer_preview": _preview_text(answer, limit=420) or "Sem resposta guardada.",
+                "feedback_status": (item.get("feedback_status") or "").strip().lower(),
+                "feedback_status_label": status_label,
+                "feedback_badge": badge,
+                "feedback_note": item.get("feedback_note", ""),
+                "feedback_correction": item.get("feedback_correction", ""),
+                "feedback_correction_document": item.get("feedback_correction_document", ""),
+                "feedback_updated_by": item.get("feedback_updated_by", ""),
+                "feedback_updated_at_label": item.get("feedback_updated_at_label", ""),
+                "created_at_label": item.get("created_at_label", ""),
+                "channel_label": _feedback_source_label(item.get("channel", "")),
+                "citation_documents": list(item.get("citation_documents") or []),
+            }
+        )
+
+    observation_case_rows = []
+    governed_case_rows = []
+    for item in visible_cases:
+        status_clean = (item.get("feedback_status") or "").strip().lower()
+        status_label, badge = _case_feedback_state_meta(status_clean)
+        bucket, learning_title, learning_summary, learning_badge = _case_governance_meta(status_clean)
+        row = {
+            "maneuver_id": item.get("maneuver_id", ""),
+            "port_call_id": item.get("port_call_id", ""),
+            "reference_code": item.get("reference_code", "--"),
+            "vessel_name": item.get("vessel_name", "--"),
+            "maneuver_type": item.get("maneuver_type", ""),
+            "maneuver_type_label": item.get("maneuver_type_label", item.get("maneuver_type", "")),
+            "route_label": f"{item.get('origin_label') or '--'} -> {item.get('destination_label') or '--'}",
+            "latest_event_label": item.get("latest_event_label", "--"),
+            "state_label": item.get("current_state_label", "--"),
+            "feedback_status": status_clean,
+            "feedback_status_label": status_label,
+            "feedback_badge": badge,
+            "feedback_note": item.get("feedback_note", ""),
+            "feedback_updated_by": item.get("feedback_updated_by", ""),
+            "feedback_updated_at_label": item.get("feedback_updated_at_label", ""),
+            "feature_label": _casebook_feature_label(item),
+            "decision_flags": list((item.get("outcome_snapshot") or {}).get("decision_flags") or []),
+            "top_matches": _build_casebook_match_rows(item, all_cases),
+            "learning_title": learning_title,
+            "learning_summary": learning_summary,
+            "learning_badge": learning_badge,
+        }
+        target_rows = observation_case_rows if bucket == "observation" else governed_case_rows
+        if len(target_rows) < 12:
+            target_rows.append(row)
+
+    if not visible_cases and not visible_chat_messages:
+        state = "neutral"
+        state_label = "Sem itens"
+        summary = "Nenhuma mensagem ou caso corresponde aos filtros atuais."
+    elif any(not (item.get("feedback_status") or "").strip() for item in visible_cases) or any(
+        not (item.get("feedback_status") or "").strip() for item in visible_chat_messages
+    ):
+        state = "degraded"
+        state_label = "Por validar"
+        summary = "Há sinais recolhidos pelo sistema que ainda não foram validados por um administrador."
+    elif any((item.get("feedback_status") or "").strip() in {"avoid", "review"} for item in visible_cases):
+        state = "degraded"
+        state_label = "Com alertas"
+        summary = "Os casos visíveis já estão governados, mas existem padrões marcados para evitar ou rever."
+    elif any((item.get("feedback_status") or "").strip() == "observed" for item in visible_cases):
+        state = "neutral"
+        state_label = "Em observação"
+        summary = "Há correlações observadas em casos operacionais, mas ainda sem validação suficiente para entrarem como experiência recomendável."
+    else:
+        state = "online"
+        state_label = "Governado"
+        summary = "As mensagens e os casos visíveis já têm decisão humana sobre reutilização ou valor operacional."
+
+    return {
+        "state": state,
+        "state_label": state_label,
+        "summary": summary,
+        "return_to": _admin_casebooks_return_to(),
+        "filters": {
+            "chat_feedback": chat_feedback,
+            "case_feedback": case_feedback,
+            "case_type": case_type,
+        },
+        "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
+        "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
+        "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
+        "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
+        "case_observed_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "observed"),
+        "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
+        "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),
+        "chat_rows": chat_rows,
+        "observation_case_rows": observation_case_rows,
+        "governed_case_rows": governed_case_rows,
+    }
+
+
 @bp.route("/admin/status")
 @login_required
 @role_required("admin")
@@ -362,6 +648,71 @@ def admin_bot():
     """Painel de acompanhamento do bot, evals e correções supervisionadas."""
     refresh_knowledge_state(force_reindex=False)
     return render_template("admin_bot.html", bot=_build_admin_bot_payload(), title="Bot e evals")
+
+
+@bp.route("/admin/casebooks")
+@login_required
+@role_required("admin")
+def admin_casebooks():
+    """Painel admin para rever mensagens do chat e gerir casos operacionais."""
+    return render_template("admin_casebooks.html", casebooks=_build_admin_casebooks_payload(), title="Casebooks")
+
+
+@bp.route("/admin/casebooks/messages/<message_id>/feedback", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_casebooks_message_feedback(message_id: str):
+    """Guardar a decisão admin sobre a reutilização de uma resposta do chat."""
+    owner_username = (request.form.get("owner_username") or "").strip().lower()
+    conversation_id = (request.form.get("conversation_id") or "").strip()
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_casebooks")
+    try:
+        if not owner_username or not conversation_id:
+            raise ValueError("Mensagem inválida para revisão.")
+        services.store.update_message_feedback(
+            username=owner_username,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            feedback_status=validate_feedback_status(request.form.get("feedback_status", "")),
+            feedback_note=(request.form.get("feedback_note") or "").strip(),
+            feedback_correction=(request.form.get("feedback_correction") or "").strip(),
+            feedback_correction_document=(request.form.get("feedback_correction_document") or "").strip(),
+            feedback_updated_by=session["username"],
+        )
+        sync_feedback_correction_eval_case(
+            services.store,
+            owner_username,
+            conversation_id,
+            message_id,
+            source="web",
+        )
+        flash("Decisão sobre a mensagem guardada.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/casebooks/maneuvers/<maneuver_id>/feedback", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_casebooks_maneuver_feedback(maneuver_id: str):
+    """Guardar a validação admin de um caso operacional do casebook."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_casebooks")
+    try:
+        feedback_status = validate_operational_feedback_status(request.form.get("feedback_status", ""))
+        feedback_note = (request.form.get("feedback_note") or "").strip()
+        if feedback_status in {"avoid", "review"} and not feedback_note:
+            raise ValueError("Indica uma nota para justificar esta decisão operacional.")
+        services.store.update_maneuver_case_feedback(
+            maneuver_id=maneuver_id,
+            feedback_status=feedback_status,
+            feedback_note=feedback_note,
+            feedback_by=session["username"],
+        )
+        flash("Validação do caso operacional guardada.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(return_to)
 
 
 @bp.route("/admin/users")

@@ -1363,6 +1363,64 @@ class LocalStore(BaseStore):
         )
         return matches[:limit]
 
+    def list_reviewable_chat_messages(
+        self,
+        *,
+        limit: int = 100,
+        feedback_status: Optional[str] = None,
+    ) -> List[Dict]:
+        clean_feedback_status = _clean_text(feedback_status).lower()
+        conversations = {item["id"]: item for item in self._read_conversations()}
+        grouped_messages: Dict[str, List[Dict]] = {}
+        for message in self._read_messages():
+            conversation_id = message.get("conversation_id", "")
+            if conversation_id:
+                grouped_messages.setdefault(conversation_id, []).append(message)
+
+        items = []
+        for conversation_id, messages in grouped_messages.items():
+            conversation = conversations.get(conversation_id)
+            if not conversation:
+                continue
+            messages.sort(key=lambda item: item.get("created_at", ""))
+            for message in messages:
+                if message.get("role") != "assistant":
+                    continue
+                message_feedback = _clean_text(message.get("feedback_status")).lower()
+                if clean_feedback_status == "pending" and message_feedback:
+                    continue
+                if clean_feedback_status in ALLOWED_FEEDBACK_STATUSES and message_feedback != clean_feedback_status:
+                    continue
+                if clean_feedback_status not in {"", "all", "pending"} | ALLOWED_FEEDBACK_STATUSES:
+                    continue
+                created_at = message.get("created_at", "")
+                feedback_updated_at = message.get("feedback_updated_at")
+                items.append(
+                    {
+                        **message,
+                        "username": conversation.get("username", ""),
+                        "conversation_title": conversation.get("title", DEFAULT_CONVERSATION_TITLE),
+                        "question": _question_for_assistant_message(messages, message.get("id", "")),
+                        "feedback_status": message_feedback,
+                        "channel": message.get("channel") or "web",
+                        "citation_documents": _unique_citation_documents(message),
+                        "created_at_label": _utc_iso_to_label(created_at) if created_at else "",
+                        "feedback_updated_at_label": (
+                            _utc_iso_to_label(feedback_updated_at)
+                            if feedback_updated_at else ""
+                        ),
+                    }
+                )
+
+        items.sort(
+            key=lambda item: (
+                item.get("feedback_updated_at") or item.get("created_at") or "",
+                item.get("created_at") or "",
+            ),
+            reverse=True,
+        )
+        return items[: max(limit, 0)]
+
     def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
         clean_source = _clean_text(source).lower()
         items = []
@@ -1512,6 +1570,8 @@ class LocalStore(BaseStore):
         bow_thruster: str = "",
         stern_thruster: str = "",
         tug_count: str = "",
+        environment_signature: Optional[Dict] = None,
+        strict_route: bool = True,
         limit: int = 5,
     ) -> List[Dict]:
         return rank_similar_maneuver_cases(
@@ -1524,6 +1584,8 @@ class LocalStore(BaseStore):
             bow_thruster=bow_thruster,
             stern_thruster=stern_thruster,
             tug_count=tug_count,
+            environment_signature=environment_signature,
+            strict_route=strict_route,
             limit=limit,
         )
 

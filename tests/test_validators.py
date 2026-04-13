@@ -12,6 +12,7 @@ from core.validators import (
     validate_not_past_datetime,
     validate_optional_positive_number,
     validate_optional_text,
+    validate_operational_feedback_status,
     validate_password,
     validate_phone,
     validate_positive_number,
@@ -221,6 +222,18 @@ class TestFeedbackStatus(unittest.TestCase):
     def test_invalid_raises(self):
         with self.assertRaises(ValueError):
             validate_feedback_status("rejected")
+
+
+class TestOperationalFeedbackStatus(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(validate_operational_feedback_status("observed"), "observed")
+        self.assertEqual(validate_operational_feedback_status("approved"), "approved")
+        self.assertEqual(validate_operational_feedback_status("avoid"), "avoid")
+        self.assertEqual(validate_operational_feedback_status("review"), "review")
+
+    def test_invalid_raises(self):
+        with self.assertRaises(ValueError):
+            validate_operational_feedback_status("rejected")
 
 
 class TestPassword(unittest.TestCase):

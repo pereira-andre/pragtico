@@ -534,6 +534,7 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertGreaterEqual(len(matches), 1)
         self.assertEqual(matches[0]["port_call_id"], first["id"])
         self.assertGreater(matches[0]["similarity_score"], 0)
+        self.assertTrue(all(item["port_call_id"] != second["id"] for item in matches))
 
     def test_update_maneuver_case_feedback_persists_validation(self) -> None:
         port_call = self._create_entry()
@@ -560,6 +561,31 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(case["feedback_status_label"], "Referência positiva")
         self.assertEqual(case["feedback_note"], "Padrão seguro com esta configuração.")
         self.assertEqual(case["feedback_updated_by"], "piloto")
+
+    def test_update_maneuver_case_feedback_can_mark_case_as_observed(self) -> None:
+        port_call = self._create_entry()
+        self.store.approve_port_call(port_call["id"], decided_by="admin", approval_note="Entrada ok.")
+        self.store.attach_entry_report(
+            port_call["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-24T05:40:00+00:00",
+            maneuver_finished_at="2026-03-24T06:10:00+00:00",
+            draft_m="9.94",
+            notes="Entrada realizada sem incidentes.",
+        )
+        updated_port_call = self.store.get_port_call(port_call["id"])
+        entry = next(item for item in updated_port_call["maneuver_history"] if item["type"] == "entry")
+
+        case = self.store.update_maneuver_case_feedback(
+            maneuver_id=entry["id"],
+            feedback_status="observed",
+            feedback_note="Há padrão repetido, mas ainda sem validação suficiente.",
+            feedback_by="piloto",
+        )
+
+        self.assertEqual(case["feedback_status"], "observed")
+        self.assertEqual(case["feedback_status_label"], "Correlação observada")
+        self.assertEqual(case["feedback_note"], "Há padrão repetido, mas ainda sem validação suficiente.")
 
     def test_similarity_prefers_validated_case_when_profile_is_equivalent(self) -> None:
         first = self._create_entry()

@@ -86,6 +86,72 @@
   gap: 14px;
 }
 
+.scale-plan-composer {
+  display: grid;
+  gap: 14px;
+}
+
+.scale-plan-intro {
+  margin: 0;
+}
+
+.scale-plan-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.scale-plan-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scale-plan-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+#scale-plan-mode-departure:checked + .scale-plan-choice,
+#scale-plan-mode-shift:checked + .scale-plan-choice {
+  border-color: rgba(10, 108, 102, 0.3);
+  background: rgba(10, 108, 102, 0.12);
+  color: var(--text-strong);
+}
+
+.scale-plan-panels {
+  flex-basis: 100%;
+}
+
+.scale-plan-panel {
+  display: none;
+}
+
+.scale-plan-panel.is-active,
+.scale-plan-panels-single .scale-plan-panel {
+  display: grid;
+}
+
+#scale-plan-mode-departure:checked ~ .scale-plan-panels .scale-plan-panel-departure,
+#scale-plan-mode-shift:checked ~ .scale-plan-panels .scale-plan-panel-shift {
+  display: grid;
+}
+
+.scale-plan-form {
+  gap: 14px;
+}
+
 .scale-guidance-card,
 .scale-action-placeholder {
   grid-column: 1 / -1;
@@ -134,6 +200,72 @@
 .scale-maneuver-list {
   display: grid;
   gap: 14px;
+}
+
+.scale-maneuver-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.scale-maneuver-row:hover {
+  border-color: rgba(10, 108, 102, 0.28);
+  background: rgba(10, 108, 102, 0.08);
+  transform: translateY(-1px);
+}
+
+.scale-maneuver-row-main,
+.scale-maneuver-row-title {
+  display: grid;
+  gap: 6px;
+}
+
+.scale-maneuver-row-main {
+  flex: 1;
+}
+
+.scale-maneuver-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scale-maneuver-row-title strong,
+.scale-maneuver-row-route,
+.scale-maneuver-row-meta {
+  margin: 0;
+}
+
+.scale-maneuver-row-badges,
+.scale-maneuver-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.scale-maneuver-row-route {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.scale-maneuver-row-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.scale-maneuver-row-cta {
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .scale-maneuver-card {
@@ -344,6 +476,20 @@
   .scale-maneuver-grid,
   .admin-scale-edit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .scale-plan-switch,
+  .scale-maneuver-row,
+  .scale-maneuver-row-top {
+    display: grid;
+  }
+
+  .scale-maneuver-row {
+    gap: 12px;
+  }
+
+  .scale-maneuver-row-cta {
+    justify-self: start;
   }
 
   .maneuver-step {
@@ -1817,6 +1963,12 @@
   border-color: rgba(248, 113, 113, 0.24);
 }
 
+.admin-status-badge.is-neutral {
+  background: rgba(130, 160, 195, 0.12);
+  color: var(--muted);
+  border-color: rgba(130, 160, 195, 0.2);
+}
+
 .admin-status-alert-list {
   display: grid;
   gap: 10px;
@@ -1992,6 +2144,17 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.admin-casebooks-hero {
+  background:
+    radial-gradient(circle at top left, rgba(10, 108, 102, 0.16), transparent 24%),
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(10, 24, 37, 0.98), rgba(14, 28, 41, 0.96));
+}
+
+.admin-casebooks-filter-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .admin-bot-case-grid,
 .admin-bot-document-grid {
   display: grid;
@@ -2038,6 +2201,49 @@
 .admin-bot-case-answer,
 .admin-bot-case-meta {
   color: var(--muted);
+}
+
+.admin-casebook-card {
+  align-content: start;
+}
+
+.admin-casebook-route {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.admin-casebook-form {
+  margin-top: 4px;
+}
+
+.admin-casebook-learning {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-casebook-longtext {
+  white-space: pre-wrap;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.admin-casebook-section-block {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-casebook-match-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-casebook-match {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(29, 44, 43, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .admin-bot-document-card .admin-status-compact-grid {

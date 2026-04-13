@@ -264,6 +264,16 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_reviewable_chat_messages(
+        self,
+        *,
+        limit: int = 100,
+        feedback_status: Optional[str] = None,
+    ) -> List[Dict]:
+        """Return assistant chat messages across users for admin review."""
+        raise NotImplementedError
+
+    @abstractmethod
     def list_feedback_eval_cases(self, *, source: str = "") -> List[Dict]:
         """Return stored supervised eval cases derived from operator feedback."""
         raise NotImplementedError
@@ -329,6 +339,8 @@ class BaseStore(ABC):
         bow_thruster: str = "",
         stern_thruster: str = "",
         tug_count: str = "",
+        environment_signature: Optional[Dict] = None,
+        strict_route: bool = True,
         limit: int = 5,
     ) -> List[Dict]:
         """Return the best matching historical maneuver cases for the given profile."""

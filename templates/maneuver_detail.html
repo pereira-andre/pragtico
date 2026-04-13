@@ -235,112 +235,18 @@
     </section>
 
     <aside class="detail-side">
-      {% if maneuver_view.similar_cases %}
+      {% if current_role == "admin" %}
         <section class="panel inset-panel">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Casebook</p>
-              <h2>Casos semelhantes</h2>
+              <p class="eyebrow">Experiência</p>
+              <h2>Casebooks</h2>
             </div>
           </div>
-          {% if maneuver.casebook_recommendation %}
-            <section class="casebook-recommendation casebook-recommendation-{{ maneuver.casebook_recommendation.status_key }}">
-              <strong>{{ maneuver.casebook_recommendation.title }}</strong>
-              <p>{{ maneuver.casebook_recommendation.summary }}</p>
-              <small>{{ maneuver.casebook_recommendation.basis_label }}</small>
-              {% if maneuver.casebook_recommendation.signals_label %}
-                <small>{{ maneuver.casebook_recommendation.signals_label }}</small>
-              {% endif %}
-            </section>
-          {% endif %}
-          <div class="casebook-list">
-            {% for case in maneuver_view.similar_cases %}
-              <article class="casebook-card casebook-card-prominent">
-                <div class="casebook-card-top">
-                  <div>
-                    <strong>{{ case.reference_code }}</strong>
-                    <p>{{ case.vessel_name }}</p>
-                  </div>
-                  <div class="stack tight align-end">
-                    <span class="planned-status planned-status-{{ case.status_class }}">{{ case.state_label }}</span>
-                    <span class="casebook-score">{{ case.similarity_score }}</span>
-                  </div>
-                </div>
-                <p class="casebook-route">{{ case.route_label }}</p>
-                <p class="casebook-reasons">{{ case.reasons_label }}</p>
-                <div class="casebook-meta-grid">
-                  <span>{{ case.latest_event_label }}</span>
-                  <span>Rebocadores {{ case.tug_count }}</span>
-                  <span>LOA {{ case.loa_label }}</span>
-                  <span>Bow {{ case.bow_thruster_label }} · Stern {{ case.stern_thruster_label }}</span>
-                </div>
-                {% if case.decision_flags %}
-                  <div class="casebook-tag-list">
-                    {% for flag in case.decision_flags %}
-                      <span class="casebook-tag">{{ flag }}</span>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-                {% if case.feedback_status_label %}
-                  <div class="casebook-tag-list">
-                    <span class="casebook-tag casebook-tag-feedback">{{ case.feedback_status_label }}</span>
-                  </div>
-                {% endif %}
-                {% if case.decision_excerpt %}
-                  <p class="casebook-note">{{ case.decision_excerpt }}</p>
-                {% endif %}
-                {% if case.feedback_note %}
-                  <p class="casebook-note">{{ case.feedback_note }}</p>
-                {% endif %}
-                <div class="inline-link-row">
-                  <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=case.port_call_id, maneuver_id=case.maneuver_id) }}">Abrir caso</a>
-                </div>
-              </article>
-            {% endfor %}
+          <p class="muted">As correlações e a validação desta manobra passaram para a área admin de casebooks, onde a memória operacional é governada fora do fluxo diário.</p>
+          <div class="inline-link-row">
+            <a class="outline-link" href="{{ url_for('admin.admin_casebooks', case_type=maneuver.type) }}">Abrir casebooks</a>
           </div>
-        </section>
-      {% endif %}
-
-      {% if current_role in ["admin", "piloto"] and maneuver.status_key in ["completed", "aborted"] %}
-        <section class="panel inset-panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Validação</p>
-              <h2>Feedback operacional</h2>
-            </div>
-          </div>
-          {% if maneuver_view.case_record.feedback_status_label %}
-            <section class="casebook-recommendation casebook-recommendation-{{ 'caution' if maneuver_view.case_record.feedback_status == 'avoid' else 'positive' if maneuver_view.case_record.feedback_status == 'approved' else 'neutral' }}">
-              <strong>{{ maneuver_view.case_record.feedback_status_label }}</strong>
-              {% if maneuver_view.case_record.feedback_note %}
-                <p>{{ maneuver_view.case_record.feedback_note }}</p>
-              {% endif %}
-              <small>
-                {% if maneuver_view.case_record.feedback_updated_by %}
-                  {{ maneuver_view.case_record.feedback_updated_by }}
-                {% endif %}
-                {% if maneuver_view.case_record.feedback_updated_at_label %}
-                  · {{ maneuver_view.case_record.feedback_updated_at_label }}
-                {% endif %}
-              </small>
-            </section>
-          {% endif %}
-          <form method="post" action="{{ url_for('port_calls.update_maneuver_case_feedback', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" class="stack">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>
-              Classificação do caso
-              <select name="feedback_status" required>
-                <option value="approved" {% if maneuver_view.case_record.feedback_status == 'approved' %}selected{% endif %}>Referência positiva</option>
-                <option value="avoid" {% if maneuver_view.case_record.feedback_status == 'avoid' %}selected{% endif %}>Evitar como padrão</option>
-                <option value="review" {% if maneuver_view.case_record.feedback_status == 'review' %}selected{% endif %}>Rever caso</option>
-              </select>
-            </label>
-            <label>
-              Nota de validação
-              <textarea name="feedback_note" rows="3" placeholder="Justifica a decisão, exceção, risco ou boa prática...">{{ maneuver_view.case_record.feedback_note }}</textarea>
-            </label>
-            <button type="submit" class="mini-button">Guardar feedback</button>
-          </form>
         </section>
       {% endif %}
 
