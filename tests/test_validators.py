@@ -226,7 +226,6 @@ class TestFeedbackStatus(unittest.TestCase):
 
 class TestOperationalFeedbackStatus(unittest.TestCase):
     def test_valid(self):
-        self.assertEqual(validate_operational_feedback_status("observed"), "observed")
         self.assertEqual(validate_operational_feedback_status("approved"), "approved")
         self.assertEqual(validate_operational_feedback_status("avoid"), "avoid")
         self.assertEqual(validate_operational_feedback_status("review"), "review")

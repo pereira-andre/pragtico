@@ -260,7 +260,6 @@ def _is_wave_sensitive_maneuver(maneuver_type: Optional[str]) -> bool:
 
 def _feedback_status_label(value: Optional[str]) -> str:
     return {
-        "observed": "Correlação observada",
         "approved": "Referência positiva",
         "avoid": "Evitar como padrão",
         "review": "Rever caso",
@@ -662,8 +661,6 @@ def _case_feedback_rank(value: str) -> int:
     clean = (value or "").strip().lower()
     if clean == "approved":
         return 3
-    if clean == "observed":
-        return 1
     if clean == "review":
         return -1
     if clean == "avoid":
@@ -680,8 +677,6 @@ def _experience_meta(
     clean = (feedback_status or "").strip().lower()
     if clean == "approved":
         return "Experiência validada", "online"
-    if clean == "observed":
-        return "Correlação observada", "neutral"
     if clean == "avoid":
         return "Usar com reserva", "degraded"
     if clean == "review":
@@ -827,9 +822,6 @@ def rank_similar_maneuver_cases(
         if feedback_status == "approved":
             score += 14
             reasons.append("referência validada")
-        elif feedback_status == "observed":
-            score += 5
-            reasons.append("correlação observada")
         elif feedback_status == "review":
             score -= 8
             reasons.append("caso em revisão")

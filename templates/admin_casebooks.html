@@ -58,7 +58,6 @@
       <label>
         Decisão operacional
         <select name="feedback_status" required>
-          <option value="observed" {% if item.feedback_status == "observed" %}selected{% endif %}>Correlação observada</option>
           <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Experiência validada</option>
           <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
           <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever caso</option>
@@ -102,12 +101,7 @@
       <article class="hero-stat">
         <span>Casos por validar</span>
         <strong>{{ casebooks.case_pending_total }}</strong>
-        <small>sem decisão humana ainda</small>
-      </article>
-      <article class="hero-stat">
-        <span>Correlações observadas</span>
-        <strong>{{ casebooks.case_observed_total }}</strong>
-        <small>ainda sem experiência validada</small>
+        <small>correlações em observação</small>
       </article>
       <article class="hero-stat">
         <span>Experiência validada</span>
@@ -146,7 +140,6 @@
           Casos operacionais
           <select name="case_feedback">
             <option value="pending" {% if casebooks.filters.case_feedback == "pending" %}selected{% endif %}>Sem validação</option>
-            <option value="observed" {% if casebooks.filters.case_feedback == "observed" %}selected{% endif %}>Correlação observada</option>
             <option value="approved" {% if casebooks.filters.case_feedback == "approved" %}selected{% endif %}>Experiência validada</option>
             <option value="avoid" {% if casebooks.filters.case_feedback == "avoid" %}selected{% endif %}>Evitar como padrão</option>
             <option value="review" {% if casebooks.filters.case_feedback == "review" %}selected{% endif %}>Rever caso</option>

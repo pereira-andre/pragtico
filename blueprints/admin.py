@@ -379,8 +379,6 @@ def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
 
 def _case_feedback_state_meta(value: str | None) -> tuple[str, str]:
     clean = (value or "").strip().lower()
-    if clean == "observed":
-        return "Correlação observada", "neutral"
     if clean == "approved":
         return "Experiência validada", "online"
     if clean == "avoid":
@@ -398,13 +396,6 @@ def _case_governance_meta(value: str | None) -> tuple[str, str, str, str]:
             "Experiência validada",
             "Pode sustentar recomendação histórica, sempre com validação operacional do momento.",
             "online",
-        )
-    if clean == "observed":
-        return (
-            "observation",
-            "Correlação observada",
-            "Existe padrão útil, mas ainda não sobe a experiência recomendável sem mais validação.",
-            "neutral",
         )
     if clean == "avoid":
         return (
@@ -487,7 +478,7 @@ def _build_casebook_match_rows(case: dict, case_pool: list[dict], limit: int = 3
 
 def _build_admin_casebooks_payload() -> dict:
     chat_feedback_allowed = {"all", "pending", "approved", "review"}
-    case_feedback_allowed = {"all", "pending", "observed", "approved", "avoid", "review"}
+    case_feedback_allowed = {"all", "pending", "approved", "avoid", "review"}
     case_type_allowed = {"", "entry", "departure", "shift"}
     chat_feedback = _normalized_filter_value(request.args.get("chat_feedback"), chat_feedback_allowed, "pending")
     case_feedback = _normalized_filter_value(request.args.get("case_feedback"), case_feedback_allowed, "pending")
@@ -517,7 +508,7 @@ def _build_admin_casebooks_payload() -> dict:
             return False
         if case_feedback == "pending":
             return not status
-        if case_feedback in {"observed", "approved", "avoid", "review"}:
+        if case_feedback in {"approved", "avoid", "review"}:
             return status == case_feedback
         return True
 
@@ -600,10 +591,6 @@ def _build_admin_casebooks_payload() -> dict:
         state = "degraded"
         state_label = "Com alertas"
         summary = "Os casos visíveis já estão governados, mas existem padrões marcados para evitar ou rever."
-    elif any((item.get("feedback_status") or "").strip() == "observed" for item in visible_cases):
-        state = "neutral"
-        state_label = "Em observação"
-        summary = "Há correlações observadas em casos operacionais, mas ainda sem validação suficiente para entrarem como experiência recomendável."
     else:
         state = "online"
         state_label = "Governado"
@@ -623,7 +610,6 @@ def _build_admin_casebooks_payload() -> dict:
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
-        "case_observed_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "observed"),
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),
         "chat_rows": chat_rows,

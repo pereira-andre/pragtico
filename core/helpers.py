@@ -1877,7 +1877,6 @@ def _format_maneuver_case_flags(flags: list[str] | None) -> list[str]:
 
 def _format_case_feedback_label(value: str | None) -> str:
     return {
-        "observed": "correlação observada",
         "approved": "referência positiva",
         "avoid": "evitar como padrão",
         "review": "rever caso",
@@ -2298,7 +2297,6 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
     completed = sum(1 for item in similar_cases if item.get("status_class") == "completed")
     aborted = sum(1 for item in similar_cases if item.get("status_class") == "aborted")
     approved_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "approved")
-    observed_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "observed")
     avoid_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "avoid")
     review_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "review")
     wave_related = sum(
@@ -2324,9 +2322,6 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
     elif approved_feedback and avoid_feedback == 0:
         status_key = "positive"
         title = "Feedback validado favorável"
-    elif observed_feedback and approved_feedback == 0 and avoid_feedback == 0:
-        status_key = "neutral"
-        title = "Correlação observada, sem validação final"
     elif completed and aborted == 0:
         status_key = "positive"
         title = "Histórico favorável"
@@ -2348,8 +2343,6 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         recommendation_parts.append(f"ondulação relevante em {wave_related} caso(s)")
     if approved_feedback:
         recommendation_parts.append(f"feedback positivo validado em {approved_feedback} caso(s)")
-    if observed_feedback:
-        recommendation_parts.append(f"correlação observada em {observed_feedback} caso(s)")
     if avoid_feedback:
         recommendation_parts.append(f"feedback a evitar em {avoid_feedback} caso(s)")
     if review_feedback:
@@ -2359,8 +2352,6 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         summary = "Casos semelhantes foram sinalizados para evitar este padrão sem validação reforçada."
     elif approved_feedback and avoid_feedback == 0:
         summary = "Casos semelhantes com feedback validado apoiam esta abordagem, mantendo confirmação humana."
-    elif observed_feedback and approved_feedback == 0:
-        summary = "Há correlações observadas em casos parecidos, mas ainda sem experiência validada para recomendar este padrão por si só."
     elif status_key == "caution":
         summary = "Pede validação mais conservadora antes de confirmar esta manobra."
     elif status_key == "positive":
