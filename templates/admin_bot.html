@@ -135,6 +135,10 @@
           <span>Alertas</span>
           <strong>{{ casebooks.case_review_total }}</strong>
         </div>
+        <div class="admin-status-fact">
+          <span>Prática importada</span>
+          <strong>{{ casebooks.practice_active_total }}/{{ casebooks.practice_total }}</strong>
+        </div>
       </div>
       <p class="admin-status-note">{{ casebooks.summary }}</p>
 
@@ -174,6 +178,109 @@
           <a class="outline-link" href="{{ url_for('admin.admin_bot', _anchor='casebooks') }}">Limpar</a>
         </div>
       </form>
+
+      <div class="admin-casebook-sheet-block">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Excel de prática</p>
+            <h3>Experiência prática importada</h3>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('admin.import_practice_experience') }}" enctype="multipart/form-data" class="archive-filter-form admin-casebook-compact-filters">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+          <div class="archive-filter-grid admin-casebooks-filter-grid">
+            <label>
+              Ficheiro .xlsx
+              <input type="file" name="practice_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </label>
+            <label>
+              Estado ao importar
+              <select name="feedback_status">
+                <option value="approved" selected>Aprovado pelo admin</option>
+                <option value="review">Importar para revisão</option>
+              </select>
+            </label>
+            <label class="checkbox-line">
+              <input type="checkbox" name="replace_source" value="1" checked>
+              Substituir padrões do mesmo ficheiro
+            </label>
+          </div>
+          <p class="admin-status-note">
+            A importação agrega manobras por tipo, navio, dimensão, calado e cais. O bot só reutiliza padrões aprovados ou marcados como evitar; padrões em revisão ficam fora do contexto.
+            {% if casebooks.practice_local_source_exists %}
+              Sem upload, o servidor usa <code>{{ casebooks.practice_source_filename }}</code>.
+            {% endif %}
+          </p>
+          <button type="submit" class="mini-button">Importar experiência</button>
+        </form>
+        {% if casebooks.practice_total %}
+          <form method="post" action="{{ url_for('admin.clear_practice_experience') }}" class="admin-sheet-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+            <button type="submit" class="mini-button">Limpar experiência importada</button>
+          </form>
+        {% endif %}
+        {% if casebooks.practice_rows %}
+          <div class="admin-casebook-sheet-wrap">
+            <table class="admin-casebook-sheet">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Padrão</th>
+                  <th>Perfil</th>
+                  <th>Métricas</th>
+                  <th>Controlo admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in casebooks.practice_rows %}
+                  <tr>
+                    <td><span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span></td>
+                    <td>
+                      <strong>{{ item.reference_code }}</strong><br>
+                      <span class="muted">{{ item.source_filename }}</span><br>
+                      {{ item.maneuver_type_label }} · {{ item.route_label }}
+                    </td>
+                    <td>
+                      {{ item.profile_label }}<br>
+                      <span class="muted">Navios: {{ item.vessel_examples_label }}</span>
+                    </td>
+                    <td>
+                      {{ item.case_count }} caso(s)<br>
+                      Duração mediana {{ item.duration_median_label }}<br>
+                      Rebocadores {{ item.tug_distribution_label }}
+                      {% if item.comments_label and item.comments_label != "--" %}
+                        <br><span class="muted">{{ item.comments_label }}</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="post" action="{{ url_for('admin.update_practice_experience', record_id=item.id) }}" class="admin-sheet-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+                        <select name="feedback_status" required>
+                          <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar</option>
+                          <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar padrão</option>
+                          <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever</option>
+                        </select>
+                        <textarea name="feedback_note" rows="2" placeholder="Nota de validação">{{ item.feedback_note }}</textarea>
+                        <button type="submit" class="mini-button">Guardar</button>
+                      </form>
+                      <form method="post" action="{{ url_for('admin.delete_practice_experience', record_id=item.id) }}" class="admin-sheet-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+                        <button type="submit" class="mini-button">Remover</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="admin-status-note">Ainda não há experiência prática importada para os filtros atuais.</p>
+        {% endif %}
+      </div>
 
       <div class="admin-casebook-sheet-block">
         <div class="section-head compact-head">

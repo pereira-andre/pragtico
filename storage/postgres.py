@@ -28,6 +28,7 @@ from domain.document_processing import (
     sanitize_upload_filename,
     slugify,
 )
+from domain.practice_experience import PRACTICE_EXPERIENCE_ACTIVE_STATUSES, list_practice_experience_records
 
 from .base import BaseStore
 from .maneuver_case_helpers import (
@@ -2482,6 +2483,12 @@ class PostgresStore(BaseStore):
     ) -> List[Dict]:
         with self._connect() as conn:
             rows = self._list_raw_maneuver_cases(conn, limit=500, maneuver_type=maneuver_type)
+        rows.extend(
+            list_practice_experience_records(
+                self,
+                feedback_statuses=PRACTICE_EXPERIENCE_ACTIVE_STATUSES,
+            )
+        )
         return rank_similar_maneuver_cases(
             rows,
             maneuver_type=maneuver_type,

@@ -2208,12 +2208,22 @@
 }
 
 .admin-casebook-kpi-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-bottom: 14px;
 }
 
 .admin-casebook-compact-filters {
   margin: 16px 0;
+}
+
+.checkbox-line {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.checkbox-line input {
+  width: auto;
 }
 
 .admin-casebook-sheet-block {

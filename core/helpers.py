@@ -2208,6 +2208,7 @@ def _extract_case_decision_excerpt(case: dict) -> str:
         ((case.get("decision_snapshot") or {}).get("approval_note") or "").strip(),
         ((case.get("planning_snapshot") or {}).get("plan_observations") or "").strip(),
         ((case.get("planning_snapshot") or {}).get("plan_note") or "").strip(),
+        (case.get("practice_summary") or "").strip(),
     ):
         if value:
             compact = " ".join(value.split())
@@ -2255,6 +2256,8 @@ def _build_similar_case_cards(port_call: dict, maneuver: dict, limit: int = 3) -
                 "maneuver_id": case.get("maneuver_id", ""),
                 "port_call_id": case.get("port_call_id", ""),
                 "reference_code": case.get("reference_code", "--"),
+                "source_type": case.get("source_type", "portal"),
+                "source_label": case.get("source_label") or "Histórico PRAGtico",
                 "vessel_name": case.get("vessel_name", "--"),
                 "state_label": case.get("current_state_label", "--"),
                 "status_class": (
@@ -2299,6 +2302,7 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
     approved_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "approved")
     avoid_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "avoid")
     review_feedback = sum(1 for item in similar_cases if item.get("feedback_status") == "review")
+    practice_cases = sum(1 for item in similar_cases if item.get("source_type") == "practice_import")
     wave_related = sum(
         1
         for item in similar_cases
@@ -2347,6 +2351,8 @@ def _build_casebook_recommendation(maneuver: dict, similar_cases: list[dict]) ->
         recommendation_parts.append(f"feedback a evitar em {avoid_feedback} caso(s)")
     if review_feedback:
         recommendation_parts.append(f"{review_feedback} caso(s) marcado(s) para revisão")
+    if practice_cases:
+        recommendation_parts.append(f"experiência prática importada em {practice_cases} padrão(ões)")
 
     if avoid_feedback > approved_feedback:
         summary = "Casos semelhantes foram sinalizados para evitar este padrão sem validação reforçada."
@@ -2437,6 +2443,7 @@ def build_maneuver_case_context_source(question: str, port_calls: list[dict]) ->
         for case in maneuver.get("similar_cases", [])[:3]:
             lines.append(
                 f"- {case.get('reference_code', '--')} | {case.get('vessel_name', '--')} | "
+                f"{case.get('source_label', 'Histórico PRAGtico')} | "
                 f"{case.get('state_label', '--')} | {case.get('route_label', '--')} | "
                 f"{case.get('latest_event_label', '--')} | afinidade {case.get('similarity_score', 0)} | "
                 f"{case.get('reasons_label', 'perfil semelhante')}"

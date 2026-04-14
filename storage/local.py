@@ -26,6 +26,7 @@ from domain.document_processing import (
     sanitize_upload_filename,
     slugify,
 )
+from domain.practice_experience import PRACTICE_EXPERIENCE_ACTIVE_STATUSES, list_practice_experience_records
 
 from .base import BaseStore
 from .maneuver_case_helpers import (
@@ -1574,8 +1575,15 @@ class LocalStore(BaseStore):
         strict_route: bool = True,
         limit: int = 5,
     ) -> List[Dict]:
+        cases = self._read_maneuver_cases()
+        cases.extend(
+            list_practice_experience_records(
+                self,
+                feedback_statuses=PRACTICE_EXPERIENCE_ACTIVE_STATUSES,
+            )
+        )
         return rank_similar_maneuver_cases(
-            self._read_maneuver_cases(),
+            cases,
             maneuver_type=maneuver_type,
             origin=origin,
             destination=destination,

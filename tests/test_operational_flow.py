@@ -17,6 +17,7 @@ from core import services
 from domain.chat_actions import normalize_action_candidate
 from flask import session
 from core.helpers import answer_direct_operational_query, build_operational_chat_sources, build_scale_context
+from domain.practice_experience import PRACTICE_EXPERIENCE_STATE_KEY
 from storage import LocalStore
 
 
@@ -3486,6 +3487,7 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertIn("WhatsApp", html)
         self.assertIn("225 metros", html)
         self.assertIn("Inputs que o bot pode reutilizar", html)
+        self.assertIn("Experiência prática importada", html)
 
     def test_admin_casebooks_redirects_to_bot_page_anchor(self) -> None:
         with app.app.test_client() as client:
@@ -3494,6 +3496,147 @@ class AdminDocumentPolicyTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/bot?case_type=entry#casebooks", response.headers["Location"])
+
+    def test_admin_imports_practice_excel_as_structured_experience_for_bot(self) -> None:
+        import openpyxl
+
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Dados"
+        worksheet.append(["Manobras Realizadas"])
+        worksheet.append([
+            "No",
+            "Data",
+            "Hora Embarque",
+            "Hora Desembarque",
+            "Tempo de Manobra (h)",
+            "Tipo Manobra",
+            "Nome ",
+            "Tipo Navio",
+            "GT",
+            "Dimensão C/B (m)",
+            "Calado (m)",
+            "Rebocadores",
+            "Cais",
+            "Piloto Senior",
+            "Comentários",
+        ])
+        for index, vessel_name in enumerate(("Elbtower", "Lisbon Trader"), start=1):
+            worksheet.append([
+                index,
+                datetime(2026, 4, 10),
+                datetime(2026, 4, 10, 6, 0).time(),
+                datetime(2026, 4, 10, 7, 10).time(),
+                datetime(2026, 4, 10, 1, 10).time(),
+                "Entrada",
+                vessel_name,
+                "Contentores",
+                11662,
+                "149/22",
+                7.3,
+                2,
+                "TMS 2",
+                "Piloto Teste",
+                "Bow avariado, usar rebocador.",
+            ])
+        payload = BytesIO()
+        workbook.save(payload)
+        payload.seek(0)
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/admin/bot/practice-experience/import",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/bot#casebooks",
+                    "replace_source": "1",
+                    "feedback_status": "approved",
+                    "practice_file": (payload, "Manobras Pratica.xlsx"),
+                },
+                content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.store.list_documents(), [])
+        state = self.store.get_runtime_state(PRACTICE_EXPERIENCE_STATE_KEY)
+        self.assertIsNotNone(state)
+        self.assertEqual(len(state["records"]), 1)
+        record = state["records"][0]
+        self.assertEqual(record["feedback_status"], "approved")
+        self.assertEqual(record["source_type"], "practice_import")
+        self.assertNotIn("Piloto Teste", json.dumps(record, ensure_ascii=False))
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            review_response = client.post(
+                f"/admin/bot/practice-experience/{record['id']}/feedback",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/bot#casebooks",
+                    "feedback_status": "review",
+                    "feedback_note": "Confirmar antes de usar.",
+                },
+            )
+            approve_response = client.post(
+                f"/admin/bot/practice-experience/{record['id']}/feedback",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/bot#casebooks",
+                    "feedback_status": "approved",
+                    "feedback_note": "Validado para apoio à decisão.",
+                },
+            )
+
+        self.assertEqual(review_response.status_code, 302)
+        self.assertEqual(approve_response.status_code, 302)
+        state = self.store.get_runtime_state(PRACTICE_EXPERIENCE_STATE_KEY)
+        record = state["records"][0]
+        self.assertEqual(record["feedback_status"], "approved")
+        self.assertEqual(record["feedback_note"], "Validado para apoio à decisão.")
+
+        current = self.store.create_port_call(
+            vessel_name="Demo Container",
+            eta="2026-04-20T05:30:00+00:00",
+            created_by="admin",
+            berth="TMS 2",
+            last_port="Leixoes",
+            next_port="Barcelona",
+            notes="Nova escala.",
+            vessel_imo="9234567",
+            vessel_call_sign="DCON7",
+            vessel_flag="Portugal",
+            vessel_type="Contentores",
+            vessel_loa_m="151",
+            vessel_beam_m="22",
+            vessel_gt_t="11800",
+            vessel_max_draft_m="7.4",
+            vessel_dwt_t="16000",
+        )
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            sources = build_operational_chat_sources(
+                f"O que achas da entrada da escala {current['reference_code']}?"
+            )
+
+        snippets = "\n".join(
+            item.get("snippet", "")
+            for item in sources
+            if item.get("retrieval_mode") == "maneuver_casebook"
+        )
+        self.assertIn("Experiência prática importada", snippets)
+        self.assertIn("rebocadores mais usados: 2", snippets)
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            clear_response = client.post(
+                "/admin/bot/practice-experience/clear",
+                data={"csrf_token": csrf_token, "return_to": "/admin/bot#casebooks"},
+            )
+
+        self.assertEqual(clear_response.status_code, 302)
+        self.assertEqual(self.store.get_runtime_state(PRACTICE_EXPERIENCE_STATE_KEY)["records"], [])
 
 
 class PortalLiveNotificationTests(unittest.TestCase):

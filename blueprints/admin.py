@@ -1,8 +1,10 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
 from collections import Counter
+from io import BytesIO
 import logging
 import os
+from pathlib import Path
 import re
 from urllib.parse import urlsplit
 
@@ -22,6 +24,14 @@ from core.validators import (
 )
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases_from_dir, load_eval_cases_from_store
+from domain.practice_experience import (
+    build_practice_experience_records_from_xlsx,
+    clear_practice_experience_records,
+    delete_practice_experience_record,
+    list_practice_experience_records,
+    save_practice_experience_records,
+    update_practice_experience_feedback,
+)
 from core.helpers import (
     current_reindex_status_payload,
     load_admin_status,
@@ -39,6 +49,8 @@ from storage.utils import _local_iso_to_label
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
+
+PRACTICE_EXPERIENCE_SOURCE_FILENAME = "Manobras Pratica.xlsx"
 
 
 def _normalize_digits(value: str | None) -> str:
@@ -490,6 +502,7 @@ def _build_admin_casebooks_payload() -> dict:
 
     all_chat_messages = services.store.list_reviewable_chat_messages(limit=240)
     all_cases = services.store.list_maneuver_cases(limit=240)
+    all_practice_records = list_practice_experience_records(services.store)
     all_cases.sort(
         key=lambda item: (
             item.get("latest_event_at") or "",
@@ -516,8 +529,17 @@ def _build_admin_casebooks_payload() -> dict:
             return status == case_feedback
         return True
 
+    def _practice_visible(item: dict) -> bool:
+        status = (item.get("feedback_status") or "").strip().lower()
+        if case_type and (item.get("maneuver_type") or "").strip().lower() != case_type:
+            return False
+        if case_feedback in {"approved", "avoid", "review"}:
+            return status == case_feedback
+        return True
+
     visible_chat_messages = [item for item in all_chat_messages if _message_visible(item)]
     visible_cases = [item for item in all_cases if _case_visible(item)]
+    visible_practice_records = [item for item in all_practice_records if _practice_visible(item)]
 
     chat_rows = []
     for item in visible_chat_messages[:80]:
@@ -588,7 +610,33 @@ def _build_admin_casebooks_payload() -> dict:
         if len(target_rows) < 12:
             target_rows.append(row)
 
-    if not visible_cases and not visible_chat_messages:
+    practice_rows = []
+    for item in visible_practice_records[:80]:
+        status_clean = (item.get("feedback_status") or "").strip().lower()
+        status_label, badge = _case_feedback_state_meta(status_clean)
+        practice_rows.append(
+            {
+                "id": item.get("id", ""),
+                "reference_code": item.get("reference_code", "--"),
+                "source_filename": item.get("source_filename", ""),
+                "maneuver_type": item.get("maneuver_type", ""),
+                "maneuver_type_label": item.get("maneuver_type_label", item.get("maneuver_type", "")),
+                "vessel_name": item.get("vessel_name", "--"),
+                "route_label": item.get("route_label") or f"{item.get('origin_label') or '--'} -> {item.get('destination_label') or '--'}",
+                "profile_label": item.get("profile_label") or _casebook_feature_label(item),
+                "case_count": item.get("case_count", 0),
+                "duration_median_label": item.get("duration_median_label", "--"),
+                "tug_distribution_label": item.get("tug_distribution_label", "--"),
+                "vessel_examples_label": item.get("vessel_examples_label", "--"),
+                "comments_label": _preview_text(item.get("comments_label", ""), limit=220),
+                "feedback_status": status_clean,
+                "feedback_status_label": status_label,
+                "feedback_badge": badge,
+                "feedback_note": item.get("feedback_note", ""),
+            }
+        )
+
+    if not visible_cases and not visible_chat_messages and not visible_practice_records:
         state = "neutral"
         state_label = "Sem itens"
         summary = "Nenhuma mensagem ou caso corresponde aos filtros atuais."
@@ -598,7 +646,7 @@ def _build_admin_casebooks_payload() -> dict:
         state = "degraded"
         state_label = "Por validar"
         summary = "Há sinais recolhidos pelo sistema que ainda não foram validados por um administrador."
-    elif any((item.get("feedback_status") or "").strip() in {"avoid", "review"} for item in visible_cases):
+    elif any((item.get("feedback_status") or "").strip() in {"avoid", "review"} for item in visible_cases + visible_practice_records):
         state = "degraded"
         state_label = "Com alertas"
         summary = "Os casos visíveis já estão governados, mas existem padrões marcados para evitar ou rever."
@@ -623,8 +671,14 @@ def _build_admin_casebooks_payload() -> dict:
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),
+        "practice_total": len(all_practice_records),
+        "practice_active_total": sum(1 for item in all_practice_records if (item.get("feedback_status") or "").strip() in {"approved", "avoid"}),
+        "practice_review_total": sum(1 for item in all_practice_records if (item.get("feedback_status") or "").strip() == "review"),
+        "practice_local_source_exists": (Path(current_app.root_path) / PRACTICE_EXPERIENCE_SOURCE_FILENAME).exists(),
+        "practice_source_filename": PRACTICE_EXPERIENCE_SOURCE_FILENAME,
         "chat_rows": chat_rows,
         "case_rows": case_rows,
+        "practice_rows": practice_rows,
         "observation_case_rows": observation_case_rows,
         "governed_case_rows": governed_case_rows,
     }
@@ -660,6 +714,106 @@ def admin_casebooks():
     """Painel admin para rever mensagens do chat e gerir casos operacionais."""
     args = request.args.to_dict(flat=True)
     return redirect(url_for("admin.admin_bot", **args, _anchor="casebooks"))
+
+
+@bp.route("/admin/bot/practice-experience/import", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_practice_experience():
+    """Importar experiência prática de manobras como padrões estruturados governados."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    uploaded_file = request.files.get("practice_file")
+    source = None
+    source_filename = PRACTICE_EXPERIENCE_SOURCE_FILENAME
+    if uploaded_file and uploaded_file.filename:
+        source_filename = os.path.basename(uploaded_file.filename)
+        uploaded_file.stream.seek(0)
+        source = BytesIO(uploaded_file.read())
+    else:
+        local_source = Path(current_app.root_path) / PRACTICE_EXPERIENCE_SOURCE_FILENAME
+        if local_source.exists():
+            source = local_source
+
+    if source is None:
+        flash("Carrega o ficheiro Manobras Pratica.xlsx para importar experiência prática.", "error")
+        return redirect(return_to)
+
+    try:
+        feedback_status = validate_operational_feedback_status(request.form.get("feedback_status", "approved"))
+        records, stats = build_practice_experience_records_from_xlsx(
+            source,
+            source_filename=source_filename,
+            imported_by=session["username"],
+            feedback_status=feedback_status,
+        )
+        save_practice_experience_records(
+            services.store,
+            records,
+            source_filename=source_filename,
+            updated_by=session["username"],
+            replace_source=bool(request.form.get("replace_source")),
+        )
+        flash(
+            f"Experiência prática importada: {stats['raw_rows']} manobras agregadas em "
+            f"{stats['pattern_count']} padrões. Tipos: {stats['maneuver_types_label']}.",
+            "success",
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar experiência prática.")
+        flash(f"Falha inesperada ao importar experiência prática: {exc}", "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/practice-experience/<record_id>/feedback", methods=["POST"])
+@login_required
+@role_required("admin")
+def update_practice_experience(record_id: str):
+    """Guardar a decisão admin sobre um padrão importado de experiência prática."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    try:
+        feedback_status = validate_operational_feedback_status(request.form.get("feedback_status", ""))
+        feedback_note = (request.form.get("feedback_note") or "").strip()
+        if feedback_status in {"avoid", "review"} and not feedback_note:
+            raise ValueError("Indica uma nota para justificar esta decisão sobre a experiência prática.")
+        update_practice_experience_feedback(
+            services.store,
+            record_id,
+            feedback_status=feedback_status,
+            feedback_note=feedback_note,
+            feedback_by=session["username"],
+        )
+        flash("Experiência prática atualizada.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/practice-experience/<record_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_practice_experience(record_id: str):
+    """Remover um padrão importado de experiência prática."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    removed = delete_practice_experience_record(
+        services.store,
+        record_id,
+        deleted_by=session["username"],
+    )
+    flash("Experiência prática removida." if removed else "Experiência prática não encontrada.", "success" if removed else "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/practice-experience/clear", methods=["POST"])
+@login_required
+@role_required("admin")
+def clear_practice_experience():
+    """Limpar todos os padrões importados de experiência prática."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    removed = clear_practice_experience_records(services.store, cleared_by=session["username"])
+    flash(f"Foram removidos {removed} padrão(ões) de experiência prática.", "success")
+    return redirect(return_to)
 
 
 @bp.route("/admin/casebooks/messages/<message_id>/feedback", methods=["POST"])
