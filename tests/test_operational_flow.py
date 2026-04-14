@@ -3893,6 +3893,8 @@ class PortCallJsonImportTests(unittest.TestCase):
             organization="Agencia X",
             email="agencia@example.com",
             phone="+351 900 000 111",
+            whatsapp_number="351900000111",
+            whatsapp_opt_in=True,
         )
         with client.session_transaction() as flask_session:
             flask_session["username"] = "agencia@example.com"
@@ -3920,7 +3922,9 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertNotIn("Importar escala por JSON", html)
+        self.assertNotIn("Importar navios por JSON", html)
         self.assertNotIn("/port-calls/import-json", html)
+        self.assertNotIn("/port-calls/vessels/import-json", html)
 
     def test_admin_register_page_shows_json_import(self) -> None:
         with app.app.test_client() as client:
@@ -3931,6 +3935,102 @@ class PortCallJsonImportTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Importar escala por JSON", html)
         self.assertIn("/port-calls/import-json", html)
+        self.assertIn("Importar navios por JSON", html)
+        self.assertIn("/port-calls/vessels/import-json", html)
+
+    def test_import_vessel_catalog_json_is_admin_only(self) -> None:
+        with app.app.test_client() as client:
+            csrf_token = self._set_agent_session(client)
+            response = client.post(
+                "/port-calls/vessels/import-json",
+                data={"csrf_token": csrf_token, "payload_json": "{}"},
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIsNone(self.store.get_runtime_state("port_call_vessel_catalog"))
+
+    def test_admin_import_vessel_catalog_json_populates_selector(self) -> None:
+        payload = """
+        {
+          "vessels": [
+            {
+              "vessel_name": "Catalog Star",
+              "vessel_imo": "9234567",
+              "vessel_call_sign": "CSAB7",
+              "vessel_flag": "Portugal",
+              "vessel_type": "Contentores",
+              "vessel_loa_m": "142.5",
+              "vessel_beam_m": "21.8",
+              "vessel_gt_t": "8950",
+              "vessel_dwt_t": "12400",
+              "vessel_max_draft_m": "7.2",
+              "vessel_bow_thruster": "yes",
+              "vessel_stern_thruster": "no",
+              "service_rate_profile": "Linha regular",
+              "regular_line_calls_365d": 12,
+              "pilotage_up_rate": "0.0042",
+              "tup_reduction_profile": "regular_line",
+              "service_notes": "Perfil de teste."
+            }
+          ]
+        }
+        """
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            response = client.post(
+                "/port-calls/vessels/import-json",
+                data={"csrf_token": csrf_token, "payload_json": payload},
+            )
+            register_response = client.get("/port-calls/register")
+
+        self.assertEqual(response.status_code, 302)
+        state = self.store.get_runtime_state("port_call_vessel_catalog")
+        self.assertIsNotNone(state)
+        catalog_item = next(item for item in state["items"] if item["vessel_name"] == "Catalog Star")
+        self.assertEqual(catalog_item["regular_line_calls_365d"], "12")
+        self.assertEqual(catalog_item["service_rate_profile"], "Linha regular")
+        html = register_response.get_data(as_text=True)
+        self.assertIn("Navio frequente", html)
+        self.assertIn("Catalog Star", html)
+        self.assertIn("Linha regular", html)
+
+    def test_agent_cannot_see_or_post_admin_scale_edit(self) -> None:
+        eta = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+        with app.app.test_client() as client:
+            csrf_token = self._set_agent_session(client)
+            port_call = self.store.create_port_call(
+                vessel_name="Agent Vessel",
+                eta=eta,
+                created_by="agencia@example.com",
+                berth="Secil W",
+                last_port="Sines",
+                next_port="Vigo",
+                notes="Teste.",
+                vessel_imo="9234501",
+                vessel_call_sign="AVES7",
+                vessel_flag="Portugal",
+                vessel_type="Contentores",
+                vessel_loa_m="142.5",
+                vessel_beam_m="21.8",
+                vessel_gt_t="8950",
+                vessel_max_draft_m="7.2",
+                vessel_dwt_t="12400",
+            )
+            detail_response = client.get(f"/port-calls/{port_call['id']}")
+            edit_response = client.post(
+                f"/port-calls/{port_call['id']}/edit",
+                data={"csrf_token": csrf_token},
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(detail_response.status_code, 200)
+        html = detail_response.get_data(as_text=True)
+        self.assertNotIn("Editar escala e navio", html)
+        self.assertNotIn("Contacto piloto", html)
+        self.assertIn("+351 900 000 111", html)
+        self.assertIn("351900000111", html)
+        self.assertEqual(edit_response.status_code, 403)
 
     def test_import_port_call_json_from_textarea(self) -> None:
         payload = """
@@ -3954,6 +4054,9 @@ class PortCallJsonImportTests(unittest.TestCase):
           "draft_m": "11.2",
           "tug_count": 2,
           "constraints": ["daylight"],
+          "service_rate_profile": "Linha regular",
+          "regular_line_calls_365d": 10,
+          "tup_reduction_profile": "regular_line",
           "notes": "Janela de maré confirmada com agente."
         }
         """
@@ -3975,6 +4078,10 @@ class PortCallJsonImportTests(unittest.TestCase):
         current = self.store.get_port_call(created["id"])
         self.assertEqual(current["vessel_imo"], "9723345")
         self.assertEqual(current["vessel_bow_thruster"], "yes")
+        state = self.store.get_runtime_state("port_call_vessel_catalog")
+        catalog_item = next(item for item in state["items"] if item["vessel_name"] == "MSC Lyria")
+        self.assertEqual(catalog_item["service_rate_profile"], "Linha regular")
+        self.assertEqual(catalog_item["regular_line_calls_365d"], "10")
 
     def test_import_port_call_json_from_file_accepts_nested_scale_object(self) -> None:
         payload = b"""

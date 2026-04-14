@@ -841,11 +841,24 @@
   gap: 14px;
 }
 
+.vessel-catalog-picker {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(8, 67, 63, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.vessel-catalog-summary {
+  margin: 0;
+}
+
 .planning-register-table {
   display: grid;
   gap: 12px;
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 8px;
   border: 1px solid rgba(8, 67, 63, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }

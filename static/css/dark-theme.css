@@ -867,8 +867,8 @@ details summary {
 
 .planning-optional-box {
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 14px;
+  border-radius: 8px;
+  padding: 0;
   background: rgba(255,255,255,0.02);
 }
 

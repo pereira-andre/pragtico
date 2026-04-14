@@ -3595,6 +3595,46 @@ def build_scale_context(port_call: dict) -> dict:
     current_role = (session.get("role") or "").strip().lower()
     casebook_enabled = hasattr(services.store, "find_similar_maneuver_cases")
 
+    def _operator_contact_profile(username: str | None, snapshot: dict | None) -> dict:
+        profile = dict(snapshot or {})
+        clean_username = (username or profile.get("username") or "").strip().lower()
+        if clean_username:
+            try:
+                live_profile = services.store.get_user_profile(clean_username) or {}
+            except Exception:
+                live_profile = {}
+            for key in (
+                "username",
+                "role",
+                "full_name",
+                "organization",
+                "email",
+                "phone",
+                "whatsapp_number",
+                "whatsapp_opt_in",
+            ):
+                if live_profile.get(key):
+                    profile[key] = live_profile[key]
+        label = (
+            profile.get("full_name")
+            or profile.get("organization")
+            or profile.get("email")
+            or clean_username
+            or "--"
+        )
+        contact_parts = [
+            value
+            for value in (profile.get("organization"), profile.get("email"), profile.get("phone"))
+            if value
+        ]
+        return {
+            **profile,
+            "label": label,
+            "phone_label": profile.get("phone") or "--",
+            "whatsapp_label": profile.get("whatsapp_number") or "--",
+            "contact_label": " · ".join(contact_parts) if contact_parts else "--",
+        }
+
     def _hours_between(start_value: str | None, end_value: str | None) -> str:
         if not start_value or not end_value:
             return "--"
@@ -3627,6 +3667,10 @@ def build_scale_context(port_call: dict) -> dict:
         return items[-1]
 
     history = port_call.get("maneuver_history", [])
+    agent_contact_profile = _operator_contact_profile(
+        port_call.get("created_by"),
+        port_call.get("created_by_profile") or port_call.get("agent_profile"),
+    )
     entry = _latest(history, "entry")
     active_departure = _latest(history, "departure", {"pending", "approved"})
     latest_departure = _latest(history, "departure")
@@ -3744,7 +3788,7 @@ def build_scale_context(port_call: dict) -> dict:
         "next_port": port_call.get("next_port") or "--",
         "agent_label": port_call["agent_label"],
         "pilot_label": port_call["pilot_label"],
-        "agent_profile": port_call.get("agent_profile", {}),
+        "agent_profile": agent_contact_profile,
         "pilot_profile": port_call.get("pilot_profile", {}),
         "maneuver_count": len(maneuvers),
         "report_points_count": len(maneuvers) * 4,

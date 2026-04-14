@@ -80,6 +80,18 @@
     rgba(10, 108, 102, 0.04);
 }
 
+.scale-agent-panel,
+.scale-ship-profile-panel {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.scale-agent-grid,
+.scale-ship-fact-sheet {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .scale-actions-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -333,8 +345,7 @@
 }
 
 .scale-admin-editor {
-  background:
-    linear-gradient(180deg, rgba(26, 159, 255, 0.05), rgba(255, 255, 255, 0.04));
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .admin-scale-edit-grid {
@@ -343,12 +354,51 @@
   gap: 12px;
 }
 
+.scale-compact-details {
+  overflow: hidden;
+}
+
+.scale-compact-details > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.scale-compact-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.scale-compact-details > summary strong,
+.scale-compact-details > summary span {
+  display: grid;
+  gap: 4px;
+}
+
+.scale-compact-details-body {
+  padding: 0 16px 16px;
+}
+
+.scale-compact-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .scale-fact-row {
   display: flex;
   justify-content: space-between;
   gap: 14px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.04);
 }
@@ -473,6 +523,8 @@
   .scale-masthead,
   .scale-summary-grid,
   .scale-actions-grid,
+  .scale-agent-grid,
+  .scale-ship-fact-sheet,
   .scale-maneuver-grid,
   .admin-scale-edit-grid {
     grid-template-columns: 1fr;

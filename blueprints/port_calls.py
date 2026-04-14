@@ -70,6 +70,50 @@ PORT_CALL_JSON_TEMPLATE = {
     "notes": "Janela de maré confirmada com agente.",
 }
 
+VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
+VESSEL_CATALOG_JSON_TEMPLATE = {
+    "vessels": [
+        {
+            "vessel_name": "MSC Lyria",
+            "vessel_imo": "9723345",
+            "vessel_call_sign": "CQAN7",
+            "vessel_flag": "Madeira",
+            "vessel_type": "Graneis sólidos",
+            "vessel_loa_m": "189.9",
+            "vessel_beam_m": "32.2",
+            "vessel_gt_t": "32540",
+            "vessel_dwt_t": "38600",
+            "vessel_max_draft_m": "11.8",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "unknown",
+            "service_rate_profile": "Linha regular",
+            "regular_line_calls_365d": "7",
+            "pilotage_up_rate": "",
+            "tup_reduction_profile": "regular_line",
+            "service_notes": "Perfil comercial de demonstração.",
+        }
+    ]
+}
+VESSEL_CATALOG_FIELDS = (
+    "vessel_name",
+    "vessel_imo",
+    "vessel_call_sign",
+    "vessel_flag",
+    "vessel_type",
+    "vessel_loa_m",
+    "vessel_beam_m",
+    "vessel_gt_t",
+    "vessel_dwt_t",
+    "vessel_max_draft_m",
+    "vessel_bow_thruster",
+    "vessel_stern_thruster",
+    "service_rate_profile",
+    "regular_line_calls_365d",
+    "pilotage_up_rate",
+    "tup_reduction_profile",
+    "service_notes",
+)
+
 
 def _emit_maneuver_notification(
     *,
@@ -105,6 +149,7 @@ def _iso_to_local_input_value(value: str | None) -> str:
 
 
 def _build_scale_edit_defaults(port_call: dict) -> dict:
+    catalog_record = _catalog_record_for_vessel(port_call)
     return {
         "vessel_name": port_call.get("vessel_name", ""),
         "eta_local": _iso_to_local_input_value(port_call.get("eta")),
@@ -122,6 +167,11 @@ def _build_scale_edit_defaults(port_call: dict) -> dict:
         "vessel_max_draft_m": port_call.get("vessel_max_draft_m", ""),
         "vessel_bow_thruster": port_call.get("vessel_bow_thruster", "unknown"),
         "vessel_stern_thruster": port_call.get("vessel_stern_thruster", "unknown"),
+        "service_rate_profile": catalog_record.get("service_rate_profile", ""),
+        "regular_line_calls_365d": catalog_record.get("regular_line_calls_365d", ""),
+        "pilotage_up_rate": catalog_record.get("pilotage_up_rate", ""),
+        "tup_reduction_profile": catalog_record.get("tup_reduction_profile", ""),
+        "service_notes": catalog_record.get("service_notes", ""),
         "notes": port_call.get("notes", ""),
     }
 
@@ -129,7 +179,10 @@ def _build_scale_edit_defaults(port_call: dict) -> dict:
 def _first_payload_value(payload: dict, *keys: str, default=""):
     for key in keys:
         if key in payload and payload.get(key) is not None:
-            return payload.get(key)
+            value = payload.get(key)
+            if isinstance(value, str) and not value.strip():
+                continue
+            return value
     return default
 
 
@@ -138,6 +191,236 @@ def _string_payload_value(payload: dict, *keys: str, default: str = "") -> str:
     if value is None:
         return default
     return str(value).strip()
+
+
+def _integer_payload_value(payload: dict, *keys: str, default: str = "") -> str:
+    value = _string_payload_value(payload, *keys, default=default)
+    if not value:
+        return ""
+    try:
+        numeric_value = float(value.replace(",", "."))
+    except ValueError as exc:
+        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.") from exc
+    if not numeric_value.is_integer():
+        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.")
+    number = int(numeric_value)
+    if number < 0 or number > 999:
+        raise ValueError("Escalas últimos 365 dias deve estar entre 0 e 999.")
+    return str(number)
+
+
+def _vessel_catalog_key(record: dict) -> str:
+    imo = re.sub(r"\D", "", _string_payload_value(record, "vessel_imo"))
+    if imo:
+        return f"imo:{imo}"
+    vessel_name = re.sub(r"\s+", " ", _string_payload_value(record, "vessel_name")).casefold()
+    return f"name:{vessel_name}" if vessel_name else ""
+
+
+def _coerce_vessel_catalog_payload(payload: dict) -> dict:
+    return {
+        "vessel_name": _string_payload_value(payload, "vessel_name", "name", "ship_name"),
+        "vessel_imo": _string_payload_value(payload, "vessel_imo", "imo"),
+        "vessel_call_sign": _string_payload_value(payload, "vessel_call_sign", "call_sign", "callsign"),
+        "vessel_flag": _string_payload_value(payload, "vessel_flag", "flag"),
+        "vessel_type": _string_payload_value(payload, "vessel_type", "ship_type", "type"),
+        "vessel_loa_m": _string_payload_value(payload, "vessel_loa_m", "loa", "loa_m"),
+        "vessel_beam_m": _string_payload_value(payload, "vessel_beam_m", "beam", "beam_m"),
+        "vessel_gt_t": _string_payload_value(payload, "vessel_gt_t", "gt", "gt_t"),
+        "vessel_dwt_t": _string_payload_value(payload, "vessel_dwt_t", "dwt", "dwt_t"),
+        "vessel_max_draft_m": _string_payload_value(payload, "vessel_max_draft_m", "max_draft", "draft_m"),
+        "vessel_bow_thruster": _first_payload_value(
+            payload, "vessel_bow_thruster", "bow_thruster", default="unknown"
+        ),
+        "vessel_stern_thruster": _first_payload_value(
+            payload, "vessel_stern_thruster", "stern_thruster", default="unknown"
+        ),
+        "service_rate_profile": _string_payload_value(payload, "service_rate_profile", "tax_profile", "service_profile"),
+        "regular_line_calls_365d": _integer_payload_value(
+            payload, "regular_line_calls_365d", "scale_count_365d", "calls_365d"
+        ),
+        "pilotage_up_rate": validate_positive_number(
+            _string_payload_value(payload, "pilotage_up_rate", "custom_up_rate"),
+            "UP pilotagem",
+            required=False,
+            max_value=9999.0,
+        ),
+        "tup_reduction_profile": _string_payload_value(payload, "tup_reduction_profile", "tup_profile"),
+        "service_notes": validate_optional_text(
+            _string_payload_value(payload, "service_notes", "tax_notes", "notes")
+        ),
+    }
+
+
+def _validate_vessel_catalog_record(payload: dict) -> dict:
+    record = _coerce_vessel_catalog_payload(payload)
+    record["vessel_name"] = require_form_text(record["vessel_name"], "Nome do navio")
+    record["vessel_imo"] = validate_imo(record["vessel_imo"])
+    record["vessel_call_sign"] = require_form_text(record["vessel_call_sign"], "Indicativo")
+    record["vessel_flag"] = require_form_text(record["vessel_flag"], "Bandeira")
+    record["vessel_type"] = require_form_text(record["vessel_type"], "Tipo de navio")
+    record.update(validate_vessel_dimensions(record))
+    record["vessel_bow_thruster"] = normalize_thruster_state(record.get("vessel_bow_thruster"), "Bow thruster")
+    record["vessel_stern_thruster"] = normalize_thruster_state(record.get("vessel_stern_thruster"), "Stern thruster")
+    return record
+
+
+def _read_vessel_catalog_records() -> list[dict]:
+    state = services.store.get_runtime_state(VESSEL_CATALOG_STATE_KEY) or {}
+    records = state.get("items") or []
+    return [item for item in records if isinstance(item, dict)]
+
+
+def _write_vessel_catalog_records(records: list[dict]) -> None:
+    services.store.set_runtime_state(
+        VESSEL_CATALOG_STATE_KEY,
+        {
+            "version": 1,
+            "items": records,
+        },
+    )
+
+
+def _catalog_record_for_vessel(record: dict) -> dict:
+    key = _vessel_catalog_key(record)
+    if not key:
+        return {}
+    for current in _read_vessel_catalog_records():
+        current_key = current.get("key") or _vessel_catalog_key(current)
+        if current_key == key:
+            return current
+    return {}
+
+
+def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: bool = True) -> dict:
+    record = _validate_vessel_catalog_record(payload) if validate else _coerce_vessel_catalog_payload(payload)
+    if not record.get("vessel_name") or not record.get("vessel_imo"):
+        return record
+    key = _vessel_catalog_key(record)
+    records = _read_vessel_catalog_records()
+    now = datetime.now().astimezone().isoformat()
+    saved = {
+        **record,
+        "key": key,
+        "updated_by": updated_by,
+        "updated_at": now,
+    }
+    replaced = False
+    for index, current in enumerate(records):
+        if _vessel_catalog_key(current) != key:
+            continue
+        created_at = current.get("created_at") or now
+        saved_values = {
+            field: value
+            for field, value in saved.items()
+            if value not in {"", None}
+        }
+        merged = {**current, **saved_values}
+        merged["created_at"] = created_at
+        merged["updated_at"] = now
+        merged["updated_by"] = updated_by
+        records[index] = merged
+        saved = merged
+        replaced = True
+        break
+    if not replaced:
+        saved["created_at"] = now
+        records.append(saved)
+    records.sort(
+        key=lambda item: (item.get("vessel_name", "").casefold(), item.get("vessel_imo", ""))
+    )
+    _write_vessel_catalog_records(records)
+    return saved
+
+
+def _load_vessel_catalog_json_payload() -> list[dict]:
+    uploaded_file = request.files.get("payload_file")
+    raw_payload = ""
+    if uploaded_file and uploaded_file.filename:
+        raw_payload = uploaded_file.read().decode("utf-8-sig")
+    if not raw_payload.strip():
+        raw_payload = request.form.get("payload_json", "")
+    if not raw_payload.strip():
+        raise ValueError("Indica o JSON dos navios ou carrega um ficheiro .json.")
+    relaxed_payload = re.sub(r",(\s*[}\]])", r"\1", raw_payload)
+    try:
+        payload = json.loads(relaxed_payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
+
+    if isinstance(payload, dict) and isinstance(payload.get("vessels"), list):
+        payload = payload["vessels"]
+    elif isinstance(payload, dict) and isinstance(payload.get("ships"), list):
+        payload = payload["ships"]
+    elif isinstance(payload, dict) and isinstance(payload.get("vessel"), dict):
+        payload = [payload["vessel"]]
+    elif isinstance(payload, dict) and isinstance(payload.get("ship"), dict):
+        payload = [payload["ship"]]
+    elif isinstance(payload, dict):
+        payload = [payload]
+    if not isinstance(payload, list) or not payload:
+        raise ValueError("O JSON dos navios tem de conter um objeto ou uma lista de objetos.")
+    if not all(isinstance(item, dict) for item in payload):
+        raise ValueError("Cada navio no JSON tem de ser um objeto.")
+    return payload
+
+
+def _vessel_catalog_record_from_port_call(port_call: dict) -> dict:
+    return {
+        "vessel_name": port_call.get("vessel_name", ""),
+        "vessel_imo": port_call.get("vessel_imo", ""),
+        "vessel_call_sign": port_call.get("vessel_call_sign", ""),
+        "vessel_flag": port_call.get("vessel_flag", ""),
+        "vessel_type": port_call.get("vessel_type", ""),
+        "vessel_loa_m": port_call.get("vessel_loa_m", ""),
+        "vessel_beam_m": port_call.get("vessel_beam_m", ""),
+        "vessel_gt_t": port_call.get("vessel_gt_t", ""),
+        "vessel_dwt_t": port_call.get("vessel_dwt_t", ""),
+        "vessel_max_draft_m": port_call.get("vessel_max_draft_m", ""),
+        "vessel_bow_thruster": port_call.get("vessel_bow_thruster", "unknown"),
+        "vessel_stern_thruster": port_call.get("vessel_stern_thruster", "unknown"),
+    }
+
+
+def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
+    records_by_key = {}
+    for record in _read_vessel_catalog_records():
+        key = record.get("key") or _vessel_catalog_key(record)
+        if key:
+            records_by_key[key] = {**record, "key": key, "scale_count": 0}
+
+    if activity is None:
+        try:
+            activity = services.store.get_port_activity_snapshot(window_days=3650)
+        except Exception:
+            logger.exception("Falha ao construir catálogo de navios a partir das escalas.")
+            activity = {}
+    seen_scale_ids = set()
+    for group_name in ("arrivals", "in_port", "departed", "aborted"):
+        for port_call in activity.get(group_name, []) or []:
+            port_call_id = port_call.get("id")
+            if not port_call_id or port_call_id in seen_scale_ids:
+                continue
+            seen_scale_ids.add(port_call_id)
+            record = _vessel_catalog_record_from_port_call(port_call)
+            key = _vessel_catalog_key(record)
+            if not key:
+                continue
+            current = records_by_key.setdefault(key, {**record, "key": key, "scale_count": 0})
+            current["scale_count"] = int(current.get("scale_count") or 0) + 1
+            for field in VESSEL_CATALOG_FIELDS:
+                if not current.get(field) and record.get(field):
+                    current[field] = record[field]
+            current["latest_scale_reference"] = port_call.get(
+                "reference_code", current.get("latest_scale_reference", "")
+            )
+            current["latest_eta_label"] = port_call.get("eta_label", current.get("latest_eta_label", ""))
+
+    options = list(records_by_key.values())
+    options.sort(
+        key=lambda item: (item.get("vessel_name", "").casefold(), item.get("vessel_imo", ""))
+    )
+    return options
 
 
 def _coerce_port_call_payload(payload: dict) -> dict:
@@ -155,6 +438,11 @@ def _coerce_port_call_payload(payload: dict) -> dict:
         "vessel_dwt_t": _string_payload_value(payload, "vessel_dwt_t"),
         "vessel_bow_thruster": _first_payload_value(payload, "vessel_bow_thruster", default="unknown"),
         "vessel_stern_thruster": _first_payload_value(payload, "vessel_stern_thruster", default="unknown"),
+        "service_rate_profile": _string_payload_value(payload, "service_rate_profile"),
+        "regular_line_calls_365d": _string_payload_value(payload, "regular_line_calls_365d"),
+        "pilotage_up_rate": _string_payload_value(payload, "pilotage_up_rate"),
+        "tup_reduction_profile": _string_payload_value(payload, "tup_reduction_profile"),
+        "service_notes": _string_payload_value(payload, "service_notes"),
         "eta_local": _string_payload_value(payload, "eta_local", "eta"),
         "berth": _string_payload_value(payload, "berth"),
         "last_port": _string_payload_value(payload, "last_port"),
@@ -242,11 +530,17 @@ def port_call_register():
     from core.helpers import build_tracked_scales, filter_port_activity_for_session
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
+    historical_activity = services.store.get_port_activity_snapshot(window_days=3650)
+    historical_activity = filter_port_activity_for_session(historical_activity)
+    vessel_catalog = _build_vessel_catalog_options(historical_activity)
     return render_template(
         "port_call_register.html",
         port_activity=port_activity,
         tracked_scales=build_tracked_scales(port_activity),
+        vessel_catalog=vessel_catalog,
+        vessel_catalog_json=json.dumps(vessel_catalog, ensure_ascii=False),
         port_call_json_template=json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        vessel_catalog_json_template=json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
         title="Escalas",
     )
 
@@ -350,6 +644,11 @@ def create_port_call():
             "vessel_dwt_t": request.form.get("vessel_dwt_t", ""),
             "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown"),
             "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown"),
+            "service_rate_profile": request.form.get("service_rate_profile", ""),
+            "regular_line_calls_365d": request.form.get("regular_line_calls_365d", ""),
+            "pilotage_up_rate": request.form.get("pilotage_up_rate", ""),
+            "tup_reduction_profile": request.form.get("tup_reduction_profile", ""),
+            "service_notes": request.form.get("service_notes", ""),
             "eta_local": request.form.get("eta_local", ""),
             "berth": request.form.get("berth", ""),
             "last_port": request.form.get("last_port", ""),
@@ -362,7 +661,9 @@ def create_port_call():
     )
 
     try:
+        catalog_record = _validate_vessel_catalog_record(form_data)
         port_call = _create_port_call_from_payload(form_data, created_by=session["username"])
+        _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("dashboard_bp.dashboard"))
@@ -388,10 +689,13 @@ def import_port_call_json():
     """Criar uma nova escala a partir de um payload JSON colado ou carregado no browser."""
     try:
         payload = _load_port_call_json_payload()
+        form_data = _coerce_port_call_payload(payload)
+        catalog_record = _validate_vessel_catalog_record({**payload, **form_data})
         port_call = _create_port_call_from_payload(
-            _coerce_port_call_payload(payload),
+            form_data,
             created_by=session["username"],
         )
+        _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect(url_for("port_calls.port_call_register"))
@@ -411,6 +715,35 @@ def import_port_call_json():
         event_type="created",
         actor_username=session["username"],
     )
+    return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/vessels/import-json", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_vessel_catalog_json():
+    """Importar ou atualizar fichas de navios reutilizáveis no registo de escalas."""
+    try:
+        payloads = _load_vessel_catalog_json_payload()
+        imported = [
+            _upsert_vessel_catalog_record(payload, updated_by=session["username"])
+            for payload in payloads
+        ]
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("port_calls.port_call_register"))
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar navios por JSON para %s.", session.get("username"))
+        detail = " ".join(str(exc).strip().split())
+        flash(
+            f"Falha inesperada ao importar navios por JSON: {detail}"
+            if detail
+            else "Falha inesperada ao importar navios por JSON.",
+            "error",
+        )
+        return redirect(url_for("port_calls.port_call_register"))
+
+    flash(f"{len(imported)} navio(s) importado(s) ou atualizado(s) no catálogo.", "success")
     return redirect(url_for("port_calls.port_call_register"))
 
 
@@ -435,6 +768,11 @@ def edit_port_call(port_call_id: str):
             "vessel_dwt_t": request.form.get("vessel_dwt_t", "").strip(),
             "vessel_bow_thruster": request.form.get("vessel_bow_thruster", "unknown").strip(),
             "vessel_stern_thruster": request.form.get("vessel_stern_thruster", "unknown").strip(),
+            "service_rate_profile": request.form.get("service_rate_profile", "").strip(),
+            "regular_line_calls_365d": request.form.get("regular_line_calls_365d", "").strip(),
+            "pilotage_up_rate": request.form.get("pilotage_up_rate", "").strip(),
+            "tup_reduction_profile": request.form.get("tup_reduction_profile", "").strip(),
+            "service_notes": request.form.get("service_notes", "").strip(),
             "eta_local": request.form.get("eta_local", "").strip(),
             "berth": request.form.get("berth", "").strip(),
             "last_port": request.form.get("last_port", "").strip(),
@@ -456,6 +794,7 @@ def edit_port_call(port_call_id: str):
         form_data.update(validated_dims)
         form_data["vessel_bow_thruster"] = normalize_thruster_state(form_data.get("vessel_bow_thruster"), "Bow thruster")
         form_data["vessel_stern_thruster"] = normalize_thruster_state(form_data.get("vessel_stern_thruster"), "Stern thruster")
+        catalog_record = _validate_vessel_catalog_record(form_data)
         updated = services.store.edit_port_call(
             port_call_id=port_call_id,
             updated_by=session["username"],
@@ -477,6 +816,7 @@ def edit_port_call(port_call_id: str):
             vessel_bow_thruster=form_data["vessel_bow_thruster"],
             vessel_stern_thruster=form_data["vessel_stern_thruster"],
         )
+        _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
         flash(str(exc), "error")
         return redirect_to_portal_target(port_call_id)

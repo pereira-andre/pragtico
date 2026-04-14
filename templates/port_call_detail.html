@@ -102,34 +102,6 @@
       </div>
     </div>
 
-    <div class="scale-kpi-strip">
-      <article class="scale-kpi">
-        <span>LOA</span>
-        <strong>{{ scale.ship_profile.loa }}</strong>
-        <small>m</small>
-      </article>
-      <article class="scale-kpi">
-        <span>Boca</span>
-        <strong>{{ scale.ship_profile.beam }}</strong>
-        <small>m</small>
-      </article>
-      <article class="scale-kpi">
-        <span>GT</span>
-        <strong>{{ scale.ship_profile.gt }}</strong>
-        <small>t</small>
-      </article>
-      <article class="scale-kpi">
-        <span>Calado</span>
-        <strong>{{ scale.ship_profile.draft }}</strong>
-        <small>m</small>
-      </article>
-      <article class="scale-kpi">
-        <span>DWT</span>
-        <strong>{{ scale.ship_profile.dwt }}</strong>
-        <small>t</small>
-      </article>
-    </div>
-
     <div class="scale-masthead">
       <article class="scale-meta-card">
         <span class="mini-label">Escala</span>
@@ -156,38 +128,18 @@
 
   <section class="detail-layout scale-detail-layout">
     <section class="panel detail-main">
-      <section class="panel inset-panel scale-summary-panel">
+      <section class="panel inset-panel scale-agent-panel">
         <div class="section-head compact-head">
           <div>
-            <p class="eyebrow">Resumo da Escala</p>
-            <h2>Panorama operacional</h2>
+            <p class="eyebrow">Agente</p>
+            <h2>{{ scale.summary.agent_profile.label }}</h2>
           </div>
         </div>
-        <div class="scale-summary-grid">
-          <article class="mini-card">
-            <h3>Estado</h3>
-            <p>{{ scale.summary.status_label }}</p>
-          </article>
-          <article class="mini-card">
-            <h3>Local atual</h3>
-            <p>{{ scale.summary.current_location }}</p>
-          </article>
-          <article class="mini-card">
-            <h3>Total de manobras</h3>
-            <p>{{ scale.summary.maneuver_count }}</p>
-          </article>
-          <article class="mini-card">
-            <h3>ETA</h3>
-            <p>{{ scale.summary.eta_label }}</p>
-          </article>
-          <article class="mini-card">
-            <h3>ETD</h3>
-            <p>{{ scale.summary.etd_label }}</p>
-          </article>
-          <article class="mini-card">
-            <h3>Estadia</h3>
-            <p>{{ scale.summary.stay_hours_label }}</p>
-          </article>
+        <div class="scale-agent-grid">
+          <article class="scale-fact-row"><span>Organização</span><strong>{{ scale.summary.agent_profile.organization or '--' }}</strong></article>
+          <article class="scale-fact-row"><span>Email</span><strong>{{ scale.summary.agent_profile.email or '--' }}</strong></article>
+          <article class="scale-fact-row"><span>Telefone</span><strong>{{ scale.summary.agent_profile.phone_label }}</strong></article>
+          <article class="scale-fact-row"><span>WhatsApp</span><strong>{{ scale.summary.agent_profile.whatsapp_label }}</strong></article>
         </div>
         {% if scale.actions.must_report_label %}
           <article class="ops-empty scale-guidance-card">
@@ -196,52 +148,34 @@
         {% endif %}
       </section>
 
-      <section class="panel inset-panel scale-actions-panel">
+      <section class="panel inset-panel scale-ship-profile-panel">
         <div class="section-head compact-head">
           <div>
-            <p class="eyebrow">Planeamento</p>
-            <h2>Criar manobra</h2>
+            <p class="eyebrow">Ficha do Navio</p>
+            <h2>Dados técnicos</h2>
           </div>
         </div>
-        {% set can_create_departure = current_role in ["admin", "agente"] and scale.actions.can_plan_departure %}
-        {% set can_create_shift = current_role in ["admin", "agente"] and scale.actions.can_plan_shift %}
-        {% if can_create_departure or can_create_shift %}
-          <div class="scale-plan-composer">
-            <p class="muted scale-plan-intro">Seleciona o tipo de manobra a criar. A aprovação, o registo do piloto e o histórico continuam dentro de cada manobra.</p>
-            {% if can_create_departure and can_create_shift %}
-              <div class="scale-plan-switch">
-                <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-departure" checked>
-                <label class="scale-plan-choice" for="scale-plan-mode-departure">Saída</label>
-                <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-shift">
-                <label class="scale-plan-choice" for="scale-plan-mode-shift">Mudança</label>
-                <div class="scale-plan-panels">
-                  <section class="scale-plan-panel scale-plan-panel-departure">
-                    {{ departure_plan_form(scale, port_call, constraint_options) }}
-                  </section>
-                  <section class="scale-plan-panel scale-plan-panel-shift">
-                    {{ shift_plan_form(scale, port_call, constraint_options) }}
-                  </section>
-                </div>
-              </div>
-            {% elif can_create_departure %}
-              <div class="scale-plan-panels scale-plan-panels-single">
-                <section class="scale-plan-panel is-active">
-                  {{ departure_plan_form(scale, port_call, constraint_options) }}
-                </section>
-              </div>
-            {% else %}
-              <div class="scale-plan-panels scale-plan-panels-single">
-                <section class="scale-plan-panel is-active">
-                  {{ shift_plan_form(scale, port_call, constraint_options) }}
-                </section>
-              </div>
-            {% endif %}
-          </div>
-        {% else %}
-          <article class="ops-empty scale-action-placeholder">
-            <p>Sem novos planeamentos pendentes nesta escala. As aprovações e os registos operacionais ficam dentro de cada manobra.</p>
+        <div class="scale-fact-sheet scale-ship-fact-sheet">
+          <article class="scale-fact-row"><span>IMO</span><strong>{{ scale.ship_profile.imo }}</strong></article>
+          <article class="scale-fact-row"><span>Indicativo</span><strong>{{ scale.ship_profile.call_sign }}</strong></article>
+          <article class="scale-fact-row"><span>Bandeira</span><strong>{{ scale.ship_profile.flag }}</strong></article>
+          <article class="scale-fact-row">
+            <span>Tipo de navio</span>
+            <strong class="scale-inline-meta">
+              {% if scale.ship_profile.type_icon %}
+                <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
+              {% endif %}
+              <span>{{ scale.ship_profile.type }}</span>
+            </strong>
           </article>
-        {% endif %}
+          <article class="scale-fact-row"><span>LOA</span><strong>{{ scale.ship_profile.loa }} m</strong></article>
+          <article class="scale-fact-row"><span>Boca</span><strong>{{ scale.ship_profile.beam }} m</strong></article>
+          <article class="scale-fact-row"><span>GT</span><strong>{{ scale.ship_profile.gt }} t</strong></article>
+          <article class="scale-fact-row"><span>DWT</span><strong>{{ scale.ship_profile.dwt }} t</strong></article>
+          <article class="scale-fact-row"><span>Calado máximo</span><strong>{{ scale.ship_profile.draft }} m</strong></article>
+          <article class="scale-fact-row"><span>Bow thruster</span><strong>{{ scale.ship_profile.bow_thruster }}</strong></article>
+          <article class="scale-fact-row"><span>Stern thruster</span><strong>{{ scale.ship_profile.stern_thruster }}</strong></article>
+        </div>
       </section>
 
       <section class="panel inset-panel scale-maneuvers-panel">
@@ -331,54 +265,68 @@
           </table>
         </div>
       </section>
-    </section>
 
-    <aside class="detail-side">
-      <section class="panel inset-panel">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Ficha</p>
-            <h2>Dados do navio</h2>
-          </div>
-        </div>
-        <div class="scale-fact-sheet">
-          <article class="scale-fact-row"><span>Documento</span><strong>{{ scale.ship_profile.doc_number }}</strong></article>
-          <article class="scale-fact-row"><span>Número de escala</span><strong>{{ scale.ship_profile.scale_reference }}</strong></article>
-          <article class="scale-fact-row"><span>IMO</span><strong>{{ scale.ship_profile.imo }}</strong></article>
-          <article class="scale-fact-row"><span>Indicativo</span><strong>{{ scale.ship_profile.call_sign }}</strong></article>
-          <article class="scale-fact-row"><span>Bandeira</span><strong>{{ scale.ship_profile.flag }}</strong></article>
-          <article class="scale-fact-row">
-            <span>Tipo de navio</span>
-            <strong class="scale-inline-meta">
-              {% if scale.ship_profile.type_icon %}
-                <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
+      {% set can_create_departure = current_role in ["admin", "agente"] and scale.actions.can_plan_departure %}
+      {% set can_create_shift = current_role in ["admin", "agente"] and scale.actions.can_plan_shift %}
+      <details class="panel inset-panel scale-actions-panel scale-compact-details">
+        <summary>
+          <span>
+            <span class="eyebrow">Planeamento</span>
+            <strong>Criar manobra</strong>
+          </span>
+          <span class="scale-compact-toggle">Abrir</span>
+        </summary>
+        <div class="scale-compact-details-body">
+          {% if can_create_departure or can_create_shift %}
+            <div class="scale-plan-composer">
+              <p class="muted scale-plan-intro">Seleciona o tipo de manobra a criar. A aprovação, o registo do piloto e o histórico continuam dentro de cada manobra.</p>
+              {% if can_create_departure and can_create_shift %}
+                <div class="scale-plan-switch">
+                  <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-departure" checked>
+                  <label class="scale-plan-choice" for="scale-plan-mode-departure">Saída</label>
+                  <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-shift">
+                  <label class="scale-plan-choice" for="scale-plan-mode-shift">Mudança</label>
+                  <div class="scale-plan-panels">
+                    <section class="scale-plan-panel scale-plan-panel-departure">
+                      {{ departure_plan_form(scale, port_call, constraint_options) }}
+                    </section>
+                    <section class="scale-plan-panel scale-plan-panel-shift">
+                      {{ shift_plan_form(scale, port_call, constraint_options) }}
+                    </section>
+                  </div>
+                </div>
+              {% elif can_create_departure %}
+                <div class="scale-plan-panels scale-plan-panels-single">
+                  <section class="scale-plan-panel is-active">
+                    {{ departure_plan_form(scale, port_call, constraint_options) }}
+                  </section>
+                </div>
+              {% else %}
+                <div class="scale-plan-panels scale-plan-panels-single">
+                  <section class="scale-plan-panel is-active">
+                    {{ shift_plan_form(scale, port_call, constraint_options) }}
+                  </section>
+                </div>
               {% endif %}
-              <span>{{ scale.ship_profile.type }}</span>
-            </strong>
-          </article>
-          <article class="scale-fact-row"><span>LOA</span><strong>{{ scale.ship_profile.loa }} m</strong></article>
-          <article class="scale-fact-row"><span>Boca</span><strong>{{ scale.ship_profile.beam }} m</strong></article>
-          <article class="scale-fact-row"><span>GT</span><strong>{{ scale.ship_profile.gt }} t</strong></article>
-          <article class="scale-fact-row"><span>Calado</span><strong>{{ scale.ship_profile.draft }} m</strong></article>
-          <article class="scale-fact-row"><span>DWT</span><strong>{{ scale.ship_profile.dwt }} t</strong></article>
-          <article class="scale-fact-row"><span>Bow thruster</span><strong>{{ scale.ship_profile.bow_thruster }}</strong></article>
-          <article class="scale-fact-row"><span>Stern thruster</span><strong>{{ scale.ship_profile.stern_thruster }}</strong></article>
-          <article class="scale-fact-row"><span>Agente</span><strong>{{ scale.summary.agent_profile.label }}</strong></article>
-          <article class="scale-fact-row"><span>Contacto agente</span><strong>{{ scale.summary.agent_profile.contact_label }}</strong></article>
-          <article class="scale-fact-row"><span>Piloto</span><strong>{{ scale.summary.pilot_profile.label }}</strong></article>
-          <article class="scale-fact-row"><span>Contacto piloto</span><strong>{{ scale.summary.pilot_profile.contact_label }}</strong></article>
+            </div>
+          {% else %}
+            <article class="ops-empty scale-action-placeholder">
+              <p>Sem novos planeamentos pendentes nesta escala. As aprovações e os registos operacionais ficam dentro de cada manobra.</p>
+            </article>
+          {% endif %}
         </div>
-      </section>
+      </details>
 
       {% if current_role == "admin" %}
-        <section class="panel inset-panel scale-admin-editor">
-          <div class="section-head compact-head">
-            <div>
-              <p class="eyebrow">Admin</p>
-              <h2>Editar escala e navio</h2>
-            </div>
-          </div>
-          <form method="post" action="{{ url_for('port_calls.edit_port_call', port_call_id=port_call.id) }}" class="stack">
+        <details class="panel inset-panel scale-admin-editor scale-compact-details">
+          <summary>
+            <span>
+              <span class="eyebrow">Admin</span>
+              <strong>Editar escala e navio</strong>
+            </span>
+            <span class="scale-compact-toggle">Abrir</span>
+          </summary>
+          <form method="post" action="{{ url_for('port_calls.edit_port_call', port_call_id=port_call.id) }}" class="stack scale-compact-details-body">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="redirect_to" value="scale">
             <div class="admin-scale-edit-grid">
@@ -454,16 +402,57 @@
                   <option value="yes" {% if scale_edit_defaults.vessel_stern_thruster == "yes" %}selected{% endif %}>Sim</option>
                 </select>
               </label>
+              <label>
+                Perfil de serviços
+                <input type="text" name="service_rate_profile" value="{{ scale_edit_defaults.service_rate_profile }}" placeholder="Ex.: Linha regular">
+              </label>
+              <label>
+                Escalas últimos 365 dias
+                <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ scale_edit_defaults.regular_line_calls_365d }}" placeholder="0">
+              </label>
+              <label>
+                UP pilotagem
+                <input type="text" name="pilotage_up_rate" value="{{ scale_edit_defaults.pilotage_up_rate }}" placeholder="Opcional">
+              </label>
+              <label>
+                Perfil redução TUP
+                <input type="text" name="tup_reduction_profile" value="{{ scale_edit_defaults.tup_reduction_profile }}" placeholder="Ex.: linha regular">
+              </label>
             </div>
+            <label>
+              Notas de serviços e taxas
+              <textarea name="service_notes" rows="2" placeholder="Notas reutilizáveis do catálogo do navio...">{{ scale_edit_defaults.service_notes }}</textarea>
+            </label>
             <label>
               Observações
               <textarea name="notes" rows="3" placeholder="Contexto operacional ou correção histórica...">{{ scale_edit_defaults.notes }}</textarea>
             </label>
-            <p class="muted small-note">O admin pode corrigir também escalas já arquivadas. Se o navio estiver em porto, o portal valida ocupação antes de aceitar um novo cais real.</p>
+            <p class="muted small-note">O admin pode corrigir também escalas já arquivadas. Estes dados atualizam o catálogo reutilizável do navio.</p>
             <button type="submit" class="mini-button">Guardar escala</button>
           </form>
-        </section>
+        </details>
       {% endif %}
+    </section>
+
+    <aside class="detail-side">
+      <section class="panel inset-panel">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Resumo</p>
+            <h2>Escala</h2>
+          </div>
+        </div>
+        <div class="scale-fact-sheet">
+          <article class="scale-fact-row"><span>Documento</span><strong>{{ scale.ship_profile.doc_number }}</strong></article>
+          <article class="scale-fact-row"><span>Número de escala</span><strong>{{ scale.ship_profile.scale_reference }}</strong></article>
+          <article class="scale-fact-row"><span>Estado</span><strong>{{ scale.summary.status_label }}</strong></article>
+          <article class="scale-fact-row"><span>ETA</span><strong>{{ scale.summary.eta_label }}</strong></article>
+          <article class="scale-fact-row"><span>ETD</span><strong>{{ scale.summary.etd_label }}</strong></article>
+          <article class="scale-fact-row"><span>Local atual</span><strong>{{ scale.summary.current_location }}</strong></article>
+          <article class="scale-fact-row"><span>Manobras</span><strong>{{ scale.summary.maneuver_count }}</strong></article>
+          <article class="scale-fact-row"><span>Estadia</span><strong>{{ scale.summary.stay_hours_label }}</strong></article>
+        </div>
+      </section>
 
       <section class="panel inset-panel">
         <div class="section-head compact-head">

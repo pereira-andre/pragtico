@@ -38,6 +38,22 @@
       <form method="post" action="{{ url_for('port_calls.create_port_call') }}" class="stack planning-form planning-register-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="redirect_to" value="register">
+        {% if vessel_catalog %}
+          <div class="vessel-catalog-picker">
+            <label>
+              Navio frequente
+              <select data-vessel-catalog-select>
+                <option value="">Sem preenchimento automático</option>
+                {% for vessel in vessel_catalog %}
+                  <option value="{{ loop.index0 }}">
+                    {{ vessel.vessel_name }} · IMO {{ vessel.vessel_imo or "--" }} · {{ vessel.scale_count or 0 }} escala{% if (vessel.scale_count or 0) != 1 %}s{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </label>
+            <p class="muted small-note vessel-catalog-summary" data-vessel-catalog-summary data-default-text="Escolhe um navio para preencher a ficha técnica e os dados de serviços.">Escolhe um navio para preencher a ficha técnica e os dados de serviços.</p>
+          </div>
+        {% endif %}
         <div class="planning-register-table">
           <div class="planning-register-row planning-register-row-primary">
             <label>
@@ -127,6 +143,30 @@
                 </select>
               </label>
             </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Perfil de serviços
+                <input type="text" name="service_rate_profile" placeholder="Ex.: Linha regular">
+              </label>
+              <label>
+                Escalas linha regular (365 dias)
+                <input type="number" min="0" max="999" name="regular_line_calls_365d" placeholder="0">
+              </label>
+              <label>
+                UP pilotagem
+                <input type="text" name="pilotage_up_rate" placeholder="Opcional">
+              </label>
+            </div>
+            <div class="mini-grid planned-mini-grid">
+              <label>
+                Perfil redução TUP
+                <input type="text" name="tup_reduction_profile" placeholder="Ex.: linha regular">
+              </label>
+              <label>
+                Notas de serviços e taxas
+                <textarea name="service_notes" rows="2" placeholder="Notas reutilizáveis da ficha do navio..."></textarea>
+              </label>
+            </div>
           </div>
         </details>
         <details class="planning-optional-box">
@@ -194,6 +234,36 @@
             </div>
           </div>
         </details>
+        <details class="planning-optional-box planning-json-import-box">
+          <summary>Importar navios por JSON</summary>
+          <div class="stack planning-optional-body planning-json-import-body">
+            <p class="muted">Podes importar uma lista de navios frequentes para preencher fichas técnicas e dados de serviços na criação de novas escalas.</p>
+            <form
+              method="post"
+              action="{{ url_for('port_calls.import_vessel_catalog_json') }}"
+              enctype="multipart/form-data"
+              class="stack planning-form planning-json-import-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label>
+                Ficheiro JSON
+                <input type="file" name="payload_file" accept=".json,application/json">
+              </label>
+              <label>
+                JSON dos navios
+                <textarea
+                  name="payload_json"
+                  rows="14"
+                  class="planning-json-textarea"
+                  placeholder='{"vessels":[{"vessel_name":"MSC Lyria", ...}]}'></textarea>
+              </label>
+              <button type="submit">Importar Navios por JSON</button>
+            </form>
+            <div class="planning-json-template-block">
+              <span class="mini-label">Modelo</span>
+              <pre class="planning-json-template">{{ vessel_catalog_json_template }}</pre>
+            </div>
+          </div>
+        </details>
       {% endif %}
     </section>
 
@@ -231,4 +301,64 @@
     </section>
   </div>
 </main>
+<script>
+(() => {
+  const select = document.querySelector("[data-vessel-catalog-select]");
+  if (!select) {
+    return;
+  }
+  const catalog = JSON.parse({{ vessel_catalog_json|tojson }});
+  const form = select.closest("form");
+  const summary = document.querySelector("[data-vessel-catalog-summary]");
+  const fields = [
+    "vessel_name",
+    "vessel_imo",
+    "vessel_call_sign",
+    "vessel_flag",
+    "vessel_type",
+    "vessel_loa_m",
+    "vessel_beam_m",
+    "vessel_gt_t",
+    "vessel_dwt_t",
+    "vessel_max_draft_m",
+    "vessel_bow_thruster",
+    "vessel_stern_thruster",
+    "service_rate_profile",
+    "regular_line_calls_365d",
+    "pilotage_up_rate",
+    "tup_reduction_profile",
+    "service_notes"
+  ];
+
+  select.addEventListener("change", () => {
+    if (!select.value) {
+      if (summary) {
+        summary.textContent = summary.dataset.defaultText || "";
+      }
+      return;
+    }
+    const vessel = catalog[Number(select.value)];
+    if (!vessel) {
+      if (summary) {
+        summary.textContent = summary.dataset.defaultText || "";
+      }
+      return;
+    }
+    fields.forEach((fieldName) => {
+      const field = form.elements[fieldName];
+      const value = vessel[fieldName];
+      if (!field || value === undefined || value === null) {
+        return;
+      }
+      field.value = value;
+    });
+    if (summary) {
+      const count = Number(vessel.scale_count || 0);
+      const plural = count === 1 ? "" : "s";
+      const latest = vessel.latest_scale_reference ? ` · última ${vessel.latest_scale_reference}` : "";
+      summary.textContent = `${vessel.vessel_name} · IMO ${vessel.vessel_imo || "--"} · ${count} escala${plural} registada${plural}${latest}`;
+    }
+  });
+})();
+</script>
 {% endblock %}
