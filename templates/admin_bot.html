@@ -107,54 +107,6 @@
       </div>
     </section>
 
-    <section class="panel section-panel" id="practice-casebook">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Experiência prática</p>
-          <h2>Casebook de manobras</h2>
-        </div>
-      </div>
-      <div class="admin-status-split">
-        <article class="admin-status-surface">
-          <div class="admin-status-surface-head">
-            <strong>{{ bot.practice_casebook.document_name }}</strong>
-            <span class="admin-status-badge is-{{ 'online' if bot.practice_casebook.exists else 'degraded' }}">
-              {{ 'Importado' if bot.practice_casebook.exists else 'Por importar' }}
-            </span>
-          </div>
-          {% if bot.practice_casebook.exists %}
-            <p class="admin-status-note">{{ bot.practice_casebook.preview }}</p>
-            <p class="admin-bot-case-meta"><strong>Atualizado:</strong> {{ bot.practice_casebook.updated_at_label }}</p>
-            <a class="inline-link" href="{{ url_for('admin.document_detail', name=bot.practice_casebook.document_name, return_to=request.full_path) }}">Abrir documento gerado</a>
-          {% else %}
-            <p class="admin-status-note">Importa a folha de prática para criar um documento de conhecimento com padrões por tipo de manobra, navio, cais, rebocadores, duração e comentários operacionais.</p>
-          {% endif %}
-          <p class="admin-status-note">A importação remove nomes de pilotos e marca o ficheiro como referência observacional. O bot usa isto como contexto, não como regra automática.</p>
-        </article>
-        <article class="admin-status-surface">
-          <div class="admin-status-surface-head">
-            <strong>Importar Excel</strong>
-            <span class="admin-status-badge is-neutral">.xlsx</span>
-          </div>
-          <form method="post" action="{{ url_for('admin.import_practice_casebook') }}" enctype="multipart/form-data" class="stack admin-casebook-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>
-              Ficheiro de prática
-              <input type="file" name="practice_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-            </label>
-            <p class="admin-status-note">
-              {% if bot.practice_casebook.local_source_exists %}
-                Sem upload, o servidor usa o ficheiro local <code>{{ bot.practice_casebook.local_source_label }}</code>.
-              {% else %}
-                Carrega o ficheiro <code>{{ bot.practice_casebook.local_source_label }}</code> para gerar o casebook.
-              {% endif %}
-            </p>
-            <button type="submit" class="mini-button">Importar casebook prático</button>
-          </form>
-        </article>
-      </div>
-    </section>
-
     <section class="panel section-panel" id="casebooks">
       <div class="section-head">
         <div>

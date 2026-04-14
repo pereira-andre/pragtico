@@ -3486,7 +3486,6 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertIn("WhatsApp", html)
         self.assertIn("225 metros", html)
         self.assertIn("Inputs que o bot pode reutilizar", html)
-        self.assertIn("Casebook de manobras", html)
 
     def test_admin_casebooks_redirects_to_bot_page_anchor(self) -> None:
         with app.app.test_client() as client:
@@ -3495,72 +3494,6 @@ class AdminDocumentPolicyTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/bot?case_type=entry#casebooks", response.headers["Location"])
-
-    def test_admin_imports_practice_casebook_excel_as_knowledge_document(self) -> None:
-        import openpyxl
-
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Dados"
-        worksheet.append(["Manobras Realizadas"])
-        worksheet.append([
-            "No",
-            "Data",
-            "Hora Embarque",
-            "Hora Desembarque",
-            "Tempo de Manobra (h)",
-            "Tipo Manobra",
-            "Nome ",
-            "Tipo Navio",
-            "GT",
-            "Dimensão C/B (m)",
-            "Calado (m)",
-            "Rebocadores",
-            "Cais",
-            "Piloto Senior",
-            "Comentários",
-        ])
-        worksheet.append([
-            1,
-            datetime(2026, 4, 10),
-            datetime(2026, 4, 10, 6, 0).time(),
-            datetime(2026, 4, 10, 7, 10).time(),
-            datetime(2026, 4, 10, 1, 10).time(),
-            "Entrada",
-            "Elbtower",
-            "Contentores",
-            11662,
-            "149/22",
-            7.3,
-            0,
-            "TMS 2",
-            "Piloto Teste",
-            "Bow avariado, usar rebocador.",
-        ])
-        payload = BytesIO()
-        workbook.save(payload)
-        payload.seek(0)
-
-        with app.app.test_client() as client:
-            csrf_token = self._set_admin_session(client)
-            with patch("blueprints.admin.safe_rebuild_index", return_value=True):
-                response = client.post(
-                    "/admin/bot/practice-casebook/import",
-                    data={
-                        "csrf_token": csrf_token,
-                        "practice_file": (payload, "Manobras Pratica.xlsx"),
-                    },
-                    content_type="multipart/form-data",
-                )
-
-        self.assertEqual(response.status_code, 302)
-        document = self.store.get_document("manobras-pratica-casebook.md")
-        self.assertIsNotNone(document)
-        text = self.store.get_document_text("manobras-pratica-casebook.md")
-        self.assertIn("Casebook prático de manobras", text)
-        self.assertIn("Elbtower", text)
-        self.assertIn("Bow avariado", text)
-        self.assertNotIn("Piloto Teste", text)
 
 
 class PortalLiveNotificationTests(unittest.TestCase):
