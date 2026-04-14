@@ -2207,6 +2207,71 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.admin-casebook-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.admin-casebook-compact-filters {
+  margin: 16px 0;
+}
+
+.admin-casebook-sheet-block {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.admin-casebook-sheet-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(29, 44, 43, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-casebook-sheet {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.admin-casebook-sheet th,
+.admin-casebook-sheet td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(29, 44, 43, 0.08);
+  border-right: 1px solid rgba(29, 44, 43, 0.06);
+  vertical-align: top;
+  text-align: left;
+}
+
+.admin-casebook-sheet th {
+  color: var(--muted);
+  background: rgba(10, 108, 102, 0.08);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.admin-casebook-sheet tbody tr:hover {
+  background: rgba(10, 108, 102, 0.05);
+}
+
+.admin-sheet-form {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.admin-sheet-form select,
+.admin-sheet-form textarea,
+.admin-sheet-form input {
+  min-height: 32px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
 .admin-bot-case-grid,
 .admin-bot-document-grid {
   display: grid;
@@ -3505,6 +3570,7 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
+  .admin-casebook-kpi-grid,
   .admin-status-split,
   .admin-bot-case-grid,
   .admin-bot-document-grid {
@@ -3550,6 +3616,7 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
+  .admin-casebook-kpi-grid,
   .admin-status-split,
   .admin-bot-case-grid,
   .admin-bot-document-grid {

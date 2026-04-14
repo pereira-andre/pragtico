@@ -1,9 +1,13 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
 from collections import Counter
+from datetime import datetime
 import logging
 import os
 import re
+from io import BytesIO
+from pathlib import Path
+import statistics
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
@@ -39,6 +43,10 @@ from storage.utils import _local_iso_to_label
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
+
+PRACTICE_CASEBOOK_DOCUMENT_NAME = "manobras-pratica-casebook.md"
+PRACTICE_CASEBOOK_TITLE = "manobras pratica casebook"
+PRACTICE_CASEBOOK_SOURCE_FILENAME = "Manobras Pratica.xlsx"
 
 
 def _normalize_digits(value: str | None) -> str:
@@ -95,6 +103,267 @@ def _preview_text(value: str, limit: int = 220) -> str:
     if len(clean) <= limit:
         return clean
     return clean[: limit - 1].rstrip() + "…"
+
+
+def _practice_casebook_payload() -> dict:
+    document = services.store.get_document(PRACTICE_CASEBOOK_DOCUMENT_NAME)
+    local_source = Path(current_app.root_path) / PRACTICE_CASEBOOK_SOURCE_FILENAME
+    return {
+        "document_name": PRACTICE_CASEBOOK_DOCUMENT_NAME,
+        "exists": bool(document),
+        "document": document or {},
+        "updated_at_label": (document or {}).get("updated_at_label", ""),
+        "preview": (document or {}).get("preview", ""),
+        "local_source_exists": local_source.exists(),
+        "local_source_label": PRACTICE_CASEBOOK_SOURCE_FILENAME,
+    }
+
+
+def _as_clean_text(value) -> str:
+    return " ".join(str(value or "").strip().split())
+
+
+def _as_number(value) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    clean = _as_clean_text(value).replace(" ", "").replace(",", ".")
+    if not clean:
+        return None
+    try:
+        return float(clean)
+    except ValueError:
+        return None
+
+
+def _format_metric(value: float | None, *, decimals: int = 1, suffix: str = "") -> str:
+    if value is None:
+        return "--"
+    formatted = f"{value:.{decimals}f}".rstrip("0").rstrip(".")
+    return f"{formatted}{suffix}"
+
+
+def _duration_hours(value) -> float | None:
+    if value is None:
+        return None
+    if hasattr(value, "hour") and hasattr(value, "minute"):
+        return float(value.hour) + float(value.minute) / 60 + float(getattr(value, "second", 0)) / 3600
+    number = _as_number(value)
+    if number is None:
+        return None
+    return number * 24 if 0 < number < 1 else number
+
+
+def _split_length_beam(value) -> tuple[float | None, float | None]:
+    text = _as_clean_text(value)
+    if not text:
+        return None, None
+    parts = re.findall(r"\d+(?:[.,]\d+)?", text)
+    if len(parts) < 2:
+        return None, None
+    return _as_number(parts[0]), _as_number(parts[1])
+
+
+def _median(values: list[float]) -> float | None:
+    clean = [value for value in values if value is not None]
+    return statistics.median(clean) if clean else None
+
+
+def _counter_label(counter: Counter, *, limit: int = 6) -> str:
+    parts = [f"{label} ({count})" for label, count in counter.most_common(limit) if label]
+    return ", ".join(parts) or "--"
+
+
+def _markdown_cell(value: str) -> str:
+    return _as_clean_text(value).replace("|", "/")
+
+
+def _load_practice_maneuver_rows(source) -> list[dict]:
+    try:
+        import openpyxl
+    except ImportError as exc:
+        raise ValueError("A dependência openpyxl não está instalada para ler ficheiros .xlsx.") from exc
+
+    workbook = openpyxl.load_workbook(source, data_only=True, read_only=True)
+    if "Dados" not in workbook.sheetnames:
+        raise ValueError("O ficheiro tem de conter a folha 'Dados'.")
+    worksheet = workbook["Dados"]
+    headers = [
+        _as_clean_text(value)
+        for value in next(worksheet.iter_rows(min_row=2, max_row=2, values_only=True))
+    ]
+    rows: list[dict] = []
+    for raw_row in worksheet.iter_rows(min_row=3, values_only=True):
+        payload = dict(zip(headers, raw_row))
+        maneuver_type = _as_clean_text(payload.get("Tipo Manobra"))
+        vessel_name = _as_clean_text(payload.get("Nome"))
+        if not maneuver_type or not vessel_name:
+            continue
+        length_m, beam_m = _split_length_beam(payload.get("Dimensão C/B (m)"))
+        rows.append(
+            {
+                "date": payload.get("Data"),
+                "maneuver_type": maneuver_type,
+                "vessel_name": vessel_name,
+                "vessel_type": _as_clean_text(payload.get("Tipo Navio")) or "Não indicado",
+                "gt": _as_number(payload.get("GT")),
+                "length_m": length_m,
+                "beam_m": beam_m,
+                "draft_m": _as_number(payload.get("Calado (m)")),
+                "tug_count": _as_number(payload.get("Rebocadores")),
+                "berth": _as_clean_text(payload.get("Cais")) or "Não indicado",
+                "duration_h": _duration_hours(payload.get("Tempo de Manobra (h)")),
+                "comment": _as_clean_text(payload.get("Comentários")),
+            }
+        )
+    if not rows:
+        raise ValueError("Não encontrei manobras válidas na folha 'Dados'.")
+    return rows
+
+
+def _build_practice_casebook_document(rows: list[dict]) -> tuple[str, dict]:
+    total = len(rows)
+    type_counter = Counter(row["maneuver_type"] for row in rows)
+    vessel_type_counter = Counter(row["vessel_type"] for row in rows)
+    berth_counter = Counter(row["berth"] for row in rows)
+    tug_counter = Counter(str(int(row["tug_count"])) if row["tug_count"] is not None else "0/sem registo" for row in rows)
+    comments = [row for row in rows if row.get("comment")]
+    dates = [
+        row["date"]
+        for row in rows
+        if isinstance(row.get("date"), datetime)
+    ]
+    date_range = ""
+    if dates:
+        date_range = f"{min(dates).date().isoformat()} a {max(dates).date().isoformat()}"
+
+    lines = [
+        "# Casebook prático de manobras",
+        "",
+        f"Fonte: `{PRACTICE_CASEBOOK_SOURCE_FILENAME}`, folha `Dados`. Importado em {datetime.now().astimezone().isoformat(timespec='minutes')}.",
+        "",
+        "Uso: referência supervisionada para o bot reconhecer padrões operacionais históricos. Não substitui validação do piloto, estado meteorológico, tráfego, instruções locais nem restrições do dia.",
+        "",
+        "Limitações conhecidas: a folha não inclui meteorologia, IMO ou ambiente live; o campo `Cais` representa o cais registado na prática e, nas saídas, pode ser origem em vez de destino; proveniência/destino externo não está normalizado como `mar` ou `fora`.",
+        "",
+        "## Resumo",
+        "",
+        f"- Total de manobras válidas: {total}.",
+        f"- Intervalo de datas: {date_range or '--'}.",
+        f"- Tipos de manobra: {_counter_label(type_counter)}.",
+        f"- Tipos de navio: {_counter_label(vessel_type_counter, limit=10)}.",
+        f"- Cais mais frequentes: {_counter_label(berth_counter, limit=12)}.",
+        f"- Rebocadores registados: {_counter_label(tug_counter, limit=8)}.",
+        f"- Linhas com comentários operacionais: {len(comments)}.",
+        "",
+        "## Métricas por tipo de manobra",
+        "",
+        "| Manobra | Casos | Duração mediana | Duração média | Rebocadores medianos | Calado mediano |",
+        "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for maneuver_type, count in type_counter.most_common():
+        typed_rows = [row for row in rows if row["maneuver_type"] == maneuver_type]
+        durations = [row["duration_h"] for row in typed_rows if row["duration_h"] is not None]
+        tugs = [row["tug_count"] for row in typed_rows if row["tug_count"] is not None]
+        drafts = [row["draft_m"] for row in typed_rows if row["draft_m"] is not None]
+        mean_duration = statistics.mean(durations) if durations else None
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_cell(maneuver_type),
+                    str(count),
+                    _format_metric(_median(durations), suffix=" h"),
+                    _format_metric(mean_duration, suffix=" h"),
+                    _format_metric(_median(tugs), decimals=0),
+                    _format_metric(_median(drafts), suffix=" m"),
+                ]
+            )
+            + " |"
+        )
+
+    grouped: dict[tuple[str, str, str], list[dict]] = {}
+    for row in rows:
+        key = (row["maneuver_type"], row["vessel_type"], row["berth"])
+        grouped.setdefault(key, []).append(row)
+
+    group_rows = sorted(
+        grouped.items(),
+        key=lambda item: (len(item[1]), item[0][0], item[0][1], item[0][2]),
+        reverse=True,
+    )
+    lines.extend(
+        [
+            "",
+            "## Padrões por manobra, tipo de navio e cais",
+            "",
+            "| Manobra | Tipo navio | Cais | Casos | Duração mediana | Rebocadores medianos | GT mediano | LOA mediana | Calado mediano | Observações |",
+            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        ]
+    )
+    for (maneuver_type, vessel_type, berth), bucket in group_rows[:120]:
+        durations = [row["duration_h"] for row in bucket if row["duration_h"] is not None]
+        tugs = [row["tug_count"] for row in bucket if row["tug_count"] is not None]
+        gts = [row["gt"] for row in bucket if row["gt"] is not None]
+        lengths = [row["length_m"] for row in bucket if row["length_m"] is not None]
+        drafts = [row["draft_m"] for row in bucket if row["draft_m"] is not None]
+        bucket_comments = [row["comment"] for row in bucket if row.get("comment")]
+        observations = "; ".join(bucket_comments[:2])
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_cell(maneuver_type),
+                    _markdown_cell(vessel_type),
+                    _markdown_cell(berth),
+                    str(len(bucket)),
+                    _format_metric(_median(durations), suffix=" h"),
+                    _format_metric(_median(tugs), decimals=0),
+                    _format_metric(_median(gts), decimals=0),
+                    _format_metric(_median(lengths), suffix=" m"),
+                    _format_metric(_median(drafts), suffix=" m"),
+                    _markdown_cell(observations) or "--",
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Comentários operacionais preservados",
+            "",
+            "Comentários livres da folha, sem nomes de pilotos. Usar como pistas de risco ou exceção, não como regra automática.",
+            "",
+            "| Manobra | Navio | Tipo | Cais | Rebocadores | Comentário |",
+            "| --- | --- | --- | --- | ---: | --- |",
+        ]
+    )
+    for row in comments[:90]:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_cell(row["maneuver_type"]),
+                    _markdown_cell(row["vessel_name"]),
+                    _markdown_cell(row["vessel_type"]),
+                    _markdown_cell(row["berth"]),
+                    _format_metric(row["tug_count"], decimals=0),
+                    _markdown_cell(row["comment"]),
+                ]
+            )
+            + " |"
+        )
+
+    stats = {
+        "total": total,
+        "comments": len(comments),
+        "date_range": date_range,
+        "top_maneuver_type": type_counter.most_common(1)[0][0] if type_counter else "",
+        "top_berth": berth_counter.most_common(1)[0][0] if berth_counter else "",
+    }
+    return "\n".join(lines) + "\n", stats
 
 
 def _build_admin_bot_payload() -> dict:
@@ -274,6 +543,7 @@ def _build_admin_bot_payload() -> dict:
         "recent_feedback_cases": recent_feedback_cases,
         "failure_rows": failure_rows,
         "document_rows": document_rows[:16],
+        "practice_casebook": _practice_casebook_payload(),
     }
 
 
@@ -359,8 +629,12 @@ def _filter_documents(docs: list[dict], filters: dict) -> list[dict]:
 
 def _admin_casebooks_return_to() -> str:
     if request.query_string:
-        return f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
-    return request.path
+        target = f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
+    else:
+        target = request.path
+    if request.endpoint == "admin.admin_bot":
+        return f"{target}#casebooks"
+    return target
 
 
 def _normalized_filter_value(value: str | None, allowed: set[str], default: str) -> str:
@@ -516,7 +790,7 @@ def _build_admin_casebooks_payload() -> dict:
     visible_cases = [item for item in all_cases if _case_visible(item)]
 
     chat_rows = []
-    for item in visible_chat_messages[:16]:
+    for item in visible_chat_messages[:80]:
         status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
@@ -546,10 +820,12 @@ def _build_admin_casebooks_payload() -> dict:
 
     observation_case_rows = []
     governed_case_rows = []
-    for item in visible_cases:
+    case_rows = []
+    for item in visible_cases[:80]:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         bucket, learning_title, learning_summary, learning_badge = _case_governance_meta(status_clean)
+        top_matches = _build_casebook_match_rows(item, all_cases)
         row = {
             "maneuver_id": item.get("maneuver_id", ""),
             "port_call_id": item.get("port_call_id", ""),
@@ -568,11 +844,16 @@ def _build_admin_casebooks_payload() -> dict:
             "feedback_updated_at_label": item.get("feedback_updated_at_label", ""),
             "feature_label": _casebook_feature_label(item),
             "decision_flags": list((item.get("outcome_snapshot") or {}).get("decision_flags") or []),
-            "top_matches": _build_casebook_match_rows(item, all_cases),
+            "top_matches": top_matches,
+            "top_matches_label": "; ".join(
+                f"{match['reference_code']} ({match['similarity_score']}, {match['feedback_status_label']})"
+                for match in top_matches[:2]
+            ),
             "learning_title": learning_title,
             "learning_summary": learning_summary,
             "learning_badge": learning_badge,
         }
+        case_rows.append(row)
         target_rows = observation_case_rows if bucket == "observation" else governed_case_rows
         if len(target_rows) < 12:
             target_rows.append(row)
@@ -613,6 +894,7 @@ def _build_admin_casebooks_payload() -> dict:
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),
         "chat_rows": chat_rows,
+        "case_rows": case_rows,
         "observation_case_rows": observation_case_rows,
         "governed_case_rows": governed_case_rows,
     }
@@ -633,7 +915,12 @@ def admin_status():
 def admin_bot():
     """Painel de acompanhamento do bot, evals e correções supervisionadas."""
     refresh_knowledge_state(force_reindex=False)
-    return render_template("admin_bot.html", bot=_build_admin_bot_payload(), title="Bot e evals")
+    return render_template(
+        "admin_bot.html",
+        bot=_build_admin_bot_payload(),
+        casebooks=_build_admin_casebooks_payload(),
+        title="Bot e evals",
+    )
 
 
 @bp.route("/admin/casebooks")
@@ -641,7 +928,62 @@ def admin_bot():
 @role_required("admin")
 def admin_casebooks():
     """Painel admin para rever mensagens do chat e gerir casos operacionais."""
-    return render_template("admin_casebooks.html", casebooks=_build_admin_casebooks_payload(), title="Casebooks")
+    args = request.args.to_dict(flat=True)
+    return redirect(url_for("admin.admin_bot", **args, _anchor="casebooks"))
+
+
+@bp.route("/admin/bot/practice-casebook/import", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_practice_casebook():
+    """Importar a folha de prática de manobras como documento de conhecimento supervisionado."""
+    uploaded_file = request.files.get("practice_file")
+    source = None
+    if uploaded_file and uploaded_file.filename:
+        uploaded_file.stream.seek(0)
+        source = BytesIO(uploaded_file.read())
+    else:
+        local_source = Path(current_app.root_path) / PRACTICE_CASEBOOK_SOURCE_FILENAME
+        if local_source.exists():
+            source = local_source
+
+    if source is None:
+        flash("Carrega o ficheiro Manobras Pratica.xlsx para importar o casebook prático.", "error")
+        return redirect(url_for("admin.admin_bot", _anchor="practice-casebook"))
+
+    try:
+        rows = _load_practice_maneuver_rows(source)
+        content, stats = _build_practice_casebook_document(rows)
+        if services.store.get_document(PRACTICE_CASEBOOK_DOCUMENT_NAME):
+            services.store.update_document_text(
+                PRACTICE_CASEBOOK_DOCUMENT_NAME,
+                content,
+                updated_by=session["username"],
+            )
+            filename = PRACTICE_CASEBOOK_DOCUMENT_NAME
+        else:
+            filename = services.store.save_document(
+                PRACTICE_CASEBOOK_TITLE,
+                content,
+                created_by=session["username"],
+            )
+        if safe_rebuild_index(force=False):
+            flash(
+                f"Casebook prático importado: {stats['total']} manobras, "
+                f"{stats['comments']} comentários operacionais. Documento {filename} indexado.",
+                "success",
+            )
+        else:
+            flash(
+                f"Casebook prático guardado em {filename}, mas a reindexação falhou: {services.rag.last_index_error}",
+                "error",
+            )
+    except ValueError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar casebook prático.")
+        flash(f"Falha inesperada ao importar o casebook prático: {exc}", "error")
+    return redirect(url_for("admin.admin_bot", _anchor="practice-casebook"))
 
 
 @bp.route("/admin/casebooks/messages/<message_id>/feedback", methods=["POST"])
@@ -651,7 +993,7 @@ def admin_casebooks_message_feedback(message_id: str):
     """Guardar a decisão admin sobre a reutilização de uma resposta do chat."""
     owner_username = (request.form.get("owner_username") or "").strip().lower()
     conversation_id = (request.form.get("conversation_id") or "").strip()
-    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_casebooks")
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
     try:
         if not owner_username or not conversation_id:
             raise ValueError("Mensagem inválida para revisão.")
@@ -683,7 +1025,7 @@ def admin_casebooks_message_feedback(message_id: str):
 @role_required("admin")
 def admin_casebooks_maneuver_feedback(maneuver_id: str):
     """Guardar a validação admin de um caso operacional do casebook."""
-    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_casebooks")
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
     try:
         feedback_status = validate_operational_feedback_status(request.form.get("feedback_status", ""))
         feedback_note = (request.form.get("feedback_note") or "").strip()

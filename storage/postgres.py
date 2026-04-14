@@ -2087,7 +2087,8 @@ class PostgresStore(BaseStore):
                         assistant.feedback_correction_document,
                         assistant.feedback_updated_by,
                         assistant.feedback_updated_at,
-                        user_msg.content AS question
+                        user_msg.content AS question,
+                        c.username
                     FROM messages assistant
                     JOIN conversations c ON c.id = assistant.conversation_id
                     JOIN LATERAL (
@@ -2099,12 +2100,11 @@ class PostgresStore(BaseStore):
                         ORDER BY created_at DESC
                         LIMIT 1
                     ) user_msg ON TRUE
-                    WHERE c.username = %s
-                      AND assistant.role = 'assistant'
+                    WHERE assistant.role = 'assistant'
                       AND assistant.feedback_status = ANY(%s)
                     ORDER BY assistant.feedback_updated_at DESC NULLS LAST, assistant.created_at DESC
                     """,
-                    (username, sorted(allowed_statuses)),
+                    (sorted(allowed_statuses),),
                 )
                 rows = cur.fetchall()
 

@@ -245,7 +245,7 @@
           </div>
           <p class="muted">As correlações e a validação desta manobra passaram para a área admin de casebooks, onde a memória operacional é governada fora do fluxo diário.</p>
           <div class="inline-link-row">
-            <a class="outline-link" href="{{ url_for('admin.admin_casebooks', case_type=maneuver.type) }}">Abrir casebooks</a>
+            <a class="outline-link" href="{{ url_for('admin.admin_bot', case_type=maneuver.type, _anchor='casebooks') }}">Abrir casebooks</a>
           </div>
         </section>
       {% endif %}

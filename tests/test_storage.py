@@ -1246,6 +1246,18 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(reviewed[0]["feedback_status"], "review")
         self.assertIn("feedback_correction", reviewed[0])
 
+    def test_find_feedback_matches_uses_admin_governed_answers_globally(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message("admin", conv["id"], "user", "Qual é a distância da barra ao Outão?")
+        msg = self.store.append_chat_message("admin", conv["id"], "assistant", "3,23 milhas náuticas.")
+        self.store.update_message_feedback("admin", conv["id"], msg["id"], "approved", "Validado.")
+
+        matches = self.store.find_feedback_matches("agente@example.com", "distância da barra ao outão")
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["answer"], "3,23 milhas náuticas.")
+        self.assertEqual(matches[0]["username"], "admin")
+
     def test_feedback_eval_case_crud(self) -> None:
         created = self.store.upsert_feedback_eval_case(
             source_message_id="msg-1",

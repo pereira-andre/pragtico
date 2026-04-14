@@ -60,8 +60,7 @@
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
               {% if current_role == "admin" %}
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_casebooks' else '' }}" href="{{ url_for('admin.admin_casebooks') }}">Casebooks</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_bot' else '' }}" href="{{ url_for('admin.admin_bot') }}">Bot</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_bot', 'admin.admin_casebooks'] else '' }}" href="{{ url_for('admin.admin_bot') }}">Bot</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_documents' else '' }}" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_status' else '' }}" href="{{ url_for('admin.admin_status') }}">Estado</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_users' else '' }}" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
@@ -83,7 +82,6 @@
                 <option value="{{ url_for('dashboard_bp.local_warnings') }}">Avisos locais</option>
                 <option value="{{ url_for('dashboard_bp.contact') }}">Contacto e suporte</option>
                 {% if current_role == "admin" %}
-                  <option value="{{ url_for('admin.admin_casebooks') }}">Casebooks</option>
                   <option value="{{ url_for('admin.admin_bot') }}">Bot e evals</option>
                   <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
                   <option value="{{ url_for('admin.admin_status') }}">Estado da plataforma</option>

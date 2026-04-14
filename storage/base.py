@@ -260,7 +260,7 @@ class BaseStore(ABC):
         limit: int = 3,
         feedback_statuses: Optional[set[str]] = None,
     ) -> List[Dict]:
-        """Return previously reviewed chat answers whose question closely matches the given text."""
+        """Return admin-governed chat answers whose question closely matches the given text."""
         raise NotImplementedError
 
     @abstractmethod

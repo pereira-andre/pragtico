@@ -107,6 +107,241 @@
       </div>
     </section>
 
+    <section class="panel section-panel" id="practice-casebook">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Experiência prática</p>
+          <h2>Casebook de manobras</h2>
+        </div>
+      </div>
+      <div class="admin-status-split">
+        <article class="admin-status-surface">
+          <div class="admin-status-surface-head">
+            <strong>{{ bot.practice_casebook.document_name }}</strong>
+            <span class="admin-status-badge is-{{ 'online' if bot.practice_casebook.exists else 'degraded' }}">
+              {{ 'Importado' if bot.practice_casebook.exists else 'Por importar' }}
+            </span>
+          </div>
+          {% if bot.practice_casebook.exists %}
+            <p class="admin-status-note">{{ bot.practice_casebook.preview }}</p>
+            <p class="admin-bot-case-meta"><strong>Atualizado:</strong> {{ bot.practice_casebook.updated_at_label }}</p>
+            <a class="inline-link" href="{{ url_for('admin.document_detail', name=bot.practice_casebook.document_name, return_to=request.full_path) }}">Abrir documento gerado</a>
+          {% else %}
+            <p class="admin-status-note">Importa a folha de prática para criar um documento de conhecimento com padrões por tipo de manobra, navio, cais, rebocadores, duração e comentários operacionais.</p>
+          {% endif %}
+          <p class="admin-status-note">A importação remove nomes de pilotos e marca o ficheiro como referência observacional. O bot usa isto como contexto, não como regra automática.</p>
+        </article>
+        <article class="admin-status-surface">
+          <div class="admin-status-surface-head">
+            <strong>Importar Excel</strong>
+            <span class="admin-status-badge is-neutral">.xlsx</span>
+          </div>
+          <form method="post" action="{{ url_for('admin.import_practice_casebook') }}" enctype="multipart/form-data" class="stack admin-casebook-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Ficheiro de prática
+              <input type="file" name="practice_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </label>
+            <p class="admin-status-note">
+              {% if bot.practice_casebook.local_source_exists %}
+                Sem upload, o servidor usa o ficheiro local <code>{{ bot.practice_casebook.local_source_label }}</code>.
+              {% else %}
+                Carrega o ficheiro <code>{{ bot.practice_casebook.local_source_label }}</code> para gerar o casebook.
+              {% endif %}
+            </p>
+            <button type="submit" class="mini-button">Importar casebook prático</button>
+          </form>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel section-panel" id="casebooks">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Governança</p>
+          <h2>Inputs que o bot pode reutilizar</h2>
+        </div>
+      </div>
+      <div class="admin-status-compact-grid admin-casebook-kpi-grid">
+        <div class="admin-status-fact">
+          <span>Mensagens por rever</span>
+          <strong>{{ casebooks.chat_pending_total }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Mensagens aprovadas</span>
+          <strong>{{ casebooks.chat_approved_total }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Casos por validar</span>
+          <strong>{{ casebooks.case_pending_total }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Experiência validada</span>
+          <strong>{{ casebooks.case_approved_total }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Alertas</span>
+          <strong>{{ casebooks.case_review_total }}</strong>
+        </div>
+      </div>
+      <p class="admin-status-note">{{ casebooks.summary }}</p>
+
+      <form method="get" action="{{ url_for('admin.admin_bot') }}#casebooks" class="archive-filter-form admin-casebook-compact-filters">
+        <div class="archive-filter-grid admin-casebooks-filter-grid">
+          <label>
+            Chat/WhatsApp
+            <select name="chat_feedback">
+              <option value="pending" {% if casebooks.filters.chat_feedback == "pending" %}selected{% endif %}>Por rever</option>
+              <option value="approved" {% if casebooks.filters.chat_feedback == "approved" %}selected{% endif %}>Aprovadas</option>
+              <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas / rever</option>
+              <option value="all" {% if casebooks.filters.chat_feedback == "all" %}selected{% endif %}>Todas</option>
+            </select>
+          </label>
+          <label>
+            Manobras
+            <select name="case_feedback">
+              <option value="pending" {% if casebooks.filters.case_feedback == "pending" %}selected{% endif %}>Sem validação</option>
+              <option value="approved" {% if casebooks.filters.case_feedback == "approved" %}selected{% endif %}>Experiência validada</option>
+              <option value="avoid" {% if casebooks.filters.case_feedback == "avoid" %}selected{% endif %}>Evitar como padrão</option>
+              <option value="review" {% if casebooks.filters.case_feedback == "review" %}selected{% endif %}>Rever caso</option>
+              <option value="all" {% if casebooks.filters.case_feedback == "all" %}selected{% endif %}>Todos</option>
+            </select>
+          </label>
+          <label>
+            Tipo
+            <select name="case_type">
+              <option value="" {% if not casebooks.filters.case_type %}selected{% endif %}>Todos</option>
+              <option value="entry" {% if casebooks.filters.case_type == "entry" %}selected{% endif %}>Entrada</option>
+              <option value="departure" {% if casebooks.filters.case_type == "departure" %}selected{% endif %}>Saída</option>
+              <option value="shift" {% if casebooks.filters.case_type == "shift" %}selected{% endif %}>Mudança</option>
+            </select>
+          </label>
+        </div>
+        <div class="inline-link-row">
+          <button type="submit" class="mini-button">Aplicar</button>
+          <a class="outline-link" href="{{ url_for('admin.admin_bot', _anchor='casebooks') }}">Limpar</a>
+        </div>
+      </form>
+
+      <div class="admin-casebook-sheet-block">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Chat e WhatsApp</p>
+            <h3>Respostas governadas</h3>
+          </div>
+        </div>
+        {% if casebooks.chat_rows %}
+          <div class="admin-casebook-sheet-wrap">
+            <table class="admin-casebook-sheet">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Origem</th>
+                  <th>Pergunta</th>
+                  <th>Resposta</th>
+                  <th>Controlo admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in casebooks.chat_rows %}
+                  <tr>
+                    <td>
+                      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ item.channel_label }}</strong><br>
+                      <span class="muted">{{ item.owner_username }}</span><br>
+                      <span class="muted">{{ item.created_at_label }}</span>
+                    </td>
+                    <td>{{ item.question_preview }}</td>
+                    <td>
+                      {{ item.answer_preview }}
+                      {% if item.feedback_correction %}
+                        <br><strong>Correção:</strong> {{ item.feedback_correction }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="admin-sheet-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
+                        <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
+                        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+                        <select name="feedback_status" required>
+                          <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar</option>
+                          <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Bloquear / rever</option>
+                        </select>
+                        <textarea name="feedback_note" rows="2" placeholder="Nota">{{ item.feedback_note }}</textarea>
+                        <textarea name="feedback_correction" rows="2" placeholder="Correção reutilizável">{{ item.feedback_correction }}</textarea>
+                        <input type="text" name="feedback_correction_document" value="{{ item.feedback_correction_document }}" placeholder="Documento alvo">
+                        <button type="submit" class="mini-button">Guardar</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="admin-status-note">Nenhuma mensagem corresponde aos filtros atuais.</p>
+        {% endif %}
+      </div>
+
+      <div class="admin-casebook-sheet-block">
+        <div class="section-head compact-head">
+          <div>
+            <p class="eyebrow">Manobras</p>
+            <h3>Casos operacionais</h3>
+          </div>
+        </div>
+        {% if casebooks.case_rows %}
+          <div class="admin-casebook-sheet-wrap">
+            <table class="admin-casebook-sheet">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Escala</th>
+                  <th>Manobra</th>
+                  <th>Perfil</th>
+                  <th>Correlação</th>
+                  <th>Controlo admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in casebooks.case_rows %}
+                  <tr>
+                    <td><span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span></td>
+                    <td>
+                      <strong>{{ item.reference_code }}</strong><br>
+                      <span class="muted">{{ item.vessel_name }}</span><br>
+                      <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir</a>
+                    </td>
+                    <td>{{ item.maneuver_type_label }}<br><span class="muted">{{ item.route_label }}</span></td>
+                    <td>{{ item.feature_label }}</td>
+                    <td>{{ item.top_matches_label or "Sem correlação forte" }}</td>
+                    <td>
+                      <form method="post" action="{{ url_for('admin.admin_casebooks_maneuver_feedback', maneuver_id=item.maneuver_id) }}" class="admin-sheet-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+                        <select name="feedback_status" required>
+                          <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Validar</option>
+                          <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar padrão</option>
+                          <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever</option>
+                        </select>
+                        <textarea name="feedback_note" rows="2" placeholder="Nota de validação">{{ item.feedback_note }}</textarea>
+                        <button type="submit" class="mini-button">Guardar</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="admin-status-note">Nenhum caso operacional corresponde aos filtros atuais.</p>
+        {% endif %}
+      </div>
+    </section>
+
     <section class="panel section-panel">
       <div class="section-head">
         <div>

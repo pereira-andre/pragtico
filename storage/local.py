@@ -1297,7 +1297,7 @@ class LocalStore(BaseStore):
         limit: int = 3,
         feedback_statuses: Optional[set[str]] = None,
     ) -> List[Dict]:
-        """Return previously reviewed messages whose question best matches the given text."""
+        """Return admin-governed chat answers whose question best matches the given text."""
         allowed_statuses = {
             (status or "").strip().lower()
             for status in (feedback_statuses or {FEEDBACK_APPROVED})
@@ -1310,7 +1310,6 @@ class LocalStore(BaseStore):
         conversations = {
             item["id"]: item
             for item in self._read_conversations()
-            if item["username"] == username
         }
         if not conversations:
             return []
@@ -1341,6 +1340,7 @@ class LocalStore(BaseStore):
                     {
                         "message_id": message["id"],
                         "conversation_id": conversation_id,
+                        "username": conversations[conversation_id].get("username", ""),
                         "question": previous_user.get("content", ""),
                         "answer": message.get("content", ""),
                         "citations": message.get("citations", []),
