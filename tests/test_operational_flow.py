@@ -3884,11 +3884,59 @@ class PortCallJsonImportTests(unittest.TestCase):
             flask_session["_csrf_token"] = "json-token"
         return "json-token"
 
+    def _set_agent_session(self, client) -> str:
+        self.store.create_user(
+            "agencia@example.com",
+            "secret123",
+            "agente",
+            full_name="Agencia X",
+            organization="Agencia X",
+            email="agencia@example.com",
+            phone="+351 900 000 111",
+        )
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = "agencia@example.com"
+            flask_session["role"] = "agente"
+            flask_session["_csrf_token"] = "json-token"
+        return "json-token"
+
+    def test_import_port_call_json_is_admin_only(self) -> None:
+        with app.app.test_client() as client:
+            csrf_token = self._set_agent_session(client)
+            response = client.post(
+                "/port-calls/import-json",
+                data={"csrf_token": csrf_token, "payload_json": "{}"},
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.store.get_port_activity_snapshot(window_days=30)["arrivals"], [])
+
+    def test_agent_register_page_hides_json_import(self) -> None:
+        with app.app.test_client() as client:
+            self._set_agent_session(client)
+            response = client.get("/port-calls/register")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("Importar escala por JSON", html)
+        self.assertNotIn("/port-calls/import-json", html)
+
+    def test_admin_register_page_shows_json_import(self) -> None:
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/port-calls/register")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Importar escala por JSON", html)
+        self.assertIn("/port-calls/import-json", html)
+
     def test_import_port_call_json_from_textarea(self) -> None:
         payload = """
         {
           "vessel_name": "MSC Lyria",
-          "eta": "2026-04-09T14:30:00+01:00",
+          "eta": "2026-04-20T14:30:00+01:00",
           "berth": "Secil W",
           "last_port": "Sines",
           "next_port": "Vigo",
@@ -3903,7 +3951,6 @@ class PortCallJsonImportTests(unittest.TestCase):
           "vessel_max_draft_m": "11.8",
           "vessel_bow_thruster": true,
           "vessel_stern_thruster": "unknown",
-          "booking": "2026-04-09T13:45:00+01:00",
           "draft_m": "11.2",
           "tug_count": 2,
           "constraints": ["daylight"],
@@ -3934,7 +3981,7 @@ class PortCallJsonImportTests(unittest.TestCase):
         {
           "scale": {
                 "vessel_name": "Atlantic Trader",
-                "eta_local": "2026-04-10T08:15",
+                "eta_local": "2026-04-21T08:15",
                 "berth": "TMS 2",
                 "last_port": "Leixoes",
                 "next_port": "Casablanca",
@@ -3949,7 +3996,6 @@ class PortCallJsonImportTests(unittest.TestCase):
             "vessel_max_draft_m": "9.94",
             "vessel_bow_thruster": "no",
             "vessel_stern_thruster": "yes",
-            "booking_local": "2026-04-10T07:30",
             "draft_m": "9.5",
             "tug_count": 1,
             "constraints": ["gas"],
@@ -3982,7 +4028,7 @@ class PortCallJsonImportTests(unittest.TestCase):
         payload = """
         {
           "vessel_name": "ARKLOW GLOBE",
-          "eta": "2026-04-09T11:15:00+01:00",
+          "eta": "2026-04-20T11:15:00+01:00",
           "berth": "Secil W",
           "last_port": "Sines",
           "next_port": "Vigo",
@@ -3997,7 +4043,6 @@ class PortCallJsonImportTests(unittest.TestCase):
           "vessel_max_draft_m": "6,26",
           "vessel_bow_thruster": "yes",
           "vessel_stern_thruster": "no",
-          "booking": "2026-04-09T11:15:00+01:00",
           "draft_m": "4",
           "tug_count": 0,
           "constraints": ,

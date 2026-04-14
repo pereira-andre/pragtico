@@ -241,10 +241,6 @@ PENDING_UPDATE_FIELD_ALIASES = {
         "planned_at_local",
         "hora prevista",
         "nova hora prevista",
-        "hora de marcacao",
-        "hora de marcação",
-        "marcacao",
-        "marcação",
     ],
     "notes": ["notes", "nota", "observacoes", "observações", "obs"],
     "constraints": ["restricoes", "restrições", "constraints"],
@@ -403,7 +399,6 @@ FIELD_ALIASES = {
     "eta": "eta_local",
     "port": "berth",
     "ship_type": "vessel_type",
-    "marking": "planned_at_local",
     "operational_draft": "draft_m",
     "arrival_eta": "eta_local",
     "arrival_time": "eta_local",
@@ -1892,6 +1887,7 @@ Regras de saída:
 - `target.reference_code` e `target.vessel_name` devem vir limpos, sem inventar.
 - `target.maneuver_type` deve ser entry, departure, shift ou vazio.
 - Em datas/horas operacionais, usa formato `YYYY-MM-DDTHH:MM` no fuso local.
+- Usa apenas a hora prevista como referência de planeamento: ETA nas entradas, ETD/hora prevista nas saídas e hora prevista nas mudanças. Não proponhas campos separados de marcação interna.
 - Se a mensagem pedir alterar um planeamento existente, prefere `edit_maneuver_plan`.
 - Se a mensagem pedir rever um registo já concluído, prefere `edit_maneuver_report`.
 - Em `fields.constraints`, devolve códigos válidos.
@@ -1953,6 +1949,7 @@ Schema:
 Regras:
 - Em `update`, mantém a mesma ação salvo correção explícita do utilizador.
 - Usa formato `YYYY-MM-DDTHH:MM` para datas/horas locais.
+- Usa apenas a hora prevista como referência de planeamento; não devolvas campos separados de marcação interna.
 - Não inventes valores em falta.
 - Mantém a lógica operacional por slots de cais.
 - Fundeadouros são quadros e não contam como slots ocupados.

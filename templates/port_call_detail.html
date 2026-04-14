@@ -10,10 +10,6 @@
         <input type="datetime-local" name="planned_departure_at_local" required>
       </label>
       <label>
-        Marcação interna
-        <input type="datetime-local" name="booking_local" required>
-      </label>
-      <label>
         Próximo destino
         <input type="text" name="next_port" value="{{ scale.summary.next_port if scale.summary.next_port != '--' else '' }}" required>
       </label>
@@ -56,10 +52,6 @@
       <label>
         Hora prevista
         <input type="datetime-local" name="planned_shift_at_local" required>
-      </label>
-      <label>
-        Marcação interna
-        <input type="datetime-local" name="booking_local" required>
       </label>
       <label>
         Cais destino

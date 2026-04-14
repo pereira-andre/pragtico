@@ -49,7 +49,7 @@ bp = Blueprint("port_calls", __name__)
 
 PORT_CALL_JSON_TEMPLATE = {
     "vessel_name": "MSC Lyria",
-    "eta": "2026-04-09T14:30:00+01:00",
+    "eta": "2026-04-20T14:30:00+01:00",
     "berth": "Secil W",
     "last_port": "Sines",
     "next_port": "Vigo",
@@ -64,7 +64,6 @@ PORT_CALL_JSON_TEMPLATE = {
     "vessel_max_draft_m": "11.8",
     "vessel_bow_thruster": "yes",
     "vessel_stern_thruster": "unknown",
-    "booking": "2026-04-09T13:45:00+01:00",
     "draft_m": "11.2",
     "tug_count": 2,
     "constraints": ["daylight"],
@@ -160,7 +159,6 @@ def _coerce_port_call_payload(payload: dict) -> dict:
         "berth": _string_payload_value(payload, "berth"),
         "last_port": _string_payload_value(payload, "last_port"),
         "next_port": _string_payload_value(payload, "next_port"),
-        "booking_local": _string_payload_value(payload, "booking_local", "booking"),
         "draft_m": _string_payload_value(payload, "draft_m"),
         "constraints": _first_payload_value(payload, "constraints", default=[]),
         "tug_count": _string_payload_value(payload, "tug_count"),
@@ -171,7 +169,6 @@ def _coerce_port_call_payload(payload: dict) -> dict:
 def _create_port_call_from_payload(form_data: dict, *, created_by: str) -> dict:
     eta = parse_local_datetime_input(form_data["eta_local"], "ETA")
     validate_not_past_datetime(eta, "ETA")
-    parse_local_datetime_input(form_data["booking_local"], "Marcação")
     berth = normalize_portal_berth(form_data["berth"], "Cais previsto")
     last_port = require_form_text(form_data["last_port"], "Porto anterior")
     next_port = require_form_text(form_data["next_port"], "Próximo destino")
@@ -357,7 +354,6 @@ def create_port_call():
             "berth": request.form.get("berth", ""),
             "last_port": request.form.get("last_port", ""),
             "next_port": request.form.get("next_port", ""),
-            "booking_local": request.form.get("booking_local", ""),
             "draft_m": request.form.get("draft_m", ""),
             "constraints": request.form.getlist("constraints"),
             "tug_count": request.form.get("tug_count", ""),
@@ -387,7 +383,7 @@ def create_port_call():
 
 @bp.route("/port-calls/import-json", methods=["POST"])
 @login_required
-@role_required("admin", "agente")
+@role_required("admin")
 def import_port_call_json():
     """Criar uma nova escala a partir de um payload JSON colado ou carregado no browser."""
     try:
@@ -547,7 +543,6 @@ def schedule_departure_plan(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
-        parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
         next_port = require_form_text(request.form.get("next_port", "").strip(), "Próximo destino")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
@@ -602,7 +597,6 @@ def schedule_shift_plan(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         planned_shift_at = parse_local_datetime_input(request.form.get("planned_shift_at_local", "").strip(), "Hora prevista da mudança")
-        parse_local_datetime_input(request.form.get("booking_local", "").strip(), "Marcação")
         origin_berth = normalize_portal_berth(current.get("berth", ""), "Cais origem")
         destination_berth = normalize_portal_berth(request.form.get("destination_berth", "").strip(), "Cais destino")
         if destination_berth == origin_berth:
@@ -841,7 +835,7 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
         port_call = services.store.edit_maneuver_plan(
             port_call_id=port_call_id, maneuver_id=maneuver_id,
             updated_by=session["username"], actor_role=session.get("role", ""),
-            planned_at=parse_local_datetime_input(request.form.get("planned_at_local", "").strip(), "Hora de marcação"),
+            planned_at=parse_local_datetime_input(request.form.get("planned_at_local", "").strip(), "Hora prevista"),
             origin=origin,
             destination=destination,
             draft_m=validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0),
