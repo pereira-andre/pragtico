@@ -3497,51 +3497,115 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/bot?case_type=entry#casebooks", response.headers["Location"])
 
-    def test_admin_imports_practice_excel_as_structured_experience_for_bot(self) -> None:
-        import openpyxl
-
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Dados"
-        worksheet.append(["Manobras Realizadas"])
-        worksheet.append([
-            "No",
-            "Data",
-            "Hora Embarque",
-            "Hora Desembarque",
-            "Tempo de Manobra (h)",
-            "Tipo Manobra",
-            "Nome ",
-            "Tipo Navio",
-            "GT",
-            "Dimensão C/B (m)",
-            "Calado (m)",
-            "Rebocadores",
-            "Cais",
-            "Piloto Senior",
-            "Comentários",
-        ])
-        for index, vessel_name in enumerate(("Elbtower", "Lisbon Trader"), start=1):
-            worksheet.append([
-                index,
-                datetime(2026, 4, 10),
-                datetime(2026, 4, 10, 6, 0).time(),
-                datetime(2026, 4, 10, 7, 10).time(),
-                datetime(2026, 4, 10, 1, 10).time(),
-                "Entrada",
-                vessel_name,
-                "Contentores",
-                11662,
-                "149/22",
-                7.3,
-                2,
-                "TMS 2",
-                "Piloto Teste",
-                "Bow avariado, usar rebocador.",
-            ])
-        payload = BytesIO()
-        workbook.save(payload)
-        payload.seek(0)
+    def test_admin_imports_practice_json_as_structured_experience_for_bot(self) -> None:
+        payload = BytesIO(
+            json.dumps(
+                {
+                    "kind": "pragtico.practice_maneuver_experience",
+                    "version": 1,
+                    "stats": {
+                        "raw_rows": 2,
+                        "pattern_count": 1,
+                        "maneuver_types_label": "Entrada (2)",
+                    },
+                    "records": [
+                        {
+                            "id": "practice-test",
+                            "maneuver_id": "practice-test",
+                            "port_call_id": "",
+                            "reference_code": "EXP-TEST",
+                            "source_type": "practice_import",
+                            "source_label": "Experiência prática importada",
+                            "source_filename": "practice_maneuver_experience.json",
+                            "vessel_name": "Padrão Contentores · TMS 2",
+                            "maneuver_type": "entry",
+                            "maneuver_type_label": "Entrada",
+                            "current_state": "completed",
+                            "current_state_label": "Realizada",
+                            "origin_label": "Fora",
+                            "destination_label": "TMS 2",
+                            "latest_event_at": "2026-04-10T07:10:00+00:00",
+                            "case_summary": "Entrada | Contentores | TMS 2 | 2 caso(s) | rebocadores mais comuns 2",
+                            "practice_summary": "Entrada | Contentores | TMS 2 | 2 caso(s) | rebocadores mais comuns 2",
+                            "practice_metrics": {
+                                "case_count": 2,
+                                "date_range": "2026-04-10 a 2026-04-10",
+                                "duration_median_label": "1.2 h",
+                                "dominant_tug_count": "2",
+                                "tug_distribution_label": "2 (2)",
+                                "vessel_examples": ["Elbtower", "Lisbon Trader"],
+                                "comments": ["Bow avariado, usar rebocador."],
+                                "loa_band": "150-200m",
+                                "beam_band": "20-25m",
+                                "draft_band": "6-8m",
+                            },
+                            "vessel_snapshot": {
+                                "type": "Contentores",
+                                "loa_m": "151",
+                                "beam_m": "22",
+                                "gt_t": "11800",
+                                "max_draft_m": "7.4",
+                            },
+                            "planning_snapshot": {
+                                "origin": "Fora",
+                                "destination": "TMS 2",
+                                "planned_draft_m": "7.4",
+                                "tug_count": "2",
+                                "plan_note": "Entrada | Contentores | TMS 2",
+                            },
+                            "decision_snapshot": {
+                                "decision": "approved",
+                                "state": "completed",
+                                "approval_note": "Padrão agregado.",
+                            },
+                            "execution_snapshot": {
+                                "report_note": "Bow avariado, usar rebocador.",
+                                "reported_by": "experiência importada",
+                            },
+                            "outcome_snapshot": {
+                                "state": "completed",
+                                "state_label": "Realizada",
+                                "decision_flags": [],
+                            },
+                            "environment_snapshot": {
+                                "latest": {"status": "not_captured", "source": "practice_import"},
+                            },
+                            "feature_snapshot": {
+                                "maneuver_type": "entry",
+                                "origin": "Fora",
+                                "destination": "TMS 2",
+                                "origin_key": "fora",
+                                "destination_key": "tms 2",
+                                "origin_is_anchorage": False,
+                                "destination_is_anchorage": False,
+                                "origin_is_known_berth": False,
+                                "destination_is_known_berth": True,
+                                "vessel_type": "Contentores",
+                                "vessel_type_key": "contentores",
+                                "vessel_loa_m": 151,
+                                "vessel_beam_m": 22,
+                                "vessel_gt_t": 11800,
+                                "planned_draft_m": 7.4,
+                                "reported_draft_m": 7.4,
+                                "bow_thruster": "unknown",
+                                "stern_thruster": "unknown",
+                                "tug_count": "2",
+                                "constraints": [],
+                                "wave_sensitive": True,
+                            },
+                            "feedback_status": "review",
+                            "feedback_note": "",
+                            "created_at": "2026-04-10T07:10:00+00:00",
+                            "updated_at": "2026-04-10T07:10:00+00:00",
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+            ).encode("utf-8")
+        )
+        knowledge_source = Path(self.store.knowledge_dir) / "practice_maneuver_experience.json"
+        knowledge_source.parent.mkdir(parents=True, exist_ok=True)
+        knowledge_source.write_bytes(payload.getvalue())
 
         with app.app.test_client() as client:
             csrf_token = self._set_admin_session(client)
@@ -3552,9 +3616,7 @@ class AdminDocumentPolicyTests(unittest.TestCase):
                     "return_to": "/admin/bot#casebooks",
                     "replace_source": "1",
                     "feedback_status": "approved",
-                    "practice_file": (payload, "Manobras Pratica.xlsx"),
                 },
-                content_type="multipart/form-data",
         )
 
         self.assertEqual(response.status_code, 302)

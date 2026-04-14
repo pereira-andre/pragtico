@@ -182,7 +182,7 @@
       <div class="admin-casebook-sheet-block">
         <div class="section-head compact-head">
           <div>
-            <p class="eyebrow">Excel de prática</p>
+            <p class="eyebrow">JSON de prática</p>
             <h3>Experiência prática importada</h3>
           </div>
         </div>
@@ -191,8 +191,8 @@
           <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
           <div class="archive-filter-grid admin-casebooks-filter-grid">
             <label>
-              Ficheiro .xlsx
-              <input type="file" name="practice_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+              Ficheiro .json
+              <input type="file" name="practice_file" accept=".json,application/json">
             </label>
             <label>
               Estado ao importar
@@ -209,7 +209,7 @@
           <p class="admin-status-note">
             A importação agrega manobras por tipo, navio, dimensão, calado e cais. O bot só reutiliza padrões aprovados ou marcados como evitar; padrões em revisão ficam fora do contexto.
             {% if casebooks.practice_local_source_exists %}
-              Sem upload, o servidor usa <code>{{ casebooks.practice_source_filename }}</code>.
+              Sem upload, o servidor usa <code>knowledge/{{ casebooks.practice_source_filename }}</code>.
             {% endif %}
           </p>
           <button type="submit" class="mini-button">Importar experiência</button>

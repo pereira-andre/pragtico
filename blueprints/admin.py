@@ -1,7 +1,6 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
 from collections import Counter
-from io import BytesIO
 import logging
 import os
 from pathlib import Path
@@ -25,10 +24,12 @@ from core.validators import (
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import evaluate_companion_cases, load_eval_cases_from_dir, load_eval_cases_from_store
 from domain.practice_experience import (
-    build_practice_experience_records_from_xlsx,
     clear_practice_experience_records,
     delete_practice_experience_record,
     list_practice_experience_records,
+    load_practice_experience_records_from_json,
+    PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME,
+    prepare_practice_experience_records_for_import,
     save_practice_experience_records,
     update_practice_experience_feedback,
 )
@@ -50,7 +51,13 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
 
-PRACTICE_EXPERIENCE_SOURCE_FILENAME = "Manobras Pratica.xlsx"
+PRACTICE_EXPERIENCE_SOURCE_FILENAME = PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME
+
+
+def _practice_experience_source_path() -> Path:
+    knowledge_dir = getattr(services.store, "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "")
+    base_dir = Path(knowledge_dir) if knowledge_dir else Path(current_app.root_path) / "knowledge"
+    return base_dir / PRACTICE_EXPERIENCE_SOURCE_FILENAME
 
 
 def _normalize_digits(value: str | None) -> str:
@@ -674,7 +681,7 @@ def _build_admin_casebooks_payload() -> dict:
         "practice_total": len(all_practice_records),
         "practice_active_total": sum(1 for item in all_practice_records if (item.get("feedback_status") or "").strip() in {"approved", "avoid"}),
         "practice_review_total": sum(1 for item in all_practice_records if (item.get("feedback_status") or "").strip() == "review"),
-        "practice_local_source_exists": (Path(current_app.root_path) / PRACTICE_EXPERIENCE_SOURCE_FILENAME).exists(),
+        "practice_local_source_exists": _practice_experience_source_path().exists(),
         "practice_source_filename": PRACTICE_EXPERIENCE_SOURCE_FILENAME,
         "chat_rows": chat_rows,
         "case_rows": case_rows,
@@ -727,21 +734,25 @@ def import_practice_experience():
     source_filename = PRACTICE_EXPERIENCE_SOURCE_FILENAME
     if uploaded_file and uploaded_file.filename:
         source_filename = os.path.basename(uploaded_file.filename)
-        uploaded_file.stream.seek(0)
-        source = BytesIO(uploaded_file.read())
+        if not source_filename.lower().endswith(".json"):
+            flash("Carrega um ficheiro .json de experiência prática.", "error")
+            return redirect(return_to)
+        source = uploaded_file.read()
     else:
-        local_source = Path(current_app.root_path) / PRACTICE_EXPERIENCE_SOURCE_FILENAME
+        local_source = _practice_experience_source_path()
         if local_source.exists():
+            source_filename = local_source.name
             source = local_source
 
     if source is None:
-        flash("Carrega o ficheiro Manobras Pratica.xlsx para importar experiência prática.", "error")
+        flash(f"Carrega {PRACTICE_EXPERIENCE_SOURCE_FILENAME} em knowledge ou envia um JSON de experiência prática.", "error")
         return redirect(return_to)
 
     try:
         feedback_status = validate_operational_feedback_status(request.form.get("feedback_status", "approved"))
-        records, stats = build_practice_experience_records_from_xlsx(
-            source,
+        source_records, stats = load_practice_experience_records_from_json(source)
+        records = prepare_practice_experience_records_for_import(
+            source_records,
             source_filename=source_filename,
             imported_by=session["username"],
             feedback_status=feedback_status,
@@ -754,7 +765,7 @@ def import_practice_experience():
             replace_source=bool(request.form.get("replace_source")),
         )
         flash(
-            f"Experiência prática importada: {stats['raw_rows']} manobras agregadas em "
+            f"Experiência prática carregada: {stats['raw_rows']} manobras agregadas em "
             f"{stats['pattern_count']} padrões. Tipos: {stats['maneuver_types_label']}.",
             "success",
         )
