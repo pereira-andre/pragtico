@@ -5,9 +5,12 @@ from __future__ import annotations
 from collections import Counter
 import json
 from pathlib import Path
+import re
 from typing import Any
+import unicodedata
 
 from core.validators import validate_operational_feedback_status
+from domain.berth_layout import canonicalize_berth_label, is_anchorage_berth, is_known_berth_label
 from domain.document_processing import iso_now
 
 
@@ -20,6 +23,73 @@ PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME = "practice_maneuver_experience.json"
 
 def _clean_text(value: Any) -> str:
     return " ".join(str(value or "").strip().split())
+
+
+def _case_key(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", _clean_text(value).lower())
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", " ", ascii_value).strip()
+
+
+def _canonical_route_label(value: Any) -> str:
+    clean = _clean_text(value)
+    if not clean:
+        return ""
+    return canonicalize_berth_label(clean) or clean
+
+
+def _replace_route_text(value: Any, replacements: dict[str, str]) -> str:
+    text = str(value or "")
+    for old, new in replacements.items():
+        if old and new and old != new:
+            text = text.replace(old, new)
+    return text
+
+
+def _normalize_practice_record_routes(record: dict) -> dict:
+    features = dict(record.get("feature_snapshot") or {})
+    planning = dict(record.get("planning_snapshot") or {})
+    old_origin = _clean_text(record.get("origin_label") or features.get("origin") or planning.get("origin"))
+    old_destination = _clean_text(record.get("destination_label") or features.get("destination") or planning.get("destination"))
+    origin = _canonical_route_label(old_origin)
+    destination = _canonical_route_label(old_destination)
+    replacements = {
+        old_origin: origin,
+        old_destination: destination,
+    }
+
+    record["origin_label"] = origin
+    record["destination_label"] = destination
+    for field in ("vessel_name", "case_summary", "practice_summary"):
+        if field in record:
+            record[field] = _replace_route_text(record.get(field), replacements)
+
+    scale_snapshot = dict(record.get("scale_snapshot") or {})
+    if "source" in scale_snapshot or "notes" in scale_snapshot:
+        record["scale_snapshot"] = scale_snapshot
+
+    planning["origin"] = origin
+    planning["destination"] = destination
+    for field in ("plan_note", "plan_observations"):
+        if field in planning:
+            planning[field] = _replace_route_text(planning.get(field), replacements)
+    record["planning_snapshot"] = planning
+
+    execution = dict(record.get("execution_snapshot") or {})
+    if "report_note" in execution:
+        execution["report_note"] = _replace_route_text(execution.get("report_note"), replacements)
+    record["execution_snapshot"] = execution
+
+    features["origin"] = origin
+    features["destination"] = destination
+    features["origin_key"] = _case_key(origin)
+    features["destination_key"] = _case_key(destination)
+    features["origin_is_anchorage"] = is_anchorage_berth(origin)
+    features["destination_is_anchorage"] = is_anchorage_berth(destination)
+    features["origin_is_known_berth"] = is_known_berth_label(origin)
+    features["destination_is_known_berth"] = is_known_berth_label(destination)
+    record["feature_snapshot"] = features
+    return record
 
 
 def _status_meta(value: str) -> tuple[str, str]:
@@ -108,6 +178,7 @@ def prepare_practice_experience_records_for_import(
         record["source_filename"] = source_filename
         record["source_type"] = "practice_import"
         record["source_label"] = record.get("source_label") or "Experiência prática importada"
+        record = _normalize_practice_record_routes(record)
         record["feedback_status"] = feedback_status
         record["feedback_note"] = (
             "Carregado do JSON de conhecimento e aprovado pelo admin."

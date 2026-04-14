@@ -68,6 +68,11 @@ from domain.cost_engine import (
     calculate_scale_cost,
     format_cost_summary,
 )
+from domain.lisnave_rules import (
+    build_lisnave_rule_items,
+    lisnave_rule_snippet,
+    should_include_lisnave_rule_source,
+)
 from domain.migration_service import get_database_runtime_status
 from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
 from core.validators import normalize_thruster_state, validate_not_past_datetime
@@ -1298,6 +1303,20 @@ def build_berth_catalog_source(question: str) -> dict | None:
     }
 
 
+def build_lisnave_operational_rule_source(question: str) -> dict | None:
+    """Expose high-confidence Lisnave manoeuvre rules as structured operational context."""
+    if not should_include_lisnave_rule_source(question):
+        return None
+    return {
+        "source_id": "OPS5",
+        "document": "regras_operacionais_lisnave",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "operational_rule",
+        "snippet": lisnave_rule_snippet(),
+    }
+
+
 def build_operational_chat_sources(question: str) -> list[dict]:
     """Assemble supplemental operational context sources for the chat RAG pipeline."""
     recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
@@ -1310,6 +1329,9 @@ def build_operational_chat_sources(question: str) -> list[dict]:
     berth_catalog_source = build_berth_catalog_source(question)
     if berth_catalog_source:
         sources.append(berth_catalog_source)
+    lisnave_rule_source = build_lisnave_operational_rule_source(question)
+    if lisnave_rule_source:
+        sources.append(lisnave_rule_source)
     maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
     if maneuver_case_source:
         sources.append(maneuver_case_source)
@@ -1933,6 +1955,8 @@ def _format_operational_opinion_answer(
     lines.append("")
     lines.append("Base usada")
     lines.append("- Checklist operacional determinística do portal.")
+    if any("Lisnave" in (item.get("title") or "") for item in checklist):
+        lines.append("- Regra estruturada Lisnave: docas com mínimo de 4 rebocadores e orientação proa a norte; cais com proa a sul.")
     if similar_cases:
         base_line = (
             f"- Histórico semelhante: {len(similar_cases)} caso(s); mais próximo {top_case.get('reference_code', '--')} "
@@ -1943,7 +1967,10 @@ def _format_operational_opinion_answer(
             lines.append(f"- Estado do caso mais próximo: {top_case['feedback_status_label']}.")
     else:
         lines.append("- Histórico semelhante: sem casos suficientes para comparação.")
-    lines.append("- Base documental: não foi invocada regra específica nesta leitura; pede regra/norma se precisares de enquadramento normativo.")
+    if any("Lisnave" in (item.get("title") or "") for item in checklist):
+        lines.append("- Base operacional: regra estruturada Lisnave aplicada nesta leitura.")
+    else:
+        lines.append("- Base documental: não foi invocada regra específica nesta leitura; pede regra/norma se precisares de enquadramento normativo.")
     lines.append("")
     lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
     return "\n".join(lines).strip()
@@ -2104,6 +2131,16 @@ def _build_maneuver_analysis_checklist(
                 "Sem rebocadores previstos e sem thrusters declarados.",
             )
         )
+
+    items.extend(
+        build_lisnave_rule_items(
+            maneuver_type=maneuver_type,
+            origin=origin,
+            destination=destination,
+            tug_count=tug_count_raw,
+            berth_options=services.BERTH_OPTIONS,
+        )
+    )
 
     constraint_labels = format_constraint_labels(maneuver.get("constraint_codes") or [])
     if constraint_labels:
@@ -2435,7 +2472,11 @@ def build_maneuver_case_context_source(question: str, port_calls: list[dict]) ->
                 f"alertas {checklist_summary.get('caution_count', 0)} | "
                 f"ok {checklist_summary.get('ok_count', 0)}"
             )
-        for checklist_item in checklist_items[:3]:
+        prioritized_checklist = [
+            *[item for item in checklist_items if item.get("status") == "caution"],
+            *[item for item in checklist_items if item.get("status") != "caution"],
+        ]
+        for checklist_item in prioritized_checklist[:4]:
             lines.append(
                 f"  checklist [{checklist_item.get('status', 'info')}]: "
                 f"{checklist_item.get('title', '')} - {checklist_item.get('detail', '')}"

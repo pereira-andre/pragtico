@@ -8,7 +8,11 @@
     "distancias operacionais",
     "distancia barra lisnave",
     "entrada da barra lisnave",
-    "pilar 2 lisnave"
+    "pilar 2 lisnave",
+    "rebocadores lisnave",
+    "docas lisnave",
+    "doca 33 lisnave",
+    "c3a lisnave"
   ],
   "summary": "real. Complementa as regras formais das IT com distâncias, proas, correntes, marcas e dicas operacionais não documentadas nas instruções de trabalho oficiais. O corredor dragado na Barra tem menos de 200 metros de largura e 12 metros de profundidade. É um canal estreito que exige atenção permanente ao alinhamento.",
   "key_points": [
@@ -16,7 +20,9 @@
     "0,2 NM é o resguardo a manter de terra/cais no Canal Norte.",
     "0,2 NM é a distância a manter da costa no Canal Sul.",
     "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são 10,5 NM pelo Canal Sul completo.",
-    "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são cerca de 10,0 NM pelo atalho/corta-mato."
+    "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são cerca de 10,0 NM pelo atalho/corta-mato.",
+    "Navios para docas Lisnave usam pelo menos 4 rebocadores e ficam com proa a norte.",
+    "Navios nos cais Lisnave ficam com proa a sul; navios pequenos para cais podem manobrar com 3 rebocadores."
   ],
   "faq": [
     {
@@ -46,6 +52,32 @@
         "milhas nauticas",
         "canal sul",
         "pilar 2"
+      ]
+    },
+    {
+      "question": "Quantos rebocadores devo considerar para uma entrada em doca Lisnave?",
+      "answer": "Para docas Lisnave, considera sempre pelo menos 4 rebocadores. A entrada é atravessada à corrente: dois rebocadores empurram, um de cada lado, e os restantes controlam popa/proa. Os navios que entram nas docas ficam com proa a norte.",
+      "keywords": [
+        "lisnave",
+        "doca",
+        "docas",
+        "d33",
+        "doca 33",
+        "rebocadores",
+        "proa a norte"
+      ]
+    },
+    {
+      "question": "Qual é a orientação dos navios nos cais e docas Lisnave?",
+      "answer": "Nos cais Lisnave os navios ficam com proa a sul. Nas docas Lisnave os navios entram e ficam com proa a norte. Navio pequeno para cais pode manobrar com 3 rebocadores, mas essa exceção não se aplica às docas.",
+      "keywords": [
+        "lisnave",
+        "cais",
+        "doca",
+        "proa a sul",
+        "proa a norte",
+        "c3a",
+        "d33"
       ]
     }
   ]

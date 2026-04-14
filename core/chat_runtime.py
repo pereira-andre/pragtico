@@ -48,7 +48,6 @@ from storage.utils import normalize_feedback_correction
 
 logger = logging.getLogger(__name__)
 
-APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
 REVIEW_CORRECTION_SIMILARITY = 0.94
@@ -905,25 +904,6 @@ def handle_chat_turn(
                         and not targeted_document_context["document_sources"]
                     ):
                         answer = _build_review_guard_answer(review_guard_match)
-                    elif (
-                        trusted_answers
-                        and trusted_answers[0].get("similarity", 0) >= APPROVED_MEMORY_SIMILARITY
-                        and not review_guard_match
-                    ):
-                        best_match = trusted_answers[0]
-                        answer = {
-                            "answer": best_match["answer"],
-                            "sources": best_match.get("citations", []),
-                            "answer_origin": "approved_memory",
-                            "feedback_match": {
-                                "similarity": best_match["similarity"],
-                                "message_id": best_match["message_id"],
-                                "question": best_match["question"],
-                                "feedback_note": best_match.get("feedback_note", ""),
-                                "feedback_correction": best_match.get("feedback_correction", ""),
-                                "feedback_correction_document": best_match.get("feedback_correction_document", ""),
-                            },
-                        }
                     else:
                         if not services.rag.can_generate():
                             raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")

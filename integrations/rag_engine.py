@@ -1188,7 +1188,7 @@ class SimpleRAGEngine:
         trusted_block = "\n\n".join(
             (
                 f"Pergunta validada: {item['question']}\n"
-                f"Resposta aprovada: {item['answer']}\n"
+                f"Resposta anterior aprovada, a sintetizar e não copiar literalmente: {item['answer']}\n"
                 f"Nota do operador: {item.get('feedback_note') or 'Sem nota.'}\n"
                 f"Semelhança: {item.get('similarity', 0)}"
             )
@@ -1227,7 +1227,8 @@ Regras:
 - Responde em português europeu.
 - Usa primeiro o contexto recuperado.
 - As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
-- Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte e preserva a formulação quando fizer sentido.
+- Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte de factos e decisão, mas reformula-a no contexto atual.
+- Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.
 - Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
 - Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
 - Se existir uma resposta corrigida sugerida pelo operador para uma pergunta muito semelhante, usa-a como referência forte e reconcilia-a com os documentos disponíveis.

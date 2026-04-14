@@ -664,6 +664,52 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(entry["analysis_checklist"])
         self.assertTrue(any(item["title"] == "Disponibilidade do destino" for item in entry["analysis_checklist"]))
 
+    def test_lisnave_dock_checklist_requires_at_least_four_tugs(self) -> None:
+        port_call = self.store.create_port_call(
+            vessel_name="DOCK TEST",
+            eta="2026-04-08T05:30:00+00:00",
+            created_by="admin",
+            berth="D33",
+            last_port="Sines",
+            next_port="Lisboa",
+            notes="Calado: 5.4\nRebocadores: 3\nObservações: entrada para doca.",
+            vessel_imo="9123456",
+            vessel_call_sign="D33T",
+            vessel_flag="Portugal",
+            vessel_type="Carga Geral",
+            vessel_loa_m="120",
+            vessel_beam_m="19",
+            vessel_gt_t="6500",
+            vessel_max_draft_m="5.4",
+            vessel_dwt_t="9000",
+        )
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            scale = build_scale_context(self.store.get_port_call(port_call["id"]))
+
+        entry = next(item for item in scale["maneuvers"] if item["type"] == "entry")
+        lisnave_items = [item for item in entry["analysis_checklist"] if item["title"] == "Lisnave - doca"]
+        self.assertEqual(lisnave_items[0]["status"], "caution")
+        self.assertIn("pelo menos 4 rebocadores", lisnave_items[0]["detail"])
+        self.assertIn("3 previsto", lisnave_items[0]["detail"])
+        self.assertTrue(
+            any(
+                item["title"] == "Orientação Lisnave" and "proa a norte" in item["detail"]
+                for item in entry["analysis_checklist"]
+            )
+        )
+
+    def test_lisnave_rule_source_is_added_for_dock_questions(self) -> None:
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            sources = build_operational_chat_sources("Quantos rebocadores para entrada na D33 da Lisnave?")
+
+        rule_sources = [item for item in sources if item.get("retrieval_mode") == "operational_rule"]
+        self.assertTrue(rule_sources)
+        self.assertIn("mínimo 4 rebocadores", rule_sources[0]["snippet"])
+        self.assertIn("proa a norte", rule_sources[0]["snippet"])
+
     def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-19T05:30:00+00:00")
         self.store.approve_port_call(historical["id"], decided_by="admin", approval_note="Aprovada com 2 rebocadores.")
@@ -709,6 +755,59 @@ class OperationalFlowTests(unittest.TestCase):
             answer = answer_direct_operational_query(f"O que achas da entrada da escala {current['reference_code']}?")
 
         self.assertIsNone(answer)
+
+    def test_approved_feedback_is_synthesized_instead_of_replayed_verbatim(self) -> None:
+        conversation = self.store.ensure_conversation(username="admin")
+        self.store.append_chat_message(
+            username="admin",
+            conversation_id=conversation["id"],
+            role="user",
+            content="Como devo preparar a entrada de um navio para a doca 33 da Lisnave?",
+            channel="whatsapp",
+        )
+        approved_message = self.store.append_chat_message(
+            username="admin",
+            conversation_id=conversation["id"],
+            role="assistant",
+            content="Têm sempre pelo menos 4 reboques porque estão sempre dois de cada lado a empurrar.",
+            channel="whatsapp",
+        )
+        self.store.update_message_feedback(
+            "admin",
+            conversation["id"],
+            approved_message["id"],
+            "approved",
+            "Regra operacional validada.",
+            feedback_updated_by="admin",
+        )
+
+        with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+            services.rag,
+            "answer",
+            return_value={
+                "answer": "Para Doca 33, planeia pelo menos 4 rebocadores e valida a entrada atravessada à corrente.",
+                "sources": [],
+            },
+        ) as answer_mock:
+            with app.app.test_client() as client:
+                with client.session_transaction() as flask_session:
+                    flask_session["username"] = "admin"
+                    flask_session["role"] = "admin"
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Como devo preparar a entrada de um navio para a doca 33 da Lisnave?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        self.assertIn("pelo menos 4 rebocadores", payload["answer"])
+        self.assertNotEqual(payload["answer"], approved_message["content"])
+        answer_mock.assert_called_once()
+        self.assertEqual(answer_mock.call_args.kwargs["trusted_answers"][0]["answer"], approved_message["content"])
 
     def test_complete_entry_rejects_occupied_quay(self) -> None:
         occupied = self._create_entry(notes="Primeira escala")
