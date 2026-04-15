@@ -99,7 +99,50 @@ LENGTH_TIME_TERMS = {
     "noturna",
     "noturno",
 }
-BERTH_TERMS = {"cais", "doca", "docas", "plataforma", "plataformas"}
+FACILITY_TERMS = {
+    "berco",
+    "bercos",
+    "cais",
+    "doca",
+    "docas",
+    "instalacao",
+    "instalacoes",
+    "plataforma",
+    "plataformas",
+    "terminal",
+    "terminais",
+}
+ANCHORAGE_TERMS = {
+    "fundeadouro",
+    "fundeadouros",
+    "fundeio",
+    "ancoradouro",
+    "ancoradouros",
+}
+SPECIFIC_FACILITY_SCOPE_TERMS = {
+    "alstom",
+    "autoeuropa",
+    "eco",
+    "ecooil",
+    "europa",
+    "fundeadouro",
+    "fundeadouros",
+    "lisnave",
+    "mitrena",
+    "praias",
+    "sado",
+    "sapec",
+    "secil",
+    "tanquisado",
+    "tepor",
+    "teporset",
+    "termitrena",
+    "tgl",
+    "tms1",
+    "tms2",
+    "tps",
+    "troia",
+}
 BERTH_INVENTORY_RE = re.compile(
     r"\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b",
     flags=re.IGNORECASE,
@@ -466,9 +509,21 @@ def _is_berth_inventory_question(question: str, question_tokens: set[str]) -> bo
     normalized_question = _normalize_text(question)
     if not BERTH_INVENTORY_RE.search(normalized_question):
         return False
-    if not ({"lisnave", "mitrena"} & question_tokens):
+    if not ({"lisnave", "mitrena", "porto", "setubal"} & question_tokens):
         return False
-    return bool(BERTH_TERMS & question_tokens)
+    return bool((FACILITY_TERMS | ANCHORAGE_TERMS) & question_tokens)
+
+
+def _is_port_wide_facility_inventory_question(question_tokens: set[str]) -> bool:
+    return bool({"porto", "setubal"} & question_tokens) and bool(FACILITY_TERMS & question_tokens)
+
+
+def _is_port_inventory_candidate(candidate_tokens: set[str]) -> bool:
+    return bool({"inventario", "instalacoes"} & candidate_tokens) or (
+        bool({"porto", "setubal"} & candidate_tokens)
+        and bool({"terminal", "terminais"} & candidate_tokens)
+        and bool({"cais", "doca", "docas"} & candidate_tokens)
+    )
 
 
 def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) -> bool:
@@ -481,12 +536,30 @@ def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) 
         return True
 
     if _is_berth_inventory_question(question, question_tokens):
-        asked_berth_terms = BERTH_TERMS & question_tokens
-        if {"cais", "doca"} & asked_berth_terms and not (
+        asked_facility_terms = FACILITY_TERMS & question_tokens
+        asked_anchorage_terms = ANCHORAGE_TERMS & question_tokens
+        is_port_inventory_candidate = _is_port_inventory_candidate(candidate_tokens)
+        if not is_port_inventory_candidate:
+            if asked_facility_terms and candidate_tokens & ANCHORAGE_TERMS and not asked_anchorage_terms:
+                return True
+            if asked_anchorage_terms and candidate_tokens & FACILITY_TERMS and not asked_facility_terms:
+                return True
+        if {"cais", "doca"} & asked_facility_terms and not (
             "cais" in candidate_tokens and bool({"doca", "docas"} & candidate_tokens)
         ):
             return True
-        if "plataformas" in asked_berth_terms and "plataformas" not in candidate_tokens:
+        if {"terminal", "terminais"} & asked_facility_terms and not (
+            {"terminal", "terminais"} & candidate_tokens
+        ):
+            return True
+        if "plataformas" in asked_facility_terms and "plataformas" not in candidate_tokens:
+            return True
+        if (
+            _is_port_wide_facility_inventory_question(question_tokens)
+            and not question_tokens & SPECIFIC_FACILITY_SCOPE_TERMS
+            and candidate_tokens & SPECIFIC_FACILITY_SCOPE_TERMS
+            and not is_port_inventory_candidate
+        ):
             return True
 
     return False

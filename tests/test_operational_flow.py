@@ -2248,6 +2248,71 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Para calado", detail_payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_port_facility_inventory_uses_rag_synthesis_not_fundeadouro_shortcut(self) -> None:
+        repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
+        for document_name in [
+            "Porto_Setubal_Terminais_Cais.txt",
+            "IT-015_Fundeadouros.txt",
+        ]:
+            (Path(self.store.knowledge_dir) / document_name).write_text(
+                (repo_knowledge / document_name).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+        self._write_knowledge_companion(
+            "IT-015_Fundeadouros.txt",
+            json.loads((repo_knowledge / "companions" / "IT-015_Fundeadouros.json").read_text(encoding="utf-8")),
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                services.rag,
+                "answer",
+                side_effect=[
+                    {
+                        "answer": "Pelos documentos RAG, os terminais incluem TMS1, TMS2, AUTO-EUROPA, SAPEC e TEPORSET.",
+                        "sources": [],
+                    },
+                    {
+                        "answer": "Não há contagem única sem definir critério; fundeadouros não contam como cais.",
+                        "sources": [],
+                    },
+                ],
+            ) as answer_mock:
+                terminals_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Quais são os terminais que existem no porto de Setúbal?",
+                    },
+                )
+                quays_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Quantos cais existem em Setúbal?",
+                    },
+                )
+
+        self.assertEqual(terminals_response.status_code, 200)
+        terminals_payload = terminals_response.get_json()
+        self.assertEqual(terminals_payload["answer_origin"], "llm")
+        self.assertIn("TMS1", terminals_payload["answer"])
+        self.assertNotIn("Existem quatro zonas de fundeio", terminals_payload["answer"])
+
+        self.assertEqual(quays_response.status_code, 200)
+        quays_payload = quays_response.get_json()
+        self.assertEqual(quays_payload["answer_origin"], "llm")
+        self.assertIn("fundeadouros não contam como cais", quays_payload["answer"])
+
+        self.assertEqual(answer_mock.call_count, 2)
+        for call in answer_mock.call_args_list:
+            execution_plan = call.kwargs["execution_plan"]
+            self.assertTrue(execution_plan["requires_llm_synthesis"])
+            self.assertEqual(execution_plan["primary_intent"], "document_synthesis")
+
     def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"
         knowledge_path = Path(self.store.knowledge_dir) / document_name

@@ -51,6 +51,7 @@ def _format_plan_block(plan: Dict | None) -> str:
         f"intent={plan.get('primary_intent') or '--'}",
         f"live_facets={', '.join(plan.get('live_facets') or []) or '--'}",
         f"weather_mode={plan.get('weather_mode') or '--'}",
+        f"requires_llm_synthesis={bool(plan.get('requires_llm_synthesis'))}",
         f"needs_history_state={bool(plan.get('needs_history_state'))}",
         f"needs_answer_critic={bool(plan.get('needs_answer_critic'))}",
     ]
@@ -1169,7 +1170,8 @@ class SimpleRAGEngine:
         conversation_state: Dict | None = None,
     ) -> Dict:
         try:
-            contexts = self.retrieve((retrieval_question or question or "").strip())
+            retrieval_top_k = 8 if (execution_plan or {}).get("requires_llm_synthesis") else 4
+            contexts = self.retrieve((retrieval_question or question or "").strip(), top_k=retrieval_top_k)
         except Exception as exc:
             return {
                 "answer": (
@@ -1235,6 +1237,8 @@ Regras:
 - Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
 - Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
 - Se existirem excertos de um documento-alvo, nunca digas que o documento não está disponível ou que não tens acesso a ele.
+- Em perguntas amplas de inventário, como cais, terminais, docas ou instalações do Porto de Setúbal, cruza várias fontes RAG e não respondas pelo todo com uma fonte parcial de outro tipo, por exemplo fundeadouros.
+- Para contagens de cais/terminais, declara o critério de contagem quando houver ambiguidade entre terminal, cais físico, face, rampa, doca, plataforma ou duque d'alba.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".

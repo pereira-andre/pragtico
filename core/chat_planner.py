@@ -29,6 +29,14 @@ DOCUMENT_QUERY_RE = re.compile(
     r"\b(regra|regras|documento|doc|instrucao|instrução|norma|normas|procedimento|procedimentos|"
     r"o que diz|segundo o|segundo a|it[\s\-_]?\d{1,3})\b"
 )
+PORT_FACILITY_INVENTORY_RE = re.compile(
+    r"\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b"
+    r".*\b(cais|berco|bercos|berço|berços|doca|docas|terminal|terminais|instalacao|instalação|instalacoes|instalações)\b"
+    r"|"
+    r"\b(cais|berco|bercos|berço|berços|doca|docas|terminal|terminais|instalacao|instalação|instalacoes|instalações)\b"
+    r".*\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b"
+)
+PORT_SCOPE_RE = re.compile(r"\b(porto|setubal|setúbal)\b")
 RULE_CODE_RE = re.compile(r"\bit[\s\-_]?0*(\d{1,3})\b", flags=re.IGNORECASE)
 LIVE_REASONING_RE = re.compile(
     r"\b(avalia|avaliar|considera|considerarias|recomenda|recomendarias|recomendaria|"
@@ -129,11 +137,22 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
     explicit_rule_codes = tuple(
         sorted({match.group(1).zfill(3) for match in RULE_CODE_RE.finditer(raw_question)})
     )
-    wants_documents = bool(explicit_rule_codes) or bool(DOCUMENT_QUERY_RE.search(clean_question))
+    wants_port_facility_inventory = bool(PORT_SCOPE_RE.search(clean_question)) and bool(
+        PORT_FACILITY_INVENTORY_RE.search(clean_question)
+    )
+    wants_documents = (
+        bool(explicit_rule_codes)
+        or bool(DOCUMENT_QUERY_RE.search(clean_question))
+        or wants_port_facility_inventory
+    )
     requires_live_reasoning = bool(live_facets) and bool(
         LIVE_REASONING_RE.search(clean_question) and OPERATIONAL_DECISION_RE.search(clean_question)
     )
-    requires_llm_synthesis = requires_live_reasoning or (bool(live_facets) and wants_documents)
+    requires_llm_synthesis = (
+        requires_live_reasoning
+        or (bool(live_facets) and wants_documents)
+        or wants_port_facility_inventory
+    )
     needs_history_state = requires_live_reasoning or bool(
         re.search(r"\b(os dois|ambos|essas|esses|isso|isto|a mesma|o mesmo)\b", clean_question)
     )
@@ -142,7 +161,12 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
     if wants_operational_lookup:
         primary_intent = "operational_lookup"
     elif requires_llm_synthesis:
-        primary_intent = "mixed_live_and_documents" if wants_documents else "live_reasoning"
+        if live_facets and wants_documents:
+            primary_intent = "mixed_live_and_documents"
+        elif requires_live_reasoning:
+            primary_intent = "live_reasoning"
+        else:
+            primary_intent = "document_synthesis"
     elif live_facets:
         primary_intent = "live_environment"
     elif wants_documents:

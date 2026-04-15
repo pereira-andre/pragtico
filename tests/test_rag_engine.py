@@ -439,8 +439,36 @@ class SimpleRAGEngineTests(unittest.TestCase):
                 trusted_answers=[],
             )
 
-        retrieve_mock.assert_called_once_with("IT-036 Regulação de Agulhas período noturno")
+        retrieve_mock.assert_called_once_with("IT-036 Regulação de Agulhas período noturno", top_k=4)
         self.assertEqual(answer["answer"], "Resposta documental.")
+
+    def test_answer_retrieves_more_context_for_required_synthesis(self) -> None:
+        engine, _ = self._make_engine()
+        engine.client = None
+        engine.rebuild_index(force=True)
+        provider = _StubProvider("gemini", generation_text="Resposta de síntese.")
+        engine.provider = provider
+        engine.generation_model = "gemini-test"
+        engine._generation_candidates = [(provider, engine.generation_model)]
+
+        with patch.object(engine, "retrieve", return_value=[]) as retrieve_mock:
+            answer = engine.answer(
+                question="Quais são os terminais que existem no porto de Setúbal?",
+                role="piloto",
+                history=[],
+                supplemental_sources=[],
+                trusted_answers=[],
+                execution_plan={
+                    "primary_intent": "document_synthesis",
+                    "requires_llm_synthesis": True,
+                },
+            )
+
+        retrieve_mock.assert_called_once_with(
+            "Quais são os terminais que existem no porto de Setúbal?",
+            top_k=8,
+        )
+        self.assertEqual(answer["answer"], "Resposta de síntese.")
 
     def test_answer_overrides_document_evasion_when_targeted_sources_exist(self) -> None:
         engine, _ = self._make_engine()

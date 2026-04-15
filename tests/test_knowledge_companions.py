@@ -138,3 +138,31 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("10,5", answer)
         self.assertIn("10,0", answer)
         self.assertNotIn("1000 metros", answer)
+
+    def test_port_inventory_companion_answers_terminal_inventory(self) -> None:
+        companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Quais são os terminais que existem no porto de Setúbal?",
+            companion,
+        )
+
+        self.assertIn("TMS1", answer)
+        self.assertIn("TMS2", answer)
+        self.assertIn("AUTO-EUROPA", answer)
+        self.assertIn("SAPEC (TPS e TGL)", answer)
+        self.assertIn("TEPORSET", answer)
+
+    def test_port_inventory_companion_does_not_confuse_quays_with_anchorages(self) -> None:
+        from domain.knowledge_companions import find_best_global_companion_match
+
+        answer = find_best_global_companion_match(
+            "Quantos cais existem em Setúbal?",
+            KNOWLEDGE_DIR,
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual(answer["companion"]["document"], "Porto_Setubal_Terminais_Cais.txt")
+        self.assertIn("Fundeadouros nao contam como cais", answer["answer"])
+        self.assertNotIn("Existem quatro zonas de fundeio definidas", answer["answer"])

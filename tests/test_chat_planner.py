@@ -49,3 +49,13 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertTrue(plan.needs_history_state)
         self.assertTrue(plan.needs_answer_critic)
         self.assertFalse(plan.should_answer_directly)
+
+    def test_port_facility_inventory_question_requires_rag_synthesis(self) -> None:
+        plan = build_chat_execution_plan(
+            "Quais são os terminais que existem no porto de Setúbal?"
+        )
+
+        self.assertEqual(plan.primary_intent, "document_synthesis")
+        self.assertTrue(plan.wants_documents)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertFalse(plan.should_answer_directly)

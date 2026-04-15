@@ -1,0 +1,125 @@
+DOCUMENTO: INVENTARIO OPERACIONAL — TERMINAIS, CAIS E INSTALACOES DO PORTO DE SETUBAL
+NATUREZA: Sintese derivada dos documentos de conhecimento operacional existentes.
+FONTES-BASE: IT-005, IT-006, IT-007, IT-008, IT-009, IT-010, IT-011, IT-012, IT-014, IT-029, IT-038 e IT-062.
+
+================================================================================
+FINALIDADE
+================================================================================
+
+Este documento existe para perguntas amplas sobre quais os terminais, cais, docas
+e instalacoes operacionais existentes no Porto de Setubal. Deve ser usado como
+ponte de sintese para o RAG quando a pergunta nao aponta para um terminal
+especifico.
+
+IMPORTANTE:
+  - Fundeadouros nao sao cais nem terminais. Sao zonas de fundeio.
+  - "Quantos cais existem" depende do criterio de contagem: terminal, cais fisico,
+    face operacional, rampa, doca seca, plataforma ou estrutura de duques d'alba.
+  - Quando a pergunta pedir uma contagem, responder com o criterio usado e evitar
+    transformar uma lista parcial num numero oficial absoluto.
+
+================================================================================
+TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
+================================================================================
+
+1. Terminal Multiusos — Zona 1 (TMS1)
+   Fonte: IT-005.
+   O TMS1 dispoe de cais numerados do 4 ao 8:
+     - Cais 4;
+     - Cais 5;
+     - Cais 6;
+     - Cais 7;
+     - Cais 8.
+
+2. Terminal Multiusos — Zona 2 (TMS2)
+   Fonte: IT-006.
+   O TMS2 abrange os cabecos 40 a 63 e corresponde a um unico espaco continuo
+   de 723 metros, sem subdivisao em cais numerados distintos.
+
+3. Terminal AUTO-EUROPA
+   Fonte: IT-007.
+   Composto por dois espacos operacionais:
+     - Cais 10, terminal principal;
+     - Cais 11, rampa Ro-Ro.
+
+4. Terminal ECO-OIL / ECOIL
+   Fonte: IT-008.
+   Terminal da ECOIL — Tanquisado Nascente, com regras proprias de reponto,
+   calado, periodo do dia e defensas.
+
+5. Terminal SECIL
+   Fonte: IT-009.
+   Composto por dois cais distintos:
+     - Cais de Oeste, tambem designado Cais A;
+     - Cais de Este, tambem designado Cais B.
+
+6. Terminal TANQUISADO
+   Fonte: IT-010.
+   Composto por um cais central e dois duques d'alba.
+
+7. Terminal TERMITRENA
+   Fonte: IT-011.
+   Antigo terminal EUROMINAS. Tem um cais fisico de referencia e regras
+   especificas de calado por baixa-mar de referencia.
+
+8. Terminal PRAIAS DO SADO
+   Fonte: IT-012.
+   Antigo Terminal Pirites. Tem cais fisico de referencia e sistema de dupla
+   restricao de calado: estacionamento ao cais e percurso/bacia de manobra.
+
+9. LISNAVE / Estaleiros Mitrena
+   Fonte: IT-014.
+   Instalacao de reparacao e construcao naval, composta por:
+     - Pontes-Cais I, II e III;
+     - faces IA, IB, II-A, II-B, III-A e III-B;
+     - Cais 0, Face A e Face B;
+     - Cais de Descarga de Aco;
+     - Docas 20, 21 e 22;
+     - Plataformas 31, 32 e 33.
+
+10. SAPEC
+    Fonte: IT-029.
+    O documento SAPEC cobre dois terminais:
+      - TPS — Terminal de Graneis Solidos;
+      - TGL — Terminal de Graneis Liquidos.
+    O TPS tem cais fisico e duque d'alba; o TGL e uma estrutura de duques d'alba,
+    nao um cais continuo.
+
+11. Cais ALSTOM / ABB-ALSTOM
+    Fonte: IT-038.
+    Instalacao industrial com acesso pelo Canal ABB-ALSTOM.
+
+12. TEPORSET
+    Fonte: IT-062.
+    Cais da TEPORSET / Terminal Portuario de Setubal, com regras de calado
+    baseadas na altura da preia-mar.
+
+================================================================================
+RESPOSTA OPERACIONAL PARA PERGUNTAS AMPLAS
+================================================================================
+
+Pergunta: Quais sao os terminais que existem no porto de Setubal?
+Resposta: Pelos documentos operacionais atualmente no conhecimento, o Porto de
+Setubal inclui TMS1, TMS2, AUTO-EUROPA, ECO-OIL, SECIL, TANQUISADO, TERMITRENA,
+PRAIAS DO SADO, LISNAVE / Estaleiros Mitrena, SAPEC (TPS e TGL), ALSTOM e
+TEPORSET. A resposta deve indicar que se trata da lista coberta pelos documentos
+operacionais carregados, nao necessariamente de uma lista administrativa oficial
+exaustiva de todas as instalacoes portuarias.
+
+Pergunta: Quantos cais existem em Setubal?
+Resposta: Nao ha uma contagem unica sem definir criterio. Pelos documentos
+operacionais, ha cais numerados no TMS1 (4 a 8), um espaco continuo no TMS2,
+Cais 10 e Cais 11 na AUTO-EUROPA, dois cais na SECIL, cais/estruturas em
+TANQUISADO, TERMITRENA, PRAIAS DO SADO, ECO-OIL, SAPEC, ALSTOM e TEPORSET, e
+varios cais, faces, docas e plataformas na LISNAVE. Fundeadouros nao contam como
+cais. Para responder com numero, e obrigatorio dizer se a contagem esta a usar
+cais fisico, face operacional, terminal, doca, plataforma ou estrutura de
+duques d'alba.
+
+Pergunta: Os fundeadouros contam como cais?
+Resposta: Nao. Fundeadouros sao zonas de fundeio/espera e nao devem ser usados
+para responder a perguntas sobre cais ou terminais.
+
+================================================================================
+FIM DO DOCUMENTO — INVENTARIO OPERACIONAL DO PORTO DE SETUBAL
+================================================================================
