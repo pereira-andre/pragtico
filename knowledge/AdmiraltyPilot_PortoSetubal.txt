@@ -549,6 +549,14 @@ Tróia, no Canal Sul.
 CAIS COMERCIAIS
 ================================================================================
 
+NOTA DE DESAMBIGUACAO OPERACIONAL:
+Para perguntas amplas de inventario do Porto de Setubal, nao listar aliases
+como se fossem cais ou terminais diferentes. O Cais das Fontainhas corresponde
+ao Terminal Multiusos 1 (TMS1); o Terminal de Contentores corresponde ao
+Terminal Multiusos 2 (TMS2); e o berco RoRo operacionalmente deve ser agrupado
+com Autoeuropa/Ro-Ro quando a pergunta pede nomes principais. Nao usar as
+designacoes Terminal Multiusos Norte ou Terminal Multiusos Sul.
+
 Todos os cais comerciais se encontram na margem norte do rio. As instalações
 de carga comercial compreendem três bacias e quatro cais com instalações para
 carga geral, contentores e embarcações de pesca, e sete terminais equipados

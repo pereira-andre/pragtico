@@ -1238,6 +1238,7 @@ Regras:
 - Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
 - Se existirem excertos de um documento-alvo, nunca digas que o documento não está disponível ou que não tens acesso a ele.
 - Em perguntas amplas de inventário, como cais, terminais, docas ou instalações do Porto de Setúbal, cruza várias fontes RAG e não respondas pelo todo com uma fonte parcial de outro tipo, por exemplo fundeadouros.
+- Em inventário do Porto de Setúbal, não uses "Terminal Multiusos Norte" nem "Terminal Multiusos Sul"; usa TMS1 e TMS2. Não dupliques aliases: TMS1 = Cais das Fontainhas, TMS2 = Terminal de Contentores / Multiusos 2, Autoeuropa = Ro-Ro.
 - Para contagens de cais/terminais, declara o critério de contagem quando houver ambiguidade entre terminal, cais físico, face, rampa, doca, plataforma ou duque d'alba.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.

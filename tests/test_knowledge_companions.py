@@ -11,6 +11,7 @@ KNOWLEDGE_DIR = str(REPO_ROOT / "knowledge")
 class RepositoryKnowledgeCompanionTests(unittest.TestCase):
     def test_curated_critical_companions_have_summary_and_faq(self) -> None:
         critical_documents = [
+            "Porto_Setubal_Terminais_Cais.txt",
             "IT-015_Fundeadouros.txt",
             "IT-016_Rebocadores.txt",
             "IT-018_NormasEspeciais.txt",
@@ -154,7 +155,7 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("TMS1", answer)
         self.assertIn("TMS2", answer)
         self.assertIn("AUTO-EUROPA", answer)
-        self.assertIn("SAPEC (TPS e TGL)", answer)
+        self.assertIn("SAPEC Solidos e SAPEC Liquidos", answer)
         self.assertIn("TEPORSET", answer)
 
     def test_port_inventory_companion_answers_quay_names_with_expected_grouping(self) -> None:
@@ -172,8 +173,27 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("Terminal de Contentores ou Multiusos 2", answer)
         self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", answer)
         self.assertIn("SAPEC Solidos e SAPEC Liquidos", answer)
-        self.assertIn("Hidrolift com acesso as Docas secas 31/32/33", answer)
+        self.assertIn("Hidrolift com acesso as Docas secas 31, 32 e 33", answer)
+        self.assertNotIn("Terminal Multiusos Norte", answer)
+        self.assertNotIn("Terminal Multiusos Sul", answer)
+        self.assertNotIn("Berço Ro-Ro (na extremidade leste", answer)
         self.assertNotIn("Existem quatro zonas de fundeio definidas", answer)
+
+    def test_port_inventory_companion_answers_ungrammatical_quay_names_question(self) -> None:
+        companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Quantos cais existem em Setúbal e qual os seus nomes?",
+            companion,
+        )
+
+        self.assertIn("34 slots de cais operacionais", answer)
+        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", answer)
+        self.assertIn("Terminal de Contentores ou Multiusos 2", answer)
+        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", answer)
+        self.assertNotIn("Terminal Multiusos Norte", answer)
+        self.assertNotIn("Terminal Multiusos Sul", answer)
 
     def test_port_inventory_companion_does_not_confuse_quays_with_anchorages(self) -> None:
         from domain.knowledge_companions import find_best_global_companion_match

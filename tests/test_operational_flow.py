@@ -2249,7 +2249,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Para calado", detail_payload["answer"])
         answer_mock.assert_not_called()
 
-    def test_chat_port_facility_inventory_uses_rag_synthesis_not_fundeadouro_shortcut(self) -> None:
+    def test_chat_port_facility_inventory_uses_canonical_companion_without_duplicate_aliases(self) -> None:
         repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
         for document_name in [
             "Porto_Setubal_Terminais_Cais.txt",
@@ -2271,16 +2271,6 @@ class OperationalFlowTests(unittest.TestCase):
             with patch.object(services.rag, "can_generate", return_value=True), patch.object(
                 services.rag,
                 "answer",
-                side_effect=[
-                    {
-                        "answer": "Pelos documentos RAG, os terminais incluem TMS1, TMS2, AUTO-EUROPA, SAPEC e TEPORSET.",
-                        "sources": [],
-                    },
-                    {
-                        "answer": "Não há contagem única sem definir critério; fundeadouros não contam como cais.",
-                        "sources": [],
-                    },
-                ],
             ) as answer_mock:
                 terminals_response = client.post(
                     "/api/chat",
@@ -2299,20 +2289,24 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(terminals_response.status_code, 200)
         terminals_payload = terminals_response.get_json()
-        self.assertEqual(terminals_payload["answer_origin"], "llm")
-        self.assertIn("TMS1", terminals_payload["answer"])
+        self.assertEqual(terminals_payload["answer_origin"], "document_companion_global")
+        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", terminals_payload["answer"])
+        self.assertIn("Terminal de Contentores ou Multiusos 2", terminals_payload["answer"])
+        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", terminals_payload["answer"])
+        self.assertNotIn("Terminal Multiusos Norte", terminals_payload["answer"])
+        self.assertNotIn("Terminal Multiusos Sul", terminals_payload["answer"])
         self.assertNotIn("Existem quatro zonas de fundeio", terminals_payload["answer"])
 
         self.assertEqual(quays_response.status_code, 200)
         quays_payload = quays_response.get_json()
-        self.assertEqual(quays_payload["answer_origin"], "llm")
-        self.assertIn("fundeadouros não contam como cais", quays_payload["answer"])
+        self.assertEqual(quays_payload["answer_origin"], "document_companion_global")
+        self.assertIn("34 slots operacionais", quays_payload["answer"])
+        self.assertIn("Fundeadouros nao contam como cais", quays_payload["answer"])
+        self.assertNotIn("Terminal Multiusos Norte", quays_payload["answer"])
+        self.assertNotIn("Terminal Multiusos Sul", quays_payload["answer"])
+        self.assertNotIn("Berço Ro-Ro (na extremidade leste", quays_payload["answer"])
 
-        self.assertEqual(answer_mock.call_count, 2)
-        for call in answer_mock.call_args_list:
-            execution_plan = call.kwargs["execution_plan"]
-            self.assertTrue(execution_plan["requires_llm_synthesis"])
-            self.assertEqual(execution_plan["primary_intent"], "document_synthesis")
+        answer_mock.assert_not_called()
 
     def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"

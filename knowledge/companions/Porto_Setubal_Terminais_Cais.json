@@ -1,0 +1,94 @@
+{
+  "document": "Porto_Setubal_Terminais_Cais.txt",
+  "title": "Inventario operacional - Terminais, cais e instalacoes do Porto de Setubal",
+  "aliases": [
+    "Porto_Setubal_Terminais_Cais.txt",
+    "Porto_Setubal_Terminais_Cais",
+    "inventario cais setubal",
+    "terminais porto setubal",
+    "cais porto setubal"
+  ],
+  "summary": "Inventario canonico para perguntas amplas sobre terminais, cais, docas e instalacoes operacionais do Porto de Setubal. A resposta deve agrupar sinonimos e nunca duplicar TMS1/Cais das Fontainhas, TMS2/Terminal de Contentores ou Autoeuropa/Ro-Ro como instalacoes separadas.",
+  "key_points": [
+    "O catalogo operacional do portal tem 34 slots operacionais de cais, berco ou manobra, excluindo fundeadouros.",
+    "Nao usar as designacoes Terminal Multiusos Norte ou Terminal Multiusos Sul; usar Terminal Multiusos 1 (TMS1) e Terminal Multiusos 2 (TMS2).",
+    "TMS1 e Cais das Fontainhas sao a mesma zona operacional para respostas amplas.",
+    "TMS2 e Terminal de Contentores / Multiusos 2 sao a mesma zona operacional para respostas amplas.",
+    "Autoeuropa e Ro-Ro sao a mesma zona operacional para respostas amplas.",
+    "SAPEC deve ser apresentado como dois cais/terminais operacionais: SAPEC Solidos e SAPEC Liquidos.",
+    "Fundeadouros sao zonas de espera/fundeio e nao contam como cais."
+  ],
+  "faq": [
+    {
+      "question": "Quantos cais existem em Setubal e quais os seus nomes?",
+      "answer": "No Porto de Setubal existem 34 slots de cais operacionais, berco ou manobra no catalogo do portal, excluindo fundeadouros. Para responder sem duplicar aliases, agrupa assim: - Cais SECIL W e E; - Terminal Multiusos 1 ou Cais das Fontainhas (TMS1); - Terminal de Contentores ou Multiusos 2 (TMS2); - Terminal AUTO-EUROPA ou Ro-Ro, a leste do Terminal de Contentores; - Cais das Praias do Sado ou Pirites Alentejanas; - SAPEC Solidos e SAPEC Liquidos; - ALSTOM; - Terminal da LISNAVE, incluindo Cais 0 A e 0 B, Cais 1 A e 1 B, Cais 2 A e 2 B, Cais 3 A e 3 B, Docas secas 20, 21 e 22, e Hidrolift com acesso as Docas secas 31, 32 e 33. Nao listar Terminal de Contentores separado de TMS2, nem Autoeuropa separado de Ro-Ro, nem Cais das Fontainhas separado de TMS1. Fundeadouros nao contam como cais.",
+      "keywords": [
+        "34 slots",
+        "cais",
+        "nomes",
+        "setubal",
+        "sem duplicar",
+        "tms1",
+        "tms2",
+        "autoeuropa",
+        "ro-ro"
+      ]
+    },
+    {
+      "question": "Quantos cais existem em Setubal?",
+      "answer": "No catalogo operacional do portal existem 34 slots operacionais de cais, berco ou manobra, excluindo fundeadouros. Esta contagem deve ser explicada por criterio porque mistura cais fisicos, faces operacionais, rampas, docas e estruturas de manobra. Para resposta ampla, usa os grupos canonicos: SECIL W/E; TMS1 ou Cais das Fontainhas; TMS2 ou Terminal de Contentores / Multiusos 2; Autoeuropa ou Ro-Ro; Praias do Sado ou Pirites Alentejanas; SAPEC Solidos e SAPEC Liquidos; ALSTOM; e LISNAVE com os seus cais e docas. Fundeadouros nao contam como cais.",
+      "keywords": [
+        "34 slots",
+        "cais",
+        "contagem",
+        "setubal",
+        "fundeadouros"
+      ]
+    },
+    {
+      "question": "Quais sao os terminais que existem no porto de Setubal?",
+      "answer": "Pelos documentos operacionais carregados, os nomes principais a usar sao: Cais SECIL W e E; Terminal Multiusos 1 ou Cais das Fontainhas (TMS1); Terminal de Contentores ou Multiusos 2 (TMS2); Terminal AUTO-EUROPA ou Ro-Ro; Cais das Praias do Sado ou Pirites Alentejanas; SAPEC Solidos e SAPEC Liquidos; ALSTOM; TEPORSET; TANQUISADO; TERMITRENA; ECO-OIL / ECOIL; e Terminal da LISNAVE / Estaleiros Mitrena. Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados em linhas separadas.",
+      "keywords": [
+        "terminais",
+        "porto",
+        "setubal",
+        "tms1",
+        "tms2",
+        "lisnave",
+        "sapec",
+        "tepor"
+      ]
+    },
+    {
+      "question": "Os fundeadouros contam como cais?",
+      "answer": "Nao. Fundeadouros sao zonas de fundeio ou espera e nao devem ser usados para responder a perguntas sobre cais, terminais ou slots de cais.",
+      "keywords": [
+        "fundeadouros",
+        "cais",
+        "contam",
+        "fundeio"
+      ]
+    },
+    {
+      "question": "TMS1 e Cais das Fontainhas sao o mesmo?",
+      "answer": "Sim. Em respostas amplas de inventario, Terminal Multiusos 1 (TMS1) e Cais das Fontainhas devem ser tratados como a mesma zona operacional, nao como dois cais independentes.",
+      "keywords": [
+        "tms1",
+        "cais das fontainhas",
+        "mesmo",
+        "alias"
+      ]
+    },
+    {
+      "question": "TMS2 e Terminal de Contentores sao o mesmo?",
+      "answer": "Sim. Em respostas amplas de inventario, Terminal Multiusos 2 (TMS2) e Terminal de Contentores / Multiusos 2 devem ser tratados como a mesma zona operacional, nao como dois terminais independentes.",
+      "keywords": [
+        "tms2",
+        "terminal de contentores",
+        "multiusos 2",
+        "mesmo",
+        "alias"
+      ]
+    }
+  ]
+}
