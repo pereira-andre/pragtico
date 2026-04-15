@@ -157,7 +157,7 @@ if not _embedding_provider:
 _default_gen_models = {
     "gemini": "gemini-2.5-flash",
     "openrouter": "openrouter/free",
-    "openai": "gpt-4.1-mini",
+    "openai": "o4-mini",
     "deepseek": "deepseek-chat",
 }
 _default_emb_models = {

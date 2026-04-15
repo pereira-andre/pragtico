@@ -50,9 +50,9 @@ MIGRATE_LOCAL_DATA_ON_START=1
 OPENAI_API_KEY=<api-key principal do chat e embeddings>
 OPENROUTER_API_KEY=<api-key de fallback do chat>
 LLM_PROVIDER=openai
-LLM_MODEL=gpt-4.1-mini
+LLM_MODEL=o4-mini
 LLM_FALLBACK_PROVIDER=openrouter
-LLM_FALLBACK_MODEL=openai/gpt-4.1-mini
+LLM_FALLBACK_MODEL=openai/o4-mini
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_LOCAL_ENABLED=0
@@ -124,9 +124,9 @@ Para produção, a configuração mais coerente é:
 - `RAG_INDEX_BACKEND=pgvector`
 - serviço de base de dados Railway com `pgvector`
 - `LLM_PROVIDER=openai`
-- `LLM_MODEL=gpt-4.1-mini`
+- `LLM_MODEL=o4-mini`
 - `LLM_FALLBACK_PROVIDER=openrouter`
-- `LLM_FALLBACK_MODEL=openai/gpt-4.1-mini`
+- `LLM_FALLBACK_MODEL=openai/o4-mini`
 - `EMBEDDING_PROVIDER=openai`
 - `EMBEDDING_MODEL=text-embedding-3-small`
 - `EMBEDDING_LOCAL_ENABLED=0`

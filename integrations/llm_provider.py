@@ -22,6 +22,11 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
+def _is_reasoning_chat_model(model: str) -> bool:
+    model_name = (model or "").split("/")[-1].strip().lower()
+    return model_name.startswith(("o1", "o3", "o4"))
+
+
 @dataclass
 class GenerationResult:
     """Unified generation result across providers."""
@@ -181,12 +186,19 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             raise RuntimeError(
                 self.unavailable_reason or f"{self.provider_label} API key not configured."
             )
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=kwargs.get("max_tokens", 4096),
-            temperature=kwargs.get("temperature", 0.3),
-        )
+        request_payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if _is_reasoning_chat_model(model):
+            request_payload["max_completion_tokens"] = kwargs.get(
+                "max_completion_tokens",
+                kwargs.get("max_tokens", 4096),
+            )
+        else:
+            request_payload["max_tokens"] = kwargs.get("max_tokens", 4096)
+            request_payload["temperature"] = kwargs.get("temperature", 0.3)
+        response = self.client.chat.completions.create(**request_payload)
         text = response.choices[0].message.content if response.choices else ""
         usage = {}
         if hasattr(response, "usage") and response.usage:
