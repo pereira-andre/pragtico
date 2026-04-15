@@ -992,21 +992,17 @@ def _build_admin_bot_payload() -> dict:
 
     if not results:
         state = "offline"
-        state_label = "Sem régua"
-        summary = "Ainda não existem casos de avaliação carregados para medir o comportamento do bot."
+        state_label = "Sem avaliação"
     elif failed_cases:
         state = "degraded"
-        state_label = "Com desvios"
-        summary = f"Existem {len(failed_cases)} caso(s) a rever no conjunto atual de evals."
+        state_label = "Falhas ativas"
     else:
         state = "online"
         state_label = "Conforme"
-        summary = "Todos os casos ativos passam com os companions e correções atualmente carregados."
 
     return {
         "state": state,
         "state_label": state_label,
-        "summary": summary,
         "knowledge_documents_total": len(documents),
         "manual_companions_total": len(manual_companion_files),
         "resolved_companions_total": resolved_companions_total,
@@ -1456,26 +1452,21 @@ def _build_admin_casebooks_payload() -> dict:
     if not visible_cases and not visible_chat_messages and not visible_practice_records:
         state = "neutral"
         state_label = "Sem itens"
-        summary = "Nenhuma mensagem ou caso corresponde aos filtros atuais."
     elif any(not (item.get("feedback_status") or "").strip() for item in visible_cases) or any(
         not (item.get("feedback_status") or "").strip() for item in visible_chat_messages
     ):
         state = "degraded"
         state_label = "Por validar"
-        summary = "Há sinais recolhidos pelo sistema que ainda não foram validados por um administrador."
     elif any((item.get("feedback_status") or "").strip() in {"avoid", "review"} for item in visible_cases + visible_practice_records):
         state = "degraded"
         state_label = "Com alertas"
-        summary = "Os casos visíveis já estão governados, mas existem padrões marcados para evitar ou rever."
     else:
         state = "online"
         state_label = "Governado"
-        summary = "As mensagens e os casos visíveis já têm decisão humana sobre reutilização ou valor operacional."
 
     return {
         "state": state,
         "state_label": state_label,
-        "summary": summary,
         "return_to": _admin_casebooks_return_to(),
         "filters": {
             "chat_feedback": chat_feedback,
