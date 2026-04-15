@@ -4,6 +4,24 @@ from domain.chat_response_formatting import add_contextual_response_emojis
 
 
 class ChatResponseFormattingTests(unittest.TestCase):
+    def test_question_echo_is_stripped_even_without_emoji_decoration(self) -> None:
+        payload = {
+            "answer": (
+                "O que me podes dizer sobre o cais da Teporset em termos gerais?\n"
+                "A TEPORSET é o Terminal Portuário de Setúbal."
+            ),
+            "sources": [{"retrieval_mode": "document_companion"}],
+            "answer_origin": "document_companion",
+        }
+
+        formatted = add_contextual_response_emojis(
+            payload,
+            "O que me podes dizer sobre o cais da Teporset em termos gerais?",
+        )
+
+        self.assertEqual(formatted["answer"], "A TEPORSET é o Terminal Portuário de Setúbal.")
+        self.assertTrue(payload["answer"].startswith("O que me podes dizer"))
+
     def test_slash_live_query_gets_contextual_prefix(self) -> None:
         payload = {
             "answer": "Meteorologia para Setúbal: vento NW 15 kts.",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from copy import copy
 from typing import Any
 
@@ -67,6 +68,46 @@ LIVE_FEED_QUESTION_RE = re.compile(
 
 def _answer_text(payload: dict[str, Any]) -> str:
     return str(payload.get("answer") or "").strip()
+
+
+def _normalize_echo_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = re.sub(r"\s+", " ", normalized).strip().lower()
+    normalized = re.sub(r"^(?:pergunta|questao)\s*:\s*", "", normalized)
+    normalized = normalized.strip(" \t\n\r\"'“”‘’[]()")
+    return re.sub(r"[^\w]+", " ", normalized).strip()
+
+
+def strip_leading_question_echo(question: str, answer: str) -> str:
+    """Remove a leading copy of the user question from any chat answer."""
+    clean_answer = str(answer or "").strip()
+    question_key = _normalize_echo_text(question)
+    if not clean_answer or not question_key:
+        return clean_answer
+
+    for _attempt in range(3):
+        lines = clean_answer.splitlines()
+        if not lines:
+            break
+        first_line = lines[0].strip()
+        if _normalize_echo_text(first_line) == question_key:
+            clean_answer = "\n".join(lines[1:]).lstrip()
+            continue
+        candidate_line = re.sub(r"^(?:pergunta|questao)\s*:\s*", "", first_line, flags=re.IGNORECASE).strip()
+        if "?" not in candidate_line:
+            break
+        possible_question, remainder = candidate_line.split("?", 1)
+        if _normalize_echo_text(possible_question) != question_key:
+            break
+        next_lines = []
+        clean_remainder = remainder.lstrip(" :-")
+        if clean_remainder:
+            next_lines.append(clean_remainder)
+        next_lines.extend(lines[1:])
+        clean_answer = "\n".join(next_lines).lstrip()
+
+    return clean_answer.strip()
 
 
 def _starts_with_known_emoji(line: str) -> bool:
@@ -150,6 +191,11 @@ def add_contextual_response_emojis(payload: dict[str, Any], question: str = "") 
     text = _answer_text(payload)
     if not text:
         return payload
+    sanitized_text = strip_leading_question_echo(question, text)
+    if sanitized_text != text:
+        payload = copy(payload)
+        payload["answer"] = sanitized_text
+        text = sanitized_text
 
     origin = str(payload.get("answer_origin") or "")
     emoji = LIVE_SLASH_ORIGIN_EMOJI.get(origin) or OPERATIONAL_ORIGIN_EMOJI.get(origin)

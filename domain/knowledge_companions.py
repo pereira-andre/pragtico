@@ -54,14 +54,17 @@ PORTUGUESE_STOPWORDS = {
     "vai",
 }
 SUMMARY_REQUEST_RE = re.compile(
-    r"\b(o que diz|resume|resumo|sumario|sumário|explica|diz me|diz-me|da me|dá me|da-me|dá-me|"
+    r"\b(o que diz|o que me podes dizer|o que podes dizer|fala me|fala-me|resume|resumo|sumario|sumário|"
+    r"explica|diz me|diz-me|da me|dá me|da-me|dá-me|"
     r"detalhes|mais detalhes|informacao|informação|informacoes|informações|visao geral|visão geral|"
-    r"quais sao|quais são|qual e a regra|qual é a regra)\b",
+    r"termos gerais|em geral|quais sao|quais são|qual e a regra|qual é a regra|"
+    r"regras|restricoes|restrições|limites|condicoes operacionais|condições operacionais)\b",
     flags=re.IGNORECASE,
 )
 QUESTION_LINE_RE = re.compile(r"^Pergunta:\s*(.+)$", flags=re.IGNORECASE)
 ANSWER_LINE_RE = re.compile(r"^Resposta:\s*(.+)$", flags=re.IGNORECASE)
 LOW_SIGNAL_MATCH_TOKENS = {
+    "cais",
     "documento",
     "entrada",
     "entrar",
@@ -81,6 +84,7 @@ LOW_SIGNAL_MATCH_TOKENS = {
     "regras",
     "saida",
     "setubal",
+    "teporset",
 }
 DEPTH_TERMS = {
     "calado",
@@ -98,6 +102,79 @@ LENGTH_TIME_TERMS = {
     "noite",
     "noturna",
     "noturno",
+}
+RULE_OR_RESTRICTION_TERMS = {
+    "condicao",
+    "condicoes",
+    "especifica",
+    "especificas",
+    "limite",
+    "limites",
+    "operacional",
+    "operacionais",
+    "regra",
+    "regras",
+    "restricao",
+    "restricoes",
+}
+OVERVIEW_TERMS = {
+    "detalhe",
+    "detalhes",
+    "dizer",
+    "explica",
+    "gerais",
+    "geral",
+    "informacao",
+    "informacoes",
+    "resumo",
+    "sumario",
+    "visao",
+}
+SCALAR_FACT_TERMS = (
+    DEPTH_TERMS
+    | LENGTH_TIME_TERMS
+    | {
+        "altura",
+        "boca",
+        "calado",
+        "maximo",
+        "maxima",
+        "metro",
+        "metros",
+        "minimo",
+        "minima",
+    }
+)
+DISTANCE_TERMS = {
+    "barra",
+    "distancia",
+    "distancias",
+    "milha",
+    "milhas",
+}
+TIME_PLANNING_TERMS = {
+    "antecedencia",
+    "horas",
+    "notificacao",
+    "notificado",
+    "prazo",
+    "tempo",
+    "quando",
+}
+CONTACT_REFERENCE_TERMS = {
+    "canal",
+    "telefone",
+    "vhf",
+}
+VALIDATION_TERMS = {
+    "quem",
+    "requisição",
+    "requisições",
+    "requisicao",
+    "requisicoes",
+    "valida",
+    "validacao",
+    "validação",
 }
 FACILITY_TERMS = {
     "berco",
@@ -546,8 +623,92 @@ def _is_port_inventory_candidate(candidate_tokens: set[str]) -> bool:
     )
 
 
+def _is_short_scalar_answer(value: object) -> bool:
+    clean = _clean_text(value)
+    if not clean or len(clean) > 120 or not re.search(r"\d", clean):
+        return False
+    return len(_tokenize(clean)) <= 10
+
+
+def _is_brief_direct_answer(value: object) -> bool:
+    clean = _clean_text(value)
+    return bool(clean) and len(clean) <= 150 and len(_tokenize(clean)) <= 16
+
+
+def _ensure_sentence(value: str) -> str:
+    clean = _clean_text(value)
+    if not clean:
+        return ""
+    if clean.endswith((".", "!", "?")):
+        return clean
+    return clean + "."
+
+
+def _lower_initial_article(value: str) -> str:
+    clean = _clean_text(value).rstrip(".")
+    if clean.lower().startswith(("o ", "a ")):
+        return clean[:1].lower() + clean[1:]
+    return clean
+
+
+def _starts_with_boolean_answer(value: str) -> bool:
+    return bool(re.match(r"^(?:sim|não|nao)\b", _normalize_text(value)))
+
+
+def _humanize_companion_faq_answer(question: str, answer: str) -> str:
+    clean_answer = _clean_answer_text(answer)
+    if not _is_brief_direct_answer(clean_answer):
+        return clean_answer
+
+    question_tokens = _tokenize(question)
+    answer_sentence = _ensure_sentence(clean_answer)
+    if not answer_sentence:
+        return clean_answer
+
+    if question_tokens & VALIDATION_TERMS and "piloto coordenador" in _normalize_text(clean_answer):
+        return f"A validação fica com {_lower_initial_article(clean_answer)}."
+
+    if _starts_with_boolean_answer(clean_answer):
+        return f"Neste caso, a resposta é: {answer_sentence}"
+
+    if question_tokens & CONTACT_REFERENCE_TERMS:
+        return f"Usa esta referência: {answer_sentence}"
+
+    if question_tokens & TIME_PLANNING_TERMS:
+        return (
+            f"Para planeamento, conta com {answer_sentence} "
+            "Depois valida os restantes condicionantes da manobra."
+        )
+
+    if question_tokens & DISTANCE_TERMS:
+        return (
+            f"Para planeamento, considera {answer_sentence} "
+            "Confirma sempre o ponto de origem e destino da pergunta."
+        )
+
+    if question_tokens & (SCALAR_FACT_TERMS | RULE_OR_RESTRICTION_TERMS):
+        return (
+            f"O valor a reter é {answer_sentence} "
+            "Usa-o como referência documental e confirma o resto da regra antes de concluir se a manobra é viável."
+        )
+
+    return f"A resposta direta: {answer_sentence}"
+
+
 def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) -> bool:
     candidate_tokens = _tokenize(_faq_candidate_text(item))
+
+    asks_rules_or_restrictions = bool(question_tokens & RULE_OR_RESTRICTION_TERMS)
+    asks_overview = bool(question_tokens & OVERVIEW_TERMS)
+    asks_specific_scalar_fact = bool(question_tokens & SCALAR_FACT_TERMS)
+    candidate_has_rules_or_restrictions = bool(candidate_tokens & RULE_OR_RESTRICTION_TERMS)
+    if (
+        (asks_overview or (asks_rules_or_restrictions and not asks_specific_scalar_fact))
+        and not candidate_has_rules_or_restrictions
+        and bool(candidate_tokens & SCALAR_FACT_TERMS)
+        and _is_short_scalar_answer(item.get("answer"))
+    ):
+        return True
 
     asks_depth = bool(question_tokens & DEPTH_TERMS)
     candidate_has_depth = bool(candidate_tokens & DEPTH_TERMS)
@@ -637,7 +798,7 @@ def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict 
         return None
     companion = best_match["companion"]
     return {
-        "answer": best_match["faq_match"]["answer"],
+        "answer": _humanize_companion_faq_answer(question, best_match["faq_match"]["answer"]),
         "sources": build_companion_sources(companion, question),
         "companion": companion,
         "faq_match": best_match["faq_match"],
@@ -685,7 +846,7 @@ def build_companion_sources(companion: dict, question: str) -> list[dict]:
 def build_companion_answer(question: str, companion: dict) -> str:
     faq_match = find_best_companion_faq(question, companion)
     if faq_match:
-        return faq_match["answer"]
+        return _humanize_companion_faq_answer(question, faq_match["answer"])
 
     if not is_companion_summary_request(question):
         return ""

@@ -58,6 +58,67 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("LOA igual ou superior a 225 metros", answer)
         self.assertIn("0,7 milhas", answer)
 
+    def test_it062_companion_distinguishes_overview_rules_and_length(self) -> None:
+        companion = load_document_companion("IT-062_Teporset.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        overview = build_companion_answer(
+            "O que me podes dizer sobre o cais da Teporset em termos gerais?",
+            companion,
+        )
+        rules = build_companion_answer("Quais são as regras para o cais da Teporset?", companion)
+        restrictions = build_companion_answer("Que restrições existem no cais da Teporset?", companion)
+        length = build_companion_answer("Qual o comprimento do cais da Teporset?", companion)
+        unsupported = build_companion_answer("Qual é a cor do cais da Teporset?", companion)
+
+        self.assertIn("Terminal Portuário de Setúbal", overview)
+        self.assertIn("calado calculado", overview)
+        self.assertIn("7,4 metros", rules)
+        self.assertIn("11,0 metros", rules)
+        self.assertIn("Piloto Coordenador", rules)
+        self.assertIn("200 metros", restrictions)
+        self.assertIn("calado máximo", restrictions)
+        self.assertIn("164 metros", length)
+        self.assertIn("não ler esse número isoladamente", length)
+        self.assertIn("200 metros de LOA", length)
+        self.assertEqual(unsupported, "")
+
+    def test_brief_companion_answers_are_operationalized_for_common_fact_types(self) -> None:
+        tms2 = load_document_companion("IT-006_TMS2.txt", KNOWLEDGE_DIR)
+        pilotagem_assistida = load_document_companion("IT-017_PilotagemAssistida.txt", KNOWLEDGE_DIR)
+        tms1 = load_document_companion("IT-005_TMS1.txt", KNOWLEDGE_DIR)
+        marcacao = load_document_companion("Marcar_manobra_repontos_mare.txt", KNOWLEDGE_DIR)
+        entrada_saida = load_document_companion("IT-041_EntradaSaida.txt", KNOWLEDGE_DIR)
+        ecooil = load_document_companion("IT-008_EcoOil.txt", KNOWLEDGE_DIR)
+
+        length = build_companion_answer("Qual é o comprimento total do TMS2?", tms2)
+        distance = build_companion_answer(
+            "A que distância da Barra o VTS inicia a aquisição do navio?",
+            pilotagem_assistida,
+        )
+        validator = build_companion_answer("Quem valida as requisições de manobra no TMS1?", tms1)
+        lead_time = build_companion_answer(
+            "Com quanto tempo de antecedência se marca uma entrada de fora da barra?",
+            marcacao,
+        )
+        vhf = build_companion_answer(
+            "Em que canal VHF se faz a transferência de responsabilidade entre OVTS e Piloto?",
+            entrada_saida,
+        )
+        boolean_rule = build_companion_answer("É possível atracar de noite no ECO-OIL?", ecooil)
+
+        self.assertIn("723 metros", length)
+        self.assertIn("referência documental", length)
+        self.assertIn("4 milhas", distance)
+        self.assertIn("ponto de origem e destino", distance)
+        self.assertEqual(validator, "A validação fica com o Piloto Coordenador.")
+        self.assertIn("2 horas", lead_time)
+        self.assertIn("restantes condicionantes", lead_time)
+        self.assertIn("canal VHF 14", vhf)
+        self.assertTrue(vhf.startswith("Usa esta referência:"))
+        self.assertTrue(boolean_rule.startswith("Neste caso, a resposta é: Não."))
+        self.assertNotIn("O valor a reter é Não", boolean_rule)
+
     def test_it014_companion_answers_generic_lisnave_night_length_question(self) -> None:
         companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)

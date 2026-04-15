@@ -2249,6 +2249,59 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Para calado", detail_payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_teporset_followup_changes_focus_between_overview_and_rules(self) -> None:
+        document_name = "IT-062_Teporset.txt"
+        repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
+        (Path(self.store.knowledge_dir) / document_name).write_text(
+            (repo_knowledge / document_name).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        companion_payload = json.loads(
+            (repo_knowledge / "companions" / "IT-062_Teporset.json").read_text(encoding="utf-8")
+        )
+        self._write_knowledge_companion(document_name, companion_payload)
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                overview_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "O que me podes dizer sobre o cais da Teporset em termos gerais?",
+                    },
+                )
+                rules_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Quais são as regras para o cais da Teporset?",
+                    },
+                )
+
+        self.assertEqual(overview_response.status_code, 200)
+        overview_payload = overview_response.get_json()
+        self.assertEqual(overview_payload["answer_origin"], "document_companion")
+        self.assertFalse(overview_payload["answer"].startswith("O que me podes dizer"))
+        self.assertIn("Terminal Portuário de Setúbal", overview_payload["answer"])
+        self.assertIn("calado calculado", overview_payload["answer"])
+
+        self.assertEqual(rules_response.status_code, 200)
+        rules_payload = rules_response.get_json()
+        self.assertEqual(rules_payload["answer_origin"], "document_companion")
+        self.assertFalse(rules_payload["answer"].startswith("Quais são as regras"))
+        self.assertIn("7,4 metros", rules_payload["answer"])
+        self.assertIn("11,0 metros", rules_payload["answer"])
+        self.assertIn("Piloto Coordenador", rules_payload["answer"])
+        self.assertNotEqual(overview_payload["answer"], rules_payload["answer"])
+        self.assertNotEqual(rules_payload["answer"], "164 metros de comprimento físico.")
+        answer_mock.assert_not_called()
+
     def test_chat_port_facility_inventory_uses_canonical_companion_without_duplicate_aliases(self) -> None:
         repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
         for document_name in [

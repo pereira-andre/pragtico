@@ -78,8 +78,34 @@ CALADO MÍNIMO GARANTIDO:
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
 ================================================================================
 
+Pergunta: O que me podes dizer sobre o Cais da TEPORSET em termos gerais?
+Resposta: A TEPORSET é o Terminal Portuário de Setúbal. O documento IT-062
+define as regras de estacionamento e execução de manobras neste cais. Em termos
+operacionais, as referências principais são: cais físico com 164 metros,
+comprimento máximo de referência do navio de 200 metros, calado calculado por
+7,4 metros mais a altura da preia-mar prevista para o dia, limitado a 11,0
+metros, e validação das requisições pelo Piloto Coordenador.
+
+Pergunta: Quais são as regras principais para o Cais da TEPORSET?
+Resposta: As regras principais são: o navio pode ter até 200 metros de LOA como
+referência operacional, apesar do cais físico ter 164 metros; o calado máximo é
+7,4 metros mais a altura da preia-mar prevista para o dia; o resultado nunca
+pode exceder 11,0 metros; a atracação deve ser planeada próximo da preia-mar
+quando o calado depende dessa altura; e as requisições de manobra são validadas
+pelo Piloto Coordenador.
+
+Pergunta: Que restrições existem no Cais da TEPORSET?
+Resposta: As restrições documentadas no IT-062 são essencialmente de comprimento
+e calado: comprimento máximo de referência de navio de 200 metros; cais físico
+de 164 metros, admitindo saliência de proa ou popa; calado máximo calculado por
+7,4 metros mais a altura da preia-mar prevista para o dia; teto absoluto de 11,0
+metros; e calado mínimo praticável de 7,4 metros quando a preia-mar está ao nível
+do Zero Hidrográfico.
+
 Pergunta: Qual o comprimento do Cais da TEPORSET?
-Resposta: 164 metros de comprimento físico.
+Resposta: O cais físico da TEPORSET tem 164 metros. Em termos operacionais,
+convém não ler esse número isoladamente: o IT-062 admite como referência navios
+até 200 metros de LOA, com proa ou popa a saliente quando aplicável.
 
 Pergunta: Qual o comprimento máximo de navio no Cais da TEPORSET?
 Resposta: 200 metros (comprimento máximo de referência).

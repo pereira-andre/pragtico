@@ -10,19 +10,61 @@
     "062",
     "CAIS DA TEPORSET"
   ],
-  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal TEPORSET, no Porto de Setúbal.",
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal TEPORSET, no Porto de Setúbal. As referências operacionais principais são comprimento físico de cais, comprimento máximo de referência de navio, fórmula de calado por altura da preia-mar e validação das requisições pelo Piloto Coordenador.",
   "key_points": [
-    "164 metros de comprimento físico.",
-    "200 metros (comprimento máximo de referência).",
-    "11,0 metros.",
-    "Somam-se 7,4 metros à altura da preia-mar prevista para o dia, com teto de 11,0 metros.",
-    "Sim, desde que a preia-mar do dia seja igual ou superior a 2,6 m (7,4 + 2,6 = 10,0 m).",
-    "7,4 metros (correspondente a preia-mar ao nível do Zero Hidrográfico)."
+    "Aplica-se ao estacionamento e à execução das manobras no Terminal TEPORSET.",
+    "O cais físico tem 164 metros, mas o comprimento máximo de referência do navio é 200 metros.",
+    "O calado máximo calcula-se somando 7,4 metros à altura da preia-mar prevista para o dia.",
+    "O calado máximo absoluto é 11,0 metros.",
+    "O calado mínimo praticável é 7,4 metros, correspondente a preia-mar ao nível do Zero Hidrográfico.",
+    "O Piloto Coordenador valida as requisições de manobra."
   ],
   "faq": [
     {
+      "question": "O que me podes dizer sobre o Cais da TEPORSET em termos gerais?",
+      "answer": "A TEPORSET é o Terminal Portuário de Setúbal. O IT-062 define as regras de estacionamento e execução de manobras neste cais. Em termos operacionais, as referências principais são: cais físico com 164 metros, comprimento máximo de referência do navio de 200 metros, calado calculado por 7,4 metros mais a altura da preia-mar prevista para o dia, limitado a 11,0 metros, e validação das requisições pelo Piloto Coordenador.",
+      "keywords": [
+        "geral",
+        "termos gerais",
+        "cais",
+        "terminal",
+        "teporset",
+        "regras",
+        "calado",
+        "comprimento"
+      ]
+    },
+    {
+      "question": "Quais são as regras principais para o Cais da TEPORSET?",
+      "answer": "As regras principais da TEPORSET são: o navio pode ter até 200 metros de LOA como referência operacional, apesar do cais físico ter 164 metros; o calado máximo é 7,4 metros mais a altura da preia-mar prevista para o dia; o resultado nunca pode exceder 11,0 metros; a atracação deve ser planeada próximo da preia-mar quando o calado depende dessa altura; e as requisições de manobra são validadas pelo Piloto Coordenador.",
+      "keywords": [
+        "regras",
+        "regras operacionais",
+        "cais",
+        "teporset",
+        "loa",
+        "calado",
+        "preia-mar",
+        "piloto coordenador"
+      ]
+    },
+    {
+      "question": "Que restrições existem no Cais da TEPORSET?",
+      "answer": "As restrições documentadas no IT-062 são essencialmente de comprimento e calado: comprimento máximo de referência de navio de 200 metros; cais físico de 164 metros, admitindo saliência de proa ou popa; calado máximo calculado por 7,4 metros mais a altura da preia-mar prevista para o dia; teto absoluto de 11,0 metros; e calado mínimo praticável de 7,4 metros quando a preia-mar está ao nível do Zero Hidrográfico.",
+      "keywords": [
+        "restricoes",
+        "restrições",
+        "limites",
+        "cais",
+        "teporset",
+        "comprimento",
+        "calado",
+        "preia-mar"
+      ]
+    },
+    {
       "question": "Qual o comprimento do Cais da TEPORSET?",
-      "answer": "164 metros de comprimento físico.",
+      "answer": "O cais físico da TEPORSET tem 164 metros. Em termos operacionais, convém não ler esse número isoladamente: o IT-062 admite como referência navios até 200 metros de LOA, com proa ou popa a saliente quando aplicável.",
       "keywords": [
         "cais",
         "comprimento",
