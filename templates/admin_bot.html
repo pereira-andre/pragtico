@@ -12,6 +12,7 @@
         <span class="admin-status-badge is-{{ bot.state }}">{{ bot.state_label }}</span>
         <a class="outline-link" href="{{ url_for('chat.chat_archive') }}">Abrir conversas</a>
         <a class="outline-link" href="{{ url_for('admin.admin_documents') }}">Ver documentos</a>
+        <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar bot</a>
       </div>
     </div>
 
@@ -142,8 +143,63 @@
       </div>
       <p class="admin-status-note">{{ casebooks.summary }}</p>
 
+      <div class="admin-bot-data-actions">
+        <article class="admin-status-surface admin-bot-data-box">
+          <div class="admin-status-surface-head">
+            <strong>Base do bot</strong>
+            <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar JSON</a>
+          </div>
+          <form method="post" action="{{ url_for('admin.import_bot_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+            <label>
+              Importar bot
+              <input type="file" name="bot_database_file" accept=".json,application/json">
+            </label>
+            <button type="submit" class="mini-button">Importar</button>
+          </form>
+          <p class="admin-status-note">Evals, feedback validado, experiência prática e validações de manobras.</p>
+        </article>
+        <article class="admin-status-surface admin-bot-data-box">
+          <div class="admin-status-surface-head">
+            <strong>Base do sistema</strong>
+            <a class="outline-link" href="{{ url_for('admin.export_system_database') }}">Exportar JSON</a>
+          </div>
+          <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+            <label>
+              Importar sistema
+              <input type="file" name="system_database_file" accept=".json,application/json">
+            </label>
+            <label>
+              Modo
+              <select name="import_mode">
+                <option value="merge" selected>Juntar / atualizar</option>
+                <option value="replace">Substituir tudo</option>
+              </select>
+            </label>
+            <button type="submit" class="mini-button">Importar</button>
+          </form>
+          <p class="admin-status-note">Inclui escalas, utilizadores, conversas, knowledge e estado runtime. Trata este JSON como ficheiro sensível.</p>
+        </article>
+      </div>
+
       <form method="get" action="{{ url_for('admin.admin_bot') }}#casebooks" class="archive-filter-form admin-casebook-compact-filters">
         <div class="archive-filter-grid admin-casebooks-filter-grid">
+          <label>
+            Busca
+            <input type="search" name="q" value="{{ casebooks.filters.q }}" placeholder="Navio, cais, pergunta, resposta...">
+          </label>
+          <label>
+            Origem
+            <select name="source_type">
+              <option value="all" {% if casebooks.filters.source_type == "all" %}selected{% endif %}>Tudo</option>
+              <option value="chat" {% if casebooks.filters.source_type == "chat" %}selected{% endif %}>Chat / WhatsApp</option>
+              <option value="maneuver" {% if casebooks.filters.source_type == "maneuver" %}selected{% endif %}>Manobras</option>
+              <option value="practice" {% if casebooks.filters.source_type == "practice" %}selected{% endif %}>Excel / prática</option>
+            </select>
+          </label>
           <label>
             Chat/WhatsApp
             <select name="chat_feedback">
@@ -172,6 +228,14 @@
               <option value="shift" {% if casebooks.filters.case_type == "shift" %}selected{% endif %}>Mudança</option>
             </select>
           </label>
+          <label>
+            Linhas
+            <select name="limit">
+              {% for option in casebooks.allowed_limits %}
+                <option value="{{ option }}" {% if casebooks.filters.limit == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </label>
         </div>
         <div class="inline-link-row">
           <button type="submit" class="mini-button">Aplicar</button>
@@ -185,6 +249,7 @@
             <p class="eyebrow">JSON de prática</p>
             <h3>Experiência prática importada</h3>
           </div>
+          <span class="admin-casebook-count">Mostra {{ casebooks.practice_rows|length }} de {{ casebooks.practice_visible_total }}</span>
         </div>
         <form method="post" action="{{ url_for('admin.import_practice_experience') }}" enctype="multipart/form-data" class="archive-filter-form admin-casebook-compact-filters">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -280,6 +345,9 @@
         {% else %}
           <p class="admin-status-note">Ainda não há experiência prática importada para os filtros atuais.</p>
         {% endif %}
+        {% if casebooks.practice_has_more %}
+          <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
+        {% endif %}
       </div>
 
       <div class="admin-casebook-sheet-block">
@@ -288,6 +356,7 @@
             <p class="eyebrow">Chat e WhatsApp</p>
             <h3>Respostas governadas</h3>
           </div>
+          <span class="admin-casebook-count">Mostra {{ casebooks.chat_rows|length }} de {{ casebooks.chat_visible_total }}</span>
         </div>
         {% if casebooks.chat_rows %}
           <div class="admin-casebook-sheet-wrap">
@@ -343,6 +412,9 @@
         {% else %}
           <p class="admin-status-note">Nenhuma mensagem corresponde aos filtros atuais.</p>
         {% endif %}
+        {% if casebooks.chat_has_more %}
+          <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
+        {% endif %}
       </div>
 
       <div class="admin-casebook-sheet-block">
@@ -351,6 +423,7 @@
             <p class="eyebrow">Manobras</p>
             <h3>Casos operacionais</h3>
           </div>
+          <span class="admin-casebook-count">Mostra {{ casebooks.case_rows|length }} de {{ casebooks.case_visible_total }}</span>
         </div>
         {% if casebooks.case_rows %}
           <div class="admin-casebook-sheet-wrap">
@@ -397,6 +470,9 @@
           </div>
         {% else %}
           <p class="admin-status-note">Nenhum caso operacional corresponde aos filtros atuais.</p>
+        {% endif %}
+        {% if casebooks.case_has_more %}
+          <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
         {% endif %}
       </div>
     </section>

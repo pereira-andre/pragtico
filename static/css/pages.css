@@ -2204,7 +2204,33 @@
 }
 
 .admin-casebooks-filter-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.admin-bot-data-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-bot-data-box {
+  padding: 12px;
+}
+
+.admin-bot-import-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  min-width: 0;
+}
+
+.admin-bot-import-form label {
+  min-width: 0;
+}
+
+.admin-bot-import-form select,
+.admin-bot-import-form input {
+  width: 100%;
 }
 
 .admin-casebook-kpi-grid {
@@ -2232,6 +2258,12 @@
   margin-top: 18px;
 }
 
+.admin-casebook-count {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .admin-casebook-sheet-wrap {
   overflow-x: auto;
   border: 1px solid rgba(29, 44, 43, 0.1);
@@ -2243,12 +2275,12 @@
   width: 100%;
   min-width: 1180px;
   border-collapse: collapse;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 
 .admin-casebook-sheet th,
 .admin-casebook-sheet td {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid rgba(29, 44, 43, 0.08);
   border-right: 1px solid rgba(29, 44, 43, 0.06);
   vertical-align: top;
@@ -2276,10 +2308,10 @@
 .admin-sheet-form select,
 .admin-sheet-form textarea,
 .admin-sheet-form input {
-  min-height: 32px;
-  padding: 7px 8px;
+  min-height: 30px;
+  padding: 6px 8px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .admin-bot-case-grid,
@@ -3582,6 +3614,7 @@ button:hover {
   .admin-status-compact-grid,
   .admin-casebook-kpi-grid,
   .admin-status-split,
+  .admin-bot-data-actions,
   .admin-bot-case-grid,
   .admin-bot-document-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3628,6 +3661,7 @@ button:hover {
   .admin-status-compact-grid,
   .admin-casebook-kpi-grid,
   .admin-status-split,
+  .admin-bot-data-actions,
   .admin-bot-case-grid,
   .admin-bot-document-grid {
     grid-template-columns: 1fr;

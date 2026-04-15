@@ -3725,6 +3725,131 @@ class AdminDocumentPolicyTests(unittest.TestCase):
         self.assertIn("225 metros", html)
         self.assertIn("Inputs que o bot pode reutilizar", html)
         self.assertIn("Experiência prática importada", html)
+        self.assertIn("Exportar bot", html)
+        self.assertIn("Base do sistema", html)
+
+    def test_admin_bot_casebooks_support_search_and_compact_limit(self) -> None:
+        conversation = self.store.create_conversation("admin", "Teste LISNAVE")
+        self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "user",
+            "Quais sao as docas da Lisnave?",
+        )
+        self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "assistant",
+            "A Lisnave tem docas secas 20, 21, 22 e o Hidrolift para 31, 32 e 33.",
+            channel="whatsapp",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot?q=Lisnave&source_type=chat&chat_feedback=all&limit=8#casebooks")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('name="q" value="Lisnave"', html)
+        self.assertIn("A Lisnave tem docas secas", html)
+        self.assertIn("Mostra 1 de 1", html)
+        self.assertIn("Chat / WhatsApp", html)
+
+    def test_admin_exports_bot_and_system_databases_as_json(self) -> None:
+        self.store.upsert_feedback_eval_case(
+            source_message_id="import-test",
+            document="IT-014_Lisnave.txt",
+            question="Quais sao as docas da Lisnave?",
+            expected_answer="D31, D32 e D33 sao docas secas com acesso por Hidrolift.",
+            expected_substrings=["Hidrolift"],
+            updated_by="admin",
+            source="web",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            bot_response = client.get("/admin/bot/export")
+            system_response = client.get("/admin/system/export")
+
+        self.assertEqual(bot_response.status_code, 200)
+        bot_payload = json.loads(bot_response.get_data(as_text=True))
+        self.assertEqual(bot_payload["kind"], "pragtico.bot_database_export")
+        self.assertEqual(bot_payload["payload"]["feedback_eval_cases"][0]["document"], "IT-014_Lisnave.txt")
+
+        self.assertEqual(system_response.status_code, 200)
+        system_payload = json.loads(system_response.get_data(as_text=True))
+        self.assertEqual(system_payload["kind"], "pragtico.system_database_export")
+        self.assertIn("users", system_payload["payload"]["data_files"])
+        self.assertIn("bot_database", system_payload["payload"])
+
+    def test_admin_imports_bot_and_system_database_json(self) -> None:
+        bot_payload = {
+            "kind": "pragtico.bot_database_export",
+            "version": 1,
+            "payload": {
+                "feedback_eval_cases": [
+                    {
+                        "source_message_id": "bot-import-1",
+                        "document": "Porto_Setubal_Terminais_Cais.txt",
+                        "question": "Quantos cais existem em Setubal?",
+                        "expected_answer": "34 slots operacionais, sem duplicar aliases de terminais.",
+                        "expected_substrings": ["34 slots"],
+                        "source": "web",
+                    }
+                ]
+            },
+        }
+        system_payload = {
+            "kind": "pragtico.system_database_export",
+            "version": 1,
+            "payload": {
+                "data_files": {
+                    "runtime_state": {
+                        "admin_import_test": {"ok": True}
+                    }
+                },
+                "knowledge_files": [
+                    {
+                        "path": "admin_import_test.txt",
+                        "content": "Conhecimento importado.",
+                    }
+                ],
+            },
+        }
+
+        with app.app.test_client() as client:
+            csrf_token = self._set_admin_session(client)
+            bot_response = client.post(
+                "/admin/bot/import",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/bot#casebooks",
+                    "bot_database_file": (
+                        BytesIO(json.dumps(bot_payload).encode("utf-8")),
+                        "bot.json",
+                    ),
+                },
+                content_type="multipart/form-data",
+            )
+            system_response = client.post(
+                "/admin/system/import",
+                data={
+                    "csrf_token": csrf_token,
+                    "return_to": "/admin/bot#casebooks",
+                    "import_mode": "merge",
+                    "system_database_file": (
+                        BytesIO(json.dumps(system_payload).encode("utf-8")),
+                        "system.json",
+                    ),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(bot_response.status_code, 302)
+        self.assertEqual(system_response.status_code, 302)
+        self.assertEqual(self.store.list_feedback_eval_cases()[0]["source_message_id"], "bot-import-1")
+        self.assertEqual(self.store.get_runtime_state("admin_import_test"), {"ok": True})
+        self.assertTrue((Path(self.store.knowledge_dir) / "admin_import_test.txt").exists())
 
     def test_admin_casebooks_redirects_to_bot_page_anchor(self) -> None:
         with app.app.test_client() as client:

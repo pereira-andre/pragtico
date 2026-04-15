@@ -1,6 +1,8 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
 from collections import Counter
+from datetime import date, datetime
+import json
 import logging
 import os
 from pathlib import Path
@@ -29,6 +31,7 @@ from domain.practice_experience import (
     list_practice_experience_records,
     load_practice_experience_records_from_json,
     PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME,
+    practice_experience_state,
     prepare_practice_experience_records_for_import,
     save_practice_experience_records,
     update_practice_experience_feedback,
@@ -52,6 +55,230 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("admin", __name__)
 
 PRACTICE_EXPERIENCE_SOURCE_FILENAME = PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME
+
+BOT_DATABASE_EXPORT_KIND = "pragtico.bot_database_export"
+SYSTEM_DATABASE_EXPORT_KIND = "pragtico.system_database_export"
+DATABASE_EXPORT_VERSION = 1
+ADMIN_CASEBOOK_DEFAULT_LIMIT = 8
+ADMIN_CASEBOOK_ALLOWED_LIMITS = (8, 16, 40, 80)
+SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES = {".txt", ".md", ".json"}
+POSTGRES_EXPORT_TABLES = {
+    "app_users": {
+        "pk": ("username",),
+        "jsonb": set(),
+        "columns": (
+            "username",
+            "password_hash",
+            "role",
+            "full_name",
+            "organization",
+            "email",
+            "phone",
+            "whatsapp_number",
+            "whatsapp_opt_in",
+            "whatsapp_opt_in_at",
+            "profile_completed_at",
+        ),
+    },
+    "documents": {
+        "pk": ("name",),
+        "jsonb": set(),
+        "columns": (
+            "name",
+            "original_name",
+            "doc_type",
+            "size_bytes",
+            "updated_at",
+            "created_at",
+            "uploaded_by",
+            "preview",
+            "file_path",
+        ),
+    },
+    "port_calls": {
+        "pk": ("id",),
+        "jsonb": {"maneuver_history"},
+        "columns": (
+            "id",
+            "vessel_name",
+            "vessel_short_name",
+            "vessel_imo",
+            "vessel_call_sign",
+            "vessel_flag",
+            "vessel_type",
+            "vessel_loa_m",
+            "vessel_beam_m",
+            "vessel_gt_t",
+            "vessel_max_draft_m",
+            "vessel_dwt_t",
+            "vessel_bow_thruster",
+            "vessel_stern_thruster",
+            "status",
+            "approval_status",
+            "approval_note",
+            "aborted_reason",
+            "decided_by",
+            "decided_at",
+            "eta",
+            "ata",
+            "planned_departure_at",
+            "departure_plan_note",
+            "departure_at",
+            "planned_shift_at",
+            "shift_plan_note",
+            "shift_at",
+            "shift_origin_berth",
+            "shift_destination_berth",
+            "shift_approval_status",
+            "shift_approval_note",
+            "shift_aborted_reason",
+            "shift_decided_by",
+            "shift_decided_at",
+            "maneuver_history",
+            "berth",
+            "last_port",
+            "next_port",
+            "created_by",
+            "notes",
+            "created_at",
+            "updated_at",
+        ),
+    },
+    "conversations": {
+        "pk": ("id",),
+        "jsonb": set(),
+        "columns": ("id", "username", "title", "created_at", "updated_at"),
+    },
+    "messages": {
+        "pk": ("id",),
+        "jsonb": {"citations", "channel_metadata"},
+        "columns": (
+            "id",
+            "conversation_id",
+            "role",
+            "content",
+            "citations",
+            "feedback_status",
+            "feedback_note",
+            "feedback_correction",
+            "feedback_correction_document",
+            "feedback_updated_by",
+            "feedback_updated_at",
+            "channel",
+            "channel_user_id",
+            "external_message_id",
+            "external_reply_to_id",
+            "channel_metadata",
+            "created_at",
+        ),
+    },
+    "channel_events": {
+        "pk": ("id",),
+        "jsonb": {"payload"},
+        "columns": (
+            "id",
+            "channel",
+            "event_type",
+            "username",
+            "conversation_id",
+            "local_message_id",
+            "channel_user_id",
+            "external_event_id",
+            "external_message_id",
+            "payload",
+            "created_at",
+        ),
+    },
+    "app_runtime_state": {
+        "pk": ("key",),
+        "jsonb": {"value"},
+        "columns": ("key", "value", "updated_at"),
+    },
+    "feedback_eval_cases": {
+        "pk": ("id",),
+        "jsonb": {"expected_substrings"},
+        "columns": (
+            "id",
+            "source_message_id",
+            "document",
+            "question",
+            "expected_answer",
+            "expected_substrings",
+            "feedback_note",
+            "updated_by",
+            "source",
+            "created_at",
+            "updated_at",
+        ),
+    },
+    "maneuver_cases": {
+        "pk": ("maneuver_id",),
+        "jsonb": {
+            "vessel_snapshot",
+            "scale_snapshot",
+            "planning_snapshot",
+            "decision_snapshot",
+            "execution_snapshot",
+            "outcome_snapshot",
+            "environment_snapshot",
+            "feature_snapshot",
+            "change_log",
+        },
+        "columns": (
+            "maneuver_id",
+            "port_call_id",
+            "reference_code",
+            "vessel_name",
+            "maneuver_type",
+            "current_state",
+            "origin_label",
+            "destination_label",
+            "planned_at",
+            "decided_at",
+            "completed_at",
+            "reported_at",
+            "latest_event_at",
+            "case_summary",
+            "vessel_snapshot",
+            "scale_snapshot",
+            "planning_snapshot",
+            "decision_snapshot",
+            "execution_snapshot",
+            "outcome_snapshot",
+            "environment_snapshot",
+            "feature_snapshot",
+            "change_log",
+            "feedback_status",
+            "feedback_note",
+            "feedback_updated_by",
+            "feedback_updated_at",
+            "created_at",
+            "updated_at",
+        ),
+    },
+}
+POSTGRES_INSERT_ORDER = (
+    "app_users",
+    "documents",
+    "port_calls",
+    "conversations",
+    "messages",
+    "channel_events",
+    "app_runtime_state",
+    "feedback_eval_cases",
+    "maneuver_cases",
+)
+POSTGRES_DELETE_ORDER = (
+    "channel_events",
+    "messages",
+    "conversations",
+    "maneuver_cases",
+    "port_calls",
+    "feedback_eval_cases",
+    "app_runtime_state",
+    "documents",
+    "app_users",
+)
 
 
 def _practice_experience_source_path() -> Path:
@@ -114,6 +341,510 @@ def _preview_text(value: str, limit: int = 220) -> str:
     if len(clean) <= limit:
         return clean
     return clean[: limit - 1].rstrip() + "…"
+
+
+def _normalized_int_filter(value: str | None, allowed: tuple[int, ...], default: int) -> int:
+    try:
+        parsed = int(str(value or "").strip())
+    except ValueError:
+        return default
+    return parsed if parsed in allowed else default
+
+
+def _casebook_query_matches(item: dict, fields: tuple[str, ...], q_search: str) -> bool:
+    if not q_search:
+        return True
+    chunks = []
+    for field in fields:
+        value = item.get(field)
+        if isinstance(value, (dict, list)):
+            chunks.append(json.dumps(value, ensure_ascii=False, sort_keys=True))
+        else:
+            chunks.append(str(value or ""))
+    haystack = " ".join(chunks).lower()
+    return q_search in haystack
+
+
+def _exported_at() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _json_safe(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    return str(value)
+
+
+def _json_download_response(payload: dict, filename: str):
+    body = json.dumps(_json_safe(payload), ensure_ascii=False, indent=2) + "\n"
+    response = current_app.response_class(body, mimetype="application/json; charset=utf-8")
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+
+
+def _read_admin_json_upload(field_name: str) -> dict:
+    uploaded_file = request.files.get(field_name)
+    raw_payload = ""
+    if uploaded_file and uploaded_file.filename:
+        raw_payload = uploaded_file.read().decode("utf-8-sig")
+    if not raw_payload.strip():
+        raw_payload = request.form.get("payload_json", "")
+    if not raw_payload.strip():
+        raise ValueError("Carrega um ficheiro JSON ou cola o conteúdo JSON.")
+    try:
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("O backup tem de ser um objeto JSON principal.")
+    return payload
+
+
+def _safe_knowledge_export_files() -> list[dict]:
+    knowledge_dir = getattr(services.store, "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "")
+    if not knowledge_dir or not os.path.isdir(knowledge_dir):
+        return []
+    base_dir = Path(knowledge_dir)
+    files = []
+    for path in sorted(base_dir.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES:
+            continue
+        try:
+            relative_path = path.relative_to(base_dir).as_posix()
+            files.append(
+                {
+                    "path": relative_path,
+                    "content": path.read_text(encoding="utf-8"),
+                }
+            )
+        except (OSError, UnicodeDecodeError):
+            logger.exception("Falha ao exportar ficheiro de knowledge %s.", path)
+    return files
+
+
+def _restore_knowledge_files(files: list[dict]) -> int:
+    knowledge_dir = getattr(services.store, "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "")
+    if not knowledge_dir:
+        raise ValueError("Diretoria knowledge indisponível para restaurar ficheiros.")
+    base_dir = Path(knowledge_dir)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    restored = 0
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        relative_path = str(item.get("path") or "").strip()
+        content = item.get("content")
+        if not relative_path or not isinstance(content, str):
+            continue
+        target = (base_dir / relative_path).resolve()
+        if base_dir.resolve() not in target.parents and target != base_dir.resolve():
+            continue
+        if target.suffix.lower() not in SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        restored += 1
+    return restored
+
+
+def _local_store_data_files() -> dict:
+    store = services.store
+    method_map = {
+        "users": "_read_users",
+        "documents": "_read_document_records",
+        "conversations": "_read_conversations",
+        "messages": "_read_messages",
+        "feedback_eval_cases": "_read_feedback_eval_cases",
+        "channel_events": "_read_channel_events",
+        "runtime_state": "_read_runtime_state",
+        "port_calls": "_read_port_calls",
+        "maneuver_cases": "_read_maneuver_cases",
+    }
+    payload = {}
+    for key, method_name in method_map.items():
+        method = getattr(store, method_name, None)
+        if callable(method):
+            payload[key] = method()
+    return payload
+
+
+def _postgres_table_rows() -> dict:
+    store = services.store
+    connect = getattr(store, "_connect", None)
+    if not callable(connect):
+        return {}
+    tables = {}
+    with connect() as conn:
+        with conn.cursor() as cur:
+            for table, config in POSTGRES_EXPORT_TABLES.items():
+                order_by = ", ".join(config["pk"])
+                cur.execute(f"SELECT * FROM {table} ORDER BY {order_by}")
+                tables[table] = [_json_safe(row) for row in cur.fetchall()]
+    return tables
+
+
+def _runtime_state_rows_to_dict(rows: list[dict]) -> dict:
+    state = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("key") or "").strip()
+        if key:
+            state[key] = row.get("value") or {}
+    return state
+
+
+def _tables_to_data_files(tables: dict) -> dict:
+    if not isinstance(tables, dict):
+        return {}
+    data_files = {}
+    table_map = {
+        "app_users": "users",
+        "documents": "documents",
+        "conversations": "conversations",
+        "messages": "messages",
+        "feedback_eval_cases": "feedback_eval_cases",
+        "channel_events": "channel_events",
+        "port_calls": "port_calls",
+        "maneuver_cases": "maneuver_cases",
+    }
+    for table, key in table_map.items():
+        rows = tables.get(table)
+        if isinstance(rows, list):
+            data_files[key] = rows
+    runtime_rows = tables.get("app_runtime_state")
+    if isinstance(runtime_rows, list):
+        data_files["runtime_state"] = _runtime_state_rows_to_dict(runtime_rows)
+    return data_files
+
+
+def _data_files_to_tables(data_files: dict) -> dict:
+    if not isinstance(data_files, dict):
+        return {}
+    tables = {}
+    file_map = {
+        "users": "app_users",
+        "documents": "documents",
+        "conversations": "conversations",
+        "messages": "messages",
+        "feedback_eval_cases": "feedback_eval_cases",
+        "channel_events": "channel_events",
+        "port_calls": "port_calls",
+        "maneuver_cases": "maneuver_cases",
+    }
+    for key, table in file_map.items():
+        rows = data_files.get(key)
+        if isinstance(rows, list):
+            tables[table] = rows
+    runtime_state = data_files.get("runtime_state")
+    if isinstance(runtime_state, dict):
+        tables["app_runtime_state"] = [
+            {"key": key, "value": value}
+            for key, value in runtime_state.items()
+        ]
+    return tables
+
+
+def _build_bot_database_export() -> dict:
+    return {
+        "kind": BOT_DATABASE_EXPORT_KIND,
+        "version": DATABASE_EXPORT_VERSION,
+        "exported_at": _exported_at(),
+        "backend": getattr(services.store, "backend_name", ""),
+        "payload": {
+            "feedback_eval_cases": services.store.list_feedback_eval_cases(),
+            "reviewable_chat_messages": services.store.list_reviewable_chat_messages(limit=5000),
+            "maneuver_cases": services.store.list_maneuver_cases(limit=5000),
+            "practice_experience": practice_experience_state(services.store),
+        },
+    }
+
+
+def _build_system_database_export() -> dict:
+    data_files = _local_store_data_files()
+    tables = _postgres_table_rows()
+    return {
+        "kind": SYSTEM_DATABASE_EXPORT_KIND,
+        "version": DATABASE_EXPORT_VERSION,
+        "exported_at": _exported_at(),
+        "backend": getattr(services.store, "backend_name", ""),
+        "payload": {
+            "data_files": data_files,
+            "tables": tables,
+            "knowledge_files": _safe_knowledge_export_files(),
+            "bot_database": _build_bot_database_export()["payload"],
+        },
+    }
+
+
+def _normalize_bot_import_payload(payload: dict) -> dict:
+    kind = payload.get("kind")
+    body = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    if kind == SYSTEM_DATABASE_EXPORT_KIND:
+        system_payload = body
+        bot_payload = system_payload.get("bot_database")
+        if isinstance(bot_payload, dict):
+            return bot_payload
+        data_files = system_payload.get("data_files") or _tables_to_data_files(system_payload.get("tables") or {})
+        return {
+            "feedback_eval_cases": data_files.get("feedback_eval_cases") or [],
+            "reviewable_chat_messages": data_files.get("messages") or [],
+            "maneuver_cases": data_files.get("maneuver_cases") or [],
+            "practice_experience": (data_files.get("runtime_state") or {}).get(PRACTICE_EXPERIENCE_STATE_KEY),
+        }
+    if kind in {BOT_DATABASE_EXPORT_KIND, None, ""}:
+        return body
+    raise ValueError("Tipo de backup do bot não suportado.")
+
+
+def _import_bot_database_payload(payload: dict) -> dict:
+    body = _normalize_bot_import_payload(payload)
+    stats = {
+        "feedback_eval_cases": 0,
+        "chat_feedback": 0,
+        "maneuver_feedback": 0,
+        "practice_records": 0,
+        "skipped": 0,
+    }
+
+    for item in body.get("feedback_eval_cases") or []:
+        if not isinstance(item, dict):
+            stats["skipped"] += 1
+            continue
+        document = str(item.get("document") or "").strip()
+        question = str(item.get("question") or "").strip()
+        expected_answer = str(item.get("expected_answer") or "").strip()
+        if not document or not question or not expected_answer:
+            stats["skipped"] += 1
+            continue
+        services.store.upsert_feedback_eval_case(
+            source_message_id=str(item.get("source_message_id") or "").strip(),
+            document=document,
+            question=question,
+            expected_answer=expected_answer,
+            expected_substrings=list(item.get("expected_substrings") or []),
+            feedback_note=str(item.get("feedback_note") or "").strip(),
+            updated_by=session.get("username", "admin"),
+            source=str(item.get("source") or "import").strip(),
+        )
+        stats["feedback_eval_cases"] += 1
+
+    practice_state = body.get("practice_experience")
+    if isinstance(practice_state, dict) and isinstance(practice_state.get("records"), list):
+        services.store.set_runtime_state(PRACTICE_EXPERIENCE_STATE_KEY, practice_state)
+        stats["practice_records"] = len(practice_state.get("records") or [])
+
+    for item in body.get("reviewable_chat_messages") or []:
+        if not isinstance(item, dict):
+            stats["skipped"] += 1
+            continue
+        feedback_status = str(item.get("feedback_status") or "").strip().lower()
+        if feedback_status not in {"approved", "review"}:
+            continue
+        username = str(item.get("username") or item.get("owner_username") or "").strip().lower()
+        conversation_id = str(item.get("conversation_id") or "").strip()
+        message_id = str(item.get("id") or item.get("message_id") or "").strip()
+        if not username or not conversation_id or not message_id:
+            stats["skipped"] += 1
+            continue
+        try:
+            services.store.update_message_feedback(
+                username=username,
+                conversation_id=conversation_id,
+                message_id=message_id,
+                feedback_status=feedback_status,
+                feedback_note=str(item.get("feedback_note") or "").strip(),
+                feedback_correction=str(item.get("feedback_correction") or "").strip(),
+                feedback_correction_document=str(item.get("feedback_correction_document") or "").strip(),
+                feedback_updated_by=session.get("username", "admin"),
+            )
+            stats["chat_feedback"] += 1
+        except ValueError:
+            stats["skipped"] += 1
+
+    for item in body.get("maneuver_cases") or []:
+        if not isinstance(item, dict):
+            stats["skipped"] += 1
+            continue
+        feedback_status = str(item.get("feedback_status") or "").strip().lower()
+        maneuver_id = str(item.get("maneuver_id") or "").strip()
+        if feedback_status not in {"approved", "avoid", "review"} or not maneuver_id:
+            continue
+        try:
+            services.store.update_maneuver_case_feedback(
+                maneuver_id=maneuver_id,
+                feedback_status=feedback_status,
+                feedback_note=str(item.get("feedback_note") or "").strip(),
+                feedback_by=session.get("username", "admin"),
+            )
+            stats["maneuver_feedback"] += 1
+        except ValueError:
+            stats["skipped"] += 1
+
+    return stats
+
+
+def _merge_record_lists(existing: list, incoming: list, key_fields: tuple[str, ...]) -> list:
+    merged = [item for item in existing if isinstance(item, dict)]
+    index = {
+        tuple(str(item.get(field) or "") for field in key_fields): pos
+        for pos, item in enumerate(merged)
+        if all(str(item.get(field) or "") for field in key_fields)
+    }
+    for item in incoming:
+        if not isinstance(item, dict):
+            continue
+        key = tuple(str(item.get(field) or "") for field in key_fields)
+        if all(key) and key in index:
+            merged[index[key]] = {**merged[index[key]], **item}
+        else:
+            merged.append(item)
+            if all(key):
+                index[key] = len(merged) - 1
+    return merged
+
+
+def _restore_local_data_files(data_files: dict, *, mode: str) -> dict:
+    store = services.store
+    writer_map = {
+        "users": ("_read_users", "_write_users", ("username",)),
+        "documents": ("_read_document_records", "_write_document_records", ("name",)),
+        "conversations": ("_read_conversations", "_write_conversations", ("id",)),
+        "messages": ("_read_messages", "_write_messages", ("id",)),
+        "feedback_eval_cases": ("_read_feedback_eval_cases", "_write_feedback_eval_cases", ("id",)),
+        "channel_events": ("_read_channel_events", "_write_channel_events", ("id",)),
+        "port_calls": ("_read_port_calls", "_write_port_calls", ("id",)),
+        "maneuver_cases": ("_read_maneuver_cases", "_write_maneuver_cases", ("maneuver_id",)),
+    }
+    stats = {"files": 0, "records": 0}
+    for key, (reader_name, writer_name, key_fields) in writer_map.items():
+        incoming = data_files.get(key)
+        if not isinstance(incoming, list):
+            continue
+        writer = getattr(store, writer_name, None)
+        if not callable(writer):
+            continue
+        if mode == "replace":
+            next_records = incoming
+        else:
+            reader = getattr(store, reader_name, None)
+            existing = reader() if callable(reader) else []
+            next_records = _merge_record_lists(existing, incoming, key_fields)
+        if key == "port_calls":
+            writer(next_records, capture_live_environment=False)
+        else:
+            writer(next_records)
+        stats["files"] += 1
+        stats["records"] += len(incoming)
+
+    runtime_state = data_files.get("runtime_state")
+    if isinstance(runtime_state, dict):
+        reader = getattr(store, "_read_runtime_state", None)
+        writer = getattr(store, "_write_runtime_state", None)
+        if callable(writer):
+            next_state = runtime_state if mode == "replace" else {**(reader() if callable(reader) else {}), **runtime_state}
+            writer(next_state)
+            stats["files"] += 1
+            stats["records"] += len(runtime_state)
+    return stats
+
+
+def _validate_system_import_has_admin(data_files: dict, tables: dict, mode: str) -> None:
+    if mode != "replace":
+        return
+    users = data_files.get("users")
+    if users is None and tables.get("app_users") is not None:
+        users = tables.get("app_users")
+    if isinstance(users, list) and not any((item.get("role") or "").strip().lower() == "admin" for item in users if isinstance(item, dict)):
+        raise ValueError("O backup de sistema não contém nenhum utilizador admin; importação cancelada.")
+
+
+def _restore_postgres_tables(tables: dict, *, mode: str) -> dict:
+    store = services.store
+    connect = getattr(store, "_connect", None)
+    if not callable(connect):
+        raise ValueError("Backend PostgreSQL indisponível para importação de tabelas.")
+    stats = {"tables": 0, "records": 0}
+    with connect() as conn:
+        with conn.cursor() as cur:
+            if mode == "replace":
+                for table in POSTGRES_DELETE_ORDER:
+                    if table in tables:
+                        cur.execute(f"DELETE FROM {table}")
+            for table in POSTGRES_INSERT_ORDER:
+                rows = tables.get(table)
+                if not isinstance(rows, list) or table not in POSTGRES_EXPORT_TABLES:
+                    continue
+                config = POSTGRES_EXPORT_TABLES[table]
+                pk_fields = set(config["pk"])
+                jsonb_fields = set(config["jsonb"])
+                columns_order = list(config["columns"])
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    columns = [column for column in columns_order if column in row]
+                    if not columns:
+                        continue
+                    placeholders = [
+                        "%s::jsonb" if column in jsonb_fields else "%s"
+                        for column in columns
+                    ]
+                    values = [
+                        json.dumps(row.get(column), ensure_ascii=False) if column in jsonb_fields else row.get(column)
+                        for column in columns
+                    ]
+                    update_columns = [column for column in columns if column not in pk_fields]
+                    if update_columns:
+                        updates = ", ".join(f"{column} = EXCLUDED.{column}" for column in update_columns)
+                    else:
+                        updates = f"{columns[0]} = EXCLUDED.{columns[0]}"
+                    conflict = ", ".join(config["pk"])
+                    cur.execute(
+                        f"""
+                        INSERT INTO {table} ({", ".join(columns)})
+                        VALUES ({", ".join(placeholders)})
+                        ON CONFLICT ({conflict}) DO UPDATE SET {updates}
+                        """,
+                        tuple(values),
+                    )
+                stats["tables"] += 1
+                stats["records"] += len(rows)
+        conn.commit()
+    return stats
+
+
+def _import_system_database_payload(payload: dict, *, mode: str) -> dict:
+    if payload.get("kind") not in {SYSTEM_DATABASE_EXPORT_KIND, None, ""}:
+        raise ValueError("Tipo de backup de sistema não suportado.")
+    body = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    data_files = body.get("data_files") if isinstance(body.get("data_files"), dict) else {}
+    tables = body.get("tables") if isinstance(body.get("tables"), dict) else {}
+    if not data_files and tables:
+        data_files = _tables_to_data_files(tables)
+    if not tables and data_files:
+        tables = _data_files_to_tables(data_files)
+    _validate_system_import_has_admin(data_files, tables, mode)
+
+    backend = getattr(services.store, "backend_name", "")
+    if backend == "postgres":
+        stats = _restore_postgres_tables(tables, mode=mode)
+    else:
+        stats = _restore_local_data_files(data_files, mode=mode)
+
+    knowledge_files = body.get("knowledge_files")
+    if isinstance(knowledge_files, list):
+        stats["knowledge_files"] = _restore_knowledge_files(knowledge_files)
+    else:
+        stats["knowledge_files"] = 0
+    return stats
 
 
 def _build_admin_bot_payload() -> dict:
@@ -503,9 +1234,23 @@ def _build_admin_casebooks_payload() -> dict:
     chat_feedback_allowed = {"all", "pending", "approved", "review"}
     case_feedback_allowed = {"all", "pending", "approved", "avoid", "review"}
     case_type_allowed = {"", "entry", "departure", "shift"}
+    source_type_allowed = {"all", "chat", "maneuver", "practice"}
     chat_feedback = _normalized_filter_value(request.args.get("chat_feedback"), chat_feedback_allowed, "pending")
     case_feedback = _normalized_filter_value(request.args.get("case_feedback"), case_feedback_allowed, "pending")
     case_type = _normalized_filter_value(request.args.get("case_type"), case_type_allowed, "")
+    source_type = _normalized_filter_value(request.args.get("source_type"), source_type_allowed, "all")
+    display_limit = _normalized_int_filter(
+        request.args.get("limit"),
+        ADMIN_CASEBOOK_ALLOWED_LIMITS,
+        ADMIN_CASEBOOK_DEFAULT_LIMIT,
+    )
+    q = " ".join((request.args.get("q") or "").strip().split())
+    q_search = q.lower()
+    next_limit = ADMIN_CASEBOOK_ALLOWED_LIMITS[-1]
+    for option in ADMIN_CASEBOOK_ALLOWED_LIMITS:
+        if option > display_limit:
+            next_limit = option
+            break
 
     all_chat_messages = services.store.list_reviewable_chat_messages(limit=240)
     all_cases = services.store.list_maneuver_cases(limit=240)
@@ -519,37 +1264,102 @@ def _build_admin_casebooks_payload() -> dict:
     )
 
     def _message_visible(item: dict) -> bool:
+        if source_type not in {"all", "chat"}:
+            return False
         status = (item.get("feedback_status") or "").strip().lower()
         if chat_feedback == "pending":
-            return not status
-        if chat_feedback in {"approved", "review"}:
-            return status == chat_feedback
-        return True
+            visible = not status
+        elif chat_feedback in {"approved", "review"}:
+            visible = status == chat_feedback
+        else:
+            visible = True
+        if not visible:
+            return False
+        return _casebook_query_matches(
+            item,
+            (
+                "username",
+                "conversation_title",
+                "question",
+                "content",
+                "feedback_note",
+                "feedback_correction",
+                "feedback_correction_document",
+                "channel",
+                "citation_documents",
+            ),
+            q_search,
+        )
 
     def _case_visible(item: dict) -> bool:
+        if source_type not in {"all", "maneuver"}:
+            return False
         status = (item.get("feedback_status") or "").strip().lower()
         if case_type and (item.get("maneuver_type") or "").strip().lower() != case_type:
             return False
         if case_feedback == "pending":
-            return not status
-        if case_feedback in {"approved", "avoid", "review"}:
-            return status == case_feedback
-        return True
+            visible = not status
+        elif case_feedback in {"approved", "avoid", "review"}:
+            visible = status == case_feedback
+        else:
+            visible = True
+        if not visible:
+            return False
+        return _casebook_query_matches(
+            item,
+            (
+                "reference_code",
+                "vessel_name",
+                "maneuver_type_label",
+                "origin_label",
+                "destination_label",
+                "current_state_label",
+                "feedback_note",
+                "case_summary",
+                "feature_snapshot",
+                "outcome_snapshot",
+            ),
+            q_search,
+        )
 
     def _practice_visible(item: dict) -> bool:
+        if source_type not in {"all", "practice"}:
+            return False
         status = (item.get("feedback_status") or "").strip().lower()
         if case_type and (item.get("maneuver_type") or "").strip().lower() != case_type:
             return False
         if case_feedback in {"approved", "avoid", "review"}:
-            return status == case_feedback
-        return True
+            visible = status == case_feedback
+        else:
+            visible = True
+        if not visible:
+            return False
+        return _casebook_query_matches(
+            item,
+            (
+                "reference_code",
+                "source_filename",
+                "vessel_name",
+                "maneuver_type_label",
+                "origin_label",
+                "destination_label",
+                "route_label",
+                "profile_label",
+                "comments_label",
+                "tug_distribution_label",
+                "vessel_examples_label",
+                "feature_snapshot",
+                "practice_metrics",
+            ),
+            q_search,
+        )
 
     visible_chat_messages = [item for item in all_chat_messages if _message_visible(item)]
     visible_cases = [item for item in all_cases if _case_visible(item)]
     visible_practice_records = [item for item in all_practice_records if _practice_visible(item)]
 
     chat_rows = []
-    for item in visible_chat_messages[:80]:
+    for item in visible_chat_messages[:display_limit]:
         status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
@@ -580,7 +1390,7 @@ def _build_admin_casebooks_payload() -> dict:
     observation_case_rows = []
     governed_case_rows = []
     case_rows = []
-    for item in visible_cases[:80]:
+    for item in visible_cases[:display_limit]:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         bucket, learning_title, learning_summary, learning_badge = _case_governance_meta(status_clean)
@@ -618,7 +1428,7 @@ def _build_admin_casebooks_payload() -> dict:
             target_rows.append(row)
 
     practice_rows = []
-    for item in visible_practice_records[:80]:
+    for item in visible_practice_records[:display_limit]:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         practice_rows.append(
@@ -671,7 +1481,14 @@ def _build_admin_casebooks_payload() -> dict:
             "chat_feedback": chat_feedback,
             "case_feedback": case_feedback,
             "case_type": case_type,
+            "source_type": source_type,
+            "q": q,
+            "limit": display_limit,
         },
+        "display_limit": display_limit,
+        "next_limit": next_limit,
+        "allowed_limits": ADMIN_CASEBOOK_ALLOWED_LIMITS,
+        "has_active_filters": bool(q or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
         "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
@@ -683,6 +1500,12 @@ def _build_admin_casebooks_payload() -> dict:
         "practice_review_total": sum(1 for item in all_practice_records if (item.get("feedback_status") or "").strip() == "review"),
         "practice_local_source_exists": _practice_experience_source_path().exists(),
         "practice_source_filename": PRACTICE_EXPERIENCE_SOURCE_FILENAME,
+        "chat_visible_total": len(visible_chat_messages),
+        "case_visible_total": len(visible_cases),
+        "practice_visible_total": len(visible_practice_records),
+        "chat_has_more": len(visible_chat_messages) > len(chat_rows),
+        "case_has_more": len(visible_cases) > len(case_rows),
+        "practice_has_more": len(visible_practice_records) > len(practice_rows),
         "chat_rows": chat_rows,
         "case_rows": case_rows,
         "practice_rows": practice_rows,
@@ -712,6 +1535,75 @@ def admin_bot():
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
     )
+
+
+@bp.route("/admin/bot/export")
+@login_required
+@role_required("admin")
+def export_bot_database():
+    """Exportar dados de governação/aprendizagem do bot em JSON."""
+    return _json_download_response(_build_bot_database_export(), "pragtico-bot-database.json")
+
+
+@bp.route("/admin/system/export")
+@login_required
+@role_required("admin")
+def export_system_database():
+    """Exportar dados aplicacionais e ficheiros knowledge em JSON."""
+    return _json_download_response(_build_system_database_export(), "pragtico-system-database.json")
+
+
+@bp.route("/admin/bot/import", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_bot_database():
+    """Importar JSON de governação do bot sem dependências externas."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    try:
+        payload = _read_admin_json_upload("bot_database_file")
+        stats = _import_bot_database_payload(payload)
+        flash(
+            "Base do bot importada: "
+            f"{stats['feedback_eval_cases']} eval(s), {stats['chat_feedback']} feedback(s) de chat, "
+            f"{stats['maneuver_feedback']} validação(ões) de manobra, "
+            f"{stats['practice_records']} padrão(ões) de experiência. "
+            f"Ignorados: {stats['skipped']}.",
+            "success",
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar base do bot.")
+        flash(f"Falha inesperada ao importar base do bot: {exc}", "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/system/import", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_system_database():
+    """Importar backup JSON completo do sistema."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
+    mode = (request.form.get("import_mode") or "merge").strip().lower()
+    if mode not in {"merge", "replace"}:
+        mode = "merge"
+    try:
+        payload = _read_admin_json_upload("system_database_file")
+        stats = _import_system_database_payload(payload, mode=mode)
+        refresh_knowledge_state(force_reindex=True)
+        flash(
+            "Base do sistema importada em modo "
+            f"{'substituir' if mode == 'replace' else 'juntar'}: "
+            f"{stats.get('records', 0)} registo(s), {stats.get('files', stats.get('tables', 0))} conjunto(s), "
+            f"{stats.get('knowledge_files', 0)} ficheiro(s) knowledge.",
+            "success",
+        )
+    except ValueError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar base do sistema.")
+        flash(f"Falha inesperada ao importar base do sistema: {exc}", "error")
+    return redirect(return_to)
 
 
 @bp.route("/admin/casebooks")
