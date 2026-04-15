@@ -10,16 +10,72 @@
     "014",
     "REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)"
   ],
-  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras nos Terminais da LISNAVE, designados Estaleiros Mitrena, no Porto de Setúbal.",
+  "summary": "Este documento descreve as regras de estacionamento e execução de manobras na LISNAVE / Estaleiros Mitrena, uma instalação com Pontes-Cais I, II e III, Docas 20, 21 e 22, Cais 0, Cais de Descarga de Aço e Plataformas 31, 32 e 33.",
   "key_points": [
-    "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré.",
-    "Não. Navios com comprimento superior a 280 metros só podem manobrar durante o dia.",
-    "Sim. Navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite.",
-    "6,10 metros (20 pés ao ZH).",
-    "O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.",
-    "Sim, para navios com considerável área vélica."
+    "Todas as manobras na LISNAVE fazem-se próximo dos repontos de maré porque os cais estão perpendiculares à corrente.",
+    "Navios com LOA até 280 metros podem manobrar em qualquer reponto, de dia ou de noite; acima de 280 metros só podem manobrar de dia.",
+    "O calado não tem um máximo único para toda a LISNAVE: depende do destino, da sonda ao ZH, da altura de maré e das margens operacionais.",
+    "Sondas ao ZH: Cais III-B 8,60 m; Cais IA 7,14 m; Cais IB 7,40 m; Cais II-A, II-B e III-A 7,0 m; Cais 0 6,0 m.",
+    "Docas 21 e 22 têm 6,10 m ao ZH na soleira com a comporta aberta e 5,49 m com a comporta fechada.",
+    "Plataformas 31, 32 e 33 têm boca máxima admissível de 32 m e sonda à boca do cais de 5,5 m."
   ],
   "faq": [
+    {
+      "question": "Qual é o calado máximo para um navio que vai para a LISNAVE?",
+      "answer": "Não há um calado máximo único para toda a LISNAVE. O limite depende do destino exato, da sonda ao ZH, da altura de maré e das margens operacionais. Referências ao ZH no IT-014: Cais III-B 8,60 m a 10 m da face; Cais IB 7,40 m; Cais IA 7,14 m; Cais II-A, II-B e III-A 7,0 m a 10 m da face; Cais 0 6,0 m; Docas 21 e 22 6,10 m na soleira com a comporta aberta e 5,49 m com a comporta fechada; Plataformas 31/32/33 5,5 m. O Cais de Descarga de Aço está como ND no documento.",
+      "keywords": [
+        "calado máximo",
+        "profundidade",
+        "sonda ao ZH",
+        "lisnave",
+        "doca 21",
+        "doca 22",
+        "cais iii-b",
+        "plataformas"
+      ]
+    },
+    {
+      "question": "Quais são os cais e as docas da LISNAVE?",
+      "answer": "A LISNAVE / Estaleiros Mitrena inclui as Pontes-Cais de reparação I, II e III, com faces IA, IB, II-A, II-B, III-A e III-B; os cais auxiliares Cais 0 (Face A e Face B) e Cais de Descarga de Aço; as Docas 20, 21 e 22; e as Plataformas 31, 32 e 33.",
+      "keywords": [
+        "cais",
+        "docas",
+        "lisnave",
+        "ponte-cais",
+        "cais 0",
+        "cais descarga aço",
+        "doca 20",
+        "plataformas"
+      ]
+    },
+    {
+      "question": "Existem quantos cais e quantas docas na LISNAVE?",
+      "answer": "Depende da forma de contar. O IT-014 identifica 3 grupos principais de Pontes-Cais de reparação (I, II e III), com 6 faces operacionais: IA, IB, II-A, II-B, III-A e III-B. Além disso há o Cais 0, com Face A e Face B, e o Cais de Descarga de Aço. As docas secas são 3: Docas 20, 21 e 22. Também existem as Plataformas 31, 32 e 33.",
+      "keywords": [
+        "quantos cais",
+        "quantas docas",
+        "lisnave",
+        "faces operacionais",
+        "docas 20 21 22",
+        "ponte-cais",
+        "cais 0",
+        "plataformas"
+      ]
+    },
+    {
+      "question": "Dá-me mais detalhes sobre a LISNAVE",
+      "answer": "A LISNAVE / Estaleiros Mitrena é uma zona de reparação e construção naval em Setúbal. As manobras fazem-se próximo dos repontos de maré porque os cais estão perpendiculares à corrente. A instalação inclui Pontes-Cais I, II e III, Docas 20, 21 e 22, Cais 0, Cais de Descarga de Aço e Plataformas 31, 32 e 33. Há regras específicas de LOA: até 280 m pode manobrar em qualquer reponto, dia ou noite; acima de 280 m só de dia. Para calado, deve-se usar a sonda ao ZH do destino concreto e acrescentar maré e margens operacionais.",
+      "keywords": [
+        "detalhes",
+        "lisnave",
+        "estaleiros mitrena",
+        "repontos",
+        "cais",
+        "docas",
+        "loa",
+        "calado"
+      ]
+    },
     {
       "question": "Qual é o comprimento máximo que um navio pode manobrar durante a noite na LISNAVE?",
       "answer": "280 metros. Na LISNAVE, navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite. Acima de 280 metros, as manobras ficam limitadas ao período diurno.",

@@ -2176,6 +2176,78 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertNotIn("1000 metros", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_lisnave_questions_use_specific_companion_intent(self) -> None:
+        document_name = "IT-014_Lisnave.txt"
+        (Path(self.store.knowledge_dir) / document_name).write_text(
+            (Path(__file__).resolve().parents[1] / "knowledge" / document_name).read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        companion_payload = json.loads(
+            (
+                Path(__file__).resolve().parents[1]
+                / "knowledge"
+                / "companions"
+                / "IT-014_Lisnave.json"
+            ).read_text(encoding="utf-8")
+        )
+        self._write_knowledge_companion(document_name, companion_payload)
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                draft_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Qual é o calado máximo para um navio que vai para a LISNAVE?",
+                    },
+                )
+                inventory_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Quais são os cais e as docas da LISNAVE?",
+                    },
+                )
+                detail_response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "Dá-me mais detalhes sobre a LISNAVE",
+                    },
+                )
+
+        self.assertEqual(draft_response.status_code, 200)
+        draft_payload = draft_response.get_json()
+        self.assertEqual(draft_payload["answer_origin"], "document_companion")
+        self.assertIn("Não há um calado máximo único", draft_payload["answer"])
+        self.assertIn("Cais III-B 8,60 m", draft_payload["answer"])
+        self.assertNotIn("período diurno", draft_payload["answer"])
+
+        self.assertEqual(inventory_response.status_code, 200)
+        inventory_payload = inventory_response.get_json()
+        self.assertEqual(inventory_payload["answer_origin"], "document_companion")
+        self.assertIn("Docas 20, 21 e 22", inventory_payload["answer"])
+        self.assertIn("Plataformas 31, 32 e 33", inventory_payload["answer"])
+        self.assertNotEqual(
+            "O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.",
+            inventory_payload["answer"],
+        )
+
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.get_json()
+        self.assertEqual(detail_payload["answer_origin"], "document_companion")
+        self.assertIn("zona de reparação e construção naval", detail_payload["answer"])
+        self.assertIn("Para calado", detail_payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"
         knowledge_path = Path(self.store.knowledge_dir) / document_name

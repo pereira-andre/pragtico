@@ -22,6 +22,7 @@ PORTUGUESE_STOPWORDS = {
     "dentro",
     "do",
     "dos",
+    "durante",
     "e",
     "em",
     "essa",
@@ -47,15 +48,62 @@ PORTUGUESE_STOPWORDS = {
     "se",
     "sem",
     "sff",
+    "sobre",
     "uma",
     "um",
+    "vai",
 }
 SUMMARY_REQUEST_RE = re.compile(
-    r"\b(o que diz|resume|resumo|sumario|sumário|explica|diz me|diz-me|quais sao|quais são|qual e a regra|qual é a regra)\b",
+    r"\b(o que diz|resume|resumo|sumario|sumário|explica|diz me|diz-me|da me|dá me|da-me|dá-me|"
+    r"detalhes|mais detalhes|informacao|informação|informacoes|informações|visao geral|visão geral|"
+    r"quais sao|quais são|qual e a regra|qual é a regra)\b",
     flags=re.IGNORECASE,
 )
 QUESTION_LINE_RE = re.compile(r"^Pergunta:\s*(.+)$", flags=re.IGNORECASE)
 ANSWER_LINE_RE = re.compile(r"^Resposta:\s*(.+)$", flags=re.IGNORECASE)
+LOW_SIGNAL_MATCH_TOKENS = {
+    "documento",
+    "entrada",
+    "entrar",
+    "estaleiro",
+    "estaleiros",
+    "lisnave",
+    "manobra",
+    "manobrar",
+    "manobras",
+    "mitrena",
+    "navio",
+    "navios",
+    "pode",
+    "podem",
+    "porto",
+    "regra",
+    "regras",
+    "saida",
+    "setubal",
+}
+DEPTH_TERMS = {
+    "calado",
+    "calados",
+    "profundidade",
+    "profundidades",
+    "soleira",
+    "sonda",
+    "sondas",
+    "zh",
+}
+LENGTH_TIME_TERMS = {
+    "comprimento",
+    "loa",
+    "noite",
+    "noturna",
+    "noturno",
+}
+BERTH_TERMS = {"cais", "doca", "docas", "plataforma", "plataformas"}
+BERTH_INVENTORY_RE = re.compile(
+    r"\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def companion_directory(knowledge_dir: str) -> str:
@@ -395,6 +443,55 @@ def is_companion_summary_request(question: str) -> bool:
     return bool(SUMMARY_REQUEST_RE.search(str(question or "")))
 
 
+def _faq_match_signal_tokens(
+    question_tokens: set[str],
+    faq_tokens: set[str],
+    keyword_tokens: set[str],
+) -> set[str]:
+    overlap = question_tokens & (faq_tokens | keyword_tokens)
+    return {
+        token
+        for token in overlap
+        if token not in LOW_SIGNAL_MATCH_TOKENS and not token.isdigit()
+    }
+
+
+def _faq_candidate_text(item: dict) -> str:
+    parts = [item.get("question", ""), item.get("answer", "")]
+    parts.extend(item.get("keywords", []) or [])
+    return " ".join(str(part or "") for part in parts)
+
+
+def _is_berth_inventory_question(question: str, question_tokens: set[str]) -> bool:
+    normalized_question = _normalize_text(question)
+    if not BERTH_INVENTORY_RE.search(normalized_question):
+        return False
+    if not ({"lisnave", "mitrena"} & question_tokens):
+        return False
+    return bool(BERTH_TERMS & question_tokens)
+
+
+def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) -> bool:
+    candidate_tokens = _tokenize(_faq_candidate_text(item))
+
+    asks_depth = bool(question_tokens & DEPTH_TERMS)
+    candidate_has_depth = bool(candidate_tokens & DEPTH_TERMS)
+    candidate_is_length_time = bool(candidate_tokens & LENGTH_TIME_TERMS)
+    if asks_depth and candidate_is_length_time and not candidate_has_depth:
+        return True
+
+    if _is_berth_inventory_question(question, question_tokens):
+        asked_berth_terms = BERTH_TERMS & question_tokens
+        if {"cais", "doca"} & asked_berth_terms and not (
+            "cais" in candidate_tokens and bool({"doca", "docas"} & candidate_tokens)
+        ):
+            return True
+        if "plataformas" in asked_berth_terms and "plataformas" not in candidate_tokens:
+            return True
+
+    return False
+
+
 def find_best_companion_faq(question: str, companion: dict) -> dict | None:
     question_tokens = _tokenize(question)
     if not question_tokens:
@@ -407,6 +504,11 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
         keyword_tokens = set()
         for keyword in item.get("keywords", []) or []:
             keyword_tokens.update(_tokenize(keyword))
+        signal_tokens = _faq_match_signal_tokens(question_tokens, faq_tokens, keyword_tokens)
+        if not signal_tokens:
+            continue
+        if _faq_intent_conflicts(question, question_tokens, item):
+            continue
         overlap_score = len(question_tokens & faq_tokens) / max(len(question_tokens), 1)
         keyword_score = len(question_tokens & keyword_tokens) / max(len(question_tokens), 1) if keyword_tokens else 0.0
         total_score = overlap_score + (0.45 * keyword_score)

@@ -70,6 +70,62 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("período diurno", answer)
         self.assertNotIn("Não.", answer[:6])
 
+    def test_it014_companion_answers_lisnave_draft_question_without_loa_shortcut(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Qual é o calado máximo para um navio que vai para a LISNAVE?",
+            companion,
+        )
+
+        self.assertIn("Não há um calado máximo único", answer)
+        self.assertIn("Cais III-B 8,60 m", answer)
+        self.assertIn("Docas 21 e 22 6,10 m", answer)
+        self.assertIn("Plataformas 31/32/33 5,5 m", answer)
+        self.assertNotIn("período diurno", answer)
+
+    def test_it014_companion_answers_lisnave_quays_and_docks_inventory(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Quais são os cais e as docas da LISNAVE?",
+            companion,
+        )
+
+        self.assertIn("Pontes-Cais de reparação I, II e III", answer)
+        self.assertIn("Docas 20, 21 e 22", answer)
+        self.assertIn("Cais 0", answer)
+        self.assertIn("Plataformas 31, 32 e 33", answer)
+        self.assertNotEqual("O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.", answer)
+
+    def test_it014_companion_answers_lisnave_counts_with_counting_context(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Existem quantos cais e quantas docas na LISNAVE?",
+            companion,
+        )
+
+        self.assertIn("Depende da forma de contar", answer)
+        self.assertIn("6 faces operacionais", answer)
+        self.assertIn("As docas secas são 3", answer)
+        self.assertIn("Plataformas 31, 32 e 33", answer)
+
+    def test_it014_companion_answers_lisnave_details_as_overview(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer("Dá-me mais detalhes sobre a LISNAVE", companion)
+
+        self.assertIn("zona de reparação e construção naval", answer)
+        self.assertIn("Pontes-Cais I, II e III", answer)
+        self.assertIn("Docas 20, 21 e 22", answer)
+        self.assertIn("Para calado", answer)
+        self.assertNotEqual("280 metros. Na LISNAVE, navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite. Acima de 280 metros, as manobras ficam limitadas ao período diurno.", answer)
+
     def test_notas_pilotagem_companion_answers_lisnave_distance_question(self) -> None:
         companion = load_document_companion("Notas_Pilotagem.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)
