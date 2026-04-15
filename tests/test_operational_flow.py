@@ -708,6 +708,7 @@ class OperationalFlowTests(unittest.TestCase):
         rule_sources = [item for item in sources if item.get("retrieval_mode") == "operational_rule"]
         self.assertTrue(rule_sources)
         self.assertIn("mínimo 4 rebocadores", rule_sources[0]["snippet"])
+        self.assertIn("Hidrolift", rule_sources[0]["snippet"])
         self.assertIn("proa a norte", rule_sources[0]["snippet"])
 
     def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
@@ -2234,8 +2235,8 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(inventory_response.status_code, 200)
         inventory_payload = inventory_response.get_json()
         self.assertEqual(inventory_payload["answer_origin"], "document_companion")
-        self.assertIn("Docas 20, 21 e 22", inventory_payload["answer"])
-        self.assertIn("Plataformas 31, 32 e 33", inventory_payload["answer"])
+        self.assertIn("Docas secas 20, 21 e 22", inventory_payload["answer"])
+        self.assertIn("Hidrolift com acesso às Docas secas 31, 32 e 33", inventory_payload["answer"])
         self.assertNotEqual(
             "O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.",
             inventory_payload["answer"],

@@ -15,7 +15,7 @@ de Setúbal.
 O estaleiro LISNAVE / Estaleiros Mitrena é uma instalação de reparação e
 construção naval. É composto por múltiplos cais de reparação (Pontes-Cais I, II
 e III), docas secas (Docas 20, 21 e 22), cais auxiliares (Cais 0, Cais de
-Descarga de Aço) e plataformas flutuantes (Plataformas 31, 32 e 33).
+Descarga de Aço) e um Hidrolift que dá acesso às Docas secas 31, 32 e 33.
 
 ================================================================================
 RESPONSABILIDADES
@@ -250,20 +250,21 @@ CAIS III-B:
   reparação (7 m), o que o torna apto para navios com maior calado.
 
 ================================================================================
-PLATAFORMAS 31, 32 E 33
+HIDROLIFT E DOCAS SECAS 31, 32 E 33
 ================================================================================
 
-As Plataformas 31, 32 e 33 são plataformas flutuantes ou diques de carena
-utilizados para reparação de embarcações de menores dimensões ou de boca
-reduzida.
+As Docas secas 31, 32 e 33 são docas de reparação para embarcações de menores
+dimensões ou de boca reduzida. O acesso a estas três docas faz-se por um único
+Hidrolift, uma espécie de mini eclusa/elevador: o navio entra no Hidrolift e,
+depois de elevado/posicionado, é deslocado para uma das três docas secas.
 
-Comprimento total das plataformas: 320 metros.
-Boca máxima admissível: 32 metros.
+Comprimento total do conjunto Hidrolift / Docas 31, 32 e 33: 320 metros.
+Boca máxima admissível no Hidrolift: 32 metros.
   "Boca" é a largura máxima do navio. Um navio com boca (largura) superior
-  a 32 metros não pode entrar nas plataformas 31, 32 e 33.
-Sonda à boca do cais: 5,5 metros.
-  Esta profundidade é reduzida e restringe as plataformas a navios com calado
-  inferior a 5,5 m (descontada a margem de maré disponível).
+  a 32 metros não pode entrar no Hidrolift para acesso às Docas 31, 32 e 33.
+Sonda à boca/acesso do Hidrolift: 5,5 metros.
+  Esta profundidade é reduzida e restringe o acesso às Docas 31, 32 e 33 a
+  navios com calado inferior a 5,5 m (descontada a margem de maré disponível).
 
 ================================================================================
 QUADRO RESUMO — SONDAS AO ZH POR LOCAL
@@ -280,7 +281,7 @@ Doca 21 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
 Doca 21 — soleira com comporta fechada: 5,49 metros ao ZH (18 pés).
 Doca 22 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
 Doca 22 — soleira com comporta fechada: 5,49 metros ao ZH (18 pés).
-Plataformas 31/32/33 — boca do cais: 5,5 metros.
+Docas secas 31/32/33 — acesso pelo Hidrolift: 5,5 metros.
 Cais de Descarga de Aço: calado não determinado (ND).
 
 ================================================================================
@@ -320,8 +321,8 @@ Resposta: Em marés vivas, recomenda-se uma manobra por reponto quando houver
 necessidade de ocupar a mesma bacia em simultâneo, especialmente com navios de
 LOA superior a 200 metros.
 
-Pergunta: Qual a boca máxima para as Plataformas 31, 32 e 33 do LISNAVE?
-Resposta: 32 metros.
+Pergunta: Qual a boca máxima para as Docas secas 31, 32 e 33 do LISNAVE?
+Resposta: 32 metros no Hidrolift que dá acesso às Docas secas 31, 32 e 33.
 
 Pergunta: Quem valida as requisições de manobra no LISNAVE?
 Resposta: O Piloto Coordenador.

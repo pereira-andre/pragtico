@@ -13,10 +13,15 @@ especifico.
 
 IMPORTANTE:
   - Fundeadouros nao sao cais nem terminais. Sao zonas de fundeio.
+  - O catalogo operacional do portal tem 34 slots de cais/berco/manobra,
+    excluindo fundeadouros.
   - "Quantos cais existem" depende do criterio de contagem: terminal, cais fisico,
     face operacional, rampa, doca seca, plataforma ou estrutura de duques d'alba.
   - Quando a pergunta pedir uma contagem, responder com o criterio usado e evitar
     transformar uma lista parcial num numero oficial absoluto.
+  - Nao duplicar sinonimos como se fossem instalacoes diferentes: TMS1 e Cais das
+    Fontainhas referem a mesma zona operacional; TMS2 e Terminal de Contentores
+    referem a mesma zona operacional; Autoeuropa e Ro-Ro referem a mesma zona.
 
 ================================================================================
 TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
@@ -24,6 +29,7 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
 
 1. Terminal Multiusos — Zona 1 (TMS1)
    Fonte: IT-005.
+   Tambem conhecido operacionalmente como Cais das Fontainhas.
    O TMS1 dispoe de cais numerados do 4 ao 8:
      - Cais 4;
      - Cais 5;
@@ -33,11 +39,14 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
 
 2. Terminal Multiusos — Zona 2 (TMS2)
    Fonte: IT-006.
+   Tambem conhecido operacionalmente como Terminal de Contentores / Multiusos 2.
    O TMS2 abrange os cabecos 40 a 63 e corresponde a um unico espaco continuo
    de 723 metros, sem subdivisao em cais numerados distintos.
 
 3. Terminal AUTO-EUROPA
    Fonte: IT-007.
+   Tambem referido como terminal Ro-Ro, situado a leste do Terminal de
+   Contentores.
    Composto por dois espacos operacionais:
      - Cais 10, terminal principal;
      - Cais 11, rampa Ro-Ro.
@@ -75,7 +84,9 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
      - Cais 0, Face A e Face B;
      - Cais de Descarga de Aco;
      - Docas 20, 21 e 22;
-     - Plataformas 31, 32 e 33.
+     - Docas secas 31, 32 e 33, cujo acesso e feito por um unico Hidrolift
+       (mini eclusa/elevador), onde o navio entra e depois e transferido para
+       uma das tres docas.
 
 10. SAPEC
     Fonte: IT-029.
@@ -107,14 +118,31 @@ operacionais carregados, nao necessariamente de uma lista administrativa oficial
 exaustiva de todas as instalacoes portuarias.
 
 Pergunta: Quantos cais existem em Setubal?
-Resposta: Nao ha uma contagem unica sem definir criterio. Pelos documentos
-operacionais, ha cais numerados no TMS1 (4 a 8), um espaco continuo no TMS2,
-Cais 10 e Cais 11 na AUTO-EUROPA, dois cais na SECIL, cais/estruturas em
-TANQUISADO, TERMITRENA, PRAIAS DO SADO, ECO-OIL, SAPEC, ALSTOM e TEPORSET, e
-varios cais, faces, docas e plataformas na LISNAVE. Fundeadouros nao contam como
-cais. Para responder com numero, e obrigatorio dizer se a contagem esta a usar
-cais fisico, face operacional, terminal, doca, plataforma ou estrutura de
-duques d'alba.
+Resposta: No catalogo operacional do portal existem 34 slots operacionais de
+cais, berco ou manobra, excluindo fundeadouros. Para uma resposta ao utilizador,
+agrupar por nomes reconhecidos e evitar duplicar sinonimos:
+  - Cais SECIL W e E;
+  - Terminal Multiusos 1 ou Cais das Fontainhas (TMS1);
+  - Terminal de Contentores ou Multiusos 2 (TMS2);
+  - Terminal AUTO-EUROPA ou Ro-Ro, a leste do Terminal de Contentores;
+  - Cais das Praias do Sado ou Pirites Alentejanas;
+  - SAPEC Solidos e SAPEC Liquidos;
+  - ALSTOM;
+  - Terminal da LISNAVE, incluindo Cais 0 A e 0 B, Cais 1 A e 1 B, Cais 2 A
+    e 2 B, Cais 3 A e 3 B, Docas secas 20, 21 e 22, e Hidrolift com acesso as
+    Docas secas 31, 32 e 33.
+Fundeadouros nao contam como cais; sao zonas de espera/fundeio.
+
+Pergunta: Quantos cais existem em Setubal? E quais os seus nomes?
+Resposta: No porto de Setubal existem 34 slots de cais operacionais no catalogo
+do portal, distribuidos por varios cais e terminais. Os principais nomes a
+responder sao: Cais SECIL W e E; Terminal Multiusos 1 ou Cais das Fontainhas
+(TMS1); Terminal de Contentores ou Multiusos 2 (TMS2); Terminal AUTO-EUROPA ou
+Ro-Ro; Cais das Praias do Sado ou Pirites Alentejanas; SAPEC Solidos e SAPEC
+Liquidos; ALSTOM; e Terminal da LISNAVE, com Cais 0 A/0 B, Cais 1 A/1 B,
+Cais 2 A/2 B, Cais 3 A/3 B, Docas secas 20/21/22 e Hidrolift com acesso as
+Docas secas 31/32/33. Alem destes, existem fundeadouros, mas nao contam como
+cais.
 
 Pergunta: Os fundeadouros contam como cais?
 Resposta: Nao. Fundeadouros sao zonas de fundeio/espera e nao devem ser usados

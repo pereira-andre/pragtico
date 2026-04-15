@@ -82,7 +82,8 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("Não há um calado máximo único", answer)
         self.assertIn("Cais III-B 8,60 m", answer)
         self.assertIn("Docas 21 e 22 6,10 m", answer)
-        self.assertIn("Plataformas 31/32/33 5,5 m", answer)
+        self.assertIn("Docas secas 31/32/33 5,5 m", answer)
+        self.assertIn("Hidrolift", answer)
         self.assertNotIn("período diurno", answer)
 
     def test_it014_companion_answers_lisnave_quays_and_docks_inventory(self) -> None:
@@ -95,9 +96,9 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         )
 
         self.assertIn("Pontes-Cais de reparação I, II e III", answer)
-        self.assertIn("Docas 20, 21 e 22", answer)
+        self.assertIn("Docas secas 20, 21 e 22", answer)
         self.assertIn("Cais 0", answer)
-        self.assertIn("Plataformas 31, 32 e 33", answer)
+        self.assertIn("Hidrolift com acesso às Docas secas 31, 32 e 33", answer)
         self.assertNotEqual("O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do cais.", answer)
 
     def test_it014_companion_answers_lisnave_counts_with_counting_context(self) -> None:
@@ -111,8 +112,9 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIn("Depende da forma de contar", answer)
         self.assertIn("6 faces operacionais", answer)
-        self.assertIn("As docas secas são 3", answer)
-        self.assertIn("Plataformas 31, 32 e 33", answer)
+        self.assertIn("Docas 20, 21 e 22", answer)
+        self.assertIn("Docas secas 31, 32 e 33", answer)
+        self.assertIn("Hidrolift", answer)
 
     def test_it014_companion_answers_lisnave_details_as_overview(self) -> None:
         companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
@@ -122,7 +124,8 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIn("zona de reparação e construção naval", answer)
         self.assertIn("Pontes-Cais I, II e III", answer)
-        self.assertIn("Docas 20, 21 e 22", answer)
+        self.assertIn("Docas secas 20, 21 e 22", answer)
+        self.assertIn("Hidrolift com acesso às Docas secas 31, 32 e 33", answer)
         self.assertIn("Para calado", answer)
         self.assertNotEqual("280 metros. Na LISNAVE, navios com LOA até 280 metros podem manobrar em qualquer reponto de maré, tanto de dia como de noite. Acima de 280 metros, as manobras ficam limitadas ao período diurno.", answer)
 
@@ -153,6 +156,24 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("AUTO-EUROPA", answer)
         self.assertIn("SAPEC (TPS e TGL)", answer)
         self.assertIn("TEPORSET", answer)
+
+    def test_port_inventory_companion_answers_quay_names_with_expected_grouping(self) -> None:
+        companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Quantos cais existem em Setúbal? E quais os seus nomes?",
+            companion,
+        )
+
+        self.assertIn("34 slots de cais operacionais", answer)
+        self.assertIn("Cais SECIL W e E", answer)
+        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", answer)
+        self.assertIn("Terminal de Contentores ou Multiusos 2", answer)
+        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", answer)
+        self.assertIn("SAPEC Solidos e SAPEC Liquidos", answer)
+        self.assertIn("Hidrolift com acesso as Docas secas 31/32/33", answer)
+        self.assertNotIn("Existem quatro zonas de fundeio definidas", answer)
 
     def test_port_inventory_companion_does_not_confuse_quays_with_anchorages(self) -> None:
         from domain.knowledge_companions import find_best_global_companion_match

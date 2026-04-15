@@ -1287,8 +1287,10 @@ def build_berth_catalog_source(question: str) -> dict | None:
     lisnave_berths = [item for item in services.BERTH_OPTIONS if item.startswith("Lisnave - ")]
     lines = [
         "Catálogo canónico de cais/fundeadouros do portal:",
+        "- O catálogo operacional tem 34 slots de cais/berço/manobra, excluindo fundeadouros.",
         "- 'Lisnave' identifica o terminal/estaleiro; para registo operacional usa-se um cais ou doca específicos.",
         "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A' -> 'Lisnave - Cais 2 A'.",
+        "- D31/D32/D33 são Docas secas Lisnave com acesso por um único Hidrolift/mini eclusa.",
         "- Cais/docas Lisnave disponíveis no sistema:",
     ]
     for item in lisnave_berths:
