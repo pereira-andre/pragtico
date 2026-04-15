@@ -83,6 +83,9 @@ DOCUMENT_MATCH_STOPWORDS = {
     "docx",
     "md",
 }
+TUG_DOCUMENT_QUERY_RE = re.compile(
+    r"\b(reboque|reboques|rebocador|rebocadores)\b"
+)
 
 
 def _active_knowledge_dir() -> str:
@@ -303,6 +306,12 @@ def _match_document_from_text(text: str, documents: list[dict]) -> dict | None:
     normalized_text = _normalize_lookup_text(text)
     if not normalized_text:
         return None
+    if TUG_DOCUMENT_QUERY_RE.search(normalized_text):
+        for record in documents:
+            name = str(record.get("name") or "")
+            if re.match(r"IT-016_", name, flags=re.IGNORECASE):
+                return record
+
     question_tokens = {
         token
         for token in normalized_text.split()

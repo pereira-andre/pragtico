@@ -92,6 +92,7 @@ def _format_plan_block(plan: Dict | None) -> str:
         f"intent={plan.get('primary_intent') or '--'}",
         f"live_facets={', '.join(plan.get('live_facets') or []) or '--'}",
         f"weather_mode={plan.get('weather_mode') or '--'}",
+        f"requires_live_reasoning={bool(plan.get('requires_live_reasoning'))}",
         f"requires_llm_synthesis={bool(plan.get('requires_llm_synthesis'))}",
         f"needs_history_state={bool(plan.get('needs_history_state'))}",
         f"needs_answer_critic={bool(plan.get('needs_answer_critic'))}",
@@ -1294,6 +1295,9 @@ Regras:
 - Quando o plano interno indicar `live_reasoning`, usa os dados live como evidência para responder a uma decisão operacional.
 - Em perguntas de avaliação ou suficiência, começa pela conclusão prática e só depois justifica.
 - Não respondas a uma pergunta de avaliação com um dump de meteorologia, marés, ondulação ou avisos sem concluir algo operacional.
+- Quando a pergunta pedir quantidade/recomendação de reboques/rebocadores, usa a IT-016 e o contexto live/histórico disponível para fechar a recomendação.
+- Se faltarem dados críticos para rebocadores (DWT, carga perigosa, carregado/vazio, bow/stern thruster), não inventes; dá a recomendação condicionada por cenários claros e diz exatamente o que falta confirmar.
+- Se a pergunta juntar vento/marés/ondulação live com "quantos", "recomendas", "aconselhas" ou "suficiente", trata o live feed como input da decisão e não como resposta final.
 
 Histórico recente:
 {history_block or "Sem histórico anterior."}
@@ -1387,6 +1391,9 @@ Regras:
                 "suficiente",
                 "suficientes",
                 "recomend",
+                "aconselh",
+                "quantos",
+                "quantas",
                 "avalia",
                 "avaliar",
                 "achas",

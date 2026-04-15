@@ -2418,7 +2418,7 @@ def build_maneuver_case_context_source(question: str, port_calls: list[dict]) ->
     clean_question = _operational_lookup_key(question)
     if not clean_question:
         return None
-    if not re.search(r"\b(manobra|entrada|saida|departure|mudanca|shift|rebocador|rebocadores|thruster|cais|fundeadouro|aprovar|abortar|cancelar|opiniao|opiniao|achar|recomend)\b", clean_question):
+    if not re.search(r"\b(manobra|entrada|saida|departure|mudanca|shift|reboque|reboques|rebocador|rebocadores|thruster|cais|fundeadouro|aprovar|abortar|cancelar|opiniao|opiniao|achar|recomend|aconselh|suger)\b", clean_question):
         return None
 
     matched_port_call = _match_port_call_from_question(question, port_calls)

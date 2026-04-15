@@ -22,6 +22,10 @@ LOA_RE = re.compile(
     r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:comprimento|loa)\b",
     flags=re.IGNORECASE,
 )
+BARE_LOA_RE = re.compile(
+    r"\b(?:navio|roro|ro\s*ro|ro-ro|loa|comprimento)\b[^\n.;,]{0,60}?\b(\d{2,3}(?:[.,]\d+)?)\s*m\b",
+    flags=re.IGNORECASE,
+)
 DRAFT_RE = re.compile(
     r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?calado\b",
     flags=re.IGNORECASE,
@@ -52,6 +56,10 @@ def _extract_message_facts(content: str) -> list[str]:
     loa_match = LOA_RE.search(content or "")
     if loa_match:
         facts.append(f"LOA / comprimento: {_clean_numeric(loa_match.group(1))} m.")
+    else:
+        bare_loa_match = BARE_LOA_RE.search(content or "")
+        if bare_loa_match:
+            facts.append(f"LOA / comprimento: {_clean_numeric(bare_loa_match.group(1))} m.")
 
     draft_match = DRAFT_RE.search(content or "")
     if draft_match:

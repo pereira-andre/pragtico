@@ -50,6 +50,63 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertTrue(plan.needs_answer_critic)
         self.assertFalse(plan.should_answer_directly)
 
+    def test_initial_weather_tug_recommendation_uses_live_reasoning(self) -> None:
+        plan = build_chat_execution_plan(
+            "Com o estado de vento atual em porto, se fosse atracar um navio RORO com 180m, quantos reboques recomendavas?"
+        )
+
+        self.assertEqual(plan.primary_intent, "live_reasoning")
+        self.assertEqual(plan.live_facets, ("weather",))
+        self.assertEqual(plan.weather_mode, "current")
+        self.assertTrue(plan.wants_documents)
+        self.assertTrue(plan.requires_live_reasoning)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertTrue(plan.needs_answer_critic)
+        self.assertFalse(plan.should_answer_directly)
+
+    def test_live_operational_decision_variants_use_reasoning(self) -> None:
+        questions = [
+            ("Com esta ondulação achas seguro sair com um navio Ro-Ro?", ("waves",)),
+            ("A maré de agora permite marcar entrada para a Lisnave?", ("tides",)),
+            ("Há avisos da capitania, posso autorizar a saída?", ("warnings",)),
+            ("O vento atual condiciona atracar o Ro-Ro?", ("weather",)),
+            ("Com a visibilidade atual, devia adiar a manobra?", ("weather",)),
+        ]
+
+        for question, expected_facets in questions:
+            with self.subTest(question=question):
+                plan = build_chat_execution_plan(question)
+
+                self.assertEqual(plan.primary_intent, "live_reasoning")
+                self.assertEqual(plan.live_facets, expected_facets)
+                self.assertTrue(plan.requires_live_reasoning)
+                self.assertTrue(plan.requires_llm_synthesis)
+                self.assertTrue(plan.needs_answer_critic)
+                self.assertFalse(plan.should_answer_directly)
+
+    def test_factual_current_weather_stays_direct_live_environment(self) -> None:
+        plan = build_chat_execution_plan("Qual é o vento atual no porto?")
+
+        self.assertEqual(plan.primary_intent, "live_environment")
+        self.assertEqual(plan.live_facets, ("weather",))
+        self.assertEqual(plan.weather_mode, "current")
+        self.assertFalse(plan.requires_llm_synthesis)
+        self.assertFalse(plan.needs_answer_critic)
+        self.assertTrue(plan.should_answer_directly)
+
+    def test_followup_tug_recommendation_keeps_history_state(self) -> None:
+        plan = build_chat_execution_plan(
+            "Com base nisso, quantos reboques aconselharias para atracar o Ro-Ro de 180m?"
+        )
+
+        self.assertEqual(plan.primary_intent, "document_synthesis")
+        self.assertEqual(plan.live_facets, ())
+        self.assertTrue(plan.wants_documents)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertTrue(plan.needs_history_state)
+        self.assertTrue(plan.needs_answer_critic)
+        self.assertFalse(plan.should_answer_directly)
+
     def test_port_facility_inventory_question_requires_rag_synthesis(self) -> None:
         plan = build_chat_execution_plan(
             "Quais são os terminais que existem no porto de Setúbal?"

@@ -7,7 +7,11 @@
     "IT-016",
     "IT-16",
     "rebocadores",
+    "reboques",
+    "reboque",
     "tabela de rebocadores",
+    "quantos reboques",
+    "recomendação de rebocadores",
     "portuqs",
     "assistência em manobra"
   ],
@@ -33,7 +37,7 @@
     {
       "question": "Quantos rebocadores são necessários para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster?",
       "answer": "A referência da tabela é 2 rebocadores grandes e 1 pequeno (GGp), tanto para cargas perigosas como para outras cargas nessa faixa de DWT.",
-      "keywords": ["ggp", "15.001", "25.000", "atracar carregado", "sem bow thruster"]
+      "keywords": ["ggp", "15.001", "25.000", "atracar carregado", "sem bow thruster", "reboques", "rebocadores", "roro", "loa", "recomendacao"]
     },
     {
       "question": "Qual é o calado máximo na barra para um navio de 100.000 DWT com destino à Lisnave-Mitrena?",

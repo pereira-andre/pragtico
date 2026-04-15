@@ -29,6 +29,25 @@ DOCUMENT_QUERY_RE = re.compile(
     r"\b(regra|regras|documento|doc|instrucao|instrução|norma|normas|procedimento|procedimentos|"
     r"o que diz|segundo o|segundo a|it[\s\-_]?\d{1,3})\b"
 )
+TUG_TERMS_RE = re.compile(r"\b(reboque|reboques|rebocador|rebocadores)\b")
+TUG_RECOMMENDATION_RE = re.compile(
+    r"\b(quantos|quantas|numero|número|qtd|necessari\w*|precis\w*|"
+    r"recomend\w*|aconselh\w*|suger\w*|indic\w*)\b"
+    r".{0,90}\b(reboque|reboques|rebocador|rebocadores)\b"
+    r"|"
+    r"\b(reboque|reboques|rebocador|rebocadores)\b"
+    r".{0,90}\b(quantos|quantas|numero|número|qtd|necessari\w*|precis\w*|"
+    r"recomend\w*|aconselh\w*|suger\w*|indic\w*)\b"
+)
+TUG_OPERATION_CONTEXT_RE = re.compile(
+    r"\b(navio|navios|atracar|desatracar|entrada|saida|saída|manobra|roro|ro ro|ro-ro|"
+    r"loa|comprimento|calado|thruster|bow|stern)\b"
+)
+FOLLOW_UP_REFERENCE_RE = re.compile(
+    r"\b(os dois|ambos|essas|esses|isso|isto|nisso|nisto|com base nisso|com base nisto|"
+    r"nesse caso|neste caso|a partir disso|a partir disto|o mesmo|a mesma|"
+    r"como disseste|como referiste|com base no que disseste)\b"
+)
 PORT_FACILITY_INVENTORY_RE = re.compile(
     r"\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b"
     r".*\b(cais|berco|bercos|berço|berços|doca|docas|terminal|terminais|instalacao|instalação|instalacoes|instalações)\b"
@@ -39,13 +58,19 @@ PORT_FACILITY_INVENTORY_RE = re.compile(
 PORT_SCOPE_RE = re.compile(r"\b(porto|setubal|setúbal)\b")
 RULE_CODE_RE = re.compile(r"\bit[\s\-_]?0*(\d{1,3})\b", flags=re.IGNORECASE)
 LIVE_REASONING_RE = re.compile(
-    r"\b(avalia|avaliar|considera|considerarias|recomenda|recomendarias|recomendaria|"
-    r"deve|devemos|pode|podemos|marcar|embarcar|trazer|autorizar|aprovar|"
-    r"viavel|viável|suficiente|suficientes|basta|bastam|chega|achas)\b"
+    r"\b(avali\w*|consider\w*|recomend\w*|aconselh\w*|suger\w*|indic\w*|"
+    r"devo|deve\w*|devia\w*|deveri\w*|pod\w*|posso|podes|podia\w*|poderi\w*|"
+    r"precis\w*|necessari\w*|convem|marc\w*|embarc\w*|traz\w*|autor\w*|aprov\w*|"
+    r"permit\w*|viavel|aceitavel|suficient\w*|bast\w*|cheg\w*|ach\w*|"
+    r"segur\w*|risco\w*|arrisc\w*|condicion\w*|limit\w*|imped\w*|"
+    r"cancel\w*|abort\w*|adi\w*)\b"
+    r"|"
+    r"\b(da para|faz sentido|vale a pena|e melhor|melhor opcao|melhor opção)\b"
 )
 OPERATIONAL_DECISION_RE = re.compile(
-    r"\b(piloto|manobra|navio|entrada|saida|saída|doca|lisnave|cais|"
-    r"reboque|reboques|rebocador|rebocadores|thruster|calado|loa)\b"
+    r"\b(piloto|manobra|navio|entrada|saida|saída|sair|atracar|desatracar|doca|lisnave|cais|"
+    r"barra|fundeadouro|fundeadouros|reboque|reboques|rebocador|rebocadores|"
+    r"thruster|calado|loa|roro|ro ro|ro-ro)\b"
 )
 
 
@@ -140,31 +165,44 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
     wants_port_facility_inventory = bool(PORT_SCOPE_RE.search(clean_question)) and bool(
         PORT_FACILITY_INVENTORY_RE.search(clean_question)
     )
+    wants_tug_recommendation = bool(TUG_RECOMMENDATION_RE.search(clean_question)) and bool(
+        TUG_OPERATION_CONTEXT_RE.search(clean_question) or live_facets
+    )
+    wants_tug_rules = wants_tug_recommendation or bool(
+        TUG_TERMS_RE.search(clean_question) and DOCUMENT_QUERY_RE.search(clean_question)
+    )
     wants_documents = (
         bool(explicit_rule_codes)
         or bool(DOCUMENT_QUERY_RE.search(clean_question))
         or wants_port_facility_inventory
+        or wants_tug_rules
     )
-    requires_live_reasoning = bool(live_facets) and bool(
-        LIVE_REASONING_RE.search(clean_question) and OPERATIONAL_DECISION_RE.search(clean_question)
+    asks_operational_decision = (
+        bool(LIVE_REASONING_RE.search(clean_question) and OPERATIONAL_DECISION_RE.search(clean_question))
+        or wants_tug_recommendation
     )
+    requires_live_reasoning = bool(live_facets) and asks_operational_decision
     requires_llm_synthesis = (
         requires_live_reasoning
+        or wants_tug_recommendation
         or (bool(live_facets) and wants_documents)
         or wants_port_facility_inventory
     )
-    needs_history_state = requires_live_reasoning or bool(
-        re.search(r"\b(os dois|ambos|essas|esses|isso|isto|a mesma|o mesmo)\b", clean_question)
+    has_follow_up_reference = bool(FOLLOW_UP_REFERENCE_RE.search(clean_question))
+    needs_history_state = requires_live_reasoning or has_follow_up_reference
+    needs_answer_critic = (
+        requires_live_reasoning
+        or wants_tug_recommendation
+        or (has_follow_up_reference and asks_operational_decision)
     )
-    needs_answer_critic = requires_live_reasoning
 
     if wants_operational_lookup:
         primary_intent = "operational_lookup"
     elif requires_llm_synthesis:
-        if live_facets and wants_documents:
-            primary_intent = "mixed_live_and_documents"
-        elif requires_live_reasoning:
+        if requires_live_reasoning:
             primary_intent = "live_reasoning"
+        elif live_facets and wants_documents:
+            primary_intent = "mixed_live_and_documents"
         else:
             primary_intent = "document_synthesis"
     elif live_facets:

@@ -2508,6 +2508,81 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(history[-2]["role"], "assistant")
         self.assertIn("2 rebocadores", history[-2]["content"])
 
+    def test_chat_initial_weather_tug_recommendation_uses_llm_with_it016_context(self) -> None:
+        document_name = "IT-016_Rebocadores.txt"
+        knowledge_path = Path(self.store.knowledge_dir) / document_name
+        knowledge_path.write_text(
+            "DOCUMENTO: IT-016 — REBOCADORES\n"
+            "A tabela de rebocadores é orientativa na generalidade, mas define mínimos para cargas perigosas.\n"
+            "Para atracar, ponderar DWT, estado carregado/vazio e bow/stern thruster.\n",
+            encoding="utf-8",
+        )
+        self._write_knowledge_companion(
+            document_name,
+            {
+                "document": document_name,
+                "title": "IT-016 Rebocadores",
+                "aliases": ["IT-016", "rebocadores", "reboques"],
+                "summary": "Define o enquadramento de rebocadores nas manobras do Porto de Setúbal.",
+                "key_points": [
+                    "A recomendação depende de DWT, carga, estado carregado/vazio e bow/stern thruster.",
+                    "A meteorologia live deve ser usada como condicionante operacional.",
+                ],
+                "faq": [
+                    {
+                        "question": "Quantos rebocadores devo recomendar?",
+                        "answer": "Cruza a IT-016 com DWT, carga, estado carregado/vazio, thrusters e condições atuais.",
+                        "keywords": ["quantos", "reboques", "rebocadores", "recomendacao", "atracar"],
+                    }
+                ],
+            },
+        )
+        self.store.list_documents()
+
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with app.app.test_client() as client:
+                self._login_client_as_admin(client)
+                conversation = self.store.ensure_conversation(username="admin")
+
+                with patch.object(services.rag, "can_generate", return_value=True), patch.object(
+                    services.rag,
+                    "answer",
+                    return_value={
+                        "answer": "Com vento atual moderado, usaria a IT-016 e deixaria a decisão condicionada aos thrusters.",
+                        "sources": [],
+                    },
+                ) as answer_mock:
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "conversation_id": conversation["id"],
+                            "question": (
+                                "Com o estado de vento atual em porto, se fosse atracar um navio RORO "
+                                "com 180m, quantos reboques recomendavas?"
+                            ),
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "llm")
+        answer_mock.assert_called_once()
+        supplemental_sources = answer_mock.call_args.kwargs["supplemental_sources"]
+        documents = {str(item.get("document") or "") for item in supplemental_sources}
+        retrieval_modes = {str(item.get("retrieval_mode") or "") for item in supplemental_sources}
+        execution_plan = answer_mock.call_args.kwargs["execution_plan"]
+        conversation_state = answer_mock.call_args.kwargs["conversation_state"]
+        self.assertEqual(execution_plan["primary_intent"], "live_reasoning")
+        self.assertTrue(execution_plan["wants_documents"])
+        self.assertTrue(execution_plan["needs_answer_critic"])
+        self.assertIn("Meteorologia live", documents)
+        self.assertIn(document_name, documents)
+        self.assertIn("live_planner", retrieval_modes)
+        self.assertIn("document_target", retrieval_modes)
+        self.assertIn("document_companion", retrieval_modes)
+        self.assertIn("Ro-Ro", conversation_state["summary"])
+        self.assertIn("180 m", conversation_state["summary"])
+
     def test_chat_ok_does_not_confirm_pending_report_with_missing_target(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:
