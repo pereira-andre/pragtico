@@ -21,7 +21,7 @@
   "faq": [
     {
       "question": "Quantos cais existem em Setubal e quais os seus nomes?",
-      "answer": "No Porto de Setubal existem 34 slots de cais operacionais, berco ou manobra no catalogo do portal, excluindo fundeadouros. Para responder sem duplicar aliases, agrupa assim: - Cais SECIL W e E; - Terminal Multiusos 1 ou Cais das Fontainhas (TMS1); - Terminal de Contentores ou Multiusos 2 (TMS2); - Terminal AUTO-EUROPA ou Ro-Ro, a leste do Terminal de Contentores; - Cais das Praias do Sado ou Pirites Alentejanas; - SAPEC Solidos e SAPEC Liquidos; - ALSTOM; - Terminal da LISNAVE, incluindo Cais 0 A e 0 B, Cais 1 A e 1 B, Cais 2 A e 2 B, Cais 3 A e 3 B, Docas secas 20, 21 e 22, e Hidrolift com acesso as Docas secas 31, 32 e 33. Nao listar Terminal de Contentores separado de TMS2, nem Autoeuropa separado de Ro-Ro, nem Cais das Fontainhas separado de TMS1. Fundeadouros nao contam como cais.",
+      "answer": "No Porto de Setubal existem 34 slots de cais operacionais, berco ou manobra no catalogo do portal, excluindo fundeadouros. Os terminais e cais sao: - Cais Secil (cais W e E); - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8); - Terminal Multiusos 2 (TMS2 carga contentorizada); - Terminal Autoeuropa (Cais 10 e Cais 11); - Cais das Praias do Sado (Pirites Alentejanas); - SAPEC (com cais para solidos e outro para liquidos); - ALSTOM / ABB-ALSTOM (instalacao industrial com cais proprio); - Terminal TANQUISADO (e/ou Eco-Oil, sendo Tanquisado a jusante e a Eco-Oil a montante); - Terminal LISNAVE / Estaleiros Mitrena, que inclui: Cais 0 A e 0 B, Cais 1 A e 1 B, Cais 2 A e 2 B, Cais 3 A e 3 B, Docas secas 20, 21 e 22, Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift); - Terminal TERMITRENA; - TEPORSET (cais dedicado). Fundeadouros nao contam como cais.",
       "keywords": [
         "34 slots",
         "cais",
@@ -36,7 +36,7 @@
     },
     {
       "question": "Quantos cais existem em Setubal?",
-      "answer": "No catalogo operacional do portal existem 34 slots operacionais de cais, berco ou manobra, excluindo fundeadouros. Esta contagem deve ser explicada por criterio porque mistura cais fisicos, faces operacionais, rampas, docas e estruturas de manobra. Para resposta ampla, usa os grupos canonicos: SECIL W/E; TMS1 ou Cais das Fontainhas; TMS2 ou Terminal de Contentores / Multiusos 2; Autoeuropa ou Ro-Ro; Praias do Sado ou Pirites Alentejanas; SAPEC Solidos e SAPEC Liquidos; ALSTOM; e LISNAVE com os seus cais e docas. Fundeadouros nao contam como cais.",
+      "answer": "No catalogo operacional do portal existem 34 slots operacionais de cais, berco ou manobra, excluindo fundeadouros. Os terminais e cais sao: Cais Secil (cais W e E); Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8); Terminal Multiusos 2 (TMS2 carga contentorizada); Terminal Autoeuropa (Cais 10 e Cais 11); Cais das Praias do Sado (Pirites Alentejanas); SAPEC (com cais para solidos e outro para liquidos); ALSTOM / ABB-ALSTOM (instalacao industrial com cais proprio); Terminal TANQUISADO (e/ou Eco-Oil, sendo Tanquisado a jusante e a Eco-Oil a montante); Terminal LISNAVE / Estaleiros Mitrena (com Cais 0 a 3 A/B, Docas secas 20/21/22, Plataformas / Docas secas 31/32/33 por hidrolift); Terminal TERMITRENA; TEPORSET (cais dedicado). Fundeadouros nao contam como cais.",
       "keywords": [
         "34 slots",
         "cais",
@@ -47,7 +47,7 @@
     },
     {
       "question": "Quais sao os terminais que existem no porto de Setubal?",
-      "answer": "Pelos documentos operacionais carregados, os nomes principais a usar sao: Cais SECIL W e E; Terminal Multiusos 1 ou Cais das Fontainhas (TMS1); Terminal de Contentores ou Multiusos 2 (TMS2); Terminal AUTO-EUROPA ou Ro-Ro; Cais das Praias do Sado ou Pirites Alentejanas; SAPEC Solidos e SAPEC Liquidos; ALSTOM; TEPORSET; TANQUISADO; TERMITRENA; ECO-OIL / ECOIL; e Terminal da LISNAVE / Estaleiros Mitrena. Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados em linhas separadas.",
+      "answer": "Pelos documentos operacionais carregados, os terminais e cais do Porto de Setubal sao: Cais Secil (cais W e E); Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8); Terminal Multiusos 2 (TMS2 carga contentorizada); Terminal Autoeuropa (Cais 10 e Cais 11); Cais das Praias do Sado (Pirites Alentejanas); SAPEC (com cais para solidos e outro para liquidos); ALSTOM / ABB-ALSTOM (instalacao industrial com cais proprio); Terminal TANQUISADO (e/ou Eco-Oil, sendo Tanquisado a jusante e a Eco-Oil a montante); Terminal LISNAVE / Estaleiros Mitrena (com Cais 0 a 3 A/B, Docas secas 20/21/22, Plataformas / Docas secas 31/32/33 por hidrolift); Terminal TERMITRENA; TEPORSET (cais dedicado). Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados em linhas separadas.",
       "keywords": [
         "terminais",
         "porto",

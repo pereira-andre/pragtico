@@ -154,8 +154,8 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIn("TMS1", answer)
         self.assertIn("TMS2", answer)
-        self.assertIn("AUTO-EUROPA", answer)
-        self.assertIn("SAPEC Solidos e SAPEC Liquidos", answer)
+        self.assertIn("Autoeuropa", answer)
+        self.assertIn("SAPEC", answer)
         self.assertIn("TEPORSET", answer)
 
     def test_port_inventory_companion_answers_quay_names_with_expected_grouping(self) -> None:
@@ -168,12 +168,15 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         )
 
         self.assertIn("34 slots de cais operacionais", answer)
-        self.assertIn("Cais SECIL W e E", answer)
-        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", answer)
-        self.assertIn("Terminal de Contentores ou Multiusos 2", answer)
-        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", answer)
-        self.assertIn("SAPEC Solidos e SAPEC Liquidos", answer)
-        self.assertIn("Hidrolift com acesso as Docas secas 31, 32 e 33", answer)
+        self.assertIn("Cais Secil (cais W e E)", answer)
+        self.assertIn("Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas", answer)
+        self.assertIn("Terminal Multiusos 2 (TMS2 carga contentorizada)", answer)
+        self.assertIn("Terminal Autoeuropa (Cais 10 e Cais 11)", answer)
+        self.assertIn("SAPEC", answer)
+        self.assertIn("TANQUISADO", answer)
+        self.assertIn("TERMITRENA", answer)
+        self.assertIn("TEPORSET", answer)
+        self.assertIn("Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift)", answer)
         self.assertNotIn("Terminal Multiusos Norte", answer)
         self.assertNotIn("Terminal Multiusos Sul", answer)
         self.assertNotIn("Berço Ro-Ro (na extremidade leste", answer)
@@ -189,9 +192,9 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         )
 
         self.assertIn("34 slots de cais operacionais", answer)
-        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", answer)
-        self.assertIn("Terminal de Contentores ou Multiusos 2", answer)
-        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", answer)
+        self.assertIn("Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas", answer)
+        self.assertIn("Terminal Multiusos 2 (TMS2 carga contentorizada)", answer)
+        self.assertIn("Terminal Autoeuropa (Cais 10 e Cais 11)", answer)
         self.assertNotIn("Terminal Multiusos Norte", answer)
         self.assertNotIn("Terminal Multiusos Sul", answer)
 
