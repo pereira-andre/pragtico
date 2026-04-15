@@ -36,6 +36,7 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from domain.chat_response_formatting import add_contextual_response_emojis
 from domain.knowledge_companions import (
     build_companion_answer,
     build_companion_sources,
@@ -930,6 +931,8 @@ def handle_chat_turn(
                                 "feedback_correction": trusted_answers[0].get("feedback_correction", ""),
                                 "feedback_correction_document": trusted_answers[0].get("feedback_correction_document", ""),
                             }
+
+        answer = add_contextual_response_emojis(answer, clean_question)
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:
