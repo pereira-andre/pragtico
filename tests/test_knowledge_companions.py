@@ -167,19 +167,22 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
             companion,
         )
 
-        self.assertIn("34 slots de cais operacionais", answer)
-        self.assertIn("Cais Secil (cais W e E)", answer)
-        self.assertIn("Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas", answer)
-        self.assertIn("Terminal Multiusos 2 (TMS2 carga contentorizada)", answer)
-        self.assertIn("Terminal Autoeuropa (Cais 10 e Cais 11)", answer)
+        self.assertFalse(answer.startswith("Quantos cais"))
+        self.assertIn("34 slots operacionais", answer)
+        self.assertIn("\n- **Cais SECIL:**", answer)
+        self.assertIn("Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)", answer)
+        self.assertIn("Terminal Multiusos 2 (TMS2 / Terminal de Contentores)", answer)
+        self.assertIn("Terminal Autoeuropa / Ro-Ro", answer)
         self.assertIn("SAPEC", answer)
         self.assertIn("TANQUISADO", answer)
         self.assertIn("TERMITRENA", answer)
         self.assertIn("TEPORSET", answer)
-        self.assertIn("Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift)", answer)
+        self.assertIn("Hidrolift com acesso as docas secas 31, 32 e 33", answer)
+        self.assertIn("\n\nNota:", answer)
         self.assertNotIn("Terminal Multiusos Norte", answer)
         self.assertNotIn("Terminal Multiusos Sul", answer)
         self.assertNotIn("Berço Ro-Ro (na extremidade leste", answer)
+        self.assertNotIn("Plataformas / Docas", answer)
         self.assertNotIn("Existem quatro zonas de fundeio definidas", answer)
 
     def test_port_inventory_companion_answers_ungrammatical_quay_names_question(self) -> None:
@@ -191,10 +194,12 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
             companion,
         )
 
-        self.assertIn("34 slots de cais operacionais", answer)
-        self.assertIn("Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas", answer)
-        self.assertIn("Terminal Multiusos 2 (TMS2 carga contentorizada)", answer)
-        self.assertIn("Terminal Autoeuropa (Cais 10 e Cais 11)", answer)
+        self.assertFalse(answer.startswith("Quantos cais"))
+        self.assertIn("34 slots operacionais", answer)
+        self.assertIn("Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)", answer)
+        self.assertIn("Terminal Multiusos 2 (TMS2 / Terminal de Contentores)", answer)
+        self.assertIn("Terminal Autoeuropa / Ro-Ro", answer)
+        self.assertIn("Hidrolift com acesso as docas secas 31, 32 e 33", answer)
         self.assertNotIn("Terminal Multiusos Norte", answer)
         self.assertNotIn("Terminal Multiusos Sul", answer)
 
@@ -208,5 +213,5 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
 
         self.assertIsNotNone(answer)
         self.assertEqual(answer["companion"]["document"], "Porto_Setubal_Terminais_Cais.txt")
-        self.assertIn("Fundeadouros nao contam como cais", answer["answer"])
+        self.assertIn("fundeadouros nao contam como cais", answer["answer"].lower())
         self.assertNotIn("Existem quatro zonas de fundeio definidas", answer["answer"])

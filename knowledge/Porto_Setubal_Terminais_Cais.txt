@@ -113,12 +113,11 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
     baseadas na altura da preia-mar.
 
 ================================================================================
-RESPOSTA OPERACIONAL PARA PERGUNTAS AMPLAS
+FACTOS PARA SINTESE EM PERGUNTAS AMPLAS
 ================================================================================
 
-Pergunta: Quais sao os terminais que existem no porto de Setubal?
-Resposta: Pelos documentos operacionais carregados, os terminais e cais do Porto
-de Setubal sao, pela seguinte ordem:
+Intencao coberta: perguntas sobre quais terminais existem no Porto de Setubal.
+Factos de inventario: os grupos operacionais a considerar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
   - Terminal Multiusos 2 (TMS2 carga contentorizada);
@@ -134,17 +133,17 @@ de Setubal sao, pela seguinte ordem:
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
       - Docas secas 20, 21 e 22;
-      - Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift);
+      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados
 em linhas separadas.
 
-Pergunta: Quantos cais existem em Setubal?
-Resposta: No catalogo operacional do portal existem 34 slots operacionais de
-cais, berco ou manobra, excluindo fundeadouros. Para uma resposta ao utilizador,
-agrupar por nomes reconhecidos e evitar duplicar sinonimos. Listar pela seguinte
-ordem e formato:
+Intencao coberta: perguntas sobre quantos cais existem em Setubal.
+Factos de contagem: no catalogo operacional do portal existem 34 slots
+operacionais de cais, berco ou manobra, excluindo fundeadouros. Ao sintetizar
+uma resposta, agrupar por nomes reconhecidos e evitar duplicar sinonimos. Usar
+os seguintes grupos:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
   - Terminal Multiusos 2 (TMS2 carga contentorizada);
@@ -160,15 +159,15 @@ ordem e formato:
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
       - Docas secas 20, 21 e 22;
-      - Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift);
+      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Fundeadouros nao contam como cais; sao zonas de espera/fundeio.
 
-Pergunta: Quantos cais existem em Setubal? E quais os seus nomes?
-Resposta: No porto de Setubal existem 34 slots de cais operacionais no catalogo
-do portal, distribuidos por varios cais e terminais. Os principais nomes a
-responder sao, pela seguinte ordem e formato:
+Intencao coberta: perguntas sobre quantos cais existem e quais sao os nomes.
+Factos de contagem e nomes: no porto de Setubal existem 34 slots de cais
+operacionais no catalogo do portal, distribuidos por varios cais e terminais. Os
+principais grupos a usar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
   - Terminal Multiusos 2 (TMS2 carga contentorizada);
@@ -184,14 +183,14 @@ responder sao, pela seguinte ordem e formato:
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
       - Docas secas 20, 21 e 22;
-      - Plataformas / Docas secas 31, 32 e 33 (acesso por hidrolift);
+      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Fundeadouros nao contam como cais. Nao acrescentar aliases como linhas
 separadas quando estes ja estao cobertos pelos grupos acima.
 
-Pergunta: Os fundeadouros contam como cais?
-Resposta: Nao. Fundeadouros sao zonas de fundeio/espera e nao devem ser usados
+Intencao coberta: perguntas sobre se fundeadouros contam como cais.
+Facto: Nao. Fundeadouros sao zonas de fundeio/espera e nao devem ser usados
 para responder a perguntas sobre cais ou terminais.
 
 ================================================================================

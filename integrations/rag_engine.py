@@ -5,6 +5,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, List
@@ -42,6 +43,46 @@ def lexical_score(query: str, text: str) -> float:
 
 def _normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _normalize_echo_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = re.sub(r"\s+", " ", normalized).strip().lower()
+    normalized = re.sub(r"^(?:pergunta|questao)\s*:\s*", "", normalized)
+    normalized = normalized.strip(" \t\n\r\"'“”‘’[]()")
+    return re.sub(r"[^\w]+", " ", normalized).strip()
+
+
+def _strip_leading_question_echo(question: str, answer: str) -> str:
+    clean_answer = str(answer or "").strip()
+    question_key = _normalize_echo_text(question)
+    if not clean_answer or not question_key:
+        return clean_answer
+
+    for _attempt in range(3):
+        lines = clean_answer.splitlines()
+        if not lines:
+            break
+        first_line = lines[0].strip()
+        if _normalize_echo_text(first_line) == question_key:
+            clean_answer = "\n".join(lines[1:]).lstrip()
+            continue
+        candidate_line = re.sub(r"^(?:pergunta|questao)\s*:\s*", "", first_line, flags=re.IGNORECASE).strip()
+        if "?" in candidate_line:
+            possible_question, remainder = candidate_line.split("?", 1)
+            if _normalize_echo_text(possible_question) == question_key:
+                next_lines = []
+                clean_remainder = remainder.lstrip(" :-")
+                if clean_remainder:
+                    next_lines.append(clean_remainder)
+                next_lines.extend(lines[1:])
+                clean_answer = "\n".join(next_lines).lstrip()
+                continue
+            break
+        break
+
+    return clean_answer.strip()
 
 
 def _format_plan_block(plan: Dict | None) -> str:
@@ -1229,6 +1270,7 @@ Regras:
 - Responde em português europeu.
 - Usa primeiro o contexto recuperado.
 - As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
+- Fontes com modo `document_companion` são factos curados pelo admin; usa-as como balizas fortes, mas não as copies como resposta pronta.
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte de factos e decisão, mas reformula-a no contexto atual.
 - Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.
 - Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
@@ -1240,6 +1282,7 @@ Regras:
 - Em perguntas amplas de inventário, como cais, terminais, docas ou instalações do Porto de Setúbal, cruza várias fontes RAG e não respondas pelo todo com uma fonte parcial de outro tipo, por exemplo fundeadouros.
 - Em inventário do Porto de Setúbal, não uses "Terminal Multiusos Norte" nem "Terminal Multiusos Sul"; usa TMS1 e TMS2. Não dupliques aliases: TMS1 = Cais das Fontainhas, TMS2 = Terminal de Contentores / Multiusos 2, Autoeuropa = Ro-Ro.
 - Para contagens de cais/terminais, declara o critério de contagem quando houver ambiguidade entre terminal, cais físico, face, rampa, doca, plataforma ou duque d'alba.
+- Em perguntas amplas de inventário, não comeces por repetir a pergunta. Começa pela resposta direta, usa uma lista curta quando houver vários itens, e deixa notas complementares como fundeadouros só no fim.
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
@@ -1321,6 +1364,7 @@ Regras:
             extractive_answer = self._build_targeted_document_answer(question, sources)
             if extractive_answer:
                 answer_text = extractive_answer
+        answer_text = _strip_leading_question_echo(question, answer_text)
 
         return {
             "answer": answer_text,

@@ -171,6 +171,24 @@ def _clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
+def _clean_answer_text(value: object) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    cleaned_lines = [_clean_text(line) for line in raw.splitlines()]
+    compact_lines: list[str] = []
+    previous_blank = False
+    for line in cleaned_lines:
+        if not line:
+            if compact_lines and not previous_blank:
+                compact_lines.append("")
+            previous_blank = True
+            continue
+        compact_lines.append(line)
+        previous_blank = False
+    return "\n".join(compact_lines).strip()
+
+
 def _clean_list(value: object) -> list[str]:
     if isinstance(value, list):
         return [item for item in (_clean_text(item) for item in value) if item]
@@ -196,15 +214,17 @@ def _candidate_companion_paths(document_name: str, knowledge_dir: str) -> list[s
 
 def _normalize_faq_entry(item: dict) -> dict | None:
     question = _clean_text(item.get("question"))
-    answer = _clean_text(item.get("answer"))
+    answer = _clean_answer_text(item.get("answer"))
     if not question or not answer:
         return None
     keywords = _clean_list(item.get("keywords"))
     if not keywords:
         keywords = sorted(_tokenize(question))[:8]
+    source_text = _clean_answer_text(item.get("source_text") or item.get("facts") or answer)
     return {
         "question": question,
         "answer": answer,
+        "source_text": source_text,
         "keywords": keywords,
     }
 
@@ -628,6 +648,7 @@ def build_companion_sources(companion: dict, question: str) -> list[dict]:
     sources: list[dict] = []
     faq_match = find_best_companion_faq(question, companion)
     if faq_match:
+        source_text = faq_match.get("source_text") or faq_match["answer"]
         sources.append(
             {
                 "source_id": "KC1",
@@ -635,7 +656,10 @@ def build_companion_sources(companion: dict, question: str) -> list[dict]:
                 "chunk_id": 0,
                 "score": faq_match["score"],
                 "retrieval_mode": "document_companion",
-                "snippet": f"FAQ canónica: {faq_match['question']} Resposta: {faq_match['answer']}",
+                "snippet": (
+                    f"Pergunta de referência: {faq_match['question']}\n"
+                    f"Factos operacionais validados para síntese: {source_text}"
+                ),
             }
         )
 

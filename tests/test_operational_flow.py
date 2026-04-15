@@ -2263,7 +2263,39 @@ class OperationalFlowTests(unittest.TestCase):
             "IT-015_Fundeadouros.txt",
             json.loads((repo_knowledge / "companions" / "IT-015_Fundeadouros.json").read_text(encoding="utf-8")),
         )
+        self._write_knowledge_companion(
+            "Porto_Setubal_Terminais_Cais.txt",
+            json.loads(
+                (repo_knowledge / "companions" / "Porto_Setubal_Terminais_Cais.json").read_text(
+                    encoding="utf-8"
+                )
+            ),
+        )
         self.store.list_documents()
+
+        def synthesize_from_sources(**kwargs):
+            question = kwargs["question"]
+            if "terminais" in question.lower():
+                answer = (
+                    "Os principais terminais e cais operacionais de Setúbal são:\n\n"
+                    "- Cais SECIL W/E\n"
+                    "- Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)\n"
+                    "- Terminal Multiusos 2 (TMS2 / Terminal de Contentores)\n"
+                    "- Terminal Autoeuropa / Ro-Ro\n"
+                    "- SAPEC Sólidos e SAPEC Líquidos\n\n"
+                    "Nota: estes nomes já agrupam aliases operacionais."
+                )
+            else:
+                answer = (
+                    "No catálogo operacional do portal existem 34 slots operacionais.\n\n"
+                    "- Cais SECIL W/E\n"
+                    "- Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)\n"
+                    "- Terminal Multiusos 2 (TMS2 / Terminal de Contentores)\n"
+                    "- Terminal Autoeuropa / Ro-Ro\n"
+                    "- LISNAVE / Mitrena, incluindo Hidrolift para as docas secas 31, 32 e 33\n\n"
+                    "Nota: fundeadouros não contam como cais."
+                )
+            return {"answer": answer, "sources": kwargs.get("supplemental_sources", [])}
 
         with app.app.test_client() as client:
             self._login_client_as_admin(client)
@@ -2271,6 +2303,7 @@ class OperationalFlowTests(unittest.TestCase):
             with patch.object(services.rag, "can_generate", return_value=True), patch.object(
                 services.rag,
                 "answer",
+                side_effect=synthesize_from_sources,
             ) as answer_mock:
                 terminals_response = client.post(
                     "/api/chat",
@@ -2289,24 +2322,28 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(terminals_response.status_code, 200)
         terminals_payload = terminals_response.get_json()
-        self.assertEqual(terminals_payload["answer_origin"], "document_companion_global")
-        self.assertIn("Terminal Multiusos 1 ou Cais das Fontainhas", terminals_payload["answer"])
-        self.assertIn("Terminal de Contentores ou Multiusos 2", terminals_payload["answer"])
-        self.assertIn("Terminal AUTO-EUROPA ou Ro-Ro", terminals_payload["answer"])
+        self.assertEqual(terminals_payload["answer_origin"], "llm")
+        self.assertIn("Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)", terminals_payload["answer"])
+        self.assertIn("Terminal Multiusos 2 (TMS2 / Terminal de Contentores)", terminals_payload["answer"])
+        self.assertIn("Terminal Autoeuropa / Ro-Ro", terminals_payload["answer"])
         self.assertNotIn("Terminal Multiusos Norte", terminals_payload["answer"])
         self.assertNotIn("Terminal Multiusos Sul", terminals_payload["answer"])
         self.assertNotIn("Existem quatro zonas de fundeio", terminals_payload["answer"])
 
         self.assertEqual(quays_response.status_code, 200)
         quays_payload = quays_response.get_json()
-        self.assertEqual(quays_payload["answer_origin"], "document_companion_global")
+        self.assertEqual(quays_payload["answer_origin"], "llm")
         self.assertIn("34 slots operacionais", quays_payload["answer"])
-        self.assertIn("Fundeadouros nao contam como cais", quays_payload["answer"])
+        self.assertIn("fundeadouros não contam como cais", quays_payload["answer"].lower())
         self.assertNotIn("Terminal Multiusos Norte", quays_payload["answer"])
         self.assertNotIn("Terminal Multiusos Sul", quays_payload["answer"])
         self.assertNotIn("Berço Ro-Ro (na extremidade leste", quays_payload["answer"])
 
-        answer_mock.assert_not_called()
+        self.assertEqual(answer_mock.call_count, 2)
+        first_sources = answer_mock.call_args_list[0].kwargs["supplemental_sources"]
+        source_snippets = "\n".join(source.get("snippet", "") for source in first_sources)
+        self.assertIn("Factos operacionais validados para síntese", source_snippets)
+        self.assertIn("nao usar terminal multiusos norte/sul", source_snippets.lower())
 
     def test_chat_mixed_live_and_document_question_uses_llm_with_planned_sources(self) -> None:
         document_name = "IT-036_RegulacaoAgulhas.txt"

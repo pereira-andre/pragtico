@@ -53,7 +53,6 @@ REVIEW_BLOCK_SIMILARITY = 0.97
 REVIEW_CORRECTION_SIMILARITY = 0.94
 TRUSTED_DOCUMENT_HINT_SIMILARITY = 0.82
 TRUSTED_DOCUMENT_HINT_GAP = 0.08
-CANONICAL_PORT_INVENTORY_DOCUMENT = "Porto_Setubal_Terminais_Cais.txt"
 DOCUMENT_FOLLOW_UP_RE = re.compile(
     r"\b(?:esse|essa|este|esta|o|a)\s+(?:documento|doc|ficheiro|regra|instrucao|instrução)\b"
     r"|\bo que diz(?:\s+(?:esse|essa|este|esta|o|a))?\s+"
@@ -62,36 +61,6 @@ DOCUMENT_FOLLOW_UP_RE = re.compile(
     r"(?:documento|doc|ficheiro|regra|instrucao|instrução)?\b",
     flags=re.IGNORECASE,
 )
-
-
-def _normalized_rule_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", str(value or ""))
-    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
-    return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
-
-
-def _should_use_canonical_port_inventory_answer(question: str, global_companion_match: dict | None) -> bool:
-    """Use the curated inventory answer instead of letting the LLM recombine aliases."""
-    companion = (global_companion_match or {}).get("companion") or {}
-    if companion.get("document") != CANONICAL_PORT_INVENTORY_DOCUMENT:
-        return False
-    clean_question = _normalized_rule_text(question)
-    if not ({"porto", "setubal"} & set(clean_question.split())):
-        return False
-    facility_terms = {
-        "berco",
-        "bercos",
-        "cais",
-        "doca",
-        "docas",
-        "instalacao",
-        "instalacoes",
-        "terminal",
-        "terminais",
-    }
-    inventory_terms = {"existem", "lista", "listar", "nomes", "quais", "quantos", "quantas"}
-    tokens = set(clean_question.split())
-    return bool(tokens & facility_terms) and bool(tokens & inventory_terms)
 
 
 DOCUMENT_MATCH_STOPWORDS = {
@@ -911,8 +880,6 @@ def handle_chat_turn(
                     clean_question,
                     _active_knowledge_dir(),
                 )
-                if _should_use_canonical_port_inventory_answer(clean_question, global_companion_match):
-                    allow_companion_shortcut = True
                 if global_companion_match and not allow_companion_shortcut:
                     supplemental_sources.extend(global_companion_match.get("sources") or [])
                 if global_companion_match and allow_companion_shortcut:

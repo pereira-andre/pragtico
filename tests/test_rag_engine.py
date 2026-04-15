@@ -507,6 +507,40 @@ class SimpleRAGEngineTests(unittest.TestCase):
         self.assertIn("LOA superior a 225 metros", answer["answer"])
         self.assertNotIn("não está disponível", answer["answer"].lower())
 
+    def test_answer_strips_leading_question_echo(self) -> None:
+        question = "Quais são os terminais que existem no porto de Setúbal?"
+        engine, _ = self._make_engine(
+            document_text="O Porto de Setúbal inclui TMS1, TMS2, Autoeuropa e LISNAVE."
+        )
+        engine.client = None
+        engine.rebuild_index(force=True)
+        provider = _StubProvider(
+            "gemini",
+            generation_text=(
+                "Quais sao os terminais que existem no porto de Setubal?\n"
+                "Os principais terminais são TMS1, TMS2, Autoeuropa e LISNAVE."
+            ),
+        )
+        engine.provider = provider
+        engine.generation_model = "gemini-test"
+        engine._generation_candidates = [(provider, engine.generation_model)]
+
+        answer = engine.answer(
+            question=question,
+            role="piloto",
+            history=[],
+            trusted_answers=[],
+            execution_plan={
+                "primary_intent": "document_synthesis",
+                "requires_llm_synthesis": True,
+            },
+        )
+
+        self.assertEqual(
+            answer["answer"],
+            "Os principais terminais são TMS1, TMS2, Autoeuropa e LISNAVE.",
+        )
+
     def test_answer_retries_when_decision_question_receives_live_data_dump(self) -> None:
         engine, _ = self._make_engine()
         engine.client = None
