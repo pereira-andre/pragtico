@@ -107,6 +107,21 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertTrue(plan.needs_answer_critic)
         self.assertFalse(plan.should_answer_directly)
 
+    def test_scheduled_operational_question_with_time_uses_tide_reasoning(self) -> None:
+        plan = build_chat_execution_plan(
+            "Estava a tratar de um navio para sair do cais da Eco Oil. "
+            "O navio tem 290 m e 7 m de calado, posso marcar manobra para as 23:00? "
+            "É preciso algum reboque?"
+        )
+
+        self.assertEqual(plan.primary_intent, "live_reasoning")
+        self.assertEqual(plan.live_facets, ("tides",))
+        self.assertTrue(plan.wants_documents)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertTrue(plan.needs_history_state)
+        self.assertTrue(plan.needs_answer_critic)
+        self.assertFalse(plan.should_answer_directly)
+
     def test_port_facility_inventory_question_requires_rag_synthesis(self) -> None:
         plan = build_chat_execution_plan(
             "Quais são os terminais que existem no porto de Setúbal?"

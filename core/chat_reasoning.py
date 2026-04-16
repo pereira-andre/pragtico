@@ -38,6 +38,60 @@ THRUSTER_RE = re.compile(
     r"\b(bow thruster|stern thruster|thruster(?:s)?)\b",
     flags=re.IGNORECASE,
 )
+TIME_RE = re.compile(
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}[:h]\d{2})\b"
+    r"|\b(\d{1,2}[:h]\d{2})\b",
+    flags=re.IGNORECASE,
+)
+DATE_RE = re.compile(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
+RELATIVE_DATE_RE = re.compile(r"\b(hoje|amanh[ãa]|depois de amanh[ãa])\b", flags=re.IGNORECASE)
+FACILITY_PATTERNS = (
+    (re.compile(r"\beco\s*-?\s*oil\b|\becooil\b|\becoil\b", flags=re.IGNORECASE), "Terminal ECO-OIL"),
+    (re.compile(r"\btanquisado\b", flags=re.IGNORECASE), "Terminal da TANQUISADO"),
+    (re.compile(r"\bpraias\s+do\s+sado\b|\bpirites\b", flags=re.IGNORECASE), "Terminal Praias do Sado"),
+    (re.compile(r"\bsapec\b|\btps\b|\btgl\b", flags=re.IGNORECASE), "SAPEC / TPS-TGL"),
+    (re.compile(r"\balstom\b|\babb\s*-?\s*alstom\b", flags=re.IGNORECASE), "Cais ALSTOM"),
+    (re.compile(r"\bsecil\b", flags=re.IGNORECASE), "Terminal SECIL"),
+    (re.compile(r"\btepor\s*set\b|\bteporset\b", flags=re.IGNORECASE), "TEPORSET"),
+    (re.compile(r"\btms\s*1\b|\btms1\b|\bfontainhas\b", flags=re.IGNORECASE), "TMS1"),
+    (re.compile(r"\btms\s*2\b|\btms2\b|\bterminal de contentores\b", flags=re.IGNORECASE), "TMS2"),
+    (re.compile(r"\blisnave\b|\bmitrena\b", flags=re.IGNORECASE), "LISNAVE / Mitrena"),
+)
+
+
+def split_message_utterances(content: str) -> list[str]:
+    """Split a compound user message without breaking decimal numbers such as 9.5m."""
+    raw_parts = re.split(r"(?<=[.!?])\s+|\n+", str(content or "").strip())
+    return [part.strip() for part in raw_parts if part and part.strip()]
+
+
+def build_compound_message_analysis_source(question: str) -> dict | None:
+    segments = split_message_utterances(question)
+    if len(segments) < 2:
+        return None
+
+    facts = _extract_message_facts(question)
+    questions = [segment for segment in segments if "?" in segment]
+    lines = ["Mensagem composta detetada. Processar os segmentos por ordem e acumular factos antes de responder."]
+    lines.append("Segmentos:")
+    for index, segment in enumerate(segments[:8], start=1):
+        segment_type = "pergunta" if "?" in segment else "contexto"
+        lines.append(f"{index}. ({segment_type}) {segment}")
+    if facts:
+        lines.append("Factos extraidos: " + " ".join(facts[:10]))
+    if questions:
+        lines.append("Perguntas explicitas a responder: " + " | ".join(questions[:5]))
+
+    snippet = "\n".join(lines)
+    return {
+        "source_id": "MSG1",
+        "document": "Analise estruturada da mensagem",
+        "chunk_id": 0,
+        "score": 1.0,
+        "retrieval_mode": "message_analysis",
+        "snippet": snippet,
+        "text": snippet,
+    }
 
 
 def _clean_numeric(value: str) -> str:
@@ -47,6 +101,20 @@ def _clean_numeric(value: str) -> str:
 def _extract_message_facts(content: str) -> list[str]:
     clean = normalize_planner_text(content)
     facts: list[str] = []
+
+    for pattern, label in FACILITY_PATTERNS:
+        if pattern.search(content or ""):
+            facts.append(f"Cais/terminal referido: {label}.")
+            break
+
+    if re.search(r"\b(saida|sair|desatracar|desatracacao)\b", clean):
+        facts.append("Operação pretendida: saída/desatracação.")
+    elif re.search(r"\b(entrada|entrar)\b", clean):
+        facts.append("Operação pretendida: entrada.")
+    elif re.search(r"\b(atracar|atracacao)\b", clean):
+        facts.append("Operação pretendida: atracação.")
+    elif re.search(r"\b(mudanca|shift)\b", clean):
+        facts.append("Operação pretendida: mudança.")
 
     for token, label in VESSEL_TYPE_LABELS.items():
         if token in clean:
@@ -69,9 +137,24 @@ def _extract_message_facts(content: str) -> list[str]:
     if tug_match:
         count = tug_match.group(1)
         facts.append(f"Referência a {count} rebocador(es)/reboque(s).")
+    elif re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", content or "", flags=re.IGNORECASE):
+        facts.append("Pedido de recomendação/necessidade de rebocadores.")
 
     if THRUSTER_RE.search(content or ""):
         facts.append("Há referência explícita a thrusters do navio.")
+
+    time_match = TIME_RE.search(content or "")
+    if time_match:
+        raw_time = (time_match.group(1) or time_match.group(2) or "").replace("h", ":")
+        facts.append(f"Hora planeada/referida: {raw_time}.")
+
+    date_match = DATE_RE.search(content or "")
+    if date_match:
+        facts.append(f"Data referida: {date_match.group(0)}.")
+    else:
+        relative_date_match = RELATIVE_DATE_RE.search(content or "")
+        if relative_date_match:
+            facts.append(f"Data relativa referida: {relative_date_match.group(1)}.")
 
     return list(dict.fromkeys(facts))
 

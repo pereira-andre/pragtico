@@ -13,7 +13,10 @@ from flask import session
 
 from core import services
 from core.chat_planner import ChatExecutionPlan, build_chat_execution_plan
-from core.chat_reasoning import build_conversation_reasoning_state
+from core.chat_reasoning import (
+    build_compound_message_analysis_source,
+    build_conversation_reasoning_state,
+)
 from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
@@ -37,6 +40,11 @@ from domain.chat_actions import (
     parse_slash_command,
 )
 from domain.chat_response_formatting import add_contextual_response_emojis
+from domain.berth_profiles import (
+    build_berth_profile_answer,
+    build_berth_profile_sources,
+    find_best_berth_profile,
+)
 from domain.knowledge_companions import (
     build_companion_answer,
     build_companion_sources,
@@ -544,6 +552,21 @@ def _blocked_mutation_answer(channel: str) -> dict:
     }
 
 
+def _should_prefer_berth_profile_answer(question: str, companion_answer: str) -> bool:
+    clean_answer = re.sub(r"\s+", " ", str(companion_answer or "")).strip()
+    if not clean_answer:
+        return True
+    if clean_answer.startswith(("A resposta direta:", "O valor a reter é")):
+        return True
+    clean_question = _normalize_lookup_text(question)
+    asks_general_profile = bool(
+        re.search(r"\b(fala|sabes|conheces|termos gerais|geral|restricoes|restrições|regras|limites)\b", clean_question)
+    )
+    if asks_general_profile and clean_answer.startswith("Segundo o ") and "Pontos principais:" in clean_answer:
+        return True
+    return False
+
+
 def handle_chat_turn(
     *,
     username: str,
@@ -861,16 +884,31 @@ def handle_chat_turn(
                 trusted_answers,
                 reviewed_answers,
             )
+            berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
+            berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
             supplemental_sources = _build_supplemental_sources(
                 clean_question,
                 plan=execution_plan,
                 conversation_state=conversation_state,
             )
+            compound_message_source = build_compound_message_analysis_source(clean_question)
+            if compound_message_source:
+                supplemental_sources.append(compound_message_source)
+            supplemental_sources.extend(build_berth_profile_sources(berth_profile_match))
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
             allow_companion_shortcut = not execution_plan.requires_llm_synthesis
-            if targeted_document_context["companion_answer"] and allow_companion_shortcut:
+            if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+                clean_question,
+                targeted_document_context["companion_answer"],
+            ):
+                answer = {
+                    "answer": berth_profile_answer,
+                    "sources": supplemental_sources,
+                    "answer_origin": "berth_profile",
+                }
+            elif targeted_document_context["companion_answer"] and allow_companion_shortcut:
                 if _review_correction_targets_document(
                     review_correction_match,
                     targeted_document_context,

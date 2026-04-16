@@ -1,0 +1,342 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "eco_oil",
+      "name": "Terminal ECO-OIL",
+      "document": "IT-008_EcoOil.txt",
+      "aliases": ["eco-oil", "eco oil", "ecooil", "ecoil", "terminal eco-oil", "cais da eco-oil", "cais da eco oil"],
+      "category": "terminal de graneis liquidos / produtos petroliferos",
+      "overview": "Terminal da ECOIL / Tanquisado Nascente, com regras proprias de reponto de mare, calado, periodo do dia e atencao a defensas em navios de bordo livre baixo.",
+      "dimensions": [
+        "O IT-008 nao indica um comprimento fisico de cais como dado principal; os limites operacionais aparecem por LOA e por tipo de manobra.",
+        "Altura da lanca da grua: 55 metros."
+      ],
+      "vessel_limits": [
+        "Atracacao diurna em preia-mar: sem limite documental de comprimento.",
+        "Atracacao/desatracacao diurna em baixa-mar: ate 250 m, ou ate 255 m se a baixa-mar for >= 0,9 m.",
+        "Desatracacao noturna em preia-mar: ate 255 m.",
+        "Navios acima de 255 m ficam fora dos limites documentados para baixa-mar e para desatracacao noturna."
+      ],
+      "draft_rules": [
+        "Calado maximo absoluto estacionado: 7,5 m.",
+        "Calado maximo para manobra em preia-mar: 7,0 m.",
+        "Calado maximo para manobra em baixa-mar: 5,5 m."
+      ],
+      "maneuver_rules": [
+        "As manobras devem ser planeadas proximo dos repontos de mare, quando a corrente e minima."
+      ],
+      "night_rules": [
+        "Atracacao noturna proibida em qualquer condicao.",
+        "Desatracacao noturna so em preia-mar e ate 255 m de LOA; baixa-mar noturna proibida."
+      ],
+      "restrictions": [
+        "Regra estrutural de reponto de mare.",
+        "Limites diferentes entre atracacao, desatracacao, dia/noite e preia-mar/baixa-mar.",
+        "Avaliacao especial das defensas para navios de bordo livre baixo ou fragil."
+      ],
+      "tug_guidance": [
+        "O IT-008 nao fixa uma tabela propria de rebocadores; cruzar com a IT-016.",
+        "Por se tratar de produtos liquidos/petroliferos, confirmar se a carga e perigosa; se for e LOA > 70 m, os valores da IT-016 sao minimos obrigatorios.",
+        "Para navios grandes ou condicionados, usar tambem historico de manobras e condicoes de vento/corrente antes de reduzir meios."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "tanquisado",
+      "name": "Terminal da TANQUISADO",
+      "document": "IT-010_Tanquisado.txt",
+      "aliases": ["tanquisado", "terminal tanquisado", "cais da tanquisado"],
+      "category": "terminal de graneis liquidos com cais e duques d'alba",
+      "overview": "Terminal composto por cais central e dois duques d'alba, com operacao fortemente dependente de repontos de mare, calado praticavel e regras especificas para noite.",
+      "dimensions": [
+        "Comprimento operacional total: 463 m, incluindo cais fisico de 75 m e dois duques d'alba.",
+        "Sonda ao ZH: 10 m."
+      ],
+      "vessel_limits": [
+        "Calado maximo absoluto: 9,5 m.",
+        "Atracacao noturna simples apenas para navios com LOA inferior a 110 m.",
+        "Navios com LOA superior a 110 m so podem atracar de noite em dias especificos em que as duas preia-mares sejam noturnas e cumprindo a regra de calado noturno."
+      ],
+      "draft_rules": [
+        "Calado diurno praticavel: 6,3 m + altura da mare no momento, limitado a 9,5 m.",
+        "Saida noturna: 4,8 m + altura de agua, com teto de 8,0 m."
+      ],
+      "maneuver_rules": [
+        "Regra geral de atracacao: repontos de mare e periodo diurno.",
+        "Saida fora de reponto apenas em vazante quando a preia-mar precedente tiver altura <= 3 m."
+      ],
+      "night_rules": [
+        "Noite condicionada por LOA, preia-mares exclusivamente noturnas e calado.",
+        "Saidas noturnas dependem do limite 4,8 m + altura de agua."
+      ],
+      "restrictions": [
+        "Reponto de mare como regra base.",
+        "Calado absoluto 9,5 m.",
+        "Regime noturno condicionado por LOA e altura de agua."
+      ],
+      "tug_guidance": [
+        "Nao ha tabela propria no IT-010; aplicar IT-016 e ajustar pelo facto de ser terminal atravessado por corrente de mare.",
+        "Confirmar carga perigosa, DWT, estado carregado/vazio e thrusters."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "praias_sado",
+      "name": "Terminal Praias do Sado",
+      "document": "IT-012_PraiasSado.txt",
+      "aliases": ["praias do sado", "pirites", "pirites alentejanas", "terminal praias do sado", "cais das praias do sado"],
+      "category": "terminal com dupla restricao de calado",
+      "overview": "Antigo Terminal Pirites, hoje Terminal Praias do Sado. A regra critica e calcular separadamente o calado de estacionamento e o calado do percurso/bacia, usando o menor resultado.",
+      "dimensions": [
+        "Comprimento fisico do cais: 125 m.",
+        "Comprimento maximo aconselhavel de navio: 200 m.",
+        "Calado maximo absoluto: 10,0 m."
+      ],
+      "vessel_limits": [
+        "LOA de 200 m e referencia aconselhavel, nao limite absoluto automatico.",
+        "Navios acima da referencia devem ser avaliados caso a caso."
+      ],
+      "draft_rules": [
+        "Estacionamento: 8,7 m + altura da baixa-mar.",
+        "Percurso/bacia de manobra: 7,40 m + altura de agua no momento.",
+        "Calado praticavel final: menor dos dois resultados, limitado a 10,0 m."
+      ],
+      "maneuver_rules": [
+        "A decisao de calado exige conhecer a altura de agua no momento da manobra e a baixa-mar relevante durante a estadia."
+      ],
+      "night_rules": [
+        "O IT-012 nao destaca uma regra noturna autonoma no resumo operacional; validar pelas restantes condicionantes."
+      ],
+      "restrictions": [
+        "Dupla restricao de calado: estacionamento e percurso/bacia.",
+        "Teto absoluto de 10,0 m.",
+        "Comprimento de 200 m tratado como referencia aconselhavel."
+      ],
+      "tug_guidance": [
+        "Sem tabela propria no IT-012; aplicar IT-016 e historico operacional quando houver duvida."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "sapec",
+      "name": "SAPEC (TPS e TGL)",
+      "document": "IT-029_SAPEC.txt",
+      "aliases": ["sapec", "tps", "tgl", "cais da sapec", "sapec solidos", "sapec liquidos"],
+      "category": "dois terminais: TPS solidos e TGL liquidos",
+      "overview": "O IT-029 cobre dois terminais SAPEC: TPS para graneis solidos e TGL para graneis liquidos. As regras devem ser lidas por terminal e por tipo de carga, sobretudo IMO vs nao IMO.",
+      "dimensions": [
+        "TPS: cais fisico com duque d'alba; o IT usa regras de calado e carochas como pontos criticos.",
+        "TGL: estrutura de duques d'alba; distancia entre duques extremos: 70 m."
+      ],
+      "vessel_limits": [
+        "TPS e TGL distinguem carga IMO/perigosa de outras cargas.",
+        "Calados ligeiramente superiores aos valores de referencia podem ser avaliados caso a caso quando o documento o admite."
+      ],
+      "draft_rules": [
+        "Carga IMO: 7,1 m + altura de agua, com referencia maxima de 9,5 m.",
+        "Carga nao IMO: 7,6 m + altura de agua, com referencia de 10,0 m.",
+        "TPS: se calado > 8,8 m + baixa-mar, deve usar defensas afastadoras/carochas."
+      ],
+      "maneuver_rules": [
+        "No canal de acesso ao TPS recomenda-se velocidade inferior a 5 nos para evitar squat elevado."
+      ],
+      "night_rules": [
+        "O resumo do IT-029 nao define uma regra noturna autonoma; validar com calado, carga e condicoes de manobra."
+      ],
+      "restrictions": [
+        "Separar sempre TPS e TGL.",
+        "Separar carga IMO/perigosa e carga nao IMO.",
+        "Aplicar regra das carochas no TPS quando o calado excede 8,8 m + baixa-mar."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; em TGL/cargas liquidas confirmar se e carga perigosa.",
+        "Confirmar DWT, carregado/vazio e thrusters antes de fechar numero."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "alstom",
+      "name": "Cais ALSTOM / ABB-ALSTOM",
+      "document": "IT-038_Alstom.txt",
+      "aliases": ["alstom", "abb-alstom", "abb alstom", "cais alstom", "cais da alstom"],
+      "category": "instalacao industrial com canal interior",
+      "overview": "Cais industrial com acesso pelo Canal ABB-ALSTOM. A regra principal combina LOA, calado, vento no canal e periodo diurno/noturno.",
+      "dimensions": [
+        "Comprimento fisico do cais: 91 m.",
+        "LOA ate 110 m: calado maximo 7,0 m.",
+        "LOA entre 110 m e 120 m: calado reduzido linearmente ate 6,0 m.",
+        "LOA superior a 120 m: nao aceite."
+      ],
+      "vessel_limits": [
+        "LOA maximo absoluto: 120 m.",
+        "Entrada noturna proibida para LOA superior a 90 m; estes navios podem sair de noite."
+      ],
+      "draft_rules": [
+        "Calado maximo base 7,0 m ate LOA 110 m.",
+        "Entre 110 m e 120 m: 7,0 - ((LOA - 110) x 0,1).",
+        "Canal ABB-ALSTOM: profundidade disponivel = 5 m + altura de mare."
+      ],
+      "maneuver_rules": [
+        "Transito no canal apenas com vento igual ou inferior a 15 nos.",
+        "O canal e estreito; vento acima de 15 nos deve bloquear o transito."
+      ],
+      "night_rules": [
+        "LOA > 90 m: entrada so de dia; saida pode ser noturna.",
+        "LOA <= 90 m: entrada noturna nao fica proibida por esta regra especifica."
+      ],
+      "restrictions": [
+        "Vento no canal <= 15 nos.",
+        "LOA maximo 120 m.",
+        "Relacao LOA/calado obrigatoria acima de 110 m."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; por ser canal estreito, vento e capacidade lateral do navio devem pesar na decisao final."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "secil",
+      "name": "Terminal SECIL",
+      "document": "IT-009_Secil.txt",
+      "aliases": ["secil", "terminal secil", "cais da secil", "cais secil", "secil w", "secil e", "cais de oeste", "cais de este"],
+      "category": "terminal com cais de oeste e cais de este",
+      "overview": "Terminal composto por Cais de Oeste/Cais A e Cais de Este/Cais B. As regras variam por cais, LOA, calado, preia-mar e periodo diurno.",
+      "dimensions": [
+        "Cais de Oeste: LOA maximo 200 m; calado maximo de referencia 9,5 m.",
+        "Cais de Este com duques d'alba: comprimento 121 m; comprimento de referencia para navios 140 m; calado de referencia 8,0 m."
+      ],
+      "vessel_limits": [
+        "Cais de Oeste: navios com LOA > 170 m so devem ser movimentados com luz do dia e junto da preia-mar.",
+        "Cais de Este: usar referencia de 140 m para navios."
+      ],
+      "draft_rules": [
+        "Cais de Oeste: 9,5 m de referencia.",
+        "Cais de Este: 8,0 m de referencia."
+      ],
+      "maneuver_rules": [
+        "Cais de Oeste: LOA > 170 m exige luz do dia e proximidade da preia-mar.",
+        "Cais de Este: em mares vivas, atracar no reponto."
+      ],
+      "night_rules": [
+        "Cais de Oeste: manobra noturna proibida para LOA > 170 m.",
+        "Para LOA <= 170 m, o documento nao proibe explicitamente noite; continuam a aplicar-se as restantes condicionantes."
+      ],
+      "restrictions": [
+        "Distinguir sempre Cais de Oeste e Cais de Este.",
+        "LOA > 170 m no Oeste fica condicionado a dia e preia-mar.",
+        "Em mares vivas no Este, usar reponto."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; ajustar por LOA, calado, vento/corrente e se o navio esta carregado ou vazio."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "tms1",
+      "name": "Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)",
+      "document": "IT-005_TMS1.txt",
+      "aliases": ["tms1", "tms 1", "terminal multiusos 1", "cais das fontainhas", "fontainhas"],
+      "category": "terminal multiusos com cais numerados 4 a 8",
+      "overview": "Zona 1 do Terminal Multiusos, tambem conhecida por Cais das Fontainhas. Abrange os cabecos 1 a 39 e os cais 4 a 8, com calados operacionais variaveis por zona.",
+      "dimensions": [
+        "Cabecos 1 a 39.",
+        "Cais numerados 4, 5, 6, 7 e 8."
+      ],
+      "vessel_limits": [
+        "A compatibilidade depende da zona/cabecos usados, nao apenas do nome TMS1."
+      ],
+      "draft_rules": [
+        "Cabecos 1 a 10: 8,8 m.",
+        "Cabecos 10 a 20: 9,8 m.",
+        "Cabecos 20 a 38: 10,0 m.",
+        "Navios com 12 m de calado so entre cabecos 17 e 28 e com afastadores/carochas."
+      ],
+      "maneuver_rules": [
+        "Separacao minima na rampa: 30 m em relacao ao navio a jusante.",
+        "No Cais 8, rebocador nao e obrigatorio, mas e fortemente recomendado em vazante de mares vivas quando o navio esta condicionado a atracar por estibordo."
+      ],
+      "night_rules": [
+        "O resumo do IT-005 nao isola uma regra noturna geral; validar por cais, calado e condicoes."
+      ],
+      "restrictions": [
+        "Calado varia por cabeco.",
+        "Uso de afastadores/carochas para casos de maior calado.",
+        "Cuidado no Cais 8 em vazante de mares vivas."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; no Cais 8 ha recomendacao forte em vazante de mares vivas quando a atracacao esta condicionada por bordo."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "tms2",
+      "name": "Terminal Multiusos 2 (TMS2 / Terminal de Contentores)",
+      "document": "IT-006_TMS2.txt",
+      "aliases": ["tms2", "tms 2", "terminal multiusos 2", "terminal de contentores", "multiusos 2"],
+      "category": "terminal multiusos continuo",
+      "overview": "Zona 2 do Terminal Multiusos, contigua ao TMS1 mas com regras proprias. E um espaco continuo de 723 m entre os cabecos 40 e 63.",
+      "dimensions": [
+        "Cabecos 40 a 63.",
+        "Comprimento total: 723 m.",
+        "Sem subdivisao em cais numerados distintos."
+      ],
+      "vessel_limits": [
+        "Pode receber mais do que um navio se a soma dos comprimentos e intervalos regulamentares couber nos 723 m."
+      ],
+      "draft_rules": [
+        "Calado maximo admitido: 12 m, aplicado de forma uniforme ao terminal."
+      ],
+      "maneuver_rules": [
+        "Cada navio precisa de intervalo minimo de 10% do seu proprio comprimento para cada lado.",
+        "Para varios navios, calcular espaco total ocupado e confirmar compatibilidade."
+      ],
+      "night_rules": [
+        "O resumo do IT-006 nao isola uma proibicao noturna geral; validar pelas restantes condicionantes."
+      ],
+      "restrictions": [
+        "Regra de separacao de 10% do comprimento para cada lado.",
+        "Calado maximo 12 m.",
+        "Nao confundir TMS2 com Terminal Multiusos Sul/Norte; usar TMS2 / Terminal de Contentores."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; ajustar pela ocupacao do cais, vento, corrente e tipo de navio."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "teporset",
+      "name": "TEPORSET",
+      "document": "IT-062_Teporset.txt",
+      "aliases": ["teporset", "tepor set", "terminal portuario de setubal", "cais da teporset"],
+      "category": "terminal portuario dedicado",
+      "overview": "Terminal Portuario de Setubal com regras de comprimento de referencia e calado calculado pela altura da preia-mar prevista.",
+      "dimensions": [
+        "Cais fisico: 164 m.",
+        "Comprimento maximo de referencia do navio: 200 m."
+      ],
+      "vessel_limits": [
+        "O cais fisico de 164 m nao deve ser lido isoladamente; a referencia operacional de navio e 200 m de LOA."
+      ],
+      "draft_rules": [
+        "Calado maximo = 7,4 m + altura da preia-mar prevista para o dia.",
+        "Teto absoluto: 11,0 m.",
+        "Calado minimo praticavel: 7,4 m."
+      ],
+      "maneuver_rules": [
+        "Quando o calado depende da altura de agua, planear proximo da preia-mar aplicavel."
+      ],
+      "night_rules": [
+        "O resumo do IT-062 nao destaca proibicao noturna autonoma; validar pelas restantes condicionantes."
+      ],
+      "restrictions": [
+        "LOA de referencia 200 m.",
+        "Calado condicionado pela preia-mar e teto de 11,0 m."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016; confirmar DWT, carga, estado carregado/vazio e thrusters."
+      ],
+      "validation": "Piloto Coordenador"
+    }
+  ]
+}

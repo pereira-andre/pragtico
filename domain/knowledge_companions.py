@@ -54,7 +54,7 @@ PORTUGUESE_STOPWORDS = {
     "vai",
 }
 SUMMARY_REQUEST_RE = re.compile(
-    r"\b(o que diz|o que me podes dizer|o que podes dizer|fala me|fala-me|resume|resumo|sumario|sumário|"
+    r"\b(o que diz|o que sabes|que sabes|o que conheces|o que me podes dizer|o que podes dizer|fala me|fala-me|resume|resumo|sumario|sumário|"
     r"explica|diz me|diz-me|da me|dá me|da-me|dá-me|"
     r"detalhes|mais detalhes|informacao|informação|informacoes|informações|visao geral|visão geral|"
     r"termos gerais|em geral|quais sao|quais são|qual e a regra|qual é a regra|"
@@ -118,16 +118,20 @@ RULE_OR_RESTRICTION_TERMS = {
     "restricoes",
 }
 OVERVIEW_TERMS = {
+    "conheces",
     "detalhe",
     "detalhes",
     "dizer",
     "explica",
+    "fala",
     "gerais",
     "geral",
     "informacao",
     "informacoes",
     "resumo",
+    "sabes",
     "sumario",
+    "termos",
     "visao",
 }
 SCALAR_FACT_TERMS = (
@@ -702,6 +706,21 @@ def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) 
     asks_overview = bool(question_tokens & OVERVIEW_TERMS)
     asks_specific_scalar_fact = bool(question_tokens & SCALAR_FACT_TERMS)
     candidate_has_rules_or_restrictions = bool(candidate_tokens & RULE_OR_RESTRICTION_TERMS)
+    candidate_has_overview = bool(candidate_tokens & OVERVIEW_TERMS)
+    if (
+        asks_overview
+        and not asks_rules_or_restrictions
+        and not asks_specific_scalar_fact
+        and not candidate_has_overview
+    ):
+        return True
+    if (
+        asks_rules_or_restrictions
+        and not asks_specific_scalar_fact
+        and not candidate_has_rules_or_restrictions
+        and _is_brief_direct_answer(item.get("answer"))
+    ):
+        return True
     if (
         (asks_overview or (asks_rules_or_restrictions and not asks_specific_scalar_fact))
         and not candidate_has_rules_or_restrictions
@@ -777,7 +796,11 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
 
 def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict | None:
     scored_matches = []
+    question_tokens = _tokenize(question)
+    explicit_scope_tokens = question_tokens & SPECIFIC_FACILITY_SCOPE_TERMS
     for companion in list_document_companions(knowledge_dir):
+        if explicit_scope_tokens and not _companion_alias_matches_question(question, companion):
+            continue
         faq_match = find_best_companion_faq(question, companion)
         if faq_match:
             scored_matches.append(
@@ -803,6 +826,32 @@ def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict 
         "companion": companion,
         "faq_match": best_match["faq_match"],
     }
+
+
+def _companion_alias_matches_question(question: str, companion: dict) -> bool:
+    normalized_question = _normalize_text(question)
+    compact_question = re.sub(r"[^a-z0-9]+", "", normalized_question)
+    question_tokens = _tokenize(question)
+    for alias in companion.get("aliases", []) or []:
+        alias_normalized = _normalize_text(alias)
+        if not alias_normalized:
+            continue
+        alias_tokens = _tokenize(alias_normalized)
+        signal_tokens = {
+            token
+            for token in alias_tokens
+            if token not in LOW_SIGNAL_MATCH_TOKENS and not token.isdigit()
+        }
+        if not signal_tokens:
+            continue
+        if alias_normalized in normalized_question:
+            return True
+        alias_compact = re.sub(r"[^a-z0-9]+", "", alias_normalized)
+        if alias_compact and len(alias_compact) >= 4 and alias_compact in compact_question:
+            return True
+        if question_tokens & signal_tokens:
+            return True
+    return False
 
 
 def build_companion_sources(companion: dict, question: str) -> list[dict]:

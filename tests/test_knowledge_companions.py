@@ -119,6 +119,35 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertTrue(boolean_rule.startswith("Neste caso, a resposta é: Não."))
         self.assertNotIn("O valor a reter é Não", boolean_rule)
 
+    def test_overview_questions_do_not_collapse_to_short_scalar_faqs(self) -> None:
+        cases = [
+            ("IT-008_EcoOil.txt", "Fala me do cais da Eco-oil em termos gerais", "Terminal da ECO-OIL"),
+            ("IT-012_PraiasSado.txt", "O que sabes sobre o cais das Praias do Sado?", "Terminal Praias do Sado"),
+            ("IT-038_Alstom.txt", "O que sabes sobre o cais da alstom?", "Cais da ALSTOM"),
+            ("IT-029_SAPEC.txt", "O que sabes sobre o cais da SAPEC?", "dois terminais da SAPEC"),
+        ]
+
+        for document_name, question, expected_text in cases:
+            with self.subTest(document=document_name):
+                companion = load_document_companion(document_name, KNOWLEDGE_DIR)
+                self.assertIsNotNone(companion)
+
+                answer = build_companion_answer(question, companion)
+
+                self.assertIn(expected_text, answer)
+                self.assertFalse(answer.startswith("A resposta direta:"))
+                self.assertFalse(answer.startswith("O valor a reter é"))
+
+    def test_global_companion_does_not_match_generic_teporset_faq_when_specific_cais_is_named(self) -> None:
+        from domain.knowledge_companions import find_best_global_companion_match
+
+        answer = find_best_global_companion_match(
+            "Fala me do cais da Secil em termos gerais",
+            KNOWLEDGE_DIR,
+        )
+
+        self.assertIsNone(answer)
+
     def test_it014_companion_answers_generic_lisnave_night_length_question(self) -> None:
         companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)

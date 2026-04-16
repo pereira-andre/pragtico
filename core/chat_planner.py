@@ -25,6 +25,17 @@ WAVE_QUERY_RE = re.compile(
 WARNING_QUERY_RE = re.compile(
     r"\b(aviso local|avisos locais|avisos em vigor|avisos da capitania|anav|capitania|avisos?)\b"
 )
+OPERATION_TIME_RE = re.compile(
+    r"\b(?:as|às|para as|para às|para|pelas)\s*\d{1,2}[:h]\d{2}\b"
+    r"|\b\d{1,2}[:h]\d{2}\b"
+    r"|\b(?:hoje|amanha|amanhã|depois de amanha|depois de amanhã)\b"
+    r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b",
+    flags=re.IGNORECASE,
+)
+OPERATION_SCHEDULING_RE = re.compile(
+    r"\b(marc\w*|agend\w*|program\w*|plane\w*|manobra|entrada|saida|saída|sair|"
+    r"atracar|desatracar|atracacao|atracação|desatracacao|desatracação)\b"
+)
 DOCUMENT_QUERY_RE = re.compile(
     r"\b(regra|regras|documento|doc|instrucao|instrução|norma|normas|procedimento|procedimentos|"
     r"o que diz|segundo o|segundo a|it[\s\-_]?\d{1,3})\b"
@@ -136,6 +147,12 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
         live_facets.append("waves")
     if WARNING_QUERY_RE.search(clean_question):
         live_facets.append("warnings")
+    if (
+        "tides" not in live_facets
+        and OPERATION_TIME_RE.search(raw_question)
+        and OPERATION_SCHEDULING_RE.search(clean_question)
+    ):
+        live_facets.append("tides")
 
     weather_mode = "context"
     if "weather" in live_facets:
@@ -189,7 +206,7 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
         or wants_port_facility_inventory
     )
     has_follow_up_reference = bool(FOLLOW_UP_REFERENCE_RE.search(clean_question))
-    needs_history_state = requires_live_reasoning or has_follow_up_reference
+    needs_history_state = requires_live_reasoning or has_follow_up_reference or wants_tug_recommendation
     needs_answer_critic = (
         requires_live_reasoning
         or wants_tug_recommendation

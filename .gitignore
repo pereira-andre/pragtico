@@ -19,6 +19,7 @@ data/
 knowledge/*
 !knowledge/.gitkeep
 !knowledge/*.txt
+!knowledge/berth_profiles.json
 !knowledge/practice_maneuver_experience.json
 !knowledge/companions/
 !knowledge/companions/*.json
