@@ -73,6 +73,7 @@ from domain.lisnave_rules import (
     lisnave_rule_snippet,
     should_include_lisnave_rule_source,
 )
+from domain.tug_guidance import build_tug_operational_guidance_source
 from domain.migration_service import get_database_runtime_status
 from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
 from core.validators import normalize_thruster_state, validate_not_past_datetime
@@ -1334,6 +1335,14 @@ def build_operational_chat_sources(question: str) -> list[dict]:
     lisnave_rule_source = build_lisnave_operational_rule_source(question)
     if lisnave_rule_source:
         sources.append(lisnave_rule_source)
+    knowledge_dir = (
+        getattr(getattr(services, "store", None), "knowledge_dir", "")
+        or getattr(services, "KNOWLEDGE_DIR", "")
+        or ""
+    )
+    tug_guidance_source = build_tug_operational_guidance_source(question, knowledge_dir)
+    if tug_guidance_source:
+        sources.append(tug_guidance_source)
     maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
     if maneuver_case_source:
         sources.append(maneuver_case_source)

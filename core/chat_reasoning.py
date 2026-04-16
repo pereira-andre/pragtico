@@ -10,11 +10,20 @@ from core.chat_planner import ChatExecutionPlan, normalize_planner_text
 VESSEL_TYPE_LABELS = {
     "roro": "Ro-Ro",
     "ro ro": "Ro-Ro",
+    "ro/ro": "Ro-Ro",
+    "contentores grande": "Contentores grande",
+    "porta contentores grande": "Contentores grande",
+    "container grande": "Contentores grande",
     "contentores": "Contentores",
     "container": "Contentores",
     "tanque": "Tanque",
-    "graneis": "Granéis",
     "graneis solidos": "Granéis sólidos",
+    "graneis": "Granéis",
+    "graneleiro": "Graneleiro",
+    "bulk": "Graneleiro",
+    "reefer": "Reefer",
+    "reefers": "Reefer",
+    "estilha": "Estilha",
     "passageiros": "Passageiros",
 }
 
@@ -23,21 +32,44 @@ LOA_RE = re.compile(
     flags=re.IGNORECASE,
 )
 BARE_LOA_RE = re.compile(
-    r"\b(?:navio|roro|ro\s*ro|ro-ro|loa|comprimento)\b[^\n.;,]{0,60}?\b(\d{2,3}(?:[.,]\d+)?)\s*m\b",
+    r"\b(?:navio|roro|ro\s*ro|ro-ro|ro/ro|loa|comprimento)\b[^\n.;,]{0,80}?\b(\d{2,3}(?:[.,]\d+)?)\s*m\b",
     flags=re.IGNORECASE,
 )
 DRAFT_RE = re.compile(
     r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?calado\b",
     flags=re.IGNORECASE,
 )
+BEAM_RE = re.compile(
+    r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:boca|beam)\b",
+    flags=re.IGNORECASE,
+)
 TUG_RE = re.compile(
     r"\b(\d+)\s*(?:reboques|rebocadores|rebocador|reboque)\b",
+    flags=re.IGNORECASE,
+)
+NO_BOW_RE = re.compile(
+    r"\b(?:sem|s/?|nao tem|não tem|avariado|inoperacional)\s+"
+    r"(?:bow\s*thruster|bowthruster|h[eé]lice de proa|hpr)\b",
+    flags=re.IGNORECASE,
+)
+HAS_BOW_RE = re.compile(
+    r"\b(?:com|tem)\s+(?:bow\s*thruster|bowthruster|h[eé]lice de proa|hpr)\b",
     flags=re.IGNORECASE,
 )
 THRUSTER_RE = re.compile(
     r"\b(bow thruster|stern thruster|thruster(?:s)?)\b",
     flags=re.IGNORECASE,
 )
+WIND_PATTERNS = (
+    (re.compile(r"\b(?:vento\s*)?(?:sw|sudoeste)\b", flags=re.IGNORECASE), "vento SW / sudoeste"),
+    (re.compile(r"\b(?:vento\s*s\b|sul)\b", flags=re.IGNORECASE), "vento Sul"),
+    (re.compile(r"\b(?:vento\s*n\b|norte)\b", flags=re.IGNORECASE), "vento Norte"),
+    (re.compile(r"\b(?:vento\s*w\b|oeste)\b", flags=re.IGNORECASE), "vento Oeste"),
+    (re.compile(r"\b(?:vento\s*e\b|este|leste)\b", flags=re.IGNORECASE), "vento Este"),
+    (re.compile(r"\b(?:nevoeiro|nevoa|névoa)\b", flags=re.IGNORECASE), "nevoeiro"),
+)
+PROPELLER_RE = re.compile(r"\bpasso\s+(direito|esquerdo)\b", flags=re.IGNORECASE)
+BERTHING_SIDE_RE = re.compile(r"\b(?:por|a|ao)\s+(estibordo|bombordo)\b", flags=re.IGNORECASE)
 TIME_RE = re.compile(
     r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}[:h]\d{2})\b"
     r"|\b(\d{1,2}[:h]\d{2})\b",
@@ -121,6 +153,11 @@ def _extract_message_facts(content: str) -> list[str]:
             facts.append(f"Tipo de navio: {label}.")
             break
 
+    for pattern, label in WIND_PATTERNS:
+        if pattern.search(content or ""):
+            facts.append(f"Condição meteo referida: {label}.")
+            break
+
     loa_match = LOA_RE.search(content or "")
     if loa_match:
         facts.append(f"LOA / comprimento: {_clean_numeric(loa_match.group(1))} m.")
@@ -133,6 +170,10 @@ def _extract_message_facts(content: str) -> list[str]:
     if draft_match:
         facts.append(f"Calado: {_clean_numeric(draft_match.group(1))} m.")
 
+    beam_match = BEAM_RE.search(content or "")
+    if beam_match:
+        facts.append(f"Boca: {_clean_numeric(beam_match.group(1))} m.")
+
     tug_match = TUG_RE.search(content or "")
     if tug_match:
         count = tug_match.group(1)
@@ -140,8 +181,20 @@ def _extract_message_facts(content: str) -> list[str]:
     elif re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", content or "", flags=re.IGNORECASE):
         facts.append("Pedido de recomendação/necessidade de rebocadores.")
 
-    if THRUSTER_RE.search(content or ""):
+    if NO_BOW_RE.search(content or ""):
+        facts.append("Bowthruster ausente/inoperacional.")
+    elif HAS_BOW_RE.search(content or ""):
+        facts.append("Bowthruster disponível.")
+    elif THRUSTER_RE.search(content or ""):
         facts.append("Há referência explícita a thrusters do navio.")
+
+    propeller_match = PROPELLER_RE.search(content or "")
+    if propeller_match:
+        facts.append(f"Passo do hélice: {propeller_match.group(1).lower()}.")
+
+    berthing_side_match = BERTHING_SIDE_RE.search(content or "")
+    if berthing_side_match:
+        facts.append(f"Bordo de atracação: {berthing_side_match.group(1).lower()}.")
 
     time_match = TIME_RE.search(content or "")
     if time_match:

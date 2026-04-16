@@ -443,6 +443,12 @@ class OperationalFlowTests(unittest.TestCase):
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return path
 
+    def _copy_tug_guidance(self) -> Path:
+        source = Path(__file__).resolve().parents[1] / "knowledge" / "tug_operational_guidance.json"
+        target = Path(self.store.knowledge_dir) / "tug_operational_guidance.json"
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        return target
+
     def test_complete_entry_with_real_times_only_confirms_maneuver(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
         self.store.approve_port_call(port_call["id"], decided_by="admin")
@@ -710,6 +716,20 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("mínimo 4 rebocadores", rule_sources[0]["snippet"])
         self.assertIn("Hidrolift", rule_sources[0]["snippet"])
         self.assertIn("proa a norte", rule_sources[0]["snippet"])
+
+    def test_tug_guidance_source_is_added_for_tug_decision_questions(self) -> None:
+        self._copy_tug_guidance()
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            sources = build_operational_chat_sources(
+                "Quantos reboques para entrada de RORO de 180m com vento norte?"
+            )
+
+        tug_sources = [item for item in sources if item.get("retrieval_mode") == "operational_tug_guidance"]
+        self.assertTrue(tug_sources)
+        self.assertIn("Ro-Ro com vento Norte a entrar: 3 rebocadores", tug_sources[0]["snippet"])
+        self.assertIn("IT-016 confirma/agrava", tug_sources[0]["snippet"])
 
     def test_operational_chat_sources_include_casebook_when_scale_is_identified(self) -> None:
         historical = self._create_entry(notes="Entrada histórica", eta="2026-03-19T05:30:00+00:00")
@@ -2537,6 +2557,7 @@ class OperationalFlowTests(unittest.TestCase):
                 ],
             },
         )
+        self._copy_tug_guidance()
         self.store.list_documents()
 
         with patch.object(services, "weather_service", _StubWeatherService()):
@@ -2577,7 +2598,9 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(execution_plan["needs_answer_critic"])
         self.assertIn("Meteorologia live", documents)
         self.assertIn(document_name, documents)
+        self.assertIn("tug_operational_guidance.json", documents)
         self.assertIn("live_planner", retrieval_modes)
+        self.assertIn("operational_tug_guidance", retrieval_modes)
         self.assertIn("document_target", retrieval_modes)
         self.assertIn("document_companion", retrieval_modes)
         self.assertIn("Ro-Ro", conversation_state["summary"])

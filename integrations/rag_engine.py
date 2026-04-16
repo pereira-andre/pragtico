@@ -1273,6 +1273,7 @@ Regras:
 - As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
 - Fontes com modo `document_companion` são factos curados pelo admin; usa-as como balizas fortes, mas não as copies como resposta pronta.
 - Fontes com modo `berth_profile` são perfis estruturados de cais/terminal; usa-as para normalizar dimensões, calados, janelas de manobra, restrições e orientação de rebocadores antes de sintetizar.
+- Fontes com modo `operational_tug_guidance` são regra prática operacional para rebocadores; usa-as como baseline da recomendação. A IT-016 confirma ou agrava mínimos legais/DWT/carga perigosa, mas não deve reduzir essa regra prática.
 - Fontes com modo `message_analysis` separam mensagens compostas em contexto e perguntas; responde a cada pergunta explícita e usa os factos declarativos como premissas.
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte de factos e decisão, mas reformula-a no contexto atual.
 - Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.
@@ -1298,7 +1299,7 @@ Regras:
 - Quando o plano interno indicar `live_reasoning`, usa os dados live como evidência para responder a uma decisão operacional.
 - Em perguntas de avaliação ou suficiência, começa pela conclusão prática e só depois justifica.
 - Não respondas a uma pergunta de avaliação com um dump de meteorologia, marés, ondulação ou avisos sem concluir algo operacional.
-- Quando a pergunta pedir quantidade/recomendação de reboques/rebocadores, usa a IT-016 e o contexto live/histórico disponível para fechar a recomendação.
+- Quando a pergunta pedir quantidade/recomendação de reboques/rebocadores, usa primeiro a fonte `operational_tug_guidance` como baseline, cruza com histórico/live e usa a IT-016 para confirmar ou agravar mínimos legais, DWT, carga perigosa, estado carregado/vazio e thrusters.
 - Se faltarem dados críticos para rebocadores (DWT, carga perigosa, carregado/vazio, bow/stern thruster), não inventes; dá a recomendação condicionada por cenários claros e diz exatamente o que falta confirmar.
 - Se a pergunta juntar vento/marés/ondulação live com "quantos", "recomendas", "aconselhas" ou "suficiente", trata o live feed como input da decisão e não como resposta final.
 

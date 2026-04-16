@@ -44,6 +44,25 @@ class ChatReasoningTests(unittest.TestCase):
         self.assertIn("Hora planeada/referida: 23:00", state["summary"])
         self.assertIn("rebocadores", state["summary"])
 
+    def test_compound_message_analysis_extracts_tug_risk_facts(self) -> None:
+        question = (
+            "Vai entrar um RORO de 180m e 26m de boca, sem bowthruster, "
+            "com vento SW, passo direito por estibordo. "
+            "Quantos reboques aconselhas?"
+        )
+
+        source = build_compound_message_analysis_source(question)
+
+        self.assertIsNotNone(source)
+        snippet = source["snippet"]
+        self.assertIn("Tipo de navio: Ro-Ro", snippet)
+        self.assertIn("Condição meteo referida: vento SW / sudoeste", snippet)
+        self.assertIn("LOA / comprimento: 180 m", snippet)
+        self.assertIn("Boca: 26 m", snippet)
+        self.assertIn("Bowthruster ausente/inoperacional", snippet)
+        self.assertIn("Passo do hélice: direito", snippet)
+        self.assertIn("Bordo de atracação: estibordo", snippet)
+
 
 if __name__ == "__main__":
     unittest.main()
