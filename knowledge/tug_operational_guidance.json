@@ -9,7 +9,8 @@
     "Navios pequenos ate 120 m usam normalmente rebocadores pequenos. Acima disso, assumir rebocadores grandes salvo indicacao operacional em contrario."
   ],
   "weather_rules": [
-    "Quando fica nevoeiro, assumir risco de vir vento SW forte.",
+    "Quando ha nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada. Alem disso, assumir risco de vir vento SW forte.",
+    "Com vento sustentado ou rajada superior a 30 kt, todas as manobras ficam suspensas por seguranca; depois de suspensao por vento, retomar apenas quando estiver abaixo de 25 kt.",
     "Vento SW forte e o vento mais perigoso: empurra os navios para o cais com forca, pode impedir a saida mesmo com rebocadores e pode gerar cerca de 1 m de ondulacao dentro do porto.",
     "Outra situacao perigosa: vento Norte forte ao atracar com mares vivas pela popa, sobretudo se o bordo de atracacao nao condiz com o passo do helice do navio. Exemplo: navio de passo direito a atracar por estibordo, ou o inverso.",
     "Vento W atua como vento S fraco. Vento E atua como vento N fraco. Se o vento rondar para N ou S, tratar como aumento de risco nessa componente."

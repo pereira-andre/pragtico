@@ -64,6 +64,16 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertTrue(plan.needs_answer_critic)
         self.assertFalse(plan.should_answer_directly)
 
+    def test_fog_suspension_question_uses_current_weather_reasoning(self) -> None:
+        plan = build_chat_execution_plan("Há nevoeiro agora no porto, as manobras estão suspensas?")
+
+        self.assertEqual(plan.primary_intent, "live_reasoning")
+        self.assertEqual(plan.live_facets, ("weather",))
+        self.assertEqual(plan.weather_mode, "current")
+        self.assertTrue(plan.requires_live_reasoning)
+        self.assertTrue(plan.requires_llm_synthesis)
+        self.assertFalse(plan.should_answer_directly)
+
     def test_live_operational_decision_variants_use_reasoning(self) -> None:
         questions = [
             ("Com esta ondulação achas seguro sair com um navio Ro-Ro?", ("waves",)),

@@ -8,7 +8,8 @@ import unicodedata
 
 TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-mar)\b")
 WEATHER_QUERY_RE = re.compile(
-    r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|humidade|temperatura|chuva)\b"
+    r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|"
+    r"nevoeiro|nevoa|névoa|neblina|fog|mist|humidade|temperatura|chuva)\b"
 )
 CURRENT_WEATHER_RE = re.compile(
     r"\b(atual|atuais|atualmente|actualmente|agora|neste momento|corrente|correntes|hoje)\b"
@@ -74,12 +75,12 @@ LIVE_REASONING_RE = re.compile(
     r"precis\w*|necessari\w*|convem|marc\w*|embarc\w*|traz\w*|autor\w*|aprov\w*|"
     r"permit\w*|viavel|aceitavel|suficient\w*|bast\w*|cheg\w*|ach\w*|"
     r"segur\w*|risco\w*|arrisc\w*|condicion\w*|limit\w*|imped\w*|"
-    r"cancel\w*|abort\w*|adi\w*)\b"
+    r"suspens\w*|suspend\w*|cancel\w*|abort\w*|adi\w*)\b"
     r"|"
     r"\b(da para|faz sentido|vale a pena|e melhor|melhor opcao|melhor opção)\b"
 )
 OPERATIONAL_DECISION_RE = re.compile(
-    r"\b(piloto|manobra|navio|entrada|saida|saída|sair|atracar|desatracar|doca|lisnave|cais|"
+    r"\b(piloto|manobra|manobras|navio|navios|entrada|saida|saída|sair|atracar|desatracar|doca|lisnave|cais|"
     r"barra|fundeadouro|fundeadouros|reboque|reboques|rebocador|rebocadores|"
     r"thruster|calado|loa|roro|ro ro|ro-ro)\b"
 )

@@ -23,11 +23,15 @@ Acima dos limites praticáveis: superior a 25 nós — as manobras podem não se
                   Piloto em conjunto com o Comandante, conforme o IT-018,
                   Artigo 3 (condicionante de vento > 20 nós para navios de
                   grande superfície vélica).
+Suspensão operacional: vento sustentado ou rajada superior a 30 nós — todas as
+                  manobras ficam suspensas por segurança. Depois de acionada a
+                  suspensão por vento, a retoma só deve ocorrer quando o vento
+                  baixar para menos de 25 nós.
 
 NOTA: Os valores indicados são referências operacionais práticas. O limite
 formal do IT-018 para avaliação obrigatória é 20 nós. A partir dos 25 nós
-a operação torna-se geralmente inviável, mas a decisão final é sempre do Piloto
-e do Comandante em conjunto.
+a operação torna-se geralmente inviável; acima de 30 nós aplica-se suspensão
+operacional. A retoma após suspensão por vento exige vento abaixo de 25 nós.
 
 ================================================================================
 DEFINIÇÃO OPERACIONAL DE MARÉS VIVAS
@@ -202,7 +206,9 @@ RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
 Pergunta: A partir de que velocidade de vento as manobras ficam condicionadas?
 Resposta: A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das
 manobras, especialmente para navios de grande superfície vélica. Acima de 25
-nós as manobras são geralmente impraticáveis.
+nós as manobras são geralmente impraticáveis. Com vento superior a 30 nós, as
+manobras ficam suspensas por segurança; depois de acionada essa suspensão, só
+se retoma quando o vento baixar abaixo de 25 nós.
 
 Pergunta: Quando se considera maré viva no Porto de Setúbal?
 Resposta: Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.

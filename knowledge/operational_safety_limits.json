@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "title": "Limites operacionais de seguranca por meteorologia",
+  "status": "operational_safety_rule",
+  "rules": [
+    {
+      "id": "fog_suspension",
+      "condition": "nevoeiro em porto ou visibilidade operacional nao restaurada",
+      "decision": "suspend_all_maneuvers",
+      "note": "Com nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada."
+    },
+    {
+      "id": "wind_suspension",
+      "condition": "vento sustentado ou rajada superior a 30 kt",
+      "decision": "suspend_all_maneuvers",
+      "note": "Com vento superior a 30 kt, todas as manobras ficam suspensas por seguranca."
+    },
+    {
+      "id": "wind_resume_hysteresis",
+      "condition": "retoma apos suspensao por vento",
+      "decision": "resume_only_below_25_kt",
+      "note": "Depois de suspensao por vento, as manobras so devem retomar quando o vento estiver abaixo de 25 kt."
+    }
+  ],
+  "thresholds": {
+    "wind_suspend_above_kts": 30,
+    "wind_resume_below_kts": 25,
+    "fog_visibility_km_reference": 1.0
+  },
+  "fog_terms": [
+    "nevoeiro",
+    "nevoa",
+    "neblina",
+    "fog",
+    "mist"
+  ],
+  "response_guidance": [
+    "Se houver nevoeiro, comecar pela conclusao: manobras suspensas ate visibilidade restaurada.",
+    "Se vento ou rajada for superior a 30 kt, comecar pela conclusao: manobras suspensas.",
+    "Se a suspensao por vento ja tiver sido acionada, nao considerar retoma operacional ate vento abaixo de 25 kt.",
+    "Estas regras aplicam-se a todas as manobras, independentemente do cais, tipo de navio ou numero de rebocadores."
+  ]
+}

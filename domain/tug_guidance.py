@@ -263,7 +263,7 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
             lines.append(f"- {item}")
 
     lines.append("Regras meteorologicas criticas:")
-    for item in (guidance.get("weather_rules") or [])[:4]:
+    for item in guidance.get("weather_rules") or []:
         lines.append(f"- {item}")
 
     lines.append("Regras gerais a manter:")

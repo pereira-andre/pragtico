@@ -73,6 +73,10 @@ from domain.lisnave_rules import (
     lisnave_rule_snippet,
     should_include_lisnave_rule_source,
 )
+from domain.operational_safety import (
+    build_operational_safety_source,
+    build_weather_safety_status_lines,
+)
 from domain.tug_guidance import build_tug_operational_guidance_source
 from domain.migration_service import get_database_runtime_status
 from core.reindex_scheduler import DeferredTaskScheduler, next_provider_quota_reset_utc
@@ -108,6 +112,15 @@ RULE_CODE_TITLES = {
     "042": "IT-042 Recomendações Navios Canal Norte",
     "062": "IT-062 Cais da Teporset",
 }
+
+
+def _active_knowledge_dir() -> str:
+    return (
+        getattr(getattr(services, "store", None), "knowledge_dir", "")
+        or getattr(services, "KNOWLEDGE_DIR", "")
+        or ""
+    )
+
 
 def available_rule_code_titles() -> dict[str, str]:
     """Return the rule-code map limited to documents actually present in the knowledge base."""
@@ -1335,11 +1348,10 @@ def build_operational_chat_sources(question: str) -> list[dict]:
     lisnave_rule_source = build_lisnave_operational_rule_source(question)
     if lisnave_rule_source:
         sources.append(lisnave_rule_source)
-    knowledge_dir = (
-        getattr(getattr(services, "store", None), "knowledge_dir", "")
-        or getattr(services, "KNOWLEDGE_DIR", "")
-        or ""
-    )
+    knowledge_dir = _active_knowledge_dir()
+    safety_source = build_operational_safety_source(question, knowledge_dir)
+    if safety_source:
+        sources.append(safety_source)
     tug_guidance_source = build_tug_operational_guidance_source(question, knowledge_dir)
     if tug_guidance_source:
         sources.append(tug_guidance_source)
@@ -1463,6 +1475,14 @@ def _build_weather_lookup_answer(
 
     location = forecast.get("location", {})
     current = forecast.get("current", {})
+    knowledge_dir = _active_knowledge_dir()
+    safety_source = build_operational_safety_source(
+        question,
+        knowledge_dir,
+        forecast=forecast,
+        force=True,
+    )
+    safety_sources = [safety_source] if safety_source else []
     weather_mode = (plan.weather_mode if plan else "").strip().lower() or "context"
     timeline_answer = _build_weather_timeline_answer(
         question,
@@ -1472,7 +1492,7 @@ def _build_weather_lookup_answer(
     )
     if timeline_answer:
         text, sources = timeline_answer
-        return text, sources
+        return text, sources + safety_sources
     if weather_mode == "current" or CURRENT_WEATHER_RE.search(clean_question):
         lines = [
             f"Condições meteorológicas atuais em {location.get('name', 'Setúbal')} ({location.get('localtime', '--')}):",
@@ -1484,13 +1504,17 @@ def _build_weather_lookup_answer(
             f"- Visibilidade: {current.get('vis_km', '--')} km",
             f"- Precipitação: {current.get('precip_mm', '--')} mm",
         ]
+        safety_status_lines = build_weather_safety_status_lines(forecast, knowledge_dir)
+        if safety_status_lines:
+            lines.append("")
+            lines.extend(safety_status_lines)
         context = weather_service.context_source()
-        sources = [context] if context else []
+        sources = ([context] if context else []) + safety_sources
         return "\n".join(lines), sources
 
     context = weather_service.context_for_question(question)
     if context:
-        return context.get("text") or context.get("snippet", ""), [context]
+        return context.get("text") or context.get("snippet", ""), [context] + safety_sources
     return "Não consegui obter a previsão meteorológica pedida.", []
 
 

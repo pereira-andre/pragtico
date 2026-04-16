@@ -230,6 +230,16 @@ class _StubWeatherService:
         return []
 
 
+class _StubHazardWeatherService(_StubWeatherService):
+    def __init__(self, current: dict) -> None:
+        self._current = current
+
+    def get_forecast(self, days: int = 3):
+        forecast = super().get_forecast(days=days)
+        forecast["current"].update(self._current)
+        return forecast
+
+
 class _StubWhatsAppService:
     def __init__(
         self,
@@ -446,6 +456,12 @@ class OperationalFlowTests(unittest.TestCase):
     def _copy_tug_guidance(self) -> Path:
         source = Path(__file__).resolve().parents[1] / "knowledge" / "tug_operational_guidance.json"
         target = Path(self.store.knowledge_dir) / "tug_operational_guidance.json"
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        return target
+
+    def _copy_safety_limits(self) -> Path:
+        source = Path(__file__).resolve().parents[1] / "knowledge" / "operational_safety_limits.json"
+        target = Path(self.store.knowledge_dir) / "operational_safety_limits.json"
         target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
         return target
 
@@ -1535,6 +1551,67 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
         answer_mock.assert_not_called()
 
+    def test_chat_current_weather_reports_fog_suspension(self) -> None:
+        self._copy_safety_limits()
+
+        weather_service = _StubHazardWeatherService(
+            {
+                "condition": "Nevoeiro",
+                "wind_kts": 8.0,
+                "gust_kts": 10.0,
+                "vis_km": 0.7,
+            }
+        )
+        with patch.object(services, "weather_service", weather_service):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={"question": "Qual é a visibilidade atual no porto?"},
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Manobras suspensas neste momento", payload["answer"])
+        self.assertIn("visibilidade restaurada", payload["answer"])
+        answer_mock.assert_not_called()
+
+    def test_chat_current_weather_reports_wind_suspension_above_30_kts(self) -> None:
+        self._copy_safety_limits()
+
+        weather_service = _StubHazardWeatherService(
+            {
+                "condition": "Céu limpo",
+                "wind_kts": 31.0,
+                "gust_kts": 34.0,
+                "vis_km": 10,
+            }
+        )
+        with patch.object(services, "weather_service", weather_service):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={"question": "Qual é o vento atual no porto?"},
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Manobras suspensas neste momento", payload["answer"])
+        self.assertIn("superior a 30", payload["answer"])
+        self.assertIn("abaixo de 25", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_weather_timeline_without_current_marker_uses_forecast_horizon(self) -> None:
         with patch.object(services, "weather_service", _StubWeatherService()):
             with patch.object(services.rag, "answer") as answer_mock:
@@ -2558,6 +2635,7 @@ class OperationalFlowTests(unittest.TestCase):
             },
         )
         self._copy_tug_guidance()
+        self._copy_safety_limits()
         self.store.list_documents()
 
         with patch.object(services, "weather_service", _StubWeatherService()):
@@ -2598,8 +2676,10 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(execution_plan["needs_answer_critic"])
         self.assertIn("Meteorologia live", documents)
         self.assertIn(document_name, documents)
+        self.assertIn("operational_safety_limits.json", documents)
         self.assertIn("tug_operational_guidance.json", documents)
         self.assertIn("live_planner", retrieval_modes)
+        self.assertIn("operational_safety_limits", retrieval_modes)
         self.assertIn("operational_tug_guidance", retrieval_modes)
         self.assertIn("document_target", retrieval_modes)
         self.assertIn("document_companion", retrieval_modes)

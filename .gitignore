@@ -20,6 +20,7 @@ knowledge/*
 !knowledge/.gitkeep
 !knowledge/*.txt
 !knowledge/berth_profiles.json
+!knowledge/operational_safety_limits.json
 !knowledge/tug_operational_guidance.json
 !knowledge/practice_maneuver_experience.json
 !knowledge/companions/
