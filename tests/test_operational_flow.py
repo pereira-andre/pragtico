@@ -4154,6 +4154,8 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(response.get_json()["delivered"], 1)
         self.assertEqual(len(whatsapp_service.sent_messages), 1)
         self.assertIn("Comandos disponíveis", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("SOS", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("CANCELAR SOS", whatsapp_service.sent_messages[0]["text"])
         self.assertNotIn("#ERR-9001", whatsapp_service.sent_messages[0]["text"])
 
     def test_whatsapp_webhook_sends_welcome_only_once_per_contact(self) -> None:
