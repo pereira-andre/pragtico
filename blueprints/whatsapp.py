@@ -18,17 +18,25 @@ from core.event_report_runtime import (
 from domain.error_catalog import error_ref, log_error_event, user_error_message
 from domain.sos_alerts import (
     build_sos_admin_alert,
+    build_sos_admin_cancel_alert,
+    build_sos_cancelled_reply,
+    build_sos_dispatched_cancelled_reply,
     build_sos_disabled_reply,
     build_sos_event_id,
+    build_sos_expired_reply,
     build_sos_location_prompt,
+    build_sos_no_pending_cancel_reply,
     build_sos_no_pending_location_reply,
     build_sos_user_confirmation,
     configured_sos_numbers,
+    is_sos_cancel,
     is_sos_trigger,
     local_datetime_label,
     normalize_location,
     sos_admin_recipients,
     sos_alerts_enabled,
+    sos_last_event_key,
+    sos_pending_expired,
     sos_event_key,
     sos_pending_key,
     utc_now_iso,
@@ -111,6 +119,8 @@ def _send_sos_alerts(
     alert_text: str,
     recipients: list[dict],
     sos_event_id: str,
+    event_type: str = "outgoing_sos_alert",
+    message_kind: str = "sos_admin_alert",
 ) -> tuple[int, list[str]]:
     sent = 0
     failed: list[str] = []
@@ -129,7 +139,7 @@ def _send_sos_alerts(
                     channel_user_id=number,
                     external_reply_to_id="",
                     channel_metadata={
-                        "message_kind": "sos_admin_alert",
+                        "message_kind": message_kind,
                         "sos_event_id": sos_event_id,
                         "requester_message_id": requester_message_id,
                     },
@@ -142,14 +152,14 @@ def _send_sos_alerts(
                     content=alert_text,
                     to_number=number,
                     reply_to_message_id="",
-                    event_type="outgoing_sos_alert",
+                    event_type=event_type,
                 )
             else:
                 send_response = service.send_text_message(number, alert_text, reply_to_message_id="")
                 outbound_id = _extract_outbound_message_id(send_response)
                 services.store.record_channel_event(
                     channel="whatsapp",
-                    event_type="outgoing_sos_alert",
+                    event_type=event_type,
                     payload=send_response,
                     username=requester_username,
                     conversation_id=requester_conversation_id,
@@ -643,6 +653,21 @@ def whatsapp_webhook_receive():
                     delivered += 1
                     continue
 
+                if sos_pending_expired(pending_sos):
+                    _clear_pending_sos(from_number)
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=build_sos_expired_reply(),
+                        event_type="outgoing_sos_expired",
+                        metadata={"message_kind": "sos_expired"},
+                    )
+                    delivered += 1
+                    continue
+
                 created_at = utc_now_iso()
                 sos_event_id = str(pending_sos.get("event_id") or build_sos_event_id())
                 alert_payload = {
@@ -673,9 +698,18 @@ def whatsapp_webhook_receive():
                     sos_event_key(sos_event_id),
                     {
                         **alert_payload,
+                        "status": "alert_sent",
                         "recipient_count": len(recipients),
                         "sent_count": sent_count,
                         "failed": failed,
+                    },
+                )
+                services.store.set_runtime_state(
+                    sos_last_event_key(from_number),
+                    {
+                        "event_id": sos_event_id,
+                        "status": "alert_sent",
+                        "created_at": created_at,
                     },
                 )
                 _clear_pending_sos(from_number)
@@ -816,6 +850,125 @@ def whatsapp_webhook_receive():
             text = (event.get("text") or "").strip()
             if not text:
                 ignored += 1
+                continue
+
+            pending_sos = _load_pending_sos(from_number)
+            if is_sos_cancel(text, pending_sos=bool(pending_sos)):
+                last_sos_event = {}
+                if not pending_sos:
+                    last_sos_ref = services.store.get_runtime_state(sos_last_event_key(from_number)) or {}
+                    last_event_id = str(last_sos_ref.get("event_id") or "").strip()
+                    if last_event_id:
+                        candidate_event = services.store.get_runtime_state(sos_event_key(last_event_id)) or {}
+                        if (
+                            candidate_event
+                            and not candidate_event.get("cancelled_at")
+                            and not sos_pending_expired({"requested_at": candidate_event.get("created_at")})
+                        ):
+                            last_sos_event = candidate_event
+                conversation_id = str(pending_sos.get("conversation_id") or "").strip()
+                if not conversation_id and last_sos_event:
+                    conversation_id = str(last_sos_event.get("conversation_id") or "").strip()
+                if not conversation_id:
+                    conversation = services.store.ensure_conversation(username=profile["username"])
+                    conversation_id = conversation["id"]
+                sos_event_id = str(
+                    pending_sos.get("event_id") or last_sos_event.get("event_id") or ""
+                ).strip()
+                user_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation_id,
+                    role="user",
+                    content=text,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "sos_cancel",
+                        "sos_event_id": sos_event_id,
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_sos_cancel",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=conversation_id,
+                    local_message_id=user_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+                if pending_sos:
+                    _clear_pending_sos(from_number)
+                    reply_text = build_sos_cancelled_reply()
+                    event_type_reply = "outgoing_sos_cancelled"
+                    message_kind = "sos_cancelled"
+                    extra_delivered = 0
+                elif last_sos_event:
+                    cancelled_at = utc_now_iso()
+                    cancel_payload = {
+                        **last_sos_event,
+                        "cancelled_at": cancelled_at,
+                        "cancelled_at_label": local_datetime_label(cancelled_at),
+                        "cancel_message_id": message_id,
+                    }
+                    cancel_alert_text = build_sos_admin_cancel_alert(cancel_payload)
+                    recipients = sos_admin_recipients(
+                        services.store.list_users(),
+                        configured_numbers=configured_sos_numbers(),
+                    )
+                    sent_count, failed = _send_sos_alerts(
+                        service,
+                        requester_username=profile["username"],
+                        requester_conversation_id=conversation_id,
+                        requester_message_id=message_id,
+                        alert_text=cancel_alert_text,
+                        recipients=recipients,
+                        sos_event_id=sos_event_id,
+                        event_type="outgoing_sos_cancel_alert",
+                        message_kind="sos_admin_cancel_alert",
+                    )
+                    services.store.set_runtime_state(
+                        sos_event_key(sos_event_id),
+                        {
+                            **cancel_payload,
+                            "status": "cancelled",
+                            "cancel_sent_count": sent_count,
+                            "cancel_failed": failed,
+                        },
+                    )
+                    services.store.set_runtime_state(
+                        sos_last_event_key(from_number),
+                        {
+                            "event_id": sos_event_id,
+                            "status": "cancelled",
+                            "cancelled_at": cancelled_at,
+                        },
+                    )
+                    reply_text = build_sos_dispatched_cancelled_reply(sent_count, len(failed))
+                    event_type_reply = "outgoing_sos_dispatched_cancelled"
+                    message_kind = "sos_dispatched_cancelled"
+                    extra_delivered = sent_count
+                else:
+                    reply_text = build_sos_no_pending_cancel_reply()
+                    event_type_reply = "outgoing_sos_cancel_without_pending"
+                    message_kind = "sos_cancel_without_pending"
+                    extra_delivered = 0
+                _append_send_and_mark_reply(
+                    service,
+                    username=profile["username"],
+                    conversation_id=conversation_id,
+                    from_number=from_number,
+                    inbound_message_id=message_id,
+                    content=reply_text,
+                    event_type=event_type_reply,
+                    metadata={
+                        "message_kind": message_kind,
+                        "sos_event_id": sos_event_id,
+                    },
+                )
+                delivered += extra_delivered + 1
                 continue
 
             if is_sos_trigger(text):

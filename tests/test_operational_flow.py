@@ -3702,6 +3702,33 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(channel_events[0]["event_type"], "incoming_sos_request")
         self.assertEqual(channel_events[1]["event_type"], "outgoing_sos_location_prompt")
 
+    def test_whatsapp_sos_request_can_be_cancelled_before_location(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        request_payload = self._whatsapp_text_payload(message_id="wamid.SOS_CANCEL1", text="SOS")
+        cancel_payload = self._whatsapp_text_payload(
+            message_id="wamid.SOS_CANCEL2",
+            text="cancelar",
+            timestamp="1712165460",
+        )
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=request_payload)
+                    second = client.post("/webhooks/whatsapp", json=cancel_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 2)
+        self.assertIn("SOS recebido", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("Pedido SOS cancelado", whatsapp_service.sent_messages[1]["text"])
+        self.assertFalse(self.store.get_runtime_state("whatsapp:sos:pending:351962063664"))
+        event_types = [event["event_type"] for event in self.store._read_channel_events()]
+        self.assertIn("incoming_sos_cancel", event_types)
+        self.assertIn("outgoing_sos_cancelled", event_types)
+
     def test_whatsapp_sos_location_alerts_admin_and_confirms_user(self) -> None:
         self.store.update_user_profile(
             "admin",
@@ -3744,6 +3771,89 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("incoming_sos_location", event_types)
         self.assertIn("outgoing_sos_alert", event_types)
         self.assertIn("outgoing_sos_confirmation", event_types)
+
+    def test_whatsapp_sos_dispatched_alert_can_be_cancelled_and_admin_is_notified(self) -> None:
+        self.store.update_user_profile(
+            "admin",
+            full_name="Admin Porto",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 900 000 001",
+            whatsapp_number="351900000001",
+            whatsapp_opt_in=True,
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664", "351900000001"})
+        request_payload = self._whatsapp_text_payload(message_id="wamid.SOS_SENT_CANCEL1", text="SOS")
+        location_payload = self._whatsapp_location_payload(message_id="wamid.SOS_SENT_CANCEL2")
+        cancel_payload = self._whatsapp_text_payload(
+            message_id="wamid.SOS_SENT_CANCEL3",
+            text="CANCELAR SOS",
+            timestamp="1712165520",
+        )
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=request_payload)
+                    second = client.post("/webhooks/whatsapp", json=location_payload)
+                    third = client.post("/webhooks/whatsapp", json=cancel_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 2)
+        self.assertEqual(third.get_json()["delivered"], 2)
+        self.assertEqual(len(whatsapp_service.sent_messages), 5)
+        self.assertIn("ALERTA SOS", whatsapp_service.sent_messages[1]["text"])
+        self.assertIn("CANCELAMENTO SOS", whatsapp_service.sent_messages[3]["text"])
+        self.assertEqual(whatsapp_service.sent_messages[3]["to_number"], "351900000001")
+        self.assertIn("Avisei o contacto de emergência", whatsapp_service.sent_messages[4]["text"])
+        event_types = [event["event_type"] for event in self.store._read_channel_events()]
+        self.assertIn("outgoing_sos_cancel_alert", event_types)
+        self.assertIn("outgoing_sos_dispatched_cancelled", event_types)
+
+    def test_whatsapp_sos_location_after_expiry_does_not_alert_admin(self) -> None:
+        self.store.update_user_profile(
+            "admin",
+            full_name="Admin Porto",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 900 000 001",
+            whatsapp_number="351900000001",
+            whatsapp_opt_in=True,
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664", "351900000001"})
+        request_payload = self._whatsapp_text_payload(message_id="wamid.SOS_EXPIRED1", text="SOS")
+        location_payload = self._whatsapp_location_payload(message_id="wamid.SOS_EXPIRED2")
+
+        with patch.dict(
+            os.environ,
+            {
+                "WHATSAPP_SOS_ENABLED": "1",
+                "WHATSAPP_SOS_ALERT_NUMBERS": "",
+                "WHATSAPP_SOS_PENDING_TTL_MINUTES": "1",
+            },
+        ):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=request_payload)
+                    pending = self.store.get_runtime_state("whatsapp:sos:pending:351962063664")
+                    pending["requested_at"] = "2000-01-01T00:00:00+00:00"
+                    self.store.set_runtime_state("whatsapp:sos:pending:351962063664", pending)
+                    second = client.post("/webhooks/whatsapp", json=location_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 2)
+        self.assertIn("SOS recebido", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("já expirou", whatsapp_service.sent_messages[1]["text"])
+        self.assertFalse(self.store.get_runtime_state("whatsapp:sos:pending:351962063664"))
+        self.assertFalse(
+            any("ALERTA SOS" in message["text"] for message in whatsapp_service.sent_messages)
+        )
 
     def test_whatsapp_location_without_pending_sos_does_not_alert_admin(self) -> None:
         self.store.update_user_profile(

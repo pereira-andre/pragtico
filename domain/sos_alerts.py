@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -23,6 +23,24 @@ SOS_TRIGGER_PHRASES = {
     "cai na água",
     "queda ao mar",
     "preciso de ajuda urgente",
+}
+
+SOS_CANCEL_WORDS = {
+    "cancelar",
+    "cancela",
+    "anular",
+    "anula",
+}
+
+SOS_CANCEL_PHRASES = {
+    "cancelar sos",
+    "cancela sos",
+    "anular sos",
+    "anula sos",
+    "falso alarme",
+    "sem efeito",
+    "cancelar ajuda",
+    "pedido cancelado",
 }
 
 
@@ -45,6 +63,15 @@ def sos_alerts_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def sos_pending_ttl_minutes() -> int:
+    raw = os.getenv("WHATSAPP_SOS_PENDING_TTL_MINUTES", "20").strip()
+    try:
+        minutes = int(raw)
+    except ValueError:
+        return 20
+    return max(1, minutes)
+
+
 def sos_pending_key(from_number: str) -> str:
     number = re.sub(r"\D+", "", str(from_number or ""))
     return f"whatsapp:sos:pending:{number}"
@@ -52,6 +79,11 @@ def sos_pending_key(from_number: str) -> str:
 
 def sos_event_key(event_id: str) -> str:
     return f"whatsapp:sos:event:{_clean_text(event_id)}"
+
+
+def sos_last_event_key(from_number: str) -> str:
+    number = re.sub(r"\D+", "", str(from_number or ""))
+    return f"whatsapp:sos:last:{number}"
 
 
 def build_sos_event_id(now: datetime | None = None) -> str:
@@ -65,6 +97,30 @@ def is_sos_trigger(text: str) -> bool:
     if lookup in SOS_TRIGGER_WORDS:
         return True
     return any(phrase in lookup for phrase in SOS_TRIGGER_PHRASES)
+
+
+def is_sos_cancel(text: str, *, pending_sos: bool = False) -> bool:
+    clean = _clean_text(text)
+    lookup = _lookup_key(clean)
+    if pending_sos and lookup in SOS_CANCEL_WORDS:
+        return True
+    return any(phrase in lookup for phrase in SOS_CANCEL_PHRASES)
+
+
+def sos_pending_expired(payload: dict[str, Any], *, now: datetime | None = None) -> bool:
+    requested_at = str(payload.get("requested_at") or "").strip()
+    if not requested_at:
+        return False
+    try:
+        requested = datetime.fromisoformat(requested_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if requested.tzinfo is None:
+        requested = requested.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return current - requested > timedelta(minutes=sos_pending_ttl_minutes())
 
 
 def normalize_location(latitude: Any, longitude: Any) -> tuple[float, float]:
@@ -86,7 +142,8 @@ def build_sos_location_prompt() -> str:
     return (
         "🛟⚠️ SOS recebido.\n\n"
         "Partilha já a tua localização atual pelo WhatsApp para eu avisar imediatamente o contacto de emergência.\n\n"
-        "No WhatsApp: + > Localização > Enviar localização atual."
+        "No WhatsApp: + > Localização > Enviar localização atual.\n\n"
+        "Se foi engano, responde `CANCELAR SOS`."
     )
 
 
@@ -104,6 +161,27 @@ def build_sos_no_pending_location_reply() -> str:
     )
 
 
+def build_sos_cancelled_reply() -> str:
+    return (
+        "✅🛟 Pedido SOS cancelado.\n\n"
+        "Não enviei alerta ao contacto de emergência. Se precisares de ajuda, envia novamente `SOS`."
+    )
+
+
+def build_sos_no_pending_cancel_reply() -> str:
+    return (
+        "🛟 Não há pedido SOS ativo para cancelar.\n\n"
+        "Se precisares de ajuda urgente, envia `SOS` e partilha a localização atual."
+    )
+
+
+def build_sos_expired_reply() -> str:
+    return (
+        "🛟⚠️ A localização chegou, mas o pedido SOS anterior já expirou por segurança.\n\n"
+        "Se ainda precisares de ajuda, envia novamente `SOS` e partilha a localização atual."
+    )
+
+
 def build_sos_admin_alert(payload: dict[str, Any]) -> str:
     lat = float(payload["latitude"])
     lon = float(payload["longitude"])
@@ -118,16 +196,51 @@ def build_sos_admin_alert(payload: dict[str, Any]) -> str:
     )
 
 
+def build_sos_admin_cancel_alert(payload: dict[str, Any]) -> str:
+    lat = payload.get("latitude")
+    lon = payload.get("longitude")
+    location_lines = ""
+    if lat is not None and lon is not None:
+        latitude = float(lat)
+        longitude = float(lon)
+        location_lines = (
+            f"\nLocalização do pedido: {latitude:.6f}, {longitude:.6f}"
+            f"\nMapa: {maps_link(latitude, longitude)}"
+        )
+    return (
+        "✅🛟 CANCELAMENTO SOS\n\n"
+        f"{payload.get('user_label') or 'Utilizador'} cancelou o pedido SOS.\n"
+        f"Telefone: +{payload.get('from_number', '--')}\n"
+        f"Hora do cancelamento: {payload.get('cancelled_at_label') or payload.get('cancelled_at') or '--'}\n"
+        f"Evento: {payload.get('event_id') or '--'}"
+        f"{location_lines}"
+    )
+
+
 def build_sos_user_confirmation(sent_count: int, failed_count: int = 0) -> str:
     if sent_count > 0:
         return (
             "✅🛟 Localização recebida.\n\n"
             f"O alerta SOS foi enviado ao contacto de emergência ({sent_count} envio(s)). "
-            "Mantém-te em segurança e segue instruções da coordenação."
+            "Mantém-te em segurança e segue instruções da coordenação.\n\n"
+            "Se foi falso alarme, responde `CANCELAR SOS`."
         )
     return (
         "🛟⚠️ Localização recebida, mas não consegui enviar o alerta por WhatsApp.\n\n"
         "Contacta de imediato os meios de emergência locais ou a coordenação operacional por canal direto. "
+        f"Falhas registadas: {failed_count}."
+    )
+
+
+def build_sos_dispatched_cancelled_reply(sent_count: int, failed_count: int = 0) -> str:
+    if sent_count > 0:
+        return (
+            "✅🛟 Pedido SOS cancelado.\n\n"
+            f"Avisei o contacto de emergência do cancelamento ({sent_count} envio(s))."
+        )
+    return (
+        "✅🛟 Pedido SOS marcado como cancelado.\n\n"
+        "Não consegui avisar o contacto de emergência por WhatsApp. "
         f"Falhas registadas: {failed_count}."
     )
 

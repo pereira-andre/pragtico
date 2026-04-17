@@ -179,7 +179,7 @@ python3 scripts/test_whatsapp_send.py --to 351962063664
 
 Pré-requisitos na `.env`: `WHATSAPP_ENABLED=1`, `WHATSAPP_ACCESS_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`.
 
-SOS via WhatsApp: usa administradores com `whatsapp_opt_in` ativo ou define `WHATSAPP_SOS_ALERT_NUMBERS` com números separados por vírgulas. Em ambientes com `WHATSAPP_ALLOWED_NUMBERS`, inclui também esses destinatários.
+SOS via WhatsApp: usa administradores com `whatsapp_opt_in` ativo ou define `WHATSAPP_SOS_ALERT_NUMBERS` com números separados por vírgulas. Em ambientes com `WHATSAPP_ALLOWED_NUMBERS`, inclui também esses destinatários. O pedido fica pendente até chegar a localização, pode ser cancelado com `CANCELAR SOS`, e expira por segurança ao fim de `WHATSAPP_SOS_PENDING_TTL_MINUTES`.
 
 Atualizar a foto do perfil do número WhatsApp com `img/icon.png`:
 
