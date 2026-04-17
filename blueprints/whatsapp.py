@@ -854,19 +854,19 @@ def whatsapp_webhook_receive():
                 continue
 
             pending_sos = _load_pending_sos(from_number)
-            if is_sos_cancel(text, pending_sos=bool(pending_sos)):
-                last_sos_event = {}
-                if not pending_sos:
-                    last_sos_ref = services.store.get_runtime_state(sos_last_event_key(from_number)) or {}
-                    last_event_id = str(last_sos_ref.get("event_id") or "").strip()
-                    if last_event_id:
-                        candidate_event = services.store.get_runtime_state(sos_event_key(last_event_id)) or {}
-                        if (
-                            candidate_event
-                            and not candidate_event.get("cancelled_at")
-                            and not sos_pending_expired({"requested_at": candidate_event.get("created_at")})
-                        ):
-                            last_sos_event = candidate_event
+            last_sos_event = {}
+            if not pending_sos:
+                last_sos_ref = services.store.get_runtime_state(sos_last_event_key(from_number)) or {}
+                last_event_id = str(last_sos_ref.get("event_id") or "").strip()
+                if last_event_id:
+                    candidate_event = services.store.get_runtime_state(sos_event_key(last_event_id)) or {}
+                    if (
+                        candidate_event
+                        and not candidate_event.get("cancelled_at")
+                        and not sos_pending_expired({"requested_at": candidate_event.get("created_at")})
+                    ):
+                        last_sos_event = candidate_event
+            if is_sos_cancel(text, pending_sos=bool(pending_sos or last_sos_event)):
                 conversation_id = str(pending_sos.get("conversation_id") or "").strip()
                 if not conversation_id and last_sos_event:
                     conversation_id = str(last_sos_event.get("conversation_id") or "").strip()

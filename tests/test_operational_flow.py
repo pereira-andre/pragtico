@@ -3816,7 +3816,7 @@ class OperationalFlowTests(unittest.TestCase):
         location_payload = self._whatsapp_location_payload(message_id="wamid.SOS_SENT_CANCEL2")
         cancel_payload = self._whatsapp_text_payload(
             message_id="wamid.SOS_SENT_CANCEL3",
-            text="CANCELAR SOS",
+            text="Cancelar",
             timestamp="1712165520",
         )
 
