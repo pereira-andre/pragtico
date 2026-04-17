@@ -3772,6 +3772,35 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("outgoing_sos_alert", event_types)
         self.assertIn("outgoing_sos_confirmation", event_types)
 
+    def test_whatsapp_sos_from_admin_does_not_alert_same_number(self) -> None:
+        self.store.update_user_profile(
+            "admin",
+            full_name="Admin Porto",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 962 063 664",
+            whatsapp_number="351962063664",
+            whatsapp_opt_in=True,
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        request_payload = self._whatsapp_text_payload(message_id="wamid.SOS_ADMIN1", text="SOS")
+        location_payload = self._whatsapp_location_payload(message_id="wamid.SOS_ADMIN2")
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=request_payload)
+                    second = client.post("/webhooks/whatsapp", json=location_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 2)
+        self.assertIn("SOS recebido", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("não encontrei contacto de emergência externo", whatsapp_service.sent_messages[1]["text"])
+        self.assertFalse(any("ALERTA SOS" in message["text"] for message in whatsapp_service.sent_messages))
+
     def test_whatsapp_sos_dispatched_alert_can_be_cancelled_and_admin_is_notified(self) -> None:
         self.store.update_user_profile(
             "admin",

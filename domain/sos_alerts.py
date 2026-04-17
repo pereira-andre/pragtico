@@ -225,6 +225,11 @@ def build_sos_user_confirmation(sent_count: int, failed_count: int = 0) -> str:
             "Mantém-te em segurança e segue instruções da coordenação.\n\n"
             "Se foi falso alarme, responde `CANCELAR SOS`."
         )
+    if failed_count == 0:
+        return (
+            "🛟⚠️ Localização recebida, mas não encontrei contacto de emergência externo para avisar.\n\n"
+            "Contacta de imediato os meios de emergência locais ou a coordenação operacional por canal direto."
+        )
     return (
         "🛟⚠️ Localização recebida, mas não consegui enviar o alerta por WhatsApp.\n\n"
         "Contacta de imediato os meios de emergência locais ou a coordenação operacional por canal direto. "
@@ -254,13 +259,21 @@ def configured_sos_numbers() -> list[str]:
     return numbers
 
 
-def sos_admin_recipients(users: list[dict[str, Any]], *, configured_numbers: list[str] | None = None) -> list[dict[str, str]]:
+def sos_admin_recipients(
+    users: list[dict[str, Any]],
+    *,
+    configured_numbers: list[str] | None = None,
+    exclude_number: str = "",
+) -> list[dict[str, str]]:
     recipients: list[dict[str, str]] = []
     seen: set[str] = set()
+    excluded = re.sub(r"\D+", "", exclude_number)
     for user in users:
         if _lookup_key(user.get("role")) != "admin":
             continue
         number = re.sub(r"\D+", "", str(user.get("whatsapp_number") or ""))
+        if excluded and number == excluded:
+            continue
         if not number or not bool(user.get("whatsapp_opt_in")):
             continue
         seen.add(number)
@@ -273,6 +286,8 @@ def sos_admin_recipients(users: list[dict[str, Any]], *, configured_numbers: lis
         )
     for number in configured_numbers or []:
         clean = re.sub(r"\D+", "", number)
+        if excluded and clean == excluded:
+            continue
         if clean and clean not in seen:
             seen.add(clean)
             recipients.append({"number": clean, "username": "", "label": clean})

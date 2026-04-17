@@ -684,6 +684,7 @@ def whatsapp_webhook_receive():
                 recipients = sos_admin_recipients(
                     services.store.list_users(),
                     configured_numbers=configured_sos_numbers(),
+                    exclude_number=from_number,
                 )
                 sent_count, failed = _send_sos_alerts(
                     service,
@@ -917,6 +918,7 @@ def whatsapp_webhook_receive():
                     recipients = sos_admin_recipients(
                         services.store.list_users(),
                         configured_numbers=configured_sos_numbers(),
+                        exclude_number=from_number,
                     )
                     sent_count, failed = _send_sos_alerts(
                         service,
