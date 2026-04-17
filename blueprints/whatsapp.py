@@ -484,7 +484,7 @@ def whatsapp_webhook_receive():
                 if not pending_report:
                     reply_text = (
                         "Recebi a imagem, mas não tenho um reporte de evento pendente. "
-                        "Envia primeiro `/reportar_evento TAG | LOCAL | DESCRIPTION`."
+                        "Envia primeiro `/reportar_evento TAG. LOCAL. DESCRIPTION`."
                     )
                     _append_send_and_mark_reply(
                         service,

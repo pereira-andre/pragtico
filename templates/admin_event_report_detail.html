@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell event-report-detail-page">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Reporte de evento</p>
+        <h1>{{ event.id }}</h1>
+        <p class="lead">{{ event.local or "Local por confirmar" }} · {{ event.timestamp_label }}</p>
+      </div>
+      <div class="admin-status-hero-tools">
+        <span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span>
+        <a class="outline-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir</a>
+        <a class="outline-link" href="{{ reports_return_to }}">Voltar</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="event-report-detail-grid">
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Revisão</p>
+          <h2>Dados do reporte</h2>
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('admin.edit_event_report', event_id=event.id) }}" class="event-report-edit-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+        <div class="form-grid two-col">
+          <label>
+            Tipo
+            <select name="tag" required>
+              {% for tag in tag_options %}
+                <option value="{{ tag }}" {% if event.tag == tag %}selected{% endif %}>{{ tag }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Estado
+            <select name="estado" required>
+              {% for option in status_options %}
+                <option value="{{ option.value }}" {% if event.estado == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <label>
+          Local
+          <input name="local" value="{{ event.local }}" required maxlength="200">
+        </label>
+        <label>
+          Descrição revista
+          <textarea name="descricao_processada" rows="5" required maxlength="5000">{{ event.descricao_processada or event.descricao_original }}</textarea>
+        </label>
+        <label>
+          Texto original
+          <textarea name="descricao_original" rows="4" maxlength="5000">{{ event.descricao_original }}</textarea>
+        </label>
+        <label>
+          Nota administrativa
+          <textarea name="nota_admin" rows="4" maxlength="2000" placeholder="Decisão tomada, contacto feito, ação pendente...">{{ event.nota_admin or "" }}</textarea>
+        </label>
+        <div class="archive-actions">
+          <button type="submit" class="mini-button">Guardar revisão</button>
+          <a class="mini-button secondary-button" href="{{ reports_return_to }}">Cancelar</a>
+        </div>
+      </form>
+    </section>
+
+    <aside class="panel section-panel event-report-side-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Contexto</p>
+          <h2>Origem e anexo</h2>
+        </div>
+      </div>
+      <div class="admin-status-compact-grid">
+        <div class="admin-status-fact">
+          <span>Reportado por</span>
+          <strong>{{ event.utilizador or event.username or "--" }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Perfil</span>
+          <strong>{{ event.role or "operacional" }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Registado</span>
+          <strong>{{ event.timestamp_label }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Última revisão</span>
+          <strong>{{ event.revisto_em_label or "Sem revisão" }}</strong>
+        </div>
+      </div>
+      {% if event.nota_admin %}
+        <p class="admin-status-note">{{ event.nota_admin }}</p>
+      {% endif %}
+      {% if event.has_photo %}
+        <a class="event-report-photo-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">
+          <img src="{{ event.photo_url }}" alt="Foto anexada ao reporte {{ event.id }}">
+        </a>
+      {% else %}
+        <p class="admin-status-note">Este reporte foi arquivado sem foto.</p>
+      {% endif %}
+    </aside>
+  </div>
+</main>
+{% endblock %}

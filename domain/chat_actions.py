@@ -1304,7 +1304,7 @@ def build_slash_help(role: str) -> str:
         "  consulta uma regra/instrução por código",
         "/consultar-navio IMO ou nome",
         "  mostra a ficha do navio conhecida no portal",
-        "/reportar_evento TAG | LOCAL | DESCRIPTION",
+        "/reportar_evento TAG. LOCAL. DESCRIPTION",
         "  regista uma ocorrência operacional e pergunta por foto opcional",
         "",
         "Escalas:",

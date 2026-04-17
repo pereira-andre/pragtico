@@ -20,6 +20,22 @@ EVENT_REPORT_TAGS = {
     "OBSERVAÇÃO",
 }
 
+EVENT_REPORT_TAG_OPTIONS = (
+    "AVARIA",
+    "FALHA",
+    "DANO",
+    "FALTA",
+    "INCIDENTE",
+    "OBSERVACAO",
+)
+
+EVENT_REPORT_STATUS_OPTIONS = (
+    "novo",
+    "em_revisao",
+    "resolvido",
+    "arquivado",
+)
+
 NO_PHOTO_REPLIES = {
     "nao",
     "não",
@@ -166,6 +182,15 @@ def _parse_labelled_event_report(argument: str) -> dict[str, str]:
     return fields
 
 
+def _split_event_report_parts(argument: str, separator: str) -> list[str]:
+    if separator not in argument:
+        return []
+    parts = [part.strip() for part in argument.split(separator, 2)]
+    if len(parts) == 3 and all(parts):
+        return parts
+    return []
+
+
 def parse_event_report_command(argument: str) -> dict[str, Any]:
     raw = str(argument or "").strip()
     labelled = _parse_labelled_event_report(raw)
@@ -174,11 +199,16 @@ def parse_event_report_command(argument: str) -> dict[str, Any]:
         local = _clean_text(labelled.get("local"))
         description = _clean_text(labelled.get("description"))
     else:
-        pipe_parts = [part.strip() for part in raw.split("|") if part.strip()]
-        if len(pipe_parts) >= 3:
+        pipe_parts = _split_event_report_parts(raw, "|")
+        dot_parts = _split_event_report_parts(raw, ".")
+        if pipe_parts:
             tag = _clean_text(pipe_parts[0]).upper()
             local = _clean_text(pipe_parts[1])
-            description = _clean_text(" | ".join(pipe_parts[2:]))
+            description = _clean_text(pipe_parts[2])
+        elif dot_parts:
+            tag = _clean_text(dot_parts[0]).upper()
+            local = _clean_text(dot_parts[1])
+            description = _clean_text(dot_parts[2])
         else:
             head, _, rest = raw.partition(" ")
             tag = _clean_text(head).upper()
@@ -210,10 +240,11 @@ def build_event_report_template(missing: list[str] | None = None) -> str:
     missing_text = f"\n\nCampos em falta: {', '.join(missing)}" if missing else ""
     return (
         "Usa este formato:\n"
-        "/reportar_evento TAG | LOCAL | DESCRIPTION\n\n"
+        "/reportar_evento TAG. LOCAL. DESCRIPTION\n\n"
         "Exemplo:\n"
-        "/reportar_evento AVARIA | cais Teporset | o guincho do cais nao esta a funcionar\n\n"
-        "Tags habituais: AVARIA, FALHA, DANO, FALTA, INCIDENTE, OBSERVACAO."
+        "/reportar_evento AVARIA. cais Teporset. o guincho do cais nao esta a funcionar\n\n"
+        "Tags habituais: AVARIA, FALHA, DANO, FALTA, INCIDENTE, OBSERVACAO. "
+        "O separador antigo com | continua aceite."
         f"{missing_text}"
     )
 
@@ -257,6 +288,107 @@ def _write_events(root: Path, events: list[dict[str, Any]]) -> None:
     temp_path = path.with_suffix(".json.tmp")
     temp_path.write_text(json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8")
     temp_path.replace(path)
+
+
+def _parse_event_timestamp(value: Any) -> datetime:
+    try:
+        dt = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _event_timestamp_label(value: Any) -> str:
+    dt = _parse_event_timestamp(value)
+    if dt.year == datetime.min.year:
+        return "Sem hora"
+    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+
+
+def event_report_photo_path(event: dict[str, Any]) -> Path | None:
+    raw_path = _clean_text(event.get("foto_path"))
+    if not raw_path:
+        return None
+    path = Path(raw_path).expanduser()
+    resolved_path = path.resolve()
+    root = event_reports_root().resolve()
+    try:
+        resolved_path.relative_to(root)
+    except ValueError:
+        return None
+    if not resolved_path.exists() or not resolved_path.is_file():
+        return None
+    return resolved_path
+
+
+def _normalize_event_status(value: Any) -> str:
+    status = _lookup_key(value).replace(" ", "_").replace("-", "_")
+    return status if status in EVENT_REPORT_STATUS_OPTIONS else "novo"
+
+
+def _enrich_event_report(event: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(event)
+    enriched["estado"] = _normalize_event_status(enriched.get("estado"))
+    enriched["timestamp_label"] = _event_timestamp_label(enriched.get("timestamp"))
+    enriched["has_photo"] = event_report_photo_path(enriched) is not None
+    enriched["descricao"] = (
+        _clean_text(enriched.get("descricao_processada"))
+        or _clean_text(enriched.get("descricao_original"))
+    )
+    return enriched
+
+
+def list_event_reports() -> list[dict[str, Any]]:
+    events = [_enrich_event_report(event) for event in _read_events(event_reports_root())]
+    return sorted(
+        events,
+        key=lambda event: _parse_event_timestamp(event.get("timestamp")),
+        reverse=True,
+    )
+
+
+def get_event_report(event_id: str) -> dict[str, Any] | None:
+    clean_id = _clean_text(event_id)
+    for event in list_event_reports():
+        if _clean_text(event.get("id")) == clean_id:
+            return event
+    return None
+
+
+def update_event_report(event_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    root = event_reports_root()
+    clean_id = _clean_text(event_id)
+    events = _read_events(root)
+    allowed_fields = {
+        "tag",
+        "local",
+        "descricao_original",
+        "descricao_processada",
+        "estado",
+        "nota_admin",
+        "revisto_por",
+        "revisto_em",
+    }
+    for index, event in enumerate(events):
+        if _clean_text(event.get("id")) != clean_id:
+            continue
+        updated = dict(event)
+        for key, value in updates.items():
+            if key not in allowed_fields:
+                continue
+            if key == "estado":
+                updated[key] = _normalize_event_status(value)
+            elif key == "tag":
+                tag = _clean_text(value).upper()
+                updated[key] = "OBSERVACAO" if tag == "OBSERVAÇÃO" else tag
+            else:
+                updated[key] = _clean_text(value)
+        events[index] = updated
+        _write_events(root, events)
+        return _enrich_event_report(updated)
+    raise ValueError("Reporte de evento não encontrado.")
 
 
 def _next_event_id(events: list[dict[str, Any]], now: datetime) -> str:
@@ -323,6 +455,10 @@ def register_event_report(
         "foto_path": photo_path,
         "foto_mime_type": _clean_text(attachment_mime_type),
         "media_id": _clean_text(media_id),
+        "estado": "novo",
+        "nota_admin": "",
+        "revisto_por": "",
+        "revisto_em": "",
     }
     events.append(event)
     _write_events(root, events)

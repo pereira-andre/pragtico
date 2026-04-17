@@ -17,6 +17,7 @@ from core import services
 from domain.chat_actions import normalize_action_candidate
 from flask import session
 from core.helpers import answer_direct_operational_query, build_operational_chat_sources, build_scale_context
+from domain.event_reports import build_event_report_template, parse_event_report_command, register_event_report
 from domain.practice_experience import PRACTICE_EXPERIENCE_STATE_KEY
 from storage import LocalStore
 
@@ -3585,6 +3586,77 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(events[0]["tag"], "AVARIA")
         self.assertEqual(events[0]["local"], "cais Teporset")
         self.assertFalse(events[0]["foto_path"])
+
+    def test_reportar_evento_prefers_dot_template_but_keeps_pipe_compatibility(self) -> None:
+        parsed = parse_event_report_command(
+            "AVARIA. cais Teporset. o guincho do cais nao esta a funcionar. precisa de intervenção"
+        )
+        self.assertTrue(parsed["ok"])
+        self.assertEqual(parsed["draft"]["tag"], "AVARIA")
+        self.assertEqual(parsed["draft"]["local"], "cais Teporset")
+        self.assertEqual(
+            parsed["draft"]["description_original"],
+            "o guincho do cais nao esta a funcionar. precisa de intervenção",
+        )
+
+        legacy = parse_event_report_command("DANO | navio ATLANTIC STAR | amassadela na amurada")
+        self.assertTrue(legacy["ok"])
+        self.assertEqual(legacy["draft"]["local"], "navio ATLANTIC STAR")
+        self.assertIn("/reportar_evento TAG. LOCAL. DESCRIPTION", build_event_report_template(["LOCAL"]))
+
+    def test_admin_event_reports_page_supports_review_edit_and_print(self) -> None:
+        event = register_event_report(
+            {
+                "tag": "AVARIA",
+                "local": "cais Teporset",
+                "description_original": "o guincho do cais nao esta a funcionar",
+            },
+            username="admin",
+            role="admin",
+            user_label="Admin",
+            description_processed="O guincho do cais não está a funcionar.",
+        )
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+                flask_session["_csrf_token"] = "event-token"
+
+            response = client.get("/admin/event-reports?q=Teporset")
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            self.assertIn("Reportes de evento", html)
+            self.assertIn(event["id"], html)
+
+            detail = client.get(f"/admin/event-reports/{event['id']}?return_to=/admin/event-reports")
+            self.assertEqual(detail.status_code, 200)
+            self.assertIn("Guardar revisão", detail.get_data(as_text=True))
+
+            update = client.post(
+                f"/admin/event-reports/{event['id']}/edit",
+                data={
+                    "csrf_token": "event-token",
+                    "return_to": "/admin/event-reports",
+                    "tag": "FALHA",
+                    "estado": "resolvido",
+                    "local": "cais Teporset 2",
+                    "descricao_original": "o guincho do cais nao esta a funcionar",
+                    "descricao_processada": "Guincho operacional após verificação.",
+                    "nota_admin": "Validado pela coordenação.",
+                },
+            )
+            self.assertEqual(update.status_code, 302)
+
+            report = client.get(f"/admin/event-reports/print?ids={event['id']}")
+            self.assertEqual(report.status_code, 200)
+            self.assertIn("Relatório de eventos operacionais", report.get_data(as_text=True))
+
+        events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+        events = json.loads(events_path.read_text(encoding="utf-8"))
+        self.assertEqual(events[0]["tag"], "FALHA")
+        self.assertEqual(events[0]["estado"], "resolvido")
+        self.assertEqual(events[0]["nota_admin"], "Validado pela coordenação.")
 
     def test_whatsapp_reportar_evento_accepts_photo_and_archives_file(self) -> None:
         whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
