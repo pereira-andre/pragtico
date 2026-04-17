@@ -3769,6 +3769,46 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("#ERR-9001", whatsapp_service.sent_messages[0]["text"])
         self.assertIn("Contacta o suporte", whatsapp_service.sent_messages[0]["text"])
 
+    def test_whatsapp_webhook_does_not_send_error_when_only_outbound_metadata_fails(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.META123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "/help"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with patch.object(
+                self.store,
+                "update_message_channel_metadata",
+                side_effect=RuntimeError("metadata down"),
+            ):
+                with app.app.test_client() as client:
+                    response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
+        self.assertIn("Comandos disponíveis", whatsapp_service.sent_messages[0]["text"])
+        self.assertNotIn("#ERR-9001", whatsapp_service.sent_messages[0]["text"])
+
     def test_whatsapp_webhook_sends_welcome_only_once_per_contact(self) -> None:
         whatsapp_service = _StubWhatsAppService(
             allowed_numbers={"351962063664"},

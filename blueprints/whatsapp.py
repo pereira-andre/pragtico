@@ -117,16 +117,22 @@ def _is_duplicate_inbound(message_id: str) -> bool:
 def _mark_inbound_processed(message_id: str, *, from_number: str, conversation_id: str, answer: str) -> None:
     if not message_id:
         return
-    services.store.set_runtime_state(
-        _processed_inbound_key(message_id),
-        {
-            "message_id": message_id,
-            "from_number": from_number,
-            "conversation_id": conversation_id,
-            "answer_preview": str(answer or "")[:240],
-            "processed_at": datetime.now(timezone.utc).isoformat(),
-        },
-    )
+    try:
+        services.store.set_runtime_state(
+            _processed_inbound_key(message_id),
+            {
+                "message_id": message_id,
+                "from_number": from_number,
+                "conversation_id": conversation_id,
+                "answer_preview": str(answer or "")[:240],
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Falha não bloqueante ao marcar inbound WhatsApp como processado (msg=%s).",
+            message_id,
+        )
 
 
 def _welcome_already_sent(from_number: str) -> bool:
@@ -213,27 +219,34 @@ def _send_and_record_outbound_message(
             reply_to_message_id=reply_to_message_id,
         )
     outbound_message_id = _extract_outbound_message_id(send_response)
-    services.store.update_message_channel_metadata(
-        username,
-        conversation_id,
-        local_message_id,
-        external_message_id=outbound_message_id or None,
-        channel_metadata={
-            "send_response": send_response,
-            "last_status": "accepted",
-        },
-    )
-    services.store.record_channel_event(
-        channel="whatsapp",
-        event_type=event_type,
-        payload=send_response,
-        username=username,
-        conversation_id=conversation_id,
-        local_message_id=local_message_id,
-        channel_user_id=to_number,
-        external_event_id=outbound_message_id,
-        external_message_id=outbound_message_id,
-    )
+    try:
+        services.store.update_message_channel_metadata(
+            username,
+            conversation_id,
+            local_message_id,
+            external_message_id=outbound_message_id or None,
+            channel_metadata={
+                "send_response": send_response,
+                "last_status": "accepted",
+            },
+        )
+        services.store.record_channel_event(
+            channel="whatsapp",
+            event_type=event_type,
+            payload=send_response,
+            username=username,
+            conversation_id=conversation_id,
+            local_message_id=local_message_id,
+            channel_user_id=to_number,
+            external_event_id=outbound_message_id,
+            external_message_id=outbound_message_id,
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Resposta WhatsApp enviada, mas falhou o registo local do outbound (msg=%s, wamid=%s).",
+            local_message_id,
+            outbound_message_id,
+        )
     return send_response, outbound_message_id
 
 
