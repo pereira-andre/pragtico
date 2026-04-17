@@ -8,11 +8,14 @@ import unicodedata
 
 TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-mar)\b")
 WEATHER_QUERY_RE = re.compile(
-    r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|tempo no porto|vento|visibilidade|"
+    r"\b(meteorologia|meteorologic|condicoes meteorologicas|condicoes do tempo|estado do tempo|"
+    r"como esta o tempo|como vai estar o tempo|tempo no porto|tempo em setubal|tempo para setubal|"
+    r"vento|visibilidade|"
     r"nevoeiro|nevoa|névoa|neblina|fog|mist|humidade|temperatura|chuva)\b"
 )
 CURRENT_WEATHER_RE = re.compile(
-    r"\b(atual|atuais|atualmente|actualmente|agora|neste momento|corrente|correntes|hoje)\b"
+    r"\b(atual|atuais|atualmente|actualmente|agora|neste momento|corrente|correntes|hoje|"
+    r"como esta|como esta o tempo|estado do tempo)\b"
 )
 WEATHER_TIMELINE_RE = re.compile(
     r"\b(ao longo do dia|durante o dia|resto do dia|nas proximas horas|nas próximas horas|"

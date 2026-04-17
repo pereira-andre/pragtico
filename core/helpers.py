@@ -1456,6 +1456,7 @@ def _build_tide_lookup_answer(question: str) -> tuple[str, list[dict]]:
             )
         luminosity = summary.get("luminosity") or {}
         if luminosity.get("summary"):
+            lines.append("")
             lines.append(f"- {luminosity['summary']}")
     context = services.tide_service.context_for_question(question)
     sources = [context] if context else []
@@ -2798,12 +2799,8 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
         except Exception as exc:
             return {"answer": f"Falha ao obter leitura costeira: {exc}", "sources": [], "answer_origin": "slash_wave"}
     if command == "tides":
-        dates = services.tide_service.resolve_query_dates(clean_argument or "hoje")
-        parts = []
-        for target_date in dates[:2]:
-            summary = services.tide_service.summary_for_date(target_date)
-            parts.append(summary.get("summary", "Sem dados de maré."))
-        return {"answer": "\n\n".join(parts), "sources": [], "answer_origin": "slash_tides"}
+        tide_answer, _sources = _build_tide_lookup_answer(clean_argument or "hoje")
+        return {"answer": tide_answer or "Sem dados de maré.", "sources": [], "answer_origin": "slash_tides"}
     if command == "weather":
         if not services.weather_service.enabled:
             return {"answer": "A meteorologia não está configurada neste ambiente.", "sources": [], "answer_origin": "slash_weather"}

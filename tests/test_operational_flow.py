@@ -1610,6 +1610,22 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Parcialmente nublado", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_slash_tides_uses_topic_layout(self) -> None:
+        with patch.object(services, "tide_service", _StubTideService()):
+            with app.app.test_client() as client:
+                with client.session_transaction() as flask_session:
+                    flask_session["username"] = "admin"
+                    flask_session["role"] = "admin"
+
+                response = client.post("/api/chat", json={"question": "/mares"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_tides")
+        self.assertIn("🌕 Marés para 09/04/2026", payload["answer"])
+        self.assertIn("\n- 01:48 — Baixa-mar de 1.3 m", payload["answer"])
+        self.assertIn("\n- 08:02 — Preia-mar de 2.4 m", payload["answer"])
+
     def test_chat_current_weather_follow_up_prefers_live_operational_answer(self) -> None:
         with patch.object(services, "weather_service", _StubWeatherService()):
             with patch.object(services.rag, "answer") as answer_mock:
@@ -1630,6 +1646,26 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["answer_origin"], "operational_live")
         self.assertIn("Condições meteorológicas atuais em Setúbal", payload["answer"])
         self.assertIn("vento: 12.0 kts de nw", payload["answer"].lower())
+        answer_mock.assert_not_called()
+
+    def test_chat_tempo_em_setubal_prefers_weather_not_static_documents(self) -> None:
+        with patch.object(services, "weather_service", _StubWeatherService()):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={"question": "Como está o tempo em Setúbal?"},
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertIn("Condições meteorológicas atuais em Setúbal", payload["answer"])
+        self.assertIn("Parcialmente nublado", payload["answer"])
         answer_mock.assert_not_called()
 
     def test_chat_current_weather_reports_fog_suspension(self) -> None:

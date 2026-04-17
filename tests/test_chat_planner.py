@@ -104,6 +104,19 @@ class ChatPlannerTests(unittest.TestCase):
         self.assertFalse(plan.needs_answer_critic)
         self.assertTrue(plan.should_answer_directly)
 
+    def test_tempo_in_weather_context_means_meteorology(self) -> None:
+        plan = build_chat_execution_plan("Como está o tempo em Setúbal?")
+
+        self.assertEqual(plan.primary_intent, "live_environment")
+        self.assertEqual(plan.live_facets, ("weather",))
+        self.assertEqual(plan.weather_mode, "current")
+        self.assertTrue(plan.should_answer_directly)
+
+    def test_tempo_duration_context_does_not_trigger_weather(self) -> None:
+        plan = build_chat_execution_plan("Quanto tempo demora uma entrada da barra até à Lisnave?")
+
+        self.assertEqual(plan.live_facets, ())
+
     def test_followup_tug_recommendation_keeps_history_state(self) -> None:
         plan = build_chat_execution_plan(
             "Com base nisso, quantos reboques aconselharias para atracar o Ro-Ro de 180m?"

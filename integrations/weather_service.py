@@ -105,17 +105,30 @@ class WeatherService:
 
     def _moon_phase_display(self, phase: str) -> tuple[str, str]:
         clean = (phase or "").strip()
+        lookup = clean.casefold()
         phase_map = {
-            "New Moon": ("🌑", "Lua nova"),
-            "Waxing Crescent": ("🌒", "Lua crescente"),
-            "First Quarter": ("🌓", "Quarto crescente"),
-            "Waxing Gibbous": ("🌔", "Lua gibosa crescente"),
-            "Full Moon": ("🌕", "Lua cheia"),
-            "Waning Gibbous": ("🌖", "Lua gibosa minguante"),
-            "Last Quarter": ("🌗", "Quarto minguante"),
-            "Waning Crescent": ("🌘", "Lua minguante"),
+            "new moon": ("🌑", "Lua nova"),
+            "waxing crescent": ("🌒", "Lua crescente"),
+            "first quarter": ("🌓", "Quarto crescente"),
+            "waxing gibbous": ("🌔", "Lua gibosa crescente"),
+            "full moon": ("🌕", "Lua cheia"),
+            "waning gibbous": ("🌖", "Lua gibosa minguante"),
+            "last quarter": ("🌗", "Quarto minguante"),
+            "waning crescent": ("🌘", "Lua minguante"),
+            "lua nova": ("🌑", "Lua nova"),
+            "lua crescente": ("🌒", "Lua crescente"),
+            "quarto crescente": ("🌓", "Quarto crescente"),
+            "lua cheia": ("🌕", "Lua cheia"),
+            "quarto minguante": ("🌗", "Quarto minguante"),
+            "lua minguante": ("🌘", "Lua minguante"),
         }
-        return phase_map.get(clean, ("🌙", clean or "Lua"))
+        return phase_map.get(lookup, ("🌙", clean or "Lua"))
+
+    def _moon_line(self, payload: Dict) -> str:
+        icon = payload.get("moon_phase_icon") or "🌙"
+        label = payload.get("moon_phase_label") or payload.get("moon_phase") or "Lua"
+        illumination = payload.get("moon_illumination", "--")
+        return f"{icon} {label} ({illumination}% iluminação)"
 
     def _resolve_query_dates(self, question: str, reference_date: date) -> List[str]:
         question_lower = (question or "").lower()
@@ -334,22 +347,28 @@ class WeatherService:
         current_gust_kts = self._kph_to_kts(current.get("gust_kph"))
         current_is_day = bool(current.get("is_day", 1))
 
-        summary = (
-            f"Meteorologia para {location.get('name', self.location)} em {location.get('localtime', '')}: "
-            f"{current.get('condition', {}).get('text', '')}, "
-            f"{current.get('temp_c')} °C, vento {current_wind_kts} kts de {current.get('wind_dir')}, "
-            f"humidade {current.get('humidity')}%, precipitação {current.get('precip_mm')} mm."
-        )
+        summary_lines = [
+            f"Meteorologia para {location.get('name', self.location)} ({location.get('localtime', '')}):",
+            f"- Estado: {current.get('condition', {}).get('text', '--')}",
+            f"- Temperatura: {current.get('temp_c', '--')} °C",
+            f"- Vento: {current_wind_kts} kts de {current.get('wind_dir', '--')}",
+            f"- Humidade: {current.get('humidity', '--')}%",
+            f"- Precipitação: {current.get('precip_mm', '--')} mm",
+        ]
         if days_summary:
-            summary += " Próximos dias: " + "; ".join(
-                f"{d['date']}: {d['condition']}, {d['min_temp_c']}–{d['max_temp_c']} °C, "
-                f"vento máx. {d['max_wind_kts']} kts, "
-                f"nascer {d['sunrise']} pôr {d['sunset']}"
-                + (f", lua {d['moon_phase']}" if d.get("moon_phase") else "")
-                for d in days_summary
-            )
+            summary_lines.extend(["", "Próximos dias:"])
+            for d in days_summary:
+                summary_lines.append(
+                    f"- {d['date_label']}: {d['condition']}, {d['min_temp_c']}–{d['max_temp_c']} °C, "
+                    f"vento máx. {d['max_wind_kts']} kts."
+                )
+                if d.get("sunrise") and d.get("sunset"):
+                    summary_lines.append(f"  - ☀️ Nascer {d['sunrise']}; 🌅 pôr {d['sunset']}.")
+                if d.get("moon_phase"):
+                    summary_lines.append(f"  - {self._moon_line(d)}.")
         if alerts:
-            summary += f" Alertas ativos: {len(alerts)}."
+            summary_lines.extend(["", f"Alertas ativos: {len(alerts)}."])
+        summary = "\n".join(summary_lines)
 
         return {
             "location": {
@@ -390,12 +409,12 @@ class WeatherService:
         for d in forecast.get("forecast_days", []):
             if d.get("sunrise") and d.get("sunset"):
                 sector_lines.append(
-                    f"Sectores {d['date']}: Dia {d['sunrise']}–{d['sunset']}, "
+                    f"Sectores {d['date_label']}: Dia {d['sunrise']}–{d['sunset']}, "
                     f"Noite antes das {d['sunrise']} e após as {d['sunset']}."
                 )
             if d.get("moon_phase"):
                 sector_lines.append(
-                    f"Lua {d['date']}: {d['moon_phase']} ({d.get('moon_illumination', '--')}% iluminação)."
+                    f"Lua {d['date_label']}: {self._moon_line(d)}."
                 )
 
         full_snippet = forecast["summary"]
@@ -451,25 +470,36 @@ class WeatherService:
 
         lines = [f"Previsão meteorológica detalhada para {forecast['location']['name']}:"]
         for group in selected_groups:
-            lines.append(
-                f"- {group.get('date_label') or group.get('date')}: {group.get('condition')}, "
-                f"{group.get('min_temp_c')}–{group.get('max_temp_c')} °C, vento máx {group.get('max_wind_kts')} kts."
+            lines.extend(
+                [
+                    "",
+                    f"{group.get('date_label') or group.get('date')}:",
+                    f"- Estado: {group.get('condition')}",
+                    f"- Temperatura: {group.get('min_temp_c')}–{group.get('max_temp_c')} °C",
+                    f"- Vento máximo: {group.get('max_wind_kts')} kts",
+                ]
             )
+            if group.get("sunrise") and group.get("sunset"):
+                lines.append(f"- ☀️ Nascer {group.get('sunrise')}; 🌅 pôr {group.get('sunset')}.")
+            if group.get("moon_phase"):
+                lines.append(f"- {self._moon_line(group)}.")
             if target_times:
+                lines.append("- Horas pedidas:")
                 for target_time in target_times:
                     closest = self._closest_hour(group.get("hours", []), target_time)
                     if not closest:
                         continue
                     lines.append(
-                        f"  {target_time} -> {closest.get('time')} | {closest.get('condition')} | "
-                        f"{closest.get('temp_c')} °C | vento {closest.get('wind_kts')} kts {closest.get('wind_dir')} | "
-                        f"rajadas {closest.get('gust_kts')} kts | chuva {closest.get('chance_of_rain')}%."
+                        f"  - {target_time} -> {closest.get('time')}: {closest.get('condition')}; "
+                        f"{closest.get('temp_c')} °C; vento {closest.get('wind_kts')} kts {closest.get('wind_dir')}; "
+                        f"rajadas {closest.get('gust_kts')} kts; chuva {closest.get('chance_of_rain')}%."
                     )
             else:
+                lines.append("- Próximas horas:")
                 for hour in group.get("hours", [])[:8]:
                     lines.append(
-                        f"  {hour.get('time')} | {hour.get('condition')} | {hour.get('temp_c')} °C | "
-                        f"vento {hour.get('wind_kts')} kts {hour.get('wind_dir')} | chuva {hour.get('chance_of_rain')}%."
+                        f"  - {hour.get('time')}: {hour.get('condition')}; {hour.get('temp_c')} °C; "
+                        f"vento {hour.get('wind_kts')} kts {hour.get('wind_dir')}; chuva {hour.get('chance_of_rain')}%."
                     )
 
         text = "\n".join(lines)
