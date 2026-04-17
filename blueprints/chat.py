@@ -18,6 +18,7 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from domain.error_catalog import error_payload, log_error_event
 from core.security import api_limiter, rate_limit
 from core.helpers import (
     answer_direct_operational_query,
@@ -577,7 +578,7 @@ def api_chat():
     conversation_id = (payload.get("conversation_id") or "").strip() or None
 
     if not question:
-        return jsonify({"error": "Pergunta vazia."}), 400
+        return jsonify(error_payload("EMPTY_QUESTION")), 400
 
     username = session["username"]
     try:
@@ -590,7 +591,15 @@ def api_chat():
             allow_mutations=True,
         )
     except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 500
+        log_error_event(
+            logger,
+            "CHAT_RUNTIME_FAILED",
+            detail=str(exc),
+            channel="web",
+            username=username,
+            endpoint="/api/chat",
+        )
+        return jsonify(error_payload("CHAT_RUNTIME_FAILED", detail=str(exc), expose_detail=True)), 500
 
     shell = _conversation_shell(username, result["conversation_id"])
     return jsonify({

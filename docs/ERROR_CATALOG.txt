@@ -1,0 +1,101 @@
+CATALOGO DE ERROS DO PRAGTICO
+=============================
+
+Objetivo
+--------
+Este ficheiro lista os erros numerados que o bot pode devolver ao utilizador
+ou escrever nos logs. A referencia curta, por exemplo #ERR-9001, serve para
+procurar rapidamente o incidente no Railway, nos logs locais ou no historico
+da conversa.
+
+O que mudou na ultima adicao
+----------------------------
+Foi adicionado um catalogo central em domain/error_catalog.py. Em vez de cada
+endpoint devolver mensagens soltas e dificeis de pesquisar, os erros passam a
+ter:
+
+- error_code: numero estavel para maquinas, API e logs.
+- error_ref: referencia curta para utilizadores e suporte, no formato #ERR-0000.
+- mensagem tecnica: usada em respostas HTTP e logs.
+- mensagem de utilizador: usada quando o erro precisa de aparecer no WhatsApp.
+
+No /api/chat, uma pergunta vazia devolve agora #ERR-1001.
+Se o runtime do chat falhar, o /api/chat devolve #ERR-9001 e grava um log
+estruturado.
+
+No WhatsApp, se o processamento da mensagem falhar, o bot tenta responder ao
+utilizador com uma mensagem curta contendo #ERR-9001. Isto evita ficar
+silencioso e da uma referencia concreta para suporte.
+
+Lista atual de erros
+--------------------
+
+#ERR-1001
+Codigo interno: EMPTY_QUESTION
+Categoria: validation
+Mensagem tecnica: Pergunta vazia.
+Mensagem ao utilizador: Escreve a pergunta ou comando que queres enviar.
+Onde aparece:
+- /api/chat quando o campo question vem vazio ou so com espacos.
+O que significa:
+- O pedido chegou ao bot, mas nao tinha texto util para processar.
+Acao recomendada:
+- Reenviar a pergunta/comando com texto.
+
+#ERR-5001
+Codigo interno: PENDING_ACTION_FAILED
+Categoria: business_rule
+Mensagem tecnica: Nao foi possivel aplicar a acao operacional.
+Mensagem ao utilizador: Nao foi possivel aplicar a acao operacional. Confirma os dados e tenta novamente.
+Onde aparece:
+- Reservado para falhas em acoes operacionais pendentes.
+O que significa:
+- O bot percebeu a intencao, mas nao conseguiu aplicar uma acao de negocio.
+Acao recomendada:
+- Confirmar dados da escala/manobra e repetir. Se persistir, procurar #ERR-5001 nos logs.
+
+#ERR-9000
+Codigo interno: UNHANDLED_EXCEPTION
+Categoria: internal
+Mensagem tecnica: Erro inesperado.
+Mensagem ao utilizador: Erro inesperado. Contacta o suporte com este codigo.
+Onde aparece:
+- Fallback para chaves de erro desconhecidas.
+O que significa:
+- O sistema recebeu ou tentou usar um erro que ainda nao esta catalogado.
+Acao recomendada:
+- Procurar #ERR-9000 nos logs e transformar a falha numa chave especifica.
+
+#ERR-9001
+Codigo interno: CHAT_RUNTIME_FAILED
+Categoria: internal
+Mensagem tecnica: Nao foi possivel processar a mensagem.
+Mensagem ao utilizador: Erro inesperado ao processar a mensagem. Contacta o suporte com este codigo.
+Onde aparece:
+- /api/chat quando handle_chat_turn levanta RuntimeError.
+- Webhook WhatsApp quando o processamento da mensagem falha.
+O que significa:
+- O bot recebeu a mensagem, mas o motor de chat/RAG/LLM falhou antes de produzir resposta.
+Acao recomendada:
+- Procurar #ERR-9001 nos logs do Railway.
+- Verificar provider LLM, RAG, base de dados, timeouts e configuracao de ambiente.
+
+Formato dos logs
+----------------
+Os logs estruturados sao escritos como JSON, por exemplo:
+
+{
+  "level": "error",
+  "error_code": 9001,
+  "error_ref": "#ERR-9001",
+  "error_key": "CHAT_RUNTIME_FAILED",
+  "category": "internal",
+  "message": "provider down",
+  "channel": "whatsapp"
+}
+
+Notas
+-----
+- A lista deve crescer sempre que encontrarmos uma falha recorrente.
+- O utilizador final deve ver apenas a referencia curta e uma mensagem clara.
+- O detalhe tecnico deve ficar nos logs, nao no WhatsApp.

@@ -1142,6 +1142,19 @@ class OperationalFlowTests(unittest.TestCase):
         entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
         self.assertEqual(entry["state"], "completed")
 
+    def test_chat_empty_question_returns_error_code(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            response = client.post("/api/chat", json={"question": "   "})
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.get_json()
+        self.assertEqual(payload["error_code"], 1001)
+        self.assertEqual(payload["error_ref"], "#ERR-1001")
+
     def test_maneuver_archive_defaults_to_latest_available_month(self) -> None:
         older = self._archive_entry(
             vessel_name="BELITAKI FEB",
@@ -3647,6 +3660,42 @@ class OperationalFlowTests(unittest.TestCase):
         events = json.loads(events_path.read_text(encoding="utf-8"))
         self.assertEqual(events[0]["tag"], "DANO")
         self.assertTrue(Path(events[0]["foto_path"]).exists())
+
+    def test_whatsapp_webhook_sends_error_code_when_chat_runtime_fails(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.FAIL123",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {"body": "teste"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with patch("blueprints.whatsapp.handle_chat_turn", side_effect=RuntimeError("provider down")):
+                with app.app.test_client() as client:
+                    response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
+        self.assertIn("#ERR-9001", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("Contacta o suporte", whatsapp_service.sent_messages[0]["text"])
 
     def test_whatsapp_webhook_sends_welcome_only_once_per_contact(self) -> None:
         whatsapp_service = _StubWhatsAppService(
