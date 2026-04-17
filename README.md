@@ -179,6 +179,8 @@ python3 scripts/test_whatsapp_send.py --to 351962063664
 
 Pré-requisitos na `.env`: `WHATSAPP_ENABLED=1`, `WHATSAPP_ACCESS_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`.
 
+SOS via WhatsApp: usa administradores com `whatsapp_opt_in` ativo ou define `WHATSAPP_SOS_ALERT_NUMBERS` com números separados por vírgulas.
+
 Atualizar a foto do perfil do número WhatsApp com `img/icon.png`:
 
 ```bash

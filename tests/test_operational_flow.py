@@ -330,6 +330,22 @@ class _StubWhatsAppService:
                                 "raw": message,
                             }
                         )
+                    elif message.get("type") == "location":
+                        location = message.get("location") or {}
+                        parsed.append(
+                            {
+                                "event_type": "message_location",
+                                "message_id": str(message.get("id", "")),
+                                "from_number": from_number,
+                                "profile_name": profile_name,
+                                "latitude": location.get("latitude"),
+                                "longitude": location.get("longitude"),
+                                "location_name": str(location.get("name") or ""),
+                                "location_address": str(location.get("address") or ""),
+                                "timestamp": str(message.get("timestamp") or ""),
+                                "raw": message,
+                            }
+                        )
                 for status in value.get("statuses", []):
                     parsed.append(
                         {
@@ -495,6 +511,76 @@ class OperationalFlowTests(unittest.TestCase):
         target = Path(self.store.knowledge_dir) / "operational_safety_limits.json"
         target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
         return target
+
+    def _whatsapp_text_payload(
+        self,
+        *,
+        message_id: str,
+        from_number: str = "351962063664",
+        profile_name: str = "Andre",
+        text: str,
+        timestamp: str = "1712165400",
+    ) -> dict:
+        return {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": from_number, "profile": {"name": profile_name}}],
+                                "messages": [
+                                    {
+                                        "id": message_id,
+                                        "from": from_number,
+                                        "timestamp": timestamp,
+                                        "type": "text",
+                                        "text": {"body": text},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+    def _whatsapp_location_payload(
+        self,
+        *,
+        message_id: str,
+        from_number: str = "351962063664",
+        profile_name: str = "Andre",
+        latitude: float = 38.5244,
+        longitude: float = -8.8882,
+        timestamp: str = "1712165460",
+    ) -> dict:
+        return {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": from_number, "profile": {"name": profile_name}}],
+                                "messages": [
+                                    {
+                                        "id": message_id,
+                                        "from": from_number,
+                                        "timestamp": timestamp,
+                                        "type": "location",
+                                        "location": {
+                                            "latitude": latitude,
+                                            "longitude": longitude,
+                                            "name": "Porto de Setubal",
+                                            "address": "Setubal",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
 
     def test_complete_entry_with_real_times_only_confirms_maneuver(self) -> None:
         port_call = self._create_entry(notes="Registo do agente · Entrada\nCalado: 9.94")
@@ -3596,6 +3682,92 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(len(channel_events), 2)
         self.assertEqual(channel_events[0]["event_type"], "incoming_text")
         self.assertEqual(channel_events[1]["event_type"], "outgoing_text")
+
+    def test_whatsapp_sos_request_asks_for_current_location(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        payload = self._whatsapp_text_payload(message_id="wamid.SOS1", text="SOS")
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    response = client.post("/webhooks/whatsapp", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
+        self.assertIn("🛟⚠️ SOS recebido", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("Partilha já a tua localização", whatsapp_service.sent_messages[0]["text"])
+        self.assertTrue(self.store.get_runtime_state("whatsapp:sos:pending:351962063664"))
+        channel_events = self.store._read_channel_events()
+        self.assertEqual(channel_events[0]["event_type"], "incoming_sos_request")
+        self.assertEqual(channel_events[1]["event_type"], "outgoing_sos_location_prompt")
+
+    def test_whatsapp_sos_location_alerts_admin_and_confirms_user(self) -> None:
+        self.store.update_user_profile(
+            "admin",
+            full_name="Admin Porto",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 900 000 001",
+            whatsapp_number="351900000001",
+            whatsapp_opt_in=True,
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664", "351900000001"})
+        request_payload = self._whatsapp_text_payload(message_id="wamid.SOS2", text="Emergência")
+        location_payload = self._whatsapp_location_payload(message_id="wamid.SOS3")
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    first = client.post("/webhooks/whatsapp", json=request_payload)
+                    second = client.post("/webhooks/whatsapp", json=location_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 2)
+        self.assertEqual(len(whatsapp_service.sent_messages), 3)
+        admin_alert = whatsapp_service.sent_messages[1]
+        user_confirmation = whatsapp_service.sent_messages[2]
+        self.assertEqual(admin_alert["to_number"], "351900000001")
+        self.assertEqual(admin_alert["reply_to_message_id"], "")
+        self.assertIn("🛟⚠️ ALERTA SOS", admin_alert["text"])
+        self.assertIn("Telefone: +351962063664", admin_alert["text"])
+        self.assertIn("Localização: 38.524400, -8.888200", admin_alert["text"])
+        self.assertIn("https://maps.google.com/?q=38.524400,-8.888200", admin_alert["text"])
+        self.assertEqual(user_confirmation["to_number"], "351962063664")
+        self.assertIn("✅🛟 Localização recebida", user_confirmation["text"])
+        self.assertFalse(self.store.get_runtime_state("whatsapp:sos:pending:351962063664"))
+        channel_events = self.store._read_channel_events()
+        event_types = [event["event_type"] for event in channel_events]
+        self.assertIn("incoming_sos_request", event_types)
+        self.assertIn("incoming_sos_location", event_types)
+        self.assertIn("outgoing_sos_alert", event_types)
+        self.assertIn("outgoing_sos_confirmation", event_types)
+
+    def test_whatsapp_location_without_pending_sos_does_not_alert_admin(self) -> None:
+        self.store.update_user_profile(
+            "admin",
+            full_name="Admin Porto",
+            organization="APSS",
+            email="admin@apss.pt",
+            phone="+351 900 000 001",
+            whatsapp_number="351900000001",
+            whatsapp_opt_in=True,
+        )
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664", "351900000001"})
+        location_payload = self._whatsapp_location_payload(message_id="wamid.LOC1")
+
+        with patch.dict(os.environ, {"WHATSAPP_SOS_ENABLED": "1", "WHATSAPP_SOS_ALERT_NUMBERS": ""}):
+            with patch.object(services, "whatsapp_service", whatsapp_service):
+                with app.app.test_client() as client:
+                    response = client.post("/webhooks/whatsapp", json=location_payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["delivered"], 1)
+        self.assertEqual(len(whatsapp_service.sent_messages), 1)
+        self.assertEqual(whatsapp_service.sent_messages[0]["to_number"], "351962063664")
+        self.assertIn("não há pedido SOS ativo", whatsapp_service.sent_messages[0]["text"])
 
     def test_reportar_evento_web_archives_without_photo(self) -> None:
         with app.app.test_client() as client:

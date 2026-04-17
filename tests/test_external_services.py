@@ -97,6 +97,45 @@ class ExternalServiceCacheTests(unittest.TestCase):
         self.assertEqual(events[0]["media_id"], "media-123")
         self.assertEqual(events[0]["mime_type"], "image/jpeg")
 
+    def test_whatsapp_parse_webhook_events_maps_location_message(self) -> None:
+        service = WhatsAppCloudService(enabled=True)
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351965756128", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.LOCATION123",
+                                        "from": "351965756128",
+                                        "timestamp": "1712165400",
+                                        "type": "location",
+                                        "location": {
+                                            "latitude": 38.5244,
+                                            "longitude": -8.8882,
+                                            "name": "Porto de Setubal",
+                                            "address": "Setubal",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        events = service.parse_webhook_events(payload)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "message_location")
+        self.assertEqual(events[0]["latitude"], 38.5244)
+        self.assertEqual(events[0]["longitude"], -8.8882)
+        self.assertEqual(events[0]["location_name"], "Porto de Setubal")
+        self.assertEqual(events[0]["location_address"], "Setubal")
+
     def test_whatsapp_download_media_fetches_metadata_and_bytes(self) -> None:
         service = WhatsAppCloudService(
             enabled=True,

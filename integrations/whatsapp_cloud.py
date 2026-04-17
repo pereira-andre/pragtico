@@ -455,6 +455,22 @@ class WhatsAppCloudService:
                                     "raw": message,
                                 }
                             )
+                    elif message_type == "location":
+                        location = message.get("location") or {}
+                        parsed.append(
+                            {
+                                "event_type": "message_location",
+                                "message_id": (message.get("id") or "").strip(),
+                                "from_number": from_number,
+                                "profile_name": (profile.get("name") or "").strip(),
+                                "latitude": location.get("latitude"),
+                                "longitude": location.get("longitude"),
+                                "location_name": str(location.get("name") or "").strip(),
+                                "location_address": str(location.get("address") or "").strip(),
+                                "timestamp": str(message.get("timestamp") or "").strip(),
+                                "raw": message,
+                            }
+                        )
                 for status in (value.get("statuses") or []):
                     status_message_id = (status.get("id") or "").strip()
                     status_value = (status.get("status") or "").strip().lower()

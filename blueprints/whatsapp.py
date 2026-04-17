@@ -16,6 +16,23 @@ from core.event_report_runtime import (
     load_pending_event_report,
 )
 from domain.error_catalog import error_ref, log_error_event, user_error_message
+from domain.sos_alerts import (
+    build_sos_admin_alert,
+    build_sos_disabled_reply,
+    build_sos_event_id,
+    build_sos_location_prompt,
+    build_sos_no_pending_location_reply,
+    build_sos_user_confirmation,
+    configured_sos_numbers,
+    is_sos_trigger,
+    local_datetime_label,
+    normalize_location,
+    sos_admin_recipients,
+    sos_alerts_enabled,
+    sos_event_key,
+    sos_pending_key,
+    utc_now_iso,
+)
 
 bp = Blueprint("whatsapp", __name__)
 
@@ -39,6 +56,113 @@ def _welcome_sent_key(from_number: str) -> str:
 
 def _pending_feedback_correction_key(from_number: str) -> str:
     return f"whatsapp:feedback-correction:{from_number}"
+
+
+def _sos_user_label(profile: dict | None, fallback_name: str = "") -> str:
+    profile = profile or {}
+    return (
+        str(profile.get("full_name") or "").strip()
+        or str(fallback_name or "").strip()
+        or str(profile.get("username") or "").strip()
+        or "Utilizador WhatsApp"
+    )
+
+
+def _save_pending_sos(
+    *,
+    from_number: str,
+    profile: dict,
+    conversation_id: str,
+    message_id: str,
+    text: str,
+) -> dict:
+    number_suffix = "".join(char for char in from_number if char.isdigit())[-4:]
+    event_id = build_sos_event_id()
+    if number_suffix:
+        event_id = f"{event_id}-{number_suffix}"
+    payload = {
+        "event_id": event_id,
+        "from_number": from_number,
+        "username": profile.get("username", ""),
+        "user_label": _sos_user_label(profile),
+        "conversation_id": conversation_id,
+        "message_id": message_id,
+        "initial_text": text,
+        "requested_at": utc_now_iso(),
+    }
+    services.store.set_runtime_state(sos_pending_key(from_number), payload)
+    return payload
+
+
+def _load_pending_sos(from_number: str) -> dict:
+    return services.store.get_runtime_state(sos_pending_key(from_number)) or {}
+
+
+def _clear_pending_sos(from_number: str) -> None:
+    services.store.delete_runtime_state(sos_pending_key(from_number))
+
+
+def _send_sos_alerts(
+    service,
+    *,
+    requester_username: str,
+    requester_conversation_id: str,
+    requester_message_id: str,
+    alert_text: str,
+    recipients: list[dict],
+    sos_event_id: str,
+) -> tuple[int, list[str]]:
+    sent = 0
+    failed: list[str] = []
+    for recipient in recipients:
+        number = recipient.get("number", "")
+        username = recipient.get("username", "")
+        try:
+            if username:
+                conversation = services.store.ensure_conversation(username=username)
+                local_message = services.store.append_chat_message(
+                    username=username,
+                    conversation_id=conversation["id"],
+                    role="assistant",
+                    content=alert_text,
+                    channel="whatsapp",
+                    channel_user_id=number,
+                    external_reply_to_id="",
+                    channel_metadata={
+                        "message_kind": "sos_admin_alert",
+                        "sos_event_id": sos_event_id,
+                        "requester_message_id": requester_message_id,
+                    },
+                )
+                _send_and_record_outbound_message(
+                    service,
+                    username=username,
+                    conversation_id=conversation["id"],
+                    local_message_id=local_message["id"],
+                    content=alert_text,
+                    to_number=number,
+                    reply_to_message_id="",
+                    event_type="outgoing_sos_alert",
+                )
+            else:
+                send_response = service.send_text_message(number, alert_text, reply_to_message_id="")
+                outbound_id = _extract_outbound_message_id(send_response)
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="outgoing_sos_alert",
+                    payload=send_response,
+                    username=requester_username,
+                    conversation_id=requester_conversation_id,
+                    local_message_id="",
+                    channel_user_id=number,
+                    external_event_id=outbound_id,
+                    external_message_id=outbound_id,
+                )
+            sent += 1
+        except Exception as exc:
+            current_app.logger.exception("Falha ao enviar alerta SOS para %s.", number)
+            failed.append(f"{number}: {exc}")
+    return sent, failed
 
 
 def _reaction_feedback_status(emoji: str | None) -> str:
@@ -457,6 +581,122 @@ def whatsapp_webhook_receive():
                 )
                 continue
 
+            if event_type == "message_location":
+                conversation = services.store.ensure_conversation(username=profile["username"])
+                try:
+                    latitude, longitude = normalize_location(event.get("latitude"), event.get("longitude"))
+                except ValueError as exc:
+                    reply_text = f"🛟⚠️ Recebi uma localização, mas as coordenadas não são válidas: {exc}"
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=reply_text,
+                        event_type="outgoing_sos_location_invalid",
+                        metadata={"message_kind": "sos_location_invalid"},
+                    )
+                    delivered += 1
+                    continue
+
+                location_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content=f"[localização recebida: {latitude:.6f}, {longitude:.6f}]",
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "sos_location",
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "location_name": event.get("location_name", ""),
+                        "location_address": event.get("location_address", ""),
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_sos_location",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    local_message_id=location_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+
+                pending_sos = _load_pending_sos(from_number)
+                if not pending_sos:
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=build_sos_no_pending_location_reply(),
+                        event_type="outgoing_sos_location_without_pending",
+                        metadata={"message_kind": "sos_location_without_pending"},
+                    )
+                    delivered += 1
+                    continue
+
+                created_at = utc_now_iso()
+                sos_event_id = str(pending_sos.get("event_id") or build_sos_event_id())
+                alert_payload = {
+                    **pending_sos,
+                    "event_id": sos_event_id,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "created_at": created_at,
+                    "created_at_label": local_datetime_label(created_at),
+                    "location_name": event.get("location_name", ""),
+                    "location_address": event.get("location_address", ""),
+                }
+                alert_text = build_sos_admin_alert(alert_payload)
+                recipients = sos_admin_recipients(
+                    services.store.list_users(),
+                    configured_numbers=configured_sos_numbers(),
+                )
+                sent_count, failed = _send_sos_alerts(
+                    service,
+                    requester_username=profile["username"],
+                    requester_conversation_id=conversation["id"],
+                    requester_message_id=message_id,
+                    alert_text=alert_text,
+                    recipients=recipients,
+                    sos_event_id=sos_event_id,
+                )
+                services.store.set_runtime_state(
+                    sos_event_key(sos_event_id),
+                    {
+                        **alert_payload,
+                        "recipient_count": len(recipients),
+                        "sent_count": sent_count,
+                        "failed": failed,
+                    },
+                )
+                _clear_pending_sos(from_number)
+                _append_send_and_mark_reply(
+                    service,
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    from_number=from_number,
+                    inbound_message_id=message_id,
+                    content=build_sos_user_confirmation(sent_count, len(failed)),
+                    event_type="outgoing_sos_confirmation",
+                    metadata={
+                        "message_kind": "sos_confirmation",
+                        "sos_event_id": sos_event_id,
+                        "sent_count": sent_count,
+                        "failed_count": len(failed),
+                    },
+                )
+                delivered += sent_count + 1
+                continue
+
             if event_type == "message_media":
                 conversation = services.store.ensure_conversation(username=profile["username"])
                 media_kind = (event.get("media_kind") or "").strip().lower()
@@ -576,6 +816,63 @@ def whatsapp_webhook_receive():
             text = (event.get("text") or "").strip()
             if not text:
                 ignored += 1
+                continue
+
+            if is_sos_trigger(text):
+                conversation = services.store.ensure_conversation(username=profile["username"])
+                user_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content=text,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "sos_request",
+                        "profile_name": event.get("profile_name", ""),
+                        "timestamp": event.get("timestamp", ""),
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_sos_request",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    local_message_id=user_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+
+                if sos_alerts_enabled():
+                    _save_pending_sos(
+                        from_number=from_number,
+                        profile=profile,
+                        conversation_id=conversation["id"],
+                        message_id=message_id,
+                        text=text,
+                    )
+                    reply_text = build_sos_location_prompt()
+                    event_type_reply = "outgoing_sos_location_prompt"
+                    message_kind = "sos_location_prompt"
+                else:
+                    reply_text = build_sos_disabled_reply()
+                    event_type_reply = "outgoing_sos_disabled"
+                    message_kind = "sos_disabled"
+
+                _append_send_and_mark_reply(
+                    service,
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    from_number=from_number,
+                    inbound_message_id=message_id,
+                    content=reply_text,
+                    event_type=event_type_reply,
+                    metadata={"message_kind": message_kind},
+                )
+                delivered += 1
                 continue
 
             pending_feedback_correction = services.store.get_runtime_state(
