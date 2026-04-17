@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 report/
 reports/
+reportes/
 
 .env
 .env.local

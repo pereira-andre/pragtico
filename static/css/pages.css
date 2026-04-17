@@ -1897,6 +1897,73 @@
   margin: 0;
 }
 
+.event-reports-admin-page .document-window-table {
+  border-radius: 8px;
+  border-color: rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.5);
+}
+
+.event-reports-admin-page .planned-table {
+  min-width: 1040px;
+}
+
+.event-report-filter-grid {
+  grid-template-columns: minmax(240px, 1.6fr) repeat(3, minmax(150px, 1fr));
+}
+
+.event-report-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  color: rgba(126, 147, 168, 0.92);
+  font-size: 0.84rem;
+}
+
+.event-report-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.event-report-edit-form {
+  display: grid;
+  gap: 14px;
+}
+
+.event-report-edit-form .form-grid.two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.event-report-edit-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.event-report-side-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.event-report-photo-link {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.event-report-photo-link img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
 .warnings-archive-page .warning-table td {
   vertical-align: top;
 }
@@ -3616,6 +3683,10 @@ button:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .event-report-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .ais-map-frame {
     min-height: 380px;
   }
@@ -3689,6 +3760,8 @@ button:hover {
 
 @media (max-width: 720px) {
   .archive-filter-grid,
+  .event-report-filter-grid,
+  .event-report-edit-form .form-grid.two-col,
   .archive-selection-actions {
     grid-template-columns: 1fr;
   }

@@ -1454,6 +1454,9 @@ def _build_tide_lookup_answer(question: str) -> tuple[str, list[dict]]:
             lines.append(
                 f"- {item.get('time', '--')} — {item.get('type', '--')} de {item.get('height_m', '--')} m"
             )
+        luminosity = summary.get("luminosity") or {}
+        if luminosity.get("summary"):
+            lines.append(f"- {luminosity['summary']}")
     context = services.tide_service.context_for_question(question)
     sources = [context] if context else []
     return "\n".join(lines), sources
@@ -2587,6 +2590,186 @@ def current_resolvable_port_calls() -> list[dict]:
     return current_visible_port_calls(window_days=3650)
 
 
+def _float_from_port_value(value: str | float | int | None) -> float:
+    text = str(value or "").strip().replace(" ", "").replace(",", ".")
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    return float(match.group(0)) if match else 0.0
+
+
+def _maneuver_type_label(maneuver_type: str) -> str:
+    return {
+        "entry": "entrada",
+        "departure": "saída",
+        "shift": "mudança",
+        "anchoring": "fundear/suspender",
+    }.get((maneuver_type or "").strip().lower(), "manobra")
+
+
+def _maneuver_type_from_argument(argument: str) -> str:
+    clean = _operational_lookup_key(argument)
+    if re.search(r"\b(saida|departure|sair)\b", clean):
+        return "departure"
+    if re.search(r"\b(mudanca|shift|mudar)\b", clean):
+        return "shift"
+    if re.search(r"\b(entrada|entry|entrar)\b", clean):
+        return "entry"
+    return ""
+
+
+def _argument_without_maneuver_type(argument: str) -> str:
+    clean = re.sub(
+        r"\b(entrada|sa[ií]da|mudan[cç]a|entry|departure|shift|tipo de manobra|tipo|id|ref)\b",
+        " ",
+        str(argument or ""),
+        flags=re.IGNORECASE,
+    )
+    clean = clean.replace(":", " ")
+    return " ".join(clean.split())
+
+
+def _resolve_port_call_for_slash_argument(argument: str) -> dict | None:
+    clean_argument = " ".join((argument or "").strip().split())
+    if not clean_argument:
+        return None
+    port_calls = current_resolvable_port_calls()
+    lookup_argument = _argument_without_maneuver_type(clean_argument) or clean_argument
+    for target in (
+        {"maneuver_id": lookup_argument},
+        {"reference_code": lookup_argument},
+        {"vessel_name": lookup_argument},
+        {"reference_code": clean_argument},
+        {"vessel_name": clean_argument},
+    ):
+        match = resolve_port_call(port_calls, target)
+        if match:
+            return services.store.get_port_call(match["id"])
+    lookup = _operational_lookup_key(clean_argument)
+    by_imo = [
+        item for item in port_calls
+        if lookup and _operational_lookup_key(item.get("vessel_imo")) == lookup
+    ]
+    if len(by_imo) == 1:
+        return services.store.get_port_call(by_imo[0]["id"])
+    full_imo_matches = []
+    for item in port_calls:
+        item_id = item.get("id")
+        if not item_id:
+            continue
+        try:
+            full_port_call = services.store.get_port_call(item_id)
+        except Exception:
+            continue
+        if lookup and _operational_lookup_key(full_port_call.get("vessel_imo")) == lookup:
+            full_imo_matches.append(full_port_call)
+    if len(full_imo_matches) == 1:
+        return full_imo_matches[0]
+    return None
+
+
+def _resolve_maneuver_for_slash_argument(port_call: dict, argument: str) -> tuple[dict | None, str]:
+    maneuver_type = _maneuver_type_from_argument(argument)
+    clean_argument = " ".join((argument or "").strip().split())
+    lookup_argument = _argument_without_maneuver_type(clean_argument)
+    explicit_id = lookup_argument or clean_argument
+    if explicit_id:
+        for maneuver in port_call.get("maneuver_history", []) or []:
+            maneuver_id = _operational_lookup_key(maneuver.get("id"))
+            target_id = _operational_lookup_key(explicit_id)
+            if target_id and (maneuver_id == target_id or maneuver_id.startswith(target_id)):
+                return maneuver, maneuver.get("type", "")
+    if maneuver_type:
+        return resolve_maneuver(port_call, "edit_maneuver_plan", maneuver_type), maneuver_type
+    maneuvers = list(port_call.get("maneuver_history", []) or [])
+    if len(maneuvers) == 1:
+        return maneuvers[0], maneuvers[0].get("type", "")
+    return None, maneuver_type
+
+
+def _scale_cost_summary(port_call: dict, *, maneuver: dict | None = None) -> str:
+    gt = _float_from_port_value(port_call.get("vessel_gt_t") or port_call.get("vessel_gt"))
+    if gt <= 0:
+        return "Não consigo estimar custo: falta GT válido na ficha do navio."
+    vessel_type = port_call.get("vessel_type") or "restantes"
+    if maneuver:
+        maneuver_types = [(maneuver.get("type") or "entry").strip().lower()]
+        include_tup = False
+    else:
+        maneuver_types = [
+            (item.get("type") or "").strip().lower()
+            for item in port_call.get("maneuver_history", []) or []
+            if (item.get("type") or "").strip().lower()
+        ] or ["entry"]
+        include_tup = True
+    inputs = []
+    for maneuver_type in maneuver_types:
+        try:
+            enum_value = ManoeuvreType(maneuver_type)
+        except ValueError:
+            enum_value = ManoeuvreType.ENTRY
+        inputs.append(ManoeuvreInput(manoeuvre_type=enum_value, gt=gt))
+    estimate = calculate_scale_cost(
+        vessel_name=port_call.get("vessel_name") or "Navio",
+        gt=gt,
+        vessel_type=vessel_type,
+        manoeuvres=inputs,
+        include_tup=include_tup,
+    )
+    return format_cost_summary(estimate)
+
+
+def _format_scale_query_answer(port_call: dict, *, include_cost: bool = False) -> str:
+    lines = [
+        f"Escala {port_call.get('reference_code') or port_call.get('id', '--')}",
+        f"Navio: {port_call.get('vessel_name', '--')}",
+        f"Estado: {port_call.get('status_label') or port_call.get('status') or '--'}",
+        f"Cais/fundeadouro: {port_call.get('berth_label') or port_call.get('berth') or '--'}",
+        f"ETA: {port_call.get('eta_label') or '--'}",
+        f"ATA: {port_call.get('ata_label') or '--'}",
+        f"ATD: {port_call.get('departure_label') or '--'}",
+        f"Agente: {port_call.get('agent_label') or '--'}",
+    ]
+    if include_cost:
+        lines.extend(["", _scale_cost_summary(port_call)])
+    return "\n".join(lines)
+
+
+def _format_maneuver_query_answer(port_call: dict, maneuver: dict, *, include_cost: bool = False) -> str:
+    maneuver_type = maneuver.get("type", "")
+    short_id = (maneuver.get("id") or "")[:8].upper() or "--"
+    lines = [
+        f"Manobra {short_id}",
+        f"Navio: {port_call.get('vessel_name', '--')}",
+        f"Escala: {port_call.get('reference_code') or '--'}",
+        f"Tipo: {_maneuver_type_label(maneuver_type)}",
+        f"Estado: {maneuver.get('state_label') or maneuver.get('state') or '--'}",
+        f"Origem: {maneuver.get('origin') or '--'}",
+        f"Destino: {maneuver.get('destination') or '--'}",
+        f"Prevista: {maneuver.get('planned_label') or '--'}",
+        f"Executada: {maneuver.get('completed_label') or maneuver.get('finished_label') or '--'}",
+    ]
+    if include_cost:
+        lines.extend(["", _scale_cost_summary(port_call, maneuver=maneuver)])
+    return "\n".join(lines)
+
+
+def _format_vessel_query_answer(port_call: dict) -> str:
+    return "\n".join(
+        [
+            f"Navio: {port_call.get('vessel_name', '--')}",
+            f"IMO: {port_call.get('vessel_imo') or '--'}",
+            f"Indicativo: {port_call.get('vessel_call_sign') or '--'}",
+            f"Bandeira: {port_call.get('vessel_flag') or '--'}",
+            f"Tipo: {port_call.get('vessel_type') or '--'}",
+            f"LOA: {port_call.get('vessel_loa_m') or '--'} m",
+            f"Boca: {port_call.get('vessel_beam_m') or '--'} m",
+            f"GT: {port_call.get('vessel_gt_t') or '--'}",
+            f"DWT: {port_call.get('vessel_dwt_t') or '--'}",
+            f"Calado max.: {port_call.get('vessel_max_draft_m') or '--'} m",
+            f"Ultima escala visivel: {port_call.get('reference_code') or '--'}",
+        ]
+    )
+
+
 def answer_slash_query(command: str, argument: str, role: str) -> dict:
     """Answer direct slash-query commands without entering the operational proposal flow."""
     clean_argument = " ".join((argument or "").strip().split())
@@ -2665,6 +2848,57 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
         )
         answer["answer_origin"] = "slash_rule"
         return answer
+    if command in {"consult_scale", "consult_scale_cost"}:
+        port_call = _resolve_port_call_for_slash_argument(clean_argument)
+        if not port_call:
+            return {
+                "answer": "Não encontrei uma escala visível para esse identificador. Usa a Ref, ID curto ou nome do navio.",
+                "sources": [],
+                "answer_origin": "slash_consult_scale",
+            }
+        return {
+            "answer": _format_scale_query_answer(port_call, include_cost=command == "consult_scale_cost"),
+            "sources": [],
+            "answer_origin": "slash_consult_scale",
+        }
+    if command in {"consult_maneuver", "consult_maneuver_cost"}:
+        port_call = _resolve_port_call_for_slash_argument(clean_argument)
+        if not port_call:
+            return {
+                "answer": "Não encontrei uma manobra visível para esse identificador. Usa ID da manobra ou Ref + tipo.",
+                "sources": [],
+                "answer_origin": "slash_consult_maneuver",
+            }
+        maneuver, maneuver_type = _resolve_maneuver_for_slash_argument(port_call, clean_argument)
+        if not maneuver:
+            hint = " Indica também o tipo: entrada, saída ou mudança." if not maneuver_type else ""
+            return {
+                "answer": f"Encontrei a escala, mas não consegui escolher uma manobra única.{hint}",
+                "sources": [],
+                "answer_origin": "slash_consult_maneuver",
+            }
+        return {
+            "answer": _format_maneuver_query_answer(
+                port_call,
+                maneuver,
+                include_cost=command == "consult_maneuver_cost",
+            ),
+            "sources": [],
+            "answer_origin": "slash_consult_maneuver",
+        }
+    if command == "consult_vessel":
+        port_call = _resolve_port_call_for_slash_argument(clean_argument)
+        if not port_call:
+            return {
+                "answer": "Não encontrei esse navio nas escalas visíveis. Usa nome parcial ou IMO.",
+                "sources": [],
+                "answer_origin": "slash_consult_vessel",
+            }
+        return {
+            "answer": _format_vessel_query_answer(port_call),
+            "sources": [],
+            "answer_origin": "slash_consult_vessel",
+        }
     return {"answer": "Comando não suportado.", "sources": [], "answer_origin": "slash_unknown"}
 
 

@@ -1,7 +1,7 @@
 """Admin blueprint — users, documents, status, migration, reindex."""
 
 from collections import Counter
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import json
 import logging
 import os
@@ -35,6 +35,14 @@ from domain.practice_experience import (
     prepare_practice_experience_records_for_import,
     save_practice_experience_records,
     update_practice_experience_feedback,
+)
+from domain.event_reports import (
+    EVENT_REPORT_STATUS_OPTIONS,
+    EVENT_REPORT_TAG_OPTIONS,
+    event_report_photo_path,
+    get_event_report,
+    list_event_reports,
+    update_event_report,
 )
 from core.helpers import (
     current_reindex_status_payload,
@@ -1042,6 +1050,134 @@ def _documents_return_to() -> str:
     return request.path
 
 
+EVENT_REPORT_STATUS_META = {
+    "novo": {"label": "Novo", "badge": "degraded"},
+    "em_revisao": {"label": "Em revisão", "badge": "neutral"},
+    "resolvido": {"label": "Resolvido", "badge": "online"},
+    "arquivado": {"label": "Arquivado", "badge": "offline"},
+}
+
+
+def _current_request_return_to() -> str:
+    if request.query_string:
+        return f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
+    return request.path
+
+
+def _event_report_status_options() -> list[dict]:
+    return [
+        {
+            "value": status,
+            "label": EVENT_REPORT_STATUS_META.get(status, {}).get("label", status.replace("_", " ").capitalize()),
+        }
+        for status in EVENT_REPORT_STATUS_OPTIONS
+    ]
+
+
+def _event_report_status_meta(status: str) -> dict:
+    return EVENT_REPORT_STATUS_META.get(status, {"label": status.replace("_", " ").capitalize(), "badge": "neutral"})
+
+
+def _event_report_view(event: dict) -> dict:
+    status = event.get("estado") or "novo"
+    meta = _event_report_status_meta(status)
+    has_photo = event_report_photo_path(event) is not None
+    description = (event.get("descricao_processada") or event.get("descricao_original") or "").strip()
+    return {
+        **event,
+        "estado": status,
+        "status_label": meta["label"],
+        "status_badge": meta["badge"],
+        "descricao": description,
+        "has_photo": has_photo,
+        "revisto_em_label": _local_iso_to_label(event.get("revisto_em")) if event.get("revisto_em") else "",
+        "photo_url": url_for("admin.event_report_photo", event_id=event.get("id")) if has_photo else "",
+    }
+
+
+def _build_event_report_filters(events: list[dict]) -> dict:
+    q = " ".join((request.args.get("q") or "").strip().split())
+    q_lookup = q.lower()
+    tag = (request.args.get("tag") or "").strip().upper()
+    status = (request.args.get("estado") or "").strip().lower()
+    photo = (request.args.get("photo") or "").strip().lower()
+    if status not in EVENT_REPORT_STATUS_OPTIONS:
+        status = ""
+    if photo not in {"with", "without"}:
+        photo = ""
+    tags = sorted(
+        {
+            (item.get("tag") or "").strip().upper()
+            for item in events
+            if (item.get("tag") or "").strip()
+        }
+        | set(EVENT_REPORT_TAG_OPTIONS)
+    )
+    return {
+        "q": q,
+        "q_lookup": q_lookup,
+        "tag": tag,
+        "estado": status,
+        "photo": photo,
+        "tags": tags,
+        "statuses": _event_report_status_options(),
+        "has_active_filters": bool(q or tag or status or photo),
+    }
+
+
+def _filter_event_reports(events: list[dict], filters: dict) -> list[dict]:
+    filtered = []
+    for item in events:
+        if filters["tag"] and (item.get("tag") or "").strip().upper() != filters["tag"]:
+            continue
+        if filters["estado"] and (item.get("estado") or "").strip().lower() != filters["estado"]:
+            continue
+        if filters["photo"] == "with" and not item.get("has_photo"):
+            continue
+        if filters["photo"] == "without" and item.get("has_photo"):
+            continue
+        if filters["q_lookup"]:
+            haystack = " ".join(
+                str(item.get(key) or "")
+                for key in (
+                    "id",
+                    "tag",
+                    "local",
+                    "descricao_original",
+                    "descricao_processada",
+                    "utilizador",
+                    "username",
+                    "nota_admin",
+                )
+            ).lower()
+            if filters["q_lookup"] not in haystack:
+                continue
+        filtered.append(item)
+    return filtered
+
+
+def _event_report_stats(events: list[dict], filtered_events: list[dict]) -> dict:
+    return {
+        "total": len(events),
+        "filtered": len(filtered_events),
+        "with_photo": sum(1 for item in events if item.get("has_photo")),
+        "open": sum(1 for item in events if item.get("estado") in {"novo", "em_revisao"}),
+    }
+
+
+def _selected_event_report_ids() -> list[str]:
+    values = request.values.getlist("event_ids")
+    raw_ids = request.values.get("ids", "")
+    if raw_ids:
+        values.extend(raw_ids.split(","))
+    selected: list[str] = []
+    for value in values:
+        clean = " ".join((value or "").strip().split())
+        if clean and clean not in selected:
+            selected.append(clean)
+    return selected
+
+
 def _build_document_filters(docs: list[dict]) -> dict:
     q = " ".join((request.args.get("q") or "").strip().split())
     q_search = q.lower()
@@ -1604,6 +1740,115 @@ def admin_casebooks():
     """Painel admin para rever mensagens do chat e gerir casos operacionais."""
     args = request.args.to_dict(flat=True)
     return redirect(url_for("admin.admin_bot", **args, _anchor="casebooks"))
+
+
+@bp.route("/admin/event-reports")
+@login_required
+@role_required("admin")
+def admin_event_reports():
+    """Painel admin para rever reportes de evento operacionais."""
+    events = [_event_report_view(event) for event in list_event_reports()]
+    filters = _build_event_report_filters(events)
+    filtered_events = _filter_event_reports(events, filters)
+    return render_template(
+        "admin_event_reports.html",
+        events=filtered_events,
+        stats=_event_report_stats(events, filtered_events),
+        filters=filters,
+        reports_return_to=_current_request_return_to(),
+        title="Reportes de Evento",
+    )
+
+
+@bp.route("/admin/event-reports/print", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def print_event_reports():
+    """Relatório imprimível dos reportes selecionados."""
+    selected_ids = _selected_event_report_ids()
+    all_events = [_event_report_view(event) for event in list_event_reports()]
+    if selected_ids:
+        selected = [event for event in all_events if event.get("id") in selected_ids]
+    else:
+        selected = all_events
+    return render_template(
+        "admin_event_reports_print.html",
+        events=selected,
+        selected_count=len(selected),
+        generated_at_label=_local_iso_to_label(datetime.now(timezone.utc).isoformat()),
+        auto_print=(request.values.get("print") == "1"),
+        title="Relatório de Eventos",
+    )
+
+
+@bp.route("/admin/event-reports/<event_id>")
+@login_required
+@role_required("admin")
+def event_report_detail(event_id: str):
+    """Página de detalhe e edição de um reporte de evento."""
+    event = get_event_report(event_id)
+    if not event:
+        abort(404)
+    return_to = _safe_return_to(request.args.get("return_to")) or url_for("admin.admin_event_reports")
+    return render_template(
+        "admin_event_report_detail.html",
+        event=_event_report_view(event),
+        reports_return_to=return_to,
+        status_options=_event_report_status_options(),
+        tag_options=EVENT_REPORT_TAG_OPTIONS,
+        title=f"Reporte {event.get('id', '')}",
+    )
+
+
+@bp.route("/admin/event-reports/<event_id>/photo")
+@login_required
+@role_required("admin")
+def event_report_photo(event_id: str):
+    """Mostrar a foto anexada ao reporte de evento."""
+    event = get_event_report(event_id)
+    if not event:
+        abort(404)
+    photo_path = event_report_photo_path(event)
+    if not photo_path:
+        abort(404)
+    return send_file(photo_path, mimetype=event.get("foto_mime_type") or None, as_attachment=False)
+
+
+@bp.route("/admin/event-reports/<event_id>/edit", methods=["POST"])
+@login_required
+@role_required("admin")
+def edit_event_report(event_id: str):
+    """Guardar revisão administrativa de um reporte de evento."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.event_report_detail", event_id=event_id)
+    try:
+        tag = validate_required_text(request.form.get("tag", ""), "Tipo", max_length=60).upper()
+        if tag == "OBSERVAÇÃO":
+            tag = "OBSERVACAO"
+        if tag not in EVENT_REPORT_TAG_OPTIONS:
+            raise ValueError("Escolhe uma tag válida para o reporte.")
+        local = validate_required_text(request.form.get("local", ""), "Local", max_length=200)
+        description = validate_required_text(request.form.get("descricao_processada", ""), "Descrição", max_length=5000)
+        original_description = (request.form.get("descricao_original") or "").strip()
+        status = (request.form.get("estado") or "").strip().lower()
+        if status not in EVENT_REPORT_STATUS_OPTIONS:
+            raise ValueError("Escolhe um estado válido para o reporte.")
+        update_event_report(
+            event_id,
+            {
+                "tag": tag,
+                "local": local,
+                "descricao_original": original_description,
+                "descricao_processada": description,
+                "estado": status,
+                "nota_admin": request.form.get("nota_admin", ""),
+                "revisto_por": session.get("username", "admin"),
+                "revisto_em": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        flash("Reporte de evento atualizado.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(return_to)
 
 
 @bp.route("/admin/bot/practice-experience/import", methods=["POST"])

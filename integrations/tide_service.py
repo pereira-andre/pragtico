@@ -6,12 +6,14 @@ import re
 from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from math import cos, pi
+from math import acos, asin, atan, cos, degrees, pi, radians, sin, tan
 from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 
 LISBON_TZ = ZoneInfo("Europe/Lisbon")
+SETUBAL_LAT = 38.5244
+SETUBAL_LON = -8.8882
 
 
 @dataclass
@@ -80,6 +82,91 @@ class TideService:
         start_month = self._format_month_name(start_date)
         end_month = self._format_month_name(end_date)
         return f"{start_date.day} {start_month} a {end_date.day} de {end_month}"
+
+    def _format_duration_label(self, duration: timedelta | None) -> str:
+        if duration is None:
+            return "--"
+        total_minutes = max(int(duration.total_seconds() // 60), 0)
+        hours, minutes = divmod(total_minutes, 60)
+        return f"{hours}h {minutes:02d}m"
+
+    def _sun_event_local(self, target_date: date, *, sunrise: bool) -> datetime | None:
+        # NOAA sunrise/sunset approximation. Good enough for operational context labels;
+        # exact maneuver decisions still use official pilotage/local instructions.
+        day_of_year = target_date.timetuple().tm_yday
+        lng_hour = SETUBAL_LON / 15.0
+        base_hour = 6 if sunrise else 18
+        t = day_of_year + ((base_hour - lng_hour) / 24)
+        mean_anomaly = (0.9856 * t) - 3.289
+        true_longitude = (
+            mean_anomaly
+            + (1.916 * sin(radians(mean_anomaly)))
+            + (0.020 * sin(radians(2 * mean_anomaly)))
+            + 282.634
+        ) % 360
+        right_ascension = degrees(atan(0.91764 * tan(radians(true_longitude)))) % 360
+        longitude_quadrant = (int(true_longitude / 90)) * 90
+        ascension_quadrant = (int(right_ascension / 90)) * 90
+        right_ascension = (right_ascension + (longitude_quadrant - ascension_quadrant)) / 15
+        sin_declination = 0.39782 * sin(radians(true_longitude))
+        cos_declination = cos(asin(sin_declination))
+        cos_hour_angle = (
+            cos(radians(90.833))
+            - (sin_declination * sin(radians(SETUBAL_LAT)))
+        ) / (cos_declination * cos(radians(SETUBAL_LAT)))
+        if cos_hour_angle > 1 or cos_hour_angle < -1:
+            return None
+        hour_angle = 360 - degrees(acos(cos_hour_angle)) if sunrise else degrees(acos(cos_hour_angle))
+        hour_angle /= 15
+        local_mean_time = hour_angle + right_ascension - (0.06571 * t) - 6.622
+        utc_hour = (local_mean_time - lng_hour) % 24
+        hour = int(utc_hour)
+        minute_float = (utc_hour - hour) * 60
+        minute = int(minute_float)
+        second = int(round((minute_float - minute) * 60))
+        if second >= 60:
+            minute += 1
+            second = 0
+        if minute >= 60:
+            hour = (hour + 1) % 24
+            minute = 0
+        utc_dt = datetime(
+            target_date.year,
+            target_date.month,
+            target_date.day,
+            hour,
+            minute,
+            second,
+            tzinfo=timezone.utc,
+        )
+        return utc_dt.astimezone(LISBON_TZ)
+
+    def luminosity_for_date(self, target_date: date) -> Dict:
+        sunrise = self._sun_event_local(target_date, sunrise=True)
+        sunset = self._sun_event_local(target_date, sunrise=False)
+        daylight = None
+        night = None
+        if sunrise and sunset:
+            daylight = sunset - sunrise
+            if daylight.total_seconds() < 0:
+                daylight += timedelta(days=1)
+            night = timedelta(days=1) - daylight
+        sunrise_label = sunrise.strftime("%H:%M") if sunrise else "--"
+        sunset_label = sunset.strftime("%H:%M") if sunset else "--"
+        daylight_label = self._format_duration_label(daylight)
+        night_label = self._format_duration_label(night)
+        summary = (
+            f"☀️ Nascer do sol {sunrise_label}; "
+            f"🌅 pôr do sol {sunset_label}; "
+            f"luz {daylight_label}; 🌙 noite {night_label}."
+        )
+        return {
+            "sunrise": sunrise_label,
+            "sunset": sunset_label,
+            "daylight_duration": daylight_label,
+            "night_duration": night_label,
+            "summary": summary,
+        }
 
     def _resolve_portuguese_date(
         self,
@@ -351,6 +438,7 @@ class TideService:
         events = self.events_for_date(target_date)
         date_label = self._format_date_label(target_date)
         relative_label = self._relative_day_label(target_date)
+        luminosity = self.luminosity_for_date(target_date)
         if not events:
             return {
                 "date": target_date.isoformat(),
@@ -359,7 +447,11 @@ class TideService:
                 "location": self.location_label,
                 "events": [],
                 "chart": self._build_chart(events),
-                "summary": f"Sem marés registadas para {date_label} em {self.location_label}.",
+                "luminosity": luminosity,
+                "summary": (
+                    f"Sem marés registadas para {date_label} em {self.location_label}. "
+                    f"{luminosity['summary']}"
+                ),
             }
 
         lines = [
@@ -381,7 +473,12 @@ class TideService:
                 for item in events
             ],
             "chart": chart,
-            "summary": f"Marés para {date_label} em {self.location_label}: " + "; ".join(lines),
+            "luminosity": luminosity,
+            "summary": (
+                f"Marés para {date_label} em {self.location_label}: "
+                + "; ".join(lines)
+                + f". {luminosity['summary']}"
+            ),
         }
 
     def context_for_question(self, question: str) -> Dict:

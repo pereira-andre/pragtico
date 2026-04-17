@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Relatório de eventos" }}</title>
+    <style>
+      :root {
+        color: #152235;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+      }
+      body {
+        margin: 0;
+        background: #f4f7fb;
+        color: #152235;
+      }
+      .report-shell {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+      .report-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .report-button {
+        border: 1px solid #264766;
+        border-radius: 6px;
+        background: #264766;
+        color: white;
+        padding: 9px 12px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .report-button.secondary {
+        background: white;
+        color: #264766;
+      }
+      .report-header,
+      .report-event {
+        border: 1px solid #cbd7e6;
+        border-radius: 8px;
+        background: white;
+        padding: 18px;
+      }
+      .report-header {
+        margin-bottom: 16px;
+      }
+      .report-header h1,
+      .report-event h2 {
+        margin: 0;
+      }
+      .report-header p,
+      .report-event p {
+        line-height: 1.45;
+      }
+      .report-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .report-meta {
+        border: 1px solid #dde7f2;
+        border-radius: 6px;
+        padding: 10px;
+      }
+      .report-meta span {
+        display: block;
+        color: #597086;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+      .report-meta strong {
+        display: block;
+        margin-top: 4px;
+      }
+      .report-events {
+        display: grid;
+        gap: 14px;
+      }
+      .report-event-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .report-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .report-badge {
+        border: 1px solid #b8c7d8;
+        border-radius: 6px;
+        padding: 4px 8px;
+        background: #eef4fa;
+        color: #23384f;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .report-description {
+        border-left: 3px solid #264766;
+        padding-left: 12px;
+        white-space: pre-wrap;
+      }
+      .report-photo {
+        margin-top: 12px;
+      }
+      .report-photo img {
+        max-width: 360px;
+        max-height: 260px;
+        border: 1px solid #cbd7e6;
+        border-radius: 6px;
+        object-fit: contain;
+      }
+      .empty {
+        padding: 18px;
+        border: 1px dashed #a9b8c8;
+        border-radius: 8px;
+        background: white;
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        .report-shell {
+          max-width: none;
+          padding: 0;
+        }
+        .report-toolbar {
+          display: none;
+        }
+        .report-event {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report-shell">
+      <div class="report-toolbar">
+        <a class="report-button secondary" href="{{ url_for('admin.admin_event_reports') }}">Voltar aos reportes</a>
+        <button type="button" class="report-button" onclick="window.print()">Imprimir / PDF</button>
+      </div>
+      <header class="report-header">
+        <h1>Relatório de eventos operacionais</h1>
+        <p>Emitido em {{ generated_at_label }}. Total de reportes neste relatório: {{ selected_count }}.</p>
+      </header>
+
+      <section class="report-events">
+        {% for event in events %}
+          <article class="report-event">
+            <div class="report-event-head">
+              <div>
+                <h2>{{ event.id }}</h2>
+                <p>{{ event.local or "--" }} · {{ event.timestamp_label }}</p>
+              </div>
+              <div class="report-badges">
+                <span class="report-badge">{{ event.tag }}</span>
+                <span class="report-badge">{{ event.status_label }}</span>
+                <span class="report-badge">{% if event.has_photo %}Com foto{% else %}Sem foto{% endif %}</span>
+              </div>
+            </div>
+            <div class="report-meta-grid">
+              <div class="report-meta"><span>Reportado por</span><strong>{{ event.utilizador or event.username or "--" }}</strong></div>
+              <div class="report-meta"><span>Perfil</span><strong>{{ event.role or "operacional" }}</strong></div>
+              <div class="report-meta"><span>Estado</span><strong>{{ event.status_label }}</strong></div>
+              <div class="report-meta"><span>Revisto por</span><strong>{{ event.revisto_por or "--" }}</strong></div>
+            </div>
+            <p class="report-description">{{ event.descricao or "Sem descrição." }}</p>
+            {% if event.nota_admin %}
+              <p><strong>Nota administrativa:</strong> {{ event.nota_admin }}</p>
+            {% endif %}
+            {% if event.has_photo %}
+              <div class="report-photo">
+                <img src="{{ event.photo_url }}" alt="Foto anexada ao reporte {{ event.id }}">
+              </div>
+            {% endif %}
+          </article>
+        {% else %}
+          <p class="empty">Sem reportes selecionados para imprimir.</p>
+        {% endfor %}
+      </section>
+    </main>
+    {% if auto_print %}
+      <script>
+        window.addEventListener("load", () => window.print(), { once: true });
+      </script>
+    {% endif %}
+  </body>
+</html>

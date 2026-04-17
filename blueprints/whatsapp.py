@@ -10,6 +10,11 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from core import services
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
+from core.event_report_runtime import (
+    finalize_pending_event_report,
+    format_event_report_answer,
+    load_pending_event_report,
+)
 from domain.error_catalog import error_ref, log_error_event, user_error_message
 
 bp = Blueprint("whatsapp", __name__)
@@ -232,6 +237,45 @@ def _send_and_record_outbound_message(
     return send_response, outbound_message_id
 
 
+def _append_send_and_mark_reply(
+    service,
+    *,
+    username: str,
+    conversation_id: str,
+    from_number: str,
+    inbound_message_id: str,
+    content: str,
+    event_type: str,
+    metadata: dict | None = None,
+) -> None:
+    reply_message = services.store.append_chat_message(
+        username=username,
+        conversation_id=conversation_id,
+        role="assistant",
+        content=content,
+        channel="whatsapp",
+        channel_user_id=from_number,
+        external_reply_to_id=inbound_message_id,
+        channel_metadata=metadata or {},
+    )
+    _send_and_record_outbound_message(
+        service,
+        username=username,
+        conversation_id=conversation_id,
+        local_message_id=reply_message["id"],
+        content=content,
+        to_number=from_number,
+        reply_to_message_id=inbound_message_id,
+        event_type=event_type,
+    )
+    _mark_inbound_processed(
+        inbound_message_id,
+        from_number=from_number,
+        conversation_id=conversation_id,
+        answer=content,
+    )
+
+
 @bp.route("/webhooks/whatsapp", methods=["GET"])
 def whatsapp_webhook_verify():
     service = getattr(services, "whatsapp_service", None)
@@ -398,6 +442,122 @@ def whatsapp_webhook_receive():
                     conversation_id=(target_message or {}).get("conversation_id", ""),
                     answer=f"reaction:{event.get('emoji', '')}",
                 )
+                continue
+
+            if event_type == "message_media":
+                conversation = services.store.ensure_conversation(username=profile["username"])
+                media_kind = (event.get("media_kind") or "").strip().lower()
+                media_id = (event.get("media_id") or "").strip()
+                media_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content=f"[{media_kind or 'media'} recebida para reporte]",
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "event_report_media",
+                        "media_kind": media_kind,
+                        "media_id": media_id,
+                        "mime_type": event.get("mime_type", ""),
+                        "caption": event.get("caption", ""),
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_media",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    local_message_id=media_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+                pending_report = load_pending_event_report(
+                    channel="whatsapp",
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    channel_user_id=from_number,
+                )
+                if not pending_report:
+                    reply_text = (
+                        "Recebi a imagem, mas não tenho um reporte de evento pendente. "
+                        "Envia primeiro `/reportar_evento TAG. LOCAL. DESCRIPTION`."
+                    )
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=reply_text,
+                        event_type="outgoing_event_report_media_help",
+                        metadata={"message_kind": "event_report_media_help"},
+                    )
+                    delivered += 1
+                    continue
+                if media_kind != "image":
+                    reply_text = "Para este reporte, envia uma foto ou responde `não` para arquivar sem anexo."
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=reply_text,
+                        event_type="outgoing_event_report_media_rejected",
+                        metadata={"message_kind": "event_report_media_rejected"},
+                    )
+                    delivered += 1
+                    continue
+                try:
+                    media_payload = service.download_media(media_id)
+                except Exception:
+                    current_app.logger.exception(
+                        "Falha ao descarregar foto WhatsApp para reporte (media=%s).",
+                        media_id,
+                    )
+                    reply_text = (
+                        "Recebi a foto, mas não consegui descarregá-la da WhatsApp Cloud API. "
+                        "Tenta enviar novamente ou responde `não` para arquivar sem anexo."
+                    )
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=reply_text,
+                        event_type="outgoing_event_report_media_error",
+                        metadata={"message_kind": "event_report_media_error"},
+                    )
+                    delivered += 1
+                    continue
+
+                event_report = finalize_pending_event_report(
+                    pending_report,
+                    attachment_bytes=media_payload.get("bytes") or b"",
+                    attachment_mime_type=media_payload.get("mime_type") or event.get("mime_type", ""),
+                    attachment_filename=media_payload.get("filename") or event.get("filename", ""),
+                    media_id=media_id,
+                )
+                reply_text = format_event_report_answer(event_report)
+                _append_send_and_mark_reply(
+                    service,
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    from_number=from_number,
+                    inbound_message_id=message_id,
+                    content=reply_text,
+                    event_type="outgoing_event_report_registered",
+                    metadata={
+                        "message_kind": "event_report_registered",
+                        "event_report_id": event_report.get("id", ""),
+                    },
+                )
+                delivered += 1
                 continue
 
             text = (event.get("text") or "").strip()
