@@ -10,6 +10,7 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from core import services
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
+from domain.error_catalog import error_ref, log_error_event, user_error_message
 
 bp = Blueprint("whatsapp", __name__)
 
@@ -49,6 +50,57 @@ def _extract_outbound_message_id(payload: dict | None) -> str:
         return ""
     first = messages[0] or {}
     return str(first.get("id") or "").strip()
+
+
+def _send_whatsapp_error_reply(
+    service,
+    *,
+    from_number: str,
+    message_id: str,
+    profile: dict | None,
+) -> bool:
+    error_text = user_error_message("CHAT_RUNTIME_FAILED", channel="whatsapp")
+    username = str((profile or {}).get("username") or _whatsapp_username(from_number)).strip()
+    try:
+        conversation = services.store.ensure_conversation(username=username)
+        assistant_message = services.store.append_chat_message(
+            username=username,
+            conversation_id=conversation["id"],
+            role="assistant",
+            content=error_text,
+            channel="whatsapp",
+            channel_user_id=from_number,
+            external_reply_to_id=message_id,
+            channel_metadata={
+                "message_kind": "error",
+                "error_ref": error_ref("CHAT_RUNTIME_FAILED"),
+            },
+        )
+        _send_and_record_outbound_message(
+            service,
+            username=username,
+            conversation_id=conversation["id"],
+            local_message_id=assistant_message["id"],
+            content=error_text,
+            to_number=from_number,
+            reply_to_message_id=message_id,
+            event_type="outgoing_error",
+        )
+        _mark_inbound_processed(
+            message_id,
+            from_number=from_number,
+            conversation_id=conversation["id"],
+            answer=error_text,
+        )
+        return True
+    except Exception as send_exc:
+        current_app.logger.exception(
+            "Falha ao enviar resposta de erro WhatsApp (from=%s, msg=%s): %s",
+            from_number,
+            message_id,
+            send_exc,
+        )
+        return False
 
 
 def _is_duplicate_inbound(message_id: str) -> bool:
@@ -566,12 +618,28 @@ def whatsapp_webhook_receive():
                 answer=result["answer"],
             )
             delivered += 1
-        except Exception:
+        except Exception as exc:
+            log_error_event(
+                current_app.logger,
+                "CHAT_RUNTIME_FAILED",
+                detail=str(exc),
+                channel="whatsapp",
+                from_number=from_number,
+                message_id=message_id,
+                event_type=event_type,
+            )
             current_app.logger.exception(
                 "Falha ao responder ao webhook WhatsApp (from=%s, msg=%s).",
                 from_number,
                 message_id,
             )
+            if _send_whatsapp_error_reply(
+                service,
+                from_number=from_number,
+                message_id=message_id,
+                profile=locals().get("profile"),
+            ):
+                delivered += 1
 
     return jsonify({
         "status": "ok",
