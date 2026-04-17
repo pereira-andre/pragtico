@@ -259,6 +259,7 @@ class _StubWhatsAppService:
         self.welcome_message = welcome_message
         self.sent_messages: list[dict] = []
         self._outbound_counter = 122
+        self.media_downloads: dict[str, dict] = {}
 
     def verify_webhook(self, mode: str | None, token: str | None) -> bool:
         return self.verify_ok and (mode or "") == "subscribe" and bool(token)
@@ -311,6 +312,23 @@ class _StubWhatsAppService:
                                 "raw": message,
                             }
                         )
+                    elif message.get("type") in {"image", "document"}:
+                        media = message.get(message.get("type")) or {}
+                        parsed.append(
+                            {
+                                "event_type": "message_media",
+                                "message_id": str(message.get("id", "")),
+                                "from_number": from_number,
+                                "profile_name": profile_name,
+                                "media_kind": str(message.get("type", "")),
+                                "media_id": str(media.get("id") or ""),
+                                "mime_type": str(media.get("mime_type") or ""),
+                                "caption": str(media.get("caption") or ""),
+                                "filename": str(media.get("filename") or ""),
+                                "timestamp": str(message.get("timestamp") or ""),
+                                "raw": message,
+                            }
+                        )
                 for status in value.get("statuses", []):
                     parsed.append(
                         {
@@ -357,6 +375,12 @@ class _StubWhatsAppService:
         )
         return {"messages": [{"id": f"wamid.REPLY{self._outbound_counter}"}]}
 
+    def download_media(self, media_id: str) -> dict:
+        payload = self.media_downloads.get(media_id)
+        if payload is None:
+            raise RuntimeError(f"media not found: {media_id}")
+        return payload
+
 
 class OperationalFlowTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -364,10 +388,16 @@ class OperationalFlowTests(unittest.TestCase):
         base = Path(self.temp_dir.name)
         self.store = LocalStore(data_dir=str(base / "data"), knowledge_dir=str(base / "knowledge"))
         self.original_store = services.store
+        self.original_event_reports_dir = os.environ.get("EVENT_REPORTS_DIR")
+        os.environ["EVENT_REPORTS_DIR"] = str(base / "reportes")
         services.store = self.store
 
     def tearDown(self) -> None:
         services.store = self.original_store
+        if self.original_event_reports_dir is None:
+            os.environ.pop("EVENT_REPORTS_DIR", None)
+        else:
+            os.environ["EVENT_REPORTS_DIR"] = self.original_event_reports_dir
         self.temp_dir.cleanup()
 
     def _create_entry(self, *, notes: str, eta: str = "2026-03-24T05:30:00+00:00") -> dict:
@@ -1447,6 +1477,43 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(payload["answer_origin"], "review_correction_memory")
         self.assertIn("280 metros", payload["answer"])
         self.assertIn("período diurno", payload["answer"])
+
+    def test_slash_consult_scale_maneuver_and_vessel_queries(self) -> None:
+        port_call = self._create_entry(notes="Consulta slash.")
+        maneuver_id = port_call["maneuver_history"][0]["id"]
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            scale_response = client.post(
+                "/api/chat",
+                json={"question": f"/consultar-escala {port_call['reference_code']}"},
+            )
+            maneuver_response = client.post(
+                "/api/chat",
+                json={"question": f"/consultar-manobra {maneuver_id[:8]}"},
+            )
+            vessel_response = client.post(
+                "/api/chat",
+                json={"question": "/consultar-navio 9152923"},
+            )
+            cost_response = client.post(
+                "/api/chat",
+                json={"question": f"/consultar-manobra-custo {maneuver_id[:8]}"},
+            )
+
+        self.assertEqual(scale_response.status_code, 200)
+        self.assertIn("Escala", scale_response.get_json()["answer"])
+        self.assertIn("BELITAKI", scale_response.get_json()["answer"])
+        self.assertEqual(maneuver_response.status_code, 200)
+        self.assertIn("Manobra", maneuver_response.get_json()["answer"])
+        self.assertNotIn("Total pilotagem", maneuver_response.get_json()["answer"])
+        self.assertEqual(vessel_response.status_code, 200)
+        self.assertIn("IMO: 9152923", vessel_response.get_json()["answer"])
+        self.assertEqual(cost_response.status_code, 200)
+        self.assertIn("Total pilotagem", cost_response.get_json()["answer"])
 
     def test_legacy_review_correction_commentary_is_normalized_before_reuse(self) -> None:
         with app.app.test_client() as client:
@@ -3463,7 +3530,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(response.get_json()["delivered"], 1)
         self.assertEqual(len(whatsapp_service.sent_messages), 1)
         self.assertEqual(whatsapp_service.sent_messages[0]["to_number"], "351962063664")
-        self.assertEqual(whatsapp_service.sent_messages[0]["text"], "Resposta do bot")
+        self.assertIn("Resposta do bot", whatsapp_service.sent_messages[0]["text"])
         self.assertEqual(whatsapp_service.sent_messages[0]["reply_to_message_id"], "wamid.TEST123")
         username = "whatsapp-351962063664@pragtico.local"
         conversations = self.store.list_conversations(username)
@@ -3479,6 +3546,107 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(len(channel_events), 2)
         self.assertEqual(channel_events[0]["event_type"], "incoming_text")
         self.assertEqual(channel_events[1]["event_type"], "outgoing_text")
+
+    def test_reportar_evento_web_archives_without_photo(self) -> None:
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            first = client.post(
+                "/api/chat",
+                json={
+                    "question": "/reportar_evento AVARIA | cais Teporset | o guincho do cais nao esta a funcionar"
+                },
+            )
+            second = client.post("/api/chat", json={"question": "não"})
+
+        self.assertEqual(first.status_code, 200)
+        self.assertIn("Queres anexar uma foto", first.get_json()["answer"])
+        self.assertEqual(second.status_code, 200)
+        answer = second.get_json()["answer"]
+        self.assertIn("Reporte de evento registado", answer)
+        self.assertIn("EVT-", answer)
+        events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+        events = json.loads(events_path.read_text(encoding="utf-8"))
+        self.assertEqual(events[0]["tag"], "AVARIA")
+        self.assertEqual(events[0]["local"], "cais Teporset")
+        self.assertFalse(events[0]["foto_path"])
+
+    def test_whatsapp_reportar_evento_accepts_photo_and_archives_file(self) -> None:
+        whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
+        whatsapp_service.media_downloads["media-1"] = {
+            "bytes": b"fake-jpeg",
+            "mime_type": "image/jpeg",
+            "filename": "guincho.jpg",
+        }
+        command_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.EVT1",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165400",
+                                        "type": "text",
+                                        "text": {
+                                            "body": "/reportar_evento DANO | navio ATLANTIC STAR | amassadela na amurada"
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        photo_payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351962063664", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.EVT2",
+                                        "from": "351962063664",
+                                        "timestamp": "1712165460",
+                                        "type": "image",
+                                        "image": {
+                                            "id": "media-1",
+                                            "mime_type": "image/jpeg",
+                                            "caption": "",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(services, "whatsapp_service", whatsapp_service):
+            with app.app.test_client() as client:
+                first = client.post("/webhooks/whatsapp", json=command_payload)
+                second = client.post("/webhooks/whatsapp", json=photo_payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["delivered"], 1)
+        self.assertEqual(second.get_json()["delivered"], 1)
+        self.assertIn("Queres anexar uma foto", whatsapp_service.sent_messages[0]["text"])
+        self.assertIn("Reporte de evento registado", whatsapp_service.sent_messages[1]["text"])
+        self.assertIn("1 foto guardada", whatsapp_service.sent_messages[1]["text"])
+        events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+        events = json.loads(events_path.read_text(encoding="utf-8"))
+        self.assertEqual(events[0]["tag"], "DANO")
+        self.assertTrue(Path(events[0]["foto_path"]).exists())
 
     def test_whatsapp_webhook_sends_welcome_only_once_per_contact(self) -> None:
         whatsapp_service = _StubWhatsAppService(
@@ -3549,14 +3717,9 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(first.get_json()["delivered"], 1)
         self.assertEqual(second.get_json()["delivered"], 1)
         self.assertEqual(len(whatsapp_service.sent_messages), 3)
-        self.assertEqual(
-            [item["text"] for item in whatsapp_service.sent_messages],
-            [
-                "👋 Bem-vindo ao PRAGtico\n\nEm que posso ajudar?",
-                "Resposta do bot",
-                "Resposta do bot",
-            ],
-        )
+        self.assertEqual(whatsapp_service.sent_messages[0]["text"], "👋 Bem-vindo ao PRAGtico\n\nEm que posso ajudar?")
+        self.assertIn("Resposta do bot", whatsapp_service.sent_messages[1]["text"])
+        self.assertIn("Resposta do bot", whatsapp_service.sent_messages[2]["text"])
         username = "whatsapp-351962063664@pragtico.local"
         conversations = self.store.list_conversations(username)
         self.assertEqual(len(conversations), 1)

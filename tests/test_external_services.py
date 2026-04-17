@@ -11,10 +11,12 @@ from integrations.wave_service import WaveService
 
 
 class _FakeResponse:
-    def __init__(self, payload, *, status_code: int = 200, text: str = ""):
+    def __init__(self, payload, *, status_code: int = 200, text: str = "", content: bytes = b"", headers: dict | None = None):
         self._payload = payload
         self.status_code = status_code
         self.text = text or ""
+        self.content = content
+        self.headers = headers or {}
 
     def raise_for_status(self):
         if self.status_code >= 400:
@@ -56,6 +58,69 @@ class ExternalServiceCacheTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["event_type"], "message_text")
         self.assertEqual(events[0]["text"], "Iniciar")
+
+    def test_whatsapp_parse_webhook_events_maps_image_media(self) -> None:
+        service = WhatsAppCloudService(enabled=True)
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "351965756128", "profile": {"name": "Andre"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.IMAGE123",
+                                        "from": "351965756128",
+                                        "timestamp": "1712165400",
+                                        "type": "image",
+                                        "image": {
+                                            "id": "media-123",
+                                            "mime_type": "image/jpeg",
+                                            "sha256": "abc",
+                                            "caption": "guincho",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        events = service.parse_webhook_events(payload)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "message_media")
+        self.assertEqual(events[0]["media_kind"], "image")
+        self.assertEqual(events[0]["media_id"], "media-123")
+        self.assertEqual(events[0]["mime_type"], "image/jpeg")
+
+    def test_whatsapp_download_media_fetches_metadata_and_bytes(self) -> None:
+        service = WhatsAppCloudService(
+            enabled=True,
+            access_token="token-123",
+            phone_number_id="phone-123",
+            graph_api_version="v25.0",
+        )
+        get_calls: list[dict] = []
+
+        def fake_get(url, **kwargs):
+            get_calls.append({"url": url, **kwargs})
+            if url.endswith("/media-123"):
+                return _FakeResponse({"url": "https://cdn.test/photo", "mime_type": "image/jpeg"})
+            if url == "https://cdn.test/photo":
+                return _FakeResponse({}, content=b"photo-bytes", headers={"Content-Type": "image/jpeg"})
+            raise AssertionError(f"URL inesperada: {url}")
+
+        with patch("integrations.whatsapp_cloud.requests.get", side_effect=fake_get):
+            payload = service.download_media("media-123")
+
+        self.assertEqual(payload["bytes"], b"photo-bytes")
+        self.assertEqual(payload["mime_type"], "image/jpeg")
+        self.assertEqual(len(get_calls), 2)
+        self.assertEqual(get_calls[0]["headers"]["Authorization"], "Bearer token-123")
 
     def test_wave_service_reuses_persisted_snapshot_after_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

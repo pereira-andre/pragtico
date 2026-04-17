@@ -435,6 +435,26 @@ class WhatsAppCloudService:
                                 "raw": message,
                             }
                         )
+                    elif message_type in {"image", "document"}:
+                        media = message.get(message_type) or {}
+                        media_id = str(media.get("id") or "").strip()
+                        if media_id:
+                            parsed.append(
+                                {
+                                    "event_type": "message_media",
+                                    "message_id": (message.get("id") or "").strip(),
+                                    "from_number": from_number,
+                                    "profile_name": (profile.get("name") or "").strip(),
+                                    "media_kind": message_type,
+                                    "media_id": media_id,
+                                    "mime_type": str(media.get("mime_type") or "").strip(),
+                                    "sha256": str(media.get("sha256") or "").strip(),
+                                    "caption": str(media.get("caption") or "").strip(),
+                                    "filename": str(media.get("filename") or "").strip(),
+                                    "timestamp": str(message.get("timestamp") or "").strip(),
+                                    "raw": message,
+                                }
+                            )
                 for status in (value.get("statuses") or []):
                     status_message_id = (status.get("id") or "").strip()
                     status_value = (status.get("status") or "").strip().lower()
@@ -456,6 +476,41 @@ class WhatsAppCloudService:
                         }
                     )
         return parsed
+
+    def download_media(self, media_id: str) -> dict[str, Any]:
+        clean_media_id = str(media_id or "").strip()
+        if not clean_media_id:
+            raise ValueError("Media id WhatsApp em falta.")
+        if not self.send_ready:
+            raise RuntimeError("WhatsApp Cloud API sem credenciais para descarregar media.")
+
+        metadata_response = requests.get(
+            f"https://graph.facebook.com/{self.graph_api_version}/{clean_media_id}",
+            headers={"Authorization": f"Bearer {self.access_token}"},
+            timeout=self.timeout,
+        )
+        metadata_response.raise_for_status()
+        metadata = metadata_response.json()
+        media_url = str(metadata.get("url") or "").strip()
+        if not media_url:
+            raise RuntimeError("A Meta não devolveu URL para o media recebido.")
+
+        file_response = requests.get(
+            media_url,
+            headers={"Authorization": f"Bearer {self.access_token}"},
+            timeout=self.timeout,
+        )
+        file_response.raise_for_status()
+        return {
+            "bytes": file_response.content,
+            "mime_type": str(
+                metadata.get("mime_type")
+                or file_response.headers.get("Content-Type")
+                or ""
+            ).strip(),
+            "filename": str(metadata.get("file_name") or metadata.get("filename") or "").strip(),
+            "metadata": metadata,
+        }
 
     def get_business_profile(self, *, fields: list[str] | None = None) -> dict[str, Any]:
         if not self.business_profile_ready:

@@ -305,8 +305,17 @@ SLASH_COMMAND_ALIASES = {
     "ondulação": "wave",
     "leitura-costeira": "wave",
     "validar-manobra": "validate_maneuver",
+    "verificar-manobra": "validate_maneuver",
+    "verificar": "validate_maneuver",
     "validar": "validate_maneuver",
     "checklist-manobra": "validate_maneuver",
+    "consultar-escala": "consult_scale",
+    "consultar-manobra": "consult_maneuver",
+    "consultar-escala-custo": "consult_scale_cost",
+    "consultar-manobra-custo": "consult_maneuver_cost",
+    "consultar-navio": "consult_vessel",
+    "reportar_evento": "event_report",
+    "reportar-evento": "event_report",
     "registar-escala": "register_scale",
     "nova-escala": "register_scale",
     "editar-escala": "edit_scale",
@@ -1293,8 +1302,16 @@ def build_slash_help(role: str) -> str:
         "  lista os códigos de regras/instruções disponíveis",
         "/regra 015",
         "  consulta uma regra/instrução por código",
+        "/consultar-navio IMO ou nome",
+        "  mostra a ficha do navio conhecida no portal",
+        "/reportar_evento TAG | LOCAL | DESCRIPTION",
+        "  regista uma ocorrência operacional e pergunta por foto opcional",
         "",
         "Escalas:",
+        "/consultar-escala REF",
+        "  mostra os dados básicos da escala",
+        "/consultar-escala-custo REF",
+        "  mostra a escala com estimativa de custos",
     ]
     if clean_role in {"admin", "agente"}:
         lines.extend(
@@ -1317,6 +1334,12 @@ def build_slash_help(role: str) -> str:
         [
             "/validar-manobra",
             "  valida uma manobra específica com checklist e histórico; usa ID da manobra ou Ref + Tipo",
+            "/verificar-manobra",
+            "  alias de /validar-manobra",
+            "/consultar-manobra ID",
+            "  mostra os dados básicos da manobra",
+            "/consultar-manobra-custo ID",
+            "  mostra a manobra com estimativa de custo",
         ]
     )
     if clean_role in {"admin", "agente"}:
@@ -1398,6 +1421,16 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         return {"intent": "query", "command": "weather", "argument": body}
     if command == "rule":
         return {"intent": "query", "command": "rule", "argument": body or tail.strip()}
+    if command in {
+        "consult_scale",
+        "consult_maneuver",
+        "consult_scale_cost",
+        "consult_maneuver_cost",
+        "consult_vessel",
+    }:
+        return {"intent": "query", "command": command, "argument": body or tail.strip()}
+    if command == "event_report":
+        return {"intent": "event_report", "argument": body or tail.strip()}
 
     command_aliases = _extract_values_from_alias_map(body, SLASH_COMMAND_FIELD_ALIASES) if body else {}
     extracted_fields = _extract_labelled_values(body)

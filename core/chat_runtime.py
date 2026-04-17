@@ -17,6 +17,18 @@ from core.chat_reasoning import (
     build_compound_message_analysis_source,
     build_conversation_reasoning_state,
 )
+from core.event_report_runtime import (
+    build_event_report_photo_prompt,
+    build_event_report_template,
+    clear_pending_event_report,
+    finalize_pending_event_report,
+    format_event_report_answer,
+    is_cancel_reply,
+    is_no_photo_reply,
+    load_pending_event_report,
+    parse_event_report_command,
+    save_pending_event_report,
+)
 from core.helpers import (
     answer_direct_operational_query,
     answer_slash_query,
@@ -621,9 +633,46 @@ def handle_chat_turn(
         )
 
         answer = None
+        pending_event_report = load_pending_event_report(
+            channel=channel,
+            username=username,
+            conversation_id=conversation["id"],
+            channel_user_id=channel_user_id,
+        )
+        if pending_event_report and not looks_like_slash_command(clean_question):
+            if is_cancel_reply(clean_question):
+                clear_pending_event_report(
+                    channel=channel,
+                    username=username,
+                    conversation_id=conversation["id"],
+                    channel_user_id=channel_user_id,
+                )
+                answer = {
+                    "answer": "Reporte de evento cancelado. Nada foi arquivado.",
+                    "sources": [],
+                    "answer_origin": "event_report_cancelled",
+                }
+            elif is_no_photo_reply(clean_question):
+                event_report = finalize_pending_event_report(pending_event_report)
+                answer = {
+                    "answer": format_event_report_answer(event_report),
+                    "sources": [],
+                    "answer_origin": "event_report_registered",
+                }
+            else:
+                answer = {
+                    "answer": (
+                        "Tenho um reporte de evento pendente. "
+                        "Envia uma foto agora, responde `não` para arquivar sem anexo, "
+                        "ou `cancelar` para desistir."
+                    ),
+                    "sources": [],
+                    "answer_origin": "event_report_pending",
+                }
+
         slash_command = (
             parse_slash_command(clean_question, role)
-            if looks_like_slash_command(clean_question)
+            if answer is None and looks_like_slash_command(clean_question)
             else None
         )
         if slash_command and slash_command.get("intent") == "help":
@@ -640,6 +689,30 @@ def handle_chat_turn(
             )
         elif slash_command and slash_command.get("intent") == "validate":
             answer = answer_slash_validation(slash_command.get("target") or {}, role)
+        elif slash_command and slash_command.get("intent") == "event_report":
+            parsed_report = parse_event_report_command(slash_command.get("argument", ""))
+            if not parsed_report.get("ok"):
+                answer = {
+                    "answer": build_event_report_template(parsed_report.get("missing") or []),
+                    "sources": [],
+                    "answer_origin": "event_report_template",
+                }
+            else:
+                draft = parsed_report.get("draft") or {}
+                save_pending_event_report(
+                    username=username,
+                    role=role,
+                    conversation_id=conversation["id"],
+                    channel=channel,
+                    channel_user_id=channel_user_id,
+                    inbound_message_id=inbound_message_id,
+                    draft=draft,
+                )
+                answer = {
+                    "answer": build_event_report_photo_prompt(draft),
+                    "sources": [],
+                    "answer_origin": "event_report_pending",
+                }
         elif slash_command and slash_command.get("intent") == "template":
             proposal = slash_command.get("proposal") or {}
             if proposal.get("intent") == "action" and proposal.get("action"):
@@ -708,7 +781,7 @@ def handle_chat_turn(
                         "sources": [],
                         "answer_origin": "slash_rejected",
                     }
-        else:
+        elif answer is None:
             answer = answer_direct_operational_query(clean_question, plan=execution_plan)
 
         if answer is None:

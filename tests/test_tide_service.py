@@ -47,6 +47,25 @@ class TideServiceTests(unittest.TestCase):
         self.assertEqual(summary["events"][0]["time"], "00:36")
         self.assertEqual(summary["events"][1]["time"], "06:51")
 
+    def test_summary_includes_professional_luminosity_period(self) -> None:
+        service = self._build_service(
+            "\n".join(
+                [
+                    "Date,Hour,Minute,Height",
+                    "2026-04-17,01,00,3.1",
+                    "2026-04-17,07,00,0.8",
+                ]
+            )
+        )
+
+        summary = service.summary_for_date(date(2026, 4, 17))
+
+        self.assertIn("luminosity", summary)
+        self.assertRegex(summary["luminosity"]["sunrise"], r"\d{2}:\d{2}")
+        self.assertRegex(summary["luminosity"]["sunset"], r"\d{2}:\d{2}")
+        self.assertIn("☀️ Nascer do sol", summary["summary"])
+        self.assertIn("🌙 noite", summary["summary"])
+
 
 if __name__ == "__main__":
     unittest.main()
