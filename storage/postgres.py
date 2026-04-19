@@ -2745,6 +2745,33 @@ class PostgresStore(BaseStore):
             ),
         )
 
+        # --- Verificar duplicados em escalas ativas (scheduled / in_port) ---
+        clean_imo = _clean_text(vessel_imo)
+        clean_cs = _clean_text(vessel_call_sign)
+        if clean_imo or clean_cs:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    conditions = []
+                    params: list = []
+                    if clean_imo:
+                        conditions.append("vessel_imo = %s")
+                        params.append(clean_imo)
+                    if clean_cs:
+                        conditions.append("vessel_call_sign = %s")
+                        params.append(clean_cs)
+                    where = " OR ".join(conditions)
+                    cur.execute(
+                        f"SELECT vessel_name, vessel_imo, vessel_call_sign FROM port_calls "
+                        f"WHERE status IN ('scheduled', 'in_port') AND ({where})",
+                        params,
+                    )
+                    dup = cur.fetchone()
+                    if dup:
+                        dup_name = dup.get("vessel_name", dup.get("vessel_name", ""))
+                        if clean_imo and _clean_text(str(dup.get("vessel_imo", ""))) == clean_imo:
+                            raise ValueError(f"Já existe uma escala ativa com o IMO {clean_imo} ({dup_name}).")
+                        raise ValueError(f"Já existe uma escala ativa com o indicativo {clean_cs} ({dup_name}).")
+
         record = {
             "id": str(uuid.uuid4()),
             "vessel_name": clean_name,

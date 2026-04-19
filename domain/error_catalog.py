@@ -244,6 +244,18 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "message": "Escala sem entrada associada.",
         "user_message": "Escala sem manobra de entrada associada.",
     },
+    "DUPLICATE_IMO_ACTIVE": {
+        "code": 3003,
+        "category": "business_rule",
+        "message": "IMO duplicado em escala ativa.",
+        "user_message": "Já existe uma escala ativa com o IMO",
+    },
+    "DUPLICATE_CALLSIGN_ACTIVE": {
+        "code": 3004,
+        "category": "business_rule",
+        "message": "Indicativo duplicado em escala ativa.",
+        "user_message": "Já existe uma escala ativa com o indicativo",
+    },
     "APPROVE_ALREADY_EXECUTED": {
         "code": 3010,
         "category": "business_rule",

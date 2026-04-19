@@ -405,6 +405,25 @@ Onde aparece: Edicao de escala sem entrada (estado inconsistente).
 Fonte: storage/postgres.py:edit_port_call
 Acao: Contactar admin.
 
+#ERR-3003
+Categoria: business_rule
+Mensagem: Já existe uma escala ativa com o IMO {imo} ({navio}).
+Canal: portal, bot
+Onde aparece: Criacao de escala quando ja existe outra ativa (scheduled/in_port)
+  com o mesmo numero IMO.
+Fonte: storage/postgres.py:create_port_call, storage/local.py:create_port_call
+Acao: Verificar se o navio ja tem escala ativa. Se for reentrada, concluir
+  ou apagar a escala anterior primeiro.
+
+#ERR-3004
+Categoria: business_rule
+Mensagem: Já existe uma escala ativa com o indicativo {call_sign} ({navio}).
+Canal: portal, bot
+Onde aparece: Criacao de escala quando ja existe outra ativa (scheduled/in_port)
+  com o mesmo call sign.
+Fonte: storage/postgres.py:create_port_call, storage/local.py:create_port_call
+Acao: Verificar se o navio ja tem escala ativa.
+
 --- Manobras — Aprovacao ---
 
 #ERR-3010

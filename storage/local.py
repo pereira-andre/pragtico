@@ -1811,6 +1811,18 @@ class LocalStore(BaseStore):
             ),
         )
 
+        # --- Verificar duplicados em escalas ativas (scheduled / in_port) ---
+        clean_imo = _clean_text(vessel_imo)
+        clean_cs = _clean_text(vessel_call_sign)
+        if clean_imo or clean_cs:
+            for existing in self._data.get("port_calls", []):
+                if existing.get("status") not in ("scheduled", "in_port"):
+                    continue
+                if clean_imo and _clean_text(str(existing.get("vessel_imo", ""))) == clean_imo:
+                    raise ValueError(f"Já existe uma escala ativa com o IMO {clean_imo} ({existing.get('vessel_name', '')}).")
+                if clean_cs and _clean_text(str(existing.get("vessel_call_sign", ""))) == clean_cs:
+                    raise ValueError(f"Já existe uma escala ativa com o indicativo {clean_cs} ({existing.get('vessel_name', '')}).")
+
         record = {
             "id": str(uuid.uuid4()),
             "vessel_name": clean_name,
