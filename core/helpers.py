@@ -11,6 +11,7 @@ from functools import wraps
 
 from flask import flash, jsonify, redirect, request, session, url_for
 
+from domain.error_catalog import error_ref, flash_error_message
 from core import services
 from core.chat_planner import (
     CURRENT_WEATHER_RE,
@@ -242,10 +243,10 @@ def ensure_port_call_scope_access(port_call_id: str) -> None:
     if scope_key is None:
         return
     if not scope_key:
-        raise PermissionError("O perfil do agente tem de ter uma agência definida.")
+        raise PermissionError(f"{error_ref('AGENCY_NOT_SET')} O perfil do agente tem de ter uma agência definida.")
     port_call = services.store.get_port_call(port_call_id)
     if _item_organization_scope_key(port_call) != scope_key:
-        raise PermissionError("Esta escala pertence a outra agência.")
+        raise PermissionError(f"{error_ref('AGENCY_MISMATCH')} Esta escala pertence a outra agência.")
 
 
 def filter_port_activity_for_session(port_activity: dict) -> dict:
@@ -352,19 +353,19 @@ def login_required(view):
         )
         if not session.get("username"):
             if wants_json:
-                return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
+                return jsonify({"error": f"{error_ref('SESSION_EXPIRED')} Sessão expirada. Faz login novamente."}), 401
             return redirect(url_for("auth.login"))
         if not ensure_session_user_profile():
             if wants_json:
-                return jsonify({"error": "Sessão expirada. Faz login novamente."}), 401
-            flash("Sessao expirada. Inicia sessao novamente.", "error")
+                return jsonify({"error": f"{error_ref('SESSION_EXPIRED')} Sessão expirada. Faz login novamente."}), 401
+            flash(f"{error_ref('SESSION_EXPIRED')} Sessão expirada. Inicia sessão novamente.", "error")
             return redirect(url_for("auth.login"))
         if (
             session_profile_incomplete()
             and request.endpoint not in {"auth.profile", "auth.logout", "static", "dashboard_bp.image_asset"}
         ):
             if wants_json:
-                return jsonify({"error": "Completa o teu perfil antes de usar o sistema."}), 403
+                return jsonify({"error": f"{error_ref('PROFILE_INCOMPLETE')} Completa o teu perfil antes de usar o sistema."}), 403
             return redirect(url_for("auth.profile", next=request.full_path if request.query_string else request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -382,8 +383,8 @@ def role_required(*roles):
                     or request.headers.get("X-Requested-With") in {"fetch", "XMLHttpRequest"}
                 )
                 if wants_json:
-                    return jsonify({"error": "Nao tens permissao para esta acao."}), 403
-                flash("Nao tens permissao para esta acao.", "error")
+                    return jsonify({"error": f"{error_ref('PERMISSION_DENIED')} Não tens permissão para esta ação."}), 403
+                flash(f"{error_ref('PERMISSION_DENIED')} Não tens permissão para esta ação.", "error")
                 return redirect(url_for("dashboard_bp.dashboard"))
             return view(*args, **kwargs)
         return wrapped

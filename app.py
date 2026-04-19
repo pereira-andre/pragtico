@@ -7,7 +7,7 @@ import re
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, request, session
+from flask import Flask, jsonify, render_template, request, session
 from markupsafe import Markup, escape
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -408,11 +408,47 @@ app.register_blueprint(whatsapp_bp)
 def handle_file_too_large(_exc):
     from flask import flash, redirect, request, url_for
     flash(
-        "Ficheiro demasiado grande para este rascunho local. "
+        "#ERR-8080 Ficheiro demasiado grande. "
         f"Limite atual: {int(app.config['MAX_CONTENT_LENGTH'] / (1024 * 1024))} MB.",
         "error",
     )
     return redirect(request.referrer or url_for("dashboard_bp.dashboard")), 413
+
+
+def _wants_json():
+    return (
+        request.path.startswith("/api/")
+        or request.accept_mimetypes.best == "application/json"
+        or request.headers.get("X-Requested-With") in {"fetch", "XMLHttpRequest"}
+    )
+
+
+@app.errorhandler(403)
+def handle_forbidden(_exc):
+    if _wants_json():
+        return jsonify({"error": "#ERR-2020 Pedido inválido. Recarrega a página e tenta novamente.", "error_code": 2020, "error_ref": "#ERR-2020"}), 403
+    return render_template("error.html", error_ref="#ERR-2020", error_title="Acesso negado", error_message="Pedido inválido ou sem permissão. Recarrega a página e tenta novamente."), 403
+
+
+@app.errorhandler(404)
+def handle_not_found(_exc):
+    if _wants_json():
+        return jsonify({"error": "Recurso não encontrado.", "error_code": 404}), 404
+    return render_template("error.html", error_ref="404", error_title="Página não encontrada", error_message="O recurso pedido não existe ou foi removido."), 404
+
+
+@app.errorhandler(429)
+def handle_rate_limited(_exc):
+    if _wants_json():
+        return jsonify({"error": "#ERR-2021 Demasiados pedidos. Aguarda e tenta novamente.", "error_code": 2021, "error_ref": "#ERR-2021"}), 429
+    return render_template("error.html", error_ref="#ERR-2021", error_title="Demasiados pedidos", error_message="Fizeste demasiados pedidos em pouco tempo. Aguarda uns segundos e tenta novamente."), 429
+
+
+@app.errorhandler(500)
+def handle_internal_error(_exc):
+    if _wants_json():
+        return jsonify({"error": "#ERR-9000 Erro inesperado.", "error_code": 9000, "error_ref": "#ERR-9000"}), 500
+    return render_template("error.html", error_ref="#ERR-9000", error_title="Erro interno", error_message="Ocorreu um erro inesperado. Contacta o suporte com este código."), 500
 
 
 @app.after_request

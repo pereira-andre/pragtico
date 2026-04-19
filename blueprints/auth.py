@@ -4,6 +4,8 @@ import re
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from domain.error_catalog import flash_error_message
+
 from core import services
 from core.whatsapp_support import verify_user_whatsapp
 from core.helpers import (
@@ -52,12 +54,12 @@ def login():
             username = validate_email(request.form.get("email", ""))
             password = validate_password(request.form.get("password", ""))
         except ValueError as exc:
-            flash(str(exc), "error")
+            flash(flash_error_message(str(exc)), "error")
             return render_template("login.html")
         try:
             user = services.auth_service.authenticate(username, password)
         except ValueError as exc:
-            flash(str(exc), "error")
+            flash(flash_error_message(str(exc)), "error")
             return render_template("login.html")
         if not user:
             flash("Credenciais invalidas.", "error")
@@ -89,7 +91,7 @@ def register():
             if whatsapp_opt_in and not whatsapp_number:
                 raise ValueError("Se ativares WhatsApp, tens de indicar o respetivo número.")
         except ValueError as exc:
-            flash(str(exc), "error")
+            flash(flash_error_message(str(exc)), "error")
             return render_template("register.html", form_data=_registration_form_data())
         profile_data = {
             "full_name": request.form.get("full_name", "").strip(),
@@ -105,7 +107,7 @@ def register():
                 username=username, password=password, role=role, profile_data=profile_data,
             )
         except ValueError as exc:
-            flash(str(exc), "error")
+            flash(flash_error_message(str(exc)), "error")
             return render_template("register.html", form_data=_registration_form_data())
 
         if created_user.get("whatsapp_opt_in") and created_user.get("whatsapp_number"):
@@ -157,7 +159,7 @@ def profile():
             if not is_user_profile_complete(updated_profile):
                 raise ValueError("Nome, agência/entidade, email e telefone são obrigatórios.")
         except ValueError as exc:
-            flash(str(exc), "error")
+            flash(flash_error_message(str(exc)), "error")
             return render_template("profile.html", profile={**existing_profile, **request.form}, title="Perfil operacional")
         flash("Perfil operacional atualizado.", "success")
         next_target = request.form.get("next", "").strip()

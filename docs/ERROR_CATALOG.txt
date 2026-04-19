@@ -1,88 +1,37 @@
 CATALOGO DE ERROS DO PRAGTICO
 =============================
+Versao: 2.0
+Ultima atualizacao: 2026-04-19
 
 Objetivo
 --------
-Este ficheiro lista os erros numerados que o bot pode devolver ao utilizador
-ou escrever nos logs. A referencia curta, por exemplo #ERR-9001, serve para
+Este ficheiro lista todos os erros previsiveis que o sistema pode devolver ao
+utilizador ou escrever nos logs. A referencia curta (#ERR-XXXX) serve para
 procurar rapidamente o incidente no Railway, nos logs locais ou no historico
 da conversa.
 
-O que mudou na ultima adicao
-----------------------------
-Foi adicionado um catalogo central em domain/error_catalog.py. Em vez de cada
-endpoint devolver mensagens soltas e dificeis de pesquisar, os erros passam a
-ter:
-
+Convencoes
+----------
 - error_code: numero estavel para maquinas, API e logs.
-- error_ref: referencia curta para utilizadores e suporte, no formato #ERR-0000.
-- mensagem tecnica: usada em respostas HTTP e logs.
-- mensagem de utilizador: usada quando o erro precisa de aparecer no WhatsApp.
+- error_ref: referencia curta para utilizadores e suporte (#ERR-XXXX).
+- Mensagem tecnica: usada em respostas HTTP e logs.
+- Mensagem de utilizador: usada quando o erro aparece no portal ou WhatsApp.
+- Canal: onde o erro pode aparecer (portal, bot, whatsapp, api, admin, logs).
 
-No /api/chat, uma pergunta vazia devolve agora #ERR-1001.
-Se o runtime do chat falhar, o /api/chat devolve #ERR-9001 e grava um log
-estruturado.
-
-No WhatsApp, se o processamento da mensagem falhar, o bot tenta responder ao
-utilizador com uma mensagem curta contendo #ERR-9001. Isto evita ficar
-silencioso e da uma referencia concreta para suporte.
-
-Lista atual de erros
---------------------
-
-#ERR-1001
-Codigo interno: EMPTY_QUESTION
-Categoria: validation
-Mensagem tecnica: Pergunta vazia.
-Mensagem ao utilizador: Escreve a pergunta ou comando que queres enviar.
-Onde aparece:
-- /api/chat quando o campo question vem vazio ou so com espacos.
-O que significa:
-- O pedido chegou ao bot, mas nao tinha texto util para processar.
-Acao recomendada:
-- Reenviar a pergunta/comando com texto.
-
-#ERR-5001
-Codigo interno: PENDING_ACTION_FAILED
-Categoria: business_rule
-Mensagem tecnica: Nao foi possivel aplicar a acao operacional.
-Mensagem ao utilizador: Nao foi possivel aplicar a acao operacional. Confirma os dados e tenta novamente.
-Onde aparece:
-- Reservado para falhas em acoes operacionais pendentes.
-O que significa:
-- O bot percebeu a intencao, mas nao conseguiu aplicar uma acao de negocio.
-Acao recomendada:
-- Confirmar dados da escala/manobra e repetir. Se persistir, procurar #ERR-5001 nos logs.
-
-#ERR-9000
-Codigo interno: UNHANDLED_EXCEPTION
-Categoria: internal
-Mensagem tecnica: Erro inesperado.
-Mensagem ao utilizador: Erro inesperado. Contacta o suporte com este codigo.
-Onde aparece:
-- Fallback para chaves de erro desconhecidas.
-O que significa:
-- O sistema recebeu ou tentou usar um erro que ainda nao esta catalogado.
-Acao recomendada:
-- Procurar #ERR-9000 nos logs e transformar a falha numa chave especifica.
-
-#ERR-9001
-Codigo interno: CHAT_RUNTIME_FAILED
-Categoria: internal
-Mensagem tecnica: Nao foi possivel processar a mensagem.
-Mensagem ao utilizador: Erro inesperado ao processar a mensagem. Contacta o suporte com este codigo.
-Onde aparece:
-- /api/chat quando handle_chat_turn levanta RuntimeError.
-- Webhook WhatsApp quando o processamento da mensagem falha.
-O que significa:
-- O bot recebeu a mensagem, mas o motor de chat/RAG/LLM falhou antes de produzir resposta.
-Acao recomendada:
-- Procurar #ERR-9001 nos logs do Railway.
-- Verificar provider LLM, RAG, base de dados, timeouts e configuracao de ambiente.
+Os codigos estao organizados por gama:
+  1xxx — Validacao de input e formularios
+  2xxx — Autenticacao, sessao e permissoes
+  3xxx — Regras de negocio operacionais (escalas, manobras)
+  4xxx — Documentos, knowledge e RAG
+  5xxx — Bot e chat
+  6xxx — WhatsApp
+  7xxx — Integracoes externas (LLM, meteo, maré)
+  8xxx — Admin e sistema
+  9xxx — Erros internos e nao previstos
 
 Formato dos logs
 ----------------
-Os logs estruturados sao escritos como JSON, por exemplo:
+Os logs estruturados sao escritos como JSON:
 
 {
   "level": "error",
@@ -94,8 +43,1402 @@ Os logs estruturados sao escritos como JSON, por exemplo:
   "channel": "whatsapp"
 }
 
-Notas
------
-- A lista deve crescer sempre que encontrarmos uma falha recorrente.
-- O utilizador final deve ver apenas a referencia curta e uma mensagem clara.
-- O detalhe tecnico deve ficar nos logs, nao no WhatsApp.
+
+================================================================================
+1xxx — VALIDACAO DE INPUT E FORMULARIOS
+================================================================================
+
+#ERR-1001
+Codigo interno: EMPTY_QUESTION
+Categoria: validation
+Mensagem: Pergunta vazia.
+Mensagem ao utilizador: Escreve a pergunta ou comando que queres enviar.
+Canal: bot, api
+Onde aparece: /api/chat quando o campo question vem vazio.
+Acao: Reenviar com texto.
+
+#ERR-1010
+Categoria: validation
+Mensagem: {label} é obrigatório(a).
+Canal: portal, bot
+Onde aparece: Qualquer campo obrigatorio vazio (nome navio, ETA, calado,
+  proximo destino, hora prevista, motivo de aborto, motivo de alteracao, etc.)
+Fonte: core/validators.py:validate_required_text, helpers.py:require_form_text
+Campos afetados:
+  - Nome do navio ("Indica o nome do navio.")
+  - ETA ("O ETA é obrigatório.")
+  - Hora prevista de saida/mudança
+  - Próximo destino da saída
+  - Cais destino da mudança
+  - Motivo de aborto ("O motivo de aborto da saída é obrigatório.")
+  - Motivo de manobra abortada ("O motivo de manobra abortada é obrigatório.")
+  - Motivo de mudança abortada
+  - Motivo da alteracao ("O motivo da alteração é obrigatório.")
+  - Calado ("O calado da manobra é obrigatório.")
+  - Inicio e fim da manobra ("O início e o fim da manobra são obrigatórios.")
+  - Hora real de chegada/saida/mudanca
+  - Email, telefone, password, IMO
+Acao: Preencher o campo indicado no label da mensagem.
+
+#ERR-1011
+Categoria: validation
+Mensagem: {label} não pode exceder {max_length} caracteres.
+Canal: portal, bot
+Fonte: core/validators.py:validate_required_text, validate_optional_text
+Acao: Reduzir o texto.
+
+#ERR-1020
+Categoria: validation
+Mensagem: {label} deve ser um número válido.
+Canal: portal, bot
+Onde aparece: Campos numericos (calado, LOA, boca, GT, DWT, calado maximo).
+Fonte: core/validators.py:validate_positive_number
+Acao: Usar valor numerico valido (ex.: 7.10 ou 7,10).
+
+#ERR-1021
+Categoria: validation
+Mensagem: {label} deve ser >= {min_value}. / {label} deve ser <= {max_value}.
+Canal: portal, bot
+Onde aparece: Calado (max 30m), dimensoes do navio.
+Fonte: core/validators.py:validate_positive_number
+Acao: Corrigir o valor para o intervalo valido.
+
+#ERR-1022
+Categoria: validation
+Mensagem: Número de rebocadores deve ser um número inteiro.
+Canal: portal, bot
+Fonte: core/validators.py:validate_tug_count
+Acao: Usar inteiro entre 0 e 10.
+
+#ERR-1023
+Categoria: validation
+Mensagem: Número de rebocadores deve estar entre 0 e 10.
+Canal: portal, bot
+Fonte: core/validators.py:validate_tug_count
+Acao: Reduzir para no maximo 10.
+
+#ERR-1030
+Categoria: validation
+Mensagem: {label} inválida. Usa data e hora válidas.
+Canal: portal, bot
+Onde aparece: Campos datetime-local mal formatados ou impossíveis.
+Fonte: core/helpers.py:parse_local_datetime_input
+Acao: Usar formato YYYY-MM-DDTHH:MM.
+
+#ERR-1031
+Categoria: validation
+Mensagem: {label} não pode ser anterior à data/hora presente.
+Canal: portal
+Onde aparece: ETA de escala com status scheduled.
+Fonte: core/validators.py:validate_not_past_datetime
+Acao: Usar data futura.
+
+#ERR-1032
+Categoria: validation
+Mensagem: {finished_label} deve ser posterior a {started_label}.
+Canal: portal, bot
+Onde aparece: Registo de manobra quando fim < inicio.
+Fonte: core/validators.py:validate_datetime_range
+Acao: Corrigir a ordem dos tempos.
+
+#ERR-1040
+Categoria: validation
+Mensagem: {label} inválido(a). Usa sim, não ou desconhecido.
+Canal: portal, bot
+Onde aparece: Campos de thruster (bow/stern).
+Fonte: core/validators.py:normalize_thruster_state
+Acao: Usar "sim", "nao" ou "desconhecido".
+
+#ERR-1050
+Categoria: validation
+Mensagem: Email é obrigatório. / Formato de email inválido. / Email demasiado longo.
+Canal: portal
+Onde aparece: Registo e perfil de utilizador.
+Fonte: core/validators.py:validate_email
+Acao: Usar email valido.
+
+#ERR-1051
+Categoria: validation
+Mensagem: Telefone é obrigatório. / Formato de telefone inválido.
+Canal: portal
+Onde aparece: Perfil de utilizador.
+Fonte: core/validators.py:validate_phone
+Acao: Usar telefone valido.
+
+#ERR-1052
+Categoria: validation
+Mensagem: Número WhatsApp é obrigatório. / Formato inválido. / Deve ter 9-15 dígitos.
+Canal: portal
+Onde aparece: Perfil ou admin quando WhatsApp ativo.
+Fonte: core/validators.py:validate_whatsapp_phone
+Acao: Usar numero internacional valido (ex.: 351912345678).
+
+#ERR-1053
+Categoria: validation
+Mensagem: Se ativares WhatsApp, tens de indicar o respetivo número.
+Canal: portal
+Onde aparece: Registo, perfil, admin de utilizadores.
+Fonte: blueprints/auth.py, blueprints/admin.py
+Acao: Preencher campo de numero WhatsApp ou desativar opcao.
+
+#ERR-1060
+Categoria: validation
+Mensagem: A password deve ter pelo menos {min_length} caracteres.
+Canal: portal
+Onde aparece: Registo e reset de password.
+Fonte: core/validators.py:validate_password
+Acao: Usar password mais longa (min 6 caracteres).
+
+#ERR-1070
+Categoria: validation
+Mensagem: IMO é obrigatório. / O IMO deve ter 7 dígitos.
+Canal: portal, bot
+Onde aparece: Criacao/edicao de escala.
+Fonte: core/validators.py:validate_imo
+Acao: Usar IMO valido com 7 digitos.
+
+#ERR-1080
+Categoria: validation
+Mensagem: {label} inválido. Usa um dos cais/fundeadouros conhecidos do porto.
+Canal: portal, bot
+Onde aparece: Campos de cais (berth) na criacao/edicao de manobra.
+Fonte: core/helpers.py:normalize_portal_berth
+Acao: Usar nome de cais reconhecido pelo sistema (ex.: "Cais 10 / Autoeuropa").
+
+#ERR-1081
+Categoria: validation
+Mensagem: O cais destino tem de ser diferente do local atual do navio.
+Canal: portal, bot
+Onde aparece: Planeamento de mudanca quando destino = origem.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Escolher cais destino diferente do atual.
+
+#ERR-1082
+Categoria: validation
+Mensagem: {label} {canonical} já está ocupado por {conflict_name}.
+Canal: portal, bot
+Onde aparece: Quando o cais destino tem outro navio atracado.
+Fonte: core/helpers.py:ensure_portal_berth_is_available
+Acao: Escolher outro cais ou resolver conflito.
+
+#ERR-1090
+Categoria: validation
+Mensagem: Indica o JSON da escala/navios ou carrega um ficheiro .json.
+Canal: portal
+Onde aparece: Importacao JSON de escalas ou catalogo de navios.
+Fonte: blueprints/port_calls.py
+Acao: Colar JSON valido ou carregar ficheiro.
+
+#ERR-1091
+Categoria: validation
+Mensagem: JSON inválido na linha {lineno}, coluna {colno}.
+Canal: portal
+Onde aparece: Importacao JSON com erro de sintaxe.
+Fonte: blueprints/port_calls.py, blueprints/admin.py
+Acao: Corrigir a sintaxe do JSON.
+
+#ERR-1092
+Categoria: validation
+Mensagem: O JSON tem de conter um único objeto / lista de objetos.
+Canal: portal
+Onde aparece: Importacao JSON com estrutura errada.
+Fonte: blueprints/port_calls.py
+Acao: Verificar formato esperado (objeto para escala, array para catalogo).
+
+#ERR-1093
+Categoria: validation
+Mensagem: Escalas últimos 365 dias deve ser um número inteiro (0-999).
+Canal: portal
+Onde aparece: Catalogo de navios, campo regular_line_calls_365d.
+Fonte: blueprints/port_calls.py:_integer_payload_value
+Acao: Usar inteiro valido.
+
+#ERR-1094
+Categoria: validation
+Mensagem: Faltam dados obrigatórios do navio: {campos}.
+Canal: portal, bot
+Onde aparece: Criacao de escala sem dados completos do navio.
+Fonte: storage/utils.py:_validate_required_vessel_profile
+Campos obrigatorios: nome, IMO, indicativo, bandeira, tipo, LOA, boca, GT,
+  DWT, calado maximo, bow thruster, stern thruster.
+Acao: Preencher todos os campos do perfil do navio.
+
+#ERR-1095
+Categoria: validation
+Mensagem: Faltam dados operacionais obrigatórios: {campos}.
+Canal: portal, bot
+Onde aparece: Criacao de escala sem dados operacionais.
+Fonte: storage/utils.py:_validate_required_operational_profile
+Campos obrigatorios: cais, ultimo porto, proximo destino.
+Acao: Preencher dados operacionais.
+
+#ERR-1096
+Categoria: validation
+Mensagem: {label} deve ser positivo. / {label} deve ser um número válido.
+Canal: portal, bot
+Onde aparece: Dimensoes do navio (LOA, boca, GT, DWT, calado maximo).
+Fonte: storage/utils.py:_validate_required_vessel_profile
+Acao: Corrigir valores numericos do navio.
+
+#ERR-1100
+Categoria: validation
+Mensagem: GT inválido. / GT tem de ser positivo.
+Canal: api
+Onde aparece: API de estimativa de custos de pilotagem.
+Fonte: blueprints/api.py
+Acao: Enviar GT como numero positivo.
+
+#ERR-1110
+Categoria: validation
+Mensagem: Coordenadas de localização inválidas/fora dos limites válidos.
+Canal: bot, whatsapp
+Onde aparece: SOS com localizacao invalida.
+Fonte: domain/sos_alerts.py
+Acao: Enviar localizacao GPS valida.
+
+
+================================================================================
+2xxx — AUTENTICACAO, SESSAO E PERMISSOES
+================================================================================
+
+#ERR-2001
+Categoria: auth
+Mensagem: Credenciais invalidas.
+Canal: portal
+Onde aparece: Login com email ou password errados.
+Fonte: blueprints/auth.py
+Acao: Verificar email e password.
+
+#ERR-2002
+Categoria: auth
+Mensagem: Sessao expirada. Inicia sessao novamente.
+Canal: portal, api
+Onde aparece: Pedido sem sessao valida ou com sessao expirada.
+Fonte: core/helpers.py:login_required
+Acao: Fazer login novamente.
+
+#ERR-2003
+Categoria: auth
+Mensagem: Completa o teu perfil operacional antes de continuar.
+Canal: portal
+Onde aparece: Login com perfil incompleto (nome, agencia, email ou telefone
+  em falta).
+Fonte: blueprints/auth.py, core/helpers.py
+Acao: Completar perfil em /perfil.
+
+#ERR-2004
+Categoria: auth
+Mensagem: Nome, agência/entidade, email e telefone são obrigatórios.
+Canal: portal
+Onde aparece: Edicao de perfil com campos obrigatorios em falta.
+Fonte: blueprints/auth.py:profile
+Acao: Preencher todos os campos do perfil.
+
+#ERR-2010
+Categoria: permission
+Mensagem: Nao tens permissao para esta acao.
+Canal: portal, api
+Onde aparece: Acesso a rota sem role adequado (ex.: agente tenta aprovar).
+Fonte: core/helpers.py:role_required
+Acao: Pedir a um utilizador com o role correto.
+
+#ERR-2011
+Categoria: permission
+Mensagem: O perfil do agente tem de ter uma agência definida.
+Canal: portal
+Onde aparece: Agente tenta aceder a escalas sem agencia configurada.
+Fonte: core/helpers.py:port_call_scope_required
+Acao: Admin configura agencia no perfil do agente.
+
+#ERR-2012
+Categoria: permission
+Mensagem: Esta escala pertence a outra agência.
+Canal: portal
+Onde aparece: Agente tenta aceder a escala de outra agencia.
+Fonte: core/helpers.py:port_call_scope_required
+Acao: Aceder apenas a escalas da propria agencia.
+
+#ERR-2013
+Categoria: permission
+Mensagem: O perfil admin deve ser atribuído fora do registo público.
+Canal: portal
+Onde aparece: Tentativa de registar utilizador com role admin.
+Fonte: integrations/auth_service.py
+Acao: Criar admin via painel de administracao.
+
+#ERR-2020
+Categoria: security
+Mensagem: (Pedido bloqueado por CSRF)
+Canal: portal
+Onde aparece: Formulario POST sem token CSRF valido.
+Fonte: core/security.py (abort 403)
+Acao: Recarregar a pagina e repetir.
+
+#ERR-2021
+Categoria: security
+Mensagem: (Rate limit excedido)
+Canal: portal, api
+Onde aparece: Demasiados pedidos em pouco tempo.
+Fonte: core/security.py (abort 429)
+Acao: Aguardar e tentar novamente.
+
+
+================================================================================
+3xxx — REGRAS DE NEGOCIO OPERACIONAIS (ESCALAS E MANOBRAS)
+================================================================================
+
+--- Escalas ---
+
+#ERR-3001
+Categoria: business_rule
+Mensagem: Escala não encontrada.
+Canal: portal, bot
+Onde aparece: Qualquer operacao com port_call_id inexistente.
+Fonte: storage/postgres.py, storage/local.py
+Acao: Verificar ID ou referencia da escala.
+
+#ERR-3002
+Categoria: business_rule
+Mensagem: Escala sem manobra de entrada associada.
+Canal: portal, bot
+Onde aparece: Edicao de escala sem entrada (estado inconsistente).
+Fonte: storage/postgres.py:edit_port_call
+Acao: Contactar admin.
+
+--- Manobras — Aprovacao ---
+
+#ERR-3010
+Categoria: business_rule
+Mensagem: Só podes aprovar manobras ainda não executadas.
+Canal: portal, bot
+Onde aparece: Tentativa de aprovar escala com status != scheduled/in_port.
+Fonte: storage/postgres.py:approve_port_call
+Acao: A manobra ja foi concluida ou abortada.
+
+#ERR-3011
+Categoria: business_rule
+Mensagem: Não existe manobra pendente para aprovar.
+Canal: portal, bot
+Onde aparece: Tentativa de aprovar quando nao ha manobra no estado pending.
+Fonte: storage/postgres.py:approve_port_call
+Acao: Verificar se a manobra ja foi aprovada.
+
+#ERR-3012
+Categoria: business_rule
+Mensagem: Só podes aprovar mudanças ainda não executadas.
+Canal: portal, bot
+Onde aparece: Tentativa de aprovar shift quando navio nao esta in_port ou
+  shift nao esta pending.
+Fonte: storage/postgres.py:approve_shift_plan
+Acao: Verificar estado da mudanca.
+
+--- Manobras — Cancelar/Abortar ---
+
+#ERR-3020
+Categoria: business_rule
+Mensagem: Só o piloto/admin pode abortar uma manobra já aprovada (piloto a bordo).
+Canal: portal, bot
+Onde aparece: Agente tenta abortar entrada ja aprovada.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao piloto ou admin para abortar.
+
+#ERR-3021
+Categoria: business_rule
+Mensagem: Manobra ainda pendente. Só o agente/admin pode cancelar antes da aprovação.
+Canal: portal, bot
+Onde aparece: Piloto tenta cancelar entrada ainda nao aprovada.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao agente ou admin para cancelar.
+
+#ERR-3022
+Categoria: business_rule
+Mensagem: Só o piloto/admin pode abortar uma saída já aprovada.
+Canal: portal, bot
+Onde aparece: Agente tenta abortar saida aprovada.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao piloto ou admin.
+
+#ERR-3023
+Categoria: business_rule
+Mensagem: Saída ainda pendente. Só o agente/admin pode cancelar antes da aprovação.
+Canal: portal, bot
+Onde aparece: Piloto tenta cancelar saida pendente.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao agente ou admin.
+
+#ERR-3024
+Categoria: business_rule
+Mensagem: Só o piloto/admin pode abortar uma mudança já aprovada.
+Canal: portal, bot
+Onde aparece: Agente tenta abortar mudanca aprovada.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao piloto ou admin.
+
+#ERR-3025
+Categoria: business_rule
+Mensagem: Mudança ainda pendente. Só o agente/admin pode cancelar antes da aprovação.
+Canal: portal, bot
+Onde aparece: Piloto tenta cancelar mudanca pendente.
+Fonte: blueprints/port_calls.py, core/helpers.py
+Acao: Pedir ao agente ou admin.
+
+#ERR-3026
+Categoria: business_rule
+Mensagem: Só podes abortar manobras ainda não executadas.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar manobra ja concluida.
+Fonte: storage/postgres.py:abort_port_call
+Acao: Manobra ja nao pode ser abortada.
+
+#ERR-3027
+Categoria: business_rule
+Mensagem: A manobra só pode ser abortada com pelo menos 2 horas de antecedência.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar entrada a menos de 2h do planeado.
+Fonte: storage/postgres.py:abort_port_call, storage/local.py
+Acao: A manobra esta demasiado proxima; contactar coordenacao.
+
+#ERR-3028
+Categoria: business_rule
+Mensagem: Não existe manobra de saída planeada para este navio.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar saida sem saida ativa.
+Fonte: storage/postgres.py:abort_departure_plan
+Acao: Verificar se existe saida planeada.
+
+#ERR-3029
+Categoria: business_rule
+Mensagem: A saída só pode ser abortada com pelo menos 1 hora de antecedência.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar saida a menos de 1h.
+Fonte: storage/postgres.py:abort_departure_plan
+Acao: A manobra esta demasiado proxima; contactar coordenacao.
+
+#ERR-3030
+Categoria: business_rule
+Mensagem: Não existe manobra de mudança planeada para este navio.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar mudanca sem mudanca ativa.
+Fonte: storage/postgres.py:abort_shift_plan
+Acao: Verificar se existe mudanca planeada.
+
+#ERR-3031
+Categoria: business_rule
+Mensagem: A mudança só pode ser abortada com pelo menos 1 hora de antecedência.
+Canal: portal, bot
+Onde aparece: Tentativa de abortar mudanca a menos de 1h.
+Fonte: storage/postgres.py:abort_shift_plan
+Acao: A manobra esta demasiado proxima; contactar coordenacao.
+
+--- Manobras — Planeamento ---
+
+#ERR-3040
+Categoria: business_rule
+Mensagem: Só podes planear saída para navios que estão em porto.
+Canal: portal, bot
+Onde aparece: Tentativa de planear saida quando status != in_port.
+Fonte: storage/postgres.py:schedule_departure_plan
+Acao: O navio tem de estar em porto.
+
+#ERR-3041
+Categoria: business_rule
+Mensagem: Já existe uma saída ativa para esta escala.
+Canal: portal, bot
+Onde aparece: Tentativa de criar segunda saida quando ja ha uma pendente/aprovada.
+Fonte: storage/postgres.py:schedule_departure_plan
+Acao: Cancelar a saida existente antes de criar nova.
+
+#ERR-3042
+Categoria: business_rule
+Mensagem: Só podes planear mudança para navios em porto.
+Canal: portal, bot
+Onde aparece: Tentativa de planear mudanca quando status != in_port.
+Fonte: storage/postgres.py:schedule_shift_plan
+Acao: O navio tem de estar em porto.
+
+#ERR-3043
+Categoria: business_rule
+Mensagem: Já existe uma mudança ativa para esta escala.
+Canal: portal, bot
+Onde aparece: Tentativa de criar segunda mudanca com uma ja ativa.
+Fonte: storage/postgres.py:schedule_shift_plan
+Acao: Concluir ou cancelar a mudanca existente.
+
+#ERR-3044
+Categoria: business_rule
+Mensagem: A entrada inicial já fica criada quando registas a escala.
+Canal: bot
+Onde aparece: /criar-manobra com tipo entrada.
+Fonte: domain/chat_actions.py
+Acao: Para alterar a entrada, usar /editar-manobra.
+
+--- Manobras — Conclusao ---
+
+#ERR-3050
+Categoria: business_rule
+Mensagem: Só podes confirmar entrada de manobras previstas.
+Canal: portal, bot
+Onde aparece: Tentativa de marcar chegada sem manobra aprovada.
+Fonte: storage/postgres.py:mark_port_call_arrived
+Acao: Aprovar a entrada primeiro.
+
+#ERR-3051
+Categoria: business_rule
+Mensagem: Só podes registar saída de navios que estão em porto e com manobra aprovada.
+Canal: portal, bot
+Onde aparece: Tentativa de marcar partida sem condicoes.
+Fonte: storage/postgres.py:mark_port_call_departed
+Acao: Verificar que navio esta em porto e saida aprovada.
+
+#ERR-3052
+Categoria: business_rule
+Mensagem: A mudança tem de estar aprovada antes de ser concluída.
+Canal: portal, bot
+Onde aparece: Tentativa de concluir mudanca nao aprovada.
+Fonte: storage/postgres.py:mark_shift_completed
+Acao: Aprovar a mudanca primeiro.
+
+--- Manobras — Registo (Piloto) ---
+
+#ERR-3060
+Categoria: business_rule
+Mensagem: Só podes registar a entrada/saída/mudança depois da manobra estar aprovada/concluída.
+Canal: portal, bot
+Onde aparece: Tentativa de registar manobra que nao esta approved/completed.
+Fonte: storage/postgres.py:attach_entry_report, attach_departure_report,
+  attach_shift_report
+Acao: Aprovar ou concluir a manobra primeiro.
+
+#ERR-3061
+Categoria: business_rule
+Mensagem: O ID indicado não corresponde a uma manobra de entrada/saída/mudança.
+Canal: portal, bot
+Onde aparece: maneuver_id fornecido nao e do tipo esperado.
+Fonte: storage/postgres.py
+Acao: Verificar o ID da manobra.
+
+#ERR-3062
+Categoria: business_rule
+Mensagem: Essa manobra já tem registo. Usa editar registo.
+Canal: portal, bot
+Onde aparece: Tentativa de registar manobra que ja tem report_note.
+Fonte: storage/postgres.py
+Acao: Usar /editar-registo-manobra ou o formulario de edicao.
+
+#ERR-3063
+Categoria: business_rule
+Mensagem: Só podes editar o registo de manobras já concluídas.
+Canal: portal, bot
+Onde aparece: Tentativa de editar registo de manobra nao concluida.
+Fonte: storage/postgres.py:edit_maneuver_report
+Acao: A manobra tem de estar concluida primeiro.
+
+--- Manobras — Edicao de Planeamento ---
+
+#ERR-3070
+Categoria: business_rule
+Mensagem: Manobra não encontrada na escala.
+Canal: portal, bot
+Onde aparece: maneuver_id nao existe na escala indicada.
+Fonte: storage/postgres.py:edit_maneuver_plan
+Acao: Verificar ID da manobra.
+
+#ERR-3071
+Categoria: business_rule
+Mensagem: A manobra concluída já só pode ser ajustada no registo.
+Canal: portal, bot
+Onde aparece: Tentativa de editar planeamento de manobra concluida (role != admin).
+Fonte: storage/postgres.py:edit_maneuver_plan
+Acao: Usar edicao de registo ou pedir ao admin.
+
+#ERR-3072
+Categoria: business_rule
+Mensagem: Depois de validada, esta manobra só pode ser editada por piloto.
+Canal: portal, bot
+Onde aparece: Agente tenta editar planeamento de manobra ja aprovada.
+Fonte: storage/postgres.py:edit_maneuver_plan
+Acao: Pedir ao piloto ou admin para editar.
+
+--- Manobras — Eliminacao ---
+
+#ERR-3080
+Categoria: business_rule
+Mensagem: Manobra não encontrada. (ao apagar)
+Canal: portal, bot
+Onde aparece: Tentativa de apagar manobra inexistente.
+Fonte: storage/postgres.py:delete_maneuver
+Acao: Verificar ID.
+
+--- Manobras — Bot Targeting ---
+
+#ERR-3090
+Categoria: business_rule
+Mensagem: Há várias manobras deste tipo nesta escala. Indica o ID da manobra.
+Canal: bot
+Onde aparece: Bot nao consegue resolver qual manobra alterar.
+Fonte: core/helpers.py:resolve_target_maneuver
+Acao: Incluir o ID da manobra no comando.
+
+#ERR-3091
+Categoria: business_rule
+Mensagem: A proposta não identifica a manobra a registar/editar/apagar.
+Canal: bot
+Onde aparece: Bot nao encontra manobra alvo na escala.
+Fonte: core/helpers.py
+Acao: Verificar referencia da escala e tipo de manobra.
+
+#ERR-3092
+Categoria: business_rule
+Mensagem: A proposta não tem escala associada.
+Canal: bot
+Onde aparece: Bot nao consegue resolver a escala alvo.
+Fonte: core/helpers.py
+Acao: Indicar referencia da escala ou nome do navio.
+
+#ERR-3093
+Categoria: business_rule
+Mensagem: Ação operacional não suportada.
+Canal: bot
+Onde aparece: Bot recebe acao desconhecida.
+Fonte: core/helpers.py
+Acao: Verificar o comando com /help.
+
+
+================================================================================
+4xxx — DOCUMENTOS, KNOWLEDGE E RAG
+================================================================================
+
+#ERR-4001
+Categoria: document
+Mensagem: Formato não suportado. Usa .pdf, .md, .txt, .docx ou .csv.
+Canal: admin
+Onde aparece: Upload de documento com extensao nao suportada.
+Fonte: storage/postgres.py:save_uploaded_document
+Acao: Converter para formato suportado.
+
+#ERR-4002
+Categoria: document
+Mensagem: Falha ao processar ficheiro: {exc}
+Canal: admin
+Onde aparece: Erro ao extrair texto do ficheiro carregado.
+Fonte: storage/postgres.py:save_uploaded_document
+Acao: Verificar integridade do ficheiro.
+
+#ERR-4003
+Categoria: document
+Mensagem: Não foi possível extrair texto útil do ficheiro.
+Canal: admin
+Onde aparece: Ficheiro vazio ou sem texto extraivel.
+Fonte: storage/postgres.py:save_uploaded_document
+Acao: Verificar conteudo do ficheiro.
+
+#ERR-4004
+Categoria: document
+Mensagem: Documento não encontrado.
+Canal: admin
+Onde aparece: Tentativa de ler/editar/apagar documento inexistente.
+Fonte: storage/postgres.py
+Acao: Verificar ID do documento.
+
+#ERR-4005
+Categoria: document
+Mensagem: O conteúdo não pode estar vazio.
+Canal: admin
+Onde aparece: Edicao de documento com conteudo vazio.
+Fonte: storage/postgres.py:update_document_text
+Acao: Escrever conteudo.
+
+#ERR-4006
+Categoria: document
+Mensagem: Este tipo de ficheiro não pode ser editado no browser.
+Canal: admin
+Onde aparece: Tentativa de editar PDF/binario no browser.
+Fonte: storage/postgres.py:update_document_text
+Acao: Recarregar o ficheiro em vez de editar.
+
+#ERR-4007
+Categoria: document
+Mensagem: Extensão não suportada: {suffix}
+Canal: admin
+Onde aparece: Tentativa de processar ficheiro desconhecido.
+Fonte: domain/document_processing.py
+Acao: Usar formato suportado.
+
+#ERR-4010
+Categoria: document
+Mensagem: Seleciona pelo menos um ficheiro.
+Canal: admin
+Onde aparece: Upload ou eliminacao sem ficheiros selecionados.
+Fonte: blueprints/admin.py
+Acao: Selecionar ficheiro(s).
+
+#ERR-4020
+Categoria: rag
+Mensagem: O cliente de embeddings configurado não suporta embeddings.
+Canal: admin, logs
+Onde aparece: Tentativa de gerar embeddings sem provider configurado.
+Fonte: integrations/rag_engine.py
+Acao: Configurar GEMINI_API_KEY ou OPENROUTER_API_KEY.
+
+#ERR-4021
+Categoria: rag
+Mensagem: Falha inesperada ao gerar embeddings.
+Canal: admin, logs
+Onde aparece: Erro no provider de embeddings.
+Fonte: integrations/rag_engine.py
+Acao: Verificar logs e estado do provider.
+
+#ERR-4022
+Categoria: rag
+Mensagem: Já existe uma reindexação em curso.
+Canal: admin
+Onde aparece: Tentativa de lancar reindexacao duplicada.
+Fonte: blueprints/admin.py
+Acao: Aguardar que a reindexacao termine.
+
+
+================================================================================
+5xxx — BOT E CHAT
+================================================================================
+
+#ERR-5001
+Codigo interno: PENDING_ACTION_FAILED
+Categoria: business_rule
+Mensagem: Nao foi possivel aplicar a acao operacional.
+Mensagem ao utilizador: Confirma os dados e tenta novamente.
+Canal: bot, api
+Onde aparece: Falha ao executar acao pendente (aprovacao, registo, etc.).
+Fonte: domain/error_catalog.py
+Acao: Confirmar dados e repetir. Procurar #ERR-5001 nos logs.
+
+#ERR-5010
+Categoria: chat
+Mensagem: Conversa não encontrada.
+Canal: portal, bot
+Onde aparece: Tentativa de aceder a conversa inexistente ou apagada.
+Fonte: blueprints/chat.py, storage/postgres.py
+Acao: A conversa pode ter sido apagada.
+
+#ERR-5011
+Categoria: chat
+Mensagem: Conversa inválida para este utilizador.
+Canal: api
+Onde aparece: Tentativa de escrever em conversa de outro utilizador.
+Fonte: storage/postgres.py:append_chat_message
+Acao: Usar conversa propria.
+
+#ERR-5012
+Categoria: chat
+Mensagem: O título da conversa não pode ficar vazio.
+Canal: portal
+Onde aparece: Tentativa de renomear conversa com titulo vazio.
+Fonte: storage/postgres.py:rename_conversation
+Acao: Indicar titulo.
+
+#ERR-5020
+Categoria: chat
+Mensagem: Não existe ação pendente para cancelar.
+Canal: api
+Onde aparece: Pedido de cancelamento sem acao pendente.
+Fonte: blueprints/chat.py
+Acao: Nao ha acao para cancelar.
+
+#ERR-5021
+Categoria: chat
+Mensagem: Não existe ação pendente para confirmar.
+Canal: api
+Onde aparece: Pedido de confirmacao sem acao pendente.
+Fonte: blueprints/chat.py
+Acao: Iniciar a acao primeiro.
+
+#ERR-5022
+Categoria: chat
+Mensagem: Ainda faltam dados obrigatórios antes de confirmar esta ação.
+Canal: api
+Onde aparece: Confirmacao de acao com campos obrigatorios em falta.
+Fonte: blueprints/chat.py
+Acao: Preencher os campos indicados na proposta.
+
+#ERR-5030
+Categoria: chat
+Mensagem: Mensagem não encontrada.
+Canal: api
+Onde aparece: Tentativa de dar feedback a mensagem inexistente.
+Fonte: storage/postgres.py:update_message_feedback
+Acao: Verificar ID da mensagem.
+
+#ERR-5031
+Categoria: chat
+Mensagem: Estado de feedback inválido.
+Canal: api
+Onde aparece: Feedback com estado nao reconhecido.
+Fonte: storage/postgres.py:update_message_feedback, blueprints/chat.py
+Acao: Usar estado valido (positive, negative, reviewed).
+
+#ERR-5032
+Categoria: chat
+Mensagem: Só podes classificar respostas do assistente.
+Canal: api
+Onde aparece: Tentativa de dar feedback a mensagem do utilizador.
+Fonte: storage/postgres.py:update_message_feedback
+Acao: Classificar apenas respostas do bot.
+
+#ERR-5033
+Categoria: chat
+Mensagem: Ao pedir revisão indica o motivo ou a resposta corrigida.
+Canal: api
+Onde aparece: Feedback de revisao sem motivo.
+Fonte: blueprints/chat.py
+Acao: Indicar motivo ou resposta correta.
+
+#ERR-5040
+Categoria: chat
+Mensagem: Correção vazia.
+Canal: bot
+Onde aparece: Admin tenta corrigir resposta do bot com texto vazio.
+Fonte: core/chat_runtime.py
+Acao: Indicar texto da correcao.
+
+#ERR-5050
+Categoria: chat
+Mensagem: Define a API key do LLM antes de usar o chatbot.
+Canal: bot, logs
+Onde aparece: Chat sem provider LLM configurado.
+Fonte: core/chat_runtime.py, integrations/rag_engine.py
+Acao: Configurar GEMINI_API_KEY ou OPENROUTER_API_KEY.
+
+#ERR-5060
+Categoria: chat
+Mensagem: conversation_id em falta.
+Canal: api
+Onde aparece: Pedidos API sem conversation_id.
+Fonte: blueprints/chat.py
+Acao: Incluir conversation_id no pedido.
+
+
+================================================================================
+6xxx — WHATSAPP
+================================================================================
+
+#ERR-6001
+Categoria: whatsapp
+Mensagem: WhatsApp webhook indisponível.
+Canal: whatsapp
+Onde aparece: Webhook desativado na configuracao.
+Fonte: blueprints/whatsapp.py
+Acao: Ativar WA_ENABLED no ambiente.
+
+#ERR-6002
+Categoria: whatsapp
+Mensagem: Verificação inválida.
+Canal: whatsapp
+Onde aparece: GET de verificacao com token errado.
+Fonte: blueprints/whatsapp.py
+Acao: Verificar WA_VERIFY_TOKEN no Meta Business.
+
+#ERR-6010
+Categoria: whatsapp
+Mensagem: WhatsApp Cloud API sem credenciais de envio configuradas.
+Canal: whatsapp, logs
+Onde aparece: Tentativa de enviar mensagem sem WA_PHONE_NUMBER_ID ou WA_TOKEN.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Configurar variaveis de ambiente WA_*.
+
+#ERR-6011
+Categoria: whatsapp
+Mensagem: Número de destino inválido.
+Canal: whatsapp
+Onde aparece: Tentativa de enviar para numero vazio ou mal formatado.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Verificar numero do destinatario.
+
+#ERR-6012
+Categoria: whatsapp
+Mensagem: Template WhatsApp inválido.
+Canal: whatsapp
+Onde aparece: Tentativa de enviar template sem nome.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Verificar nome do template.
+
+#ERR-6013
+Categoria: whatsapp
+Mensagem: Media id WhatsApp em falta.
+Canal: whatsapp
+Onde aparece: Tentativa de descarregar media sem ID.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Verificar ID do media.
+
+#ERR-6014
+Categoria: whatsapp
+Mensagem: A Meta não devolveu URL para o media recebido.
+Canal: whatsapp, logs
+Onde aparece: Falha ao obter URL de media da Meta API.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Verificar permissoes da app Meta.
+
+#ERR-6015
+Categoria: whatsapp
+Mensagem: A imagem de perfil deve ser PNG ou JPEG.
+Canal: admin, logs
+Onde aparece: Upload de foto de perfil WhatsApp com formato errado.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Usar imagem PNG ou JPEG.
+
+#ERR-6020
+Categoria: whatsapp
+Mensagem: WhatsApp Cloud API sem credenciais de business profile configuradas.
+Canal: whatsapp, logs
+Onde aparece: Tentativa de ler/atualizar perfil de negocio sem credenciais.
+Fonte: integrations/whatsapp_cloud.py
+Acao: Configurar WA_BUSINESS_PHONE_ID.
+
+#ERR-6030
+Categoria: whatsapp
+Mensagem: Falha ao enviar alerta SOS para {numero}.
+Canal: logs
+Onde aparece: Erro ao enviar alerta SOS via WhatsApp.
+Fonte: blueprints/whatsapp.py
+Acao: Verificar numero de destino e credenciais.
+
+
+================================================================================
+7xxx — INTEGRACOES EXTERNAS (LLM, METEO, MARE)
+================================================================================
+
+#ERR-7001
+Categoria: integration
+Mensagem: Gemini API key not configured. / {provider} unavailable.
+Canal: logs
+Onde aparece: Provider LLM sem API key ou indisponivel.
+Fonte: integrations/llm_provider.py
+Acao: Configurar GEMINI_API_KEY ou OPENROUTER_API_KEY.
+
+#ERR-7010
+Categoria: integration
+Mensagem: Falha ao obter marés para consulta direta.
+Canal: logs
+Onde aparece: Servico de mares falhou.
+Fonte: core/helpers.py
+Acao: Verificar dados de mares e CSV.
+
+#ERR-7011
+Categoria: integration
+Mensagem: Falha ao obter meteorologia para consulta direta.
+Canal: logs
+Onde aparece: Servico meteo falhou.
+Fonte: core/helpers.py
+Acao: Verificar fonte de dados meteo.
+
+#ERR-7012
+Categoria: integration
+Mensagem: Falha ao obter ondulação para consulta direta.
+Canal: logs
+Onde aparece: Servico de ondulacao falhou.
+Fonte: core/helpers.py
+Acao: Verificar fonte IH.
+
+#ERR-7013
+Categoria: integration
+Mensagem: Falha ao obter avisos locais para consulta direta.
+Canal: logs
+Onde aparece: Servico de avisos a navegacao falhou.
+Fonte: core/helpers.py
+Acao: Verificar servico de avisos locais.
+
+#ERR-7020
+Categoria: integration
+Mensagem: Define DATABASE_URL para usar RAG_INDEX_BACKEND=pgvector.
+Canal: logs
+Onde aparece: pgvector sem DATABASE_URL.
+Fonte: integrations/vector_store.py
+Acao: Configurar DATABASE_URL.
+
+
+================================================================================
+8xxx — ADMIN E SISTEMA
+================================================================================
+
+#ERR-8001
+Categoria: admin
+Mensagem: Utilizador não encontrado.
+Canal: admin
+Onde aparece: Operacoes de admin sobre utilizador inexistente.
+Fonte: storage/postgres.py, blueprints/admin.py
+Acao: Verificar username.
+
+#ERR-8002
+Categoria: admin
+Mensagem: Esse utilizador ja existe.
+Canal: admin
+Onde aparece: Criacao ou renomeacao com username duplicado.
+Fonte: storage/postgres.py:create_user, rename_user
+Acao: Usar username diferente.
+
+#ERR-8003
+Categoria: admin
+Mensagem: Não podes apagar o último admin.
+Canal: admin
+Onde aparece: Tentativa de apagar unico admin.
+Fonte: storage/postgres.py:delete_user
+Acao: Criar outro admin primeiro.
+
+#ERR-8004
+Categoria: admin
+Mensagem: Não podes apagar a tua própria conta enquanto estás autenticado.
+Canal: admin
+Onde aparece: Admin tenta apagar-se a si proprio.
+Fonte: blueprints/admin.py
+Acao: Pedir a outro admin.
+
+#ERR-8005
+Categoria: admin
+Mensagem: Role invalido.
+Canal: admin
+Onde aparece: Criacao/alteracao de utilizador com role desconhecido.
+Fonte: storage/postgres.py:create_user, set_user_role
+Roles validos: admin, piloto, agente.
+Acao: Usar role valido.
+
+#ERR-8006
+Categoria: admin
+Mensagem: O email deve ter pelo menos 3 caracteres.
+Canal: admin
+Onde aparece: Criacao de utilizador com email curto.
+Fonte: storage/postgres.py:create_user
+Acao: Usar email valido.
+
+#ERR-8007
+Categoria: admin
+Mensagem: A password deve ter pelo menos 6 caracteres.
+Canal: admin
+Onde aparece: Criacao ou reset de password com password curta.
+Fonte: storage/postgres.py:create_user, reset_user_password
+Acao: Usar password mais longa.
+
+#ERR-8010
+Categoria: admin
+Mensagem: Tipo de backup do bot/sistema não suportado.
+Canal: admin
+Onde aparece: Importacao de backup com formato desconhecido.
+Fonte: blueprints/admin.py
+Acao: Verificar formato do backup.
+
+#ERR-8011
+Categoria: admin
+Mensagem: O backup de sistema não contém nenhum utilizador admin.
+Canal: admin
+Onde aparece: Importacao de backup sem admin.
+Fonte: blueprints/admin.py
+Acao: Verificar backup.
+
+#ERR-8012
+Categoria: admin
+Mensagem: Backend PostgreSQL indisponível para importação de tabelas.
+Canal: admin
+Onde aparece: Importacao sem Postgres configurado.
+Fonte: blueprints/admin.py
+Acao: Configurar DATABASE_URL.
+
+#ERR-8013
+Categoria: admin
+Mensagem: Diretoria knowledge indisponível para restaurar ficheiros.
+Canal: admin
+Onde aparece: Importacao de knowledge sem diretoria.
+Fonte: blueprints/admin.py
+Acao: Verificar configuracao de ficheiros.
+
+#ERR-8020
+Categoria: admin
+Mensagem: A migração local -> Postgres só faz sentido com APP_STORAGE_BACKEND=postgres.
+Canal: admin
+Onde aparece: Tentativa de migrar sem backend postgres.
+Fonte: blueprints/admin.py
+Acao: Configurar APP_STORAGE_BACKEND=postgres.
+
+#ERR-8021
+Categoria: admin
+Mensagem: DATABASE_URL em falta.
+Canal: admin
+Onde aparece: Migracao sem DATABASE_URL.
+Fonte: blueprints/admin.py
+Acao: Configurar DATABASE_URL.
+
+#ERR-8030
+Categoria: admin
+Mensagem: Indica uma nota para justificar esta decisão.
+Canal: admin
+Onde aparece: Feedback de casebook/experiencia sem nota.
+Fonte: blueprints/admin.py, blueprints/port_calls.py
+Acao: Escrever nota de justificacao.
+
+#ERR-8040
+Categoria: admin
+Mensagem: Escolhe uma tag/estado válido para o reporte.
+Canal: admin
+Onde aparece: Edicao de reporte de evento com tag/estado invalido.
+Fonte: blueprints/admin.py
+Acao: Usar tag ou estado valido.
+
+#ERR-8050
+Categoria: admin
+Mensagem: Já existe um administrador no sistema.
+Canal: admin
+Onde aparece: Tentativa de criar segundo admin via setup.
+Fonte: blueprints/admin.py
+Acao: Usar admin existente.
+
+#ERR-8060
+Categoria: system
+Mensagem: Falha ao ligar ao PostgreSQL durante o arranque.
+Canal: logs
+Onde aparece: Arranque do sistema sem ligacao a base de dados.
+Fonte: storage/postgres.py
+Acao: Verificar DATABASE_URL e acessibilidade do Postgres.
+
+#ERR-8061
+Categoria: system
+Mensagem: Instala psycopg[binary] para usar o backend postgres.
+Canal: logs
+Onde aparece: Dependencia psycopg nao instalada.
+Fonte: storage/postgres.py
+Acao: pip install psycopg[binary].
+
+#ERR-8062
+Categoria: system
+Mensagem: Define DATABASE_URL para usar APP_STORAGE_BACKEND=postgres.
+Canal: logs
+Onde aparece: Backend postgres sem DATABASE_URL.
+Fonte: storage/postgres.py
+Acao: Configurar DATABASE_URL.
+
+--- Evals e Experience ---
+
+#ERR-8070
+Categoria: admin
+Mensagem: O ficheiro de evals deve conter uma lista de casos.
+Canal: admin
+Onde aparece: Importacao de evals com formato errado.
+Fonte: domain/knowledge_evals.py
+Acao: Verificar formato do ficheiro.
+
+#ERR-8071
+Categoria: admin
+Mensagem: Documento, pergunta e resposta esperada/corrigida são obrigatórios.
+Canal: admin
+Onde aparece: Criacao de caso de avaliacao com campos em falta.
+Fonte: domain/knowledge_evals.py, storage/postgres.py
+Acao: Preencher todos os campos.
+
+#ERR-8072
+Categoria: admin
+Mensagem: O JSON de experiência prática está vazio / inválido / formato errado.
+Canal: admin
+Onde aparece: Importacao de experiencia pratica.
+Fonte: domain/practice_experience.py
+Acao: Verificar formato do JSON.
+
+#ERR-8073
+Categoria: admin
+Mensagem: Experiência prática não encontrada.
+Canal: admin
+Onde aparece: Tentativa de atualizar experiencia inexistente.
+Fonte: domain/practice_experience.py
+Acao: Verificar ID.
+
+#ERR-8074
+Categoria: admin
+Mensagem: Caso operacional não encontrado.
+Canal: admin
+Onde aparece: Tentativa de dar feedback a caso inexistente.
+Fonte: storage/postgres.py:update_maneuver_case_feedback
+Acao: Verificar ID do caso.
+
+#ERR-8075
+Categoria: admin
+Mensagem: Reporte de evento não encontrado.
+Canal: admin
+Onde aparece: Tentativa de atualizar reporte inexistente.
+Fonte: domain/event_reports.py
+Acao: Verificar ID do reporte.
+
+--- Ficheiros grandes ---
+
+#ERR-8080
+Categoria: system
+Mensagem: O ficheiro excede o tamanho máximo permitido.
+Canal: portal
+Onde aparece: Upload de ficheiro demasiado grande (>16MB).
+Fonte: app.py, blueprints/dashboard.py (RequestEntityTooLarge handler)
+Acao: Reduzir tamanho do ficheiro.
+
+
+================================================================================
+9xxx — ERROS INTERNOS E NAO PREVISTOS
+================================================================================
+
+#ERR-9000
+Codigo interno: UNHANDLED_EXCEPTION
+Categoria: internal
+Mensagem: Erro inesperado.
+Mensagem ao utilizador: Erro inesperado. Contacta o suporte com este codigo.
+Canal: todos
+Onde aparece: Fallback para chaves de erro desconhecidas.
+Fonte: domain/error_catalog.py
+Acao: Procurar #ERR-9000 nos logs e transformar em erro especifico.
+
+#ERR-9001
+Codigo interno: CHAT_RUNTIME_FAILED
+Categoria: internal
+Mensagem: Nao foi possivel processar a mensagem.
+Mensagem ao utilizador: Erro inesperado ao processar a mensagem. Contacta o suporte.
+Canal: bot, whatsapp, api
+Onde aparece:
+  - /api/chat quando handle_chat_turn levanta RuntimeError.
+  - Webhook WhatsApp quando o processamento falha.
+Fonte: domain/error_catalog.py
+Acao: Verificar provider LLM, RAG, base de dados, timeouts nos logs Railway.
+
+#ERR-9010
+Categoria: internal
+Mensagem: Falha inesperada ao abrir a escala/manobra.
+Canal: portal
+Onde aparece: Erro nao previsto ao carregar pagina de detalhe.
+Fonte: blueprints/port_calls.py
+Acao: Verificar logs.
+
+#ERR-9011
+Categoria: internal
+Mensagem: Falha inesperada ao criar/importar/editar escala.
+Canal: portal
+Onde aparece: Erro nao previsto ao criar/editar escala.
+Fonte: blueprints/port_calls.py
+Acao: Verificar logs.
+
+#ERR-9012
+Categoria: internal
+Mensagem: Falha inesperada ao editar planeamento.
+Canal: portal
+Onde aparece: Erro nao previsto ao editar manobra.
+Fonte: blueprints/port_calls.py
+Acao: Verificar logs.
+
+#ERR-9013
+Categoria: internal
+Mensagem: Falha inesperada ao guardar feedback operacional.
+Canal: portal
+Onde aparece: Erro nao previsto ao gravar feedback.
+Fonte: blueprints/port_calls.py
+Acao: Verificar logs.
+
+#ERR-9020
+Categoria: internal
+Mensagem: Falha inesperada na execução da ação operacional do chat.
+Canal: bot, api
+Onde aparece: Erro nao previsto ao executar acao via bot.
+Fonte: blueprints/chat.py
+Acao: Verificar logs e dados da proposta.
+
+#ERR-9030
+Categoria: internal
+Mensagem: Falha inesperada ao importar base do bot/sistema.
+Canal: admin
+Onde aparece: Erro nao previsto ao importar backup.
+Fonte: blueprints/admin.py
+Acao: Verificar formato e integridade do backup.
+
+#ERR-9031
+Categoria: internal
+Mensagem: Falha inesperada ao atualizar/apagar utilizador.
+Canal: admin
+Onde aparece: Erro nao previsto na gestao de utilizadores.
+Fonte: blueprints/admin.py
+Acao: Verificar logs.
+
+#ERR-9032
+Categoria: internal
+Mensagem: Falha inesperada ao importar experiência prática.
+Canal: admin
+Onde aparece: Erro nao previsto na importacao.
+Fonte: blueprints/admin.py
+Acao: Verificar formato do JSON.
+
+#ERR-9040
+Categoria: internal
+Mensagem: Falha ao recolher assinatura ambiental da manobra.
+Canal: logs
+Onde aparece: Erro ao buscar dados ambientais para checklist.
+Fonte: core/helpers.py
+Acao: Verificar servicos de meteo/mares.
+
+#ERR-9041
+Categoria: internal
+Mensagem: Falha ao procurar casos semelhantes para a manobra.
+Canal: logs
+Onde aparece: Erro na pesquisa de historico.
+Fonte: core/helpers.py
+Acao: Verificar base de dados e casebooks.
+
+#ERR-9042
+Categoria: internal
+Mensagem: Falha ao montar contexto de casos.
+Canal: logs
+Onde aparece: Erro ao construir contexto de casebook.
+Fonte: core/helpers.py
+Acao: Verificar dados de casebooks.
+
+#ERR-9050
+Categoria: internal
+Mensagem: Falha ao gravar mensagem.
+Canal: bot, logs
+Onde aparece: Erro ao persistir mensagem de chat.
+Fonte: storage/postgres.py:append_chat_message
+Acao: Verificar base de dados.
+
+#ERR-9060
+Categoria: internal
+Mensagem: Falha na migração automática inicial.
+Canal: logs
+Onde aparece: Erro ao migrar schema no arranque.
+Fonte: app.py
+Acao: Verificar DATABASE_URL e schema.
+
+#ERR-9070
+Categoria: internal
+Mensagem: Falha ao formatar reporte de evento com LLM.
+Canal: logs
+Onde aparece: LLM falhou ao formatar reporte.
+Fonte: core/event_report_runtime.py
+Acao: Verificar provider LLM.
+
+#ERR-9080
+Categoria: internal
+Mensagem: Falha na reindexação do conhecimento.
+Canal: logs
+Onde aparece: Erro ao reindexar documentos.
+Fonte: core/helpers.py
+Acao: Verificar provider de embeddings.
+
+#ERR-9081
+Categoria: internal
+Mensagem: Falha ao validar embeddings pendentes.
+Canal: logs
+Onde aparece: Erro na verificacao de embeddings pendentes.
+Fonte: core/helpers.py
+Acao: Verificar provider de embeddings.
+
+
+================================================================================
+NOTAS
+================================================================================
+
+1. A lista deve crescer sempre que surgir uma falha recorrente.
+2. O utilizador final ve apenas a referencia curta e uma mensagem clara.
+3. O detalhe tecnico fica nos logs, nao no portal ou WhatsApp.
+4. Erros duplicados entre storage/local.py e storage/postgres.py sao normais
+   porque ambos implementam a mesma interface (storage/base.py).
+5. Muitos erros de validacao (#ERR-1xxx) usam templates dinamicos com {label}
+   substituido pelo nome do campo em falta.
+6. As gamas 3xxx cobrem todo o ciclo de vida: criacao, aprovacao, aborto,
+   conclusao, registo e edicao de escalas e manobras.
+7. Erros de permissao (cancelar vs abortar) distinguem o role do utilizador
+   e o estado da manobra (pendente vs aprovada).

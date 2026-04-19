@@ -11,6 +11,8 @@ from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
+from domain.error_catalog import flash_error_message
+
 from core import services
 from core.whatsapp_support import build_user_whatsapp_view, verify_user_whatsapp
 from core.validators import (
@@ -1698,7 +1700,7 @@ def import_bot_database():
             "success",
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao importar base do bot.")
         flash(f"Falha inesperada ao importar base do bot: {exc}", "error")
@@ -1726,7 +1728,7 @@ def import_system_database():
             "success",
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao importar base do sistema.")
         flash(f"Falha inesperada ao importar base do sistema: {exc}", "error")
@@ -1847,7 +1849,7 @@ def edit_event_report(event_id: str):
         )
         flash("Reporte de evento atualizado.", "success")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return redirect(return_to)
 
 
@@ -1898,7 +1900,7 @@ def import_practice_experience():
             "success",
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao importar experiência prática.")
         flash(f"Falha inesperada ao importar experiência prática: {exc}", "error")
@@ -1925,7 +1927,7 @@ def update_practice_experience(record_id: str):
         )
         flash("Experiência prática atualizada.", "success")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return redirect(return_to)
 
 
@@ -1985,7 +1987,7 @@ def admin_casebooks_message_feedback(message_id: str):
         )
         flash("Decisão sobre a mensagem guardada.", "success")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return redirect(return_to)
 
 
@@ -2008,7 +2010,7 @@ def admin_casebooks_maneuver_feedback(maneuver_id: str):
         )
         flash("Validação do caso operacional guardada.", "success")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return redirect(return_to)
 
 
@@ -2074,7 +2076,7 @@ def admin_update_user(username: str):
             session["username"] = effective_target_username
             session["role"] = updated_user["role"]
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("admin.admin_users"))
     except Exception:
         logger.exception("Falha inesperada ao atualizar utilizador %s.", target_username)
@@ -2117,7 +2119,7 @@ def admin_delete_user(username: str):
     try:
         services.store.delete_user(target_username)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("admin.admin_users"))
     except Exception:
         logger.exception("Falha inesperada ao apagar utilizador %s.", target_username)
@@ -2201,7 +2203,7 @@ def add_document():
         title = validate_required_text(request.form.get("title", ""), "Título", max_length=200)
         content = validate_required_text(request.form.get("content", ""), "Conteúdo", max_length=50000)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("admin.admin_documents"))
     filename = services.store.save_document(title, content, created_by=session["username"])
     if safe_rebuild_index(force=False):
@@ -2326,7 +2328,7 @@ def edit_document(name: str):
         else:
             flash(f"Documento {name} atualizado, mas a reindexação falhou: {services.rag.last_index_error}", "error")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return redirect(
         url_for(
             "admin.document_detail",
@@ -2349,7 +2351,7 @@ def delete_document(name: str):
         else:
             flash(f"Documento {name} removido, mas a reindexação falhou: {services.rag.last_index_error}", "error")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(return_to)
     return redirect(return_to)
 
