@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">{{ error_ref }}</p>
+        <h1>{{ error_title }}</h1>
+        <p class="lead">{{ error_message }}</p>
+      </div>
+    </div>
+  </section>
+  <section class="detail-layout" style="max-width:640px">
+    <div>
+      <p class="muted" style="margin-top:16px">
+        Se o problema persistir, contacta o suporte com o código <strong>{{ error_ref }}</strong>.
+      </p>
+      <div class="inline-link-row" style="margin-top:16px">
+        <a class="outline-link" href="/">Voltar ao início</a>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
