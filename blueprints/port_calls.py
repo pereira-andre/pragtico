@@ -8,6 +8,7 @@ from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core import services
+from domain.error_catalog import flash_error_message
 from core.helpers import (
     build_departure_plan_note,
     build_entry_request_note,
@@ -553,7 +554,7 @@ def port_call_detail(port_call_id: str):
     try:
         port_call = services.store.get_port_call(port_call_id)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("dashboard_bp.dashboard"))
     except Exception:
         logger.exception("Falha inesperada ao abrir a escala %s.", port_call_id)
@@ -577,7 +578,7 @@ def maneuver_detail(port_call_id: str, maneuver_id: str):
         port_call = services.store.get_port_call(port_call_id)
         maneuver_context = build_maneuver_context(port_call, maneuver_id)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
     except Exception:
         logger.exception("Falha inesperada ao abrir a manobra %s/%s.", port_call_id, maneuver_id)
@@ -610,7 +611,7 @@ def update_maneuver_case_feedback(port_call_id: str, maneuver_id: str):
             feedback_by=session["username"],
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.maneuver_detail", port_call_id=port_call_id, maneuver_id=maneuver_id))
     except Exception:
         logger.exception("Falha inesperada ao atualizar feedback do caso %s.", maneuver_id)
@@ -665,7 +666,7 @@ def create_port_call():
         port_call = _create_port_call_from_payload(form_data, created_by=session["username"])
         _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("dashboard_bp.dashboard"))
     except Exception:
         logger.exception("Falha inesperada ao criar escala para %s.", session.get("username"))
@@ -697,7 +698,7 @@ def import_port_call_json():
         )
         _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_register"))
     except Exception as exc:
         logger.exception("Falha inesperada ao importar escala por JSON para %s.", session.get("username"))
@@ -730,7 +731,7 @@ def import_vessel_catalog_json():
             for payload in payloads
         ]
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_register"))
     except Exception as exc:
         logger.exception("Falha inesperada ao importar navios por JSON para %s.", session.get("username"))
@@ -818,7 +819,7 @@ def edit_port_call(port_call_id: str):
         )
         _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     except Exception:
         logger.exception("Falha inesperada ao editar a escala %s.", port_call_id)
@@ -842,7 +843,7 @@ def approve_port_call(port_call_id: str):
             approval_note=request.form.get("approval_note", "").strip(),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Manobra aprovada para {port_call['vessel_name']}.", "success")
     _emit_maneuver_notification(
@@ -868,7 +869,7 @@ def abort_port_call(port_call_id: str):
             approval_note=validate_optional_text(request.form.get("approval_note", "")),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Manobra abortada para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -897,7 +898,7 @@ def schedule_departure_plan(port_call_id: str):
             }),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Saída planeada para {port_call['vessel_name']} às {port_call['planned_departure_label']}.", "success")
     _emit_maneuver_notification(
@@ -922,7 +923,7 @@ def abort_departure_plan(port_call_id: str):
             aborted_reason=aborted_reason,
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Planeamento de saída removido para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -954,7 +955,7 @@ def schedule_shift_plan(port_call_id: str):
             }),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança planeada para {port_call['vessel_name']} às {port_call['planned_shift_label']}.", "success")
     _emit_maneuver_notification(
@@ -977,7 +978,7 @@ def approve_shift_plan(port_call_id: str):
             approval_note=request.form.get("approval_note", "").strip(),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança aprovada para {port_call['vessel_name']}.", "success")
     _emit_maneuver_notification(
@@ -1002,7 +1003,7 @@ def abort_shift_plan(port_call_id: str):
             aborted_reason=aborted_reason,
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança removida para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -1026,7 +1027,7 @@ def mark_shift_completed(port_call_id: str):
             updated_by=session["username"],
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Mudança concluída para {port_call['vessel_name']} às {port_call['shift_label']}.", "success")
     _emit_maneuver_notification(
@@ -1057,7 +1058,7 @@ def mark_port_call_arrived(port_call_id: str):
             berth=berth,
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Entrada confirmada para {port_call['vessel_name']} às {port_call['ata_label']}.", "success")
     _emit_maneuver_notification(
@@ -1082,7 +1083,7 @@ def mark_port_call_departed(port_call_id: str):
             next_port=request.form.get("next_port", "").strip(),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Saída registada para {port_call['vessel_name']} às {port_call['departure_label']}.", "success")
     _emit_maneuver_notification(
@@ -1107,7 +1108,7 @@ def attach_entry_report(port_call_id: str):
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Entrada")
         port_call = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Registo da entrada guardado para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -1126,7 +1127,7 @@ def attach_departure_report(port_call_id: str):
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Saída")
         port_call = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Registo da saída guardado para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -1145,7 +1146,7 @@ def attach_shift_report(port_call_id: str):
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Mudança")
         port_call = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Registo da mudança guardado para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
@@ -1185,7 +1186,7 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
             change_reason=require_form_text(request.form.get("change_reason", "").strip(), "Motivo da alteração"),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     except Exception:
         logger.exception("Falha inesperada ao editar planeamento %s/%s.", port_call_id, maneuver_id)
@@ -1223,7 +1224,7 @@ def edit_maneuver_report(port_call_id: str, maneuver_id: str):
             change_reason=require_form_text(request.form.get("change_reason", "").strip(), "Motivo da alteração"),
         )
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
     flash(f"Registo revisto para {port_call['vessel_name']}.", "success")
     _emit_maneuver_notification(

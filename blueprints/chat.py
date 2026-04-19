@@ -18,7 +18,7 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
-from domain.error_catalog import error_payload, log_error_event
+from domain.error_catalog import error_payload, flash_error_message, log_error_event
 from core.security import api_limiter, rate_limit
 from core.helpers import (
     answer_direct_operational_query,
@@ -311,7 +311,7 @@ def api_get_conversation(conversation_id: str):
     try:
         return jsonify(_conversation_payload(session["username"], conversation_id))
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 404
+        return jsonify({"error": flash_error_message(str(exc))}), 404
 
 
 @bp.route("/conversations/<conversation_id>/export.json")
@@ -380,7 +380,7 @@ def rename_conversation(conversation_id: str):
         flash("Conversa renomeada.", "success")
         return _redirect_after_conversation_action(conversation["id"])
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return _redirect_after_conversation_action(conversation_id)
 
 
@@ -395,7 +395,7 @@ def api_rename_conversation(conversation_id: str):
         return jsonify(_conversation_shell(session["username"], conversation_id))
     except ValueError as exc:
         status_code = 404 if "não encontrada" in str(exc).lower() else 400
-        return jsonify({"error": str(exc)}), status_code
+        return jsonify({"error": flash_error_message(str(exc))}), status_code
 
 
 @bp.route("/conversations/<conversation_id>/clear", methods=["POST"])
@@ -406,7 +406,7 @@ def clear_conversation(conversation_id: str):
         services.store.clear_conversation(session["username"], conversation_id)
         flash("Mensagens da conversa removidas.", "success")
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
     return _redirect_after_conversation_action(conversation_id)
 
 
@@ -419,7 +419,7 @@ def delete_conversation(conversation_id: str):
         flash("Conversa eliminada.", "success")
         return _redirect_after_conversation_action(next_conversation_id)
     except ValueError as exc:
-        flash(str(exc), "error")
+        flash(flash_error_message(str(exc)), "error")
         return _redirect_after_conversation_action(conversation_id)
 
 
@@ -434,11 +434,11 @@ def api_message_feedback(message_id: str):
     feedback_correction = (payload.get("feedback_correction") or "").strip()
     feedback_correction_document = (payload.get("feedback_correction_document") or "").strip()
     if not conversation_id:
-        return jsonify({"error": "conversation_id em falta."}), 400
+        return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
     if feedback_status not in {"approved", "review"}:
-        return jsonify({"error": "Estado de feedback inválido."}), 400
+        return jsonify({"error": flash_error_message("Estado de feedback inválido.")}), 400
     if feedback_status == "review" and not feedback_note and not feedback_correction:
-        return jsonify({"error": "Ao pedir revisão indica o motivo ou a resposta corrigida."}), 400
+        return jsonify({"error": flash_error_message("Ao pedir revisão indica o motivo ou a resposta corrigida.")}), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,
@@ -457,7 +457,7 @@ def api_message_feedback(message_id: str):
             source="web",
         )
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": flash_error_message(str(exc))}), 400
     payload = dict(message)
     feedback_updated_at = payload.get("feedback_updated_at")
     payload["feedback_updated_at_label"] = (
@@ -484,10 +484,10 @@ def api_cancel_pending_chat_action():
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     if not conversation_id:
-        return jsonify({"error": "conversation_id em falta."}), 400
+        return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
     pending = load_pending_chat_action(session["username"], conversation_id)
     if not pending:
-        return jsonify({"error": "Não existe ação pendente para cancelar."}), 404
+        return jsonify({"error": flash_error_message("Não existe ação pendente para cancelar.")}), 404
     clear_pending_chat_action(session["username"], conversation_id)
     assistant_message = services.store.append_chat_message(
         username=session["username"], conversation_id=conversation_id,
@@ -510,25 +510,26 @@ def api_confirm_pending_chat_action():
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     if not conversation_id:
-        return jsonify({"error": "conversation_id em falta."}), 400
+        return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
 
     username = session["username"]
     pending = load_pending_chat_action(username, conversation_id)
     if not pending:
-        return jsonify({"error": "Não existe ação pendente para confirmar."}), 404
+        return jsonify({"error": flash_error_message("Não existe ação pendente para confirmar.")}), 404
 
     proposal = pending.get("proposal") or {}
     if proposal.get("missing_fields"):
-        return jsonify({"error": "Ainda faltam dados obrigatórios antes de confirmar esta ação."}), 400
+        return jsonify({"error": flash_error_message("Ainda faltam dados obrigatórios antes de confirmar esta ação.")}), 400
 
     try:
         result, message = execute_pending_operational_action(proposal, username=username, role=session.get("role", ""))
     except (PermissionError, ValueError) as exc:
         clear_pending_chat_action(username, conversation_id)
-        assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=f"Não consegui aplicar a ação operacional. Motivo: {exc}")
+        tagged = flash_error_message(str(exc))
+        assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=f"Não consegui aplicar a ação operacional. Motivo: {tagged}")
         shell = _conversation_shell(username, conversation_id)
         return jsonify({
-            "error": str(exc),
+            "error": tagged,
             "answer": assistant_message["content"],
             "message_id": assistant_message["id"],
             "created_at_label": assistant_message.get("created_at_label", ""),
@@ -536,9 +537,9 @@ def api_confirm_pending_chat_action():
             **shell,
         }), 400
     except Exception as exc:
-        logger.exception("Falha inesperada na execução da ação operacional do chat.")
+        log_error_event(logger, "UNEXPECTED_BOT_ACTION", detail=str(exc))
         clear_pending_chat_action(username, conversation_id)
-        assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content="Falha inesperada ao aplicar a ação operacional no portal.")
+        assistant_message = services.store.append_chat_message(username=username, conversation_id=conversation_id, role="assistant", content=flash_error_message("Falha inesperada ao aplicar a ação operacional no portal."))
         shell = _conversation_shell(username, conversation_id)
         return jsonify({
             "error": str(exc),
