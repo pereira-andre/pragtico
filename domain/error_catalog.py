@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
+
+
+_ERROR_REF_RE = re.compile(r"^#ERR-\d{4}\b")
 
 
 ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
@@ -883,6 +887,8 @@ def resolve_error_key(message: str) -> str | None:
 
 def flash_error_message(message: str) -> str:
     """Prefix a ValueError message with its #ERR-XXXX code if found in the catalog."""
+    if _ERROR_REF_RE.match(message.strip()):
+        return message
     key = resolve_error_key(message)
     if key:
         return f"{error_ref(key)} {message}"
