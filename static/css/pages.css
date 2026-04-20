@@ -178,6 +178,64 @@
   font-size: 1rem;
 }
 
+.maneuver-operations-panel {
+  background: rgba(10, 108, 102, 0.04);
+}
+
+.maneuver-action-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.maneuver-action-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.7fr);
+  gap: 16px;
+  align-items: start;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.maneuver-action-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.maneuver-action-copy h4,
+.maneuver-action-copy p {
+  margin: 0;
+}
+
+.maneuver-action-copy p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.maneuver-action-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.maneuver-inline-form {
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.maneuver-inline-action {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.maneuver-action-details {
+  border-radius: 8px;
+}
+
+.maneuver-abort-form {
+  border-color: rgba(187, 52, 47, 0.24);
+}
+
 .scale-auto-origin-note {
   margin: -4px 0 0;
 }
@@ -526,7 +584,8 @@
   .scale-agent-grid,
   .scale-ship-fact-sheet,
   .scale-maneuver-grid,
-  .admin-scale-edit-grid {
+  .admin-scale-edit-grid,
+  .maneuver-action-row {
     grid-template-columns: 1fr;
   }
 

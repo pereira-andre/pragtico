@@ -8,7 +8,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from domain.berth_layout import build_slot_occupancy
-from domain.cost_engine import ManoeuvreInput, ManoeuvreType, calculate_scale_cost
+from domain.cost_engine import (
+    ManoeuvreInput,
+    ManoeuvreType,
+    calculate_cancellation_fee,
+    calculate_scale_cost,
+    classify_cancellation_timing,
+)
 from domain.document_processing import iso_now
 
 from .constants import (
@@ -112,7 +118,7 @@ def _latest_reportable_maneuver(history: List[Dict], maneuver_type: str) -> Opti
         item
         for item in history
         if _normalize_maneuver_type(item.get("type")) == clean_type
-        and item.get("state") in ("completed", "approved")
+        and item.get("state") in ("completed", "approved", PORT_CALL_APPROVAL_ABORTED)
         and not (item.get("report_note") or "").strip()
     ]
     if not filtered:
@@ -183,8 +189,6 @@ def _thruster_state_label(value: Optional[str]) -> str:
 def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
     clean_role = (actor_role or "").strip().lower()
     if clean_role == "admin":
-        return True
-    if clean_role == "piloto":
         return True
     if clean_role == "agente":
         return maneuver.get("state") == PORT_CALL_APPROVAL_PENDING
@@ -529,24 +533,18 @@ def _normalize_port_call_record(record: Dict) -> Dict:
 
 
 def _can_abort_port_call(record: Dict) -> bool:
-    eta_dt = _parse_iso_datetime(record.get("eta"))
-    if not eta_dt:
-        return False
-    return datetime.now(timezone.utc) <= eta_dt - timedelta(hours=2)
+    entry = _latest_maneuver(record.get("maneuver_history", []), "entry", {PORT_CALL_APPROVAL_APPROVED})
+    return record.get("status") == PORT_CALL_STATUS_SCHEDULED and bool(entry)
 
 
 def _can_abort_departure_plan(record: Dict) -> bool:
-    planned_dt = _parse_iso_datetime(record.get("planned_departure_at"))
-    if not planned_dt:
-        return False
-    return datetime.now(timezone.utc) <= planned_dt - timedelta(hours=1)
+    departure = _latest_maneuver(record.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_APPROVED})
+    return record.get("status") == PORT_CALL_STATUS_IN_PORT and bool(departure)
 
 
 def _can_abort_shift_plan(record: Dict) -> bool:
-    planned_dt = _parse_iso_datetime(record.get("planned_shift_at"))
-    if not planned_dt:
-        return False
-    return datetime.now(timezone.utc) <= planned_dt - timedelta(hours=1)
+    shift = _latest_maneuver(record.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_APPROVED})
+    return record.get("status") == PORT_CALL_STATUS_IN_PORT and bool(shift)
 
 
 def _extract_departure_abort_reason(note: Optional[str]) -> str:
@@ -704,6 +702,24 @@ def _derive_standby_hours(started_at: Optional[str], finished_at: Optional[str])
     return round(max(duration_hours - 3.0, 0.0), 2)
 
 
+def _cancellation_type_for_archive_row(row: Dict) -> str:
+    planned_dt = _parse_iso_datetime(row.get("planned_value"))
+    aborted_dt = _parse_iso_datetime(row.get("actual_value") or row.get("date_value"))
+    if not planned_dt or not aborted_dt:
+        return "after_1h"
+    return classify_cancellation_timing(planned_dt, aborted_dt)
+
+
+def _cancellation_label(cancellation_type: str) -> str:
+    labels = {
+        "more_than_2h_before": "Sem cobrança (>2h antes)",
+        "2h_before": "Cancelamento nas 2h antes (30%)",
+        "1h_after": "Cancelamento até 1h depois (50%)",
+        "after_1h": "Cancelamento após 1h (100%)",
+    }
+    return labels.get(cancellation_type, labels["after_1h"])
+
+
 def _estimate_scale_stay_days(port_call: Dict, archived_rows: List[Dict], now: datetime) -> float:
     status = port_call.get("status")
     if status not in {PORT_CALL_STATUS_IN_PORT, PORT_CALL_STATUS_DEPARTED}:
@@ -762,35 +778,49 @@ def _build_archived_scale_summary(port_call: Dict, archived_rows: List[Dict], no
     notes: List[str] = []
 
     if (gt > 0 or has_structural_basis or bool(tup_context.get("exempt"))) and ordered_rows:
+        cost_inputs = [
+            ManoeuvreInput(
+                manoeuvre_type=_maneuver_type_to_cost_engine(row.get("maneuver_type")),
+                gt=gt,
+                standby_hours=row.get("derived_standby_hours") or 0.0,
+            )
+            for row in ordered_rows
+        ]
         estimate = calculate_scale_cost(
             vessel_name=port_call.get("vessel_name", "Navio"),
             gt=gt,
             vessel_type=_cost_vessel_type_key(port_call.get("vessel_type")),
-            manoeuvres=[
-                ManoeuvreInput(
-                    manoeuvre_type=_maneuver_type_to_cost_engine(row.get("maneuver_type")),
-                    gt=gt,
-                    standby_hours=row.get("derived_standby_hours") or 0.0,
-                )
-                for row in ordered_rows
-            ],
+            manoeuvres=cost_inputs,
             stay_days=stay_days or 1.0,
             include_tup=include_tup,
             tup_context=tup_context,
         )
-        pilotage_total = estimate.pilotage_total
         tup_estimate = estimate.tup_estimate if include_tup else 0.0
-        grand_total = estimate.grand_total
         notes = estimate.notes
+        recalculated_pilotage_total = 0.0
         for row, result in zip(ordered_rows, estimate.manoeuvres):
+            cancellation_type = ""
+            billing_adjustment_label = ""
+            estimated_cost = result.total_cost
+            if row.get("situation_class") == "aborted":
+                cancellation_type = _cancellation_type_for_archive_row(row)
+                billing_adjustment_label = _cancellation_label(cancellation_type)
+                estimated_cost = calculate_cancellation_fee(result.base_cost, cancellation_type)
+            recalculated_pilotage_total += estimated_cost
             estimated_rows.append(
                     {
                         **row,
                         "derived_standby_hours_label": _format_hours_pt(row.get("derived_standby_hours") or 0.0),
-                        "estimated_cost": result.total_cost,
-                        "estimated_cost_label": _format_currency_pt(result.total_cost),
+                        "estimated_cost": estimated_cost,
+                        "estimated_cost_label": _format_currency_pt(estimated_cost),
+                        "cancellation_type": cancellation_type,
+                        "billing_adjustment_label": billing_adjustment_label,
                     }
             )
+        pilotage_total = round(recalculated_pilotage_total, 2)
+        grand_total = round(pilotage_total + (tup_estimate or 0.0), 2)
+        if any(row.get("situation_class") == "aborted" for row in ordered_rows):
+            notes.append("Abortos calculados pela tabela APSS: >2h sem cobrança; 2h antes 30%; até 1h depois 50%; após 1h 100%.")
     else:
         estimated_rows = [{**row, "estimated_cost": None, "estimated_cost_label": "--"} for row in ordered_rows]
 

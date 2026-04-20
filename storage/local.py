@@ -48,9 +48,6 @@ from .constants import (
 )
 from .port_call_helpers import (
     _build_port_activity_snapshot,
-    _can_abort_departure_plan,
-    _can_abort_port_call,
-    _can_abort_shift_plan,
     _can_edit_maneuver_plan,
     _decorate_port_call,
     _default_port_calls,
@@ -1815,7 +1812,7 @@ class LocalStore(BaseStore):
         clean_imo = _clean_text(vessel_imo)
         clean_cs = _clean_text(vessel_call_sign)
         if clean_imo or clean_cs:
-            for existing in self._data.get("port_calls", []):
+            for existing in self._read_port_calls():
                 if existing.get("status") not in ("scheduled", "in_port"):
                     continue
                 if clean_imo and _clean_text(str(existing.get("vessel_imo", ""))) == clean_imo:
@@ -1998,7 +1995,7 @@ class LocalStore(BaseStore):
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de aborto da saída é obrigatório.")
-        actor_username = _normalize_username(updated_by) or "agente"
+        actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
         updated = None
@@ -2006,14 +2003,11 @@ class LocalStore(BaseStore):
             if item["id"] != port_call_id:
                 continue
             current = _normalize_port_call_record(item)
-            departure = _latest_maneuver(current.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
+            departure = _latest_maneuver(current.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_IN_PORT or not departure:
-                raise ValueError("Não existe manobra de saída planeada para este navio.")
-            if (
-                departure.get("state") == PORT_CALL_APPROVAL_PENDING
-                and not _can_abort_departure_plan({"planned_departure_at": departure.get("planned_at")})
-            ):
-                raise ValueError("A saída só pode ser abortada com pelo menos 1 hora de antecedência.")
+                if _latest_maneuver(current.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_PENDING}):
+                    raise ValueError("A saída ainda está pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
+                raise ValueError("Não existe saída aprovada para abortar.")
             departure["state"] = PORT_CALL_APPROVAL_ABORTED
             departure["aborted_reason"] = reason
             departure["decided_by"] = actor_username
@@ -2141,7 +2135,7 @@ class LocalStore(BaseStore):
                 raise ValueError("Só podes registar a entrada depois da manobra estar aprovada.")
             if maneuver_id and entry.get("type") != "entry":
                 raise ValueError("O ID indicado não corresponde a uma manobra de entrada.")
-            if maneuver_id and entry.get("state") not in {"approved", "completed"}:
+            if maneuver_id and entry.get("state") not in {"approved", "completed", "aborted"}:
                 raise ValueError("Só podes registar a entrada depois da manobra estar aprovada.")
             if maneuver_id and (entry.get("report_note") or "").strip():
                 raise ValueError("Essa manobra já tem registo. Usa editar registo.")
@@ -2206,7 +2200,7 @@ class LocalStore(BaseStore):
                 raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
             if maneuver_id and departure.get("type") != "departure":
                 raise ValueError("O ID indicado não corresponde a uma manobra de saída.")
-            if maneuver_id and departure.get("state") not in {"approved", "completed"}:
+            if maneuver_id and departure.get("state") not in {"approved", "completed", "aborted"}:
                 raise ValueError("Só podes registar a saída depois da manobra estar aprovada.")
             if maneuver_id and (departure.get("report_note") or "").strip():
                 raise ValueError("Essa manobra já tem registo. Usa editar registo.")
@@ -2330,7 +2324,7 @@ class LocalStore(BaseStore):
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de aborto da mudança é obrigatório.")
-        actor_username = _normalize_username(updated_by) or "agente"
+        actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
         updated = None
@@ -2338,14 +2332,11 @@ class LocalStore(BaseStore):
             if item["id"] != port_call_id:
                 continue
             current = _normalize_port_call_record(item)
-            shift = _latest_maneuver(current.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
+            shift = _latest_maneuver(current.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_IN_PORT or not shift:
-                raise ValueError("Não existe manobra de mudança planeada para este navio.")
-            if (
-                shift.get("state") == PORT_CALL_APPROVAL_PENDING
-                and not _can_abort_shift_plan({"planned_shift_at": shift.get("planned_at")})
-            ):
-                raise ValueError("A mudança só pode ser abortada com pelo menos 1 hora de antecedência.")
+                if _latest_maneuver(current.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_PENDING}):
+                    raise ValueError("A mudança ainda está pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
+                raise ValueError("Não existe mudança aprovada para abortar.")
             shift["state"] = PORT_CALL_APPROVAL_ABORTED
             shift["aborted_reason"] = reason
             shift["decided_by"] = actor_username
@@ -2432,7 +2423,7 @@ class LocalStore(BaseStore):
                 raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
             if maneuver_id and shift.get("type") != "shift":
                 raise ValueError("O ID indicado não corresponde a uma manobra de mudança.")
-            if maneuver_id and shift.get("state") not in {"approved", "completed"}:
+            if maneuver_id and shift.get("state") not in {"approved", "completed", "aborted"}:
                 raise ValueError("Só podes registar a mudança depois da manobra estar aprovada.")
             if maneuver_id and (shift.get("report_note") or "").strip():
                 raise ValueError("Essa manobra já tem registo. Usa editar registo.")
@@ -2553,13 +2544,14 @@ class LocalStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada na escala.")
-            if target.get("state") != "completed":
-                raise ValueError("Só podes editar o registo de manobras já concluídas.")
+            if target.get("state") not in {"completed", PORT_CALL_APPROVAL_ABORTED}:
+                raise ValueError("Só podes editar o registo de manobras concluídas ou abortadas.")
             previous_note = target.get("report_note", "")
             target["report_note"] = (notes or "").strip()
             target["execution_started_at"] = maneuver_started_at
             target["execution_finished_at"] = maneuver_finished_at
-            target["completed_at"] = maneuver_finished_at
+            if target.get("state") == "completed":
+                target["completed_at"] = maneuver_finished_at
             target["reported_draft_m"] = draft_m.strip()
             target["reported_by"] = target.get("reported_by") or actor_username
             target["reported_by_profile"] = target.get("reported_by_profile") or _build_actor_snapshot(actor_profile, username=actor_username)
@@ -2601,6 +2593,8 @@ class LocalStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada.")
+            if target.get("state") != PORT_CALL_APPROVAL_PENDING:
+                raise ValueError("Só podes cancelar manobras pendentes. Depois da aprovação usa abortar.")
             if target.get("type") == "entry":
                 removed = _decorate_port_call(current)
                 records.pop(index)
@@ -2660,7 +2654,7 @@ class LocalStore(BaseStore):
         reason = aborted_reason.strip()
         if not reason:
             raise ValueError("O motivo de manobra abortada é obrigatório.")
-        actor_username = _normalize_username(decided_by) or "agente"
+        actor_username = _normalize_username(decided_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
         records = self._read_port_calls()
         updated = None
@@ -2668,14 +2662,11 @@ class LocalStore(BaseStore):
             if item["id"] != port_call_id:
                 continue
             current = _normalize_port_call_record(item)
-            entry = _latest_maneuver(current.get("maneuver_history", []), "entry", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED})
+            entry = _latest_maneuver(current.get("maneuver_history", []), "entry", {PORT_CALL_APPROVAL_APPROVED})
             if current["status"] != PORT_CALL_STATUS_SCHEDULED or not entry:
-                raise ValueError("Só podes abortar manobras ainda não executadas.")
-            if (
-                entry.get("state") == PORT_CALL_APPROVAL_PENDING
-                and not _can_abort_port_call({"eta": entry.get("planned_at")})
-            ):
-                raise ValueError("A manobra só pode ser abortada com pelo menos 2 horas de antecedência.")
+                if _latest_maneuver(current.get("maneuver_history", []), "entry", {PORT_CALL_APPROVAL_PENDING}):
+                    raise ValueError("A entrada ainda está pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
+                raise ValueError("Não existe entrada aprovada para abortar.")
             entry["state"] = PORT_CALL_APPROVAL_ABORTED
             entry["approval_note"] = approval_note.strip()
             entry["aborted_reason"] = reason

@@ -1165,6 +1165,7 @@ class OperationalFlowTests(unittest.TestCase):
             notes="Registo do agente · Entrada\nCalado: 9.94",
             eta="2026-04-02T05:30:00+00:00",
         )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
 
         with app.app.test_request_context("/"):
             session["role"] = "admin"
@@ -5506,7 +5507,7 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertIn("Catalog Star", html)
         self.assertIn("Linha regular", html)
 
-    def test_agent_cannot_see_or_post_admin_scale_edit(self) -> None:
+    def test_agent_can_see_and_post_scoped_scale_edit(self) -> None:
         eta = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
         with app.app.test_client() as client:
             csrf_token = self._set_agent_session(client)
@@ -5537,11 +5538,11 @@ class PortCallJsonImportTests(unittest.TestCase):
 
         self.assertEqual(detail_response.status_code, 200)
         html = detail_response.get_data(as_text=True)
-        self.assertNotIn("Editar escala e navio", html)
+        self.assertIn("Editar escala e navio", html)
         self.assertNotIn("Contacto piloto", html)
         self.assertIn("+351 900 000 111", html)
         self.assertIn("351900000111", html)
-        self.assertEqual(edit_response.status_code, 403)
+        self.assertEqual(edit_response.status_code, 302)
 
     def test_import_port_call_json_from_textarea(self) -> None:
         payload = """

@@ -6,6 +6,7 @@ import os
 import re
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -691,6 +692,67 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(shift["aborted_reason"], "nevoeiro")
         self.assertEqual(aborted["berth"], "TMS 2")
         self.assertIn(pc["id"], archived_ids)
+
+    def test_abort_pending_maneuver_is_rejected_until_approved(self) -> None:
+        pc = self._create_entry()
+
+        with self.assertRaisesRegex(ValueError, "ainda está pendente"):
+            self.store.abort_port_call(pc["id"], decided_by="piloto", aborted_reason="tempo")
+
+    def test_aborted_shift_can_receive_pilot_report_without_becoming_completed(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin",
+        )
+        shifted = self.store.schedule_shift_plan(
+            pc["id"],
+            planned_shift_at="2026-03-24T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        shift_id = next(m for m in shifted["maneuver_history"] if m["type"] == "shift")["id"]
+        self.store.approve_shift_plan(pc["id"], decided_by="admin")
+        self.store.abort_shift_plan(pc["id"], updated_by="piloto", aborted_reason="sem rebocadores")
+
+        reported = self.store.attach_shift_report(
+            pc["id"],
+            updated_by="piloto",
+            maneuver_started_at="2026-03-24T07:50:00+00:00",
+            maneuver_finished_at="2026-03-24T08:05:00+00:00",
+            draft_m="9.94",
+            notes="Abortada antes de largar.",
+            maneuver_id=shift_id,
+        )
+        shift = next(m for m in reported["maneuver_history"] if m["id"] == shift_id)
+
+        self.assertEqual(shift["state"], "aborted")
+        self.assertEqual(shift["report_note"], "Abortada antes de largar.")
+        self.assertEqual(shift["execution_finished_at"], "2026-03-24T08:05:00+00:00")
+        self.assertIsNone(shift["completed_at"])
+
+    def test_archive_uses_zero_pilotage_fee_when_approved_abort_is_more_than_2h_before(self) -> None:
+        pc = self._create_entry()
+        self.store.approve_port_call(pc["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(
+            pc["id"], arrived_at="2026-03-24T06:00:00+00:00", updated_by="admin",
+        )
+        planned_at = (datetime.now(timezone.utc) + timedelta(hours=3)).isoformat()
+        self.store.schedule_shift_plan(
+            pc["id"],
+            planned_shift_at=planned_at,
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(pc["id"], decided_by="admin")
+        self.store.abort_shift_plan(pc["id"], updated_by="piloto", aborted_reason="janela cancelada")
+
+        snapshot = self.store.get_port_activity_snapshot(window_days=3650)
+        scale = next(item for item in snapshot["archived_scales"] if item["port_call_id"] == pc["id"])
+        shift = next(item for item in scale["maneuvers"] if item["maneuver_type"] == "shift")
+
+        self.assertEqual(shift["cancellation_type"], "more_than_2h_before")
+        self.assertEqual(shift["estimated_cost"], 0.0)
 
     def test_attach_entry_report_rejects_finished_before_started(self) -> None:
         pc = self._create_entry()

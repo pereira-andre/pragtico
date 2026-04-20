@@ -750,7 +750,7 @@ def import_vessel_catalog_json():
 
 @bp.route("/port-calls/<port_call_id>/edit", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("admin", "agente")
 @port_call_scope_required
 def edit_port_call(port_call_id: str):
     """Editar os dados da escala/navio a partir da página de detalhe."""
@@ -857,8 +857,7 @@ def approve_port_call(port_call_id: str):
 
 @bp.route("/port-calls/<port_call_id>/abort", methods=["POST"])
 @login_required
-@role_required("admin", "agente")
-@port_call_scope_required
+@role_required("admin", "piloto")
 def abort_port_call(port_call_id: str):
     """Abortar a escala portuária e registar o motivo."""
     try:
@@ -912,10 +911,9 @@ def schedule_departure_plan(port_call_id: str):
 
 @bp.route("/port-calls/<port_call_id>/abort-departure", methods=["POST"])
 @login_required
-@role_required("admin", "agente")
-@port_call_scope_required
+@role_required("admin", "piloto")
 def abort_departure_plan(port_call_id: str):
-    """Cancelar o planeamento de saída de um navio em porto."""
+    """Abortar a saída aprovada de um navio em porto."""
     try:
         aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_departure_plan(
@@ -925,7 +923,7 @@ def abort_departure_plan(port_call_id: str):
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
-    flash(f"Planeamento de saída removido para {port_call['vessel_name']}.", "success")
+    flash(f"Saída abortada para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
 
 
@@ -992,10 +990,9 @@ def approve_shift_plan(port_call_id: str):
 
 @bp.route("/port-calls/<port_call_id>/abort-shift", methods=["POST"])
 @login_required
-@role_required("admin", "agente")
-@port_call_scope_required
+@role_required("admin", "piloto")
 def abort_shift_plan(port_call_id: str):
-    """Cancelar o planeamento de mudança de cais de um navio em porto."""
+    """Abortar a mudança aprovada de um navio em porto."""
     try:
         aborted_reason = validate_required_text(request.form.get("aborted_reason", ""), "Motivo de aborto")
         port_call = services.store.abort_shift_plan(
@@ -1005,8 +1002,36 @@ def abort_shift_plan(port_call_id: str):
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
-    flash(f"Mudança removida para {port_call['vessel_name']}.", "success")
+    flash(f"Mudança abortada para {port_call['vessel_name']}.", "success")
     return redirect_to_portal_target(port_call_id)
+
+
+@bp.route("/port-calls/<port_call_id>/maneuvers/<maneuver_id>/cancel", methods=["POST"])
+@login_required
+@role_required("admin", "agente")
+@port_call_scope_required
+def cancel_maneuver(port_call_id: str, maneuver_id: str):
+    """Cancelar uma manobra ainda pendente antes da aprovação do piloto."""
+    try:
+        current = services.store.get_port_call(port_call_id)
+        target = maneuver_by_id(current, maneuver_id)
+        if not target:
+            raise ValueError("Manobra não encontrada.")
+        if target.get("state") != "pending":
+            raise ValueError("Só podes cancelar manobras pendentes. Depois da aprovação usa abortar.")
+        removed_or_updated = services.store.delete_maneuver(
+            port_call_id=port_call_id,
+            maneuver_id=maneuver_id,
+            updated_by=session["username"],
+        )
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect_to_portal_target(port_call_id)
+
+    flash(f"Manobra cancelada para {removed_or_updated['vessel_name']}.", "success")
+    if target.get("type") == "entry":
+        return redirect(url_for("dashboard_bp.dashboard"))
+    return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
 
 
 @bp.route("/port-calls/<port_call_id>/complete-shift", methods=["POST"])
@@ -1106,7 +1131,15 @@ def attach_entry_report(port_call_id: str):
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Entrada")
-        port_call = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
+        port_call = services.store.attach_entry_report(
+            port_call_id=port_call_id,
+            updated_by=session["username"],
+            maneuver_started_at=maneuver_started_at,
+            maneuver_finished_at=maneuver_finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=request.form.get("maneuver_id", "").strip() or None,
+        )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
@@ -1125,7 +1158,15 @@ def attach_departure_report(port_call_id: str):
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Saída")
-        port_call = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
+        port_call = services.store.attach_departure_report(
+            port_call_id=port_call_id,
+            updated_by=session["username"],
+            maneuver_started_at=maneuver_started_at,
+            maneuver_finished_at=maneuver_finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=request.form.get("maneuver_id", "").strip() or None,
+        )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)
@@ -1144,7 +1185,15 @@ def attach_shift_report(port_call_id: str):
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Mudança")
-        port_call = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=session["username"], maneuver_started_at=maneuver_started_at, maneuver_finished_at=maneuver_finished_at, draft_m=draft_m, notes=note)
+        port_call = services.store.attach_shift_report(
+            port_call_id=port_call_id,
+            updated_by=session["username"],
+            maneuver_started_at=maneuver_started_at,
+            maneuver_finished_at=maneuver_finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=request.form.get("maneuver_id", "").strip() or None,
+        )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect_to_portal_target(port_call_id)

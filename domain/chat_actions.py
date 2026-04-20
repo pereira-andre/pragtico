@@ -33,8 +33,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_entry": {
-        "label": "Cancelar/Abortar entrada",
-        "roles": {"admin", "agente", "piloto"},
+        "label": "Abortar entrada",
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "complete_entry": {
@@ -69,8 +69,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_departure": {
-        "label": "Cancelar/Abortar saída",
-        "roles": {"admin", "agente", "piloto"},
+        "label": "Abortar saída",
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "complete_departure": {
@@ -95,8 +95,8 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "abort_shift": {
-        "label": "Cancelar/Abortar mudança",
-        "roles": {"admin", "agente", "piloto"},
+        "label": "Abortar mudança",
+        "roles": {"admin", "piloto"},
         "requires_target": True,
     },
     "complete_shift": {
@@ -116,7 +116,7 @@ ACTION_SPECS = {
         "requires_target": True,
     },
     "delete_maneuver": {
-        "label": "Apagar manobra",
+        "label": "Cancelar manobra",
         "roles": {"admin", "agente"},
         "requires_target": True,
     },
@@ -125,7 +125,7 @@ ACTION_SPECS = {
 GENERIC_ACTION_FAMILIES = (
     ("approve", "approve"),
     ("abort", "abort"),
-    ("cancel", "abort"),
+    ("cancel", "cancel"),
     ("complete", "approve"),
     ("confirm", "approve"),
     ("report", "report"),
@@ -322,6 +322,7 @@ SLASH_COMMAND_ALIASES = {
     "apagar-escala": "delete_scale",
     "criar-manobra": "create_maneuver",
     "editar-manobra": "edit_maneuver",
+    "cancelar-manobra": "delete_maneuver",
     "apagar-manobra": "delete_maneuver",
     "aprovar": "approve_maneuver",
     "registar-manobra": "create_report",
@@ -748,9 +749,9 @@ def canonicalize_action_name(raw_action: str, maneuver_type: str = "") -> str:
         "approve_scale": f"approve_{clean_type}",
         "approve": f"approve_{clean_type}",
         "abort_maneuver": f"abort_{clean_type}",
-        "cancel_maneuver": f"abort_{clean_type}",
+        "cancel_maneuver": "delete_maneuver",
         "abort_port_call": f"abort_{clean_type}",
-        "cancel_port_call": f"abort_{clean_type}",
+        "cancel_port_call": "delete_port_call",
         "complete_maneuver": f"complete_{clean_type}",
         "confirm_maneuver": f"complete_{clean_type}",
         "complete_port_call": f"complete_{clean_type}",
@@ -770,6 +771,8 @@ def canonicalize_action_name(raw_action: str, maneuver_type: str = "") -> str:
                 return f"approve_{clean_type}"
             if family_name == "abort":
                 return f"abort_{clean_type}"
+            if family_name == "cancel":
+                return "delete_maneuver"
             if family_name == "complete":
                 return f"complete_{clean_type}"
             if family_name == "report":
@@ -1175,7 +1178,7 @@ def build_edit_maneuver_plan_reply_template() -> str:
 def build_delete_maneuver_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para apagar a manobra (basta o ID da manobra):",
+            "Responde neste formato para cancelar a manobra pendente (basta o ID da manobra):",
             "ID da manobra: ",
         ]
     )
@@ -1519,7 +1522,7 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         if any(field in extracted_fields for field in maneuver_payload_fields):
             return {
                 "intent": "unsupported",
-                "answer": "Este comando apaga a escala, não a manobra. Para remover uma manobra usa /apagar-manobra.\n\n" + build_delete_maneuver_reply_template(),
+                "answer": "Este comando apaga a escala, não a manobra. Para cancelar uma manobra pendente usa /cancelar-manobra.\n\n" + build_delete_maneuver_reply_template(),
             }
         if not (target["reference_code"] or target["vessel_name"]):
             proposal = normalize_action_candidate(
@@ -2203,15 +2206,15 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str, maneuver_
         return None
 
     if action in {"edit_maneuver_report", "delete_maneuver_report"}:
-        valid_states = {"approved", "completed"}
+        valid_states = {"completed", "aborted"}
     elif action.endswith("_report"):
-        valid_states = {"approved", "completed"}
+        valid_states = {"approved", "completed", "aborted"}
     elif action.startswith("approve_"):
         valid_states = {"pending"}
     elif action.startswith("abort_"):
-        valid_states = {"pending", "approved"}
+        valid_states = {"approved"}
     elif action == "delete_maneuver":
-        valid_states = {"pending", "approved", "completed", "aborted"}
+        valid_states = {"pending"}
     elif action == "edit_maneuver_plan":
         valid_states = {"pending", "approved"}
     else:
@@ -2219,7 +2222,11 @@ def resolve_maneuver(port_call: Dict, action: str, maneuver_type: str, maneuver_
 
     candidates = [item for item in history if (item.get("state") or "").strip().lower() in valid_states]
     if action in {"edit_maneuver_report", "delete_maneuver_report"}:
-        completed_candidates = [item for item in candidates if (item.get("state") or "").strip().lower() == "completed"]
+        completed_candidates = [
+            item
+            for item in candidates
+            if (item.get("state") or "").strip().lower() in {"completed", "aborted"}
+        ]
         if completed_candidates:
             candidates = completed_candidates
     if not candidates:
@@ -2240,22 +2247,26 @@ def candidate_maneuvers_for_action(port_call: Dict, action: str, maneuver_type: 
     if not history:
         return []
     if action in {"edit_maneuver_report", "delete_maneuver_report"}:
-        valid_states = {"approved", "completed"}
+        valid_states = {"completed", "aborted"}
     elif action.endswith("_report"):
-        valid_states = {"approved", "completed"}
+        valid_states = {"approved", "completed", "aborted"}
     elif action.startswith("approve_"):
         valid_states = {"pending"}
     elif action.startswith("abort_"):
-        valid_states = {"pending", "approved"}
+        valid_states = {"approved"}
     elif action == "delete_maneuver":
-        valid_states = {"pending", "approved", "completed", "aborted"}
+        valid_states = {"pending"}
     elif action == "edit_maneuver_plan":
         valid_states = {"pending", "approved"}
     else:
         valid_states = {"pending", "approved", "completed"}
     candidates = [item for item in history if (item.get("state") or "").strip().lower() in valid_states]
     if action in {"edit_maneuver_report", "delete_maneuver_report"}:
-        completed_candidates = [item for item in candidates if (item.get("state") or "").strip().lower() == "completed"]
+        completed_candidates = [
+            item
+            for item in candidates
+            if (item.get("state") or "").strip().lower() in {"completed", "aborted"}
+        ]
         if completed_candidates:
             candidates = completed_candidates
     if not candidates:

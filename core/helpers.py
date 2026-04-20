@@ -3719,13 +3719,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "abort_entry":
         target_maneuver = resolve_target_maneuver(port_call, action, "entry")
         maneuver_state = (target_maneuver or {}).get("state", "pending")
-        if role == "agente" and maneuver_state == "approved":
-            raise ValueError("Só o piloto/admin pode abortar uma manobra já aprovada (piloto a bordo).")
-        if role == "piloto" and maneuver_state == "pending":
-            raise ValueError("Manobra ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
+        if maneuver_state == "pending":
+            raise ValueError("Entrada ainda pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
         result = services.store.abort_port_call(port_call_id=port_call_id, decided_by=username, aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"), approval_note=field_text("approval_note"))
-        label = "cancelada" if maneuver_state == "pending" else "abortada (piloto a bordo)"
-        return result, f"Entrada {label} para {result['vessel_name']}."
+        return result, f"Entrada abortada para {result['vessel_name']}."
     if action == "complete_entry":
         arrived_at_value = field_text("arrived_at_local", field_text("maneuver_finished_local"))
         target_berth = field_text("berth", port_call.get("berth"))
@@ -3769,13 +3766,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "abort_departure":
         target_m = resolve_target_maneuver(port_call, action, "departure")
         m_state = (target_m or {}).get("state", "pending")
-        if role == "agente" and m_state == "approved":
-            raise ValueError("Só o piloto/admin pode abortar uma saída já aprovada.")
-        if role == "piloto" and m_state == "pending":
-            raise ValueError("Saída ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
+        if m_state == "pending":
+            raise ValueError("Saída ainda pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
         result = services.store.abort_departure_plan(port_call_id=port_call_id, updated_by=username, aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"))
-        label = "cancelada" if m_state == "pending" else "abortada (piloto a bordo)"
-        return result, f"Saída {label} para {result['vessel_name']}."
+        return result, f"Saída abortada para {result['vessel_name']}."
     if action == "complete_departure":
         departed_at_value = field_text("departed_at_local", field_text("maneuver_finished_local"))
         result = services.store.mark_port_call_departed(port_call_id=port_call_id, departed_at=parse_optional_local_datetime_input(departed_at_value, "ATD") or datetime.now().astimezone().isoformat(), updated_by=username, next_port=field_text("next_port", port_call.get("next_port")))
@@ -3806,13 +3800,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "abort_shift":
         target_ms = resolve_target_maneuver(port_call, action, "shift")
         ms_state = (target_ms or {}).get("state", "pending")
-        if role == "agente" and ms_state == "approved":
-            raise ValueError("Só o piloto/admin pode abortar uma mudança já aprovada.")
-        if role == "piloto" and ms_state == "pending":
-            raise ValueError("Mudança ainda pendente. Só o agente/admin pode cancelar antes da aprovação.")
+        if ms_state == "pending":
+            raise ValueError("Mudança ainda pendente. Cancela a marcação antes da aprovação; aborto só depois de aprovada.")
         result = services.store.abort_shift_plan(port_call_id=port_call_id, updated_by=username, aborted_reason=require_form_text(field_text("aborted_reason", field_text("reason")), "Motivo"))
-        label = "cancelada" if ms_state == "pending" else "abortada (piloto a bordo)"
-        return result, f"Mudança {label} para {result['vessel_name']}."
+        return result, f"Mudança abortada para {result['vessel_name']}."
     if action == "complete_shift":
         shifted_at_value = field_text("shifted_at_local", field_text("maneuver_finished_local"))
         shift_destination = normalize_portal_berth(
@@ -3884,7 +3875,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             maneuver_id=maneuver_id,
             updated_by=username,
         )
-        return removed_or_updated, f"Manobra apagada para {removed_or_updated['vessel_name']}."
+        return removed_or_updated, f"Manobra cancelada para {removed_or_updated['vessel_name']}."
     if action == "delete_maneuver_report":
         current_port_call = services.store.get_port_call(port_call_id)
         maneuver = resolve_target_maneuver(current_port_call, action, maneuver_type)
@@ -3973,7 +3964,7 @@ def build_scale_context(port_call: dict) -> dict:
     def _latest_reportable(history: list[dict], maneuver_type: str) -> dict | None:
         items = [
             item for item in history
-            if item.get("type") == maneuver_type and item.get("state") in {"approved", "completed"}
+            if item.get("type") == maneuver_type and item.get("state") in {"approved", "completed", "aborted"}
             and not (item.get("report_note") or "").strip()
         ]
         if not items:
@@ -4064,10 +4055,9 @@ def build_scale_context(port_call: dict) -> dict:
             "analysis_summary": analysis_summary,
             "can_edit_plan": (
                 (current_role == "admin")
-                or (item.get("state") != "completed" and current_role == "piloto")
                 or (current_role == "agente" and item.get("state") == "pending")
             ),
-            "can_edit_report": current_role in {"admin", "piloto"} and item.get("state") == "completed",
+            "can_edit_report": current_role in {"admin", "piloto"} and item.get("state") in {"completed", "aborted"} and bool((item.get("report_note") or "").strip()),
         })
         for log in item.get("change_log", []):
             actor_profile = log.get("changed_by_profile") or {}
@@ -4087,9 +4077,9 @@ def build_scale_context(port_call: dict) -> dict:
         ),
         reverse=True,
     )
-    entry_report_exists = bool(entry and entry.get("state") == "completed" and entry.get("report_note"))
-    departure_report_exists = bool(completed_departure and completed_departure.get("report_note"))
-    shift_report_exists = bool(completed_shift and completed_shift.get("report_note"))
+    entry_report_exists = bool(entry and entry.get("state") in {"completed", "aborted"} and entry.get("report_note"))
+    departure_report_exists = bool(latest_departure and latest_departure.get("state") in {"completed", "aborted"} and latest_departure.get("report_note"))
+    shift_report_exists = bool(latest_shift and latest_shift.get("state") in {"completed", "aborted"} and latest_shift.get("report_note"))
 
     summary = {
         "scale_reference": port_call["reference_code"],
@@ -4130,17 +4120,20 @@ def build_scale_context(port_call: dict) -> dict:
     }
     actions = {
         "can_approve_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") == "pending",
-        "can_abort_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") != "aborted" and port_call.get("can_abort"),
+        "can_cancel_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "pending",
+        "can_abort_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "approved",
         "can_complete_entry": False,
         "can_plan_departure": port_call.get("status") == "in_port" and not active_departure and not completed_departure,
         "can_approve_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
-        "can_abort_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") in {"pending", "approved"},
+        "can_cancel_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
+        "can_abort_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "approved",
         "can_complete_departure": False,
         "can_register_entry": bool(reportable_entry),
         "can_register_departure": bool(reportable_departure),
         "can_plan_shift": port_call.get("status") == "in_port" and not active_shift,
         "can_approve_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "pending",
-        "can_abort_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") in {"pending", "approved"},
+        "can_cancel_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "pending",
+        "can_abort_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "approved",
         "can_complete_shift": False,
         "can_register_shift": bool(reportable_shift),
         "must_report_label": (
@@ -4175,7 +4168,7 @@ def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
     plan_status = "done" if maneuver.get("planned_label") and maneuver.get("planned_label") != "Sem hora" else "current"
     if state_key == "aborted":
         validation_status = "muted"
-        report_status = "muted"
+        report_status = "done" if maneuver.get("report_completed") else "current"
     else:
         validation_status = "done" if state_key in {"approved", "completed"} else "current" if state_key == "pending" else "muted"
         report_status = "done" if maneuver.get("report_completed") else "current" if state_key in {"approved", "completed"} else "muted"
@@ -4184,7 +4177,7 @@ def build_maneuver_context(port_call: dict, maneuver_id: str) -> dict:
         if maneuver.get("report_completed")
         else "Registo do piloto em falta"
         if state_key in {"approved", "completed"}
-        else "Manobra abortada"
+        else "Registo do aborto em falta"
         if state_key == "aborted"
         else "Aguarda validação"
     )

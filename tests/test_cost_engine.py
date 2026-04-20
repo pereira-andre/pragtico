@@ -7,6 +7,7 @@ Reductions: tiered by regular line calls (Art. 16º)
 
 import math
 import unittest
+from datetime import datetime, timezone
 
 from domain.cost_engine import (
     UP_NORMAL,
@@ -21,6 +22,7 @@ from domain.cost_engine import (
     calculate_tup,
     estimate_tup,
     calculate_cancellation_fee,
+    classify_cancellation_timing,
     calculate_scale_cost,
     format_cost_summary,
     quick_estimate,
@@ -238,6 +240,10 @@ class TestTUPByVesselType(unittest.TestCase):
 
 
 class TestCancellation(unittest.TestCase):
+    def test_more_than_2h_before(self):
+        fee = calculate_cancellation_fee(1000.0, "more_than_2h_before")
+        assert fee == 0.0
+
     def test_2h_before(self):
         fee = calculate_cancellation_fee(1000.0, "2h_before")
         assert fee == 300.0  # 30%
@@ -253,6 +259,26 @@ class TestCancellation(unittest.TestCase):
     def test_weather_pilot_embarked(self):
         fee = calculate_cancellation_fee(1000.0, "any", with_pilot_embarked=True)
         assert fee == 250.0  # 25%
+
+    def test_classify_cancellation_timing(self):
+        planned = datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc)
+
+        assert classify_cancellation_timing(
+            planned,
+            datetime(2026, 4, 20, 9, 30, tzinfo=timezone.utc),
+        ) == "more_than_2h_before"
+        assert classify_cancellation_timing(
+            planned,
+            datetime(2026, 4, 20, 10, 30, tzinfo=timezone.utc),
+        ) == "2h_before"
+        assert classify_cancellation_timing(
+            planned,
+            datetime(2026, 4, 20, 12, 45, tzinfo=timezone.utc),
+        ) == "1h_after"
+        assert classify_cancellation_timing(
+            planned,
+            datetime(2026, 4, 20, 13, 30, tzinfo=timezone.utc),
+        ) == "after_1h"
 
 
 class TestScaleCost(unittest.TestCase):

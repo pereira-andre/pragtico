@@ -278,6 +278,14 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
         self.assertEqual(parsed["proposal"]["missing_fields"], [])
 
+    def test_parse_slash_cancel_maneuver_accepts_id_only(self) -> None:
+        parsed = parse_slash_command("/cancelar-manobra ID da manobra: 7f3c2a91", "agente")
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "delete_maneuver")
+        self.assertEqual(parsed["proposal"]["target"]["maneuver_id"], "7f3c2a91")
+        self.assertEqual(parsed["proposal"]["missing_fields"], [])
+
     def test_parse_slash_register_report_accepts_positional_target_with_multiline_fields(self) -> None:
         parsed = parse_slash_command(
             "/registar-manobra PTSET26OCEA1C3808 BF757B7F\n"
@@ -892,9 +900,17 @@ class ChatActionsTests(unittest.TestCase):
 
         edit_plan = resolve_maneuver(port_call, "edit_maneuver_plan", "departure")
         edit_report = resolve_maneuver(port_call, "edit_maneuver_report", "departure")
+        abort = resolve_maneuver(port_call, "abort_departure", "departure")
+        cancel = resolve_maneuver(port_call, "delete_maneuver", "departure")
 
         self.assertEqual(edit_plan["id"], "m2")
         self.assertEqual(edit_report["id"], "m3")
+        self.assertEqual(abort["id"], "m2")
+        self.assertEqual(cancel["id"], "m1")
+
+    def test_cancel_maneuver_alias_does_not_map_to_abort(self) -> None:
+        self.assertEqual(canonicalize_action_name("cancel_maneuver", "departure"), "delete_maneuver")
+        self.assertEqual(canonicalize_action_name("cancelar_mudanca", "shift"), "delete_maneuver")
 
     def test_visible_port_calls_deduplicates_activity_rows(self) -> None:
         activity = {

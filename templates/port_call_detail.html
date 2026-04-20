@@ -271,8 +271,8 @@
       <details class="panel inset-panel scale-actions-panel scale-compact-details">
         <summary>
           <span>
-            <span class="eyebrow">Planeamento</span>
-            <strong>Criar manobra</strong>
+            <span class="eyebrow">Operações</span>
+            <strong>Criar próxima manobra</strong>
           </span>
           <span class="scale-compact-toggle">Abrir</span>
         </summary>
@@ -317,11 +317,11 @@
         </div>
       </details>
 
-      {% if current_role == "admin" %}
+      {% if current_role in ["admin", "agente"] %}
         <details class="panel inset-panel scale-admin-editor scale-compact-details">
           <summary>
             <span>
-              <span class="eyebrow">Admin</span>
+              <span class="eyebrow">Gestão</span>
               <strong>Editar escala e navio</strong>
             </span>
             <span class="scale-compact-toggle">Abrir</span>
@@ -427,7 +427,7 @@
               Observações
               <textarea name="notes" rows="3" placeholder="Contexto operacional ou correção histórica...">{{ scale_edit_defaults.notes }}</textarea>
             </label>
-            <p class="muted small-note">O admin pode corrigir também escalas já arquivadas. Estes dados atualizam o catálogo reutilizável do navio.</p>
+            <p class="muted small-note">Agente e admin mantêm a escala e a ficha do navio. Estes dados atualizam o catálogo reutilizável do navio.</p>
             <button type="submit" class="mini-button">Guardar escala</button>
           </form>
         </details>

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
@@ -72,6 +73,7 @@ TUP_STRATEGIC_INTEREST_MAX_REDUCTION = 0.40
 # Cancellation fee schedule — Art. 15º, nº 7
 # Values represent the percentage of the base manoeuvre cost that remains payable.
 CANCELLATION_FEE_PERCENT = {
+    "cancelled_more_than_2h_before": 0.00,  # no charge outside the 2h window
     "cancelled_2h_before": 0.30,        # 70% reduction
     "cancelled_1h_after": 0.50,         # 50% reduction
     "cancelled_after_1h": 1.00,         # 100% payable
@@ -450,7 +452,8 @@ def calculate_cancellation_fee(base_manoeuvre_cost: float,
     Parameters:
         base_manoeuvre_cost: The base pilotage cost of the cancelled manoeuvre (before any
                              surcharges/reductions).
-        cancellation_type: One of '2h_before', '1h_after', 'after_1h'.
+        cancellation_type: One of 'more_than_2h_before', '2h_before',
+                           '1h_after', 'after_1h'.
         with_pilot_embarked: If True and weather conditions, use the weather reduction.
 
     Returns:
@@ -465,6 +468,17 @@ def calculate_cancellation_fee(base_manoeuvre_cost: float,
             CANCELLATION_FEE_PERCENT["cancelled_after_1h"]
         )
     return round(base_manoeuvre_cost * percent, 2)
+
+
+def classify_cancellation_timing(planned_at: datetime, cancelled_at: datetime) -> str:
+    """Classify cancellation timing for the APSS pilotage cancellation fee schedule."""
+    if cancelled_at < planned_at - timedelta(hours=2):
+        return "more_than_2h_before"
+    if cancelled_at <= planned_at:
+        return "2h_before"
+    if cancelled_at <= planned_at + timedelta(hours=1):
+        return "1h_after"
+    return "after_1h"
 
 
 def calculate_scale_cost(
