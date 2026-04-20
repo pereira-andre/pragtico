@@ -43,6 +43,16 @@ BERTH_OPTIONS = [
     "Teporset",
 ]
 
+TMS2_BASE_LABEL = "TMS 2"
+TMS2_SLOT_LABELS = [
+    "TMS 2 - Posição A",
+    "TMS 2 - Posição B",
+    "TMS 2 - Posição C",
+]
+MULTI_SLOT_BERTHS = {
+    TMS2_BASE_LABEL: TMS2_SLOT_LABELS,
+}
+
 TERMINAL_OPTIONS = [
     "Secil",
     "Fundeadouro Norte",
@@ -82,6 +92,9 @@ def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = Non
     options = list(berth_options or BERTH_OPTIONS)
     compact = _berth_compact_key(clean)
     key = _berth_key(clean)
+    tms2_slot = _tms2_slot_label(clean, options)
+    if tms2_slot:
+        return tms2_slot
 
     alias_map = {
         "tanquisado": "Tanquisado (lado jusante)",
@@ -159,6 +172,9 @@ def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = Non
         "lisnave3b": "Lisnave - Cais 3 B",
         "a3lisnave": "Lisnave - Cais 3 A",
         "lisnavea3": "Lisnave - Cais 3 A",
+        "tms2": "TMS 2",
+        "terminalmultiusos2": "TMS 2",
+        "terminalmultiusosdois": "TMS 2",
     }
     if compact in alias_map and alias_map[compact] in options:
         return alias_map[compact]
@@ -177,15 +193,68 @@ def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = Non
     return ""
 
 
+def _tms2_slot_label(label: str | None, berth_options: Iterable[str] | None = None) -> str:
+    options = list(berth_options or BERTH_OPTIONS)
+    if TMS2_BASE_LABEL not in options:
+        return ""
+    key = _berth_key(label)
+    compact = _berth_compact_key(label)
+    if not key and not compact:
+        return ""
+    is_tms2 = (
+        "tms 2" in key
+        or "tms2" in compact
+        or "terminal multiusos 2" in key
+        or "terminal multiusos dois" in key
+    )
+    if not is_tms2:
+        return ""
+    slot_match = re.search(r"(?:posicao|pos|slot|lugar)?\s*([abc])(?:\s|$)", key)
+    compact_slot_match = re.search(r"(?:tms2|terminalmultiusos2|terminalmultiusosdois)(?:posicao|pos|slot|lugar)?([abc])$", compact)
+    slot = ""
+    if compact_slot_match:
+        slot = compact_slot_match.group(1)
+    elif slot_match:
+        slot = slot_match.group(1)
+    if not slot:
+        return TMS2_BASE_LABEL
+    return TMS2_SLOT_LABELS[{"a": 0, "b": 1, "c": 2}[slot]]
+
+
+def _expanded_berth_options(berth_options: Iterable[str] | None = None) -> List[str]:
+    options = list(berth_options or BERTH_OPTIONS)
+    expanded: List[str] = []
+    for item in options:
+        expanded.append(item)
+        expanded.extend(MULTI_SLOT_BERTHS.get(item, []))
+    return list(dict.fromkeys(expanded))
+
+
+def _berth_base_label(label: str | None, berth_options: Iterable[str] | None = None) -> str:
+    canonical = canonicalize_berth_label(label, berth_options=berth_options)
+    if canonical in TMS2_SLOT_LABELS:
+        return TMS2_BASE_LABEL
+    return canonical
+
+
+def _berth_slot_capacity(label: str | None, berth_options: Iterable[str] | None = None) -> int:
+    base_label = _berth_base_label(label, berth_options=berth_options)
+    return len(MULTI_SLOT_BERTHS.get(base_label, [])) or 1
+
+
 def canonicalize_berth_label(label: str | None, berth_options: Iterable[str] | None = None) -> str:
     clean = " ".join(str(label or "").strip().split())
     if not clean:
         return ""
     options = list(berth_options or BERTH_OPTIONS)
+    tms2_slot = _tms2_slot_label(clean, options)
+    if tms2_slot:
+        return tms2_slot
     key = _berth_key(clean)
     compact = _berth_compact_key(clean)
-    by_key = {_berth_key(item): item for item in options}
-    by_compact = {_berth_compact_key(item): item for item in options}
+    expanded_options = _expanded_berth_options(options)
+    by_key = {_berth_key(item): item for item in expanded_options}
+    by_compact = {_berth_compact_key(item): item for item in expanded_options}
     if key in by_key:
         return by_key[key]
     if compact in by_compact:
@@ -217,7 +286,7 @@ def is_known_berth_label(label: str | None, berth_options: Iterable[str] | None 
     if not clean:
         return False
     options = list(berth_options or BERTH_OPTIONS)
-    return canonicalize_berth_label(clean, options) in options
+    return canonicalize_berth_label(clean, options) in _expanded_berth_options(options)
 
 
 def is_anchorage_berth(label: str | None) -> bool:
@@ -231,7 +300,16 @@ def is_anchorage_berth(label: str | None) -> bool:
 
 def slot_berth_options(berth_options: Iterable[str] | None = None) -> List[str]:
     options = list(berth_options or BERTH_OPTIONS)
-    return [item for item in options if not is_anchorage_berth(item)]
+    slots: List[str] = []
+    for item in options:
+        if is_anchorage_berth(item):
+            continue
+        expanded = MULTI_SLOT_BERTHS.get(item)
+        if expanded:
+            slots.extend(expanded)
+        else:
+            slots.append(item)
+    return list(dict.fromkeys(slots))
 
 
 def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None) -> tuple[int, str]:
@@ -253,7 +331,8 @@ def _group_vessels_by_berth(
     groups: Dict[str, List[Dict]] = {}
     for item in vessels:
         label = item.get("berth_label") or "Sem cais atribuído"
-        groups.setdefault(label, []).append(item)
+        canonical = canonicalize_berth_label(label, berth_options=berth_options) or label
+        groups.setdefault(canonical, []).append(item)
     return [
         {
             "berth": berth,
@@ -278,7 +357,16 @@ def build_slot_occupancy(
     berthed = _group_vessels_by_berth(quay_vessels, options)
     anchorages = _group_vessels_by_berth(anchorage_vessels, options)
     slot_capacity_count = len(slot_berth_options(options))
-    occupied_slot_count = len(berthed)
+    occupancy_by_base: Dict[str, int] = {}
+    for item in quay_vessels:
+        base_label = _berth_base_label(item.get("berth_label"), options)
+        if not base_label:
+            continue
+        occupancy_by_base[base_label] = occupancy_by_base.get(base_label, 0) + 1
+    occupied_slot_count = sum(
+        min(count, _berth_slot_capacity(base_label, options))
+        for base_label, count in occupancy_by_base.items()
+    )
     return {
         "berthed": berthed,
         "anchorages": anchorages,
@@ -302,12 +390,15 @@ def find_occupied_berth_conflict(
     if not target_clean:
         return None
     target_canonical = canonicalize_berth_label(target_clean, options)
-    if target_canonical not in options:
+    if target_canonical not in _expanded_berth_options(options):
         return None
     if is_anchorage_berth(target_canonical):
         return None
 
     current_id = (current_port_call_id or "").strip()
+    target_base = _berth_base_label(target_canonical, options)
+    target_capacity = _berth_slot_capacity(target_canonical, options)
+    occupied_same_base: List[Dict] = []
     for item in in_port_items or []:
         item_id = (item.get("id") or item.get("port_call_id") or "").strip()
         if current_id and item_id == current_id:
@@ -316,4 +407,8 @@ def find_occupied_berth_conflict(
         item_canonical = canonicalize_berth_label(item_berth, options)
         if item_canonical == target_canonical:
             return item
+        if _berth_base_label(item_canonical, options) == target_base:
+            occupied_same_base.append(item)
+    if target_capacity > 1 and len(occupied_same_base) >= target_capacity:
+        return occupied_same_base[0]
     return None

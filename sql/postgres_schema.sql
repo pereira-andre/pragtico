@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS port_calls (
     last_port TEXT,
     next_port TEXT,
     created_by TEXT NOT NULL,
+    change_log JSONB NOT NULL DEFAULT '[]'::jsonb,
     notes TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -188,6 +189,9 @@ ALTER TABLE port_calls
 
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+
+ALTER TABLE port_calls
+    ADD COLUMN IF NOT EXISTS change_log JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 ALTER TABLE port_calls
     ADD COLUMN IF NOT EXISTS planned_departure_at TIMESTAMPTZ;

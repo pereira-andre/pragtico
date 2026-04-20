@@ -2641,7 +2641,7 @@ class OperationalFlowTests(unittest.TestCase):
                 )
             else:
                 answer = (
-                    "No catálogo operacional do portal existem 34 slots operacionais.\n\n"
+                    "No catálogo operacional do portal existem 36 slots operacionais.\n\n"
                     "- Cais SECIL W/E\n"
                     "- Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)\n"
                     "- Terminal Multiusos 2 (TMS2 / Terminal de Contentores)\n"
@@ -2687,7 +2687,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(quays_response.status_code, 200)
         quays_payload = quays_response.get_json()
         self.assertEqual(quays_payload["answer_origin"], "llm")
-        self.assertIn("34 slots operacionais", quays_payload["answer"])
+        self.assertIn("36 slots operacionais", quays_payload["answer"])
         self.assertIn("fundeadouros não contam como cais", quays_payload["answer"].lower())
         self.assertNotIn("Terminal Multiusos Norte", quays_payload["answer"])
         self.assertNotIn("Terminal Multiusos Sul", quays_payload["answer"])
@@ -4728,8 +4728,8 @@ class AdminDocumentPolicyTests(unittest.TestCase):
                         "source_message_id": "bot-import-1",
                         "document": "Porto_Setubal_Terminais_Cais.txt",
                         "question": "Quantos cais existem em Setubal?",
-                        "expected_answer": "34 slots operacionais, sem duplicar aliases de terminais.",
-                        "expected_substrings": ["34 slots"],
+                        "expected_answer": "36 slots operacionais, sem duplicar aliases de terminais.",
+                        "expected_substrings": ["36 slots"],
                         "source": "web",
                     }
                 ]
@@ -5168,6 +5168,7 @@ class AgentPortActivityVisibilityTests(unittest.TestCase):
         return "scope-token"
 
     def _create_port_call(self, *, vessel_name: str, created_by: str, eta: str) -> dict:
+        vessel_hash = sum((index + 1) * ord(char) for index, char in enumerate(vessel_name))
         return self.store.create_port_call(
             vessel_name=vessel_name,
             eta=eta,
@@ -5176,8 +5177,8 @@ class AgentPortActivityVisibilityTests(unittest.TestCase):
             last_port="Sines",
             next_port="Vigo",
             notes="Escala de teste.",
-            vessel_imo="9876543",
-            vessel_call_sign="CQAB7",
+            vessel_imo=str(9000000 + (vessel_hash % 900000)),
+            vessel_call_sign=f"CQ{vessel_hash % 10000:04d}",
             vessel_flag="Portugal",
             vessel_type="General Cargo",
             vessel_loa_m="142.50",
@@ -5188,20 +5189,21 @@ class AgentPortActivityVisibilityTests(unittest.TestCase):
         )
 
     def test_dashboard_is_shared_for_agents_but_scale_registry_remains_scoped(self) -> None:
+        eta_base = datetime.now(timezone.utc) + timedelta(days=1)
         self._create_port_call(
             vessel_name="AGENCY STAR",
             created_by="agencia@example.com",
-            eta="2026-04-09T08:00:00+00:00",
+            eta=eta_base.isoformat(),
         )
         self._create_port_call(
             vessel_name="OTHER PLANNER",
             created_by="outra@example.com",
-            eta="2026-04-09T09:00:00+00:00",
+            eta=(eta_base + timedelta(hours=1)).isoformat(),
         )
         other_in_port = self._create_port_call(
             vessel_name="OTHER QUAY",
             created_by="outra@example.com",
-            eta="2026-04-09T07:00:00+00:00",
+            eta=(eta_base - timedelta(hours=1)).isoformat(),
         )
         self.store.approve_port_call(other_in_port["id"], decided_by="admin")
         self.store.mark_port_call_arrived(
@@ -5227,6 +5229,36 @@ class AgentPortActivityVisibilityTests(unittest.TestCase):
         self.assertIn("AGENCY STAR", register_html)
         self.assertNotIn("OTHER PLANNER", register_html)
         self.assertNotIn("OTHER QUAY", register_html)
+
+    def test_agent_registry_uses_current_creator_agency_for_existing_scales(self) -> None:
+        self.store.create_user(
+            "late-agent@example.com",
+            "secret123",
+            "agente",
+            full_name="Late Agent",
+            organization="",
+            email="late-agent@example.com",
+            phone="+351 900 000 333",
+        )
+        self._create_port_call(
+            vessel_name="LATE AGENCY",
+            created_by="late-agent@example.com",
+            eta=(datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+        )
+        self.store.update_user_profile(
+            "late-agent@example.com",
+            full_name="Late Agent",
+            organization="Agencia X",
+            email="late-agent@example.com",
+            phone="+351 900 000 333",
+        )
+
+        with app.app.test_client() as client:
+            self._set_session(client, username="agencia@example.com", role="agente")
+            register_response = client.get("/port-calls/register")
+
+        self.assertEqual(register_response.status_code, 200)
+        self.assertIn("LATE AGENCY", register_response.get_data(as_text=True))
 
 
 class DashboardPlanningWindowTests(unittest.TestCase):
@@ -5338,6 +5370,53 @@ class DashboardPlanningWindowTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("FUTURE DEPARTURE", html)
         self.assertIn(port_call["reference_code"], html)
+
+    def test_bot_recent_departures_uses_live_portal_departures(self) -> None:
+        now = datetime.now(timezone.utc)
+        departed_at = (now + timedelta(days=1)).isoformat()
+        port_call = self.store.create_port_call(
+            vessel_name="ELBTOWER",
+            eta=(now - timedelta(days=1)).isoformat(),
+            created_by="admin",
+            berth="Fundeadouro Norte",
+            last_port="Sines",
+            next_port="Barcelona",
+            notes="Escala de teste.",
+            vessel_imo="9876543",
+            vessel_call_sign="CQAB7",
+            vessel_flag="Portugal",
+            vessel_type="General Cargo",
+            vessel_loa_m="142.50",
+            vessel_beam_m="21.80",
+            vessel_gt_t="8950",
+            vessel_max_draft_m="7.20",
+            vessel_dwt_t="12400",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_arrived(port_call["id"], arrived_at=(now - timedelta(hours=20)).isoformat(), updated_by="admin")
+        self.store.schedule_departure_plan(
+            port_call["id"],
+            planned_departure_at=departed_at,
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+        self.store.approve_port_call(port_call["id"], decided_by="admin")
+        self.store.mark_port_call_departed(
+            port_call["id"],
+            departed_at=departed_at,
+            updated_by="admin",
+            next_port="Barcelona",
+        )
+
+        with app.app.test_request_context("/"):
+            session["role"] = "admin"
+            answer = answer_direct_operational_query("Saiu algum navio recentemente?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual(answer["answer_origin"], "operational_live")
+        self.assertIn("ELBTOWER", answer["answer"])
+        self.assertIn("ATD", answer["answer"])
+        self.assertIn("Fundeadouro Norte -> Barcelona", answer["answer"])
 
     def test_dashboard_in_port_cards_render_vessel_type_icon(self) -> None:
         now = datetime.now(timezone.utc)
@@ -5545,10 +5624,11 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertEqual(edit_response.status_code, 302)
 
     def test_import_port_call_json_from_textarea(self) -> None:
+        future_eta = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         payload = """
         {
           "vessel_name": "MSC Lyria",
-          "eta": "2026-04-20T14:30:00+01:00",
+          "eta": "__FUTURE_ETA__",
           "berth": "Secil W",
           "last_port": "Sines",
           "next_port": "Vigo",
@@ -5571,7 +5651,7 @@ class PortCallJsonImportTests(unittest.TestCase):
           "tup_reduction_profile": "regular_line",
           "notes": "Janela de maré confirmada com agente."
         }
-        """
+        """.replace("__FUTURE_ETA__", future_eta)
 
         with app.app.test_client() as client:
             csrf_token = self._set_admin_session(client)
@@ -5596,11 +5676,12 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertEqual(catalog_item["regular_line_calls_365d"], "10")
 
     def test_import_port_call_json_from_file_accepts_nested_scale_object(self) -> None:
+        future_eta_local = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
         payload = b"""
         {
           "scale": {
                 "vessel_name": "Atlantic Trader",
-                "eta_local": "2026-04-21T08:15",
+                "eta_local": "__FUTURE_ETA_LOCAL__",
                 "berth": "TMS 2",
                 "last_port": "Leixoes",
                 "next_port": "Casablanca",
@@ -5621,7 +5702,7 @@ class PortCallJsonImportTests(unittest.TestCase):
             "notes": "Operacao sensivel."
           }
         }
-        """
+        """.replace(b"__FUTURE_ETA_LOCAL__", future_eta_local.encode("utf-8"))
 
         with app.app.test_client() as client:
             csrf_token = self._set_admin_session(client)
@@ -5644,10 +5725,11 @@ class PortCallJsonImportTests(unittest.TestCase):
         self.assertIn("Operacao sensivel.", entry["plan_note"])
 
     def test_import_port_call_json_accepts_blank_constraints_and_trailing_comma(self) -> None:
+        future_eta = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         payload = """
         {
           "vessel_name": "ARKLOW GLOBE",
-          "eta": "2026-04-20T11:15:00+01:00",
+          "eta": "__FUTURE_ETA__",
           "berth": "Secil W",
           "last_port": "Sines",
           "next_port": "Vigo",
@@ -5667,7 +5749,7 @@ class PortCallJsonImportTests(unittest.TestCase):
           "constraints": ,
           "notes": "Janela de maré confirmada com pilotos.",
         }
-        """
+        """.replace("__FUTURE_ETA__", future_eta)
 
         with app.app.test_client() as client:
             csrf_token = self._set_admin_session(client)

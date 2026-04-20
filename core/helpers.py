@@ -29,7 +29,9 @@ from domain.berth_layout import (
     find_occupied_berth_conflict,
     is_anchorage_berth,
     is_known_berth_label,
+    slot_berth_options,
 )
+from domain.berth_profiles import find_best_berth_profile
 from domain.chat_actions import (
     ACTION_SPECS,
     action_for_maneuver_type,
@@ -226,6 +228,22 @@ def _item_organization_scope_key(item: dict | None) -> str:
         or payload.get("reported_by_profile")
         or {}
     )
+    username = (
+        payload.get("created_by")
+        or profile.get("username")
+        or payload.get("agent_username")
+        or payload.get("reported_by")
+        or payload.get("decided_by")
+        or ""
+    )
+    if username and hasattr(services.store, "get_user_profile"):
+        try:
+            live_profile = services.store.get_user_profile(username) or {}
+        except Exception:
+            live_profile = {}
+        live_scope = _organization_scope_key(live_profile.get("organization"))
+        if live_scope:
+            return live_scope
     return _organization_scope_key(profile.get("organization"))
 
 
@@ -1300,9 +1318,11 @@ def build_berth_catalog_source(question: str) -> dict | None:
         return None
 
     lisnave_berths = [item for item in services.BERTH_OPTIONS if item.startswith("Lisnave - ")]
+    berth_slot_count = len(slot_berth_options(services.BERTH_OPTIONS))
     lines = [
         "Catálogo canónico de cais/fundeadouros do portal:",
-        "- O catálogo operacional tem 34 slots de cais/berço/manobra, excluindo fundeadouros.",
+        f"- O catálogo operacional tem {berth_slot_count} slots de cais/berço/manobra, excluindo fundeadouros.",
+        "- TMS 2 conta como 3 posições operacionais: A, B e C.",
         "- 'Lisnave' identifica o terminal/estaleiro; para registo operacional usa-se um cais ou doca específicos.",
         "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A' -> 'Lisnave - Cais 2 A'.",
         "- D31/D32/D33 são Docas secas Lisnave com acesso por um único Hidrolift/mini eclusa.",
@@ -1378,6 +1398,9 @@ def answer_direct_operational_query(
     live_environment_answer = _answer_live_environment_query(question, clean_question, plan=plan)
     if live_environment_answer:
         return live_environment_answer
+    recent_departures_answer = _answer_recent_departures_query(question, clean_question)
+    if recent_departures_answer:
+        return recent_departures_answer
     port_calls = current_resolvable_port_calls()
     matched_port_call = _match_port_call_from_question(question, port_calls)
 
@@ -1433,6 +1456,59 @@ def answer_direct_operational_query(
             }
         ],
         "answer_origin": "operational_lookup",
+    }
+
+
+def _looks_like_recent_departures_query(clean_question: str) -> bool:
+    if not clean_question:
+        return False
+    departure_terms = {"saiu", "sairam", "saida", "saidas", "partiu", "partiram", "departed", "departure"}
+    recency_terms = {"recente", "recentes", "ultimos", "ultimas", "agora", "hoje", "ontem"}
+    tokens = set(clean_question.split())
+    has_departure = bool(tokens & departure_terms)
+    has_recency = bool(tokens & recency_terms) or "algum navio" in clean_question or "navios" in tokens
+    return has_departure and has_recency
+
+
+def _answer_recent_departures_query(question: str, clean_question: str) -> dict | None:
+    if not _looks_like_recent_departures_query(clean_question):
+        return None
+    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=3650))
+    departed = list(port_activity.get("departed", []) or [])
+    if not departed:
+        answer = "Não há saídas registadas no portal no histórico operacional disponível."
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "Saídas recentes do portal",
+                    "source_id": "OPS_RECENT_DEPARTURES",
+                    "retrieval_mode": "operational_live",
+                    "snippet": answer,
+                }
+            ],
+            "answer_origin": "operational_live",
+        }
+    lines = ["Sim. Saídas recentes registadas no portal:"]
+    for item in departed[:5]:
+        vessel_name = item.get("vessel_name") or "--"
+        atd_label = item.get("departure_label") or _local_iso_to_label(item.get("departure_at"))
+        origin = item.get("berth_label") or item.get("berth") or "--"
+        destination = item.get("next_port") or "--"
+        lines.append(f"- {vessel_name} - ATD {atd_label} - {origin} -> {destination}.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Saídas recentes do portal",
+                "source_id": "OPS_RECENT_DEPARTURES",
+                "retrieval_mode": "operational_live",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_live",
     }
 
 
@@ -2032,6 +2108,7 @@ def _build_maneuver_analysis_checklist(
     tug_count = int(tug_count_raw) if tug_count_raw.isdigit() else 0
     bow_thruster = (port_call.get("vessel_bow_thruster") or "").strip().lower()
     stern_thruster = (port_call.get("vessel_stern_thruster") or "").strip().lower()
+    operational_berth = destination if maneuver_type in {"entry", "shift"} else origin
 
     required_profile = [
         ("tipo", port_call.get("vessel_type")),
@@ -2181,6 +2258,9 @@ def _build_maneuver_analysis_checklist(
             berth_options=services.BERTH_OPTIONS,
         )
     )
+    berth_profile_item = _build_berth_profile_checklist_item(operational_berth)
+    if berth_profile_item:
+        items.append(berth_profile_item)
 
     constraint_labels = format_constraint_labels(maneuver.get("constraint_codes") or [])
     if constraint_labels:
@@ -2267,6 +2347,52 @@ def _build_maneuver_analysis_checklist(
         ),
     }
     return items, summary
+
+
+def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
+    clean_label = " ".join(str(berth_label or "").strip().split())
+    if not clean_label:
+        return None
+    profile_match = find_best_berth_profile(clean_label, _active_knowledge_dir())
+    if not profile_match:
+        return None
+    profile = profile_match.get("profile") or {}
+    profile_name = profile.get("name") or clean_label
+    document = profile.get("document") or ""
+    rules: list[str] = []
+    ignored_markers = ("loa", "comprimento")
+    for key in ("maneuver_rules", "night_rules", "restrictions", "draft_rules"):
+        for raw_rule in profile.get(key, []) or []:
+            rule = " ".join(str(raw_rule or "").strip().rstrip(".").split())
+            if not rule:
+                continue
+            normalized = _operational_lookup_key(rule)
+            if any(marker in normalized for marker in ignored_markers):
+                continue
+            if "calado" in normalized and not any(marker in normalized for marker in ("reponto", "preia", "baixa", "mare")):
+                continue
+            if rule not in rules:
+                rules.append(rule)
+            if len(rules) >= 4:
+                break
+        if len(rules) >= 4:
+            break
+    if clean_label.startswith("TMS 2") and not any("posicoes" in _operational_lookup_key(rule) for rule in rules):
+        rules.append("TMS 2 conta com tres posicoes operacionais A, B e C nesta demo")
+    if not rules:
+        return None
+    normalized_rules = _operational_lookup_key(" ".join(rules))
+    status = (
+        "caution"
+        if any(marker in normalized_rules for marker in ("reponto", "preia", "baixa", "noite", "noturna", "proibida", "mare viva"))
+        else "info"
+    )
+    doc_label = f" ({document})" if document else ""
+    detail = (
+        f"{profile_name}{doc_label}: {'; '.join(rules[:4])}. "
+        "Calado e comprimento ficam informativos nesta demo, sem bloqueio automático."
+    )
+    return _build_checklist_item(status, "Regras do cais", detail)
 
 
 def _format_thruster_case_label(value: str | None) -> str:
@@ -3576,6 +3702,11 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             raw = fallback
         return " ".join(str(raw or "").strip().split())
 
+    def optional_thruster_field(name: str, label: str) -> str | None:
+        if name not in fields:
+            return None
+        return normalize_thruster_state(fields.get(name), label)
+
     def resolve_target_maneuver(current_port_call: dict, current_action: str, current_maneuver_type: str) -> dict | None:
         explicit_maneuver_id = (proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip()
         if explicit_maneuver_id:
@@ -3600,7 +3731,17 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             planned_at_value = field_text("planned_at_local", field_text("planned_departure_at_local", planned_at_value))
         elif current_maneuver_type == "shift":
             planned_at_value = field_text("planned_at_local", field_text("planned_shift_at_local", planned_at_value))
-        if not any([planned_at_value, field_text("draft_m"), field_text("tug_count"), field_text("notes"), field_text("plan_observations"), field_text("change_reason"), fields.get("constraints")]):
+        if not any([
+            planned_at_value,
+            field_text("draft_m"),
+            field_text("tug_count"),
+            field_text("notes"),
+            field_text("plan_observations"),
+            field_text("change_reason"),
+            fields.get("constraints"),
+            "vessel_bow_thruster" in fields,
+            "vessel_stern_thruster" in fields,
+        ]):
             return
         origin_value = field_text("origin", current_maneuver.get("origin") or current_port_call.get("last_port", ""))
         destination_value = destination
@@ -3623,6 +3764,8 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             constraints=normalize_constraint_codes(fields.get("constraints") or current_maneuver.get("constraints", [])),
             plan_note=field_text("plan_observations", field_text("notes", current_maneuver.get("plan_observations", ""))),
             change_reason=require_form_text(field_text("change_reason", field_text("reason")), "Motivo da alteração"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
 
     if action == "create_port_call":
@@ -3694,6 +3837,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
                 normalize_thruster_state(fields.get("vessel_stern_thruster"), "Stern thruster")
                 if "vessel_stern_thruster" in fields else None
             ),
+            change_reason=require_form_text(field_text("change_reason", field_text("reason")), "Motivo da alteração"),
         )
         return result, f"Escala atualizada para {result['vessel_name']}."
     if action == "delete_port_call":
@@ -3737,7 +3881,17 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Entrada")
-        result = services.store.attach_entry_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
+        result = services.store.attach_entry_report(
+            port_call_id=port_call_id,
+            updated_by=username,
+            maneuver_started_at=started_at,
+            maneuver_finished_at=finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=target_maneuver.get("id"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
+        )
         return result, f"Registo de entrada guardado para {result['vessel_name']}."
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
@@ -3757,6 +3911,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
                     "notes": field_text("notes"),
                 }
             ),
+            draft_m=field_text("draft_m"),
+            tug_count=field_text("tug_count"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Saída planeada para {result['vessel_name']} às {result['planned_departure_label']}."
     if action == "approve_departure":
@@ -3782,7 +3940,17 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Saída")
-        result = services.store.attach_departure_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
+        result = services.store.attach_departure_report(
+            port_call_id=port_call_id,
+            updated_by=username,
+            maneuver_started_at=started_at,
+            maneuver_finished_at=finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=target_maneuver.get("id"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
+        )
         return result, f"Registo de saída guardado para {result['vessel_name']}."
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
@@ -3791,7 +3959,25 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         destination_berth = normalize_portal_berth(field_text("destination_berth"), "Cais destino")
         if destination_berth == origin_berth:
             raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
-        result = services.store.schedule_shift_plan(port_call_id=port_call_id, planned_shift_at=planned_shift_at, updated_by=username, destination_berth=destination_berth, constraints=constraints, shift_plan_note=build_shift_plan_note({"origin_berth": origin_berth, "destination_berth": destination_berth, "draft_m": field_text("draft_m"), "tug_count": field_text("tug_count"), "constraints": constraints, "notes": field_text("notes")}))
+        result = services.store.schedule_shift_plan(
+            port_call_id=port_call_id,
+            planned_shift_at=planned_shift_at,
+            updated_by=username,
+            destination_berth=destination_berth,
+            constraints=constraints,
+            shift_plan_note=build_shift_plan_note({
+                "origin_berth": origin_berth,
+                "destination_berth": destination_berth,
+                "draft_m": field_text("draft_m"),
+                "tug_count": field_text("tug_count"),
+                "constraints": constraints,
+                "notes": field_text("notes"),
+            }),
+            draft_m=field_text("draft_m"),
+            tug_count=field_text("tug_count"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
+        )
         return result, f"Mudança planeada para {result['vessel_name']} às {result['planned_shift_label']}."
     if action == "approve_shift":
         apply_plan_updates_before_approval(port_call, "shift")
@@ -3821,7 +4007,17 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
         note = build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": fields.get("notes", "")}, "Mudança")
-        result = services.store.attach_shift_report(port_call_id=port_call_id, updated_by=username, maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m, notes=note, maneuver_id=target_maneuver.get("id"))
+        result = services.store.attach_shift_report(
+            port_call_id=port_call_id,
+            updated_by=username,
+            maneuver_started_at=started_at,
+            maneuver_finished_at=finished_at,
+            draft_m=draft_m,
+            notes=note,
+            maneuver_id=target_maneuver.get("id"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
+        )
         return result, f"Registo de mudança guardado para {result['vessel_name']}."
     if action == "edit_maneuver_plan":
         current_port_call = services.store.get_port_call(port_call_id)
@@ -3846,6 +4042,8 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             constraints=normalize_constraint_codes(fields.get("constraints") or (maneuver or {}).get("constraints", [])),
             plan_note=field_text("plan_observations", field_text("notes", (maneuver or {}).get("plan_observations", ""))),
             change_reason=require_form_text(field_text("change_reason"), "Motivo da alteração"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Planeamento atualizado para {result['vessel_name']}."
     if action == "edit_maneuver_report":
@@ -3862,6 +4060,8 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m,
             notes=build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": field_text("notes", (maneuver or {}).get("report_note", ""))}, "Entrada" if maneuver_type == "entry" else "Saída" if maneuver_type == "departure" else "Mudança", existing_note=""),
             change_reason=require_form_text(field_text("change_reason"), "Motivo da alteração"),
+            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
+            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Registo operacional revisto para {result['vessel_name']}."
     if action == "delete_maneuver":
@@ -3987,6 +4187,7 @@ def build_scale_context(port_call: dict) -> dict:
     reportable_entry = _latest_reportable(history, "entry")
     reportable_departure = _latest_reportable(history, "departure")
     reportable_shift = _latest_reportable(history, "shift")
+    active_entry = _latest(history, "entry", {"pending", "approved"})
 
     etd_value = (active_departure or completed_departure or latest_departure or {}).get("planned_at") or (completed_departure or {}).get("completed_at")
     etd_label = (
@@ -3999,6 +4200,51 @@ def build_scale_context(port_call: dict) -> dict:
     ship_doc_number = f"PTSETSHP{(port_call.get('vessel_imo') or port_call['reference_code'])[-8:]}"
     maneuvers = []
     change_log_rows = []
+
+    def _history_actor(profile: dict | None, username: str = "") -> dict:
+        payload = profile or {}
+        return {
+            "label": payload.get("label") or payload.get("full_name") or payload.get("username") or username or "--",
+            "contact": payload.get("email") or payload.get("phone") or payload.get("organization") or "--",
+        }
+
+    def _add_history_row(*, scope: str, changed_at: str | None, actor: dict | None, username: str = "", reason: str = "", summary: str = "") -> None:
+        if not changed_at and not summary:
+            return
+        actor_meta = _history_actor(actor, username)
+        change_log_rows.append({
+            "maneuver_title": scope or "Escala",
+            "changed_at": changed_at or "",
+            "changed_at_label": _local_iso_to_label(changed_at) if changed_at else "--",
+            "changed_by_label": actor_meta["label"],
+            "changed_by_contact": actor_meta["contact"],
+            "reason": reason or "--",
+            "summary": summary or "--",
+        })
+
+    has_creation_log = any(
+        "escala criada" in str(log.get("summary") or "").casefold()
+        for log in port_call.get("change_log", []) or []
+    )
+    if not has_creation_log:
+        _add_history_row(
+            scope="Escala",
+            changed_at=port_call.get("created_at"),
+            actor=port_call.get("agent_profile") or port_call.get("created_by_profile"),
+            username=port_call.get("created_by"),
+            reason="Registo inicial",
+            summary="Escala criada.",
+        )
+    for log in port_call.get("change_log", []) or []:
+        _add_history_row(
+            scope="Escala",
+            changed_at=log.get("changed_at"),
+            actor=log.get("changed_by_profile") or {},
+            username=log.get("changed_by"),
+            reason=log.get("reason") or "--",
+            summary=log.get("summary") or "--",
+        )
+
     for item in history:
         similar_cases = _build_similar_case_cards(port_call, item, limit=3) if casebook_enabled else []
         casebook_recommendation = _build_casebook_recommendation(item, similar_cases)
@@ -4059,17 +4305,55 @@ def build_scale_context(port_call: dict) -> dict:
             ),
             "can_edit_report": current_role in {"admin", "piloto"} and item.get("state") in {"completed", "aborted"} and bool((item.get("report_note") or "").strip()),
         })
+        _add_history_row(
+            scope=item.get("type_label", item.get("type", "")),
+            changed_at=item.get("created_at"),
+            actor=item.get("agent_profile") or item.get("created_by_profile"),
+            username=item.get("created_by"),
+            reason="Marcação",
+            summary=f"{item.get('type_label', 'Manobra')} criada para {item.get('planned_label') or '--'}.",
+        )
+        if item.get("decided_at"):
+            decision_summary = (
+                f"{item.get('type_label', 'Manobra')} abortada."
+                if item.get("state") == "aborted"
+                else f"{item.get('type_label', 'Manobra')} aprovada."
+            )
+            _add_history_row(
+                scope=item.get("type_label", item.get("type", "")),
+                changed_at=item.get("decided_at"),
+                actor=item.get("pilot_profile") or item.get("decided_by_profile"),
+                username=item.get("decided_by"),
+                reason=item.get("aborted_reason") or item.get("approval_note") or "Validação operacional",
+                summary=decision_summary,
+            )
+        if item.get("completed_at"):
+            _add_history_row(
+                scope=item.get("type_label", item.get("type", "")),
+                changed_at=item.get("completed_at"),
+                actor=item.get("reported_by_profile") or item.get("pilot_profile"),
+                username=item.get("reported_by") or item.get("decided_by"),
+                reason="Execução",
+                summary=f"{item.get('type_label', 'Manobra')} executada.",
+            )
+        if item.get("reported_at"):
+            _add_history_row(
+                scope=item.get("type_label", item.get("type", "")),
+                changed_at=item.get("reported_at"),
+                actor=item.get("reported_by_profile"),
+                username=item.get("reported_by"),
+                reason="Registo do piloto",
+                summary=f"Registo operacional guardado para {item.get('type_label', 'manobra').lower()}.",
+            )
         for log in item.get("change_log", []):
-            actor_profile = log.get("changed_by_profile") or {}
-            change_log_rows.append({
-                "maneuver_title": item.get("type_label", item.get("type", "")),
-                "changed_at": log.get("changed_at"),
-                "changed_at_label": _local_iso_to_label(log.get("changed_at")),
-                "changed_by_label": actor_profile.get("full_name") or actor_profile.get("username") or "--",
-                "changed_by_contact": actor_profile.get("email") or actor_profile.get("phone") or actor_profile.get("organization") or "--",
-                "reason": log.get("reason") or "--",
-                "summary": log.get("summary") or "--",
-            })
+            _add_history_row(
+                scope=item.get("type_label", item.get("type", "")),
+                changed_at=log.get("changed_at"),
+                actor=log.get("changed_by_profile") or {},
+                username=log.get("changed_by"),
+                reason=log.get("reason") or "--",
+                summary=log.get("summary") or "--",
+            )
     maneuvers.sort(
         key=lambda item: (
             {"pending": 3, "approved": 3, "completed": 2, "aborted": 1}.get(item.get("status_key"), 0),
@@ -4117,12 +4401,15 @@ def build_scale_context(port_call: dict) -> dict:
         "dwt": port_call["ship_dwt_label"],
         "bow_thruster": port_call["ship_bow_thruster_label"],
         "stern_thruster": port_call["ship_stern_thruster_label"],
+        "bow_thruster_value": port_call.get("vessel_bow_thruster", "unknown") or "unknown",
+        "stern_thruster_value": port_call.get("vessel_stern_thruster", "unknown") or "unknown",
     }
     actions = {
         "can_approve_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") == "pending",
         "can_cancel_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "pending",
         "can_abort_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "approved",
         "can_complete_entry": False,
+        "can_plan_entry": port_call.get("status") == "scheduled" and not active_entry,
         "can_plan_departure": port_call.get("status") == "in_port" and not active_departure and not completed_departure,
         "can_approve_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
         "can_cancel_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",

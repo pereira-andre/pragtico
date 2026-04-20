@@ -231,11 +231,11 @@ def migrate_local_json_to_postgres(
                         decided_by, decided_at, eta, ata, planned_departure_at, departure_plan_note, departure_at,
                         planned_shift_at, shift_plan_note, shift_at, shift_origin_berth, shift_destination_berth,
                         shift_approval_status, shift_approval_note, shift_aborted_reason, shift_decided_by, shift_decided_at,
-                        maneuver_history, berth, last_port, next_port, created_by, notes, created_at, updated_at
+                        maneuver_history, berth, last_port, next_port, created_by, change_log, notes, created_at, updated_at
                     )
                     VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s::jsonb, %s, %s, %s
                     )
                     ON CONFLICT (id) DO UPDATE SET
                         vessel_name = EXCLUDED.vessel_name,
@@ -277,6 +277,7 @@ def migrate_local_json_to_postgres(
                         last_port = EXCLUDED.last_port,
                         next_port = EXCLUDED.next_port,
                         created_by = EXCLUDED.created_by,
+                        change_log = EXCLUDED.change_log,
                         notes = EXCLUDED.notes,
                         created_at = EXCLUDED.created_at,
                         updated_at = EXCLUDED.updated_at
@@ -322,6 +323,7 @@ def migrate_local_json_to_postgres(
                         port_call.get("last_port"),
                         port_call.get("next_port"),
                         port_call.get("created_by", "system"),
+                        json.dumps(port_call.get("change_log", [])),
                         port_call.get("notes", ""),
                         port_call.get("created_at"),
                         port_call.get("updated_at"),

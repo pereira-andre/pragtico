@@ -258,7 +258,7 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         )
 
         self.assertFalse(answer.startswith("Quantos cais"))
-        self.assertIn("34 slots operacionais", answer)
+        self.assertIn("36 slots operacionais", answer)
         self.assertIn("\n- **Cais SECIL:**", answer)
         self.assertIn("Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)", answer)
         self.assertIn("Terminal Multiusos 2 (TMS2 / Terminal de Contentores)", answer)
@@ -285,7 +285,7 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         )
 
         self.assertFalse(answer.startswith("Quantos cais"))
-        self.assertIn("34 slots operacionais", answer)
+        self.assertIn("36 slots operacionais", answer)
         self.assertIn("Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)", answer)
         self.assertIn("Terminal Multiusos 2 (TMS2 / Terminal de Contentores)", answer)
         self.assertIn("Terminal Autoeuropa / Ro-Ro", answer)

@@ -16,6 +16,7 @@ from domain.cost_engine import (
     classify_cancellation_timing,
 )
 from domain.document_processing import iso_now
+from core.validators import normalize_thruster_state
 
 from .constants import (
     ALLOWED_PORT_CALL_APPROVAL_STATUSES,
@@ -164,6 +165,29 @@ def _append_maneuver_change_log(
     )
 
 
+def _append_scale_change_log(
+    record: Dict,
+    *,
+    actor_username: str,
+    actor_profile: Optional[Dict],
+    reason: str,
+    summary: str,
+    require_reason: bool = True,
+) -> None:
+    clean_reason = " ".join((reason or "").strip().split())
+    if require_reason and not clean_reason:
+        raise ValueError("O motivo da alteração é obrigatório.")
+    record.setdefault("change_log", [])
+    record["change_log"].append(
+        _build_maneuver_change_log_entry(
+            actor_username=actor_username,
+            actor_profile=actor_profile,
+            reason=clean_reason or "Registo operacional",
+            summary=summary,
+        )
+    )
+
+
 def _extract_compact_note_value(note: str, label: str) -> str:
     prefix = f"{label.strip()}:".casefold()
     for raw_line in (note or "").splitlines():
@@ -184,6 +208,13 @@ def _thruster_state_label(value: Optional[str]) -> str:
     if clean == "no":
         return "Não"
     return "Desconhecido"
+
+
+def _apply_thruster_snapshot(record: Dict, bow_thruster: Optional[str] = None, stern_thruster: Optional[str] = None) -> None:
+    if bow_thruster is not None:
+        record["vessel_bow_thruster"] = normalize_thruster_state(bow_thruster, "Bow thruster")
+    if stern_thruster is not None:
+        record["vessel_stern_thruster"] = normalize_thruster_state(stern_thruster, "Stern thruster")
 
 
 def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
@@ -517,6 +548,7 @@ def _normalize_port_call_record(record: Dict) -> Dict:
             record.get("created_by_profile"),
             username=record.get("created_by", "system") or "system",
         ),
+        "change_log": list(record.get("change_log") or []),
         "notes": record.get("notes", "") or "",
         "created_at": created_at,
         "updated_at": updated_at,

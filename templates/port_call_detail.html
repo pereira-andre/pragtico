@@ -1,4 +1,71 @@
 {% extends "base.html" %}
+{% macro thruster_fields(scale) %}
+  <label>
+    Bow thruster
+    <select name="vessel_bow_thruster" required>
+      <option value="unknown" {% if scale.ship_profile.bow_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
+      <option value="no" {% if scale.ship_profile.bow_thruster_value == "no" %}selected{% endif %}>Não</option>
+      <option value="yes" {% if scale.ship_profile.bow_thruster_value == "yes" %}selected{% endif %}>Sim</option>
+    </select>
+  </label>
+  <label>
+    Stern thruster
+    <select name="vessel_stern_thruster" required>
+      <option value="unknown" {% if scale.ship_profile.stern_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
+      <option value="no" {% if scale.ship_profile.stern_thruster_value == "no" %}selected{% endif %}>Não</option>
+      <option value="yes" {% if scale.ship_profile.stern_thruster_value == "yes" %}selected{% endif %}>Sim</option>
+    </select>
+  </label>
+{% endmacro %}
+{% macro entry_plan_form(scale, port_call, constraint_options) %}
+  <form method="post" action="{{ url_for('port_calls.schedule_entry_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card scale-plan-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="redirect_to" value="scale">
+    <strong>Nova entrada</strong>
+    <div class="mini-grid planned-mini-grid">
+      <label>
+        Hora prevista
+        <input type="datetime-local" name="planned_entry_at_local" required>
+      </label>
+      <label>
+        Porto anterior
+        <input type="text" name="origin_port" value="{{ scale.summary.last_port if scale.summary.last_port != '--' else '' }}" required>
+      </label>
+      <label>
+        Cais previsto
+        <input type="text" name="destination_berth" list="berth-options" value="{{ scale.summary.current_location if scale.summary.current_location != '--' else '' }}" required>
+      </label>
+      <label>
+        Calado
+        <input type="text" name="draft_m" placeholder="Ex.: 7,10" required>
+      </label>
+      <label>
+        Rebocadores
+        <input type="number" name="tug_count" min="0" value="0" required>
+      </label>
+      {{ thruster_fields(scale) }}
+    </div>
+    <p class="muted small-note scale-auto-origin-note">Usa esta opção quando uma entrada aprovada foi abortada e a escala continua prevista para nova marcação.</p>
+    <div class="constraint-picker">
+      <span class="mini-label">Restrições</span>
+      <div class="constraint-option-list">
+        {% for constraint in constraint_options %}
+          <label class="constraint-option">
+            <input type="checkbox" name="constraints" value="{{ constraint.code }}">
+            <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
+            <span>{{ constraint.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+    <label>
+      Observações
+      <textarea name="entry_plan_note" rows="2" placeholder="Notas operacionais da entrada..."></textarea>
+    </label>
+    <button type="submit" class="mini-button">Guardar entrada</button>
+  </form>
+{% endmacro %}
+
 {% macro departure_plan_form(scale, port_call, constraint_options) %}
   <form method="post" action="{{ url_for('port_calls.schedule_departure_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card scale-plan-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -21,6 +88,7 @@
         Rebocadores
         <input type="number" name="tug_count" min="0" value="0" required>
       </label>
+      {{ thruster_fields(scale) }}
     </div>
     <p class="muted small-note scale-auto-origin-note">Origem automática: a saída segue o último local conhecido do navio ({{ scale.summary.current_location }}).</p>
     <div class="constraint-picker">
@@ -65,6 +133,7 @@
         Rebocadores
         <input type="number" name="tug_count" min="0" value="0" required>
       </label>
+      {{ thruster_fields(scale) }}
     </div>
     <p class="muted small-note scale-auto-origin-note">Origem automática: a mudança segue o local atual conhecido do navio ({{ scale.summary.current_location }}).</p>
     <div class="constraint-picker">
@@ -238,8 +307,8 @@
             <thead>
               <tr>
                 <th>Quando</th>
-                <th>Manobra</th>
-                <th>Alterado por</th>
+                <th>Âmbito</th>
+                <th>Registado por</th>
                 <th>Motivo</th>
                 <th>Resumo</th>
               </tr>
@@ -266,6 +335,7 @@
         </div>
       </section>
 
+      {% set can_create_entry = current_role in ["admin", "agente"] and scale.actions.can_plan_entry %}
       {% set can_create_departure = current_role in ["admin", "agente"] and scale.actions.can_plan_departure %}
       {% set can_create_shift = current_role in ["admin", "agente"] and scale.actions.can_plan_shift %}
       <details class="panel inset-panel scale-actions-panel scale-compact-details">
@@ -277,37 +347,40 @@
           <span class="scale-compact-toggle">Abrir</span>
         </summary>
         <div class="scale-compact-details-body">
-          {% if can_create_departure or can_create_shift %}
+          {% if current_role in ["admin", "agente"] %}
             <div class="scale-plan-composer">
               <p class="muted scale-plan-intro">Seleciona o tipo de manobra a criar. A aprovação, o registo do piloto e o histórico continuam dentro de cada manobra.</p>
-              {% if can_create_departure and can_create_shift %}
-                <div class="scale-plan-switch">
-                  <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-departure" checked>
-                  <label class="scale-plan-choice" for="scale-plan-mode-departure">Saída</label>
-                  <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-shift">
-                  <label class="scale-plan-choice" for="scale-plan-mode-shift">Mudança</label>
-                  <div class="scale-plan-panels">
-                    <section class="scale-plan-panel scale-plan-panel-departure">
+              <div class="scale-plan-switch">
+                <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-entry" {% if can_create_entry or (not can_create_departure and not can_create_shift) %}checked{% endif %}>
+                <label class="scale-plan-choice" for="scale-plan-mode-entry">Entrada</label>
+                <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-departure" {% if not can_create_entry and can_create_departure %}checked{% endif %}>
+                <label class="scale-plan-choice" for="scale-plan-mode-departure">Saída</label>
+                <input class="scale-plan-radio" type="radio" name="scale-plan-mode" id="scale-plan-mode-shift" {% if not can_create_entry and not can_create_departure and can_create_shift %}checked{% endif %}>
+                <label class="scale-plan-choice" for="scale-plan-mode-shift">Mudança</label>
+                <div class="scale-plan-panels">
+                  <section class="scale-plan-panel scale-plan-panel-entry">
+                    {% if can_create_entry %}
+                      {{ entry_plan_form(scale, port_call, constraint_options) }}
+                    {% else %}
+                      <article class="ops-empty scale-action-placeholder"><p>A entrada só fica disponível quando a escala está prevista e não tem entrada pendente/aprovada.</p></article>
+                    {% endif %}
+                  </section>
+                  <section class="scale-plan-panel scale-plan-panel-departure">
+                    {% if can_create_departure %}
                       {{ departure_plan_form(scale, port_call, constraint_options) }}
-                    </section>
-                    <section class="scale-plan-panel scale-plan-panel-shift">
+                    {% else %}
+                      <article class="ops-empty scale-action-placeholder"><p>A saída só fica disponível depois da entrada estar concluída e sem saída ativa.</p></article>
+                    {% endif %}
+                  </section>
+                  <section class="scale-plan-panel scale-plan-panel-shift">
+                    {% if can_create_shift %}
                       {{ shift_plan_form(scale, port_call, constraint_options) }}
-                    </section>
-                  </div>
-                </div>
-              {% elif can_create_departure %}
-                <div class="scale-plan-panels scale-plan-panels-single">
-                  <section class="scale-plan-panel is-active">
-                    {{ departure_plan_form(scale, port_call, constraint_options) }}
+                    {% else %}
+                      <article class="ops-empty scale-action-placeholder"><p>A mudança só fica disponível com o navio em porto e sem mudança ativa.</p></article>
+                    {% endif %}
                   </section>
                 </div>
-              {% else %}
-                <div class="scale-plan-panels scale-plan-panels-single">
-                  <section class="scale-plan-panel is-active">
-                    {{ shift_plan_form(scale, port_call, constraint_options) }}
-                  </section>
-                </div>
-              {% endif %}
+              </div>
             </div>
           {% else %}
             <article class="ops-empty scale-action-placeholder">
@@ -426,6 +499,10 @@
             <label>
               Observações
               <textarea name="notes" rows="3" placeholder="Contexto operacional ou correção histórica...">{{ scale_edit_defaults.notes }}</textarea>
+            </label>
+            <label>
+              Motivo da alteração
+              <textarea name="change_reason" rows="2" placeholder="Ex.: correção de ETA, atualização de agência, dados do navio ou cais..." required></textarea>
             </label>
             <p class="muted small-note">Agente e admin mantêm a escala e a ficha do navio. Estes dados atualizam o catálogo reutilizável do navio.</p>
             <button type="submit" class="mini-button">Guardar escala</button>

@@ -13,8 +13,9 @@ especifico.
 
 IMPORTANTE:
   - Fundeadouros nao sao cais nem terminais. Sao zonas de fundeio.
-  - O catalogo operacional do portal tem 34 slots de cais/berco/manobra,
+  - O catalogo operacional do portal tem 36 slots de cais/berco/manobra,
     excluindo fundeadouros.
+  - TMS2 conta como tres posicoes operacionais para efeitos de demo: A, B e C.
   - "Quantos cais existem" depende do criterio de contagem: terminal, cais fisico,
     face operacional, rampa, doca seca, plataforma ou estrutura de duques d'alba.
   - Quando a pergunta pedir uma contagem, responder com o criterio usado e evitar
@@ -120,7 +121,7 @@ Intencao coberta: perguntas sobre quais terminais existem no Porto de Setubal.
 Factos de inventario: os grupos operacionais a considerar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);
@@ -140,13 +141,13 @@ Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados
 em linhas separadas.
 
 Intencao coberta: perguntas sobre quantos cais existem em Setubal.
-Factos de contagem: no catalogo operacional do portal existem 34 slots
+Factos de contagem: no catalogo operacional do portal existem 36 slots
 operacionais de cais, berco ou manobra, excluindo fundeadouros. Ao sintetizar
 uma resposta, agrupar por nomes reconhecidos e evitar duplicar sinonimos. Usar
 os seguintes grupos:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);
@@ -165,12 +166,12 @@ os seguintes grupos:
 Fundeadouros nao contam como cais; sao zonas de espera/fundeio.
 
 Intencao coberta: perguntas sobre quantos cais existem e quais sao os nomes.
-Factos de contagem e nomes: no porto de Setubal existem 34 slots de cais
+Factos de contagem e nomes: no porto de Setubal existem 36 slots de cais
 operacionais no catalogo do portal, distribuidos por varios cais e terminais. Os
 principais grupos a usar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);

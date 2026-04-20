@@ -503,6 +503,7 @@ REQUIRED_FIELDS_BY_ACTION = {
     "schedule_departure": {"planned_departure_at_local", "next_port"},
     "schedule_shift": {"planned_shift_at_local", "destination_berth"},
     "edit_maneuver_plan": {"planned_at_local", "change_reason"},
+    "edit_port_call": {"change_reason"},
 }
 DISPLAY_FIELD_LABELS = {
     "maneuver_id": "ID da manobra",
@@ -1126,6 +1127,7 @@ def build_scale_edit_reply_template() -> str:
             "Bow thruster: sim | não | desconhecido",
             "Stern thruster: sim | não | desconhecido",
             "Observações: ",
+            "Motivo da alteração: ",
         ]
     )
 

@@ -135,6 +135,7 @@
   transition: border-color var(--transition), color var(--transition), background var(--transition);
 }
 
+#scale-plan-mode-entry:checked + .scale-plan-choice,
 #scale-plan-mode-departure:checked + .scale-plan-choice,
 #scale-plan-mode-shift:checked + .scale-plan-choice {
   border-color: rgba(10, 108, 102, 0.3);
@@ -155,6 +156,7 @@
   display: grid;
 }
 
+#scale-plan-mode-entry:checked ~ .scale-plan-panels .scale-plan-panel-entry,
 #scale-plan-mode-departure:checked ~ .scale-plan-panels .scale-plan-panel-departure,
 #scale-plan-mode-shift:checked ~ .scale-plan-panels .scale-plan-panel-shift {
   display: grid;

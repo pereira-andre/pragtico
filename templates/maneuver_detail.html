@@ -1,4 +1,22 @@
 {% extends "base.html" %}
+{% macro thruster_fields(scale) %}
+  <label>
+    Bow thruster
+    <select name="vessel_bow_thruster" required>
+      <option value="unknown" {% if scale.ship_profile.bow_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
+      <option value="no" {% if scale.ship_profile.bow_thruster_value == "no" %}selected{% endif %}>Não</option>
+      <option value="yes" {% if scale.ship_profile.bow_thruster_value == "yes" %}selected{% endif %}>Sim</option>
+    </select>
+  </label>
+  <label>
+    Stern thruster
+    <select name="vessel_stern_thruster" required>
+      <option value="unknown" {% if scale.ship_profile.stern_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
+      <option value="no" {% if scale.ship_profile.stern_thruster_value == "no" %}selected{% endif %}>Não</option>
+      <option value="yes" {% if scale.ship_profile.stern_thruster_value == "yes" %}selected{% endif %}>Sim</option>
+    </select>
+  </label>
+{% endmacro %}
 {% block content %}
 {% set maneuver = maneuver_view.maneuver %}
 <main class="ops-shell">
@@ -150,6 +168,7 @@
                           Rebocadores
                           <input type="number" min="0" name="tug_count" value="{{ maneuver.tug_count }}" required>
                         </label>
+                        {{ thruster_fields(scale) }}
                       </div>
                       <div class="constraint-picker">
                         <span class="mini-label">Restrições</span>
@@ -257,6 +276,7 @@
                       Calado
                       <input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required>
                     </label>
+                    {{ thruster_fields(scale) }}
                   </div>
                   <label>
                     Observações

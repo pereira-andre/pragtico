@@ -385,6 +385,7 @@ class LocalStorePortCallTests(unittest.TestCase):
             updated_by="admin",
             vessel_bow_thruster="unknown",
             vessel_stern_thruster="yes",
+            change_reason="Confirmacao de thrusters",
         )
 
         self.assertEqual(updated["vessel_bow_thruster"], "unknown")
@@ -1077,6 +1078,7 @@ class LocalStorePortCallTests(unittest.TestCase):
             berth="TMS 1 - Cais 3",
             last_port="Sines",
             next_port="Valencia",
+            change_reason="Atualizacao operacional",
         )
 
         self.assertEqual(updated["vessel_name"], "BELITAKI II")
