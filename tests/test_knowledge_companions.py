@@ -245,6 +245,54 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("1 milha náutica", answer)
         self.assertIn("Pilar n.º 2", answer)
 
+    def test_it005_companion_answers_tms1_defenses_and_operational_drafts(self) -> None:
+        companion = load_document_companion("IT-005_TMS1.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        defenses = build_companion_answer("Qual o tipo de defensas que o TMS 1 dispõe?", companion)
+        drafts = build_companion_answer("Quais os calados operacionais para o TMS1?", companion)
+
+        self.assertIn("Yokohama", defenses)
+        self.assertIn("carochas", defenses)
+        self.assertIn("8,8 m", drafts)
+        self.assertIn("9,8 m", drafts)
+        self.assertIn("10,0 m", drafts)
+
+    def test_it014_companion_answers_lisnave_dock33_tug_guidance(self) -> None:
+        companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "Quantos reboques devo usar para manobrar um navio de 200 metros e 4,5 m de calado na LISNAVE do cais 3A para a doca 33?",
+            companion,
+        )
+
+        self.assertIn("4 reboques", answer)
+        self.assertIn("GT", answer)
+        self.assertIn("condições meteorológicas", answer)
+
+    def test_it009_companion_answers_secil_specific_conditions(self) -> None:
+        companion = load_document_companion("IT-009_Secil.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer("Um navio na Secil pode manobrar em que condições específicas?", companion)
+
+        self.assertIn("reponto de maré", answer)
+        self.assertIn("correntes", answer)
+        self.assertIn("janela mais segura", answer)
+
+    def test_marcacao_companion_answers_secil_timing_guidance(self) -> None:
+        companion = load_document_companion("Marcar_manobra_repontos_mare.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        exit_answer = build_companion_answer("Se o navio sair da Secil, a que horas devo marcar a manobra?", companion)
+        entry_answer = build_companion_answer("Com quanto tempo de antecedência se marca uma manobra para a Secil?", companion)
+
+        self.assertIn("15 minutos", exit_answer)
+        self.assertIn("reponto de maré", exit_answer)
+        self.assertIn("30 a 45 minutos", entry_answer)
+        self.assertIn("45 minutos a 1 hora", entry_answer)
+
     def test_port_inventory_companion_answers_terminal_inventory(self) -> None:
         companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)
@@ -259,6 +307,15 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("Autoeuropa", answer)
         self.assertIn("SAPEC", answer)
         self.assertIn("TEPORSET", answer)
+
+    def test_port_inventory_companion_answers_cabeco_73_mapping(self) -> None:
+        companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer("O cabeço 73 pertence a que cais?", companion)
+
+        self.assertIn("Cais 10", answer)
+        self.assertIn("Autoeuropa", answer)
 
     def test_port_inventory_companion_answers_quay_names_with_expected_grouping(self) -> None:
         companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)

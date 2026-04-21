@@ -93,6 +93,19 @@
       ]
     },
     {
+      "question": "Quantos reboques devo usar para manobrar um navio de 200 metros e 4,5 m de calado na LISNAVE do cais 3A para a doca 33?",
+      "answer": "Como referência operacional, normalmente são necessários 4 reboques para esta manobra. Ainda assim, a decisão final deve ser afinada pelo GT do navio, pelas condições meteorológicas e pelo enquadramento concreto da bacia / Hidrolift.",
+      "keywords": [
+        "quantos reboques",
+        "lisnave",
+        "doca 33",
+        "cais 3a",
+        "200 metros",
+        "4,5 m",
+        "4 reboques"
+      ]
+    },
+    {
       "question": "Por que razão todas as manobras no LISNAVE se fazem nos repontos",
       "answer": "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré. Com corrente ativa, esta atua lateralmente sobre o navio, tornando a manobra incontrolável. Só no reponto, com corrente nula, é possível manobrar com segurança.",
       "keywords": [

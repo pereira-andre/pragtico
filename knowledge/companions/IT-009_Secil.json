@@ -132,6 +132,19 @@
       ]
     },
     {
+      "question": "Um navio na Secil pode manobrar em que condições específicas?",
+      "answer": "Na Secil a prática operacional mais importante é manobrar junto ao cais perto do reponto de maré. Isso reduz abatimentos e derivas provocados pelas correntes, que ali podem ser fortes e imprevisíveis. Em termos práticos, o reponto é a janela mais segura para executar a manobra.",
+      "keywords": [
+        "secil",
+        "condições específicas",
+        "reponto",
+        "correntes",
+        "deriva",
+        "abatimento",
+        "junto ao cais"
+      ]
+    },
+    {
       "question": "Quem valida as requisições de manobra no Terminal SECIL?",
       "answer": "O Piloto Coordenador.",
       "keywords": [

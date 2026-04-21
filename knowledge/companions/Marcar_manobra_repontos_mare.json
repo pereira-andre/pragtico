@@ -120,6 +120,32 @@
       ]
     },
     {
+      "question": "Se o navio sair da Secil, a que horas devo marcar a manobra?",
+      "answer": "Como regra prática, a saída da Secil marca-se cerca de 15 minutos antes do reponto de maré, quer seja preia-mar quer seja baixa-mar. A referência operacional é aproveitar o reponto; não fica definida aqui uma restrição autónoma de calado ou de luz.",
+      "keywords": [
+        "secil",
+        "sair",
+        "15 minutos",
+        "reponto",
+        "preia-mar",
+        "baixa-mar"
+      ]
+    },
+    {
+      "question": "Com quanto tempo de antecedência se marca uma manobra para a Secil?",
+      "answer": "Como regra prática: para entradas na Secil, marca-se junto do reponto. Se o navio vier de fora da barra ou do Fundeadouro Norte, normalmente basta 30 a 45 minutos antes do reponto; se vier do Fundeadouro de Tróia ou de outro cais, usar cerca de 45 minutos a 1 hora. A saída da Secil, por norma, marca-se 15 minutos antes do reponto.",
+      "keywords": [
+        "secil",
+        "antecedência",
+        "reponto",
+        "fora da barra",
+        "fundeadouro norte",
+        "tróia",
+        "45 minutos",
+        "1 hora"
+      ]
+    },
+    {
       "question": "Qual a diferença entre marcar para o reponto e marcar para a preia-mar?",
       "answer": "Marcar para o reponto significa que a manobra se executa no momento de corrente nula (mudança de sentido da maré). Marcar para a preia-mar significa que a manobra precisa do nível máximo de água para ter profundidade suficiente. Os terminais Lisnave/Teporset/Termitrena usam o reponto (corrente nula). As saídas das docas secas e os navios de grande calado nos TMS e SAPEC usam a preia-mar (profundidade máxima).",
       "keywords": [

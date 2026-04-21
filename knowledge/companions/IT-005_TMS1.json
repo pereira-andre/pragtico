@@ -88,6 +88,31 @@
       ]
     },
     {
+      "question": "Quais os calados operacionais para o TMS1?",
+      "answer": "No TMS1 os calados operacionais de referência são: até ao cabeço 10, 8,8 m; do cabeço 10 ao 20, 9,8 m; e do cabeço 20 ao 38, 10,0 m. Estes são os calados praticáveis em qualquer maré; acima disso, só com janela de maré e validação operacional.",
+      "keywords": [
+        "calados operacionais",
+        "tms1",
+        "cabeço 10",
+        "cabeço 20",
+        "8,8",
+        "9,8",
+        "10,0"
+      ]
+    },
+    {
+      "question": "Qual o tipo de defensas que o TMS 1 dispõe?",
+      "answer": "No TMS1 existem afastadores, vulgarmente designados por carochas. Operacionalmente, a referência usada é a defensas afastadoras de borracha do tipo Yokohama.",
+      "keywords": [
+        "defensas",
+        "tms 1",
+        "tms1",
+        "yokohama",
+        "carochas",
+        "afastadores"
+      ]
+    },
+    {
       "question": "Quando é obrigatório usar rebocador no Cais 8?",
       "answer": "Não é obrigatório, mas é fortemente recomendado em condições de vazante de marés vivas, caso o navio esteja condicionado a atracar pelo bordo de estibordo.",
       "keywords": [

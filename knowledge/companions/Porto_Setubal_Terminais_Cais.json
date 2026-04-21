@@ -93,6 +93,17 @@
         "mesmo",
         "alias"
       ]
+    },
+    {
+      "question": "O cabeço 73 pertence a que cais?",
+      "answer": "O cabeço 73 pertence ao Cais 10, na zona operacional Autoeuropa / Ro-Ro.",
+      "keywords": [
+        "cabeço 73",
+        "cabeco 73",
+        "cais 10",
+        "autoeuropa",
+        "ro-ro"
+      ]
     }
   ]
 }
