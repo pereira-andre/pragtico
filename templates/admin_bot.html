@@ -31,7 +31,7 @@
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Cobertura</span>
         <strong>{{ health.coverage_pct }}%</strong>
-        <small>{{ sources|selectattr('state', 'equalto', 'online')|list|length }} / {{ sources|length }} fontes ativas</small>
+        <small>{{ health.online_sources }} online + {{ health.degraded_sources }} parcial / {{ sources|length }}</small>
       </article>
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Sinais</span>
@@ -43,6 +43,11 @@
         <strong>{{ exceptions.total }}</strong>
         <small>{{ exceptions.severity_counts.high }} prioritária(s)</small>
       </article>
+    </div>
+    <div class="casebook-tag-list">
+      {% for item in health.breakdown_rows %}
+        <span class="casebook-tag"><strong>{{ item.label }}:</strong> {{ item.value }} · {{ item.detail }}</span>
+      {% endfor %}
     </div>
   </section>
 
@@ -99,10 +104,17 @@
             </div>
             <p class="muted">{{ source.description }}</p>
             <div class="admin-bot-source-metrics">
-              <span><strong>{{ source.count }}</strong> registo(s)</span>
+              <span><strong>{{ source.count }}</strong> {{ source.count_label or 'registo(s)' }}</span>
               {% if source.coverage_pct %}<span><strong>{{ source.coverage_pct }}%</strong> coberto</span>{% endif %}
             </div>
             {% if source.meta %}<p class="admin-bot-source-meta">{{ source.meta }}</p>{% endif %}
+            {% if source.detail_lines %}
+              <ul class="admin-bot-signal-list">
+                {% for item in source.detail_lines %}
+                  <li><strong>{{ item.label }}:</strong> {{ item.detail }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
             {% if source.action_url %}
               <a class="outline-link" href="{{ source.action_url }}">Gerir</a>
             {% endif %}

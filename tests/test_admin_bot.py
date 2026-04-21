@@ -18,8 +18,43 @@ os.environ.pop("DATABASE_URL", None)
 
 import app  # noqa: E402
 from core import services  # noqa: E402
+from core.bot_insights import build_sources_snapshot  # noqa: E402
 from core.bot_settings import DEFAULTS, load_bot_settings  # noqa: E402
 from storage.local import LocalStore  # noqa: E402
+
+
+class _StubTideService:
+    def __init__(self, csv_path: str, location_label: str = "Setúbal / Tróia") -> None:
+        self.csv_path = csv_path
+        self.location_label = location_label
+
+
+class _StubWeatherService:
+    enabled = True
+
+    def __init__(self, location: str = "Setúbal") -> None:
+        self.location = location
+
+
+class _StubWaveService:
+    enabled = True
+
+    def __init__(self, status_payload: dict | None = None, station_name: str = "Sines") -> None:
+        self._status_payload = status_payload or {}
+        self.station_name = station_name
+
+    def status(self) -> dict:
+        return dict(self._status_payload)
+
+
+class _StubLocalWarningService:
+    enabled = True
+
+    def __init__(self, status_payload: dict | None = None) -> None:
+        self._status_payload = status_payload or {}
+
+    def status(self) -> dict:
+        return dict(self._status_payload)
 
 
 class AdminBotDashboardTests(unittest.TestCase):
@@ -61,6 +96,7 @@ class AdminBotDashboardTests(unittest.TestCase):
             "Só o que precisa",
             "Evals de conhecimento",
             "Definições e aprendizagem",
+            "Pass rate:",
         ):
             self.assertIn(marker, html, msg=f"missing marker: {marker}")
 
@@ -214,6 +250,65 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertIn("Origem: Correção promovida", html)
         self.assertIn("Abrir documento", html)
         self.assertIn("Abrir correção", html)
+
+    def test_operational_source_combines_activity_and_live_feed_states(self) -> None:
+        tide_csv = Path(self.temp_dir.name) / "setubal_tides.csv"
+        tide_csv.write_text("date,height\n", encoding="utf-8")
+
+        with patch.object(services, "tide_service", _StubTideService(str(tide_csv))):
+            with patch.object(services, "weather_service", _StubWeatherService("Setúbal")):
+                with patch.object(
+                    services,
+                    "wave_service",
+                    _StubWaveService({"cache_updated_at_label": "21/04/2026, 11:20"}),
+                ):
+                    with patch.object(
+                        services,
+                        "local_warning_service",
+                        _StubLocalWarningService({"count": 2, "cache_updated_at_label": "21/04/2026, 11:18"}),
+                    ):
+                        sources = build_sources_snapshot()
+
+        operational = next(item for item in sources if item["id"] == "operational_data")
+        self.assertEqual(operational["state"], "online")
+        self.assertEqual(operational["count"], 4)
+        self.assertEqual(operational["count_label"], "sinal(is) ativos")
+        self.assertEqual(operational["meta"], "4/4 feed(s) disponíveis")
+        self.assertEqual(operational["action_url"], "/dashboard")
+        self.assertEqual(operational["detail_lines"][0]["label"], "Atividade")
+        self.assertIn("0 escala(s) agendada(s)", operational["detail_lines"][0]["detail"])
+        self.assertIn("Setúbal / Tróia", operational["detail_lines"][1]["detail"])
+        self.assertIn("Setúbal", operational["detail_lines"][2]["detail"])
+
+    def test_admin_bot_page_renders_operational_feed_breakdown(self) -> None:
+        tide_csv = Path(self.temp_dir.name) / "setubal_tides.csv"
+        tide_csv.write_text("date,height\n", encoding="utf-8")
+
+        with patch.object(services, "tide_service", _StubTideService(str(tide_csv))):
+            with patch.object(services, "weather_service", _StubWeatherService("Setúbal")):
+                with patch.object(
+                    services,
+                    "wave_service",
+                    _StubWaveService({"stale": True, "cache_updated_at_label": "21/04/2026, 11:20"}),
+                ):
+                    with patch.object(
+                        services,
+                        "local_warning_service",
+                        _StubLocalWarningService({"count": 2, "cache_updated_at_label": "21/04/2026, 11:18"}),
+                    ):
+                        with app.app.test_client() as client:
+                            self._set_admin_session(client)
+                            response = client.get("/admin/bot")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("4/4 feed(s) disponíveis", html)
+        self.assertIn("sinal(is) ativos", html)
+        self.assertIn("Atividade:</strong> 0 escala(s) agendada(s)", html)
+        self.assertIn("Maré:</strong> Setúbal / Tróia", html)
+        self.assertIn("Meteorologia:</strong> Setúbal", html)
+        self.assertIn("Ondulação:</strong> Cache local", html)
+        self.assertNotIn("0 escala(s) resolvidas", html)
 
 
 if __name__ == "__main__":

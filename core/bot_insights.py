@@ -388,7 +388,7 @@ _SOURCE_DEFS = (
     {
         "id": "operational_data",
         "label": "Dados operacionais vivos",
-        "description": "Escalas, manobras, maré, meteorologia e agulhas em tempo real.",
+        "description": "Atividade portuária atual e estado técnico dos feeds de maré, meteorologia, ondulação e avisos.",
     },
     {
         "id": "practice",
@@ -401,6 +401,87 @@ _SOURCE_DEFS = (
         "description": "Casos fixos + correções promovidas que testam a cobertura do bot.",
     },
 )
+
+
+def _build_operational_feed_rows() -> list[dict]:
+    rows: list[dict] = []
+
+    tide_service = getattr(services, "tide_service", None)
+    tide_path = str(getattr(tide_service, "csv_path", "") or "").strip()
+    tide_available = bool(tide_service and tide_path and Path(tide_path).exists())
+    tide_label = getattr(tide_service, "location_label", "") or "Tabela local"
+    rows.append(
+        {
+            "label": "Maré",
+            "state": "online" if tide_available else "offline",
+            "detail": tide_label if tide_available else "Tabela local não configurada",
+        }
+    )
+
+    weather_service = getattr(services, "weather_service", None)
+    weather_enabled = bool(weather_service and getattr(weather_service, "enabled", False))
+    weather_location = getattr(weather_service, "location", "") or "Setúbal"
+    rows.append(
+        {
+            "label": "Meteorologia",
+            "state": "online" if weather_enabled else "offline",
+            "detail": weather_location if weather_enabled else "WeatherAPI não configurado",
+        }
+    )
+
+    wave_service = getattr(services, "wave_service", None)
+    wave_enabled = bool(wave_service and getattr(wave_service, "enabled", False))
+    wave_status = {}
+    wave_error = ""
+    if wave_service:
+        try:
+            wave_status = wave_service.status() or {}
+        except Exception as exc:
+            wave_error = str(exc)
+    wave_cache_label = str(wave_status.get("cache_updated_at_label") or "").strip()
+    wave_state = "offline"
+    wave_detail = "Sem endpoint configurado"
+    if wave_enabled:
+        if wave_status.get("stale"):
+            wave_state = "degraded"
+            wave_detail = f"Cache local{f' · {wave_cache_label}' if wave_cache_label else ''}"
+        elif wave_status.get("error") or wave_error:
+            wave_state = "offline"
+            wave_detail = str(wave_status.get("error") or wave_error or "Leitura indisponível").strip()
+        else:
+            wave_state = "online"
+            station_name = getattr(wave_service, "station_name", "") or "Sines"
+            wave_detail = f"{station_name}{f' · {wave_cache_label}' if wave_cache_label else ''}"
+    rows.append({"label": "Ondulação", "state": wave_state, "detail": wave_detail})
+
+    warning_service = getattr(services, "local_warning_service", None)
+    warning_enabled = bool(warning_service and getattr(warning_service, "enabled", False))
+    warning_status = {}
+    warning_error = ""
+    if warning_service:
+        try:
+            warning_status = warning_service.status() or {}
+        except Exception as exc:
+            warning_error = str(exc)
+    warning_cache_label = str(warning_status.get("cache_updated_at_label") or "").strip()
+    warning_count = int(warning_status.get("count") or 0)
+    warning_state = "offline"
+    warning_detail = "Sem endpoint configurado"
+    if warning_enabled:
+        if warning_status.get("stale"):
+            warning_state = "degraded"
+            base = f"{warning_count} aviso(s) em cache" if warning_count else "Cache local"
+            warning_detail = f"{base}{f' · {warning_cache_label}' if warning_cache_label else ''}"
+        elif warning_status.get("error") or warning_error:
+            warning_state = "offline"
+            warning_detail = str(warning_status.get("error") or warning_error or "Avisos indisponíveis").strip()
+        else:
+            warning_state = "online"
+            base = f"{warning_count} aviso(s) em vigor" if warning_count else "Fonte configurada"
+            warning_detail = f"{base}{f' · {warning_cache_label}' if warning_cache_label else ''}"
+    rows.append({"label": "Avisos", "state": warning_state, "detail": warning_detail})
+
+    return rows
 
 
 def build_sources_snapshot() -> list[dict]:
@@ -456,15 +537,33 @@ def build_sources_snapshot() -> list[dict]:
             practice_total = 0
 
     port_calls_total = 0
+    in_port_total = 0
+    planned_maneuvers_total = 0
+    port_activity_error = ""
     try:
         if store:
-            port_calls_total = len(store.get_port_activity_snapshot(window_days=3650).get("arrivals", []) or [])
-    except Exception:
+            activity = store.get_port_activity_snapshot(window_days=3650) or {}
+            stats = activity.get("stats") or {}
+            port_calls_total = int(stats.get("scheduled_count") or len(activity.get("arrivals", []) or []))
+            in_port_total = int(stats.get("in_port_count") or len(activity.get("in_port", []) or []))
+            planned_maneuvers_total = int(stats.get("planned_count") or len(activity.get("planned_maneuvers", []) or []))
+    except Exception as exc:
+        port_activity_error = str(exc)
         port_calls_total = 0
+        in_port_total = 0
+        planned_maneuvers_total = 0
 
     snapshot: dict[str, dict] = {}
     for source in _SOURCE_DEFS:
-        snapshot[source["id"]] = {**source, "count": 0, "coverage_pct": 0, "state": "offline", "action_url": ""}
+        snapshot[source["id"]] = {
+            **source,
+            "count": 0,
+            "count_label": "registo(s)",
+            "coverage_pct": 0,
+            "state": "offline",
+            "action_url": "",
+            "detail_lines": [],
+        }
 
     if documents:
         snapshot["documents"].update(
@@ -499,11 +598,33 @@ def build_sources_snapshot() -> list[dict]:
             action_url="/admin/bot#sources",
             meta=f"{practice_total} padrões importados",
         )
+    feed_rows = _build_operational_feed_rows()
+    feed_total = len(feed_rows)
+    feed_ready_total = sum(1 for item in feed_rows if item.get("state") in {"online", "degraded"})
+    feed_online_total = sum(1 for item in feed_rows if item.get("state") == "online")
+    activity_total = port_calls_total + in_port_total + planned_maneuvers_total
+    if feed_ready_total == 0 and activity_total == 0:
+        operational_state = "offline"
+    elif feed_online_total == feed_total:
+        operational_state = "online"
+    else:
+        operational_state = "degraded"
+    activity_line = {
+        "label": "Atividade",
+        "state": "online" if activity_total else ("offline" if port_activity_error else "degraded"),
+        "detail": (
+            f"{port_calls_total} escala(s) agendada(s) · "
+            f"{in_port_total} em porto · "
+            f"{planned_maneuvers_total} manobra(s) planeada(s)"
+        ) if not port_activity_error else "Snapshot operacional indisponível",
+    }
     snapshot["operational_data"].update(
-        count=port_calls_total,
-        state="online" if port_calls_total else "offline",
-        action_url="/port-calls",
-        meta=f"{port_calls_total} escala(s) resolvidas",
+        count=activity_total + feed_ready_total,
+        count_label="sinal(is) ativos",
+        state=operational_state,
+        action_url="/dashboard",
+        meta=f"{feed_ready_total}/{feed_total} feed(s) disponíveis",
+        detail_lines=[activity_line, *feed_rows],
     )
     snapshot["evals"].update(
         count=evals_static + evals_feedback,
@@ -643,11 +764,18 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
     positives = int(signals.get("positives", {}).get("total") or 0)
     negatives = int(signals.get("negatives", {}).get("total") or 0)
     high_exceptions = int(exceptions.get("severity_counts", {}).get("high") or 0)
-    coverage = 0
-    coverage_total = 0
+    coverage_points = 0.0
+    online_sources = 0
+    degraded_sources = 0
     for src in sources or []:
-        coverage_total += 1 if src.get("state") == "online" else 0
-    coverage_pct = round((coverage_total / max(len(sources), 1)) * 100)
+        state = (src.get("state") or "").strip().lower()
+        if state == "online":
+            coverage_points += 1.0
+            online_sources += 1
+        elif state == "degraded":
+            coverage_points += 0.5
+            degraded_sources += 1
+    coverage_pct = round((coverage_points / max(len(sources), 1)) * 100)
 
     feedback_bias = 0
     if positives + negatives:
@@ -676,4 +804,12 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
         "coverage_pct": coverage_pct,
         "feedback_bias_pct": feedback_bias,
         "penalty": penalty,
+        "online_sources": online_sources,
+        "degraded_sources": degraded_sources,
+        "breakdown_rows": [
+            {"label": "Pass rate", "value": f"{pass_rate}%", "detail": "casos de eval a passar"},
+            {"label": "Cobertura", "value": f"{coverage_pct}%", "detail": f"{online_sources} online + {degraded_sources} parcial"},
+            {"label": "Sinais", "value": f"{feedback_bias}%", "detail": "feedback positivo na janela"},
+            {"label": "Penalização", "value": f"-{penalty}", "detail": f"{high_exceptions} exceção(ões) prioritária(s)"},
+        ],
     }
