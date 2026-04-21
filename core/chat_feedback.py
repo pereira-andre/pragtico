@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from core.bot_settings import load_bot_settings
 from domain.knowledge_evals import _extract_expected_substrings
 from storage.utils import _question_for_assistant_message, normalize_feedback_correction
 
@@ -36,8 +37,11 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
         question,
         str(target_message.get("feedback_correction") or "").strip(),
     )
+    settings = load_bot_settings()
+    auto_promote = bool(settings.get("auto_promote_corrections", True))
     should_register = (
-        (target_message.get("feedback_status") or "").strip().lower() == "review"
+        auto_promote
+        and (target_message.get("feedback_status") or "").strip().lower() == "review"
         and bool(corrected_answer)
         and bool(document_name)
         and bool(question)

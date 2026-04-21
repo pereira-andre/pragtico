@@ -66,14 +66,40 @@ from domain.knowledge_companions import (
 )
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
+from core.bot_settings import load_bot_settings
 
 logger = logging.getLogger(__name__)
 
+# Fallback defaults; actual values are read live from bot_settings via the helpers below.
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
 REVIEW_CORRECTION_SIMILARITY = 0.94
 TRUSTED_DOCUMENT_HINT_SIMILARITY = 0.82
 TRUSTED_DOCUMENT_HINT_GAP = 0.08
+
+
+def _threshold(key: str, fallback: float) -> float:
+    try:
+        value = load_bot_settings().get(key)
+        return float(value) if value is not None else fallback
+    except Exception:
+        return fallback
+
+
+def _review_guard_threshold() -> float:
+    return _threshold("review_guard_similarity", REVIEW_GUARD_SIMILARITY)
+
+
+def _review_block_threshold() -> float:
+    return _threshold("review_block_similarity", REVIEW_BLOCK_SIMILARITY)
+
+
+def _review_correction_threshold() -> float:
+    return _threshold("review_correction_similarity", REVIEW_CORRECTION_SIMILARITY)
+
+
+def _trusted_document_hint_threshold() -> float:
+    return _threshold("trusted_document_hint_similarity", TRUSTED_DOCUMENT_HINT_SIMILARITY)
 DOCUMENT_FOLLOW_UP_RE = re.compile(
     r"\b(?:esse|essa|este|esta|o|a)\s+(?:documento|doc|ficheiro|regra|instrucao|instrução)\b"
     r"|\bo que diz(?:\s+(?:esse|essa|este|esta|o|a))?\s+"
@@ -144,16 +170,17 @@ def _feedback_timestamp(value: dict | None) -> str:
 
 def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
     """Return the reviewed match that should suppress blind reuse, if any."""
+    guard_threshold = _review_guard_threshold()
     best_review = next(
         (
             item
             for item in reviewed_answers
-            if item.get("similarity", 0) >= REVIEW_GUARD_SIMILARITY
+            if item.get("similarity", 0) >= guard_threshold
             and not (item.get("feedback_correction") or "").strip()
         ),
         None,
     )
-    if not best_review or best_review.get("similarity", 0) < REVIEW_GUARD_SIMILARITY:
+    if not best_review or best_review.get("similarity", 0) < guard_threshold:
         return None
 
     best_trusted = trusted_answers[0] if trusted_answers else None
@@ -169,16 +196,17 @@ def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: li
 
 
 def _select_review_correction_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
+    correction_threshold = _review_correction_threshold()
     best_review = next(
         (
             item
             for item in reviewed_answers
-            if item.get("similarity", 0) >= REVIEW_CORRECTION_SIMILARITY
+            if item.get("similarity", 0) >= correction_threshold
             and (item.get("feedback_correction") or "").strip()
         ),
         None,
     )
-    if not best_review or best_review.get("similarity", 0) < REVIEW_CORRECTION_SIMILARITY:
+    if not best_review or best_review.get("similarity", 0) < correction_threshold:
         return None
 
     best_trusted = trusted_answers[0] if trusted_answers else None
@@ -379,10 +407,11 @@ def _resolve_feedback_target_document(feedback_matches: list[dict], documents: l
         return None
 
     documents_by_name = {str(item.get("name") or ""): item for item in documents}
+    hint_threshold = _trusted_document_hint_threshold()
     candidates: list[dict] = []
     for match in feedback_matches:
         similarity = float(match.get("similarity") or 0.0)
-        if similarity < TRUSTED_DOCUMENT_HINT_SIMILARITY:
+        if similarity < hint_threshold:
             continue
         cited_documents = []
         explicit_document = str(match.get("feedback_correction_document") or "").strip()
@@ -594,12 +623,16 @@ def playground_answer(
         refresh_knowledge_state(force_reindex=False)
         execution_plan = build_chat_execution_plan(clean_question)
 
-        trusted_answers = services.store.find_feedback_matches(
-            username,
-            clean_question,
-            limit=3,
-            feedback_statuses={"approved"},
-        )
+        settings = load_bot_settings()
+        if settings.get("auto_trust_positive_feedback", True):
+            trusted_answers = services.store.find_feedback_matches(
+                username,
+                clean_question,
+                limit=3,
+                feedback_statuses={"approved"},
+            )
+        else:
+            trusted_answers = []
         reviewed_answers = services.store.find_feedback_matches(
             username,
             clean_question,
@@ -686,7 +719,7 @@ def playground_answer(
             else:
                 if (
                     review_guard_match
-                    and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY
+                    and review_guard_match.get("similarity", 0) >= _review_block_threshold()
                     and not targeted_document_context["document_sources"]
                 ):
                     answer = _build_review_guard_answer(review_guard_match)
@@ -741,12 +774,15 @@ def handle_chat_turn(
             clear_pending_chat_action(username, conversation["id"])
             existing_pending = None
 
-        trusted_answers = services.store.find_feedback_matches(
-            username,
-            clean_question,
-            limit=3,
-            feedback_statuses={"approved"},
-        )
+        if load_bot_settings().get("auto_trust_positive_feedback", True):
+            trusted_answers = services.store.find_feedback_matches(
+                username,
+                clean_question,
+                limit=3,
+                feedback_statuses={"approved"},
+            )
+        else:
+            trusted_answers = []
         reviewed_answers = services.store.find_feedback_matches(
             username,
             clean_question,
@@ -1157,7 +1193,7 @@ def handle_chat_turn(
                 else:
                     if (
                         review_guard_match
-                        and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY
+                        and review_guard_match.get("similarity", 0) >= _review_block_threshold()
                         and not targeted_document_context["document_sources"]
                     ):
                         answer = _build_review_guard_answer(review_guard_match)

@@ -582,6 +582,7 @@ def _build_bot_database_export() -> dict:
             "reviewable_chat_messages": services.store.list_reviewable_chat_messages(limit=5000),
             "maneuver_cases": services.store.list_maneuver_cases(limit=5000),
             "practice_experience": practice_experience_state(services.store),
+            "bot_settings": load_bot_settings(),
         },
     }
 
@@ -630,8 +631,18 @@ def _import_bot_database_payload(payload: dict) -> dict:
         "chat_feedback": 0,
         "maneuver_feedback": 0,
         "practice_records": 0,
+        "settings": 0,
         "skipped": 0,
     }
+
+    imported_settings = body.get("bot_settings")
+    if isinstance(imported_settings, dict):
+        try:
+            save_bot_settings(imported_settings, updated_by=session.get("username", "admin"))
+            stats["settings"] = 1
+        except Exception:
+            logger.exception("Falha ao importar bot_settings.")
+            stats["skipped"] += 1
 
     for item in body.get("feedback_eval_cases") or []:
         if not isinstance(item, dict):
