@@ -218,6 +218,7 @@ class TestFeedbackStatus(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(validate_feedback_status("approved"), "approved")
         self.assertEqual(validate_feedback_status("review"), "review")
+        self.assertEqual(validate_feedback_status("ignored"), "ignored")
 
     def test_invalid_raises(self):
         with self.assertRaises(ValueError):

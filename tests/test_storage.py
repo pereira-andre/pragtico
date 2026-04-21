@@ -1310,6 +1310,39 @@ class LocalStorePortCallTests(unittest.TestCase):
         self.assertEqual(reviewed[0]["feedback_status"], "review")
         self.assertIn("feedback_correction", reviewed[0])
 
+    def test_message_feedback_ignored_clears_review_memory(self) -> None:
+        conv = self.store.create_conversation("admin")
+        self.store.append_chat_message("admin", conv["id"], "user", "Qual é a distância?")
+        msg = self.store.append_chat_message(
+            "admin",
+            conv["id"],
+            "assistant",
+            "3,00 milhas náuticas.",
+            citations=[{"document": "IT-036_RegulacaoAgulhas.txt"}],
+        )
+        self.store.update_message_feedback(
+            "admin",
+            conv["id"],
+            msg["id"],
+            "review",
+            "Corrigir para 3,23 milhas náuticas.",
+            feedback_correction="A distância correta é 3,23 milhas náuticas.",
+        )
+
+        updated = self.store.update_message_feedback(
+            "admin",
+            conv["id"],
+            msg["id"],
+            "ignored",
+            "Já não é útil para governança.",
+            feedback_updated_by="admin",
+        )
+
+        self.assertEqual(updated["feedback_status"], "ignored")
+        self.assertEqual(updated["feedback_correction"], "")
+        self.assertEqual(updated["feedback_correction_document"], "")
+        self.assertEqual(self.store.find_feedback_matches("admin", "Qual é a distância?", feedback_statuses={"review"}), [])
+
     def test_find_feedback_matches_uses_admin_governed_answers_globally(self) -> None:
         conv = self.store.create_conversation("admin")
         self.store.append_chat_message("admin", conv["id"], "user", "Qual é a distância da barra ao Outão?")

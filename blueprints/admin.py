@@ -703,7 +703,7 @@ def _import_bot_database_payload(payload: dict) -> dict:
             stats["skipped"] += 1
             continue
         feedback_status = str(item.get("feedback_status") or "").strip().lower()
-        if feedback_status not in {"approved", "review"}:
+        if feedback_status not in {"approved", "review", "ignored"}:
             continue
         username = str(item.get("username") or item.get("owner_username") or "").strip().lower()
         conversation_id = str(item.get("conversation_id") or "").strip()
@@ -1438,6 +1438,12 @@ def _chat_feedback_state_meta(item: dict | str | None) -> tuple[str, str, str]:
             "online",
             "A resposta original foi validada tal como está e pode ser reutilizada diretamente.",
         )
+    if clean == "ignored":
+        return (
+            "Arquivada",
+            "neutral",
+            "Esta resposta foi retirada da fila manual. Não conta como correção pendente nem como memória aprovada do bot.",
+        )
     if clean == "review" and correction_state["is_ready"]:
         return (
             "Correção supervisionada pronta",
@@ -1563,7 +1569,7 @@ def _build_casebook_match_rows(case: dict, case_pool: list[dict], limit: int = 3
 
 
 def _build_admin_casebooks_payload() -> dict:
-    chat_feedback_allowed = {"all", "pending", "approved", "review"}
+    chat_feedback_allowed = {"all", "pending", "approved", "review", "ignored"}
     case_feedback_allowed = {"all", "pending", "approved", "avoid", "review"}
     case_type_allowed = {"", "entry", "departure", "shift"}
     source_type_allowed = {"all", "chat", "maneuver", "practice"}
@@ -1605,7 +1611,7 @@ def _build_admin_casebooks_payload() -> dict:
         status = (item.get("feedback_status") or "").strip().lower()
         if chat_feedback == "pending":
             visible = not status
-        elif chat_feedback in {"approved", "review"}:
+        elif chat_feedback in {"approved", "review", "ignored"}:
             visible = status == chat_feedback
         else:
             visible = True
@@ -1886,6 +1892,7 @@ def _build_admin_casebooks_payload() -> dict:
         "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
+        "chat_ignored_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "ignored"),
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),

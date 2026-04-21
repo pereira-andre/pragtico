@@ -296,6 +296,84 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertIn("Notas_Pilotagem.txt", html)
         self.assertNotIn("Correção bloqueada", html)
 
+    def test_archived_chat_feedback_leaves_exception_queue_and_has_own_state(self) -> None:
+        conversation = self.store.create_conversation("admin", "Arquivo")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Pergunta antiga")
+        answer = self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "assistant",
+            "Resposta antiga.",
+            channel="whatsapp",
+        )
+        self.store.update_message_feedback(
+            username="admin",
+            conversation_id=conversation["id"],
+            message_id=answer["id"],
+            feedback_status="ignored",
+            feedback_note="Já não acrescenta valor.",
+            feedback_updated_by="admin",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot?source_type=chat&chat_feedback=ignored")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Arquivada", html)
+        self.assertIn("Já não acrescenta valor.", html)
+        self.assertNotIn("Correção bloqueada", html)
+
+    def test_archiving_chat_feedback_removes_promoted_eval_case(self) -> None:
+        conversation = self.store.create_conversation("admin", "Arquivo eval")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Qual é a distância?")
+        answer = self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "assistant",
+            "Resposta errada.",
+            citations=[{"document": "Notas_Pilotagem.txt", "snippet": "Distância operacional."}],
+            channel="whatsapp",
+        )
+        self.store.update_message_feedback(
+            username="admin",
+            conversation_id=conversation["id"],
+            message_id=answer["id"],
+            feedback_status="review",
+            feedback_note="Corrigir.",
+            feedback_correction="A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da barra.",
+            feedback_updated_by="admin",
+        )
+        self.store.upsert_feedback_eval_case(
+            source_message_id=answer["id"],
+            document="Notas_Pilotagem.txt",
+            question="Qual é a distância?",
+            expected_answer="A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da barra.",
+            expected_substrings=["1 milha náutica"],
+            updated_by="admin",
+            source="web",
+        )
+
+        with app.app.test_client() as client:
+            csrf = self._set_admin_session(client)
+            response = client.post(
+                f"/admin/casebooks/messages/{answer['id']}/feedback",
+                data={
+                    "csrf_token": csrf,
+                    "owner_username": "admin",
+                    "conversation_id": conversation["id"],
+                    "return_to": "/admin/bot#casebooks",
+                    "feedback_status": "ignored",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        updated = next(item for item in self.store.list_messages("admin", conversation["id"]) if item["id"] == answer["id"])
+        self.assertEqual(updated["feedback_status"], "ignored")
+        self.assertEqual(updated["feedback_correction"], "")
+        self.assertEqual(self.store.list_feedback_eval_cases(), [])
+
     def test_quality_failures_expose_document_and_correction_actions(self) -> None:
         knowledge_dir = Path(self.store.knowledge_dir)
         (knowledge_dir / "evals").mkdir(parents=True, exist_ok=True)
