@@ -56,7 +56,6 @@ from .port_call_helpers import (
     _latest_reportable_maneuver,
     _normalize_maneuver_record,
     _normalize_port_call_record,
-    _apply_thruster_snapshot,
     _remove_embedded_report_note,
     _replace_embedded_report_note,
     _sync_port_call_from_history,
@@ -1957,8 +1956,6 @@ class LocalStore(BaseStore):
         entry_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Add a new pending entry maneuver after an aborted entry and return the updated record."""
         if not planned_entry_at.strip():
@@ -2010,7 +2007,6 @@ class LocalStore(BaseStore):
             current["eta"] = planned_entry_at
             current["last_port"] = origin
             current["berth"] = destination
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2030,8 +2026,6 @@ class LocalStore(BaseStore):
         departure_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Add a pending departure maneuver to the port call and return the updated record."""
         if not planned_departure_at.strip():
@@ -2077,7 +2071,6 @@ class LocalStore(BaseStore):
             )
             current["maneuver_history"].append(departure)
             current["next_port"] = destination
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2207,8 +2200,6 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot entry report to the entry maneuver and return the updated port call."""
         note = notes.strip()
@@ -2256,7 +2247,6 @@ class LocalStore(BaseStore):
             entry["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             entry["reported_at"] = iso_now()
             entry["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2275,8 +2265,6 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot departure report to the departure maneuver and return the updated port call."""
         note = notes.strip()
@@ -2324,7 +2312,6 @@ class LocalStore(BaseStore):
             departure["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             departure["reported_at"] = iso_now()
             departure["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2344,8 +2331,6 @@ class LocalStore(BaseStore):
         shift_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Add a pending berth-shift maneuver to the port call and return the updated record."""
         if not planned_shift_at.strip():
@@ -2390,7 +2375,6 @@ class LocalStore(BaseStore):
                 fallback_created_by=actor_username or current.get("created_by", "system"),
             )
             current["maneuver_history"].append(shift)
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2508,8 +2492,6 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot shift report to the shift maneuver and return the updated port call."""
         note = notes.strip()
@@ -2557,7 +2539,6 @@ class LocalStore(BaseStore):
             shift["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             shift["reported_at"] = iso_now()
             shift["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2582,8 +2563,6 @@ class LocalStore(BaseStore):
         constraints: Optional[List[str]] = None,
         plan_note: str = "",
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Edit the plan fields of a maneuver, log the change, and return the updated port call."""
         actor_username = _normalize_username(updated_by) or "system"
@@ -2625,7 +2604,6 @@ class LocalStore(BaseStore):
             elif target.get("type") == "shift":
                 current["shift_origin_berth"] = target["origin"]
                 current["shift_destination_berth"] = target["destination"]
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2646,8 +2624,6 @@ class LocalStore(BaseStore):
         draft_m: str,
         notes: str,
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Edit the report fields of a completed maneuver, log the change, and return the updated port call."""
         actor_username = _normalize_username(updated_by) or "piloto"
@@ -2692,7 +2668,6 @@ class LocalStore(BaseStore):
                 previous_note,
                 target["report_note"],
             )
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             current["updated_at"] = iso_now()
             updated = _sync_port_call_from_history(current)
             records[records.index(item)] = updated
@@ -2708,6 +2683,7 @@ class LocalStore(BaseStore):
         maneuver_id: str,
         *,
         updated_by: str,
+        force: bool = False,
     ) -> Dict:
         records = self._read_port_calls()
         for index, item in enumerate(records):
@@ -2717,7 +2693,7 @@ class LocalStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada.")
-            if target.get("state") != PORT_CALL_APPROVAL_PENDING:
+            if not force and target.get("state") != PORT_CALL_APPROVAL_PENDING:
                 raise ValueError("Só podes cancelar manobras pendentes. Depois da aprovação usa abortar.")
             if target.get("type") == "entry":
                 removed = _decorate_port_call(current)

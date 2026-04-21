@@ -58,7 +58,6 @@ from .port_call_helpers import (
     _latest_reportable_maneuver,
     _normalize_maneuver_record,
     _normalize_port_call_record,
-    _apply_thruster_snapshot,
     _remove_embedded_report_note,
     _replace_embedded_report_note,
     _sync_port_call_from_history,
@@ -2963,8 +2962,6 @@ class PostgresStore(BaseStore):
         constraints: Optional[List[str]] = None,
         plan_note: str = "",
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         actor_username = _normalize_username(updated_by) or "system"
         actor_profile = self.get_user_profile(actor_username)
@@ -3001,7 +2998,6 @@ class PostgresStore(BaseStore):
             elif target.get("type") == "shift":
                 current["shift_origin_berth"] = target["origin"]
                 current["shift_destination_berth"] = target["destination"]
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3017,8 +3013,6 @@ class PostgresStore(BaseStore):
         draft_m: str,
         notes: str,
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         actor_username = _normalize_username(updated_by) or "piloto"
         actor_profile = self.get_user_profile(actor_username)
@@ -3058,7 +3052,6 @@ class PostgresStore(BaseStore):
                 previous_note,
                 target["report_note"],
             )
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3069,6 +3062,7 @@ class PostgresStore(BaseStore):
         maneuver_id: str,
         *,
         updated_by: str,
+        force: bool = False,
     ) -> Dict:
         with self._connect() as conn:
             current = self._fetch_port_call_record(conn, port_call_id, for_update=True)
@@ -3077,7 +3071,7 @@ class PostgresStore(BaseStore):
             target = next((m for m in current.get("maneuver_history", []) if m.get("id") == maneuver_id), None)
             if not target:
                 raise ValueError("Manobra não encontrada.")
-            if target.get("state") != PORT_CALL_APPROVAL_PENDING:
+            if not force and target.get("state") != PORT_CALL_APPROVAL_PENDING:
                 raise ValueError("Só podes cancelar manobras pendentes. Depois da aprovação usa abortar.")
             if target.get("type") == "entry":
                 with conn.cursor() as cur:
@@ -3126,8 +3120,6 @@ class PostgresStore(BaseStore):
         entry_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         if not planned_entry_at.strip():
             raise ValueError("A hora prevista de entrada é obrigatória.")
@@ -3174,7 +3166,6 @@ class PostgresStore(BaseStore):
             current["eta"] = planned_entry_at
             current["last_port"] = origin
             current["berth"] = destination
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3189,8 +3180,6 @@ class PostgresStore(BaseStore):
         departure_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         if not planned_departure_at.strip():
             raise ValueError("A hora prevista de saída é obrigatória.")
@@ -3230,7 +3219,6 @@ class PostgresStore(BaseStore):
             )
             current["maneuver_history"].append(departure)
             current["next_port"] = destination
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3326,8 +3314,6 @@ class PostgresStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -3369,7 +3355,6 @@ class PostgresStore(BaseStore):
             entry["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             entry["reported_at"] = iso_now()
             entry["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3383,8 +3368,6 @@ class PostgresStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -3426,7 +3409,6 @@ class PostgresStore(BaseStore):
             departure["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             departure["reported_at"] = iso_now()
             departure["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3441,8 +3423,6 @@ class PostgresStore(BaseStore):
         shift_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         if not planned_shift_at.strip():
             raise ValueError("A hora prevista da mudança é obrigatória.")
@@ -3481,7 +3461,6 @@ class PostgresStore(BaseStore):
                 fallback_created_by=actor_username or current.get("created_by", "system"),
             )
             current["maneuver_history"].append(shift)
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)
@@ -3561,8 +3540,6 @@ class PostgresStore(BaseStore):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         note = notes.strip()
         if not maneuver_started_at.strip() or not maneuver_finished_at.strip():
@@ -3604,7 +3581,6 @@ class PostgresStore(BaseStore):
             shift["reported_by_profile"] = _build_actor_snapshot(actor_profile, username=actor_username)
             shift["reported_at"] = iso_now()
             shift["updated_at"] = iso_now()
-            _apply_thruster_snapshot(current, bow_thruster, stern_thruster)
             return current
 
         return self._mutate_port_call(port_call_id, mutator)

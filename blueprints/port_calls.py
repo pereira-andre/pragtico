@@ -889,8 +889,6 @@ def schedule_entry_plan(port_call_id: str):
         destination_berth = normalize_portal_berth(request.form.get("destination_berth", "").strip(), "Cais previsto")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         port_call = services.store.schedule_entry_plan(
             port_call_id=port_call_id,
             planned_entry_at=planned_entry_at,
@@ -908,8 +906,6 @@ def schedule_entry_plan(port_call_id: str):
             }),
             draft_m=draft_m,
             tug_count=tug_count,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -936,8 +932,6 @@ def schedule_departure_plan(port_call_id: str):
         next_port = require_form_text(request.form.get("next_port", "").strip(), "Próximo destino")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         port_call = services.store.schedule_departure_plan(
             port_call_id=port_call_id, planned_departure_at=planned_departure_at,
             updated_by=session["username"], next_port=next_port,
@@ -949,8 +943,6 @@ def schedule_departure_plan(port_call_id: str):
             }),
             draft_m=draft_m,
             tug_count=tug_count,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -998,8 +990,6 @@ def schedule_shift_plan(port_call_id: str):
             raise ValueError("O cais destino tem de ser diferente do local atual do navio.")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         port_call = services.store.schedule_shift_plan(
             port_call_id=port_call_id, planned_shift_at=planned_shift_at,
             updated_by=session["username"], destination_berth=destination_berth,
@@ -1011,8 +1001,6 @@ def schedule_shift_plan(port_call_id: str):
             }),
             draft_m=draft_m,
             tug_count=tug_count,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -1094,6 +1082,45 @@ def cancel_maneuver(port_call_id: str, maneuver_id: str):
     if target.get("type") == "entry":
         return redirect(url_for("dashboard_bp.dashboard"))
     return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+
+
+@bp.route("/port-calls/<port_call_id>/maneuvers/<maneuver_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_maneuver(port_call_id: str, maneuver_id: str):
+    """Apagar definitivamente uma manobra (incluindo arquivo). Apenas admin."""
+    try:
+        current = services.store.get_port_call(port_call_id)
+        target = maneuver_by_id(current, maneuver_id)
+        if not target:
+            raise ValueError("Manobra não encontrada.")
+        removed_or_updated = services.store.delete_maneuver(
+            port_call_id=port_call_id,
+            maneuver_id=maneuver_id,
+            updated_by=session["username"],
+            force=True,
+        )
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect_to_portal_target(port_call_id)
+    flash(f"Manobra apagada definitivamente para {removed_or_updated['vessel_name']}.", "success")
+    if target.get("type") == "entry":
+        return redirect(url_for("dashboard_bp.dashboard"))
+    return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+
+
+@bp.route("/port-calls/<port_call_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_port_call(port_call_id: str):
+    """Apagar definitivamente uma escala e o respetivo arquivo de manobras. Apenas admin."""
+    try:
+        removed = services.store.delete_port_call(port_call_id)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect_to_portal_target(port_call_id)
+    flash(f"Escala apagada definitivamente para {removed['vessel_name']}.", "success")
+    return redirect(url_for("dashboard_bp.dashboard"))
 
 
 @bp.route("/port-calls/<port_call_id>/complete-shift", methods=["POST"])
@@ -1192,8 +1219,6 @@ def attach_entry_report(port_call_id: str):
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Entrada")
         port_call = services.store.attach_entry_report(
             port_call_id=port_call_id,
@@ -1203,8 +1228,6 @@ def attach_entry_report(port_call_id: str):
             draft_m=draft_m,
             notes=note,
             maneuver_id=request.form.get("maneuver_id", "").strip() or None,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -1223,8 +1246,6 @@ def attach_departure_report(port_call_id: str):
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Saída")
         port_call = services.store.attach_departure_report(
             port_call_id=port_call_id,
@@ -1234,8 +1255,6 @@ def attach_departure_report(port_call_id: str):
             draft_m=draft_m,
             notes=note,
             maneuver_id=request.form.get("maneuver_id", "").strip() or None,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -1254,8 +1273,6 @@ def attach_shift_report(port_call_id: str):
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
-        bow_thruster = normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster")
-        stern_thruster = normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster")
         note = build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, "Mudança")
         port_call = services.store.attach_shift_report(
             port_call_id=port_call_id,
@@ -1265,8 +1282,6 @@ def attach_shift_report(port_call_id: str):
             draft_m=draft_m,
             notes=note,
             maneuver_id=request.form.get("maneuver_id", "").strip() or None,
-            bow_thruster=bow_thruster,
-            stern_thruster=stern_thruster,
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -1307,8 +1322,6 @@ def edit_maneuver_plan(port_call_id: str, maneuver_id: str):
             constraints=request.form.getlist("constraints"),
             plan_note=request.form.get("plan_observations", "").strip(),
             change_reason=require_form_text(request.form.get("change_reason", "").strip(), "Motivo da alteração"),
-            bow_thruster=normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster"),
-            stern_thruster=normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster"),
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -1347,8 +1360,6 @@ def edit_maneuver_report(port_call_id: str, maneuver_id: str):
             draft_m=draft_m,
             notes=build_pilot_report_note({"maneuver_started_at": maneuver_started_at, "maneuver_finished_at": maneuver_finished_at, "draft_m": draft_m, "notes": request.form.get("notes", "").strip()}, require_form_text(request.form.get("maneuver_label", "").strip(), "Manobra")),
             change_reason=require_form_text(request.form.get("change_reason", "").strip(), "Motivo da alteração"),
-            bow_thruster=normalize_thruster_state(request.form.get("vessel_bow_thruster", "unknown"), "Bow thruster"),
-            stern_thruster=normalize_thruster_state(request.form.get("vessel_stern_thruster", "unknown"), "Stern thruster"),
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")

@@ -1401,6 +1401,12 @@ def answer_direct_operational_query(
     recent_departures_answer = _answer_recent_departures_query(question, clean_question)
     if recent_departures_answer:
         return recent_departures_answer
+    expected_arrivals_answer = _answer_expected_arrivals_query(question, clean_question)
+    if expected_arrivals_answer:
+        return expected_arrivals_answer
+    planned_maneuvers_answer = _answer_planned_maneuvers_query(question, clean_question)
+    if planned_maneuvers_answer:
+        return planned_maneuvers_answer
     port_calls = current_resolvable_port_calls()
     matched_port_call = _match_port_call_from_question(question, port_calls)
 
@@ -1503,6 +1509,119 @@ def _answer_recent_departures_query(question: str, clean_question: str) -> dict 
             {
                 "document": "Saídas recentes do portal",
                 "source_id": "OPS_RECENT_DEPARTURES",
+                "retrieval_mode": "operational_live",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_live",
+    }
+
+
+def _looks_like_expected_arrivals_query(clean_question: str) -> bool:
+    if not clean_question:
+        return False
+    arrival_terms = {"chegada", "chegadas", "chegar", "chega", "entrada", "entradas", "previstos", "prevista", "previstas", "esperado", "esperados", "esperadas", "eta"}
+    tokens = set(clean_question.split())
+    if not (tokens & arrival_terms):
+        return False
+    scope_markers = {"proximo", "proximos", "hoje", "amanha", "breve", "semana", "navio", "navios", "agendados", "agendadas"}
+    if tokens & scope_markers:
+        return True
+    return "que vao chegar" in clean_question or "a chegar" in clean_question or "vao entrar" in clean_question
+
+
+def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict | None:
+    if not _looks_like_expected_arrivals_query(clean_question):
+        return None
+    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=30))
+    arrivals = list(port_activity.get("arrivals", []) or [])
+    if not arrivals:
+        answer = "Não há chegadas previstas registadas no portal para os próximos dias."
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "Chegadas previstas do portal",
+                    "source_id": "OPS_EXPECTED_ARRIVALS",
+                    "retrieval_mode": "operational_live",
+                    "snippet": answer,
+                }
+            ],
+            "answer_origin": "operational_live",
+        }
+    lines = ["Chegadas previstas registadas no portal:"]
+    for item in arrivals[:5]:
+        vessel_name = item.get("vessel_name") or "--"
+        eta_label = item.get("arrival_label") or item.get("planned_label") or _local_iso_to_label(item.get("arrival_at") or item.get("date_value"))
+        origin = item.get("last_port") or item.get("local_origin") or "--"
+        destination = item.get("berth_label") or item.get("berth") or item.get("local_destination") or "--"
+        lines.append(f"- {vessel_name} - ETA {eta_label} - {origin} -> {destination}.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Chegadas previstas do portal",
+                "source_id": "OPS_EXPECTED_ARRIVALS",
+                "retrieval_mode": "operational_live",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_live",
+    }
+
+
+def _looks_like_planned_maneuvers_query(clean_question: str) -> bool:
+    if not clean_question:
+        return False
+    maneuver_terms = {"manobra", "manobras", "planeadas", "planeado", "planeados", "agendadas", "agendados"}
+    tokens = set(clean_question.split())
+    if not (tokens & maneuver_terms):
+        return False
+    planned_markers = {"proxima", "proximas", "hoje", "amanha", "hoje", "previstas", "futuras", "agenda", "programa"}
+    if tokens & planned_markers:
+        return True
+    return "que estao planeadas" in clean_question or "que vao acontecer" in clean_question or "proximas manobras" in clean_question
+
+
+def _answer_planned_maneuvers_query(question: str, clean_question: str) -> dict | None:
+    if not _looks_like_planned_maneuvers_query(clean_question):
+        return None
+    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=30))
+    planned = list(port_activity.get("planned_maneuvers", []) or [])
+    if not planned:
+        answer = "Não há manobras planeadas registadas no portal neste momento."
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "Manobras planeadas do portal",
+                    "source_id": "OPS_PLANNED_MANEUVERS",
+                    "retrieval_mode": "operational_live",
+                    "snippet": answer,
+                }
+            ],
+            "answer_origin": "operational_live",
+        }
+    lines = ["Manobras planeadas registadas no portal:"]
+    for item in planned[:5]:
+        vessel_name = item.get("vessel_name") or "--"
+        planned_label = item.get("planned_label") or item.get("date_label") or _local_iso_to_label(item.get("date_value"))
+        maneuver_label = item.get("maneuver_label") or "Manobra"
+        origin = item.get("local_origin") or "--"
+        destination = item.get("local_destination") or "--"
+        situation = item.get("situation_label") or ""
+        situation_suffix = f" [{situation}]" if situation else ""
+        lines.append(f"- {vessel_name} - {maneuver_label} {planned_label} - {origin} -> {destination}{situation_suffix}.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Manobras planeadas do portal",
+                "source_id": "OPS_PLANNED_MANEUVERS",
                 "retrieval_mode": "operational_live",
                 "snippet": answer,
                 "question": question,
@@ -2360,16 +2479,17 @@ def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
     profile_name = profile.get("name") or clean_label
     document = profile.get("document") or ""
     rules: list[str] = []
-    ignored_markers = ("loa", "comprimento")
-    for key in ("maneuver_rules", "night_rules", "restrictions", "draft_rules"):
+    length_markers = ("loa", "comprimento")
+    meta_markers = ("nao confundir", "nao isola", "validar pelas restantes", "usar tms", "nao utilizar")
+    for key in ("draft_rules", "maneuver_rules", "night_rules", "restrictions"):
         for raw_rule in profile.get(key, []) or []:
             rule = " ".join(str(raw_rule or "").strip().rstrip(".").split())
             if not rule:
                 continue
             normalized = _operational_lookup_key(rule)
-            if any(marker in normalized for marker in ignored_markers):
+            if any(marker in normalized for marker in length_markers):
                 continue
-            if "calado" in normalized and not any(marker in normalized for marker in ("reponto", "preia", "baixa", "mare")):
+            if any(marker in normalized for marker in meta_markers):
                 continue
             if rule not in rules:
                 rules.append(rule)
@@ -2378,19 +2498,19 @@ def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
         if len(rules) >= 4:
             break
     if clean_label.startswith("TMS 2") and not any("posicoes" in _operational_lookup_key(rule) for rule in rules):
-        rules.append("TMS 2 conta com tres posicoes operacionais A, B e C nesta demo")
+        rules.append("TMS 2 tem tres posicoes operacionais: A, B e C")
     if not rules:
         return None
     normalized_rules = _operational_lookup_key(" ".join(rules))
     status = (
         "caution"
-        if any(marker in normalized_rules for marker in ("reponto", "preia", "baixa", "noite", "noturna", "proibida", "mare viva"))
+        if any(marker in normalized_rules for marker in ("reponto", "preia", "baixa", "noite", "noturna", "proibida", "mare viva", "calado"))
         else "info"
     )
     doc_label = f" ({document})" if document else ""
     detail = (
         f"{profile_name}{doc_label}: {'; '.join(rules[:4])}. "
-        "Calado e comprimento ficam informativos nesta demo, sem bloqueio automático."
+        "Comprimento fica informativo nesta demo; calado continua a contar."
     )
     return _build_checklist_item(status, "Regras do cais", detail)
 
@@ -3702,11 +3822,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             raw = fallback
         return " ".join(str(raw or "").strip().split())
 
-    def optional_thruster_field(name: str, label: str) -> str | None:
-        if name not in fields:
-            return None
-        return normalize_thruster_state(fields.get(name), label)
-
     def resolve_target_maneuver(current_port_call: dict, current_action: str, current_maneuver_type: str) -> dict | None:
         explicit_maneuver_id = (proposal.get("maneuver_id") or target.get("maneuver_id", "")).strip()
         if explicit_maneuver_id:
@@ -3739,8 +3854,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             field_text("plan_observations"),
             field_text("change_reason"),
             fields.get("constraints"),
-            "vessel_bow_thruster" in fields,
-            "vessel_stern_thruster" in fields,
         ]):
             return
         origin_value = field_text("origin", current_maneuver.get("origin") or current_port_call.get("last_port", ""))
@@ -3764,8 +3877,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             constraints=normalize_constraint_codes(fields.get("constraints") or current_maneuver.get("constraints", [])),
             plan_note=field_text("plan_observations", field_text("notes", current_maneuver.get("plan_observations", ""))),
             change_reason=require_form_text(field_text("change_reason", field_text("reason")), "Motivo da alteração"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
 
     if action == "create_port_call":
@@ -3889,8 +4000,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             draft_m=draft_m,
             notes=note,
             maneuver_id=target_maneuver.get("id"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Registo de entrada guardado para {result['vessel_name']}."
     if action == "schedule_departure":
@@ -3913,8 +4022,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             ),
             draft_m=field_text("draft_m"),
             tug_count=field_text("tug_count"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Saída planeada para {result['vessel_name']} às {result['planned_departure_label']}."
     if action == "approve_departure":
@@ -3948,8 +4055,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             draft_m=draft_m,
             notes=note,
             maneuver_id=target_maneuver.get("id"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Registo de saída guardado para {result['vessel_name']}."
     if action == "schedule_shift":
@@ -3975,8 +4080,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             }),
             draft_m=field_text("draft_m"),
             tug_count=field_text("tug_count"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Mudança planeada para {result['vessel_name']} às {result['planned_shift_label']}."
     if action == "approve_shift":
@@ -4015,8 +4118,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             draft_m=draft_m,
             notes=note,
             maneuver_id=target_maneuver.get("id"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Registo de mudança guardado para {result['vessel_name']}."
     if action == "edit_maneuver_plan":
@@ -4042,8 +4143,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             constraints=normalize_constraint_codes(fields.get("constraints") or (maneuver or {}).get("constraints", [])),
             plan_note=field_text("plan_observations", field_text("notes", (maneuver or {}).get("plan_observations", ""))),
             change_reason=require_form_text(field_text("change_reason"), "Motivo da alteração"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Planeamento atualizado para {result['vessel_name']}."
     if action == "edit_maneuver_report":
@@ -4060,8 +4159,6 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             maneuver_started_at=started_at, maneuver_finished_at=finished_at, draft_m=draft_m,
             notes=build_pilot_report_note({"maneuver_started_at": started_at, "maneuver_finished_at": finished_at, "draft_m": draft_m, "notes": field_text("notes", (maneuver or {}).get("report_note", ""))}, "Entrada" if maneuver_type == "entry" else "Saída" if maneuver_type == "departure" else "Mudança", existing_note=""),
             change_reason=require_form_text(field_text("change_reason"), "Motivo da alteração"),
-            bow_thruster=optional_thruster_field("vessel_bow_thruster", "Bow thruster"),
-            stern_thruster=optional_thruster_field("vessel_stern_thruster", "Stern thruster"),
         )
         return result, f"Registo operacional revisto para {result['vessel_name']}."
     if action == "delete_maneuver":

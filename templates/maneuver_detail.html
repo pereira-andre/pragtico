@@ -1,22 +1,4 @@
 {% extends "base.html" %}
-{% macro thruster_fields(scale) %}
-  <label>
-    Bow thruster
-    <select name="vessel_bow_thruster" required>
-      <option value="unknown" {% if scale.ship_profile.bow_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
-      <option value="no" {% if scale.ship_profile.bow_thruster_value == "no" %}selected{% endif %}>Não</option>
-      <option value="yes" {% if scale.ship_profile.bow_thruster_value == "yes" %}selected{% endif %}>Sim</option>
-    </select>
-  </label>
-  <label>
-    Stern thruster
-    <select name="vessel_stern_thruster" required>
-      <option value="unknown" {% if scale.ship_profile.stern_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
-      <option value="no" {% if scale.ship_profile.stern_thruster_value == "no" %}selected{% endif %}>Não</option>
-      <option value="yes" {% if scale.ship_profile.stern_thruster_value == "yes" %}selected{% endif %}>Sim</option>
-    </select>
-  </label>
-{% endmacro %}
 {% block content %}
 {% set maneuver = maneuver_view.maneuver %}
 <main class="ops-shell">
@@ -168,7 +150,6 @@
                           Rebocadores
                           <input type="number" min="0" name="tug_count" value="{{ maneuver.tug_count }}" required>
                         </label>
-                        {{ thruster_fields(scale) }}
                       </div>
                       <div class="constraint-picker">
                         <span class="mini-label">Restrições</span>
@@ -262,7 +243,7 @@
                   {% else %}
                     <input type="hidden" name="maneuver_id" value="{{ maneuver.id }}">
                   {% endif %}
-                  <strong>{% if maneuver.report_completed %}Editar registo{% elif is_aborted %}Registar aborto{% else %}Registar manobra{% endif %}</strong>
+                  <strong>{% if maneuver.report_completed %}Editar registo{% elif is_aborted %}Registar manobra abortada{% else %}Registar manobra{% endif %}</strong>
                   <div class="mini-grid planned-mini-grid">
                     <label>
                       Início da manobra
@@ -276,7 +257,6 @@
                       Calado
                       <input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required>
                     </label>
-                    {{ thruster_fields(scale) }}
                   </div>
                   <label>
                     Observações
@@ -312,6 +292,19 @@
           <div class="inline-link-row">
             <a class="outline-link" href="{{ url_for('admin.admin_bot', case_type=maneuver.type, _anchor='casebooks') }}">Abrir casebooks</a>
           </div>
+        </section>
+        <section class="panel inset-panel admin-danger-zone">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow danger">Zona de risco</p>
+              <h2>Apagar manobra</h2>
+            </div>
+          </div>
+          <p class="muted">Remove esta manobra do portal e do arquivo de casos. Usa só em caso de engano ou duplicado.</p>
+          <form method="post" action="{{ url_for('port_calls.delete_maneuver', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" onsubmit="return confirm('Apagar definitivamente esta manobra? Esta ação não pode ser revertida.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="mini-button danger-button">Apagar manobra</button>
+          </form>
         </section>
       {% endif %}
 

@@ -1,22 +1,4 @@
 {% extends "base.html" %}
-{% macro thruster_fields(scale) %}
-  <label>
-    Bow thruster
-    <select name="vessel_bow_thruster" required>
-      <option value="unknown" {% if scale.ship_profile.bow_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
-      <option value="no" {% if scale.ship_profile.bow_thruster_value == "no" %}selected{% endif %}>Não</option>
-      <option value="yes" {% if scale.ship_profile.bow_thruster_value == "yes" %}selected{% endif %}>Sim</option>
-    </select>
-  </label>
-  <label>
-    Stern thruster
-    <select name="vessel_stern_thruster" required>
-      <option value="unknown" {% if scale.ship_profile.stern_thruster_value == "unknown" %}selected{% endif %}>Desconhecido</option>
-      <option value="no" {% if scale.ship_profile.stern_thruster_value == "no" %}selected{% endif %}>Não</option>
-      <option value="yes" {% if scale.ship_profile.stern_thruster_value == "yes" %}selected{% endif %}>Sim</option>
-    </select>
-  </label>
-{% endmacro %}
 {% macro entry_plan_form(scale, port_call, constraint_options) %}
   <form method="post" action="{{ url_for('port_calls.schedule_entry_plan', port_call_id=port_call.id) }}" class="ops-form-card scale-action-card scale-plan-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -43,7 +25,6 @@
         Rebocadores
         <input type="number" name="tug_count" min="0" value="0" required>
       </label>
-      {{ thruster_fields(scale) }}
     </div>
     <p class="muted small-note scale-auto-origin-note">Usa esta opção quando uma entrada aprovada foi abortada e a escala continua prevista para nova marcação.</p>
     <div class="constraint-picker">
@@ -88,7 +69,6 @@
         Rebocadores
         <input type="number" name="tug_count" min="0" value="0" required>
       </label>
-      {{ thruster_fields(scale) }}
     </div>
     <p class="muted small-note scale-auto-origin-note">Origem automática: a saída segue o último local conhecido do navio ({{ scale.summary.current_location }}).</p>
     <div class="constraint-picker">
@@ -133,7 +113,6 @@
         Rebocadores
         <input type="number" name="tug_count" min="0" value="0" required>
       </label>
-      {{ thruster_fields(scale) }}
     </div>
     <p class="muted small-note scale-auto-origin-note">Origem automática: a mudança segue o local atual conhecido do navio ({{ scale.summary.current_location }}).</p>
     <div class="constraint-picker">
@@ -506,6 +485,22 @@
             </label>
             <p class="muted small-note">Agente e admin mantêm a escala e a ficha do navio. Estes dados atualizam o catálogo reutilizável do navio.</p>
             <button type="submit" class="mini-button">Guardar escala</button>
+          </form>
+        </details>
+      {% endif %}
+      {% if current_role == "admin" %}
+        <details class="panel inset-panel scale-compact-details admin-danger-zone">
+          <summary class="scale-compact-summary">
+            <div>
+              <p class="eyebrow danger">Zona de risco</p>
+              <h2>Apagar escala</h2>
+            </div>
+            <span class="scale-compact-toggle">Abrir</span>
+          </summary>
+          <form method="post" action="{{ url_for('port_calls.delete_port_call', port_call_id=port_call.id) }}" class="stack scale-compact-details-body" onsubmit="return confirm('Apagar definitivamente esta escala e o arquivo de manobras? Esta ação não pode ser revertida.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="muted small-note">Usa apenas em caso de engano ou duplicado. A escala e todas as manobras são removidas do portal e do arquivo de casos.</p>
+            <button type="submit" class="mini-button danger-button">Apagar escala e arquivo</button>
           </form>
         </details>
       {% endif %}

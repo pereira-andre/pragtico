@@ -312,6 +312,18 @@ def slot_berth_options(berth_options: Iterable[str] | None = None) -> List[str]:
     return list(dict.fromkeys(slots))
 
 
+def dropdown_berth_options(berth_options: Iterable[str] | None = None) -> List[str]:
+    options = list(berth_options or BERTH_OPTIONS)
+    result: List[str] = []
+    for item in options:
+        expanded = MULTI_SLOT_BERTHS.get(item)
+        if expanded:
+            result.extend(expanded)
+        else:
+            result.append(item)
+    return list(dict.fromkeys(result))
+
+
 def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None) -> tuple[int, str]:
     key = _berth_key(label)
     options = list(berth_options or BERTH_OPTIONS)

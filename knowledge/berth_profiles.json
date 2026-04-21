@@ -296,8 +296,7 @@
       ],
       "restrictions": [
         "Regra de separacao de 10% do comprimento para cada lado.",
-        "Calado maximo 12 m.",
-        "Nao confundir TMS2 com Terminal Multiusos Sul/Norte; usar TMS2 / Terminal de Contentores."
+        "Calado maximo 12 m."
       ],
       "tug_guidance": [
         "Aplicar IT-016; ajustar pela ocupacao do cais, vento, corrente e tipo de navio."

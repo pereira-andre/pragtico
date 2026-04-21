@@ -469,8 +469,6 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot entry report to the port call's entry maneuver."""
         raise NotImplementedError
@@ -485,8 +483,6 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot departure report to the port call's departure maneuver."""
         raise NotImplementedError
@@ -502,8 +498,6 @@ class BaseStore(ABC):
         shift_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Schedule a berth-shift maneuver plan for a port call."""
         raise NotImplementedError
@@ -543,8 +537,6 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
         maneuver_id: Optional[str] = None,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Attach a pilot shift report to the port call's shift maneuver."""
         raise NotImplementedError
@@ -565,8 +557,6 @@ class BaseStore(ABC):
         constraints: Optional[List[str]] = None,
         plan_note: str = "",
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Edit the plan fields of an existing maneuver and log the change."""
         raise NotImplementedError
@@ -583,8 +573,6 @@ class BaseStore(ABC):
         draft_m: str,
         notes: str,
         change_reason: str,
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Edit the report fields of a completed maneuver and log the change."""
         raise NotImplementedError
@@ -596,6 +584,7 @@ class BaseStore(ABC):
         maneuver_id: str,
         *,
         updated_by: str,
+        force: bool = False,
     ) -> Dict:
         """Delete a maneuver from a port call and return the updated or removed record."""
         raise NotImplementedError
@@ -634,8 +623,6 @@ class BaseStore(ABC):
         entry_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Schedule a new entry maneuver for a still-scheduled port call."""
         raise NotImplementedError
@@ -651,8 +638,6 @@ class BaseStore(ABC):
         departure_plan_note: str = "",
         draft_m: str = "",
         tug_count: str = "",
-        bow_thruster: Optional[str] = None,
-        stern_thruster: Optional[str] = None,
     ) -> Dict:
         """Schedule a departure plan for a port call and return the updated record."""
         raise NotImplementedError

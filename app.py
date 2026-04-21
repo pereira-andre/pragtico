@@ -29,7 +29,7 @@ from integrations.llm_provider import create_embedding_provider, create_llm_prov
 from integrations.local_warning_service import LocalWarningService
 from integrations.whatsapp_cloud import WhatsAppCloudService
 from domain.migration_service import migrate_local_json_to_postgres
-from domain.berth_layout import BERTH_OPTIONS, TERMINAL_OPTIONS
+from domain.berth_layout import BERTH_OPTIONS, TERMINAL_OPTIONS, dropdown_berth_options
 from integrations.rag_engine import SimpleRAGEngine
 from core.live_data_refresh import PeriodicTaskScheduler
 from core.reindex_scheduler import DeferredTaskScheduler
@@ -492,7 +492,7 @@ def inject_globals():
         "auth_backend": getattr(auth_service, "backend_name", "unknown"),
         "storage_backend": getattr(store, "backend_name", "unknown"),
         "rag_backend": getattr(index_store, "backend_name", "unknown"),
-        "berth_options": BERTH_OPTIONS,
+        "berth_options": dropdown_berth_options(BERTH_OPTIONS),
         "terminal_options": TERMINAL_OPTIONS,
         "vessel_type_options": VESSEL_TYPE_OPTIONS,
         "constraint_options": CONSTRAINT_OPTIONS,

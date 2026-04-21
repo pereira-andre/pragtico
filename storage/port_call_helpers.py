@@ -16,7 +16,6 @@ from domain.cost_engine import (
     classify_cancellation_timing,
 )
 from domain.document_processing import iso_now
-from core.validators import normalize_thruster_state
 
 from .constants import (
     ALLOWED_PORT_CALL_APPROVAL_STATUSES,
@@ -208,13 +207,6 @@ def _thruster_state_label(value: Optional[str]) -> str:
     if clean == "no":
         return "Não"
     return "Desconhecido"
-
-
-def _apply_thruster_snapshot(record: Dict, bow_thruster: Optional[str] = None, stern_thruster: Optional[str] = None) -> None:
-    if bow_thruster is not None:
-        record["vessel_bow_thruster"] = normalize_thruster_state(bow_thruster, "Bow thruster")
-    if stern_thruster is not None:
-        record["vessel_stern_thruster"] = normalize_thruster_state(stern_thruster, "Stern thruster")
 
 
 def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
