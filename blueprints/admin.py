@@ -7,6 +7,8 @@ import logging
 import os
 from pathlib import Path
 import re
+from threading import Lock
+from time import monotonic
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
@@ -63,7 +65,15 @@ from core.bot_insights import (
     build_sources_snapshot,
     compute_health_score,
 )
-from core.bot_settings import DEFAULTS as BOT_SETTINGS_DEFAULTS, load_bot_settings, reset_bot_settings, save_bot_settings
+from core.bot_settings import (
+    DEFAULTS as BOT_SETTINGS_DEFAULTS,
+    list_bot_settings_history,
+    load_bot_settings,
+    merge_bot_settings_history,
+    reset_bot_settings,
+    restore_bot_settings_revision,
+    save_bot_settings,
+)
 from domain.migration_service import migrate_local_json_to_postgres
 from storage.maneuver_case_helpers import build_case_environment_signature, rank_similar_maneuver_cases
 from storage.utils import _local_iso_to_label
@@ -79,6 +89,14 @@ SYSTEM_DATABASE_EXPORT_KIND = "pragtico.system_database_export"
 DATABASE_EXPORT_VERSION = 1
 ADMIN_CASEBOOK_DEFAULT_LIMIT = 8
 ADMIN_CASEBOOK_ALLOWED_LIMITS = (8, 16, 40, 80)
+ADMIN_BOT_SNAPSHOT_TTL_SECONDS = 30
+_ADMIN_BOT_SNAPSHOT_LOCK = Lock()
+_ADMIN_BOT_SNAPSHOT_CACHE = {
+    "built_at_monotonic": 0.0,
+    "data_dir": "",
+    "settings_updated_at": "",
+    "payload": None,
+}
 SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES = {".txt", ".md", ".json"}
 POSTGRES_EXPORT_TABLES = {
     "app_users": {
@@ -583,6 +601,7 @@ def _build_bot_database_export() -> dict:
             "maneuver_cases": services.store.list_maneuver_cases(limit=5000),
             "practice_experience": practice_experience_state(services.store),
             "bot_settings": load_bot_settings(),
+            "bot_settings_history": list_bot_settings_history(limit=None),
         },
     }
 
@@ -636,10 +655,18 @@ def _import_bot_database_payload(payload: dict) -> dict:
     }
 
     imported_settings = body.get("bot_settings")
+    imported_settings_history = body.get("bot_settings_history")
+    if isinstance(imported_settings_history, list):
+        stats["settings"] += merge_bot_settings_history(imported_settings_history)
     if isinstance(imported_settings, dict):
         try:
-            save_bot_settings(imported_settings, updated_by=session.get("username", "admin"))
-            stats["settings"] = 1
+            save_bot_settings(
+                imported_settings,
+                updated_by=session.get("username", "admin"),
+                action="import",
+                summary="Definições importadas do backup.",
+            )
+            stats["settings"] += 1
         except Exception:
             logger.exception("Falha ao importar bot_settings.")
             stats["skipped"] += 1
@@ -1062,7 +1089,128 @@ def _safe_return_to(value: str | None) -> str:
     rebuilt = parsed.path
     if parsed.query:
         rebuilt = f"{rebuilt}?{parsed.query}"
+    if parsed.fragment:
+        rebuilt = f"{rebuilt}#{parsed.fragment}"
     return rebuilt
+
+
+BOT_SETTINGS_LABELS = {
+    "auto_promote_corrections": "Auto-promover correções",
+    "auto_trust_positive_feedback": "Confiar no feedback positivo",
+    "require_admin_validation": "Exigir validação admin",
+    "signals_window_hours": "Janela dos sinais",
+    "review_guard_similarity": "Similaridade de guard",
+    "review_block_similarity": "Similaridade de bloqueio",
+    "review_correction_similarity": "Similaridade de correção",
+    "trusted_document_hint_similarity": "Hint de documento confiável",
+    "outlier_review_threshold": "Outlier de manobra",
+}
+BOT_SETTINGS_ACTION_LABELS = {
+    "update": "Ajuste manual",
+    "reset": "Reset para defaults",
+    "rollback": "Rollback",
+    "import": "Importação",
+}
+
+
+def _format_bot_setting_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "Ativo" if value else "Desligado"
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    return str(value or "0")
+
+
+def _build_admin_bot_settings_history(limit: int = 8) -> list[dict]:
+    rows = []
+    for index, item in enumerate(list_bot_settings_history(limit=limit), start=1):
+        change_rows = []
+        changes = item.get("changes") or {}
+        for key in item.get("changed_keys") or []:
+            change = changes.get(key) or {}
+            change_rows.append(
+                {
+                    "label": BOT_SETTINGS_LABELS.get(key, key),
+                    "detail": f"{_format_bot_setting_value(change.get('before'))} → {_format_bot_setting_value(change.get('after'))}",
+                }
+            )
+        changed_at = str(item.get("changed_at") or "").strip()
+        rows.append(
+            {
+                "revision_id": str(item.get("revision_id") or ""),
+                "action_label": BOT_SETTINGS_ACTION_LABELS.get(str(item.get("action") or ""), "Atualização"),
+                "changed_by": str(item.get("changed_by") or "").strip() or "sistema",
+                "changed_at": changed_at,
+                "changed_at_label": _local_iso_to_label(changed_at) if changed_at else "",
+                "summary": str(item.get("summary") or "").strip(),
+                "change_rows": change_rows[:4],
+                "remaining_changes": max(len(change_rows) - 4, 0),
+                "is_current": index == 1,
+            }
+        )
+    return rows
+
+
+def _invalidate_admin_bot_snapshot_cache() -> None:
+    with _ADMIN_BOT_SNAPSHOT_LOCK:
+        _ADMIN_BOT_SNAPSHOT_CACHE.update(
+            {
+                "built_at_monotonic": 0.0,
+                "data_dir": "",
+                "settings_updated_at": "",
+                "payload": None,
+            }
+        )
+
+
+def _build_admin_bot_snapshot_payload(settings: dict) -> dict:
+    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
+    sources = build_sources_snapshot()
+    quality = build_quality_snapshot()
+    exceptions = build_exceptions(limit=12)
+    health = compute_health_score(quality, signals, exceptions, sources)
+    refreshed_at = datetime.now(timezone.utc).isoformat()
+    return {
+        "settings": settings,
+        "settings_history": _build_admin_bot_settings_history(),
+        "signals": signals,
+        "sources": sources,
+        "quality": quality,
+        "exceptions": exceptions,
+        "health": health,
+        "snapshot_refreshed_at": refreshed_at,
+        "snapshot_refreshed_at_label": _local_iso_to_label(refreshed_at),
+    }
+
+
+def _load_admin_bot_snapshot(force_refresh: bool = False) -> dict:
+    settings = load_bot_settings()
+    settings_updated_at = str(settings.get("updated_at") or "")
+    data_dir = str(getattr(services, "DATA_DIR", "") or "")
+    now = monotonic()
+    with _ADMIN_BOT_SNAPSHOT_LOCK:
+        cached_payload = _ADMIN_BOT_SNAPSHOT_CACHE.get("payload")
+        cache_is_fresh = (
+            not force_refresh
+            and cached_payload is not None
+            and _ADMIN_BOT_SNAPSHOT_CACHE.get("data_dir") == data_dir
+            and _ADMIN_BOT_SNAPSHOT_CACHE.get("settings_updated_at") == settings_updated_at
+            and (now - float(_ADMIN_BOT_SNAPSHOT_CACHE.get("built_at_monotonic") or 0.0)) < ADMIN_BOT_SNAPSHOT_TTL_SECONDS
+        )
+        if cache_is_fresh:
+            return cached_payload
+
+    payload = _build_admin_bot_snapshot_payload(settings)
+    with _ADMIN_BOT_SNAPSHOT_LOCK:
+        _ADMIN_BOT_SNAPSHOT_CACHE.update(
+            {
+                "built_at_monotonic": now,
+                "data_dir": data_dir,
+                "settings_updated_at": settings_updated_at,
+                "payload": payload,
+            }
+        )
+    return payload
 
 
 def _documents_return_to() -> str:
@@ -1745,20 +1893,18 @@ def admin_status():
 def admin_bot():
     """Painel de saúde, fontes, sinais e governança do bot."""
     refresh_knowledge_state(force_reindex=False)
-    settings = load_bot_settings()
-    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
-    sources = build_sources_snapshot()
-    quality = build_quality_snapshot()
-    exceptions = build_exceptions(limit=12)
-    health = compute_health_score(quality, signals, exceptions, sources)
+    snapshot = _load_admin_bot_snapshot()
     return render_template(
         "admin_bot.html",
-        health=health,
-        signals=signals,
-        sources=sources,
-        quality=quality,
-        exceptions=exceptions,
-        settings=settings,
+        health=snapshot["health"],
+        signals=snapshot["signals"],
+        sources=snapshot["sources"],
+        quality=snapshot["quality"],
+        exceptions=snapshot["exceptions"],
+        settings=snapshot["settings"],
+        settings_history=snapshot["settings_history"],
+        snapshot_refreshed_at=snapshot["snapshot_refreshed_at"],
+        snapshot_refreshed_at_label=snapshot["snapshot_refreshed_at_label"],
         settings_defaults=BOT_SETTINGS_DEFAULTS,
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
@@ -1779,6 +1925,7 @@ def admin_bot_settings():
         for bool_key in ("auto_promote_corrections", "auto_trust_positive_feedback", "require_admin_validation"):
             updates[bool_key] = bool_key in request.form
         save_bot_settings(updates, updated_by=session.get("username") or "admin")
+        _invalidate_admin_bot_snapshot_cache()
         flash("Definições do bot atualizadas.", "success")
     except Exception as exc:
         logger.exception("Falha ao guardar definições do bot.")
@@ -1793,7 +1940,26 @@ def admin_bot_settings_reset():
     """Repor definições do bot para os valores por defeito."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
     reset_bot_settings(updated_by=session.get("username") or "admin")
+    _invalidate_admin_bot_snapshot_cache()
     flash("Definições do bot repostas aos valores por defeito.", "success")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/settings/rollback/<revision_id>", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_bot_settings_rollback(revision_id: str):
+    """Repor as definições do bot para uma revisão anterior."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
+    try:
+        restore_bot_settings_revision(revision_id, updated_by=session.get("username") or "admin")
+        _invalidate_admin_bot_snapshot_cache()
+        flash("Rollback das definições do bot concluído.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.exception("Falha no rollback das definições do bot.")
+        flash(f"Falha no rollback das definições do bot: {exc}", "error")
     return redirect(return_to)
 
 
@@ -1806,6 +1972,7 @@ def admin_bot_rerun_evals():
     try:
         refresh_knowledge_state(force_reindex=False)
         snapshot = build_quality_snapshot()
+        _invalidate_admin_bot_snapshot_cache()
         passed = snapshot.get("passed_total", 0)
         total = snapshot.get("active_cases_total", 0)
         failed = snapshot.get("failed_total", 0)
@@ -1844,6 +2011,7 @@ def admin_bot_playground():
             "answer": result.get("answer", ""),
             "sources": result.get("sources", []),
             "answer_origin": result.get("answer_origin", ""),
+            "trace": result.get("trace", {}),
         }
     )
 
@@ -1873,6 +2041,7 @@ def import_bot_database():
     try:
         payload = _read_admin_json_upload("bot_database_file")
         stats = _import_bot_database_payload(payload)
+        _invalidate_admin_bot_snapshot_cache()
         flash(
             "Base do bot importada: "
             f"{stats['feedback_eval_cases']} eval(s), {stats['chat_feedback']} feedback(s) de chat, "
@@ -1902,6 +2071,7 @@ def import_system_database():
         payload = _read_admin_json_upload("system_database_file")
         stats = _import_system_database_payload(payload, mode=mode)
         refresh_knowledge_state(force_reindex=True)
+        _invalidate_admin_bot_snapshot_cache()
         flash(
             "Base do sistema importada em modo "
             f"{'substituir' if mode == 'replace' else 'juntar'}: "
@@ -2077,6 +2247,7 @@ def import_practice_experience():
             updated_by=session["username"],
             replace_source=bool(request.form.get("replace_source")),
         )
+        _invalidate_admin_bot_snapshot_cache()
         flash(
             f"Experiência prática carregada: {stats['raw_rows']} manobras agregadas em "
             f"{stats['pattern_count']} padrões. Tipos: {stats['maneuver_types_label']}.",
@@ -2108,6 +2279,7 @@ def update_practice_experience(record_id: str):
             feedback_note=feedback_note,
             feedback_by=session["username"],
         )
+        _invalidate_admin_bot_snapshot_cache()
         flash("Experiência prática atualizada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -2125,6 +2297,8 @@ def delete_practice_experience(record_id: str):
         record_id,
         deleted_by=session["username"],
     )
+    if removed:
+        _invalidate_admin_bot_snapshot_cache()
     flash("Experiência prática removida." if removed else "Experiência prática não encontrada.", "success" if removed else "error")
     return redirect(return_to)
 
@@ -2136,6 +2310,7 @@ def clear_practice_experience():
     """Limpar todos os padrões importados de experiência prática."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
     removed = clear_practice_experience_records(services.store, cleared_by=session["username"])
+    _invalidate_admin_bot_snapshot_cache()
     flash(f"Foram removidos {removed} padrão(ões) de experiência prática.", "success")
     return redirect(return_to)
 
@@ -2168,6 +2343,7 @@ def admin_casebooks_message_feedback(message_id: str):
             message_id,
             source="web",
         )
+        _invalidate_admin_bot_snapshot_cache()
         flash("Decisão sobre a mensagem guardada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -2191,6 +2367,7 @@ def admin_casebooks_maneuver_feedback(maneuver_id: str):
             feedback_note=feedback_note,
             feedback_by=session["username"],
         )
+        _invalidate_admin_bot_snapshot_cache()
         flash("Validação do caso operacional guardada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")

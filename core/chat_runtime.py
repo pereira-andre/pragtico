@@ -678,6 +678,189 @@ def _should_prefer_berth_profile_answer(question: str, companion_answer: str) ->
     return False
 
 
+_PLAYGROUND_ROUTE_META = {
+    "berth_profile": (
+        "Perfil de cais",
+        "Resposta curta a partir do perfil de cais mais relevante, sem chamar o LLM.",
+    ),
+    "document_companion": (
+        "Companion do documento",
+        "O documento alvo tinha um companion com resposta direta suficiente para esta pergunta.",
+    ),
+    "document_companion_global": (
+        "Companion global",
+        "O bot encontrou uma FAQ validada noutro companion e respondeu sem síntese adicional.",
+    ),
+    "review_correction_memory": (
+        "Correção em review reutilizada",
+        "Foi reutilizada uma correção humana suficientemente próxima e orientada para este contexto.",
+    ),
+    "review_guard": (
+        "Guard de review",
+        "O bot encontrou uma resposta muito semelhante ainda em revisão e evitou reutilizá-la como validada.",
+    ),
+    "llm": (
+        "Síntese LLM",
+        "O bot precisou de combinar contexto live e conhecimento documental antes de responder.",
+    ),
+    "error": (
+        "Erro",
+        "O playground não conseguiu completar o pedido com o runtime atual.",
+    ),
+    "empty": (
+        "Sem resposta",
+        "O pipeline terminou sem resposta final útil.",
+    ),
+}
+_PLAYGROUND_FACET_LABELS = {
+    "tides": "Maré",
+    "weather": "Meteorologia",
+    "waves": "Ondulação",
+    "warnings": "Avisos",
+}
+
+
+def _playground_route_meta(answer_origin: str) -> tuple[str, str]:
+    origin = str(answer_origin or "").strip()
+    if origin in _PLAYGROUND_ROUTE_META:
+        return _PLAYGROUND_ROUTE_META[origin]
+    if origin.startswith("operational_"):
+        return (
+            "Consulta operacional direta",
+            "A pergunta foi resolvida diretamente a partir dos dados operacionais/live sem síntese documental.",
+        )
+    if origin.startswith("slash_"):
+        return (
+            "Comando estruturado",
+            "O runtime reconheceu um fluxo estruturado e devolveu a respetiva resposta pronta.",
+        )
+    humanized = origin.replace("_", " ").strip() or "Pipeline interno"
+    return (humanized[:1].upper() + humanized[1:], "Rota interna do runtime.")
+
+
+def _playground_match_summary(matches: list[dict]) -> str:
+    if not matches:
+        return "0 match(es)"
+    top_similarity = float((matches[0] or {}).get("similarity") or 0.0)
+    if top_similarity > 0:
+        return f"{len(matches)} match(es) · topo {top_similarity:.2f}"
+    return f"{len(matches)} match(es)"
+
+
+def _playground_source_summary(sources: list[dict]) -> str:
+    labels: list[str] = []
+    for source in sources or []:
+        if not isinstance(source, dict):
+            continue
+        label = str(source.get("document") or source.get("source_id") or "").strip()
+        if not label or label in labels:
+            continue
+        labels.append(label)
+        if len(labels) >= 4:
+            break
+    if not labels:
+        return "Sem citações estruturadas."
+    return ", ".join(labels)
+
+
+def _playground_trace_row(label: str, detail: str) -> dict | None:
+    clean_label = str(label or "").strip()
+    clean_detail = str(detail or "").strip()
+    if not clean_label or not clean_detail:
+        return None
+    return {
+        "label": clean_label,
+        "detail": clean_detail,
+    }
+
+
+def _build_playground_trace(
+    *,
+    execution_plan: ChatExecutionPlan,
+    answer: dict,
+    trusted_answers: list[dict],
+    reviewed_answers: list[dict],
+    review_guard_match: dict | None,
+    review_correction_match: dict | None,
+    targeted_document_context: dict | None = None,
+    berth_profile_match: dict | None = None,
+    global_companion_match: dict | None = None,
+) -> dict:
+    route_label, route_detail = _playground_route_meta(answer.get("answer_origin", ""))
+    rows: list[dict] = []
+
+    rows.append(_playground_trace_row("Intenção", execution_plan.primary_intent.replace("_", " ")))
+    if execution_plan.live_facets:
+        live_label = ", ".join(_PLAYGROUND_FACET_LABELS.get(item, item) for item in execution_plan.live_facets)
+        rows.append(_playground_trace_row("Facetas live", live_label))
+    if execution_plan.explicit_rule_codes:
+        rows.append(_playground_trace_row("Regras pedidas", ", ".join(f"IT-{code}" for code in execution_plan.explicit_rule_codes)))
+
+    target_record = (targeted_document_context or {}).get("record") or {}
+    target_document_name = str(target_record.get("name") or "").strip()
+    if target_document_name:
+        rows.append(_playground_trace_row("Documento alvo", target_document_name))
+
+    companion_answer = str((targeted_document_context or {}).get("companion_answer") or "").strip()
+    if companion_answer and target_document_name:
+        rows.append(_playground_trace_row("Companion do documento", "Disponível para resposta curta sem síntese."))
+
+    berth_profile = (berth_profile_match or {}).get("profile") or {}
+    berth_name = str(berth_profile.get("name") or "").strip()
+    if berth_name:
+        profile_score = float((berth_profile_match or {}).get("score") or 0.0)
+        rows.append(_playground_trace_row("Perfil de cais", f"{berth_name} · score {profile_score:.2f}"))
+
+    global_companion = (global_companion_match or {}).get("companion") or {}
+    global_document = str(global_companion.get("document") or "").strip()
+    if global_document:
+        rows.append(_playground_trace_row("Companion global", global_document))
+
+    rows.append(_playground_trace_row("Memória aprovada", _playground_match_summary(trusted_answers)))
+    rows.append(_playground_trace_row("Memória em review", _playground_match_summary(reviewed_answers)))
+
+    if review_correction_match:
+        correction_document = str(review_correction_match.get("feedback_correction_document") or "").strip()
+        correction_detail = f"Disponível · similaridade {float(review_correction_match.get('similarity') or 0.0):.2f}"
+        if correction_document:
+            correction_detail = f"{correction_detail} · {correction_document}"
+        rows.append(_playground_trace_row("Correção em review", correction_detail))
+    elif review_guard_match:
+        rows.append(
+            _playground_trace_row(
+                "Guard de review",
+                f"Ativo · similaridade {float(review_guard_match.get('similarity') or 0.0):.2f}",
+            )
+        )
+
+    rows.append(_playground_trace_row("Fontes citadas", _playground_source_summary(answer.get("sources") or [])))
+    rows.append(
+        _playground_trace_row(
+            "LLM",
+            "Chamado para síntese final." if str(answer.get("answer_origin") or "") == "llm" else "Não foi preciso chamar o LLM.",
+        )
+    )
+
+    flags = [
+        {"label": "Síntese", "value": "Sim" if execution_plan.requires_llm_synthesis else "Não"},
+        {"label": "Live reasoning", "value": "Sim" if execution_plan.requires_live_reasoning else "Não"},
+        {"label": "Documentos", "value": "Sim" if execution_plan.wants_documents else "Não"},
+        {"label": "Histórico", "value": "Sim" if execution_plan.needs_history_state else "Não"},
+    ]
+
+    trace = {
+        "route_label": route_label,
+        "route_detail": route_detail,
+        "rows": [item for item in rows if item],
+        "flags": flags,
+        "plan": execution_plan.to_dict(),
+    }
+    review_match = answer.get("review_match")
+    if isinstance(review_match, dict) and review_match:
+        trace["review_match"] = review_match
+    return trace
+
+
 def playground_answer(
     *,
     username: str,
@@ -714,7 +897,15 @@ def playground_answer(
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
-            return direct_answer
+            direct_answer["trace"] = _build_playground_trace(
+                execution_plan=execution_plan,
+                answer=direct_answer,
+                trusted_answers=trusted_answers,
+                reviewed_answers=reviewed_answers,
+                review_guard_match=review_guard_match,
+                review_correction_match=review_correction_match,
+            )
+            return add_contextual_response_emojis(direct_answer, clean_question)
 
         runtime_history: list[dict] = []
         conversation_state = build_conversation_reasoning_state(
@@ -744,6 +935,7 @@ def playground_answer(
 
         allow_companion_shortcut = not execution_plan.requires_llm_synthesis
         answer: dict | None = None
+        global_companion_match: dict | None = None
         if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
             clean_question,
             targeted_document_context["companion_answer"],
@@ -795,11 +987,23 @@ def playground_answer(
                     answer = _build_review_guard_answer(review_guard_match)
                 else:
                     if not services.rag.can_generate():
-                        return {
+                        error_answer = {
                             "answer": "Define a API key do LLM antes de usar o playground.",
                             "sources": [],
                             "answer_origin": "error",
                         }
+                        error_answer["trace"] = _build_playground_trace(
+                            execution_plan=execution_plan,
+                            answer=error_answer,
+                            trusted_answers=trusted_answers,
+                            reviewed_answers=reviewed_answers,
+                            review_guard_match=review_guard_match,
+                            review_correction_match=review_correction_match,
+                            targeted_document_context=targeted_document_context,
+                            berth_profile_match=berth_profile_match,
+                            global_companion_match=global_companion_match,
+                        )
+                        return error_answer
                     answer = services.rag.answer(
                         question=clean_question,
                         retrieval_question=targeted_document_context["retrieval_question"],
@@ -812,8 +1016,19 @@ def playground_answer(
                         conversation_state=conversation_state,
                     )
                     answer["answer_origin"] = "llm"
-
-        return add_contextual_response_emojis(answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"}, clean_question)
+        final_answer = answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"}
+        final_answer["trace"] = _build_playground_trace(
+            execution_plan=execution_plan,
+            answer=final_answer,
+            trusted_answers=trusted_answers,
+            reviewed_answers=reviewed_answers,
+            review_guard_match=review_guard_match,
+            review_correction_match=review_correction_match,
+            targeted_document_context=targeted_document_context,
+            berth_profile_match=berth_profile_match,
+            global_companion_match=global_companion_match,
+        )
+        return add_contextual_response_emojis(final_answer, clean_question)
 
 
 def handle_chat_turn(

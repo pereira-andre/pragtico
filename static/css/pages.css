@@ -3979,6 +3979,19 @@ button:hover {
 .admin-bot-playground-sources {
   margin-top: 10px;
 }
+.admin-bot-playground-trace {
+  margin-top: 12px;
+}
+.admin-bot-playground-trace-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.admin-bot-playground-trace-route {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text);
+}
 .admin-bot-playground-sources ul {
   margin: 8px 0 0;
   padding-left: 18px;
@@ -4226,6 +4239,31 @@ button:hover {
   display: flex;
   justify-content: flex-end;
 }
+.admin-bot-settings-history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.admin-bot-settings-history-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.admin-bot-settings-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.admin-bot-settings-history-head p,
+.admin-bot-settings-history-summary {
+  margin: 0;
+}
 
 /* Legacy casebooks collapsed */
 .admin-bot-legacy-casebooks {
@@ -4241,5 +4279,8 @@ button:hover {
   }
   .admin-bot-event {
     grid-template-columns: 1fr;
+  }
+  .admin-bot-settings-history-head {
+    flex-direction: column;
   }
 }

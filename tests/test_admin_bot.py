@@ -17,9 +17,10 @@ os.environ.setdefault("RAG_INDEX_BACKEND", "local")
 os.environ.pop("DATABASE_URL", None)
 
 import app  # noqa: E402
+from blueprints import admin as admin_blueprint  # noqa: E402
 from core import services  # noqa: E402
 from core.bot_insights import build_sources_snapshot  # noqa: E402
-from core.bot_settings import DEFAULTS, load_bot_settings  # noqa: E402
+from core.bot_settings import DEFAULTS, list_bot_settings_history, load_bot_settings  # noqa: E402
 from storage.local import LocalStore  # noqa: E402
 
 
@@ -68,8 +69,10 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.original_data_dir = getattr(services, "DATA_DIR", "")
         services.store = self.store
         services.DATA_DIR = str(base / "data")
+        admin_blueprint._invalidate_admin_bot_snapshot_cache()
 
     def tearDown(self) -> None:
+        admin_blueprint._invalidate_admin_bot_snapshot_cache()
         services.store = self.original_store
         services.DATA_DIR = self.original_data_dir
         self.temp_dir.cleanup()
@@ -90,12 +93,15 @@ class AdminBotDashboardTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         for marker in (
             "Painel operacional",
+            "Snapshot do painel atualizado",
             "Playground",
+            "Como decidiu",
             "De onde o bot aprende",
             "O que o bot está a aprender",
             "Só o que precisa",
             "Evals de conhecimento",
             "Definições e aprendizagem",
+            "Histórico recente",
             "Pass rate:",
         ):
             self.assertIn(marker, html, msg=f"missing marker: {marker}")
@@ -135,11 +141,51 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertIn(response.status_code, (200, 302))
         self.assertEqual(load_bot_settings()["signals_window_hours"], DEFAULTS["signals_window_hours"])
 
+    def test_settings_history_supports_rollback(self) -> None:
+        with app.app.test_client() as client:
+            csrf = self._set_admin_session(client)
+            client.post(
+                "/admin/bot/settings",
+                data={"csrf_token": csrf, "signals_window_hours": "48"},
+            )
+            first_revision = list_bot_settings_history(limit=1)[0]["revision_id"]
+            client.post(
+                "/admin/bot/settings",
+                data={"csrf_token": csrf, "signals_window_hours": "72"},
+            )
+            response = client.post(
+                f"/admin/bot/settings/rollback/{first_revision}",
+                data={"csrf_token": csrf},
+            )
+
+        self.assertIn(response.status_code, (200, 302))
+        self.assertEqual(load_bot_settings()["signals_window_hours"], 48)
+        history = list_bot_settings_history(limit=3)
+        self.assertEqual(history[0]["action"], "rollback")
+        self.assertEqual(history[1]["action"], "update")
+
+    def test_admin_bot_snapshot_cache_reuses_payload_within_ttl(self) -> None:
+        with patch("blueprints.admin._build_admin_bot_snapshot_payload", wraps=admin_blueprint._build_admin_bot_snapshot_payload) as builder:
+            with app.app.test_client() as client:
+                self._set_admin_session(client)
+                first = client.get("/admin/bot")
+                second = client.get("/admin/bot")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(builder.call_count, 1)
+
     def test_playground_returns_answer_shape(self) -> None:
         fake_answer = {
             "answer": "Fundeadouro Norte é o principal para aguardar cais.",
             "sources": [{"document": "IT-015_Fundeadouros.txt", "snippet": "Fundeadouro Norte"}],
             "answer_origin": "document_companion",
+            "trace": {
+                "route_label": "Companion do documento",
+                "route_detail": "Resposta direta.",
+                "rows": [{"label": "Documento alvo", "detail": "IT-015_Fundeadouros.txt"}],
+                "flags": [{"label": "Síntese", "value": "Não"}],
+            },
         }
         with app.app.test_client() as client:
             csrf = self._set_admin_session(client)
@@ -155,6 +201,8 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertEqual(body["answer_origin"], "document_companion")
         self.assertIn("Fundeadouro Norte", body["answer"])
         self.assertEqual(len(body["sources"]), 1)
+        self.assertEqual(body["trace"]["route_label"], "Companion do documento")
+        self.assertEqual(body["trace"]["rows"][0]["label"], "Documento alvo")
 
     def test_playground_rejects_empty_question(self) -> None:
         with app.app.test_client() as client:
@@ -178,7 +226,9 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.get_data())
         self.assertIn("bot_settings", payload["payload"])
+        self.assertIn("bot_settings_history", payload["payload"])
         self.assertEqual(payload["payload"]["bot_settings"]["signals_window_hours"], 96)
+        self.assertEqual(len(payload["payload"]["bot_settings_history"]), 1)
 
     def test_exceptions_link_to_casebooks_focus_for_blocked_corrections(self) -> None:
         conversation = self.store.create_conversation("admin", "Revisao")

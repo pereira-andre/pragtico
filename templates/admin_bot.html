@@ -9,6 +9,7 @@
         <p class="eyebrow">Saúde do bot</p>
         <h1>Painel operacional do assistente</h1>
         <p class="lead muted">Estado vivo das fontes de conhecimento, sinais de aprendizagem e exceções a rever.</p>
+        <p class="muted small-note">Snapshot do painel atualizado em {{ snapshot_refreshed_at_label }}.</p>
       </div>
       <div class="admin-status-hero-tools">
         <span class="admin-status-badge is-{{ health.state }}">{{ health.label }}</span>
@@ -74,6 +75,15 @@
     <div class="admin-bot-playground-result" id="bot-playground-result" hidden>
       <article class="admin-status-surface">
         <div class="admin-bot-playground-answer" id="bot-playground-answer"></div>
+        <details class="admin-bot-playground-trace" id="bot-playground-trace-wrapper" hidden>
+          <summary>Como decidiu</summary>
+          <div class="admin-bot-playground-trace-body">
+            <p class="admin-bot-playground-trace-route" id="bot-playground-trace-route"></p>
+            <p class="muted" id="bot-playground-trace-detail"></p>
+            <div class="casebook-tag-list" id="bot-playground-trace-flags"></div>
+            <ul class="admin-bot-signal-list" id="bot-playground-trace-rows"></ul>
+          </div>
+        </details>
         <details class="admin-bot-playground-sources" id="bot-playground-sources-wrapper" hidden>
           <summary>Fontes usadas</summary>
           <ul id="bot-playground-sources"></ul>
@@ -348,11 +358,12 @@
           <h2>Definições e aprendizagem automática</h2>
         </div>
         <span class="muted small-note">
-          {% if settings.updated_at %}última alteração: {{ settings.updated_at }}{% else %}defaults{% endif %}
+          {% if settings_history %}última alteração: {{ settings_history[0].changed_at_label or settings_history[0].changed_at }}{% else %}defaults{% endif %}
         </span>
       </div>
       <form method="post" action="{{ url_for('admin.admin_bot_settings') }}" class="admin-bot-settings-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
         <div class="admin-bot-toggle-grid">
           <label class="admin-bot-toggle">
             <input type="checkbox" name="auto_promote_corrections" {% if settings.auto_promote_corrections %}checked{% endif %}>
@@ -408,8 +419,59 @@
       </form>
       <form method="post" action="{{ url_for('admin.admin_bot_settings_reset') }}" class="admin-bot-reset-form" onsubmit="return confirm('Repor todas as definições do bot para os valores por defeito?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
         <button type="submit" class="mini-button secondary-button">Repor defaults</button>
       </form>
+      <details class="documents-collapse-card admin-bot-collapse" {% if settings_history %}open{% endif %}>
+        <summary class="documents-collapse-summary">
+          <div>
+            <h3>Histórico recente</h3>
+            <span class="muted">{{ settings_history|length }} revisão(ões) registada(s)</span>
+          </div>
+        </summary>
+        <div class="documents-collapse-body">
+          {% if settings_history %}
+            <ul class="admin-bot-settings-history">
+              {% for item in settings_history %}
+                <li class="admin-bot-settings-history-item">
+                  <div class="admin-bot-settings-history-head">
+                    <div>
+                      <strong>{{ item.action_label }}</strong>
+                      <p class="muted">
+                        {{ item.changed_at_label or item.changed_at }}
+                        {% if item.changed_by %}· {{ item.changed_by }}{% endif %}
+                        {% if item.is_current %}· atual{% endif %}
+                      </p>
+                    </div>
+                    {% if not item.is_current %}
+                      <form method="post" action="{{ url_for('admin.admin_bot_settings_rollback', revision_id=item.revision_id) }}" class="admin-bot-inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
+                        <button type="submit" class="mini-button secondary-button">Voltar aqui</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                  {% if item.summary %}
+                    <p class="admin-bot-settings-history-summary">{{ item.summary }}</p>
+                  {% endif %}
+                  {% if item.change_rows %}
+                    <ul class="admin-bot-signal-list">
+                      {% for change in item.change_rows %}
+                        <li><strong>{{ change.label }}:</strong> {{ change.detail }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                  {% if item.remaining_changes %}
+                    <p class="muted small-note">+ {{ item.remaining_changes }} alteração(ões) nesta revisão.</p>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="admin-status-note">Ainda não há histórico das definições do bot neste ambiente.</p>
+          {% endif %}
+        </div>
+      </details>
 
       <div class="admin-bot-data-actions">
         <article class="admin-status-surface admin-bot-data-box">
@@ -774,6 +836,11 @@
   const sourcesWrapper = document.getElementById("bot-playground-sources-wrapper");
   const sourcesList = document.getElementById("bot-playground-sources");
   const origin = document.getElementById("bot-playground-origin");
+  const traceWrapper = document.getElementById("bot-playground-trace-wrapper");
+  const traceRoute = document.getElementById("bot-playground-trace-route");
+  const traceDetail = document.getElementById("bot-playground-trace-detail");
+  const traceFlags = document.getElementById("bot-playground-trace-flags");
+  const traceRows = document.getElementById("bot-playground-trace-rows");
   if (!form) return;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -784,7 +851,12 @@
     result.hidden = false;
     answerBox.textContent = "";
     sourcesList.innerHTML = "";
+    traceRows.innerHTML = "";
+    traceFlags.innerHTML = "";
+    traceRoute.textContent = "";
+    traceDetail.textContent = "";
     sourcesWrapper.hidden = true;
+    traceWrapper.hidden = true;
     try {
       const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
         method: "POST",
@@ -802,7 +874,27 @@
       }
       const payload = await response.json();
       answerBox.textContent = payload.answer || "(sem resposta)";
-      origin.textContent = payload.answer_origin ? `Origem: ${payload.answer_origin}` : "";
+      const trace = payload.trace || {};
+      origin.textContent = trace.route_label ? `Rota: ${trace.route_label}` : (payload.answer_origin ? `Origem: ${payload.answer_origin}` : "");
+      if (trace.route_label || trace.route_detail || (trace.rows || []).length || (trace.flags || []).length) {
+        traceRoute.textContent = trace.route_label || "";
+        traceDetail.textContent = trace.route_detail || "";
+        (trace.flags || []).forEach((item) => {
+          const span = document.createElement("span");
+          span.className = "casebook-tag";
+          span.textContent = `${item.label}: ${item.value}`;
+          traceFlags.appendChild(span);
+        });
+        (trace.rows || []).forEach((item) => {
+          const li = document.createElement("li");
+          const strong = document.createElement("strong");
+          strong.textContent = `${item.label}:`;
+          li.appendChild(strong);
+          li.append(` ${item.detail}`);
+          traceRows.appendChild(li);
+        });
+        traceWrapper.hidden = false;
+      }
       const sources = payload.sources || [];
       if (sources.length) {
         sources.forEach((src) => {
