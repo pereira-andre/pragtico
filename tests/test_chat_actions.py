@@ -400,6 +400,18 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "unsupported")
         self.assertIn("/editar-manobra", parsed["answer"])
 
+    def test_parse_slash_edit_scale_accepts_change_reason_and_next_port(self) -> None:
+        parsed = parse_slash_command(
+            "/editar-escala Ref: BF757B7F Próximo destino: Valencia Motivo da alteração: ajuste comercial",
+            "admin",
+        )
+
+        self.assertEqual(parsed["intent"], "action")
+        self.assertEqual(parsed["proposal"]["action"], "edit_port_call")
+        self.assertEqual(parsed["proposal"]["target"]["reference_code"], "BF757B7F")
+        self.assertEqual(parsed["proposal"]["fields"]["next_port"], "Valencia")
+        self.assertEqual(parsed["proposal"]["fields"]["change_reason"], "ajuste comercial")
+
     def test_parse_slash_create_maneuver_entry_redirects_to_edit(self) -> None:
         parsed = parse_slash_command(
             "/criar-manobra Ref: SET-221 Tipo de manobra: entrada Hora prevista: 29/03/2026, 20:00",

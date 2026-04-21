@@ -1445,10 +1445,15 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
     extracted_fields = _extract_labelled_values(body)
     positional_target = _extract_positional_slash_target(tail.strip()) if tail.strip() else {}
     target = {
-        "maneuver_id": _normalize_maneuver_id(command_aliases.get("maneuver_id", "")),
-        "reference_code": " ".join(str(command_aliases.get("reference_code") or "").split()),
+        "maneuver_id": _normalize_maneuver_id(
+            extracted_fields.get("maneuver_id") or command_aliases.get("maneuver_id", "")
+        ),
+        "reference_code": " ".join(
+            str(extracted_fields.get("reference_code") or command_aliases.get("reference_code") or "").split()
+        ),
         "vessel_name": " ".join(str(extracted_fields.get("vessel_name") or "").split()),
-        "maneuver_type": _extract_slash_maneuver_type(body) or _normalize_maneuver_type_label(command_aliases.get("maneuver_type", "")),
+        "maneuver_type": _extract_slash_maneuver_type(body)
+        or _normalize_maneuver_type_label(extracted_fields.get("maneuver_type") or command_aliases.get("maneuver_type", "")),
     }
     if not target["maneuver_id"] and positional_target.get("maneuver_id"):
         target["maneuver_id"] = positional_target["maneuver_id"]
@@ -1483,7 +1488,6 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         "maneuver_started_local",
         "maneuver_finished_local",
         "aborted_reason",
-        "change_reason",
     }
 
     action = ""

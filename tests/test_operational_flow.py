@@ -493,6 +493,11 @@ class OperationalFlowTests(unittest.TestCase):
             flask_session["username"] = "admin"
             flask_session["role"] = "admin"
 
+    def _future_local_value(self, *, days: int = 7, hour: int = 6, minute: int = 30) -> str:
+        future = datetime.now(timezone.utc) + timedelta(days=days)
+        future = future.astimezone().replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return future.strftime("%Y-%m-%dT%H:%M")
+
     def _write_knowledge_companion(self, document_name: str, payload: dict) -> Path:
         companion_dir = Path(self.store.knowledge_dir) / "companions"
         companion_dir.mkdir(parents=True, exist_ok=True)
@@ -693,7 +698,7 @@ class OperationalFlowTests(unittest.TestCase):
                     "action": "create_port_call",
                     "fields": {
                         "vessel_name": "AUTO TESTE",
-                        "eta_local": "2026-04-02T06:30",
+                        "eta_local": self._future_local_value(days=7, hour=6, minute=30),
                         "berth": "Cais 10 Autoeuropa",
                         "last_port": "Sines",
                         "next_port": "Vigo",
@@ -727,7 +732,7 @@ class OperationalFlowTests(unittest.TestCase):
                     "port_call_id": port_call["id"],
                     "target": {"maneuver_type": "shift"},
                     "fields": {
-                        "planned_shift_at_local": "2026-04-02T08:30",
+                        "planned_shift_at_local": self._future_local_value(days=7, hour=8, minute=30),
                         "destination_berth": "Cais 3 Terminal Multipurpose",
                         "draft_m": "9.94",
                         "tug_count": "2",
@@ -755,7 +760,7 @@ class OperationalFlowTests(unittest.TestCase):
                     "port_call_id": port_call["id"],
                     "target": {"maneuver_type": "departure"},
                     "fields": {
-                        "planned_departure_at_local": "2026-04-02T09:10",
+                        "planned_departure_at_local": self._future_local_value(days=7, hour=9, minute=10),
                         "next_port": "Barcelona",
                         "draft_m": "9.94",
                         "tug_count": "2",
@@ -1229,6 +1234,315 @@ class OperationalFlowTests(unittest.TestCase):
         updated = self.store.get_port_call(port_call["id"])
         entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
         self.assertEqual(entry["state"], "completed")
+
+    def test_slash_register_and_edit_scale_flow_via_chat(self) -> None:
+        eta_local = self._future_local_value(days=7, hour=6, minute=30)
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/registar-escala\n"
+                        "Nome do navio: AUTO TESTE\n"
+                        f"ETA de chegada: {eta_local}\n"
+                        "Cais previsto: Cais 10 Autoeuropa\n"
+                        "Último porto: Sines\n"
+                        "Próximo destino: Vigo\n"
+                        "IMO: 9876543\n"
+                        "Indicativo: CQAB7\n"
+                        "Bandeira: Portugal\n"
+                        "Tipo de navio: General Cargo\n"
+                        "LOA (m): 142.50\n"
+                        "Boca (m): 21.80\n"
+                        "GT (t): 8950\n"
+                        "DWT (t): 12400\n"
+                        "Calado máximo (m): 7.20\n"
+                        "Observações: Escala criada via slash."
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "create_port_call")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(payload["refresh_required"])
+            self.assertEqual(payload["conversation_id"], conversation["id"])
+            port_call = self.store.get_port_call(payload["port_call_id"])
+
+            self.assertEqual(port_call["berth"], "Cais 10 / Autoeuropa")
+            self.assertEqual(port_call["next_port"], "Vigo")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/editar-escala\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        "Próximo destino: Valencia\n"
+                        "Motivo da alteração: Ajuste comercial"
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "edit_port_call")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        updated = self.store.get_port_call(port_call["id"])
+        self.assertEqual(updated["next_port"], "Valencia")
+
+    def test_slash_edit_entry_and_create_departure_flow_via_chat(self) -> None:
+        port_call = self._create_entry(notes="Escala criada para smoke test slash.")
+        entry_planned_local = self._future_local_value(days=7, hour=7, minute=15)
+        departure_planned_local = self._future_local_value(days=8, hour=8, minute=45)
+        arrived_at = (datetime.now(timezone.utc) + timedelta(days=7, hours=1)).replace(microsecond=0).isoformat()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/editar-manobra\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        "Tipo de manobra: entrada\n"
+                        f"Hora prevista: {entry_planned_local}\n"
+                        "Origem: Sines\n"
+                        "Destino: TMS 2\n"
+                        "Calado: 9.94\n"
+                        "Rebocadores: 2\n"
+                        "Restrições: daylight\n"
+                        "Observações: Ajuste via slash.\n"
+                        "Motivo da alteração: Ajuste de janela"
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "edit_maneuver_plan")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(payload["refresh_required"])
+            self.assertEqual(payload["conversation_id"], conversation["id"])
+
+            self.store.approve_port_call(port_call["id"], decided_by="admin")
+            self.store.mark_port_call_arrived(
+                port_call["id"],
+                arrived_at=arrived_at,
+                updated_by="admin",
+            )
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/criar-manobra\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        "Tipo de manobra: saída\n"
+                        f"Hora prevista: {departure_planned_local}\n"
+                        "Destino: Valencia\n"
+                        "Calado: 9.80\n"
+                        "Rebocadores: 2\n"
+                        "Restrições: daylight\n"
+                        "Observações: Saída criada via slash."
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "schedule_departure")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        updated = self.store.get_port_call(port_call["id"])
+        entry = next(item for item in updated["maneuver_history"] if item["type"] == "entry")
+        departure = next(item for item in updated["maneuver_history"] if item["type"] == "departure")
+        self.assertTrue(entry["planned_at"].startswith(entry_planned_local))
+        self.assertEqual(entry["tug_count"], "2")
+        self.assertEqual(departure["state"], "pending")
+        self.assertEqual(departure["origin"], "TMS 2")
+        self.assertEqual(departure["destination"], "Valencia")
+
+    def test_slash_delete_scale_flow_via_chat(self) -> None:
+        eta_local = self._future_local_value(days=7, hour=6, minute=30)
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/registar-escala\n"
+                        "Nome do navio: AUTO DELETE\n"
+                        f"ETA de chegada: {eta_local}\n"
+                        "Cais previsto: TMS 2\n"
+                        "Último porto: Sines\n"
+                        "Próximo destino: Vigo\n"
+                        "IMO: 9876544\n"
+                        "Indicativo: CQAB8\n"
+                        "Bandeira: Portugal\n"
+                        "Tipo de navio: General Cargo\n"
+                        "LOA (m): 142.50\n"
+                        "Boca (m): 21.80\n"
+                        "GT (t): 8950\n"
+                        "DWT (t): 12400\n"
+                        "Calado máximo (m): 7.20\n"
+                        "Observações: Escala para apagar via slash."
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            port_call = self.store.get_port_call(payload["port_call_id"])
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": f"/apagar-escala\nRef: {port_call['reference_code']}",
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "delete_port_call")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.store._read_port_calls(), [])
+
+    def test_slash_cancel_maneuver_alias_flow_via_chat(self) -> None:
+        port_call = self._create_entry(notes="Escala criada para cancelar manobra via slash.")
+        departure_planned_local = self._future_local_value(days=8, hour=8, minute=45)
+        arrived_at = (datetime.now(timezone.utc) + timedelta(days=7, hours=1)).replace(microsecond=0).isoformat()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            self.store.approve_port_call(port_call["id"], decided_by="admin")
+            self.store.mark_port_call_arrived(
+                port_call["id"],
+                arrived_at=arrived_at,
+                updated_by="admin",
+            )
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/criar-manobra\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        "Tipo de manobra: saída\n"
+                        f"Hora prevista: {departure_planned_local}\n"
+                        "Destino: Valencia\n"
+                        "Calado: 9.80\n"
+                        "Rebocadores: 2\n"
+                        "Restrições: daylight\n"
+                        "Observações: Saída para cancelar via slash."
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            updated = self.store.get_port_call(payload["port_call_id"])
+            departure = next(item for item in updated["maneuver_history"] if item["type"] == "departure")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": f"/cancelar-manobra\nID da manobra: {departure['id'][:8].upper()}",
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "delete_maneuver")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        final_port_call = self.store.get_port_call(port_call["id"])
+        self.assertFalse(any(item["type"] == "departure" for item in final_port_call["maneuver_history"]))
 
     def test_chat_empty_question_returns_error_code(self) -> None:
         with app.app.test_client() as client:
