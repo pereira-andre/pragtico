@@ -579,6 +579,140 @@ def _should_prefer_berth_profile_answer(question: str, companion_answer: str) ->
     return False
 
 
+def playground_answer(
+    *,
+    username: str,
+    role: str,
+    question: str,
+) -> dict:
+    """Lightweight answer pipeline for the admin playground — no persistence, no pending actions."""
+    clean_question = (question or "").strip()
+    if not clean_question:
+        raise ValueError("Pergunta vazia.")
+
+    with chat_actor_context(username=username, role=role):
+        refresh_knowledge_state(force_reindex=False)
+        execution_plan = build_chat_execution_plan(clean_question)
+
+        trusted_answers = services.store.find_feedback_matches(
+            username,
+            clean_question,
+            limit=3,
+            feedback_statuses={"approved"},
+        )
+        reviewed_answers = services.store.find_feedback_matches(
+            username,
+            clean_question,
+            limit=3,
+            feedback_statuses={"review"},
+        )
+        review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
+        review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
+
+        direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
+        if direct_answer:
+            return direct_answer
+
+        runtime_history: list[dict] = []
+        conversation_state = build_conversation_reasoning_state(
+            clean_question,
+            runtime_history,
+            execution_plan,
+        )
+        targeted_document_context = _build_targeted_document_context(
+            clean_question,
+            runtime_history,
+            trusted_answers,
+            reviewed_answers,
+        )
+        berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
+        berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
+        supplemental_sources = _build_supplemental_sources(
+            clean_question,
+            plan=execution_plan,
+            conversation_state=conversation_state,
+        )
+        compound_message_source = build_compound_message_analysis_source(clean_question)
+        if compound_message_source:
+            supplemental_sources.append(compound_message_source)
+        supplemental_sources.extend(build_berth_profile_sources(berth_profile_match))
+        supplemental_sources.extend(targeted_document_context["companion_sources"])
+        supplemental_sources.extend(targeted_document_context["document_sources"])
+
+        allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+        answer: dict | None = None
+        if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+            clean_question,
+            targeted_document_context["companion_answer"],
+        ):
+            answer = {
+                "answer": berth_profile_answer,
+                "sources": supplemental_sources,
+                "answer_origin": "berth_profile",
+            }
+        elif targeted_document_context["companion_answer"] and allow_companion_shortcut:
+            if _review_correction_targets_document(review_correction_match, targeted_document_context, None):
+                answer = _build_review_correction_answer(review_correction_match)
+                if supplemental_sources:
+                    answer["sources"] = supplemental_sources
+            else:
+                answer = {
+                    "answer": targeted_document_context["companion_answer"],
+                    "sources": supplemental_sources,
+                    "answer_origin": "document_companion",
+                }
+        else:
+            global_companion_match = find_best_global_companion_match(
+                clean_question,
+                _active_knowledge_dir(),
+            )
+            if global_companion_match and allow_companion_shortcut:
+                if _review_correction_targets_document(
+                    review_correction_match,
+                    targeted_document_context,
+                    global_companion_match,
+                ):
+                    answer = _build_review_correction_answer(review_correction_match)
+                    if global_companion_match.get("sources"):
+                        answer["sources"] = global_companion_match["sources"]
+                else:
+                    answer = {
+                        "answer": global_companion_match["answer"],
+                        "sources": global_companion_match["sources"],
+                        "answer_origin": "document_companion_global",
+                    }
+            elif review_correction_match and not execution_plan.requires_llm_synthesis:
+                answer = _build_review_correction_answer(review_correction_match)
+            else:
+                if (
+                    review_guard_match
+                    and review_guard_match.get("similarity", 0) >= REVIEW_BLOCK_SIMILARITY
+                    and not targeted_document_context["document_sources"]
+                ):
+                    answer = _build_review_guard_answer(review_guard_match)
+                else:
+                    if not services.rag.can_generate():
+                        return {
+                            "answer": "Define a API key do LLM antes de usar o playground.",
+                            "sources": [],
+                            "answer_origin": "error",
+                        }
+                    answer = services.rag.answer(
+                        question=clean_question,
+                        retrieval_question=targeted_document_context["retrieval_question"],
+                        role=role,
+                        history=[],
+                        supplemental_sources=supplemental_sources,
+                        trusted_answers=trusted_answers,
+                        reviewed_answers=reviewed_answers,
+                        execution_plan=execution_plan.to_dict(),
+                        conversation_state=conversation_state,
+                    )
+                    answer["answer_origin"] = "llm"
+
+        return add_contextual_response_emojis(answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"}, clean_question)
+
+
 def handle_chat_turn(
     *,
     username: str,

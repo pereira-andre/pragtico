@@ -56,6 +56,14 @@ from core.helpers import (
     start_reindex_job,
 )
 from core.chat_feedback import sync_feedback_correction_eval_case
+from core.bot_insights import (
+    build_exceptions,
+    build_learning_signals,
+    build_quality_snapshot,
+    build_sources_snapshot,
+    compute_health_score,
+)
+from core.bot_settings import DEFAULTS as BOT_SETTINGS_DEFAULTS, load_bot_settings, reset_bot_settings, save_bot_settings
 from domain.migration_service import migrate_local_json_to_postgres
 from storage.maneuver_case_helpers import build_case_environment_signature, rank_similar_maneuver_cases
 from storage.utils import _local_iso_to_label
@@ -1656,13 +1664,89 @@ def admin_status():
 @login_required
 @role_required("admin")
 def admin_bot():
-    """Painel de acompanhamento do bot, evals e correções supervisionadas."""
+    """Painel de saúde, fontes, sinais e governança do bot."""
     refresh_knowledge_state(force_reindex=False)
+    settings = load_bot_settings()
+    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
+    sources = build_sources_snapshot()
+    quality = build_quality_snapshot()
+    exceptions = build_exceptions(limit=12)
+    health = compute_health_score(quality, signals, exceptions, sources)
     return render_template(
         "admin_bot.html",
-        bot=_build_admin_bot_payload(),
+        health=health,
+        signals=signals,
+        sources=sources,
+        quality=quality,
+        exceptions=exceptions,
+        settings=settings,
+        settings_defaults=BOT_SETTINGS_DEFAULTS,
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
+    )
+
+
+@bp.route("/admin/bot/settings", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_bot_settings():
+    """Atualizar definições do bot (auto-promote, thresholds, janela)."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
+    try:
+        updates: dict = {}
+        for key in BOT_SETTINGS_DEFAULTS.keys():
+            if key in request.form:
+                updates[key] = request.form.get(key)
+        for bool_key in ("auto_promote_corrections", "auto_trust_positive_feedback", "require_admin_validation"):
+            updates[bool_key] = bool_key in request.form
+        save_bot_settings(updates, updated_by=session.get("username") or "admin")
+        flash("Definições do bot atualizadas.", "success")
+    except Exception as exc:
+        logger.exception("Falha ao guardar definições do bot.")
+        flash(f"Falha ao guardar definições do bot: {exc}", "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/settings/reset", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_bot_settings_reset():
+    """Repor definições do bot para os valores por defeito."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
+    reset_bot_settings(updated_by=session.get("username") or "admin")
+    flash("Definições do bot repostas aos valores por defeito.", "success")
+    return redirect(return_to)
+
+
+@bp.route("/admin/bot/playground", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_bot_playground():
+    """Avaliar uma pergunta no pipeline real do bot e devolver resposta + citações."""
+    from core.chat_runtime import playground_answer
+
+    payload = request.get_json(silent=True) or {}
+    question = str(payload.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "Pergunta vazia."}), 400
+
+    username = session.get("username") or "admin"
+    role = session.get("role") or "admin"
+
+    try:
+        result = playground_answer(username=username, role=role, question=question)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("Playground do bot falhou.")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify(
+        {
+            "answer": result.get("answer", ""),
+            "sources": result.get("sources", []),
+            "answer_origin": result.get("answer_origin", ""),
+        }
     )
 
 
