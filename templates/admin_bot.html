@@ -275,8 +275,15 @@
                   <p class="admin-bot-failure-question">{{ item.question }}</p>
                   <p class="muted">Origem: {{ item.origin_label }}</p>
                   <p class="muted">Falta: {{ item.missing_summary }}</p>
-                  {% if item.action_url %}
-                    <a class="inline-link" href="{{ item.action_url }}">{{ item.action_label }}</a>
+                  {% if item.resolution_hint %}
+                    <p class="muted">{{ item.resolution_hint }}</p>
+                  {% endif %}
+                  {% if item.action_links %}
+                    <div class="inline-link-row">
+                      {% for link in item.action_links %}
+                        <a class="inline-link" href="{{ link.url }}">{{ link.label }}</a>
+                      {% endfor %}
+                    </div>
                   {% endif %}
                 </li>
               {% endfor %}
@@ -648,6 +655,7 @@
                   {% if item.feedback_note %}
                     <p class="admin-bot-case-meta"><strong>Nota atual:</strong> {{ item.feedback_note }}</p>
                   {% endif %}
+                  <p class="admin-bot-case-meta"><strong>Estado:</strong> {{ item.governance_hint }}</p>
                   {% if item.feedback_correction %}
                     <details class="planning-optional-box">
                       <summary>Ver correção persistida</summary>
@@ -662,8 +670,8 @@
                     <label>
                       Decisão
                       <select name="feedback_status" required>
-                        <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar para reutilização</option>
-                        <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Cancelar reutilização / rever</option>
+                        <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar resposta atual</option>
+                        <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Bloquear e guardar correção supervisionada</option>
                       </select>
                     </label>
                     <label>

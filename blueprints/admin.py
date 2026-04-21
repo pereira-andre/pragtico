@@ -57,7 +57,7 @@ from core.helpers import (
     safe_rebuild_index,
     start_reindex_job,
 )
-from core.chat_feedback import sync_feedback_correction_eval_case
+from core.chat_feedback import feedback_correction_state, sync_feedback_correction_eval_case
 from core.bot_insights import (
     build_exceptions,
     build_learning_signals,
@@ -1425,13 +1425,42 @@ def _normalized_filter_value(value: str | None, allowed: set[str], default: str)
     return clean if clean in allowed else default
 
 
-def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
-    clean = (value or "").strip().lower()
+def _chat_feedback_state_meta(item: dict | str | None) -> tuple[str, str, str]:
+    if isinstance(item, dict):
+        clean = (item.get("feedback_status") or "").strip().lower()
+        correction_state = feedback_correction_state(item)
+    else:
+        clean = (item or "").strip().lower()
+        correction_state = {"is_ready": False, "needs_document": False, "needs_correction": False, "document": ""}
     if clean == "approved":
-        return "Aprovada para reutilização", "online"
+        return (
+            "Aprovada para reutilização",
+            "online",
+            "A resposta original foi validada tal como está e pode ser reutilizada diretamente.",
+        )
+    if clean == "review" and correction_state["is_ready"]:
+        return (
+            "Correção supervisionada pronta",
+            "online",
+            f"A resposta original fica bloqueada; a correção já está pronta para memória supervisionada em {correction_state['document']}.",
+        )
+    if clean == "review" and correction_state["needs_document"]:
+        return (
+            "Correção pronta, falta documento",
+            "degraded",
+            "A correção já está escrita, mas falta indicar o documento alvo para a promover com segurança.",
+        )
     if clean == "review":
-        return "Bloqueada / rever", "degraded"
-    return "Por rever", "neutral"
+        return (
+            "Bloqueada / rever",
+            "degraded",
+            "A resposta original ficou bloqueada. Escreve uma correção reutilizável e associa um documento quando houver mais do que uma fonte citada.",
+        )
+    return (
+        "Por rever",
+        "neutral",
+        "Ainda não existe decisão humana sobre esta resposta.",
+    )
 
 
 def _case_feedback_state_meta(value: str | None) -> tuple[str, str]:
@@ -1699,7 +1728,7 @@ def _build_admin_casebooks_payload() -> dict:
 
     chat_rows = []
     for item in visible_chat_subset:
-        status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
+        status_label, badge, governance_hint = _chat_feedback_state_meta(item)
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
         chat_rows.append(
@@ -1715,6 +1744,7 @@ def _build_admin_casebooks_payload() -> dict:
                 "feedback_status": (item.get("feedback_status") or "").strip().lower(),
                 "feedback_status_label": status_label,
                 "feedback_badge": badge,
+                "governance_hint": governance_hint,
                 "feedback_note": item.get("feedback_note", ""),
                 "feedback_correction": item.get("feedback_correction", ""),
                 "feedback_correction_document": item.get("feedback_correction_document", ""),

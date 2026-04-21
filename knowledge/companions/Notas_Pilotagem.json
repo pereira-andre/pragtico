@@ -55,6 +55,30 @@
       ]
     },
     {
+      "question": "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+      "answer": "A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da Barra, tomando como referência operacional o Pilar n.º 2 / Bóia n.º 2.",
+      "keywords": [
+        "posição de embarque",
+        "embarque dos pilotos",
+        "entrada da barra",
+        "pilar 2",
+        "1 milha náutica",
+        "fora da barra"
+      ]
+    },
+    {
+      "question": "A que distância está a posição de embarque dos pilotos fora da barra?",
+      "answer": "A posição de embarque dos pilotos fora da Barra fica a 1 milha náutica da entrada da Barra, usando como referência operacional o Pilar n.º 2 / Bóia n.º 2.",
+      "keywords": [
+        "fora da barra",
+        "posição de embarque",
+        "pilotos",
+        "entrada da barra",
+        "pilar 2",
+        "1 milha náutica"
+      ]
+    },
+    {
       "question": "Quantos rebocadores devo considerar para uma entrada em doca Lisnave?",
       "answer": "Para docas Lisnave, considera sempre pelo menos 4 rebocadores. A entrada é atravessada à corrente: dois rebocadores empurram, um de cada lado, e os restantes controlam popa/proa. Os navios que entram nas docas ficam com proa a norte.",
       "keywords": [

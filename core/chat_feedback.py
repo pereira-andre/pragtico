@@ -7,7 +7,7 @@ from domain.knowledge_evals import _extract_expected_substrings
 from storage.utils import _question_for_assistant_message, normalize_feedback_correction
 
 
-def _infer_feedback_document(message: dict) -> str:
+def infer_feedback_document(message: dict) -> str:
     explicit_document = str(message.get("feedback_correction_document") or "").strip()
     if explicit_document:
         return explicit_document
@@ -19,6 +19,22 @@ def _infer_feedback_document(message: dict) -> str:
     if len(cited_documents) == 1:
         return cited_documents[0]
     return ""
+
+
+def feedback_correction_state(message: dict) -> dict:
+    feedback_status = str(message.get("feedback_status") or "").strip().lower()
+    correction = str(message.get("feedback_correction") or "").strip()
+    document = infer_feedback_document(message) if correction else ""
+    return {
+        "feedback_status": feedback_status,
+        "has_correction": bool(correction),
+        "document": document,
+        "is_ready": feedback_status == "review" and bool(correction) and bool(document),
+        "needs_document": feedback_status == "review" and bool(correction) and not bool(document),
+        "needs_correction": feedback_status == "review" and not bool(correction),
+    }
+
+
 def sync_feedback_correction_eval_case(store, username: str, conversation_id: str, message_id: str, *, source: str) -> dict | None:
     if not hasattr(store, "upsert_feedback_eval_case") or not hasattr(store, "delete_feedback_eval_case"):
         return None
@@ -31,7 +47,8 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
     if not target_message:
         return None
 
-    document_name = _infer_feedback_document(target_message)
+    correction_state = feedback_correction_state(target_message)
+    document_name = correction_state["document"]
     question = _question_for_assistant_message(messages, message_id)
     corrected_answer = normalize_feedback_correction(
         question,

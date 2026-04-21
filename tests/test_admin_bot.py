@@ -87,7 +87,7 @@ class AdminBotDashboardTests(unittest.TestCase):
     def test_admin_bot_page_renders_with_all_zones(self) -> None:
         with app.app.test_client() as client:
             self._set_admin_session(client)
-            response = client.get("/admin/bot")
+            response = client.get("/admin/bot?source_type=chat&chat_feedback=review")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -252,13 +252,49 @@ class AdminBotDashboardTests(unittest.TestCase):
 
         with app.app.test_client() as client:
             self._set_admin_session(client)
-            response = client.get("/admin/bot")
+            response = client.get("/admin/bot?source_type=chat&chat_feedback=review")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("Correção bloqueada", html)
+        self.assertIn("Correção sem documento alvo", html)
         self.assertIn(f"focus=chat-{answer['id']}", html)
         self.assertIn(f"#chat-{answer['id']}", html)
+
+    def test_ready_review_correction_leaves_exceptions_and_is_marked_as_ready(self) -> None:
+        conversation = self.store.create_conversation("admin", "Revisao")
+        self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "user",
+            "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+        )
+        answer = self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "assistant",
+            "Resposta errada.",
+            citations=[{"document": "Notas_Pilotagem.txt", "snippet": "Distância operacional."}],
+            channel="whatsapp",
+        )
+        self.store.update_message_feedback(
+            username="admin",
+            conversation_id=conversation["id"],
+            message_id=answer["id"],
+            feedback_status="review",
+            feedback_note="Correção pronta.",
+            feedback_correction="A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da barra.",
+            feedback_updated_by="admin",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot?source_type=chat&chat_feedback=review")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Correção supervisionada pronta", html)
+        self.assertIn("Notas_Pilotagem.txt", html)
+        self.assertNotIn("Correção bloqueada", html)
 
     def test_quality_failures_expose_document_and_correction_actions(self) -> None:
         knowledge_dir = Path(self.store.knowledge_dir)
@@ -300,6 +336,7 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertIn("Origem: Correção promovida", html)
         self.assertIn("Abrir documento", html)
         self.assertIn("Abrir correção", html)
+        self.assertIn("tem de existir também no companion do documento", html)
 
     def test_operational_source_combines_activity_and_live_feed_states(self) -> None:
         tide_csv = Path(self.temp_dir.name) / "setubal_tides.csv"

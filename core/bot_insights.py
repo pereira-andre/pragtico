@@ -13,6 +13,7 @@ from typing import Any, Iterable
 from urllib.parse import urlencode
 
 from core import services
+from core.chat_feedback import feedback_correction_state
 from core.bot_settings import load_bot_settings
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import (
@@ -289,12 +290,16 @@ def build_exceptions(*, limit: int = 10) -> dict:
         cases = []
 
     for msg in messages:
+        correction_state = feedback_correction_state(msg)
+        if correction_state["is_ready"]:
+            continue
         if (msg.get("feedback_status") or "").strip().lower() == "review":
+            label = "Correção sem documento alvo" if correction_state["needs_document"] else "Correção bloqueada"
             items.append(
                 {
                     "type": "correction_review",
                     "severity": "high",
-                    "label": "Correção bloqueada",
+                    "label": label,
                     "detail": msg.get("question") or (msg.get("content") or "")[:120],
                     "url": _build_casebooks_focus_url(
                         source_type="chat",
@@ -708,28 +713,41 @@ def build_quality_snapshot() -> dict:
     for item in failed[:10]:
         missing = list(item.get("missing_substrings") or []) or list(item.get("missing_terms") or [])[:4]
         source_message_id = (item.get("source_message_id") or "").strip()
+        action_links = []
         if source_message_id:
             origin_label = "Correção promovida"
-            action_label = "Abrir correção"
-            action_url = _build_casebooks_focus_url(
+            correction_url = _build_casebooks_focus_url(
                 source_type="chat",
                 chat_feedback="all",
                 limit=16,
                 anchor=f"chat-{source_message_id}",
                 q=item.get("question", ""),
             )
+            action_links.append({"label": "Abrir correção", "url": correction_url})
+            action_links.append(
+                {
+                    "label": "Abrir documento",
+                    "url": _build_relative_url("/admin/documents", q=item.get("document", "")),
+                }
+            )
+            resolution_hint = "Para este eval passar, a resposta corrigida tem de existir também no companion do documento."
         else:
             origin_label = "Eval estático"
-            action_label = "Abrir documento"
-            action_url = _build_relative_url("/admin/documents", q=item.get("document", ""))
+            action_links.append(
+                {
+                    "label": "Abrir documento",
+                    "url": _build_relative_url("/admin/documents", q=item.get("document", "")),
+                }
+            )
+            resolution_hint = ""
         failure_rows.append(
             {
                 "document": item.get("document", ""),
                 "question": item.get("question", ""),
                 "origin_label": origin_label,
                 "missing_summary": ", ".join(missing) or "Resposta vazia ou fora do esperado.",
-                "action_label": action_label,
-                "action_url": action_url,
+                "action_links": action_links,
+                "resolution_hint": resolution_hint,
             }
         )
 

@@ -233,6 +233,18 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
         self.assertIn("10,0", answer)
         self.assertNotIn("1000 metros", answer)
 
+    def test_notas_pilotagem_companion_answers_pilot_embarkment_distance(self) -> None:
+        companion = load_document_companion("Notas_Pilotagem.txt", KNOWLEDGE_DIR)
+        self.assertIsNotNone(companion)
+
+        answer = build_companion_answer(
+            "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+            companion,
+        )
+
+        self.assertIn("1 milha náutica", answer)
+        self.assertIn("Pilar n.º 2", answer)
+
     def test_port_inventory_companion_answers_terminal_inventory(self) -> None:
         companion = load_document_companion("Porto_Setubal_Terminais_Cais.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)

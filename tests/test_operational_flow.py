@@ -5046,7 +5046,7 @@ class AdminDocumentPolicyTests(unittest.TestCase):
 
         with app.app.test_client() as client:
             self._set_admin_session(client)
-            response = client.get("/admin/bot?q=Lisnave&source_type=chat&chat_feedback=all&limit=8#casebooks")
+            response = client.get("/admin/bot?q=Lisnave&source_type=chat&chat_feedback=all&limit=8")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
