@@ -1823,9 +1823,13 @@ def import_system_database():
 @login_required
 @role_required("admin")
 def admin_casebooks():
-    """Painel admin para rever mensagens do chat e gerir casos operacionais."""
-    args = request.args.to_dict(flat=True)
-    return redirect(url_for("admin.admin_bot", **args, _anchor="casebooks"))
+    """Painel admin detalhado de mensagens, casos e experiência prática."""
+    refresh_knowledge_state(force_reindex=False)
+    return render_template(
+        "admin_casebooks.html",
+        casebooks=_build_admin_casebooks_payload(),
+        title="Governança detalhada",
+    )
 
 
 @bp.route("/admin/event-reports")

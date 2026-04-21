@@ -1,571 +1,494 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell admin-status-page admin-bot-page">
+<main class="ops-shell admin-status-page admin-bot-page admin-bot-v2">
 
-  {# ── Zona A · Hero ──────────────────────────────────────────────── #}
-  <section class="hero-card admin-status-hero admin-bot-hero">
+  {# ── Zona 1 · Saúde do bot ──────────────────────────────────────── #}
+  <section class="hero-card admin-status-hero admin-bot-hero admin-bot-health-hero">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Qualidade do assistente</p>
-        <h1>Painel do bot</h1>
+        <p class="eyebrow">Saúde do bot</p>
+        <h1>Painel operacional do assistente</h1>
+        <p class="lead muted">Estado vivo das fontes de conhecimento, sinais de aprendizagem e exceções a rever.</p>
       </div>
       <div class="admin-status-hero-tools">
-        <span class="admin-status-badge is-{{ bot.state }}">{{ bot.state_label }}</span>
+        <span class="admin-status-badge is-{{ health.state }}">{{ health.label }}</span>
         <a class="outline-link" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
         <a class="outline-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
       </div>
     </div>
 
-    <div class="hero-meta-grid admin-status-hero-grid admin-bot-hero-grid">
-      <article class="hero-stat {{ 'hero-stat-warn' if bot.failed_cases_total }}">
-        <span>Taxa de acerto</span>
-        <strong>{{ bot.pass_rate_pct }}%</strong>
-        <small>{{ bot.passed_cases_total }} de {{ bot.active_cases_total }} casos</small>
+    <div class="admin-bot-health-grid">
+      <article class="admin-bot-health-score admin-bot-health-score-{{ health.state }}">
+        <div class="admin-bot-health-score-value">{{ health.score }}</div>
+        <span class="admin-bot-health-score-unit">/ 100</span>
+        <p class="muted">Score composto</p>
       </article>
-      <article class="hero-stat {{ 'hero-stat-warn' if bot.failed_cases_total }}">
-        <span>Falhas ativas</span>
-        <strong>{{ bot.failed_cases_total }}</strong>
-        <small>{% if bot.failed_cases_total %}requerem atenção{% else %}nenhuma{% endif %}</small>
+      <article class="admin-bot-health-stat">
+        <span class="eyebrow">Evals</span>
+        <strong>{{ health.pass_rate_pct }}%</strong>
+        <small>{{ quality.passed_total }} / {{ quality.active_cases_total }} casos a passar</small>
       </article>
-      <article class="hero-stat {{ 'hero-stat-warn' if (casebooks.chat_pending_total + casebooks.case_pending_total) }}">
-        <span>Por validar</span>
-        <strong>{{ casebooks.chat_pending_total + casebooks.case_pending_total }}</strong>
-        <small>mensagens + manobras</small>
+      <article class="admin-bot-health-stat">
+        <span class="eyebrow">Cobertura</span>
+        <strong>{{ health.coverage_pct }}%</strong>
+        <small>{{ sources|selectattr('state', 'equalto', 'online')|list|length }} / {{ sources|length }} fontes ativas</small>
       </article>
-      <article class="hero-stat">
-        <span>Cobertura</span>
-        <strong>{{ bot.documents_covered_total }}/{{ bot.knowledge_documents_total }}</strong>
-        <small>documentos com evals</small>
+      <article class="admin-bot-health-stat">
+        <span class="eyebrow">Sinais</span>
+        <strong>{{ health.feedback_bias_pct }}%</strong>
+        <small>positivos na última janela</small>
       </article>
-      <article class="hero-stat">
-        <span>Correções</span>
-        <strong>{{ bot.feedback_cases_total }}</strong>
-        <small>{{ bot.resolved_companions_total }} companions · {{ bot.latest_feedback_updated_at_label }}</small>
+      <article class="admin-bot-health-stat {{ 'is-danger' if exceptions.severity_counts.high else '' }}">
+        <span class="eyebrow">Exceções</span>
+        <strong>{{ exceptions.total }}</strong>
+        <small>{{ exceptions.severity_counts.high }} prioritária(s)</small>
+      </article>
+    </div>
+  </section>
+
+  {# ── Zona 2 · Playground inline ─────────────────────────────────── #}
+  <section class="panel section-panel admin-bot-playground" id="playground">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Playground</p>
+        <h2>Testar uma pergunta sem registar a conversa</h2>
+      </div>
+      <span class="muted small-note">Usa o pipeline real mas não persiste histórico.</span>
+    </div>
+    <form id="bot-playground-form" class="admin-bot-playground-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>
+        Pergunta
+        <textarea name="question" rows="3" placeholder="Ex.: Qual é o calado máximo na barra de Setúbal?" required></textarea>
+      </label>
+      <div class="admin-bot-playground-actions">
+        <button type="submit" class="mini-button">Perguntar ao bot</button>
+        <span class="muted small-note" id="bot-playground-origin"></span>
+      </div>
+    </form>
+    <div class="admin-bot-playground-result" id="bot-playground-result" hidden>
+      <article class="admin-status-surface">
+        <div class="admin-bot-playground-answer" id="bot-playground-answer"></div>
+        <details class="admin-bot-playground-sources" id="bot-playground-sources-wrapper" hidden>
+          <summary>Fontes usadas</summary>
+          <ul id="bot-playground-sources"></ul>
+        </details>
       </article>
     </div>
   </section>
 
   <div class="admin-status-layout">
 
-    {# ── Zona B · Falhas + Correções ──────────────────────────────── #}
-    {% if bot.failure_rows %}
-      <section class="panel section-panel admin-bot-failures-panel">
-        <div class="section-head compact-head">
-          <div>
-            <p class="eyebrow">Atenção</p>
-            <h2>{{ bot.failed_cases_total }} caso(s) a falhar</h2>
-          </div>
-          <span class="admin-status-badge is-degraded">Precisa de correção</span>
+    {# ── Zona 3 · Fontes de conhecimento ──────────────────────────── #}
+    <section class="panel section-panel" id="sources">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Fontes</p>
+          <h2>De onde o bot aprende</h2>
         </div>
-        <div class="admin-bot-failure-list">
-          {% for item in bot.failure_rows %}
-            <article class="admin-bot-failure-row">
-              <div class="admin-bot-failure-row-main">
-                <strong>{{ item.document }}</strong>
-                <p class="admin-bot-failure-question">{{ item.question }}</p>
-              </div>
-              <div class="admin-bot-failure-row-detail">
-                <span class="admin-bot-failure-missing">Falta: {{ item.missing_summary }}</span>
-                <span class="muted">{{ item.answer_preview }}</span>
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-
-        {% if bot.recent_feedback_cases %}
-          <details class="documents-collapse-card admin-bot-collapse">
-            <summary class="documents-collapse-summary">
-              <div>
-                <h3>Correções recentes de operadores</h3>
-                <span class="muted">{{ bot.recent_feedback_cases|length }} guardadas</span>
-              </div>
-            </summary>
-            <div class="documents-collapse-body">
-              <div class="admin-casebook-sheet-wrap">
-                <table class="admin-casebook-sheet admin-bot-corrections-sheet">
-                  <thead>
-                    <tr>
-                      <th>Documento</th>
-                      <th>Pergunta</th>
-                      <th>Resposta esperada</th>
-                      <th>Origem</th>
-                      <th>Atualizado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for item in bot.recent_feedback_cases %}
-                      <tr>
-                        <td><strong>{{ item.document }}</strong></td>
-                        <td>{{ item.question }}</td>
-                        <td>{{ item.expected_answer_preview }}</td>
-                        <td><span class="admin-status-badge is-online">{{ item.source_label }}</span></td>
-                        <td>{{ item.updated_by or "Operador" }} · {{ item.updated_at_label }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+        <span class="muted small-note">{{ sources|length }} fontes monitorizadas</span>
+      </div>
+      <div class="admin-bot-sources-grid">
+        {% for source in sources %}
+          <article class="admin-bot-source-card admin-bot-source-state-{{ source.state }}">
+            <div class="admin-bot-source-head">
+              <strong>{{ source.label }}</strong>
+              <span class="admin-status-badge is-{{ source.state }}">
+                {% if source.state == 'online' %}Ativa{% elif source.state == 'degraded' %}Parcial{% else %}Sem dados{% endif %}
+              </span>
             </div>
-          </details>
-        {% endif %}
-      </section>
-    {% elif bot.recent_feedback_cases %}
-      <section class="panel section-panel">
-        <details class="documents-collapse-card admin-bot-collapse">
+            <p class="muted">{{ source.description }}</p>
+            <div class="admin-bot-source-metrics">
+              <span><strong>{{ source.count }}</strong> registo(s)</span>
+              {% if source.coverage_pct %}<span><strong>{{ source.coverage_pct }}%</strong> coberto</span>{% endif %}
+            </div>
+            {% if source.meta %}<p class="admin-bot-source-meta">{{ source.meta }}</p>{% endif %}
+            {% if source.action_url %}
+              <a class="outline-link" href="{{ source.action_url }}">Gerir</a>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    {# ── Zona 4 · Sinais de aprendizagem ──────────────────────────── #}
+    <section class="panel section-panel" id="signals">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Sinais ({{ signals.window_hours // 24 }} dias)</p>
+          <h2>O que o bot está a aprender</h2>
+        </div>
+      </div>
+      <div class="admin-bot-signals-grid">
+        <article class="admin-bot-signal-card admin-bot-signal-positive">
+          <header>
+            <span class="eyebrow">Positivos</span>
+            <strong>{{ signals.positives.total }}</strong>
+          </header>
+          <p class="muted">
+            {% if signals.positives.trend_pct > 0 %}&uarr; {{ signals.positives.trend_pct }}%
+            {% elif signals.positives.trend_pct < 0 %}&darr; {{ signals.positives.trend_pct|abs }}%
+            {% else %}estável{% endif %}
+            vs janela anterior
+          </p>
+          <ul class="admin-bot-signal-list">
+            <li>{{ signals.positives.approved_maneuvers }} manobra(s) validada(s)</li>
+            <li>Correções aprovadas pelo admin contam como positivo.</li>
+          </ul>
+        </article>
+        <article class="admin-bot-signal-card admin-bot-signal-negative">
+          <header>
+            <span class="eyebrow">A rever</span>
+            <strong>{{ signals.negatives.total }}</strong>
+          </header>
+          <p class="muted">
+            {% if signals.negatives.trend_pct > 0 %}&uarr; {{ signals.negatives.trend_pct }}%
+            {% elif signals.negatives.trend_pct < 0 %}&darr; {{ signals.negatives.trend_pct|abs }}%
+            {% else %}estável{% endif %}
+            vs janela anterior
+          </p>
+          <ul class="admin-bot-signal-list">
+            <li>{{ signals.negatives.avoided_patterns }} padrão(ões) marcado(s) como evitar</li>
+            <li>Correções pendentes ficam aqui até o admin decidir.</li>
+          </ul>
+        </article>
+        <article class="admin-bot-signal-card">
+          <header>
+            <span class="eyebrow">Tópicos em alta</span>
+          </header>
+          {% if signals.trending_topics %}
+            <ul class="admin-bot-topic-list">
+              {% for topic in signals.trending_topics %}
+                <li><span class="admin-bot-topic-tag">{{ topic.topic }}</span> <span class="muted">× {{ topic.count }}</span></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">Sem perguntas relevantes na janela.</p>
+          {% endif %}
+        </article>
+      </div>
+
+      {% if signals.recent_events %}
+        <details class="documents-collapse-card admin-bot-collapse" open>
           <summary class="documents-collapse-summary">
             <div>
-              <p class="eyebrow">Aprendizagem supervisionada</p>
-              <h3>Correções recentes de operadores</h3>
-              <span class="muted">{{ bot.recent_feedback_cases|length }} guardadas</span>
+              <h3>Últimos sinais registados</h3>
+              <span class="muted">{{ signals.recent_events|length }} evento(s) recentes</span>
             </div>
           </summary>
           <div class="documents-collapse-body">
-            <div class="admin-casebook-sheet-wrap">
-              <table class="admin-casebook-sheet admin-bot-corrections-sheet">
-                <thead>
-                  <tr>
-                    <th>Documento</th>
-                    <th>Pergunta</th>
-                    <th>Resposta esperada</th>
-                    <th>Origem</th>
-                    <th>Atualizado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in bot.recent_feedback_cases %}
-                    <tr>
-                      <td><strong>{{ item.document }}</strong></td>
-                      <td>{{ item.question }}</td>
-                      <td>{{ item.expected_answer_preview }}</td>
-                      <td><span class="admin-status-badge is-online">{{ item.source_label }}</span></td>
-                      <td>{{ item.updated_by or "Operador" }} · {{ item.updated_at_label }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+            <ul class="admin-bot-event-list">
+              {% for event in signals.recent_events %}
+                <li class="admin-bot-event admin-bot-event-{{ event.type }}">
+                  <span class="admin-bot-event-badge">{{ event.label }}</span>
+                  <span class="admin-bot-event-detail">{{ event.detail }}</span>
+                </li>
+              {% endfor %}
+            </ul>
           </div>
         </details>
-      </section>
-    {% endif %}
-
-    {# ── Zona C · Governança ──────────────────────────────────────── #}
-    <section class="panel section-panel" id="casebooks">
-      <div class="section-head compact-head">
-        <div>
-          <p class="eyebrow">Governança</p>
-          <h2>Validação de conteúdo</h2>
-        </div>
-        <span class="admin-status-badge is-{{ casebooks.state }}">{{ casebooks.state_label }}</span>
-      </div>
-
-      <div class="admin-status-compact-grid admin-casebook-kpi-grid">
-        <div class="admin-status-fact">
-          <span>Mensagens por rever</span>
-          <strong>{{ casebooks.chat_pending_total }}</strong>
-        </div>
-        <div class="admin-status-fact">
-          <span>Mensagens aprovadas</span>
-          <strong>{{ casebooks.chat_approved_total }}</strong>
-        </div>
-        <div class="admin-status-fact">
-          <span>Casos por validar</span>
-          <strong>{{ casebooks.case_pending_total }}</strong>
-        </div>
-        <div class="admin-status-fact">
-          <span>Experiência validada</span>
-          <strong>{{ casebooks.case_approved_total }}</strong>
-        </div>
-        <div class="admin-status-fact">
-          <span>Alertas</span>
-          <strong>{{ casebooks.case_review_total }}</strong>
-        </div>
-        <div class="admin-status-fact">
-          <span>Prática importada</span>
-          <strong>{{ casebooks.practice_active_total }}/{{ casebooks.practice_total }}</strong>
-        </div>
-      </div>
-
-      <form method="get" action="{{ url_for('admin.admin_bot') }}#casebooks" class="archive-filter-form admin-casebook-compact-filters">
-        <div class="archive-filter-grid admin-casebooks-filter-grid">
-          <label>
-            Busca
-            <input type="search" name="q" value="{{ casebooks.filters.q }}" placeholder="Navio, cais, pergunta, resposta...">
-          </label>
-          <label>
-            Origem
-            <select name="source_type">
-              <option value="all" {% if casebooks.filters.source_type == "all" %}selected{% endif %}>Tudo</option>
-              <option value="chat" {% if casebooks.filters.source_type == "chat" %}selected{% endif %}>Chat / WhatsApp</option>
-              <option value="maneuver" {% if casebooks.filters.source_type == "maneuver" %}selected{% endif %}>Manobras</option>
-              <option value="practice" {% if casebooks.filters.source_type == "practice" %}selected{% endif %}>Excel / prática</option>
-            </select>
-          </label>
-          <label>
-            Chat/WhatsApp
-            <select name="chat_feedback">
-              <option value="pending" {% if casebooks.filters.chat_feedback == "pending" %}selected{% endif %}>Por rever</option>
-              <option value="approved" {% if casebooks.filters.chat_feedback == "approved" %}selected{% endif %}>Aprovadas</option>
-              <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas / rever</option>
-              <option value="all" {% if casebooks.filters.chat_feedback == "all" %}selected{% endif %}>Todas</option>
-            </select>
-          </label>
-          <label>
-            Manobras
-            <select name="case_feedback">
-              <option value="pending" {% if casebooks.filters.case_feedback == "pending" %}selected{% endif %}>Sem validação</option>
-              <option value="approved" {% if casebooks.filters.case_feedback == "approved" %}selected{% endif %}>Experiência validada</option>
-              <option value="avoid" {% if casebooks.filters.case_feedback == "avoid" %}selected{% endif %}>Evitar como padrão</option>
-              <option value="review" {% if casebooks.filters.case_feedback == "review" %}selected{% endif %}>Rever caso</option>
-              <option value="all" {% if casebooks.filters.case_feedback == "all" %}selected{% endif %}>Todos</option>
-            </select>
-          </label>
-          <label>
-            Tipo
-            <select name="case_type">
-              <option value="" {% if not casebooks.filters.case_type %}selected{% endif %}>Todos</option>
-              <option value="entry" {% if casebooks.filters.case_type == "entry" %}selected{% endif %}>Entrada</option>
-              <option value="departure" {% if casebooks.filters.case_type == "departure" %}selected{% endif %}>Saída</option>
-              <option value="shift" {% if casebooks.filters.case_type == "shift" %}selected{% endif %}>Mudança</option>
-            </select>
-          </label>
-          <label>
-            Linhas
-            <select name="limit">
-              {% for option in casebooks.allowed_limits %}
-                <option value="{{ option }}" {% if casebooks.filters.limit == option %}selected{% endif %}>{{ option }}</option>
-              {% endfor %}
-            </select>
-          </label>
-        </div>
-        <div class="inline-link-row">
-          <button type="submit" class="mini-button">Aplicar</button>
-          <a class="outline-link" href="{{ url_for('admin.admin_bot', _anchor='casebooks') }}">Limpar</a>
-        </div>
-      </form>
-
-      {# ── Chat / WhatsApp ── #}
-      <details class="documents-collapse-card admin-bot-collapse" {% if casebooks.chat_rows %}open{% endif %}>
-        <summary class="documents-collapse-summary">
-          <div>
-            <h3>Chat e WhatsApp</h3>
-            <span class="admin-casebook-count">{{ casebooks.chat_rows|length }} de {{ casebooks.chat_visible_total }}</span>
-          </div>
-        </summary>
-        <div class="documents-collapse-body">
-          {% if casebooks.chat_rows %}
-            <div class="admin-casebook-sheet-wrap">
-              <table class="admin-casebook-sheet">
-                <thead>
-                  <tr>
-                    <th>Estado</th>
-                    <th>Origem</th>
-                    <th>Pergunta</th>
-                    <th>Resposta</th>
-                    <th>Controlo admin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in casebooks.chat_rows %}
-                    <tr>
-                      <td>
-                        <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-                      </td>
-                      <td>
-                        <strong>{{ item.channel_label }}</strong><br>
-                        <span class="muted">{{ item.owner_username }}</span><br>
-                        <span class="muted">{{ item.created_at_label }}</span>
-                      </td>
-                      <td>{{ item.question_preview }}</td>
-                      <td>
-                        {{ item.answer_preview }}
-                        {% if item.feedback_correction %}
-                          <br><strong>Correção:</strong> {{ item.feedback_correction }}
-                        {% endif %}
-                      </td>
-                      <td>
-                        <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="admin-sheet-form">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
-                          <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
-                          <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                          <select name="feedback_status" required>
-                            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar</option>
-                            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Bloquear / rever</option>
-                          </select>
-                          <textarea name="feedback_note" rows="2" placeholder="Nota">{{ item.feedback_note }}</textarea>
-                          <textarea name="feedback_correction" rows="2" placeholder="Correção reutilizável">{{ item.feedback_correction }}</textarea>
-                          <input type="text" name="feedback_correction_document" value="{{ item.feedback_correction_document }}" placeholder="Documento alvo">
-                          <button type="submit" class="mini-button">Guardar</button>
-                        </form>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <p class="admin-status-note">Nenhuma mensagem corresponde aos filtros atuais.</p>
-          {% endif %}
-          {% if casebooks.chat_has_more %}
-            <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
-          {% endif %}
-        </div>
-      </details>
-
-      {# ── Manobras ── #}
-      <details class="documents-collapse-card admin-bot-collapse" {% if casebooks.case_rows %}open{% endif %}>
-        <summary class="documents-collapse-summary">
-          <div>
-            <h3>Manobras</h3>
-            <span class="admin-casebook-count">{{ casebooks.case_rows|length }} de {{ casebooks.case_visible_total }}</span>
-          </div>
-        </summary>
-        <div class="documents-collapse-body">
-          {% if casebooks.case_rows %}
-            <div class="admin-casebook-sheet-wrap">
-              <table class="admin-casebook-sheet">
-                <thead>
-                  <tr>
-                    <th>Estado</th>
-                    <th>Escala</th>
-                    <th>Manobra</th>
-                    <th>Perfil</th>
-                    <th>Correlação</th>
-                    <th>Controlo admin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in casebooks.case_rows %}
-                    <tr>
-                      <td><span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span></td>
-                      <td>
-                        <strong>{{ item.reference_code }}</strong><br>
-                        <span class="muted">{{ item.vessel_name }}</span><br>
-                        <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir</a>
-                      </td>
-                      <td>{{ item.maneuver_type_label }}<br><span class="muted">{{ item.route_label }}</span></td>
-                      <td>{{ item.feature_label }}</td>
-                      <td>{{ item.top_matches_label or "Sem correlação forte" }}</td>
-                      <td>
-                        <form method="post" action="{{ url_for('admin.admin_casebooks_maneuver_feedback', maneuver_id=item.maneuver_id) }}" class="admin-sheet-form">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                          <select name="feedback_status" required>
-                            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Validar</option>
-                            <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar padrão</option>
-                            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever</option>
-                          </select>
-                          <textarea name="feedback_note" rows="2" placeholder="Nota de validação">{{ item.feedback_note }}</textarea>
-                          <button type="submit" class="mini-button">Guardar</button>
-                        </form>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <p class="admin-status-note">Nenhum caso operacional corresponde aos filtros atuais.</p>
-          {% endif %}
-          {% if casebooks.case_has_more %}
-            <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
-          {% endif %}
-        </div>
-      </details>
-
-      {# ── Experiência prática ── #}
-      <details class="documents-collapse-card admin-bot-collapse" {% if casebooks.practice_rows %}open{% endif %}>
-        <summary class="documents-collapse-summary">
-          <div>
-            <h3>Experiência prática</h3>
-            <span class="admin-casebook-count">{{ casebooks.practice_rows|length }} de {{ casebooks.practice_visible_total }}</span>
-          </div>
-        </summary>
-        <div class="documents-collapse-body">
-          <form method="post" action="{{ url_for('admin.import_practice_experience') }}" enctype="multipart/form-data" class="archive-filter-form admin-casebook-compact-filters">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-            <div class="archive-filter-grid admin-casebooks-filter-grid">
-              <label>
-                Ficheiro .json
-                <input type="file" name="practice_file" accept=".json,application/json">
-              </label>
-              <label>
-                Estado ao importar
-                <select name="feedback_status">
-                  <option value="approved" selected>Aprovado pelo admin</option>
-                  <option value="review">Importar para revisão</option>
-                </select>
-              </label>
-              <label class="checkbox-line">
-                <input type="checkbox" name="replace_source" value="1" checked>
-                Substituir padrões do mesmo ficheiro
-              </label>
-            </div>
-            <p class="admin-status-note">
-              A importação agrega manobras por tipo, navio, dimensão, calado e cais. O bot só reutiliza padrões aprovados ou marcados como evitar; padrões em revisão ficam fora do contexto.
-              {% if casebooks.practice_local_source_exists %}
-                Sem upload, o servidor usa <code>knowledge/{{ casebooks.practice_source_filename }}</code>.
-              {% endif %}
-            </p>
-            <button type="submit" class="mini-button">Importar experiência</button>
-          </form>
-          {% if casebooks.practice_total %}
-            <form method="post" action="{{ url_for('admin.clear_practice_experience') }}" class="admin-sheet-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-              <button type="submit" class="mini-button">Limpar experiência importada</button>
-            </form>
-          {% endif %}
-          {% if casebooks.practice_rows %}
-            <div class="admin-casebook-sheet-wrap">
-              <table class="admin-casebook-sheet">
-                <thead>
-                  <tr>
-                    <th>Estado</th>
-                    <th>Padrão</th>
-                    <th>Perfil</th>
-                    <th>Métricas</th>
-                    <th>Controlo admin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in casebooks.practice_rows %}
-                    <tr>
-                      <td><span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span></td>
-                      <td>
-                        <strong>{{ item.reference_code }}</strong><br>
-                        <span class="muted">{{ item.source_filename }}</span><br>
-                        {{ item.maneuver_type_label }} · {{ item.route_label }}
-                      </td>
-                      <td>
-                        {{ item.profile_label }}<br>
-                        <span class="muted">Navios: {{ item.vessel_examples_label }}</span>
-                      </td>
-                      <td>
-                        {{ item.case_count }} caso(s)<br>
-                        Duração mediana {{ item.duration_median_label }}<br>
-                        Rebocadores {{ item.tug_distribution_label }}
-                        {% if item.comments_label and item.comments_label != "--" %}
-                          <br><span class="muted">{{ item.comments_label }}</span>
-                        {% endif %}
-                      </td>
-                      <td>
-                        <form method="post" action="{{ url_for('admin.update_practice_experience', record_id=item.id) }}" class="admin-sheet-form">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                          <select name="feedback_status" required>
-                            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar</option>
-                            <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar padrão</option>
-                            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever</option>
-                          </select>
-                          <textarea name="feedback_note" rows="2" placeholder="Nota de validação">{{ item.feedback_note }}</textarea>
-                          <button type="submit" class="mini-button">Guardar</button>
-                        </form>
-                        <form method="post" action="{{ url_for('admin.delete_practice_experience', record_id=item.id) }}" class="admin-sheet-form">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                          <button type="submit" class="mini-button">Remover</button>
-                        </form>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <p class="admin-status-note">Ainda não há experiência prática importada para os filtros atuais.</p>
-          {% endif %}
-          {% if casebooks.practice_has_more %}
-            <a class="outline-link" href="{{ url_for('admin.admin_bot', q=casebooks.filters.q, source_type=casebooks.filters.source_type, chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, limit=casebooks.next_limit, _anchor='casebooks') }}">Ver mais linhas</a>
-          {% endif %}
-        </div>
-      </details>
+      {% endif %}
     </section>
 
-    {# ── Zona D · Dados e Cobertura ──────────────────────────────── #}
-    <details class="documents-collapse-card panel section-panel admin-bot-collapse">
-      <summary class="documents-collapse-summary">
+    {# ── Zona 5 · Exceções ────────────────────────────────────────── #}
+    <section class="panel section-panel" id="exceptions">
+      <div class="section-head compact-head">
         <div>
-          <p class="eyebrow">Dados e cobertura</p>
-          <h2>Importar, exportar e cobertura documental</h2>
+          <p class="eyebrow">Exceções</p>
+          <h2>Só o que precisa de ti</h2>
         </div>
+        <span class="admin-status-badge is-{{ 'degraded' if exceptions.total else 'online' }}">
+          {% if exceptions.total %}{{ exceptions.total }} item(ns){% else %}Sem pendências{% endif %}
+        </span>
+      </div>
+      {% if exceptions['items'] %}
+        <ul class="admin-bot-exception-list">
+          {% for item in exceptions['items'] %}
+            <li class="admin-bot-exception admin-bot-exception-{{ item.severity }}">
+              <div class="admin-bot-exception-main">
+                <strong>{{ item.label }}</strong>
+                <span class="muted">{{ item.detail }}</span>
+              </div>
+              {% if item.url %}
+                <a class="outline-link" href="{{ item.url }}">Abrir</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="admin-status-note">Tudo em ordem. Nenhuma exceção operacional a necessitar de decisão admin.</p>
+      {% endif %}
+    </section>
+
+    {# ── Zona 6 · Qualidade (evals) ───────────────────────────────── #}
+    <section class="panel section-panel" id="quality">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Qualidade</p>
+          <h2>Evals de conhecimento</h2>
+        </div>
+        <span class="admin-status-badge is-{{ 'online' if quality.failed_total == 0 and quality.active_cases_total else 'degraded' if quality.active_cases_total else 'offline' }}">
+          {{ quality.passed_total }}/{{ quality.active_cases_total }} passam
+        </span>
+      </div>
+      {% if quality.failure_rows %}
+        <details class="documents-collapse-card admin-bot-collapse" open>
+          <summary class="documents-collapse-summary">
+            <div>
+              <h3>{{ quality.failed_total }} caso(s) a falhar</h3>
+              <span class="muted">Drill-down por documento</span>
+            </div>
+          </summary>
+          <div class="documents-collapse-body">
+            <ul class="admin-bot-failure-list">
+              {% for item in quality.failure_rows %}
+                <li>
+                  <strong>{{ item.document }}</strong>
+                  <p class="admin-bot-failure-question">{{ item.question }}</p>
+                  <p class="muted">Falta: {{ item.missing_summary }}</p>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </details>
+      {% endif %}
+      {% if quality.document_rows %}
+        <div class="admin-casebook-sheet-wrap">
+          <table class="admin-casebook-sheet admin-bot-coverage-sheet">
+            <thead>
+              <tr>
+                <th>Documento</th>
+                <th>Casos</th>
+                <th>Passam</th>
+                <th>Falham</th>
+                <th>Correções</th>
+                <th>Cobertura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in quality.document_rows %}
+                <tr>
+                  <td><strong>{{ row.document }}</strong></td>
+                  <td>{{ row.total }}</td>
+                  <td>{{ row.passed }}</td>
+                  <td>{{ row.failed }}</td>
+                  <td>{{ row.feedback }}</td>
+                  <td><span class="admin-status-badge is-{{ row.state }}">{{ row.coverage_pct }}%</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="admin-status-note">Nenhum documento tem ainda casos de avaliação associados.</p>
+      {% endif %}
+    </section>
+
+    {# ── Zona 7 · Controlos admin / Toolbox ──────────────────────── #}
+    <section class="panel section-panel admin-bot-toolbox" id="toolbox">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Controlos</p>
+          <h2>Definições e aprendizagem automática</h2>
+        </div>
+        <span class="muted small-note">
+          {% if settings.updated_at %}última alteração: {{ settings.updated_at }}{% else %}defaults{% endif %}
+        </span>
+      </div>
+      <form method="post" action="{{ url_for('admin.admin_bot_settings') }}" class="admin-bot-settings-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="admin-bot-toggle-grid">
+          <label class="admin-bot-toggle">
+            <input type="checkbox" name="auto_promote_corrections" {% if settings.auto_promote_corrections %}checked{% endif %}>
+            <span>
+              <strong>Auto-promover correções</strong>
+              <small class="muted">Correções do admin viram eval cases automaticamente, sem re-validação.</small>
+            </span>
+          </label>
+          <label class="admin-bot-toggle">
+            <input type="checkbox" name="auto_trust_positive_feedback" {% if settings.auto_trust_positive_feedback %}checked{% endif %}>
+            <span>
+              <strong>Confiar no feedback positivo</strong>
+              <small class="muted">Thumbs-up do utilizador passam a guiar respostas futuras sem aprovação extra.</small>
+            </span>
+          </label>
+          <label class="admin-bot-toggle">
+            <input type="checkbox" name="require_admin_validation" {% if settings.require_admin_validation %}checked{% endif %}>
+            <span>
+              <strong>Exigir validação admin</strong>
+              <small class="muted">Modo antigo: cada mensagem e manobra tem de passar pelo admin.</small>
+            </span>
+          </label>
+        </div>
+        <div class="admin-bot-setting-grid">
+          <label>
+            Janela dos sinais (horas)
+            <input type="number" name="signals_window_hours" value="{{ settings.signals_window_hours }}" min="24" max="720">
+          </label>
+          <label>
+            Similaridade de guard (review)
+            <input type="number" step="0.01" min="0.5" max="1" name="review_guard_similarity" value="{{ settings.review_guard_similarity }}">
+          </label>
+          <label>
+            Similaridade de bloqueio
+            <input type="number" step="0.01" min="0.5" max="1" name="review_block_similarity" value="{{ settings.review_block_similarity }}">
+          </label>
+          <label>
+            Similaridade de correção
+            <input type="number" step="0.01" min="0.5" max="1" name="review_correction_similarity" value="{{ settings.review_correction_similarity }}">
+          </label>
+          <label>
+            Hint de documento confiável
+            <input type="number" step="0.01" min="0.5" max="1" name="trusted_document_hint_similarity" value="{{ settings.trusted_document_hint_similarity }}">
+          </label>
+          <label>
+            Outlier de manobra
+            <input type="number" step="0.01" min="0.5" max="1" name="outlier_review_threshold" value="{{ settings.outlier_review_threshold }}">
+          </label>
+        </div>
+        <div class="admin-bot-toolbox-actions">
+          <button type="submit" class="mini-button">Guardar definições</button>
+        </div>
+      </form>
+      <form method="post" action="{{ url_for('admin.admin_bot_settings_reset') }}" class="admin-bot-reset-form" onsubmit="return confirm('Repor todas as definições do bot para os valores por defeito?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="mini-button secondary-button">Repor defaults</button>
+      </form>
+
+      <div class="admin-bot-data-actions">
+        <article class="admin-status-surface admin-bot-data-box">
+          <div class="admin-status-surface-head">
+            <strong>Base do bot</strong>
+            <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar JSON</a>
+          </div>
+          <form method="post" action="{{ url_for('admin.import_bot_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Importar bot
+              <input type="file" name="bot_database_file" accept=".json,application/json">
+            </label>
+            <button type="submit" class="mini-button">Importar</button>
+          </form>
+        </article>
+        <article class="admin-status-surface admin-bot-data-box">
+          <div class="admin-status-surface-head">
+            <strong>Base do sistema</strong>
+            <a class="outline-link" href="{{ url_for('admin.export_system_database') }}">Exportar JSON</a>
+          </div>
+          <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Importar sistema
+              <input type="file" name="system_database_file" accept=".json,application/json">
+            </label>
+            <label>
+              Modo
+              <select name="import_mode">
+                <option value="merge" selected>Juntar / atualizar</option>
+                <option value="replace">Substituir tudo</option>
+              </select>
+            </label>
+            <button type="submit" class="mini-button">Importar</button>
+          </form>
+        </article>
+      </div>
+    </section>
+
+    {# ── Zona 8 · Casebooks legados (collapsible, para quem precisar) ── #}
+    <details class="panel section-panel admin-bot-legacy-casebooks" id="casebooks">
+      <summary class="documents-collapse-summary admin-bot-legacy-summary">
+        <div>
+          <p class="eyebrow">Governança detalhada</p>
+          <h2>Mensagens, casos e prática importada</h2>
+        </div>
+        <span class="muted small-note">Abre para rever manualmente (opcional com auto-promote ligado).</span>
       </summary>
       <div class="documents-collapse-body">
-        <div class="admin-bot-data-actions">
-          <article class="admin-status-surface admin-bot-data-box">
-            <div class="admin-status-surface-head">
-              <strong>Base do bot</strong>
-              <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar JSON</a>
-            </div>
-            <form method="post" action="{{ url_for('admin.import_bot_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-              <label>
-                Importar bot
-                <input type="file" name="bot_database_file" accept=".json,application/json">
-              </label>
-              <button type="submit" class="mini-button">Importar</button>
-            </form>
-          </article>
-          <article class="admin-status-surface admin-bot-data-box">
-            <div class="admin-status-surface-head">
-              <strong>Base do sistema</strong>
-              <a class="outline-link" href="{{ url_for('admin.export_system_database') }}">Exportar JSON</a>
-            </div>
-            <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-              <label>
-                Importar sistema
-                <input type="file" name="system_database_file" accept=".json,application/json">
-              </label>
-              <label>
-                Modo
-                <select name="import_mode">
-                  <option value="merge" selected>Juntar / atualizar</option>
-                  <option value="replace">Substituir tudo</option>
-                </select>
-              </label>
-              <button type="submit" class="mini-button">Importar</button>
-            </form>
-          </article>
-        </div>
-
-        {% if bot.document_rows %}
-          <div class="admin-casebook-sheet-wrap" style="margin-top:14px">
-            <table class="admin-casebook-sheet admin-bot-coverage-sheet">
-              <thead>
-                <tr>
-                  <th>Documento</th>
-                  <th>Casos</th>
-                  <th>Passam</th>
-                  <th>Falham</th>
-                  <th>Correções</th>
-                  <th>Cobertura</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for item in bot.document_rows %}
-                  <tr>
-                    <td><strong>{{ item.document }}</strong></td>
-                    <td>{{ item.total_cases }}</td>
-                    <td>{{ item.passed_cases }}</td>
-                    <td>{{ item.failed_cases }}</td>
-                    <td>{{ item.feedback_cases }}</td>
-                    <td><span class="admin-status-badge is-{{ item.state }}">{{ item.coverage_pct }}%</span></td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+        <p class="muted">
+          Com os controlos acima, o admin só precisa de entrar aqui em exceções. Esta lista mantém a capacidade de validação manual do portal antigo.
+        </p>
+        <div class="admin-status-compact-grid admin-casebook-kpi-grid">
+          <div class="admin-status-fact">
+            <span>Mensagens por rever</span>
+            <strong>{{ casebooks.chat_pending_total }}</strong>
           </div>
-        {% else %}
-          <p class="admin-status-note">Nenhum documento tem ainda casos de avaliação associados.</p>
-        {% endif %}
+          <div class="admin-status-fact">
+            <span>Mensagens aprovadas</span>
+            <strong>{{ casebooks.chat_approved_total }}</strong>
+          </div>
+          <div class="admin-status-fact">
+            <span>Casos por validar</span>
+            <strong>{{ casebooks.case_pending_total }}</strong>
+          </div>
+          <div class="admin-status-fact">
+            <span>Experiência validada</span>
+            <strong>{{ casebooks.case_approved_total }}</strong>
+          </div>
+          <div class="admin-status-fact">
+            <span>Prática importada</span>
+            <strong>{{ casebooks.practice_active_total }}/{{ casebooks.practice_total }}</strong>
+          </div>
+        </div>
+        <a class="outline-link" href="{{ url_for('admin.admin_casebooks') }}">Abrir governança detalhada</a>
       </div>
     </details>
 
   </div>
 </main>
+
+<script>
+(function () {
+  const form = document.getElementById("bot-playground-form");
+  const result = document.getElementById("bot-playground-result");
+  const answerBox = document.getElementById("bot-playground-answer");
+  const sourcesWrapper = document.getElementById("bot-playground-sources-wrapper");
+  const sourcesList = document.getElementById("bot-playground-sources");
+  const origin = document.getElementById("bot-playground-origin");
+  if (!form) return;
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const question = (data.get("question") || "").toString().trim();
+    if (!question) return;
+    origin.textContent = "A consultar o bot...";
+    result.hidden = false;
+    answerBox.textContent = "";
+    sourcesList.innerHTML = "";
+    sourcesWrapper.hidden = true;
+    try {
+      const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": data.get("csrf_token"),
+        },
+        body: JSON.stringify({ question }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        origin.textContent = "";
+        answerBox.textContent = body.error || `Falha ${response.status}`;
+        return;
+      }
+      const payload = await response.json();
+      answerBox.textContent = payload.answer || "(sem resposta)";
+      origin.textContent = payload.answer_origin ? `Origem: ${payload.answer_origin}` : "";
+      const sources = payload.sources || [];
+      if (sources.length) {
+        sources.forEach((src) => {
+          const li = document.createElement("li");
+          const doc = src.document || src.source_id || "Fonte";
+          const snippet = (src.snippet || "").slice(0, 220);
+          li.textContent = snippet ? `${doc} — ${snippet}${snippet.length === 220 ? '…' : ''}` : doc;
+          sourcesList.appendChild(li);
+        });
+        sourcesWrapper.hidden = false;
+      }
+    } catch (err) {
+      origin.textContent = "";
+      answerBox.textContent = `Erro: ${err.message}`;
+    }
+  });
+})();
+</script>
 {% endblock %}
