@@ -305,7 +305,77 @@ def _build_supplemental_sources(
     supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
     if conversation_state and conversation_state.get("source"):
         supplemental_sources.append(conversation_state["source"])
+    supplemental_sources.extend(_build_approved_casebook_sources(question))
     return supplemental_sources
+
+
+_CASEBOOK_LOOKUP_TOKENS = {
+    "entry": ("entrada", "entrar", "chegada", "chegar"),
+    "departure": ("saida", "saída", "sair", "sair", "partida"),
+    "shift": ("mudanca", "mudança", "shift", "reatracacao", "reatracação"),
+}
+
+
+def _build_approved_casebook_sources(question: str) -> list[dict]:
+    """Inject up to three approved maneuver cases relevant to the question."""
+    store = getattr(services, "store", None)
+    if not store or not hasattr(store, "list_maneuver_cases"):
+        return []
+    try:
+        cases = store.list_maneuver_cases(limit=80) or []
+    except Exception:
+        return []
+    if not cases:
+        return []
+
+    clean_question = _normalize_lookup_text(question)
+    if not clean_question:
+        return []
+
+    target_type = None
+    for maneuver_type, tokens in _CASEBOOK_LOOKUP_TOKENS.items():
+        if any(token in clean_question for token in tokens):
+            target_type = maneuver_type
+            break
+
+    def _case_matches(case: dict) -> bool:
+        if (case.get("feedback_status") or "").strip().lower() != "approved":
+            return False
+        if target_type and (case.get("maneuver_type") or "").strip().lower() != target_type:
+            return False
+        searchable = " ".join(
+            [
+                str(case.get("vessel_name") or ""),
+                str(case.get("origin_label") or ""),
+                str(case.get("destination_label") or ""),
+                str(case.get("maneuver_type_label") or ""),
+                str(case.get("feedback_note") or ""),
+            ]
+        )
+        normalized = _normalize_lookup_text(searchable)
+        return any(token in normalized for token in clean_question.split() if len(token) > 3)
+
+    sources: list[dict] = []
+    for case in cases:
+        if not _case_matches(case):
+            continue
+        snippet_bits = [
+            f"{case.get('maneuver_type_label') or 'Manobra'}",
+            f"{case.get('origin_label') or '--'} → {case.get('destination_label') or '--'}",
+            (case.get('feedback_note') or '').strip(),
+        ]
+        snippet = " · ".join(bit for bit in snippet_bits if bit)
+        sources.append(
+            {
+                "document": f"Casebook · {case.get('reference_code') or case.get('vessel_name') or 'Manobra aprovada'}",
+                "source_id": f"CASEBOOK_{case.get('maneuver_id', '')[:8].upper()}",
+                "retrieval_mode": "casebook_approved",
+                "snippet": snippet[:300],
+            }
+        )
+        if len(sources) >= 3:
+            break
+    return sources
 
 
 def _normalize_lookup_text(value: str) -> str:

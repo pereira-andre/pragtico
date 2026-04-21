@@ -1729,6 +1729,25 @@ def admin_bot_settings_reset():
     return redirect(return_to)
 
 
+@bp.route("/admin/bot/rerun-evals", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_bot_rerun_evals():
+    """Forçar uma nova avaliação dos eval cases e devolver ao painel com resumo."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="quality")
+    try:
+        refresh_knowledge_state(force_reindex=False)
+        snapshot = build_quality_snapshot()
+        passed = snapshot.get("passed_total", 0)
+        total = snapshot.get("active_cases_total", 0)
+        failed = snapshot.get("failed_total", 0)
+        flash(f"Evals executados: {passed}/{total} passam ({failed} a falhar).", "success")
+    except Exception as exc:
+        logger.exception("Falha a correr evals.")
+        flash(f"Falha a correr evals: {exc}", "error")
+    return redirect(return_to)
+
+
 @bp.route("/admin/bot/playground", methods=["POST"])
 @login_required
 @role_required("admin")

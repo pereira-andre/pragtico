@@ -227,9 +227,15 @@
           <p class="eyebrow">Qualidade</p>
           <h2>Evals de conhecimento</h2>
         </div>
-        <span class="admin-status-badge is-{{ 'online' if quality.failed_total == 0 and quality.active_cases_total else 'degraded' if quality.active_cases_total else 'offline' }}">
-          {{ quality.passed_total }}/{{ quality.active_cases_total }} passam
-        </span>
+        <div class="inline-link-row">
+          <span class="admin-status-badge is-{{ 'online' if quality.failed_total == 0 and quality.active_cases_total else 'degraded' if quality.active_cases_total else 'offline' }}">
+            {{ quality.passed_total }}/{{ quality.active_cases_total }} passam
+          </span>
+          <form method="post" action="{{ url_for('admin.admin_bot_rerun_evals') }}" class="admin-bot-inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="mini-button secondary-button">Reexecutar agora</button>
+          </form>
+        </div>
       </div>
       {% if quality.failure_rows %}
         <details class="documents-collapse-card admin-bot-collapse" open>
