@@ -144,6 +144,77 @@ class AdminBotDashboardTests(unittest.TestCase):
         self.assertIn("bot_settings", payload["payload"])
         self.assertEqual(payload["payload"]["bot_settings"]["signals_window_hours"], 96)
 
+    def test_exceptions_link_to_casebooks_focus_for_blocked_corrections(self) -> None:
+        conversation = self.store.create_conversation("admin", "Revisao")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Qual o calado praticavel?")
+        answer = self.store.append_chat_message(
+            "admin",
+            conversation["id"],
+            "assistant",
+            "Resposta provisoria.",
+            channel="whatsapp",
+        )
+        self.store.update_message_feedback(
+            username="admin",
+            conversation_id=conversation["id"],
+            message_id=answer["id"],
+            feedback_status="review",
+            feedback_note="Precisa de correcao.",
+            feedback_correction="Corrigir com base no documento certo.",
+            feedback_updated_by="admin",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Correção bloqueada", html)
+        self.assertIn(f"focus=chat-{answer['id']}", html)
+        self.assertIn(f"#chat-{answer['id']}", html)
+
+    def test_quality_failures_expose_document_and_correction_actions(self) -> None:
+        knowledge_dir = Path(self.store.knowledge_dir)
+        (knowledge_dir / "evals").mkdir(parents=True, exist_ok=True)
+        (knowledge_dir / "IT-001_Operacoes.txt").write_text("Conteudo base.", encoding="utf-8")
+        (knowledge_dir / "IT-002_Docas.txt").write_text("Conteudo base.", encoding="utf-8")
+        (knowledge_dir / "evals" / "critical_document_companion_evals.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "document": "IT-001_Operacoes.txt",
+                        "question": "Qual o procedimento?",
+                        "expected_answer": "Procedimento validado.",
+                        "expected_substrings": ["Procedimento"],
+                    }
+                ],
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        self.store.upsert_feedback_eval_case(
+            source_message_id="msg-review",
+            document="IT-002_Docas.txt",
+            question="Que docas existem?",
+            expected_answer="Doca 1 e Doca 2.",
+            expected_substrings=["Doca 1"],
+            updated_by="admin",
+            source="whatsapp",
+        )
+
+        with app.app.test_client() as client:
+            self._set_admin_session(client)
+            response = client.get("/admin/bot")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Origem: Eval estático", html)
+        self.assertIn("Origem: Correção promovida", html)
+        self.assertIn("Abrir documento", html)
+        self.assertIn("Abrir correção", html)
+
 
 if __name__ == "__main__":
     unittest.main()

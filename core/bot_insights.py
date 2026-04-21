@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import urlencode
 
 from core import services
 from core.bot_settings import load_bot_settings
@@ -58,6 +59,51 @@ def _pct_change(current: int, previous: int) -> int:
 def _normalize_text(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
     return re.sub(r"\s+", " ", text.encode("ascii", "ignore").decode("ascii").strip().lower())
+
+
+def _feedback_source_label(source: str) -> str:
+    clean_source = str(source or "").strip().lower()
+    if clean_source == "whatsapp":
+        return "WhatsApp"
+    if clean_source == "web":
+        return "Site"
+    return "Operador"
+
+
+def _preview_text(value: Any, limit: int = 220) -> str:
+    clean = " ".join(str(value or "").split())
+    if len(clean) <= limit:
+        return clean
+    return f"{clean[: max(limit - 1, 0)].rstrip()}..."
+
+
+def _build_relative_url(path: str, **params: Any) -> str:
+    clean_params = [(key, value) for key, value in params.items() if value not in {"", None}]
+    if not clean_params:
+        return path
+    return f"{path}?{urlencode(clean_params, doseq=True)}"
+
+
+def _build_casebooks_focus_url(
+    *,
+    source_type: str,
+    anchor: str,
+    limit: int = 8,
+    chat_feedback: str = "",
+    case_feedback: str = "",
+    q: str = "",
+) -> str:
+    focus = str(anchor or "").strip()
+    params = {
+        "source_type": source_type,
+        "limit": limit,
+        "focus": focus,
+        "chat_feedback": chat_feedback,
+        "case_feedback": case_feedback,
+        "q": q,
+    }
+    base = _build_relative_url("/admin/bot", **params)
+    return f"{base}#{focus}" if focus else f"{base}#casebooks"
 
 
 # ----------------------------------------------------------------------------
@@ -250,7 +296,12 @@ def build_exceptions(*, limit: int = 10) -> dict:
                     "severity": "high",
                     "label": "Correção bloqueada",
                     "detail": msg.get("question") or (msg.get("content") or "")[:120],
-                    "url": f"/admin/bot#chat-{msg.get('id', '')}",
+                    "url": _build_casebooks_focus_url(
+                        source_type="chat",
+                        chat_feedback="review",
+                        limit=16,
+                        anchor=f"chat-{msg.get('id', '')}",
+                    ),
                 }
             )
 
@@ -488,9 +539,17 @@ def build_quality_snapshot() -> dict:
         deduped.append(case)
 
     results = evaluate_companion_cases(deduped, knowledge_dir) if (deduped and knowledge_dir) else []
-    passed = sum(1 for item in results if item.get("passed"))
-    failed = [item for item in results if not item.get("passed")]
+    evaluated_rows = [{**case, **result} for case, result in zip(deduped, results)]
+    passed = sum(1 for item in evaluated_rows if item.get("passed"))
+    failed = [item for item in evaluated_rows if not item.get("passed")]
     pass_rate = round((passed / len(results)) * 100) if results else 0
+    source_rows = [
+        {"label": label, "count": count}
+        for label, count in sorted(
+            Counter(_feedback_source_label(item.get("source", "")) for item in feedback_cases).items(),
+            key=lambda entry: (-entry[1], entry[0]),
+        )
+    ]
 
     document_summary: dict[str, dict] = {}
     for case in deduped:
@@ -505,7 +564,7 @@ def build_quality_snapshot() -> dict:
             continue
         document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
         document_summary[name]["feedback"] += 1
-    for result in results:
+    for result in evaluated_rows:
         name = (result.get("document") or "").strip()
         if not name:
             continue
@@ -527,11 +586,41 @@ def build_quality_snapshot() -> dict:
     failure_rows = []
     for item in failed[:10]:
         missing = list(item.get("missing_substrings") or []) or list(item.get("missing_terms") or [])[:4]
+        source_message_id = (item.get("source_message_id") or "").strip()
+        if source_message_id:
+            origin_label = "Correção promovida"
+            action_label = "Abrir correção"
+            action_url = _build_casebooks_focus_url(
+                source_type="chat",
+                chat_feedback="all",
+                limit=16,
+                anchor=f"chat-{source_message_id}",
+                q=item.get("question", ""),
+            )
+        else:
+            origin_label = "Eval estático"
+            action_label = "Abrir documento"
+            action_url = _build_relative_url("/admin/documents", q=item.get("document", ""))
         failure_rows.append(
             {
                 "document": item.get("document", ""),
                 "question": item.get("question", ""),
+                "origin_label": origin_label,
                 "missing_summary": ", ".join(missing) or "Resposta vazia ou fora do esperado.",
+                "action_label": action_label,
+                "action_url": action_url,
+            }
+        )
+
+    recent_feedback_cases = []
+    for item in sorted(feedback_cases, key=lambda row: str(row.get("updated_at") or ""), reverse=True)[:8]:
+        recent_feedback_cases.append(
+            {
+                "document": item.get("document", ""),
+                "question": item.get("question", ""),
+                "source_label": _feedback_source_label(item.get("source", "")),
+                "expected_answer_preview": _preview_text(item.get("expected_answer", ""), limit=220),
+                "feedback_note_preview": _preview_text(item.get("feedback_note", ""), limit=160),
             }
         )
 
@@ -542,6 +631,8 @@ def build_quality_snapshot() -> dict:
         "failed_total": len(failed),
         "static_cases_total": len(static_cases),
         "feedback_cases_total": len(feedback_cases),
+        "source_rows": source_rows,
+        "recent_feedback_cases": recent_feedback_cases,
         "document_rows": document_rows[:12],
         "failure_rows": failure_rows,
     }

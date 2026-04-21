@@ -1261,13 +1261,15 @@ def _filter_documents(docs: list[dict], filters: dict) -> list[dict]:
 
 
 def _admin_casebooks_return_to() -> str:
-    if request.query_string:
-        target = f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
-    else:
-        target = request.path
-    if request.endpoint == "admin.admin_bot":
+    query = request.query_string.decode("utf-8", errors="ignore")
+    if request.endpoint in {"admin.admin_bot", "admin.admin_casebooks"}:
+        target = url_for("admin.admin_bot")
+        if query:
+            target = f"{target}?{query}"
         return f"{target}#casebooks"
-    return target
+    if query:
+        return f"{request.path}?{query}"
+    return request.path
 
 
 def _normalized_filter_value(value: str | None, allowed: set[str], default: str) -> str:
@@ -1399,6 +1401,10 @@ def _build_admin_casebooks_payload() -> dict:
     )
     q = " ".join((request.args.get("q") or "").strip().split())
     q_search = q.lower()
+    focus_target = " ".join((request.args.get("focus") or "").strip().split())
+    focus_message_id = focus_target[5:] if focus_target.startswith("chat-") else ""
+    focus_case_id = focus_target[9:] if focus_target.startswith("maneuver-") else ""
+    focus_practice_id = focus_target[9:] if focus_target.startswith("practice-") else ""
     next_limit = ADMIN_CASEBOOK_ALLOWED_LIMITS[-1]
     for option in ADMIN_CASEBOOK_ALLOWED_LIMITS:
         if option > display_limit:
@@ -1511,8 +1517,40 @@ def _build_admin_casebooks_payload() -> dict:
     visible_cases = [item for item in all_cases if _case_visible(item)]
     visible_practice_records = [item for item in all_practice_records if _practice_visible(item)]
 
+    def _slice_with_focus(items: list[dict], *, limit: int, focus_id: str, id_getter) -> list[dict]:
+        rows = list(items[:limit])
+        if not focus_id:
+            return rows
+        focused = next((item for item in items if str(id_getter(item) or "") == focus_id), None)
+        if not focused:
+            return rows
+        if any(str(id_getter(item) or "") == focus_id for item in rows):
+            return rows
+        if rows and len(rows) >= limit:
+            rows = rows[:-1]
+        return [focused, *rows]
+
+    visible_chat_subset = _slice_with_focus(
+        visible_chat_messages,
+        limit=display_limit,
+        focus_id=focus_message_id,
+        id_getter=lambda item: item.get("id", ""),
+    )
+    visible_case_subset = _slice_with_focus(
+        visible_cases,
+        limit=display_limit,
+        focus_id=focus_case_id,
+        id_getter=lambda item: item.get("maneuver_id", ""),
+    )
+    visible_practice_subset = _slice_with_focus(
+        visible_practice_records,
+        limit=display_limit,
+        focus_id=focus_practice_id,
+        id_getter=lambda item: item.get("id", ""),
+    )
+
     chat_rows = []
-    for item in visible_chat_messages[:display_limit]:
+    for item in visible_chat_subset:
         status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
@@ -1543,7 +1581,7 @@ def _build_admin_casebooks_payload() -> dict:
     observation_case_rows = []
     governed_case_rows = []
     case_rows = []
-    for item in visible_cases[:display_limit]:
+    for item in visible_case_subset:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         bucket, learning_title, learning_summary, learning_badge = _case_governance_meta(status_clean)
@@ -1581,7 +1619,7 @@ def _build_admin_casebooks_payload() -> dict:
             target_rows.append(row)
 
     practice_rows = []
-    for item in visible_practice_records[:display_limit]:
+    for item in visible_practice_subset:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         practice_rows.append(
@@ -1621,6 +1659,29 @@ def _build_admin_casebooks_payload() -> dict:
         state = "online"
         state_label = "Governado"
 
+    scope_counts = {
+        "chat": (len(visible_chat_messages), len(chat_rows)),
+        "maneuver": (len(visible_cases), len(case_rows)),
+        "practice": (len(visible_practice_records), len(practice_rows)),
+    }
+    if source_type == "all":
+        visible_total = sum(total for total, _shown in scope_counts.values())
+        shown_total = len(chat_rows) + len(case_rows) + len(practice_rows)
+        scope_label = "Tudo"
+    else:
+        visible_total, shown_total = scope_counts.get(source_type, (0, 0))
+        scope_label = {
+            "chat": "Chat / WhatsApp",
+            "maneuver": "Casos operacionais",
+            "practice": "Experiência prática",
+        }.get(source_type, "Tudo")
+
+    summary_parts = [f"{scope_label}: {shown_total} mostrado(s) de {visible_total}."]
+    if q:
+        summary_parts.append(f'Pesquisa ativa: "{q}".')
+    if focus_target:
+        summary_parts.append("Item em foco destacado na lista.")
+
     return {
         "state": state,
         "state_label": state_label,
@@ -1637,6 +1698,13 @@ def _build_admin_casebooks_payload() -> dict:
         "next_limit": next_limit,
         "allowed_limits": ADMIN_CASEBOOK_ALLOWED_LIMITS,
         "has_active_filters": bool(q or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
+        "open_by_default": bool(q or focus_target or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
+        "focus_target": focus_target,
+        "scope_label": scope_label,
+        "visible_total": visible_total,
+        "shown_total": shown_total,
+        "visible_summary": f"Mostra {shown_total} de {visible_total}",
+        "summary": " ".join(summary_parts),
         "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
@@ -1853,13 +1921,10 @@ def import_system_database():
 @login_required
 @role_required("admin")
 def admin_casebooks():
-    """Painel admin detalhado de mensagens, casos e experiência prática."""
-    refresh_knowledge_state(force_reindex=False)
-    return render_template(
-        "admin_casebooks.html",
-        casebooks=_build_admin_casebooks_payload(),
-        title="Governança detalhada",
-    )
+    """Redirecionar a governança detalhada para o painel unificado do bot."""
+    query = request.args.to_dict(flat=False)
+    target = url_for("admin.admin_bot", **query)
+    return redirect(f"{target}#casebooks")
 
 
 @bp.route("/admin/event-reports")
