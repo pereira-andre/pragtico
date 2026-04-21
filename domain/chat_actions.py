@@ -329,6 +329,7 @@ SLASH_COMMAND_ALIASES = {
     "editar-registo-manobra": "edit_report",
     "apagar-registo-manobra": "delete_report",
     "abortar": "abort_maneuver",
+    "abortar-manobra": "abort_maneuver",
     "mares": "tides",
     "meteorologia": "weather",
     "regra": "rule",
@@ -1377,7 +1378,7 @@ def build_slash_help(role: str) -> str:
                 "/editar-registo-manobra",
                 "  revê um registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
                 "/abortar",
-                "  cancela/aborta a manobra; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
+                "  cancela/aborta a manobra; alias: /abortar-manobra; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
     if clean_role == "admin":

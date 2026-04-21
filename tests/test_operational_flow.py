@@ -1544,6 +1544,56 @@ class OperationalFlowTests(unittest.TestCase):
         final_port_call = self.store.get_port_call(port_call["id"])
         self.assertFalse(any(item["type"] == "departure" for item in final_port_call["maneuver_history"]))
 
+    def test_slash_abort_maneuver_alias_flow_via_chat(self) -> None:
+        port_call = self._create_entry(notes="Escala criada para abortar manobra via alias.")
+        self._move_port_call_in_port(port_call["id"])
+
+        self.store.schedule_shift_plan(
+            port_call["id"],
+            planned_shift_at="2000-01-01T08:00:00+00:00",
+            updated_by="admin",
+            destination_berth="TMS 1",
+        )
+        self.store.approve_shift_plan(port_call["id"], decided_by="admin")
+        current = self.store.get_port_call(port_call["id"])
+        shift = next(item for item in current["maneuver_history"] if item["type"] == "shift")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+
+            response = client.post(
+                "/api/chat",
+                json={
+                    "conversation_id": conversation["id"],
+                    "question": (
+                        "/abortar-manobra\n"
+                        f"ID da manobra: {shift['id'][:8].upper()}\n"
+                        f"Ref: {port_call['reference_code']}\n"
+                        "Tipo de manobra: mudança\n"
+                        "Motivo: nevoeiro"
+                    ),
+                },
+            )
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(payload["answer_origin"], "slash_proposal")
+            self.assertEqual(payload["pending_action"]["proposal"]["action"], "abort_shift")
+            self.assertEqual(payload["pending_action"]["proposal"]["missing_fields"], [])
+
+            response = client.post(
+                "/api/chat/pending-action/confirm",
+                json={"conversation_id": conversation["id"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        updated = self.store.get_port_call(port_call["id"])
+        shift = next(item for item in updated["maneuver_history"] if item["type"] == "shift")
+        self.assertEqual(shift["state"], "aborted")
+        self.assertEqual(shift["aborted_reason"], "nevoeiro")
+        self.assertEqual(updated["berth"], "TMS 2")
+
     def test_chat_empty_question_returns_error_code(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:

@@ -162,7 +162,7 @@ Motivo da alteração: Ajuste após conferência do piloto
 
 ### 7. Abortos e Cancelamentos
 
-Usa `/abortar` para cancelar ou abortar a manobra, consoante o estado.
+Usa `/abortar` para cancelar ou abortar a manobra, consoante o estado. `/abortar-manobra` é alias equivalente.
 
 Exemplo:
 
@@ -228,7 +228,7 @@ Ref: PTSET26OCEA123456
 - `/aprovar` aprova uma manobra pendente; usa `ID da manobra` ou `Ref + Tipo`.
 - `/registar-manobra` regista início, fim e calado da manobra executada; usa `ID da manobra` ou `Ref + Tipo`.
 - `/editar-registo-manobra` altera um registo já executado; usa `ID da manobra` ou `Ref + Tipo`.
-- `/abortar` cancela ou aborta a manobra; usa `ID da manobra` ou `Ref + Tipo`.
+- `/abortar` cancela ou aborta a manobra; alias: `/abortar-manobra`; usa `ID da manobra` ou `Ref + Tipo`.
 - `/apagar-registo-manobra` remove o registo operacional executado; usa `ID da manobra` ou `Ref + Tipo`.
 
 ## O Que Usar em Cada Caso
@@ -241,7 +241,7 @@ Ref: PTSET26OCEA123456
 - Quero validar a manobra: `/validar-manobra`
 - Quero lançar horas reais e calado: `/registar-manobra`
 - Quero corrigir um registo já feito: `/editar-registo-manobra`
-- Quero cancelar uma manobra: `/abortar`
+- Quero cancelar uma manobra: `/abortar` ou `/abortar-manobra`
 - Quero remover planeamento: `/apagar-manobra`
 - Quero remover o registo executado: `/apagar-registo-manobra`
 - Quero alterar dados cadastrais da escala: `/editar-escala`

@@ -211,7 +211,7 @@
           command: "/abortar",
           label: "Abortar manobra",
           description: "Cancela ou aborta a manobra indicada.",
-          keywords: "abortar cancelar manobra",
+          keywords: "abortar abortar-manobra cancelar manobra",
           template: joinLines([
             "/abortar",
             "ID da manobra: ",
