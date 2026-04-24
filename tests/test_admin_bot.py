@@ -217,6 +217,49 @@ class AdminBotDashboardTests(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 400)
 
+    def test_playground_lisnave_night_loa_question_prefers_structured_profile_answer(self) -> None:
+        repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
+        knowledge_dir = Path(self.store.knowledge_dir)
+        (knowledge_dir / "berth_profiles.json").write_text(
+            (repo_knowledge / "berth_profiles.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (knowledge_dir / "IT-014_Lisnave.txt").write_text(
+            (repo_knowledge / "IT-014_Lisnave.txt").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        companions_dir = knowledge_dir / "companions"
+        companions_dir.mkdir(parents=True, exist_ok=True)
+        (companions_dir / "IT-014_Lisnave.json").write_text(
+            (repo_knowledge / "companions" / "IT-014_Lisnave.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            csrf = self._set_admin_session(client)
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/admin/bot/playground",
+                    data=json.dumps(
+                        {"question": "À noite psso manobrar um navio com 285m de comprimento na Lisnave?"}
+                    ),
+                    content_type="application/json",
+                    headers={"X-CSRF-Token": csrf},
+                )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["answer_origin"], "berth_profile")
+        self.assertTrue(body["answer"].startswith("Nao."))
+        self.assertIn("285 m", body["answer"])
+        self.assertIn("280 m", body["answer"])
+        self.assertIn("periodo diurno", body["answer"])
+        answer_mock.assert_not_called()
+
     def test_bot_database_export_includes_settings(self) -> None:
         with app.app.test_client() as client:
             csrf = self._set_admin_session(client)

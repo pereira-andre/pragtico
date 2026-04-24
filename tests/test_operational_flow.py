@@ -2930,6 +2930,47 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Para calado", detail_payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_lisnave_night_loa_decision_prefers_berth_profile_over_companion(self) -> None:
+        document_name = "IT-014_Lisnave.txt"
+        repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"
+        (Path(self.store.knowledge_dir) / document_name).write_text(
+            (repo_knowledge / document_name).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (Path(self.store.knowledge_dir) / "berth_profiles.json").write_text(
+            (repo_knowledge / "berth_profiles.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        companion_payload = json.loads(
+            (repo_knowledge / "companions" / "IT-014_Lisnave.json").read_text(encoding="utf-8")
+        )
+        self._write_knowledge_companion(document_name, companion_payload)
+        self.store.list_documents()
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            conversation = self.store.ensure_conversation(username="admin")
+            with patch.object(services.rag, "can_generate", return_value=False), patch.object(
+                services.rag,
+                "answer",
+            ) as answer_mock:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "conversation_id": conversation["id"],
+                        "question": "À noite psso manobrar um navio com 285m de comprimento na Lisnave?",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "berth_profile")
+        self.assertTrue(payload["answer"].startswith("Nao."))
+        self.assertIn("285 m", payload["answer"])
+        self.assertIn("280 m", payload["answer"])
+        self.assertIn("periodo diurno", payload["answer"])
+        answer_mock.assert_not_called()
+
     def test_chat_teporset_followup_changes_focus_between_overview_and_rules(self) -> None:
         document_name = "IT-062_Teporset.txt"
         repo_knowledge = Path(__file__).resolve().parents[1] / "knowledge"

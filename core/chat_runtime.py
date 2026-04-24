@@ -678,8 +678,14 @@ def _blocked_mutation_answer(channel: str) -> dict:
     }
 
 
-def _should_prefer_berth_profile_answer(question: str, companion_answer: str) -> bool:
+def _should_prefer_berth_profile_answer(question: str, companion_answer: str, berth_profile_answer: str = "") -> bool:
     clean_answer = re.sub(r"\s+", " ", str(companion_answer or "")).strip()
+    clean_profile_answer = re.sub(r"\s+", " ", str(berth_profile_answer or "")).strip()
+    if clean_profile_answer and (
+        clean_profile_answer.startswith(("Sim.", "Nao.", "O comprimento maximo"))
+        or "limite noturno de LOA" in clean_profile_answer
+    ):
+        return True
     if not clean_answer:
         return True
     if clean_answer.startswith(("A resposta direta:", "O valor a reter é")):
@@ -952,10 +958,17 @@ def playground_answer(
         allow_companion_shortcut = not execution_plan.requires_llm_synthesis
         answer: dict | None = None
         global_companion_match: dict | None = None
-        if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
-            clean_question,
-            targeted_document_context["companion_answer"],
-        ):
+        prefer_berth_profile = (
+            bool(berth_profile_answer)
+            and allow_companion_shortcut
+            and not _review_correction_targets_document(review_correction_match, targeted_document_context, None)
+            and _should_prefer_berth_profile_answer(
+                clean_question,
+                targeted_document_context["companion_answer"],
+                berth_profile_answer,
+            )
+        )
+        if prefer_berth_profile:
             answer = {
                 "answer": berth_profile_answer,
                 "sources": supplemental_sources,
@@ -1444,10 +1457,17 @@ def handle_chat_turn(
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
             allow_companion_shortcut = not execution_plan.requires_llm_synthesis
-            if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
-                clean_question,
-                targeted_document_context["companion_answer"],
-            ):
+            prefer_berth_profile = (
+                bool(berth_profile_answer)
+                and allow_companion_shortcut
+                and not _review_correction_targets_document(review_correction_match, targeted_document_context, None)
+                and _should_prefer_berth_profile_answer(
+                    clean_question,
+                    targeted_document_context["companion_answer"],
+                    berth_profile_answer,
+                )
+            )
+            if prefer_berth_profile:
                 answer = {
                     "answer": berth_profile_answer,
                     "sources": supplemental_sources,

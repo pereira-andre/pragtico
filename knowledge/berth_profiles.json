@@ -374,6 +374,11 @@
         "Noite permitida apenas ate 280 m de LOA, sempre no reponto.",
         "Acima de 280 m a manobra noturna fica proibida."
       ],
+      "operational_limits": {
+        "night_loa_max_m": 280,
+        "night_requires_reponto": true,
+        "above_night_loa_day_only": true
+      },
       "restrictions": [
         "Navios com area velica consideravel devem manobrar com vento ate cerca de 20 km/h.",
         "O Cais de Descarga de Aco tem calado ND no documento e nao deve ser inferido.",
