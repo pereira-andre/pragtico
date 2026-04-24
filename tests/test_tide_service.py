@@ -66,6 +66,67 @@ class TideServiceTests(unittest.TestCase):
         self.assertIn("☀️ Nascer do sol", summary["summary"])
         self.assertIn("🌙 noite", summary["summary"])
 
+    def test_resolve_query_dates_supports_relative_days(self) -> None:
+        service = self._build_service("Date,Hour,Minute,Height\n")
+
+        resolved = service.resolve_query_dates(
+            "Quais são as marés de ontem, hoje, amanhã e depois de amanhã?",
+            reference_date=date(2026, 4, 24),
+        )
+
+        self.assertEqual(
+            resolved,
+            [
+                date(2026, 4, 23),
+                date(2026, 4, 24),
+                date(2026, 4, 25),
+                date(2026, 4, 26),
+            ],
+        )
+
+    def test_resolve_query_dates_supports_natural_portuguese_dates(self) -> None:
+        service = self._build_service("Date,Hour,Minute,Height\n")
+
+        resolved = service.resolve_query_dates(
+            "Preciso das marés para dia 5 maio e 7 de junho de 26.",
+            reference_date=date(2026, 4, 24),
+        )
+
+        self.assertEqual(
+            resolved,
+            [
+                date(2026, 5, 5),
+                date(2026, 6, 7),
+            ],
+        )
+
+    def test_resolve_query_dates_supports_numeric_formats(self) -> None:
+        service = self._build_service("Date,Hour,Minute,Height\n")
+
+        resolved = service.resolve_query_dates(
+            "Marés para 25/04, 26-04-26 e 2026/04/27.",
+            reference_date=date(2026, 4, 24),
+        )
+
+        self.assertEqual(
+            resolved,
+            [
+                date(2026, 4, 25),
+                date(2026, 4, 26),
+                date(2026, 4, 27),
+            ],
+        )
+
+    def test_resolve_query_dates_supports_next_weekday(self) -> None:
+        service = self._build_service("Date,Hour,Minute,Height\n")
+
+        resolved = service.resolve_query_dates(
+            "Quero ver as marés para a próxima segunda-feira.",
+            reference_date=date(2026, 4, 24),
+        )
+
+        self.assertEqual(resolved, [date(2026, 4, 27)])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import unicodedata
 from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -14,6 +15,35 @@ from zoneinfo import ZoneInfo
 LISBON_TZ = ZoneInfo("Europe/Lisbon")
 SETUBAL_LAT = 38.5244
 SETUBAL_LON = -8.8882
+MONTH_LOOKUP_PT = {
+    "janeiro": 1,
+    "fevereiro": 2,
+    "marco": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
+}
+WEEKDAY_LOOKUP_PT = {
+    "segunda": 0,
+    "segunda-feira": 0,
+    "terca": 1,
+    "terca-feira": 1,
+    "quarta": 2,
+    "quarta-feira": 2,
+    "quinta": 3,
+    "quinta-feira": 3,
+    "sexta": 4,
+    "sexta-feira": 4,
+    "sabado": 5,
+    "sábado": 5,
+    "domingo": 6,
+}
 
 
 @dataclass
@@ -168,31 +198,34 @@ class TideService:
             "summary": summary,
         }
 
-    def _resolve_portuguese_date(
-        self,
-        day_str: str,
-        month_str: str,
-        year_str: str | None,
-        reference_date: date,
-    ) -> date:
-        month_lookup = {
-            "janeiro": 1,
-            "fevereiro": 2,
-            "marco": 3,
-            "março": 3,
-            "abril": 4,
-            "maio": 5,
-            "junho": 6,
-            "julho": 7,
-            "agosto": 8,
-            "setembro": 9,
-            "outubro": 10,
-            "novembro": 11,
-            "dezembro": 12,
-        }
-        month = month_lookup.get((month_str or "").strip().lower(), reference_date.month)
-        year = int(year_str) if year_str else reference_date.year
-        return date(year, month, int(day_str))
+    def _normalize_query_text(self, value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", str(value or ""))
+        without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+        return without_accents.lower()
+
+    def _resolve_year(self, year_str: str | None, default_year: int) -> int:
+        if not year_str:
+            return default_year
+        year = int(year_str)
+        if len(year_str) == 2:
+            return 2000 + year
+        return year
+
+    def _build_date_safely(self, year: int, month: int, day: int) -> date | None:
+        try:
+            return date(year, month, day)
+        except ValueError:
+            return None
+
+    def _resolve_weekday_reference(self, weekday_str: str, reference_date: date, qualifier: str = "") -> date | None:
+        weekday_key = (weekday_str or "").strip().lower()
+        weekday = WEEKDAY_LOOKUP_PT.get(weekday_key)
+        if weekday is None:
+            return None
+        delta = (weekday - reference_date.weekday()) % 7
+        if qualifier.startswith("proxim") and delta == 0:
+            delta = 7
+        return reference_date + timedelta(days=delta)
 
     def _build_chart(self, events: List[TideEvent]) -> Dict:
         if not events:
@@ -399,37 +432,65 @@ class TideService:
 
     def resolve_query_dates(self, question: str, reference_date: Optional[date] = None) -> List[date]:
         ref = reference_date or datetime.now(LISBON_TZ).date()
-        question_lower = question.lower()
+        question_lower = self._normalize_query_text(question)
         dates: List[date] = []
 
         def add_day(value: date) -> None:
             if value not in dates:
                 dates.append(value)
 
-        for match in re.finditer(r"\b(20\d{2}-\d{2}-\d{2})\b", question_lower):
-            add_day(datetime.strptime(match.group(1), "%Y-%m-%d").date())
+        def add_if_valid(value: date | None) -> None:
+            if value is not None:
+                add_day(value)
 
-        for match in re.finditer(r"\b(\d{2}/\d{2}/20\d{2})\b", question_lower):
-            add_day(datetime.strptime(match.group(1), "%d/%m/%Y").date())
+        for match in re.finditer(r"\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b", question_lower):
+            add_if_valid(self._build_date_safely(int(match.group(1)), int(match.group(2)), int(match.group(3))))
+
+        for match in re.finditer(r"\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b", question_lower):
+            day = int(match.group(1))
+            month = int(match.group(2))
+            year = self._resolve_year(match.group(3), ref.year)
+            add_if_valid(self._build_date_safely(year, month, day))
 
         for match in re.finditer(
-            r"\b(\d{1,2})\s+de\s+"
-            r"(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)"
-            r"(?:\s+de\s+(20\d{2}))?\b",
+            r"\b(?:dia\s+)?(\d{1,2})(?:\s+de)?\s+"
+            r"(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)"
+            r"(?:(?:\s+de)?\s+(\d{2,4}))?\b",
             question_lower,
         ):
-            add_day(self._resolve_portuguese_date(match.group(1), match.group(2), match.group(3), ref))
+            add_if_valid(self._build_date_safely(
+                self._resolve_year(match.group(3), ref.year),
+                MONTH_LOOKUP_PT[match.group(2)],
+                int(match.group(1)),
+            ))
 
-        if "hoje" in question_lower:
-            add_day(ref)
-        if "amanhã" in question_lower or "amanha" in question_lower:
-            add_day(ref + timedelta(days=1))
-        if "ontem" in question_lower:
-            add_day(ref - timedelta(days=1))
+        for match in re.finditer(
+            r"\b(depois de amanha|anteontem|ontem|hoje|amanha)\b",
+            question_lower,
+        ):
+            token = match.group(1)
+            if token == "anteontem":
+                add_day(ref - timedelta(days=2))
+            elif token == "ontem":
+                add_day(ref - timedelta(days=1))
+            elif token == "hoje":
+                add_day(ref)
+            elif token == "amanha":
+                add_day(ref + timedelta(days=1))
+            elif token == "depois de amanha":
+                add_day(ref + timedelta(days=2))
+
+        for match in re.finditer(
+            r"\b(?:(proxim[ao]s?)\s+)?"
+            r"(segunda(?:[\s-]feira)?|terca(?:[\s-]feira)?|quarta(?:[\s-]feira)?|"
+            r"quinta(?:[\s-]feira)?|sexta(?:[\s-]feira)?|sabado|domingo)\b",
+            question_lower,
+        ):
+            add_if_valid(self._resolve_weekday_reference(match.group(2), ref, match.group(1) or ""))
 
         if not dates:
             add_day(ref)
-        return dates
+        return sorted(dates)
 
     def events_for_date(self, target_date: date) -> List[TideEvent]:
         return [item for item in self._load_events() if item.date_value == target_date]
