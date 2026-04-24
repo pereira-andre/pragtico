@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from domain.berth_profiles import find_best_berth_profile
 from domain.knowledge_companions import build_companion_answer, load_document_companion
 
 
@@ -151,13 +152,20 @@ class RepositoryKnowledgeCompanionTests(unittest.TestCase):
     def test_it014_companion_answers_generic_lisnave_night_length_question(self) -> None:
         companion = load_document_companion("IT-014_Lisnave.txt", KNOWLEDGE_DIR)
         self.assertIsNotNone(companion)
+        berth_profile_match = find_best_berth_profile(
+            "Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
+            KNOWLEDGE_DIR,
+        )
 
         answer = build_companion_answer(
             "Qual é o comprimento máximo que um navio pode manobrar durante noite na LISNAVE?",
             companion,
+            context_label=(berth_profile_match or {}).get("profile", {}).get("name", ""),
         )
 
-        self.assertIn("280 metros", answer)
+        self.assertIn("é 280 metros", answer)
+        self.assertIn("limite noturno de LOA", answer)
+        self.assertIn("perfil operacional da instalação LISNAVE / Estaleiros Mitrena", answer)
         self.assertIn("período diurno", answer)
         self.assertNotIn("Não.", answer[:6])
 

@@ -1928,6 +1928,12 @@ class OperationalFlowTests(unittest.TestCase):
                 feedback_correction_document="IT-014_Lisnave.txt",
                 feedback_updated_by="admin",
             )
+            (Path(self.store.knowledge_dir) / "berth_profiles.json").write_text(
+                (Path(__file__).resolve().parents[1] / "knowledge" / "berth_profiles.json").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
 
             response = client.post(
                 "/api/chat",
@@ -1941,7 +1947,17 @@ class OperationalFlowTests(unittest.TestCase):
         payload = response.get_json()
         self.assertEqual(payload["answer_origin"], "review_correction_memory")
         self.assertIn("280 metros", payload["answer"])
+        self.assertIn("é 280 metros", payload["answer"])
+        self.assertIn("limite noturno de LOA", payload["answer"])
+        self.assertIn("perfil operacional da instalação LISNAVE / Estaleiros Mitrena", payload["answer"])
         self.assertIn("período diurno", payload["answer"])
+        self.assertNotEqual(
+            (
+                "280 metros. Na LISNAVE, navios com LOA até 280 metros podem manobrar "
+                "de noite; acima disso, as manobras ficam limitadas ao período diurno."
+            ),
+            payload["answer"],
+        )
 
     def test_slash_consult_scale_maneuver_and_vessel_queries(self) -> None:
         port_call = self._create_entry(notes="Consulta slash.")

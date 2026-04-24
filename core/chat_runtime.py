@@ -62,6 +62,7 @@ from domain.knowledge_companions import (
     build_companion_sources,
     companion_lookup_terms,
     find_best_global_companion_match,
+    humanize_reused_factual_answer,
     load_document_companion,
 )
 from integrations.rag_engine import chunk_text, lexical_score
@@ -221,10 +222,15 @@ def _select_review_correction_match(reviewed_answers: list[dict], trusted_answer
     return best_review
 
 
-def _build_review_correction_answer(review_match: dict) -> dict:
+def _build_review_correction_answer(review_match: dict, berth_profile_match: dict | None = None) -> dict:
     correction = normalize_feedback_correction(
         review_match.get("question"),
         (review_match.get("feedback_correction") or "").strip(),
+    )
+    correction = humanize_reused_factual_answer(
+        review_match.get("question") or "",
+        correction,
+        context_label=str(((berth_profile_match or {}).get("profile") or {}).get("name") or "").strip(),
     )
     if not correction:
         raise ValueError("Correção vazia.")
@@ -573,6 +579,7 @@ def _build_targeted_document_context(
     history: list[dict],
     trusted_answers: list[dict] | None = None,
     reviewed_answers: list[dict] | None = None,
+    berth_profile_match: dict | None = None,
 ) -> dict:
     record = _resolve_target_knowledge_document(question, history, trusted_answers, reviewed_answers)
     if not record:
@@ -586,7 +593,15 @@ def _build_targeted_document_context(
 
     companion = load_document_companion(record["name"], _active_knowledge_dir())
     companion_sources = build_companion_sources(companion, question) if companion else []
-    companion_answer = build_companion_answer(question, companion) if companion else ""
+    companion_answer = (
+        build_companion_answer(
+            question,
+            companion,
+            context_label=str(((berth_profile_match or {}).get("profile") or {}).get("name") or "").strip(),
+        )
+        if companion
+        else ""
+    )
 
     try:
         document_text = services.store.get_document_text(record["name"])
@@ -913,13 +928,14 @@ def playground_answer(
             runtime_history,
             execution_plan,
         )
+        berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
         targeted_document_context = _build_targeted_document_context(
             clean_question,
             runtime_history,
             trusted_answers,
             reviewed_answers,
+            berth_profile_match,
         )
-        berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
         berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
         supplemental_sources = _build_supplemental_sources(
             clean_question,
@@ -947,7 +963,7 @@ def playground_answer(
             }
         elif targeted_document_context["companion_answer"] and allow_companion_shortcut:
             if _review_correction_targets_document(review_correction_match, targeted_document_context, None):
-                answer = _build_review_correction_answer(review_correction_match)
+                answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
                 if supplemental_sources:
                     answer["sources"] = supplemental_sources
             else:
@@ -967,7 +983,7 @@ def playground_answer(
                     targeted_document_context,
                     global_companion_match,
                 ):
-                    answer = _build_review_correction_answer(review_correction_match)
+                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
                     if global_companion_match.get("sources"):
                         answer["sources"] = global_companion_match["sources"]
                 else:
@@ -977,7 +993,7 @@ def playground_answer(
                         "answer_origin": "document_companion_global",
                     }
             elif review_correction_match and not execution_plan.requires_llm_synthesis:
-                answer = _build_review_correction_answer(review_correction_match)
+                answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
             else:
                 if (
                     review_guard_match
@@ -1406,13 +1422,14 @@ def handle_chat_turn(
                 runtime_history,
                 execution_plan,
             )
+            berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
             targeted_document_context = _build_targeted_document_context(
                 clean_question,
                 history,
                 trusted_answers,
                 reviewed_answers,
+                berth_profile_match,
             )
-            berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
             berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
             supplemental_sources = _build_supplemental_sources(
                 clean_question,
@@ -1442,7 +1459,7 @@ def handle_chat_turn(
                     targeted_document_context,
                     None,
                 ):
-                    answer = _build_review_correction_answer(review_correction_match)
+                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
                     if supplemental_sources:
                         answer["sources"] = supplemental_sources
                 else:
@@ -1464,7 +1481,7 @@ def handle_chat_turn(
                         targeted_document_context,
                         global_companion_match,
                     ):
-                        answer = _build_review_correction_answer(review_correction_match)
+                        answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
                         if global_companion_match.get("sources"):
                             answer["sources"] = global_companion_match["sources"]
                     else:
@@ -1474,7 +1491,7 @@ def handle_chat_turn(
                             "answer_origin": "document_companion_global",
                         }
                 elif review_correction_match and not execution_plan.requires_llm_synthesis:
-                    answer = _build_review_correction_answer(review_correction_match)
+                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
                 else:
                     if (
                         review_guard_match

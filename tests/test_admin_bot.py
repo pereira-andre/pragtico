@@ -105,6 +105,8 @@ class AdminBotDashboardTests(unittest.TestCase):
             "Pass rate:",
         ):
             self.assertIn(marker, html, msg=f"missing marker: {marker}")
+        self.assertIn("X-CSRF-Token", html)
+        self.assertNotIn("X-CSRFToken", html)
 
     def test_settings_form_persists_values(self) -> None:
         with app.app.test_client() as client:

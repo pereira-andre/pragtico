@@ -54,6 +54,18 @@ class BerthProfileTests(unittest.TestCase):
         self.assertEqual(sources[0]["retrieval_mode"], "berth_profile")
         self.assertIn("Navios acima de 255 m", sources[0]["snippet"])
 
+    def test_lisnave_profile_is_available_for_general_berth_data(self) -> None:
+        match = find_best_berth_profile("Que dados gerais tens sobre a LISNAVE?", KNOWLEDGE_DIR)
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match["profile"]["id"], "lisnave")
+
+        answer = build_berth_profile_answer("Que dados gerais tens sobre a LISNAVE?", match)
+
+        self.assertIn("LISNAVE / Estaleiros Mitrena", answer)
+        self.assertIn("repontos de mare", answer.lower())
+        self.assertIn("280", answer)
+
 
 if __name__ == "__main__":
     unittest.main()
