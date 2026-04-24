@@ -9,7 +9,6 @@
         <p class="eyebrow">Saúde do bot</p>
         <h1>Painel operacional do assistente</h1>
         <p class="lead muted">Estado vivo das fontes de conhecimento, sinais de aprendizagem e exceções a rever.</p>
-        <p class="muted small-note">Snapshot do painel atualizado em {{ snapshot_refreshed_at_label }}.</p>
       </div>
       <div class="admin-status-hero-tools">
         <span class="admin-status-badge is-{{ health.state }}">{{ health.label }}</span>
@@ -32,7 +31,7 @@
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Cobertura</span>
         <strong>{{ health.coverage_pct }}%</strong>
-        <small>{{ health.online_sources }} online + {{ health.degraded_sources }} parcial / {{ sources|length }}</small>
+        <small>{{ sources|selectattr('state', 'equalto', 'online')|list|length }} / {{ sources|length }} fontes ativas</small>
       </article>
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Sinais</span>
@@ -44,11 +43,6 @@
         <strong>{{ exceptions.total }}</strong>
         <small>{{ exceptions.severity_counts.high }} prioritária(s)</small>
       </article>
-    </div>
-    <div class="casebook-tag-list">
-      {% for item in health.breakdown_rows %}
-        <span class="casebook-tag"><strong>{{ item.label }}:</strong> {{ item.value }} · {{ item.detail }}</span>
-      {% endfor %}
     </div>
   </section>
 
@@ -75,15 +69,6 @@
     <div class="admin-bot-playground-result" id="bot-playground-result" hidden>
       <article class="admin-status-surface">
         <div class="admin-bot-playground-answer" id="bot-playground-answer"></div>
-        <details class="admin-bot-playground-trace" id="bot-playground-trace-wrapper" hidden>
-          <summary>Como decidiu</summary>
-          <div class="admin-bot-playground-trace-body">
-            <p class="admin-bot-playground-trace-route" id="bot-playground-trace-route"></p>
-            <p class="muted" id="bot-playground-trace-detail"></p>
-            <div class="casebook-tag-list" id="bot-playground-trace-flags"></div>
-            <ul class="admin-bot-signal-list" id="bot-playground-trace-rows"></ul>
-          </div>
-        </details>
         <details class="admin-bot-playground-sources" id="bot-playground-sources-wrapper" hidden>
           <summary>Fontes usadas</summary>
           <ul id="bot-playground-sources"></ul>
@@ -92,9 +77,120 @@
     </div>
   </section>
 
+  {# ── Zona 3 · Pipeline / diagrama de decisão ───────────────────── #}
+  <section class="panel section-panel admin-bot-pipeline-panel" id="pipeline">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Arquitetura</p>
+        <h2>Como o bot decide</h2>
+      </div>
+      <span class="muted small-note">
+        {{ tuning.summary.verified_total }} / {{ tuning.summary.implemented_total }} mecanismos com dados ou configuração ativa
+      </span>
+    </div>
+    <p class="admin-status-note admin-bot-section-note">{{ pipeline.note }}</p>
+    <div class="admin-bot-summary-strip">
+      {% for card in pipeline.summary_cards %}
+        <article class="admin-bot-summary-card">
+          <span class="eyebrow">{{ card.label }}</span>
+          <strong>{{ card.value }}</strong>
+          <small>{{ card.detail }}</small>
+        </article>
+      {% endfor %}
+    </div>
+    <div class="admin-bot-pipeline-diagram">
+      {% for step in pipeline.steps %}
+        <article class="admin-bot-pipeline-step admin-bot-pipeline-step-{{ step.state }}">
+          <div class="admin-bot-pipeline-step-no">{{ loop.index }}</div>
+          <div class="admin-bot-pipeline-step-head">
+            <strong>{{ step.label }}</strong>
+            <span class="admin-status-badge is-{{ step.state }}">{{ step.state_label }}</span>
+          </div>
+          <p class="muted">{{ step.detail }}</p>
+          <div class="admin-bot-pipeline-metric">{{ step.metric }}</div>
+          <ul class="admin-bot-mini-list">
+            {% for fact in step.facts %}
+              <li>{{ fact }}</li>
+            {% endfor %}
+          </ul>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── Zona 4 · Mapa de inputs reutilizáveis ─────────────────────── #}
+  <section class="panel section-panel admin-bot-map-panel" id="tuning-map">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Mapa de afinação</p>
+        <h2>Inputs que o bot pode reutilizar</h2>
+      </div>
+      <span class="muted small-note">
+        {{ tuning.summary.online_total }} ativos · {{ tuning.summary.degraded_total }} parciais · {{ tuning.summary.offline_total }} sem dados
+      </span>
+    </div>
+    <p class="admin-status-note admin-bot-section-note">
+      Cada cartão mostra a origem, o hook do runtime e o estado atual. Assim fica visível o que já está implementado e o que ainda precisa de dados reais.
+    </p>
+    <div class="admin-bot-map-groups">
+      {% for group in tuning.groups %}
+        <article class="admin-bot-map-group">
+          <div class="admin-bot-map-group-head">
+            <div>
+              <p class="eyebrow">{{ group.title }}</p>
+              <p class="muted">{{ group.description }}</p>
+            </div>
+            <div class="admin-bot-map-group-side">
+              <span class="admin-status-badge is-{{ 'online' if group.offline_total == 0 and group.degraded_total == 0 else 'degraded' if group.online_total or group.degraded_total else 'offline' }}">
+                {{ group.coverage_pct }}%
+              </span>
+              <div class="admin-bot-meter" aria-hidden="true">
+                <span style="width: {{ group.coverage_pct }}%;"></span>
+              </div>
+            </div>
+          </div>
+          <div class="admin-bot-map-grid">
+            {% for component in group.components %}
+              <article class="admin-bot-map-card admin-bot-map-card-{{ component.state }}">
+                <div class="admin-bot-map-card-head">
+                  <div>
+                    <span class="eyebrow">{{ component.label }}</span>
+                    <strong>{{ component.source_name }}</strong>
+                  </div>
+                  <span class="admin-status-badge is-{{ component.state }}">{{ component.state_label }}</span>
+                </div>
+                <p class="muted">{{ component.detail }}</p>
+                <dl class="admin-bot-tech-specs">
+                  <div>
+                    <dt>Fonte</dt>
+                    <dd><code>{{ component.source_name }}</code></dd>
+                  </div>
+                  <div>
+                    <dt>Hook</dt>
+                    <dd><code>{{ component.runtime_hook }}</code></dd>
+                  </div>
+                </dl>
+                {% if component.facts %}
+                  <ul class="admin-bot-mini-list">
+                    {% for fact in component.facts %}
+                      <li>{{ fact }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+                {% if component.action_url %}
+                  <a class="outline-link" href="{{ component.action_url }}">{{ component.action_label }}</a>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
   <div class="admin-status-layout">
 
-    {# ── Zona 3 · Fontes de conhecimento ──────────────────────────── #}
+    {# ── Zona 5 · Fontes de conhecimento ──────────────────────────── #}
     <section class="panel section-panel" id="sources">
       <div class="section-head compact-head">
         <div>
@@ -114,17 +210,10 @@
             </div>
             <p class="muted">{{ source.description }}</p>
             <div class="admin-bot-source-metrics">
-              <span><strong>{{ source.count }}</strong> {{ source.count_label or 'registo(s)' }}</span>
+              <span><strong>{{ source.count }}</strong> registo(s)</span>
               {% if source.coverage_pct %}<span><strong>{{ source.coverage_pct }}%</strong> coberto</span>{% endif %}
             </div>
             {% if source.meta %}<p class="admin-bot-source-meta">{{ source.meta }}</p>{% endif %}
-            {% if source.detail_lines %}
-              <ul class="admin-bot-signal-list">
-                {% for item in source.detail_lines %}
-                  <li><strong>{{ item.label }}:</strong> {{ item.detail }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
             {% if source.action_url %}
               <a class="outline-link" href="{{ source.action_url }}">Gerir</a>
             {% endif %}
@@ -133,7 +222,7 @@
       </div>
     </section>
 
-    {# ── Zona 4 · Sinais de aprendizagem ──────────────────────────── #}
+    {# ── Zona 6 · Sinais de aprendizagem ──────────────────────────── #}
     <section class="panel section-panel" id="signals">
       <div class="section-head compact-head">
         <div>
@@ -212,7 +301,7 @@
       {% endif %}
     </section>
 
-    {# ── Zona 5 · Exceções ────────────────────────────────────────── #}
+    {# ── Zona 7 · Exceções ────────────────────────────────────────── #}
     <section class="panel section-panel" id="exceptions">
       <div class="section-head compact-head">
         <div>
@@ -242,7 +331,7 @@
       {% endif %}
     </section>
 
-    {# ── Zona 6 · Qualidade (evals) ───────────────────────────────── #}
+    {# ── Zona 8 · Qualidade (evals) ───────────────────────────────── #}
     <section class="panel section-panel" id="quality">
       <div class="section-head compact-head">
         <div>
@@ -273,23 +362,51 @@
                 <li>
                   <strong>{{ item.document }}</strong>
                   <p class="admin-bot-failure-question">{{ item.question }}</p>
-                  <p class="muted">Origem: {{ item.origin_label }}</p>
                   <p class="muted">Falta: {{ item.missing_summary }}</p>
-                  {% if item.resolution_hint %}
-                    <p class="muted">{{ item.resolution_hint }}</p>
-                  {% endif %}
-                  {% if item.action_links %}
-                    <div class="inline-link-row">
-                      {% for link in item.action_links %}
-                        <a class="inline-link" href="{{ link.url }}">{{ link.label }}</a>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
                 </li>
               {% endfor %}
             </ul>
           </div>
         </details>
+      {% endif %}
+      {% if quality.feedback_source_rows or quality.feedback_recent_rows %}
+        <div class="admin-bot-feedback-grid">
+          <article class="admin-bot-feedback-card">
+            <header>
+              <span class="eyebrow">Correções promovidas</span>
+              <strong>{{ quality.feedback_cases_total }}</strong>
+            </header>
+            {% if quality.feedback_source_rows %}
+              <ul class="admin-bot-chip-list">
+                {% for row in quality.feedback_source_rows %}
+                  <li>{{ row.label }} <strong>× {{ row.count }}</strong></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="muted">Sem promos de feedback guardadas.</p>
+            {% endif %}
+          </article>
+          <article class="admin-bot-feedback-card">
+            <header>
+              <span class="eyebrow">Últimos inputs promovidos</span>
+              <strong>Feedback humano</strong>
+            </header>
+            {% if quality.feedback_recent_rows %}
+              <ul class="admin-bot-feedback-list">
+                {% for row in quality.feedback_recent_rows %}
+                  <li>
+                    <span class="admin-bot-feedback-source">{{ row.source_label }}</span>
+                    <strong>{{ row.document }}</strong>
+                    <p>{{ row.question }}</p>
+                    <small>{{ row.expected_hint }}</small>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="muted">Sem detalhe recente para mostrar.</p>
+            {% endif %}
+          </article>
+        </div>
       {% endif %}
       {% if quality.document_rows %}
         <div class="admin-casebook-sheet-wrap">
@@ -321,43 +438,9 @@
       {% else %}
         <p class="admin-status-note">Nenhum documento tem ainda casos de avaliação associados.</p>
       {% endif %}
-      {% if quality.recent_feedback_cases %}
-        <details class="documents-collapse-card admin-bot-collapse">
-          <summary class="documents-collapse-summary">
-            <div>
-              <h3>Inputs que o bot pode reutilizar</h3>
-              <span class="muted">{{ quality.feedback_cases_total }} correção(ões) promovida(s)</span>
-            </div>
-          </summary>
-          <div class="documents-collapse-body">
-            {% if quality.source_rows %}
-              <div class="casebook-tag-list">
-                {% for item in quality.source_rows %}
-                  <span class="casebook-tag">{{ item.label }} × {{ item.count }}</span>
-                {% endfor %}
-              </div>
-            {% endif %}
-            <ul class="admin-bot-failure-list">
-              {% for item in quality.recent_feedback_cases %}
-                <li>
-                  <strong>{{ item.document }}</strong>
-                  <p class="admin-bot-failure-question">{{ item.question }}</p>
-                  <p class="muted">Origem: {{ item.source_label }}</p>
-                  {% if item.expected_answer_preview %}
-                    <p class="muted">{{ item.expected_answer_preview }}</p>
-                  {% endif %}
-                  {% if item.feedback_note_preview %}
-                    <p class="muted">Nota: {{ item.feedback_note_preview }}</p>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        </details>
-      {% endif %}
     </section>
 
-    {# ── Zona 7 · Controlos admin / Toolbox ──────────────────────── #}
+    {# ── Zona 9 · Controlos admin / Toolbox ──────────────────────── #}
     <section class="panel section-panel admin-bot-toolbox" id="toolbox">
       <div class="section-head compact-head">
         <div>
@@ -365,12 +448,11 @@
           <h2>Definições e aprendizagem automática</h2>
         </div>
         <span class="muted small-note">
-          {% if settings_history %}última alteração: {{ settings_history[0].changed_at_label or settings_history[0].changed_at }}{% else %}defaults{% endif %}
+          {% if settings.updated_at %}última alteração: {{ settings.updated_at }}{% else %}defaults{% endif %}
         </span>
       </div>
       <form method="post" action="{{ url_for('admin.admin_bot_settings') }}" class="admin-bot-settings-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
         <div class="admin-bot-toggle-grid">
           <label class="admin-bot-toggle">
             <input type="checkbox" name="auto_promote_corrections" {% if settings.auto_promote_corrections %}checked{% endif %}>
@@ -426,59 +508,8 @@
       </form>
       <form method="post" action="{{ url_for('admin.admin_bot_settings_reset') }}" class="admin-bot-reset-form" onsubmit="return confirm('Repor todas as definições do bot para os valores por defeito?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
         <button type="submit" class="mini-button secondary-button">Repor defaults</button>
       </form>
-      <details class="documents-collapse-card admin-bot-collapse" {% if settings_history %}open{% endif %}>
-        <summary class="documents-collapse-summary">
-          <div>
-            <h3>Histórico recente</h3>
-            <span class="muted">{{ settings_history|length }} revisão(ões) registada(s)</span>
-          </div>
-        </summary>
-        <div class="documents-collapse-body">
-          {% if settings_history %}
-            <ul class="admin-bot-settings-history">
-              {% for item in settings_history %}
-                <li class="admin-bot-settings-history-item">
-                  <div class="admin-bot-settings-history-head">
-                    <div>
-                      <strong>{{ item.action_label }}</strong>
-                      <p class="muted">
-                        {{ item.changed_at_label or item.changed_at }}
-                        {% if item.changed_by %}· {{ item.changed_by }}{% endif %}
-                        {% if item.is_current %}· atual{% endif %}
-                      </p>
-                    </div>
-                    {% if not item.is_current %}
-                      <form method="post" action="{{ url_for('admin.admin_bot_settings_rollback', revision_id=item.revision_id) }}" class="admin-bot-inline-form">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="return_to" value="{{ url_for('admin.admin_bot', _anchor='toolbox') }}">
-                        <button type="submit" class="mini-button secondary-button">Voltar aqui</button>
-                      </form>
-                    {% endif %}
-                  </div>
-                  {% if item.summary %}
-                    <p class="admin-bot-settings-history-summary">{{ item.summary }}</p>
-                  {% endif %}
-                  {% if item.change_rows %}
-                    <ul class="admin-bot-signal-list">
-                      {% for change in item.change_rows %}
-                        <li><strong>{{ change.label }}:</strong> {{ change.detail }}</li>
-                      {% endfor %}
-                    </ul>
-                  {% endif %}
-                  {% if item.remaining_changes %}
-                    <p class="muted small-note">+ {{ item.remaining_changes }} alteração(ões) nesta revisão.</p>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="admin-status-note">Ainda não há histórico das definições do bot neste ambiente.</p>
-          {% endif %}
-        </div>
-      </details>
 
       <div class="admin-bot-data-actions">
         <article class="admin-status-surface admin-bot-data-box">
@@ -519,8 +550,8 @@
       </div>
     </section>
 
-    {# ── Zona 8 · Casebooks legados (collapsible, para quem precisar) ── #}
-    <details class="panel section-panel admin-bot-legacy-casebooks" id="casebooks" {% if casebooks.open_by_default %}open{% endif %}>
+    {# ── Zona 10 · Casebooks legados (collapsible, para quem precisar) ── #}
+    <details class="panel section-panel admin-bot-legacy-casebooks" id="casebooks">
       <summary class="documents-collapse-summary admin-bot-legacy-summary">
         <div>
           <p class="eyebrow">Governança detalhada</p>
@@ -554,294 +585,7 @@
             <strong>{{ casebooks.practice_active_total }}/{{ casebooks.practice_total }}</strong>
           </div>
         </div>
-
-        <form method="get" action="{{ url_for('admin.admin_bot', _anchor='casebooks') }}" class="archive-filter-form">
-          <div class="archive-filter-grid admin-casebooks-filter-grid">
-            <label>
-              Fonte
-              <select name="source_type">
-                <option value="all" {% if casebooks.filters.source_type == "all" %}selected{% endif %}>Tudo</option>
-                <option value="chat" {% if casebooks.filters.source_type == "chat" %}selected{% endif %}>Chat / WhatsApp</option>
-                <option value="maneuver" {% if casebooks.filters.source_type == "maneuver" %}selected{% endif %}>Casos operacionais</option>
-                <option value="practice" {% if casebooks.filters.source_type == "practice" %}selected{% endif %}>Experiência prática importada</option>
-              </select>
-            </label>
-            <label>
-              Mensagens do chat
-              <select name="chat_feedback">
-                <option value="pending" {% if casebooks.filters.chat_feedback == "pending" %}selected{% endif %}>Por rever</option>
-                <option value="approved" {% if casebooks.filters.chat_feedback == "approved" %}selected{% endif %}>Aprovadas</option>
-                <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas / rever</option>
-                <option value="ignored" {% if casebooks.filters.chat_feedback == "ignored" %}selected{% endif %}>Arquivadas</option>
-                <option value="all" {% if casebooks.filters.chat_feedback == "all" %}selected{% endif %}>Todas</option>
-              </select>
-            </label>
-            <label>
-              Casos operacionais
-              <select name="case_feedback">
-                <option value="pending" {% if casebooks.filters.case_feedback == "pending" %}selected{% endif %}>Sem validação</option>
-                <option value="approved" {% if casebooks.filters.case_feedback == "approved" %}selected{% endif %}>Experiência validada</option>
-                <option value="avoid" {% if casebooks.filters.case_feedback == "avoid" %}selected{% endif %}>Evitar como padrão</option>
-                <option value="review" {% if casebooks.filters.case_feedback == "review" %}selected{% endif %}>Rever caso</option>
-                <option value="all" {% if casebooks.filters.case_feedback == "all" %}selected{% endif %}>Todos</option>
-              </select>
-            </label>
-            <label>
-              Tipo de manobra
-              <select name="case_type">
-                <option value="" {% if not casebooks.filters.case_type %}selected{% endif %}>Todos</option>
-                <option value="entry" {% if casebooks.filters.case_type == "entry" %}selected{% endif %}>Entrada</option>
-                <option value="departure" {% if casebooks.filters.case_type == "departure" %}selected{% endif %}>Saída</option>
-                <option value="shift" {% if casebooks.filters.case_type == "shift" %}selected{% endif %}>Mudança</option>
-              </select>
-            </label>
-            <label>
-              Pesquisa
-              <input name="q" value="{{ casebooks.filters.q }}" type="search" placeholder="Pergunta, documento, navio, rota...">
-            </label>
-            <label>
-              Itens
-              <select name="limit">
-                {% for option in casebooks.allowed_limits %}
-                  <option value="{{ option }}" {% if casebooks.filters.limit == option %}selected{% endif %}>{{ option }}</option>
-                {% endfor %}
-              </select>
-            </label>
-          </div>
-          <div class="inline-link-row">
-            <button type="submit" class="mini-button">Aplicar filtros</button>
-            <a class="outline-link" href="{{ url_for('admin.admin_bot', _anchor='casebooks') }}">Limpar</a>
-            <span class="muted small-note">{{ casebooks.scope_label }} · {{ casebooks.visible_summary }}</span>
-          </div>
-        </form>
-
-        {% if casebooks.summary %}
-          <p class="admin-status-note admin-bot-summary">{{ casebooks.summary }}</p>
-        {% endif %}
-
-        {% if casebooks.chat_rows %}
-          <div class="admin-casebook-section-block">
-            <div class="section-head compact-head">
-              <div>
-                <p class="eyebrow">Chat</p>
-                <h3>Mensagens para governança</h3>
-              </div>
-            </div>
-            <div class="admin-bot-case-grid">
-              {% for item in casebooks.chat_rows %}
-                <article class="admin-bot-case admin-casebook-card" id="chat-{{ item.id }}">
-                  <div class="admin-bot-case-head">
-                    <div>
-                      <strong>{{ item.owner_username }}</strong>
-                      <p class="admin-casebook-route">{{ item.conversation_title }}</p>
-                    </div>
-                    <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-                  </div>
-                  <p class="admin-bot-case-meta"><strong>Origem:</strong> {{ item.channel_label }} · {{ item.created_at_label }}</p>
-                  <p class="admin-bot-case-question">{{ item.question_preview }}</p>
-                  <p class="admin-bot-case-answer">{{ item.answer_preview }}</p>
-                  {% if item.answer != item.answer_preview %}
-                    <details class="planning-optional-box">
-                      <summary>Ver resposta completa</summary>
-                      <div class="admin-casebook-longtext">{{ item.answer }}</div>
-                    </details>
-                  {% endif %}
-                  {% if item.citation_documents %}
-                    <div class="casebook-tag-list">
-                      {% for document in item.citation_documents %}
-                        <span class="casebook-tag">{{ document }}</span>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
-                  {% if item.feedback_note %}
-                    <p class="admin-bot-case-meta"><strong>Nota atual:</strong> {{ item.feedback_note }}</p>
-                  {% endif %}
-                  <p class="admin-bot-case-meta"><strong>Estado:</strong> {{ item.governance_hint }}</p>
-                  {% if item.feedback_correction %}
-                    <details class="planning-optional-box">
-                      <summary>Ver correção persistida</summary>
-                      <div class="admin-casebook-longtext">{{ item.feedback_correction }}</div>
-                    </details>
-                  {% endif %}
-                  <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="stack admin-casebook-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
-                    <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
-                    <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                    <label>
-                      Decisão
-                      <select name="feedback_status" required>
-                        <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar resposta atual</option>
-                        <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Bloquear e guardar correção supervisionada</option>
-                        <option value="ignored" {% if item.feedback_status == "ignored" %}selected{% endif %}>Arquivar da governança</option>
-                      </select>
-                    </label>
-                    <label>
-                      Nota
-                      <textarea name="feedback_note" rows="2" placeholder="Motivo da decisão, ressalvas ou contexto...">{{ item.feedback_note }}</textarea>
-                    </label>
-                    <label>
-                      Correção reutilizável
-                      <textarea name="feedback_correction" rows="3" placeholder="Resposta corrigida para alimentar memória supervisionada...">{{ item.feedback_correction }}</textarea>
-                    </label>
-                    <label>
-                      Documento alvo
-                      <input type="text" name="feedback_correction_document" value="{{ item.feedback_correction_document }}" placeholder="Opcional se houver um único documento citado">
-                    </label>
-                    <div class="inline-link-row">
-                      <button type="submit" class="mini-button">Guardar decisão</button>
-                    </div>
-                  </form>
-                  <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="admin-bot-inline-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
-                    <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
-                    <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                    <input type="hidden" name="feedback_status" value="ignored">
-                    <button type="submit" class="mini-button secondary-button">Arquivar</button>
-                  </form>
-                </article>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if casebooks.observation_case_rows or casebooks.governed_case_rows %}
-          <div class="admin-casebook-section-block">
-            <div class="section-head compact-head">
-              <div>
-                <p class="eyebrow">Casebook</p>
-                <h3>Casos operacionais e correlações</h3>
-              </div>
-            </div>
-            {% if casebooks.observation_case_rows %}
-              <p class="admin-status-note">Casos em observação continuam fora da experiência recomendável até validação explícita.</p>
-              <div class="admin-bot-case-grid">
-                {% for item in casebooks.observation_case_rows %}
-                  <article class="admin-bot-case admin-casebook-card" id="maneuver-{{ item.maneuver_id }}">
-                    <div class="admin-bot-case-head">
-                      <div>
-                        <strong>{{ item.reference_code }}</strong>
-                        <p class="admin-casebook-route">{{ item.maneuver_type_label }} · {{ item.route_label }}</p>
-                      </div>
-                      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-                    </div>
-                    <p class="admin-bot-case-meta"><strong>{{ item.vessel_name }}</strong> · {{ item.state_label }} · {{ item.latest_event_label }}</p>
-                    <p class="admin-bot-case-meta">{{ item.feature_label }}</p>
-                    {% if item.decision_flags %}
-                      <div class="casebook-tag-list">
-                        {% for flag in item.decision_flags %}
-                          <span class="casebook-tag">{{ flag }}</span>
-                        {% endfor %}
-                      </div>
-                    {% endif %}
-                    <p class="admin-casebook-learning">{{ item.learning_summary }}</p>
-                    <div class="inline-link-row">
-                      <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir manobra</a>
-                    </div>
-                    <form method="post" action="{{ url_for('admin.admin_casebooks_maneuver_feedback', maneuver_id=item.maneuver_id) }}" class="stack admin-casebook-form">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                      <label>
-                        Decisão operacional
-                        <select name="feedback_status" required>
-                          <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Experiência validada</option>
-                          <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
-                          <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever caso</option>
-                        </select>
-                      </label>
-                      <label>
-                        Nota de validação
-                        <textarea name="feedback_note" rows="3" placeholder="Decisão, ressalvas, exceções ou boa prática...">{{ item.feedback_note }}</textarea>
-                      </label>
-                      <button type="submit" class="mini-button">Guardar caso</button>
-                    </form>
-                  </article>
-                {% endfor %}
-              </div>
-            {% endif %}
-
-            {% if casebooks.governed_case_rows %}
-              <div class="section-head compact-head">
-                <div>
-                  <p class="eyebrow">Governança</p>
-                  <h3>Experiência e decisões operacionais</h3>
-                </div>
-              </div>
-              <div class="admin-bot-case-grid">
-                {% for item in casebooks.governed_case_rows %}
-                  <article class="admin-bot-case admin-casebook-card" id="maneuver-{{ item.maneuver_id }}">
-                    <div class="admin-bot-case-head">
-                      <div>
-                        <strong>{{ item.reference_code }}</strong>
-                        <p class="admin-casebook-route">{{ item.maneuver_type_label }} · {{ item.route_label }}</p>
-                      </div>
-                      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-                    </div>
-                    <p class="admin-bot-case-meta"><strong>{{ item.vessel_name }}</strong> · {{ item.state_label }} · {{ item.latest_event_label }}</p>
-                    <p class="admin-bot-case-meta">{{ item.feature_label }}</p>
-                    <p class="admin-casebook-learning">{{ item.learning_summary }}</p>
-                    <div class="inline-link-row">
-                      <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir manobra</a>
-                    </div>
-                  </article>
-                {% endfor %}
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
-
-        {% if casebooks.practice_rows %}
-          <div class="admin-casebook-section-block">
-            <div class="section-head compact-head">
-              <div>
-                <p class="eyebrow">Prática</p>
-                <h3>Experiência prática importada</h3>
-              </div>
-            </div>
-            <div class="admin-bot-case-grid">
-              {% for item in casebooks.practice_rows %}
-                <article class="admin-bot-case admin-casebook-card" id="practice-{{ item.id }}">
-                  <div class="admin-bot-case-head">
-                    <div>
-                      <strong>{{ item.reference_code }}</strong>
-                      <p class="admin-casebook-route">{{ item.maneuver_type_label }} · {{ item.route_label }}</p>
-                    </div>
-                    <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-                  </div>
-                  <p class="admin-bot-case-meta"><strong>{{ item.vessel_name }}</strong> · {{ item.source_filename }}</p>
-                  <p class="admin-bot-case-meta">{{ item.profile_label }}</p>
-                  <p class="admin-bot-case-meta">Casos agregados: {{ item.case_count }} · Duração mediana: {{ item.duration_median_label }}</p>
-                  <p class="admin-bot-case-meta">Rebocadores: {{ item.tug_distribution_label }}</p>
-                  {% if item.comments_label %}
-                    <p class="admin-bot-case-meta">{{ item.comments_label }}</p>
-                  {% endif %}
-                  <form method="post" action="{{ url_for('admin.update_practice_experience', record_id=item.id) }}" class="stack admin-casebook-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-                    <label>
-                      Decisão operacional
-                      <select name="feedback_status" required>
-                        <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Experiência validada</option>
-                        <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
-                        <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever caso</option>
-                      </select>
-                    </label>
-                    <label>
-                      Nota
-                      <textarea name="feedback_note" rows="3" placeholder="Ressalvas, exceções ou contexto adicional...">{{ item.feedback_note }}</textarea>
-                    </label>
-                    <button type="submit" class="mini-button">Guardar decisão</button>
-                  </form>
-                </article>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if not casebooks.chat_rows and not casebooks.observation_case_rows and not casebooks.governed_case_rows and not casebooks.practice_rows %}
-          <p class="admin-status-note">Nenhum item corresponde aos filtros atuais.</p>
-        {% endif %}
+        <a class="outline-link" href="{{ url_for('admin.admin_casebooks') }}">Abrir governança detalhada</a>
       </div>
     </details>
 
@@ -856,11 +600,6 @@
   const sourcesWrapper = document.getElementById("bot-playground-sources-wrapper");
   const sourcesList = document.getElementById("bot-playground-sources");
   const origin = document.getElementById("bot-playground-origin");
-  const traceWrapper = document.getElementById("bot-playground-trace-wrapper");
-  const traceRoute = document.getElementById("bot-playground-trace-route");
-  const traceDetail = document.getElementById("bot-playground-trace-detail");
-  const traceFlags = document.getElementById("bot-playground-trace-flags");
-  const traceRows = document.getElementById("bot-playground-trace-rows");
   if (!form) return;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -871,12 +610,7 @@
     result.hidden = false;
     answerBox.textContent = "";
     sourcesList.innerHTML = "";
-    traceRows.innerHTML = "";
-    traceFlags.innerHTML = "";
-    traceRoute.textContent = "";
-    traceDetail.textContent = "";
     sourcesWrapper.hidden = true;
-    traceWrapper.hidden = true;
     try {
       const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
         method: "POST",
@@ -894,27 +628,7 @@
       }
       const payload = await response.json();
       answerBox.textContent = payload.answer || "(sem resposta)";
-      const trace = payload.trace || {};
-      origin.textContent = trace.route_label ? `Rota: ${trace.route_label}` : (payload.answer_origin ? `Origem: ${payload.answer_origin}` : "");
-      if (trace.route_label || trace.route_detail || (trace.rows || []).length || (trace.flags || []).length) {
-        traceRoute.textContent = trace.route_label || "";
-        traceDetail.textContent = trace.route_detail || "";
-        (trace.flags || []).forEach((item) => {
-          const span = document.createElement("span");
-          span.className = "casebook-tag";
-          span.textContent = `${item.label}: ${item.value}`;
-          traceFlags.appendChild(span);
-        });
-        (trace.rows || []).forEach((item) => {
-          const li = document.createElement("li");
-          const strong = document.createElement("strong");
-          strong.textContent = `${item.label}:`;
-          li.appendChild(strong);
-          li.append(` ${item.detail}`);
-          traceRows.appendChild(li);
-        });
-        traceWrapper.hidden = false;
-      }
+      origin.textContent = payload.answer_origin ? `Origem: ${payload.answer_origin}` : "";
       const sources = payload.sources || [];
       if (sources.length) {
         sources.forEach((src) => {

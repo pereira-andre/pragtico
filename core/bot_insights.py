@@ -10,11 +10,10 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import urlencode
 
 from core import services
-from core.chat_feedback import feedback_correction_state
 from core.bot_settings import load_bot_settings
+from domain.berth_profiles import PROFILE_FILENAME, load_berth_profiles
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import (
     default_eval_cases_path,
@@ -22,6 +21,13 @@ from domain.knowledge_evals import (
     load_eval_cases_from_dir,
     load_eval_cases_from_store,
 )
+from domain.operational_safety import SAFETY_LIMITS_FILENAME, load_operational_safety_limits
+from domain.practice_experience import (
+    PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME,
+    PRACTICE_EXPERIENCE_ACTIVE_STATUSES,
+    list_practice_experience_records,
+)
+from domain.tug_guidance import TUG_GUIDANCE_FILENAME, load_tug_guidance
 
 logger = logging.getLogger(__name__)
 
@@ -62,49 +68,167 @@ def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", text.encode("ascii", "ignore").decode("ascii").strip().lower())
 
 
+def _knowledge_dir() -> str:
+    store = getattr(services, "store", None)
+    return getattr(store, "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "") or ""
+
+
+def _safe_list_documents() -> list[dict]:
+    store = getattr(services, "store", None)
+    if not store:
+        return []
+    try:
+        return store.list_documents()
+    except Exception:
+        logger.exception("Falha a listar documentos.")
+        return []
+
+
+def _safe_reviewable_messages(limit: int = 400) -> list[dict]:
+    store = getattr(services, "store", None)
+    if not store:
+        return []
+    try:
+        return store.list_reviewable_chat_messages(limit=limit)
+    except Exception:
+        logger.exception("Falha a listar mensagens reviewable.")
+        return []
+
+
+def _safe_maneuver_cases(limit: int = 400) -> list[dict]:
+    store = getattr(services, "store", None)
+    if not store:
+        return []
+    try:
+        return store.list_maneuver_cases(limit=limit)
+    except Exception:
+        logger.exception("Falha a listar maneuver cases.")
+        return []
+
+
+def _safe_feedback_eval_cases() -> list[dict]:
+    store = getattr(services, "store", None)
+    if not store:
+        return []
+    try:
+        return load_eval_cases_from_store(store)
+    except Exception:
+        logger.exception("Falha a listar feedback eval cases.")
+        return []
+
+
+def _safe_practice_records() -> list[dict]:
+    store = getattr(services, "store", None)
+    if not store:
+        return []
+    try:
+        return list_practice_experience_records(store)
+    except Exception:
+        logger.exception("Falha a listar experiência prática.")
+        return []
+
+
+def _component_state(active: bool, *, partial: bool = False) -> str:
+    if active:
+        return "online"
+    return "degraded" if partial else "offline"
+
+
+def _component_state_label(state: str) -> str:
+    if state == "online":
+        return "Ativo"
+    if state == "degraded":
+        return "Parcial"
+    return "Sem dados"
+
+
+def _count_live_operational_services() -> tuple[int, int]:
+    total = 4
+    active = 0
+    tide_service = getattr(services, "tide_service", None)
+    if tide_service and getattr(tide_service, "csv_path", ""):
+        active += 1
+    weather_service = getattr(services, "weather_service", None)
+    if weather_service and getattr(weather_service, "enabled", False):
+        active += 1
+    wave_service = getattr(services, "wave_service", None)
+    if wave_service and getattr(wave_service, "enabled", False):
+        active += 1
+    warning_service = getattr(services, "local_warning_service", None)
+    if warning_service and getattr(warning_service, "enabled", False):
+        active += 1
+    return active, total
+
+
 def _feedback_source_label(source: str) -> str:
     clean_source = str(source or "").strip().lower()
     if clean_source == "whatsapp":
         return "WhatsApp"
     if clean_source == "web":
         return "Site"
+    if clean_source == "api":
+        return "API"
     return "Operador"
 
 
-def _preview_text(value: Any, limit: int = 220) -> str:
-    clean = " ".join(str(value or "").split())
-    if len(clean) <= limit:
-        return clean
-    return f"{clean[: max(limit - 1, 0)].rstrip()}..."
+def _component_coverage_pct(components: Iterable[dict[str, Any]]) -> int:
+    items = list(components)
+    if not items:
+        return 0
+    score = 0.0
+    for item in items:
+        state = str(item.get("state") or "")
+        if state == "online":
+            score += 1.0
+        elif state == "degraded":
+            score += 0.55
+    return round((score / len(items)) * 100)
 
 
-def _build_relative_url(path: str, **params: Any) -> str:
-    clean_params = [(key, value) for key, value in params.items() if value not in {"", None}]
-    if not clean_params:
-        return path
-    return f"{path}?{urlencode(clean_params, doseq=True)}"
-
-
-def _build_casebooks_focus_url(
+def _build_tuning_component(
     *,
-    source_type: str,
-    anchor: str,
-    limit: int = 8,
-    chat_feedback: str = "",
-    case_feedback: str = "",
-    q: str = "",
-) -> str:
-    focus = str(anchor or "").strip()
-    params = {
-        "source_type": source_type,
-        "limit": limit,
-        "focus": focus,
-        "chat_feedback": chat_feedback,
-        "case_feedback": case_feedback,
-        "q": q,
+    label: str,
+    state: str,
+    source_name: str,
+    runtime_hook: str,
+    detail: str,
+    facts: Iterable[str],
+    action_url: str = "",
+    action_label: str = "Abrir",
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "state": state,
+        "state_label": _component_state_label(state),
+        "source_name": source_name,
+        "runtime_hook": runtime_hook,
+        "detail": detail,
+        "facts": [str(item).strip() for item in facts if str(item or "").strip()],
+        "action_url": action_url,
+        "action_label": action_label,
     }
-    base = _build_relative_url("/admin/bot", **params)
-    return f"{base}#{focus}" if focus else f"{base}#casebooks"
+
+
+def _build_tuning_group(
+    *,
+    group_id: str,
+    title: str,
+    description: str,
+    components: list[dict[str, Any]],
+) -> dict[str, Any]:
+    online_total = sum(1 for item in components if item.get("state") == "online")
+    degraded_total = sum(1 for item in components if item.get("state") == "degraded")
+    offline_total = sum(1 for item in components if item.get("state") == "offline")
+    return {
+        "id": group_id,
+        "title": title,
+        "description": description,
+        "components": components,
+        "coverage_pct": _component_coverage_pct(components),
+        "online_total": online_total,
+        "degraded_total": degraded_total,
+        "offline_total": offline_total,
+    }
 
 
 # ----------------------------------------------------------------------------
@@ -290,23 +414,14 @@ def build_exceptions(*, limit: int = 10) -> dict:
         cases = []
 
     for msg in messages:
-        correction_state = feedback_correction_state(msg)
-        if correction_state["is_ready"]:
-            continue
         if (msg.get("feedback_status") or "").strip().lower() == "review":
-            label = "Correção sem documento alvo" if correction_state["needs_document"] else "Correção bloqueada"
             items.append(
                 {
                     "type": "correction_review",
                     "severity": "high",
-                    "label": label,
+                    "label": "Correção bloqueada",
                     "detail": msg.get("question") or (msg.get("content") or "")[:120],
-                    "url": _build_casebooks_focus_url(
-                        source_type="chat",
-                        chat_feedback="review",
-                        limit=16,
-                        anchor=f"chat-{msg.get('id', '')}",
-                    ),
+                    "url": f"/admin/bot#chat-{msg.get('id', '')}",
                 }
             )
 
@@ -393,7 +508,7 @@ _SOURCE_DEFS = (
     {
         "id": "operational_data",
         "label": "Dados operacionais vivos",
-        "description": "Atividade portuária atual e estado técnico dos feeds de maré, meteorologia, ondulação e avisos.",
+        "description": "Escalas, manobras, maré, meteorologia e agulhas em tempo real.",
     },
     {
         "id": "practice",
@@ -406,87 +521,6 @@ _SOURCE_DEFS = (
         "description": "Casos fixos + correções promovidas que testam a cobertura do bot.",
     },
 )
-
-
-def _build_operational_feed_rows() -> list[dict]:
-    rows: list[dict] = []
-
-    tide_service = getattr(services, "tide_service", None)
-    tide_path = str(getattr(tide_service, "csv_path", "") or "").strip()
-    tide_available = bool(tide_service and tide_path and Path(tide_path).exists())
-    tide_label = getattr(tide_service, "location_label", "") or "Tabela local"
-    rows.append(
-        {
-            "label": "Maré",
-            "state": "online" if tide_available else "offline",
-            "detail": tide_label if tide_available else "Tabela local não configurada",
-        }
-    )
-
-    weather_service = getattr(services, "weather_service", None)
-    weather_enabled = bool(weather_service and getattr(weather_service, "enabled", False))
-    weather_location = getattr(weather_service, "location", "") or "Setúbal"
-    rows.append(
-        {
-            "label": "Meteorologia",
-            "state": "online" if weather_enabled else "offline",
-            "detail": weather_location if weather_enabled else "WeatherAPI não configurado",
-        }
-    )
-
-    wave_service = getattr(services, "wave_service", None)
-    wave_enabled = bool(wave_service and getattr(wave_service, "enabled", False))
-    wave_status = {}
-    wave_error = ""
-    if wave_service:
-        try:
-            wave_status = wave_service.status() or {}
-        except Exception as exc:
-            wave_error = str(exc)
-    wave_cache_label = str(wave_status.get("cache_updated_at_label") or "").strip()
-    wave_state = "offline"
-    wave_detail = "Sem endpoint configurado"
-    if wave_enabled:
-        if wave_status.get("stale"):
-            wave_state = "degraded"
-            wave_detail = f"Cache local{f' · {wave_cache_label}' if wave_cache_label else ''}"
-        elif wave_status.get("error") or wave_error:
-            wave_state = "offline"
-            wave_detail = str(wave_status.get("error") or wave_error or "Leitura indisponível").strip()
-        else:
-            wave_state = "online"
-            station_name = getattr(wave_service, "station_name", "") or "Sines"
-            wave_detail = f"{station_name}{f' · {wave_cache_label}' if wave_cache_label else ''}"
-    rows.append({"label": "Ondulação", "state": wave_state, "detail": wave_detail})
-
-    warning_service = getattr(services, "local_warning_service", None)
-    warning_enabled = bool(warning_service and getattr(warning_service, "enabled", False))
-    warning_status = {}
-    warning_error = ""
-    if warning_service:
-        try:
-            warning_status = warning_service.status() or {}
-        except Exception as exc:
-            warning_error = str(exc)
-    warning_cache_label = str(warning_status.get("cache_updated_at_label") or "").strip()
-    warning_count = int(warning_status.get("count") or 0)
-    warning_state = "offline"
-    warning_detail = "Sem endpoint configurado"
-    if warning_enabled:
-        if warning_status.get("stale"):
-            warning_state = "degraded"
-            base = f"{warning_count} aviso(s) em cache" if warning_count else "Cache local"
-            warning_detail = f"{base}{f' · {warning_cache_label}' if warning_cache_label else ''}"
-        elif warning_status.get("error") or warning_error:
-            warning_state = "offline"
-            warning_detail = str(warning_status.get("error") or warning_error or "Avisos indisponíveis").strip()
-        else:
-            warning_state = "online"
-            base = f"{warning_count} aviso(s) em vigor" if warning_count else "Fonte configurada"
-            warning_detail = f"{base}{f' · {warning_cache_label}' if warning_cache_label else ''}"
-    rows.append({"label": "Avisos", "state": warning_state, "detail": warning_detail})
-
-    return rows
 
 
 def build_sources_snapshot() -> list[dict]:
@@ -542,33 +576,15 @@ def build_sources_snapshot() -> list[dict]:
             practice_total = 0
 
     port_calls_total = 0
-    in_port_total = 0
-    planned_maneuvers_total = 0
-    port_activity_error = ""
     try:
         if store:
-            activity = store.get_port_activity_snapshot(window_days=3650) or {}
-            stats = activity.get("stats") or {}
-            port_calls_total = int(stats.get("scheduled_count") or len(activity.get("arrivals", []) or []))
-            in_port_total = int(stats.get("in_port_count") or len(activity.get("in_port", []) or []))
-            planned_maneuvers_total = int(stats.get("planned_count") or len(activity.get("planned_maneuvers", []) or []))
-    except Exception as exc:
-        port_activity_error = str(exc)
+            port_calls_total = len(store.get_port_activity_snapshot(window_days=3650).get("arrivals", []) or [])
+    except Exception:
         port_calls_total = 0
-        in_port_total = 0
-        planned_maneuvers_total = 0
 
     snapshot: dict[str, dict] = {}
     for source in _SOURCE_DEFS:
-        snapshot[source["id"]] = {
-            **source,
-            "count": 0,
-            "count_label": "registo(s)",
-            "coverage_pct": 0,
-            "state": "offline",
-            "action_url": "",
-            "detail_lines": [],
-        }
+        snapshot[source["id"]] = {**source, "count": 0, "coverage_pct": 0, "state": "offline", "action_url": ""}
 
     if documents:
         snapshot["documents"].update(
@@ -603,33 +619,11 @@ def build_sources_snapshot() -> list[dict]:
             action_url="/admin/bot#sources",
             meta=f"{practice_total} padrões importados",
         )
-    feed_rows = _build_operational_feed_rows()
-    feed_total = len(feed_rows)
-    feed_ready_total = sum(1 for item in feed_rows if item.get("state") in {"online", "degraded"})
-    feed_online_total = sum(1 for item in feed_rows if item.get("state") == "online")
-    activity_total = port_calls_total + in_port_total + planned_maneuvers_total
-    if feed_ready_total == 0 and activity_total == 0:
-        operational_state = "offline"
-    elif feed_online_total == feed_total:
-        operational_state = "online"
-    else:
-        operational_state = "degraded"
-    activity_line = {
-        "label": "Atividade",
-        "state": "online" if activity_total else ("offline" if port_activity_error else "degraded"),
-        "detail": (
-            f"{port_calls_total} escala(s) agendada(s) · "
-            f"{in_port_total} em porto · "
-            f"{planned_maneuvers_total} manobra(s) planeada(s)"
-        ) if not port_activity_error else "Snapshot operacional indisponível",
-    }
     snapshot["operational_data"].update(
-        count=activity_total + feed_ready_total,
-        count_label="sinal(is) ativos",
-        state=operational_state,
-        action_url="/dashboard",
-        meta=f"{feed_ready_total}/{feed_total} feed(s) disponíveis",
-        detail_lines=[activity_line, *feed_rows],
+        count=port_calls_total,
+        state="online" if port_calls_total else "offline",
+        action_url="/port-calls",
+        meta=f"{port_calls_total} escala(s) resolvidas",
     )
     snapshot["evals"].update(
         count=evals_static + evals_feedback,
@@ -665,17 +659,9 @@ def build_quality_snapshot() -> dict:
         deduped.append(case)
 
     results = evaluate_companion_cases(deduped, knowledge_dir) if (deduped and knowledge_dir) else []
-    evaluated_rows = [{**case, **result} for case, result in zip(deduped, results)]
-    passed = sum(1 for item in evaluated_rows if item.get("passed"))
-    failed = [item for item in evaluated_rows if not item.get("passed")]
+    passed = sum(1 for item in results if item.get("passed"))
+    failed = [item for item in results if not item.get("passed")]
     pass_rate = round((passed / len(results)) * 100) if results else 0
-    source_rows = [
-        {"label": label, "count": count}
-        for label, count in sorted(
-            Counter(_feedback_source_label(item.get("source", "")) for item in feedback_cases).items(),
-            key=lambda entry: (-entry[1], entry[0]),
-        )
-    ]
 
     document_summary: dict[str, dict] = {}
     for case in deduped:
@@ -690,7 +676,7 @@ def build_quality_snapshot() -> dict:
             continue
         document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
         document_summary[name]["feedback"] += 1
-    for result in evaluated_rows:
+    for result in results:
         name = (result.get("document") or "").strip()
         if not name:
             continue
@@ -712,54 +698,35 @@ def build_quality_snapshot() -> dict:
     failure_rows = []
     for item in failed[:10]:
         missing = list(item.get("missing_substrings") or []) or list(item.get("missing_terms") or [])[:4]
-        source_message_id = (item.get("source_message_id") or "").strip()
-        action_links = []
-        if source_message_id:
-            origin_label = "Correção promovida"
-            correction_url = _build_casebooks_focus_url(
-                source_type="chat",
-                chat_feedback="all",
-                limit=16,
-                anchor=f"chat-{source_message_id}",
-                q=item.get("question", ""),
-            )
-            action_links.append({"label": "Abrir correção", "url": correction_url})
-            action_links.append(
-                {
-                    "label": "Abrir documento",
-                    "url": _build_relative_url("/admin/documents", q=item.get("document", "")),
-                }
-            )
-            resolution_hint = "Para este eval passar, a resposta corrigida tem de existir também no companion do documento."
-        else:
-            origin_label = "Eval estático"
-            action_links.append(
-                {
-                    "label": "Abrir documento",
-                    "url": _build_relative_url("/admin/documents", q=item.get("document", "")),
-                }
-            )
-            resolution_hint = ""
         failure_rows.append(
             {
                 "document": item.get("document", ""),
                 "question": item.get("question", ""),
-                "origin_label": origin_label,
                 "missing_summary": ", ".join(missing) or "Resposta vazia ou fora do esperado.",
-                "action_links": action_links,
-                "resolution_hint": resolution_hint,
             }
         )
 
-    recent_feedback_cases = []
-    for item in sorted(feedback_cases, key=lambda row: str(row.get("updated_at") or ""), reverse=True)[:8]:
-        recent_feedback_cases.append(
+    feedback_source_counter: Counter[str] = Counter()
+    feedback_recent_rows = []
+    for item in feedback_cases:
+        source_label = _feedback_source_label(item.get("source", ""))
+        feedback_source_counter[source_label] += 1
+        expected_parts = [
+            str(value).strip()
+            for value in (item.get("expected_substrings") or [])
+            if str(value or "").strip()
+        ]
+        expected_hint = ", ".join(expected_parts[:3]).strip()
+        if not expected_hint:
+            expected_hint = re.sub(r"\s+", " ", str(item.get("expected_answer") or "").strip())
+        if len(expected_hint) > 180:
+            expected_hint = expected_hint[:179].rstrip() + "…"
+        feedback_recent_rows.append(
             {
-                "document": item.get("document", ""),
-                "question": item.get("question", ""),
-                "source_label": _feedback_source_label(item.get("source", "")),
-                "expected_answer_preview": _preview_text(item.get("expected_answer", ""), limit=220),
-                "feedback_note_preview": _preview_text(item.get("feedback_note", ""), limit=160),
+                "source_label": source_label,
+                "document": str(item.get("document") or "").strip(),
+                "question": str(item.get("question") or "").strip(),
+                "expected_hint": expected_hint,
             }
         )
 
@@ -770,10 +737,583 @@ def build_quality_snapshot() -> dict:
         "failed_total": len(failed),
         "static_cases_total": len(static_cases),
         "feedback_cases_total": len(feedback_cases),
-        "source_rows": source_rows,
-        "recent_feedback_cases": recent_feedback_cases,
         "document_rows": document_rows[:12],
         "failure_rows": failure_rows,
+        "feedback_source_rows": [
+            {"label": label, "count": count}
+            for label, count in feedback_source_counter.most_common()
+        ],
+        "feedback_recent_rows": feedback_recent_rows[:8],
+    }
+
+
+def build_tuning_map_snapshot(
+    *,
+    settings: dict[str, Any] | None = None,
+    quality: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    settings = settings or load_bot_settings()
+    quality = quality or build_quality_snapshot()
+
+    store = getattr(services, "store", None)
+    knowledge_dir = _knowledge_dir()
+    documents = _safe_list_documents()
+    reviewable_messages = _safe_reviewable_messages()
+    maneuver_cases = _safe_maneuver_cases()
+    feedback_eval_cases = _safe_feedback_eval_cases()
+    practice_records = _safe_practice_records()
+
+    companions_total = 0
+    resolved_companions = 0
+    companions_dir = companion_directory(knowledge_dir) if knowledge_dir else ""
+    if companions_dir and os.path.isdir(companions_dir):
+        companions_total = sum(1 for name in os.listdir(companions_dir) if name.lower().endswith(".json"))
+    for document in documents:
+        try:
+            if knowledge_dir and load_document_companion(document.get("name", ""), knowledge_dir):
+                resolved_companions += 1
+        except Exception:
+            continue
+    companions_coverage = round((resolved_companions / len(documents)) * 100) if documents else 0
+    missing_companions = max(len(documents) - resolved_companions, 0)
+
+    berth_profiles = load_berth_profiles(knowledge_dir) if knowledge_dir else []
+    berth_documents = sum(1 for item in berth_profiles if str(item.get("document") or "").strip())
+    berth_aliases = sum(len(item.get("aliases") or []) for item in berth_profiles)
+
+    tug_guidance = load_tug_guidance(knowledge_dir) if knowledge_dir else {}
+    tug_groups_total = len(tug_guidance.get("vessel_type_groups") or {})
+    tug_rules_total = (
+        len(tug_guidance.get("base_matrix") or [])
+        + len(tug_guidance.get("no_bowthruster_minimums") or [])
+        + len(tug_guidance.get("lisnave_rules") or [])
+    )
+
+    safety_limits = load_operational_safety_limits(knowledge_dir) if knowledge_dir else {}
+    safety_rules_total = len(safety_limits.get("rules") or [])
+    safety_thresholds_total = len(safety_limits.get("thresholds") or {})
+
+    approved_messages_total = 0
+    correction_memory_total = 0
+    review_pending_total = 0
+    for item in reviewable_messages:
+        status = str(item.get("feedback_status") or "").strip().lower()
+        if status == "approved":
+            approved_messages_total += 1
+            if str(item.get("feedback_correction") or "").strip():
+                correction_memory_total += 1
+        elif status == "review":
+            review_pending_total += 1
+
+    feedback_source_counter: Counter[str] = Counter()
+    for item in feedback_eval_cases:
+        feedback_source_counter[_feedback_source_label(item.get("source", ""))] += 1
+    feedback_sources_label = ", ".join(
+        f"{label} × {count}" for label, count in feedback_source_counter.most_common()
+    ) or "Sem correções promovidas."
+
+    maneuver_case_total = len(maneuver_cases)
+    maneuver_case_approved_total = sum(
+        1 for item in maneuver_cases if str(item.get("feedback_status") or "").strip().lower() == "approved"
+    )
+    maneuver_case_alert_total = sum(
+        1
+        for item in maneuver_cases
+        if str(item.get("feedback_status") or "").strip().lower() in {"avoid", "review"}
+    )
+    maneuver_case_flagged_total = sum(
+        1 for item in maneuver_cases if (item.get("outcome_snapshot") or {}).get("decision_flags")
+    )
+
+    practice_total = len(practice_records)
+    practice_active_total = sum(
+        1
+        for item in practice_records
+        if str(item.get("feedback_status") or "").strip().lower() in PRACTICE_EXPERIENCE_ACTIVE_STATUSES
+    )
+    practice_review_total = sum(
+        1 for item in practice_records if str(item.get("feedback_status") or "").strip().lower() == "review"
+    )
+    practice_source_exists = bool(
+        knowledge_dir and (Path(knowledge_dir) / PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME).exists()
+    )
+
+    port_calls_total = 0
+    try:
+        if store:
+            port_calls_total = len(store.get_port_activity_snapshot(window_days=3650).get("arrivals", []) or [])
+    except Exception:
+        logger.exception("Falha a listar atividade portuária para mapa de afinação.")
+
+    tide_service = getattr(services, "tide_service", None)
+    tide_csv_path = str(getattr(tide_service, "csv_path", "") or "")
+    tide_csv_label = Path(tide_csv_path).name if tide_csv_path else "Sem CSV carregado"
+    weather_service = getattr(services, "weather_service", None)
+    wave_service = getattr(services, "wave_service", None)
+    warning_service = getattr(services, "local_warning_service", None)
+    live_services_active, live_services_total = _count_live_operational_services()
+
+    groups = [
+        _build_tuning_group(
+            group_id="documental_base",
+            title="Base documental",
+            description="Texto, FAQ e evals que cobrem perguntas previsíveis com resposta controlada.",
+            components=[
+                _build_tuning_component(
+                    label="Documentos base",
+                    state=_component_state(bool(documents)),
+                    source_name="store.documents",
+                    runtime_hook="rag/search + citações",
+                    detail="Corpus principal do porto: instruções, regulamentos e notas operacionais.",
+                    facts=[
+                        f"{len(documents)} documento(s) indexado(s)",
+                        f"{resolved_companions}/{len(documents)} com companion" if documents else "",
+                        "A base usada para snippets e respostas documentais.",
+                    ],
+                    action_url="/admin/documents",
+                    action_label="Gerir documentos",
+                ),
+                _build_tuning_component(
+                    label="Companions por documento",
+                    state="online" if companions_total and companions_coverage >= 70 else "degraded" if companions_total else "offline",
+                    source_name="knowledge/companions/*.json",
+                    runtime_hook="load_document_companion -> build_companion_answer",
+                    detail="FAQ estruturada que acelera respostas curtas e consistentes por documento.",
+                    facts=[
+                        f"{companions_total} companion(s) carregado(s)",
+                        f"Cobertura {companions_coverage}%",
+                        f"{missing_companions} documento(s) ainda sem FAQ" if documents else "",
+                    ],
+                    action_url="/admin/documents",
+                    action_label="Completar companions",
+                ),
+                _build_tuning_component(
+                    label="Evals fixos",
+                    state=_component_state(bool(quality.get("static_cases_total"))),
+                    source_name="knowledge/evals/*.json",
+                    runtime_hook="evaluate_companion_cases",
+                    detail="Casos estáveis que verificam se o bot continua a responder o que já foi afinado.",
+                    facts=[
+                        f"{quality.get('static_cases_total', 0)} caso(s) fixo(s)",
+                        f"{quality.get('pass_rate_pct', 0)}% a passar no conjunto ativo",
+                        f"{quality.get('failed_total', 0)} falha(s) aberta(s)",
+                    ],
+                    action_url="/admin/bot#quality",
+                    action_label="Ver qualidade",
+                ),
+            ],
+        ),
+        _build_tuning_group(
+            group_id="structured_knowledge",
+            title="Conhecimento estruturado",
+            description="JSONs operacionais que o runtime consulta diretamente sem depender só de texto corrido.",
+            components=[
+                _build_tuning_component(
+                    label="Berth profiles",
+                    state=_component_state(bool(berth_profiles)),
+                    source_name=PROFILE_FILENAME,
+                    runtime_hook="find_best_berth_profile",
+                    detail="Perfis por instalação com LOA, calados, regras de noite, restrições e contexto operacional.",
+                    facts=[
+                        f"{len(berth_profiles)} perfil(is) disponível(is)",
+                        f"{berth_documents} ligado(s) a documento(s)",
+                        f"{berth_aliases} alias(es) no total" if berth_profiles else "",
+                    ],
+                    action_url="/admin/documents",
+                    action_label="Ver perfis",
+                ),
+                _build_tuning_component(
+                    label="Regras práticas de rebocadores",
+                    state=_component_state(bool(tug_guidance)),
+                    source_name=TUG_GUIDANCE_FILENAME,
+                    runtime_hook="build_tug_operational_guidance_source",
+                    detail="Matriz prática para quantos rebocadores pedir, com casos específicos como LISNAVE.",
+                    facts=[
+                        f"{tug_groups_total} grupo(s) de navio" if tug_guidance else "",
+                        f"{tug_rules_total} regra(s) práticas",
+                        f"{len(tug_guidance.get('lisnave_rules') or [])} regra(s) específicas LISNAVE" if tug_guidance else "",
+                    ],
+                    action_url="/admin/documents",
+                    action_label="Ver regras",
+                ),
+                _build_tuning_component(
+                    label="Limites de segurança",
+                    state=_component_state(bool(safety_limits)),
+                    source_name=SAFETY_LIMITS_FILENAME,
+                    runtime_hook="build_operational_safety_source",
+                    detail="Regras de suspensão/retoma por vento, rajada, visibilidade e segurança operacional.",
+                    facts=[
+                        f"{safety_rules_total} regra(s) declarada(s)",
+                        f"{safety_thresholds_total} limiar(es) live",
+                        str(safety_limits.get("title") or "").strip(),
+                    ],
+                    action_url="/admin/documents",
+                    action_label="Ver limites",
+                ),
+            ],
+        ),
+        _build_tuning_group(
+            group_id="supervised_memory",
+            title="Memória supervisionada",
+            description="Feedback humano que o bot reaproveita para não repetir erros nem voltar a inventar.",
+            components=[
+                _build_tuning_component(
+                    label="Correções aprovadas",
+                    state=_component_state(bool(correction_memory_total or approved_messages_total), partial=bool(review_pending_total)),
+                    source_name="review_correction_memory",
+                    runtime_hook="_build_review_correction_answer",
+                    detail="Memória reutilizável de respostas corrigidas, incluindo reformulação para evitar copy-paste mecânico.",
+                    facts=[
+                        f"{correction_memory_total} correção(ões) aprovada(s)",
+                        f"{approved_messages_total} resposta(s) aprovada(s) no total",
+                        f"{review_pending_total} item(ns) ainda por rever",
+                    ],
+                    action_url="/admin/bot#exceptions",
+                    action_label="Ver exceções",
+                ),
+                _build_tuning_component(
+                    label="Feedback promovido para eval",
+                    state=_component_state(bool(feedback_eval_cases), partial=bool(settings.get("auto_promote_corrections", True))),
+                    source_name="feedback_eval_cases",
+                    runtime_hook="load_eval_cases_from_store",
+                    detail="Correções aprovadas que passam a testar automaticamente o bot nas próximas execuções.",
+                    facts=[
+                        f"{len(feedback_eval_cases)} caso(s) promovido(s)",
+                        feedback_sources_label,
+                        quality.get("feedback_recent_rows", [{}])[0].get("expected_hint", "") if quality.get("feedback_recent_rows") else "",
+                    ],
+                    action_url="/admin/bot#quality",
+                    action_label="Ver promos",
+                ),
+                _build_tuning_component(
+                    label="Confiança em feedback positivo",
+                    state=_component_state(bool(settings.get("auto_trust_positive_feedback", True)), partial=True),
+                    source_name="bot_settings.json",
+                    runtime_hook="auto_trust_positive_feedback",
+                    detail="Quando ligado, thumbs-up e aprovações reforçam respostas futuras sem exigir correção textual.",
+                    facts=[
+                        f"Modo {'ligado' if settings.get('auto_trust_positive_feedback', True) else 'desligado'}",
+                        f"{approved_messages_total} resposta(s) elegível(is) para reforço",
+                        f"Hint documental confiável: {float(settings.get('trusted_document_hint_similarity', 0.82)):.2f}",
+                    ],
+                    action_url="/admin/bot#toolbox",
+                    action_label="Ajustar",
+                ),
+            ],
+        ),
+        _build_tuning_group(
+            group_id="operational_history",
+            title="Histórico operacional",
+            description="Casos reais que afinam comparação, contexto e padrões práticos do assistente.",
+            components=[
+                _build_tuning_component(
+                    label="Casebooks de manobra",
+                    state=_component_state(bool(maneuver_case_total), partial=True),
+                    source_name="maneuver_cases",
+                    runtime_hook="rank_similar_maneuver_cases",
+                    detail="Casos governados de manobra usados para comparar contexto, detectar outliers e justificar decisões.",
+                    facts=[
+                        f"{maneuver_case_total} caso(s) registado(s)",
+                        f"{maneuver_case_approved_total} aprovado(s)",
+                        f"{maneuver_case_alert_total} com alertas ou review",
+                        f"{maneuver_case_flagged_total} com decision flags" if maneuver_case_total else "",
+                    ],
+                    action_url="/admin/casebooks",
+                    action_label="Abrir casebooks",
+                ),
+                _build_tuning_component(
+                    label="Experiência prática importada",
+                    state=_component_state(bool(practice_active_total), partial=bool(practice_total or practice_source_exists)),
+                    source_name=PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME,
+                    runtime_hook="list_practice_experience_records",
+                    detail="Padrões consolidados importados para reforçar prática local além dos casos governados um a um.",
+                    facts=[
+                        f"{practice_active_total}/{practice_total} padrão(ões) ativo(s)" if practice_total else "Sem padrões ativos carregados",
+                        f"{practice_review_total} para rever" if practice_total else "",
+                        "JSON fonte presente no knowledge dir" if practice_source_exists else "Sem JSON de prática no knowledge dir",
+                    ],
+                    action_url="/admin/casebooks",
+                    action_label="Rever prática",
+                ),
+                _build_tuning_component(
+                    label="Escalas e atividade do porto",
+                    state=_component_state(bool(port_calls_total), partial=True),
+                    source_name="port_calls",
+                    runtime_hook="store.get_port_activity_snapshot",
+                    detail="Contexto operativo vivo e histórico de escalas que o bot usa para responder sobre atividade recente.",
+                    facts=[
+                        f"{port_calls_total} escala(s) resolvida(s)",
+                        "Serve de contexto à operação, não substitui as regras.",
+                    ],
+                    action_url="/port-calls",
+                    action_label="Ver escalas",
+                ),
+            ],
+        ),
+        _build_tuning_group(
+            group_id="runtime_live",
+            title="Runtime e dados live",
+            description="Serviços que entram na resposta quando a pergunta depende do dia, do tempo ou do estado operacional atual.",
+            components=[
+                _build_tuning_component(
+                    label="Marés",
+                    state=_component_state(bool(tide_csv_path)),
+                    source_name="tide_service",
+                    runtime_hook="/mares + linguagem natural",
+                    detail="Aceita datas naturais como hoje, amanhã, ontem e datas explícitas do ano.",
+                    facts=[
+                        tide_csv_label,
+                        "Comando slash e linguagem natural suportados.",
+                    ],
+                    action_url="/admin/bot#playground",
+                    action_label="Testar no playground",
+                ),
+                _build_tuning_component(
+                    label="Meteorologia",
+                    state=_component_state(bool(weather_service and getattr(weather_service, "enabled", False))),
+                    source_name="weather_service",
+                    runtime_hook="forecast live",
+                    detail="Fonte live para vento, rajadas, visibilidade e suporte a regras de segurança.",
+                    facts=[
+                        f"Estado {'ativo' if weather_service and getattr(weather_service, 'enabled', False) else 'inativo'}",
+                    ],
+                    action_url="/admin/bot#playground",
+                    action_label="Testar",
+                ),
+                _build_tuning_component(
+                    label="Ondulação",
+                    state=_component_state(bool(wave_service and getattr(wave_service, "enabled", False))),
+                    source_name="wave_service",
+                    runtime_hook="wave live",
+                    detail="Contexto marítimo live quando a resposta depende de estado de mar.",
+                    facts=[
+                        f"Estado {'ativo' if wave_service and getattr(wave_service, 'enabled', False) else 'inativo'}",
+                    ],
+                    action_url="/admin/bot#playground",
+                    action_label="Testar",
+                ),
+                _build_tuning_component(
+                    label="Avisos locais",
+                    state=_component_state(bool(warning_service and getattr(warning_service, "enabled", False))),
+                    source_name="local_warning_service",
+                    runtime_hook="local warnings",
+                    detail="Avisos e restrições locais que podem sobrepor o contexto base do documento.",
+                    facts=[
+                        f"Estado {'ativo' if warning_service and getattr(warning_service, 'enabled', False) else 'inativo'}",
+                        f"{live_services_active}/{live_services_total} serviço(s) live ativo(s)",
+                    ],
+                    action_url="/admin/bot#playground",
+                    action_label="Testar",
+                ),
+            ],
+        ),
+        _build_tuning_group(
+            group_id="governance_controls",
+            title="Governança e thresholds",
+            description="Toggles e limiares que decidem quando confiar, bloquear, promover ou pedir revisão.",
+            components=[
+                _build_tuning_component(
+                    label="Thresholds do bot",
+                    state="online",
+                    source_name="bot_settings.json",
+                    runtime_hook="load_bot_settings",
+                    detail="Limiariza similaridade, promoção automática e deteção de outliers.",
+                    facts=[
+                        f"review_guard_similarity = {float(settings.get('review_guard_similarity', 0.90)):.2f}",
+                        f"review_correction_similarity = {float(settings.get('review_correction_similarity', 0.94)):.2f}",
+                        f"outlier_review_threshold = {float(settings.get('outlier_review_threshold', 0.85)):.2f}",
+                    ],
+                    action_url="/admin/bot#toolbox",
+                    action_label="Editar settings",
+                ),
+                _build_tuning_component(
+                    label="Modo de governação",
+                    state=_component_state(not bool(settings.get("require_admin_validation", False)), partial=True),
+                    source_name="bot_settings.json",
+                    runtime_hook="auto_promote_corrections + require_admin_validation",
+                    detail="Define se o ciclo é mais autónomo ou se cada decisão precisa de validação humana explícita.",
+                    facts=[
+                        f"auto_promote_corrections = {'on' if settings.get('auto_promote_corrections', True) else 'off'}",
+                        f"require_admin_validation = {'on' if settings.get('require_admin_validation', False) else 'off'}",
+                        f"signals_window_hours = {int(settings.get('signals_window_hours', 168))}",
+                    ],
+                    action_url="/admin/bot#toolbox",
+                    action_label="Ajustar governação",
+                ),
+            ],
+        ),
+    ]
+
+    all_components = [component for group in groups for component in group.get("components", [])]
+    online_total = sum(1 for item in all_components if item.get("state") == "online")
+    degraded_total = sum(1 for item in all_components if item.get("state") == "degraded")
+    offline_total = sum(1 for item in all_components if item.get("state") == "offline")
+
+    return {
+        "summary": {
+            "implemented_total": len(all_components),
+            "verified_total": online_total + degraded_total,
+            "online_total": online_total,
+            "degraded_total": degraded_total,
+            "offline_total": offline_total,
+            "live_services_active": live_services_active,
+            "live_services_total": live_services_total,
+        },
+        "metrics": {
+            "documents_total": len(documents),
+            "companions_total": companions_total,
+            "companions_coverage_pct": companions_coverage,
+            "berth_profiles_total": len(berth_profiles),
+            "tug_rules_total": tug_rules_total,
+            "safety_rules_total": safety_rules_total,
+            "correction_memory_total": correction_memory_total,
+            "approved_messages_total": approved_messages_total,
+            "feedback_eval_total": len(feedback_eval_cases),
+            "practice_total": practice_total,
+            "practice_active_total": practice_active_total,
+            "maneuver_case_total": maneuver_case_total,
+            "port_calls_total": port_calls_total,
+            "live_services_active": live_services_active,
+            "live_services_total": live_services_total,
+        },
+        "groups": groups,
+    }
+
+
+def build_pipeline_snapshot(
+    *,
+    tuning: dict[str, Any] | None = None,
+    quality: dict[str, Any] | None = None,
+    sources: list[dict[str, Any]] | None = None,
+    exceptions: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    quality = quality or build_quality_snapshot()
+    sources = sources or build_sources_snapshot()
+    exceptions = exceptions or build_exceptions()
+    tuning = tuning or build_tuning_map_snapshot(quality=quality)
+
+    metrics = tuning.get("metrics") or {}
+    summary = tuning.get("summary") or {}
+    online_sources_total = sum(1 for item in sources if item.get("state") == "online")
+
+    trusted_memory_total = int(metrics.get("correction_memory_total") or 0) + int(metrics.get("feedback_eval_total") or 0)
+    structured_inputs_total = (
+        int(metrics.get("documents_total") or 0)
+        + int(metrics.get("companions_total") or 0)
+        + int(metrics.get("berth_profiles_total") or 0)
+        + int(metrics.get("tug_rules_total") or 0)
+        + int(metrics.get("safety_rules_total") or 0)
+    )
+    live_active = int(metrics.get("live_services_active") or 0)
+    live_total = int(metrics.get("live_services_total") or 0)
+
+    memory_state = _component_state(bool(trusted_memory_total), partial=bool(metrics.get("approved_messages_total") or 0))
+    structured_state = _component_state(bool(structured_inputs_total), partial=bool(metrics.get("documents_total") or 0))
+    live_state = _component_state(live_total > 0 and live_active == live_total, partial=bool(live_active))
+    synthesis_state = _component_state(bool(online_sources_total), partial=bool(sources))
+    governance_state = (
+        "online"
+        if quality.get("active_cases_total") and not quality.get("failed_total") and not exceptions.get("total")
+        else "degraded"
+        if quality.get("active_cases_total") or exceptions.get("total")
+        else "offline"
+    )
+
+    return {
+        "note": (
+            "Cada etapa abaixo já existe no runtime. O estado mostra se a funcionalidade está só implementada "
+            "ou se já tem dados/configuração suficientes para influenciar respostas reais neste momento."
+        ),
+        "summary_cards": [
+            {
+                "label": "Mecanismos implementados",
+                "value": summary.get("implemented_total", 0),
+                "detail": "pontos de afinação visíveis no painel",
+            },
+            {
+                "label": "Com dados ou configuração ativa",
+                "value": summary.get("verified_total", 0),
+                "detail": f"{summary.get('online_total', 0)} online · {summary.get('degraded_total', 0)} parciais",
+            },
+            {
+                "label": "Serviços live",
+                "value": f"{live_active}/{live_total or 0}",
+                "detail": "marés, meteo, onda e avisos",
+            },
+            {
+                "label": "Evals a passar",
+                "value": f"{quality.get('passed_total', 0)}/{quality.get('active_cases_total', 0)}",
+                "detail": f"{quality.get('failed_total', 0)} falha(s) aberta(s)",
+            },
+        ],
+        "steps": [
+            {
+                "label": "Leitura e routing do pedido",
+                "state": "online",
+                "state_label": _component_state_label("online"),
+                "metric": "linguagem natural + slash commands",
+                "detail": "O bot tenta perceber intenção, terminal, documento e se a pergunta depende do dia atual.",
+                "facts": [
+                    "Percebe datas naturais para marés: hoje, amanhã, ontem e datas explícitas.",
+                    "Distingue perguntas documentais, operacionais, live e de memória supervisionada.",
+                ],
+            },
+            {
+                "label": "Memória supervisionada primeiro",
+                "state": memory_state,
+                "state_label": _component_state_label(memory_state),
+                "metric": f"{trusted_memory_total} memória(s) supervisionada(s)",
+                "detail": "Antes de improvisar, o runtime tenta reutilizar correções aprovadas e feedback já promovido.",
+                "facts": [
+                    f"{metrics.get('correction_memory_total', 0)} correção(ões) reaproveitável(eis)",
+                    f"{metrics.get('feedback_eval_total', 0)} correção(ões) promovida(s) para eval",
+                ],
+            },
+            {
+                "label": "Consulta conhecimento estruturado",
+                "state": structured_state,
+                "state_label": _component_state_label(structured_state),
+                "metric": f"{structured_inputs_total} input(s) estruturado(s)",
+                "detail": "Companions, berth profiles, regras de reboque e limites de segurança entram como fonte forte.",
+                "facts": [
+                    f"{metrics.get('documents_total', 0)} documento(s) e {metrics.get('companions_total', 0)} companions",
+                    f"{metrics.get('berth_profiles_total', 0)} perfil(is) + {metrics.get('tug_rules_total', 0) + metrics.get('safety_rules_total', 0)} regra(s)",
+                ],
+            },
+            {
+                "label": "Acrescenta contexto live",
+                "state": live_state,
+                "state_label": _component_state_label(live_state),
+                "metric": f"{live_active}/{live_total or 0} serviço(s) ativo(s)",
+                "detail": "Quando a pergunta depende do estado atual, o bot injeta marés, meteo, onda e avisos locais.",
+                "facts": [
+                    "Os dados live não substituem regras fixas; complementam ou bloqueiam a resposta.",
+                    "A camada de marés já aceita datas relativas e comandos `/mares ...`.",
+                ],
+            },
+            {
+                "label": "Síntese, origem e reformulação",
+                "state": synthesis_state,
+                "state_label": _component_state_label(synthesis_state),
+                "metric": f"{online_sources_total}/{len(sources)} fonte(s) base online",
+                "detail": "O runtime escolhe a melhor origem, humaniza respostas reutilizadas e devolve a origem no playground.",
+                "facts": [
+                    "Evita FAQ copy-paste quando já existe uma resposta corrigida e confiável.",
+                    "O playground mostra a origem e os snippets usados.",
+                ],
+            },
+            {
+                "label": "Evals e governação fecham o ciclo",
+                "state": governance_state,
+                "state_label": _component_state_label(governance_state),
+                "metric": f"{quality.get('passed_total', 0)}/{quality.get('active_cases_total', 0)} eval(s)",
+                "detail": "Feedback, thresholds e exceções determinam se o bot aprende sozinho ou pede revisão humana.",
+                "facts": [
+                    f"{exceptions.get('total', 0)} exceção(ões) pendente(s)",
+                    f"{quality.get('feedback_cases_total', 0)} caso(s) vindos de feedback humano",
+                ],
+            },
+        ],
     }
 
 
@@ -782,18 +1322,11 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
     positives = int(signals.get("positives", {}).get("total") or 0)
     negatives = int(signals.get("negatives", {}).get("total") or 0)
     high_exceptions = int(exceptions.get("severity_counts", {}).get("high") or 0)
-    coverage_points = 0.0
-    online_sources = 0
-    degraded_sources = 0
+    coverage = 0
+    coverage_total = 0
     for src in sources or []:
-        state = (src.get("state") or "").strip().lower()
-        if state == "online":
-            coverage_points += 1.0
-            online_sources += 1
-        elif state == "degraded":
-            coverage_points += 0.5
-            degraded_sources += 1
-    coverage_pct = round((coverage_points / max(len(sources), 1)) * 100)
+        coverage_total += 1 if src.get("state") == "online" else 0
+    coverage_pct = round((coverage_total / max(len(sources), 1)) * 100)
 
     feedback_bias = 0
     if positives + negatives:
@@ -822,12 +1355,4 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
         "coverage_pct": coverage_pct,
         "feedback_bias_pct": feedback_bias,
         "penalty": penalty,
-        "online_sources": online_sources,
-        "degraded_sources": degraded_sources,
-        "breakdown_rows": [
-            {"label": "Pass rate", "value": f"{pass_rate}%", "detail": "casos de eval a passar"},
-            {"label": "Cobertura", "value": f"{coverage_pct}%", "detail": f"{online_sources} online + {degraded_sources} parcial"},
-            {"label": "Sinais", "value": f"{feedback_bias}%", "detail": "feedback positivo na janela"},
-            {"label": "Penalização", "value": f"-{penalty}", "detail": f"{high_exceptions} exceção(ões) prioritária(s)"},
-        ],
     }

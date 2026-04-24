@@ -7,8 +7,6 @@ import logging
 import os
 from pathlib import Path
 import re
-from threading import Lock
-from time import monotonic
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
@@ -57,23 +55,17 @@ from core.helpers import (
     safe_rebuild_index,
     start_reindex_job,
 )
-from core.chat_feedback import feedback_correction_state, sync_feedback_correction_eval_case
+from core.chat_feedback import sync_feedback_correction_eval_case
 from core.bot_insights import (
+    build_pipeline_snapshot,
     build_exceptions,
     build_learning_signals,
     build_quality_snapshot,
     build_sources_snapshot,
+    build_tuning_map_snapshot,
     compute_health_score,
 )
-from core.bot_settings import (
-    DEFAULTS as BOT_SETTINGS_DEFAULTS,
-    list_bot_settings_history,
-    load_bot_settings,
-    merge_bot_settings_history,
-    reset_bot_settings,
-    restore_bot_settings_revision,
-    save_bot_settings,
-)
+from core.bot_settings import DEFAULTS as BOT_SETTINGS_DEFAULTS, load_bot_settings, reset_bot_settings, save_bot_settings
 from domain.migration_service import migrate_local_json_to_postgres
 from storage.maneuver_case_helpers import build_case_environment_signature, rank_similar_maneuver_cases
 from storage.utils import _local_iso_to_label
@@ -89,14 +81,6 @@ SYSTEM_DATABASE_EXPORT_KIND = "pragtico.system_database_export"
 DATABASE_EXPORT_VERSION = 1
 ADMIN_CASEBOOK_DEFAULT_LIMIT = 8
 ADMIN_CASEBOOK_ALLOWED_LIMITS = (8, 16, 40, 80)
-ADMIN_BOT_SNAPSHOT_TTL_SECONDS = 30
-_ADMIN_BOT_SNAPSHOT_LOCK = Lock()
-_ADMIN_BOT_SNAPSHOT_CACHE = {
-    "built_at_monotonic": 0.0,
-    "data_dir": "",
-    "settings_updated_at": "",
-    "payload": None,
-}
 SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES = {".txt", ".md", ".json"}
 POSTGRES_EXPORT_TABLES = {
     "app_users": {
@@ -601,7 +585,6 @@ def _build_bot_database_export() -> dict:
             "maneuver_cases": services.store.list_maneuver_cases(limit=5000),
             "practice_experience": practice_experience_state(services.store),
             "bot_settings": load_bot_settings(),
-            "bot_settings_history": list_bot_settings_history(limit=None),
         },
     }
 
@@ -655,18 +638,10 @@ def _import_bot_database_payload(payload: dict) -> dict:
     }
 
     imported_settings = body.get("bot_settings")
-    imported_settings_history = body.get("bot_settings_history")
-    if isinstance(imported_settings_history, list):
-        stats["settings"] += merge_bot_settings_history(imported_settings_history)
     if isinstance(imported_settings, dict):
         try:
-            save_bot_settings(
-                imported_settings,
-                updated_by=session.get("username", "admin"),
-                action="import",
-                summary="Definições importadas do backup.",
-            )
-            stats["settings"] += 1
+            save_bot_settings(imported_settings, updated_by=session.get("username", "admin"))
+            stats["settings"] = 1
         except Exception:
             logger.exception("Falha ao importar bot_settings.")
             stats["skipped"] += 1
@@ -703,7 +678,7 @@ def _import_bot_database_payload(payload: dict) -> dict:
             stats["skipped"] += 1
             continue
         feedback_status = str(item.get("feedback_status") or "").strip().lower()
-        if feedback_status not in {"approved", "review", "ignored"}:
+        if feedback_status not in {"approved", "review"}:
             continue
         username = str(item.get("username") or item.get("owner_username") or "").strip().lower()
         conversation_id = str(item.get("conversation_id") or "").strip()
@@ -1089,128 +1064,7 @@ def _safe_return_to(value: str | None) -> str:
     rebuilt = parsed.path
     if parsed.query:
         rebuilt = f"{rebuilt}?{parsed.query}"
-    if parsed.fragment:
-        rebuilt = f"{rebuilt}#{parsed.fragment}"
     return rebuilt
-
-
-BOT_SETTINGS_LABELS = {
-    "auto_promote_corrections": "Auto-promover correções",
-    "auto_trust_positive_feedback": "Confiar no feedback positivo",
-    "require_admin_validation": "Exigir validação admin",
-    "signals_window_hours": "Janela dos sinais",
-    "review_guard_similarity": "Similaridade de guard",
-    "review_block_similarity": "Similaridade de bloqueio",
-    "review_correction_similarity": "Similaridade de correção",
-    "trusted_document_hint_similarity": "Hint de documento confiável",
-    "outlier_review_threshold": "Outlier de manobra",
-}
-BOT_SETTINGS_ACTION_LABELS = {
-    "update": "Ajuste manual",
-    "reset": "Reset para defaults",
-    "rollback": "Rollback",
-    "import": "Importação",
-}
-
-
-def _format_bot_setting_value(value: object) -> str:
-    if isinstance(value, bool):
-        return "Ativo" if value else "Desligado"
-    if isinstance(value, float):
-        return f"{value:.2f}"
-    return str(value or "0")
-
-
-def _build_admin_bot_settings_history(limit: int = 8) -> list[dict]:
-    rows = []
-    for index, item in enumerate(list_bot_settings_history(limit=limit), start=1):
-        change_rows = []
-        changes = item.get("changes") or {}
-        for key in item.get("changed_keys") or []:
-            change = changes.get(key) or {}
-            change_rows.append(
-                {
-                    "label": BOT_SETTINGS_LABELS.get(key, key),
-                    "detail": f"{_format_bot_setting_value(change.get('before'))} → {_format_bot_setting_value(change.get('after'))}",
-                }
-            )
-        changed_at = str(item.get("changed_at") or "").strip()
-        rows.append(
-            {
-                "revision_id": str(item.get("revision_id") or ""),
-                "action_label": BOT_SETTINGS_ACTION_LABELS.get(str(item.get("action") or ""), "Atualização"),
-                "changed_by": str(item.get("changed_by") or "").strip() or "sistema",
-                "changed_at": changed_at,
-                "changed_at_label": _local_iso_to_label(changed_at) if changed_at else "",
-                "summary": str(item.get("summary") or "").strip(),
-                "change_rows": change_rows[:4],
-                "remaining_changes": max(len(change_rows) - 4, 0),
-                "is_current": index == 1,
-            }
-        )
-    return rows
-
-
-def _invalidate_admin_bot_snapshot_cache() -> None:
-    with _ADMIN_BOT_SNAPSHOT_LOCK:
-        _ADMIN_BOT_SNAPSHOT_CACHE.update(
-            {
-                "built_at_monotonic": 0.0,
-                "data_dir": "",
-                "settings_updated_at": "",
-                "payload": None,
-            }
-        )
-
-
-def _build_admin_bot_snapshot_payload(settings: dict) -> dict:
-    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
-    sources = build_sources_snapshot()
-    quality = build_quality_snapshot()
-    exceptions = build_exceptions(limit=12)
-    health = compute_health_score(quality, signals, exceptions, sources)
-    refreshed_at = datetime.now(timezone.utc).isoformat()
-    return {
-        "settings": settings,
-        "settings_history": _build_admin_bot_settings_history(),
-        "signals": signals,
-        "sources": sources,
-        "quality": quality,
-        "exceptions": exceptions,
-        "health": health,
-        "snapshot_refreshed_at": refreshed_at,
-        "snapshot_refreshed_at_label": _local_iso_to_label(refreshed_at),
-    }
-
-
-def _load_admin_bot_snapshot(force_refresh: bool = False) -> dict:
-    settings = load_bot_settings()
-    settings_updated_at = str(settings.get("updated_at") or "")
-    data_dir = str(getattr(services, "DATA_DIR", "") or "")
-    now = monotonic()
-    with _ADMIN_BOT_SNAPSHOT_LOCK:
-        cached_payload = _ADMIN_BOT_SNAPSHOT_CACHE.get("payload")
-        cache_is_fresh = (
-            not force_refresh
-            and cached_payload is not None
-            and _ADMIN_BOT_SNAPSHOT_CACHE.get("data_dir") == data_dir
-            and _ADMIN_BOT_SNAPSHOT_CACHE.get("settings_updated_at") == settings_updated_at
-            and (now - float(_ADMIN_BOT_SNAPSHOT_CACHE.get("built_at_monotonic") or 0.0)) < ADMIN_BOT_SNAPSHOT_TTL_SECONDS
-        )
-        if cache_is_fresh:
-            return cached_payload
-
-    payload = _build_admin_bot_snapshot_payload(settings)
-    with _ADMIN_BOT_SNAPSHOT_LOCK:
-        _ADMIN_BOT_SNAPSHOT_CACHE.update(
-            {
-                "built_at_monotonic": now,
-                "data_dir": data_dir,
-                "settings_updated_at": settings_updated_at,
-                "payload": payload,
-            }
-        )
-    return payload
 
 
 def _documents_return_to() -> str:
@@ -1409,15 +1263,13 @@ def _filter_documents(docs: list[dict], filters: dict) -> list[dict]:
 
 
 def _admin_casebooks_return_to() -> str:
-    query = request.query_string.decode("utf-8", errors="ignore")
-    if request.endpoint in {"admin.admin_bot", "admin.admin_casebooks"}:
-        target = url_for("admin.admin_bot")
-        if query:
-            target = f"{target}?{query}"
+    if request.query_string:
+        target = f"{request.path}?{request.query_string.decode('utf-8', errors='ignore')}"
+    else:
+        target = request.path
+    if request.endpoint == "admin.admin_bot":
         return f"{target}#casebooks"
-    if query:
-        return f"{request.path}?{query}"
-    return request.path
+    return target
 
 
 def _normalized_filter_value(value: str | None, allowed: set[str], default: str) -> str:
@@ -1425,48 +1277,13 @@ def _normalized_filter_value(value: str | None, allowed: set[str], default: str)
     return clean if clean in allowed else default
 
 
-def _chat_feedback_state_meta(item: dict | str | None) -> tuple[str, str, str]:
-    if isinstance(item, dict):
-        clean = (item.get("feedback_status") or "").strip().lower()
-        correction_state = feedback_correction_state(item)
-    else:
-        clean = (item or "").strip().lower()
-        correction_state = {"is_ready": False, "needs_document": False, "needs_correction": False, "document": ""}
+def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
+    clean = (value or "").strip().lower()
     if clean == "approved":
-        return (
-            "Aprovada para reutilização",
-            "online",
-            "A resposta original foi validada tal como está e pode ser reutilizada diretamente.",
-        )
-    if clean == "ignored":
-        return (
-            "Arquivada",
-            "neutral",
-            "Esta resposta foi retirada da fila manual. Não conta como correção pendente nem como memória aprovada do bot.",
-        )
-    if clean == "review" and correction_state["is_ready"]:
-        return (
-            "Correção supervisionada pronta",
-            "online",
-            f"A resposta original fica bloqueada; a correção já está pronta para memória supervisionada em {correction_state['document']}.",
-        )
-    if clean == "review" and correction_state["needs_document"]:
-        return (
-            "Correção pronta, falta documento",
-            "degraded",
-            "A correção já está escrita, mas falta indicar o documento alvo para a promover com segurança.",
-        )
+        return "Aprovada para reutilização", "online"
     if clean == "review":
-        return (
-            "Bloqueada / rever",
-            "degraded",
-            "A resposta original ficou bloqueada. Escreve uma correção reutilizável e associa um documento quando houver mais do que uma fonte citada.",
-        )
-    return (
-        "Por rever",
-        "neutral",
-        "Ainda não existe decisão humana sobre esta resposta.",
-    )
+        return "Bloqueada / rever", "degraded"
+    return "Por rever", "neutral"
 
 
 def _case_feedback_state_meta(value: str | None) -> tuple[str, str]:
@@ -1569,7 +1386,7 @@ def _build_casebook_match_rows(case: dict, case_pool: list[dict], limit: int = 3
 
 
 def _build_admin_casebooks_payload() -> dict:
-    chat_feedback_allowed = {"all", "pending", "approved", "review", "ignored"}
+    chat_feedback_allowed = {"all", "pending", "approved", "review"}
     case_feedback_allowed = {"all", "pending", "approved", "avoid", "review"}
     case_type_allowed = {"", "entry", "departure", "shift"}
     source_type_allowed = {"all", "chat", "maneuver", "practice"}
@@ -1584,10 +1401,6 @@ def _build_admin_casebooks_payload() -> dict:
     )
     q = " ".join((request.args.get("q") or "").strip().split())
     q_search = q.lower()
-    focus_target = " ".join((request.args.get("focus") or "").strip().split())
-    focus_message_id = focus_target[5:] if focus_target.startswith("chat-") else ""
-    focus_case_id = focus_target[9:] if focus_target.startswith("maneuver-") else ""
-    focus_practice_id = focus_target[9:] if focus_target.startswith("practice-") else ""
     next_limit = ADMIN_CASEBOOK_ALLOWED_LIMITS[-1]
     for option in ADMIN_CASEBOOK_ALLOWED_LIMITS:
         if option > display_limit:
@@ -1611,7 +1424,7 @@ def _build_admin_casebooks_payload() -> dict:
         status = (item.get("feedback_status") or "").strip().lower()
         if chat_feedback == "pending":
             visible = not status
-        elif chat_feedback in {"approved", "review", "ignored"}:
+        elif chat_feedback in {"approved", "review"}:
             visible = status == chat_feedback
         else:
             visible = True
@@ -1700,41 +1513,9 @@ def _build_admin_casebooks_payload() -> dict:
     visible_cases = [item for item in all_cases if _case_visible(item)]
     visible_practice_records = [item for item in all_practice_records if _practice_visible(item)]
 
-    def _slice_with_focus(items: list[dict], *, limit: int, focus_id: str, id_getter) -> list[dict]:
-        rows = list(items[:limit])
-        if not focus_id:
-            return rows
-        focused = next((item for item in items if str(id_getter(item) or "") == focus_id), None)
-        if not focused:
-            return rows
-        if any(str(id_getter(item) or "") == focus_id for item in rows):
-            return rows
-        if rows and len(rows) >= limit:
-            rows = rows[:-1]
-        return [focused, *rows]
-
-    visible_chat_subset = _slice_with_focus(
-        visible_chat_messages,
-        limit=display_limit,
-        focus_id=focus_message_id,
-        id_getter=lambda item: item.get("id", ""),
-    )
-    visible_case_subset = _slice_with_focus(
-        visible_cases,
-        limit=display_limit,
-        focus_id=focus_case_id,
-        id_getter=lambda item: item.get("maneuver_id", ""),
-    )
-    visible_practice_subset = _slice_with_focus(
-        visible_practice_records,
-        limit=display_limit,
-        focus_id=focus_practice_id,
-        id_getter=lambda item: item.get("id", ""),
-    )
-
     chat_rows = []
-    for item in visible_chat_subset:
-        status_label, badge, governance_hint = _chat_feedback_state_meta(item)
+    for item in visible_chat_messages[:display_limit]:
+        status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
         chat_rows.append(
@@ -1750,7 +1531,6 @@ def _build_admin_casebooks_payload() -> dict:
                 "feedback_status": (item.get("feedback_status") or "").strip().lower(),
                 "feedback_status_label": status_label,
                 "feedback_badge": badge,
-                "governance_hint": governance_hint,
                 "feedback_note": item.get("feedback_note", ""),
                 "feedback_correction": item.get("feedback_correction", ""),
                 "feedback_correction_document": item.get("feedback_correction_document", ""),
@@ -1765,7 +1545,7 @@ def _build_admin_casebooks_payload() -> dict:
     observation_case_rows = []
     governed_case_rows = []
     case_rows = []
-    for item in visible_case_subset:
+    for item in visible_cases[:display_limit]:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         bucket, learning_title, learning_summary, learning_badge = _case_governance_meta(status_clean)
@@ -1803,7 +1583,7 @@ def _build_admin_casebooks_payload() -> dict:
             target_rows.append(row)
 
     practice_rows = []
-    for item in visible_practice_subset:
+    for item in visible_practice_records[:display_limit]:
         status_clean = (item.get("feedback_status") or "").strip().lower()
         status_label, badge = _case_feedback_state_meta(status_clean)
         practice_rows.append(
@@ -1843,29 +1623,6 @@ def _build_admin_casebooks_payload() -> dict:
         state = "online"
         state_label = "Governado"
 
-    scope_counts = {
-        "chat": (len(visible_chat_messages), len(chat_rows)),
-        "maneuver": (len(visible_cases), len(case_rows)),
-        "practice": (len(visible_practice_records), len(practice_rows)),
-    }
-    if source_type == "all":
-        visible_total = sum(total for total, _shown in scope_counts.values())
-        shown_total = len(chat_rows) + len(case_rows) + len(practice_rows)
-        scope_label = "Tudo"
-    else:
-        visible_total, shown_total = scope_counts.get(source_type, (0, 0))
-        scope_label = {
-            "chat": "Chat / WhatsApp",
-            "maneuver": "Casos operacionais",
-            "practice": "Experiência prática",
-        }.get(source_type, "Tudo")
-
-    summary_parts = [f"{scope_label}: {shown_total} mostrado(s) de {visible_total}."]
-    if q:
-        summary_parts.append(f'Pesquisa ativa: "{q}".')
-    if focus_target:
-        summary_parts.append("Item em foco destacado na lista.")
-
     return {
         "state": state,
         "state_label": state_label,
@@ -1882,17 +1639,9 @@ def _build_admin_casebooks_payload() -> dict:
         "next_limit": next_limit,
         "allowed_limits": ADMIN_CASEBOOK_ALLOWED_LIMITS,
         "has_active_filters": bool(q or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
-        "open_by_default": bool(q or focus_target or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
-        "focus_target": focus_target,
-        "scope_label": scope_label,
-        "visible_total": visible_total,
-        "shown_total": shown_total,
-        "visible_summary": f"Mostra {shown_total} de {visible_total}",
-        "summary": " ".join(summary_parts),
         "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
-        "chat_ignored_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "ignored"),
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),
@@ -1930,18 +1679,24 @@ def admin_status():
 def admin_bot():
     """Painel de saúde, fontes, sinais e governança do bot."""
     refresh_knowledge_state(force_reindex=False)
-    snapshot = _load_admin_bot_snapshot()
+    settings = load_bot_settings()
+    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
+    sources = build_sources_snapshot()
+    quality = build_quality_snapshot()
+    exceptions = build_exceptions(limit=12)
+    tuning = build_tuning_map_snapshot(settings=settings, quality=quality)
+    pipeline = build_pipeline_snapshot(tuning=tuning, quality=quality, sources=sources, exceptions=exceptions)
+    health = compute_health_score(quality, signals, exceptions, sources)
     return render_template(
         "admin_bot.html",
-        health=snapshot["health"],
-        signals=snapshot["signals"],
-        sources=snapshot["sources"],
-        quality=snapshot["quality"],
-        exceptions=snapshot["exceptions"],
-        settings=snapshot["settings"],
-        settings_history=snapshot["settings_history"],
-        snapshot_refreshed_at=snapshot["snapshot_refreshed_at"],
-        snapshot_refreshed_at_label=snapshot["snapshot_refreshed_at_label"],
+        health=health,
+        signals=signals,
+        sources=sources,
+        quality=quality,
+        exceptions=exceptions,
+        pipeline=pipeline,
+        tuning=tuning,
+        settings=settings,
         settings_defaults=BOT_SETTINGS_DEFAULTS,
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
@@ -1962,7 +1717,6 @@ def admin_bot_settings():
         for bool_key in ("auto_promote_corrections", "auto_trust_positive_feedback", "require_admin_validation"):
             updates[bool_key] = bool_key in request.form
         save_bot_settings(updates, updated_by=session.get("username") or "admin")
-        _invalidate_admin_bot_snapshot_cache()
         flash("Definições do bot atualizadas.", "success")
     except Exception as exc:
         logger.exception("Falha ao guardar definições do bot.")
@@ -1977,26 +1731,7 @@ def admin_bot_settings_reset():
     """Repor definições do bot para os valores por defeito."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
     reset_bot_settings(updated_by=session.get("username") or "admin")
-    _invalidate_admin_bot_snapshot_cache()
     flash("Definições do bot repostas aos valores por defeito.", "success")
-    return redirect(return_to)
-
-
-@bp.route("/admin/bot/settings/rollback/<revision_id>", methods=["POST"])
-@login_required
-@role_required("admin")
-def admin_bot_settings_rollback(revision_id: str):
-    """Repor as definições do bot para uma revisão anterior."""
-    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
-    try:
-        restore_bot_settings_revision(revision_id, updated_by=session.get("username") or "admin")
-        _invalidate_admin_bot_snapshot_cache()
-        flash("Rollback das definições do bot concluído.", "success")
-    except ValueError as exc:
-        flash(str(exc), "error")
-    except Exception as exc:
-        logger.exception("Falha no rollback das definições do bot.")
-        flash(f"Falha no rollback das definições do bot: {exc}", "error")
     return redirect(return_to)
 
 
@@ -2009,7 +1744,6 @@ def admin_bot_rerun_evals():
     try:
         refresh_knowledge_state(force_reindex=False)
         snapshot = build_quality_snapshot()
-        _invalidate_admin_bot_snapshot_cache()
         passed = snapshot.get("passed_total", 0)
         total = snapshot.get("active_cases_total", 0)
         failed = snapshot.get("failed_total", 0)
@@ -2048,7 +1782,6 @@ def admin_bot_playground():
             "answer": result.get("answer", ""),
             "sources": result.get("sources", []),
             "answer_origin": result.get("answer_origin", ""),
-            "trace": result.get("trace", {}),
         }
     )
 
@@ -2078,7 +1811,6 @@ def import_bot_database():
     try:
         payload = _read_admin_json_upload("bot_database_file")
         stats = _import_bot_database_payload(payload)
-        _invalidate_admin_bot_snapshot_cache()
         flash(
             "Base do bot importada: "
             f"{stats['feedback_eval_cases']} eval(s), {stats['chat_feedback']} feedback(s) de chat, "
@@ -2108,7 +1840,6 @@ def import_system_database():
         payload = _read_admin_json_upload("system_database_file")
         stats = _import_system_database_payload(payload, mode=mode)
         refresh_knowledge_state(force_reindex=True)
-        _invalidate_admin_bot_snapshot_cache()
         flash(
             "Base do sistema importada em modo "
             f"{'substituir' if mode == 'replace' else 'juntar'}: "
@@ -2128,10 +1859,13 @@ def import_system_database():
 @login_required
 @role_required("admin")
 def admin_casebooks():
-    """Redirecionar a governança detalhada para o painel unificado do bot."""
-    query = request.args.to_dict(flat=False)
-    target = url_for("admin.admin_bot", **query)
-    return redirect(f"{target}#casebooks")
+    """Painel admin detalhado de mensagens, casos e experiência prática."""
+    refresh_knowledge_state(force_reindex=False)
+    return render_template(
+        "admin_casebooks.html",
+        casebooks=_build_admin_casebooks_payload(),
+        title="Governança detalhada",
+    )
 
 
 @bp.route("/admin/event-reports")
@@ -2284,7 +2018,6 @@ def import_practice_experience():
             updated_by=session["username"],
             replace_source=bool(request.form.get("replace_source")),
         )
-        _invalidate_admin_bot_snapshot_cache()
         flash(
             f"Experiência prática carregada: {stats['raw_rows']} manobras agregadas em "
             f"{stats['pattern_count']} padrões. Tipos: {stats['maneuver_types_label']}.",
@@ -2316,7 +2049,6 @@ def update_practice_experience(record_id: str):
             feedback_note=feedback_note,
             feedback_by=session["username"],
         )
-        _invalidate_admin_bot_snapshot_cache()
         flash("Experiência prática atualizada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -2334,8 +2066,6 @@ def delete_practice_experience(record_id: str):
         record_id,
         deleted_by=session["username"],
     )
-    if removed:
-        _invalidate_admin_bot_snapshot_cache()
     flash("Experiência prática removida." if removed else "Experiência prática não encontrada.", "success" if removed else "error")
     return redirect(return_to)
 
@@ -2347,7 +2077,6 @@ def clear_practice_experience():
     """Limpar todos os padrões importados de experiência prática."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot", _anchor="casebooks")
     removed = clear_practice_experience_records(services.store, cleared_by=session["username"])
-    _invalidate_admin_bot_snapshot_cache()
     flash(f"Foram removidos {removed} padrão(ões) de experiência prática.", "success")
     return redirect(return_to)
 
@@ -2380,7 +2109,6 @@ def admin_casebooks_message_feedback(message_id: str):
             message_id,
             source="web",
         )
-        _invalidate_admin_bot_snapshot_cache()
         flash("Decisão sobre a mensagem guardada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
@@ -2404,7 +2132,6 @@ def admin_casebooks_maneuver_feedback(maneuver_id: str):
             feedback_note=feedback_note,
             feedback_by=session["username"],
         )
-        _invalidate_admin_bot_snapshot_cache()
         flash("Validação do caso operacional guardada.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
