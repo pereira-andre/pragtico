@@ -364,6 +364,16 @@ def login_required(view):
     """Decorator that redirects unauthenticated requests to the login page."""
     @wraps(view)
     def wrapped(*args, **kwargs):
+        profile_optional_endpoints = {
+            "auth.profile",
+            "auth.logout",
+            "static",
+            "dashboard_bp.image_asset",
+            "dashboard_bp.local_warnings",
+            "dashboard_bp.local_warning_detail",
+            "dashboard_bp.local_warnings_report_txt",
+            "dashboard_bp.local_warnings_report_pdf",
+        }
         wants_json = (
             request.path.startswith("/api/")
             or request.accept_mimetypes.best == "application/json"
@@ -380,7 +390,7 @@ def login_required(view):
             return redirect(url_for("auth.login"))
         if (
             session_profile_incomplete()
-            and request.endpoint not in {"auth.profile", "auth.logout", "static", "dashboard_bp.image_asset"}
+            and request.endpoint not in profile_optional_endpoints
         ):
             if wants_json:
                 return jsonify({"error": f"{error_ref('PROFILE_INCOMPLETE')} Completa o teu perfil antes de usar o sistema."}), 403

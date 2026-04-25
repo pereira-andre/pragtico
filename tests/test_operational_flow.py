@@ -558,6 +558,12 @@ class OperationalFlowTests(unittest.TestCase):
             flask_session["username"] = "admin"
             flask_session["role"] = "admin"
 
+    def _login_client_as_role(self, client, role: str, username: str = "") -> None:
+        clean_role = (role or "").strip().lower() or "piloto"
+        with client.session_transaction() as flask_session:
+            flask_session["username"] = username or clean_role
+            flask_session["role"] = clean_role
+
     def _future_local_value(self, *, days: int = 7, hour: int = 6, minute: int = 30) -> str:
         future = datetime.now(timezone.utc) + timedelta(days=days)
         future = future.astimezone().replace(hour=hour, minute=minute, second=0, microsecond=0)
@@ -4207,6 +4213,70 @@ class OperationalFlowTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Selecionar tudo filtrado", html)
         self.assertIn("warnings-export-pdf", html)
+
+    def test_local_warnings_page_is_available_to_all_authenticated_roles(self) -> None:
+        warnings = [
+            {
+                "id": 301,
+                "display_code": "Anav nr 301",
+                "subject": "Corrente forte na barra",
+                "location": "Barra",
+                "description_text": "Corrente forte com recomendação de prudência.",
+                "excerpt": "Corrente forte com recomendação de prudência.",
+                "status_label": "Em vigor",
+                "start_date_label": "03 abr 2026",
+                "end_date_label": "06 abr 2026",
+                "start_date_iso": "2026-04-03T08:00:00+00:00",
+                "end_date_iso": "2026-04-06T17:00:00+00:00",
+                "has_attachments": False,
+                "attachments": [],
+            },
+        ]
+
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            for role in ("admin", "agente", "piloto"):
+                with self.subTest(role=role):
+                    with app.app.test_client() as client:
+                        self._login_client_as_role(client, role)
+                        response = client.get("/warnings/local")
+
+                    self.assertEqual(response.status_code, 200)
+                    html = response.get_data(as_text=True)
+                    self.assertIn("Avisos locais", html)
+                    self.assertIn("Anav nr 301", html)
+
+    def test_local_warning_detail_is_available_to_all_authenticated_roles(self) -> None:
+        warnings = [
+            {
+                "id": 301,
+                "display_code": "Anav nr 301",
+                "subject": "Corrente forte na barra",
+                "location": "Barra",
+                "description_text": "Corrente forte com recomendação de prudência.",
+                "excerpt": "Corrente forte com recomendação de prudência.",
+                "status_label": "Em vigor",
+                "start_date_label": "03 abr 2026",
+                "end_date_label": "06 abr 2026",
+                "cancel_date_label": "06 abr 2026",
+                "start_date_iso": "2026-04-03T08:00:00+00:00",
+                "end_date_iso": "2026-04-06T17:00:00+00:00",
+                "has_attachments": False,
+                "attachments": [],
+                "entity_name": "Capitania do Porto de Setúbal",
+            },
+        ]
+
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            for role in ("admin", "agente", "piloto"):
+                with self.subTest(role=role):
+                    with app.app.test_client() as client:
+                        self._login_client_as_role(client, role)
+                        response = client.get("/warnings/local/301")
+
+                    self.assertEqual(response.status_code, 200)
+                    html = response.get_data(as_text=True)
+                    self.assertIn("Anav nr 301", html)
+                    self.assertIn("Corrente forte na barra", html)
 
     def test_local_warnings_page_shows_offline_when_source_probe_fails(self) -> None:
         warning_service = _StubLocalWarningService(
