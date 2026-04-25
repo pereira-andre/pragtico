@@ -531,8 +531,12 @@ def _render_text_pdf(title: str, body: str) -> bytes:
     page_width = 595
     page_height = 842
     margin = 48
+    font_size = 10
     line_height = 14
-    max_chars = 96
+    usable_width = page_width - (margin * 2)
+    # Keep wrapping conservative so Helvetica lines never clip on the right edge.
+    avg_char_width = font_size * 0.62
+    max_chars = max(40, int(usable_width / avg_char_width))
 
     raw_lines = [title, "", *str(body or "").splitlines()]
     wrapped_lines: list[str] = []
@@ -570,7 +574,7 @@ def _render_text_pdf(title: str, body: str) -> bytes:
         next_id += 2
         page_ids.append(page_id)
 
-        stream_lines = ["BT", "/F1 10 Tf"]
+        stream_lines = ["BT", f"/F1 {font_size} Tf"]
         y = page_height - margin
         for line in page_lines:
             stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
