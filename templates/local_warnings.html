@@ -96,15 +96,24 @@
       {% endif %}
       <div class="planned-table-wrap archive-table-wrap">
         <table class="planned-table archive-table warning-table">
+          <colgroup>
+            <col class="warning-col-select">
+            <col class="warning-col-code">
+            <col class="warning-col-subject">
+            <col class="warning-col-location">
+            <col class="warning-col-period">
+            <col class="warning-col-attachments">
+            <col class="warning-col-actions">
+          </colgroup>
           <thead>
             <tr>
-              <th class="archive-th-narrow">Sel.</th>
-              <th>Código</th>
-              <th>Assunto</th>
-              <th>Local</th>
-              <th>Período</th>
-              <th>Anexos</th>
-              <th>Ações</th>
+              <th class="archive-th-narrow warning-th-select">Sel.</th>
+              <th class="warning-th-code">Código</th>
+              <th class="warning-th-subject">Assunto</th>
+              <th class="warning-th-location">Local</th>
+              <th class="warning-th-period">Período</th>
+              <th class="warning-th-attachments">Anexos</th>
+              <th class="warning-th-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -117,24 +126,29 @@
                     value="{{ warning.id }}"
                     aria-label="Selecionar aviso {{ warning.display_code }}">
                 </td>
-                <td>
+                <td class="warning-code-cell">
                   <strong>{{ warning.display_code }}</strong>
                   <p class="muted">{{ warning.status_label }}</p>
                 </td>
-                <td>
+                <td class="warning-subject-cell">
                   <strong>{{ warning.subject }}</strong>
                   <p class="document-window-preview">{{ warning.excerpt }}</p>
                 </td>
-                <td>{{ warning.location }}</td>
-                <td>{{ warning.start_date_label }}<br><span class="muted">até {{ warning.end_date_label }}</span></td>
-                <td>
+                <td class="warning-location-cell">
+                  <span>{{ warning.location }}</span>
+                </td>
+                <td class="warning-period-cell">
+                  <span>{{ warning.start_date_label }}</span>
+                  <span class="muted">até {{ warning.end_date_label }}</span>
+                </td>
+                <td class="warning-attachments-cell">
                   {% if warning.has_attachments %}
                     <span class="doc-badge">com anexos</span>
                   {% else %}
                     <span class="muted">sem anexos</span>
                   {% endif %}
                 </td>
-                <td>
+                <td class="warning-actions-cell">
                   <div class="doc-actions">
                     <a class="inline-link" href="{{ url_for('dashboard_bp.local_warning_detail', warning_id=warning.id) }}">Abrir aviso</a>
                   </div>
