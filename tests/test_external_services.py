@@ -27,6 +27,18 @@ class _FakeResponse:
         return self._payload
 
 
+class _FakeRuntimeStore:
+    def __init__(self) -> None:
+        self.state: dict[str, dict] = {}
+
+    def get_runtime_state(self, key: str):
+        return self.state.get(key)
+
+    def set_runtime_state(self, key: str, value: dict):
+        self.state[key] = value
+        return value
+
+
 class ExternalServiceCacheTests(unittest.TestCase):
     def test_whatsapp_parse_webhook_events_maps_button_reply_to_text_event(self) -> None:
         service = WhatsAppCloudService(enabled=True)
@@ -294,6 +306,59 @@ class ExternalServiceCacheTests(unittest.TestCase):
             self.assertTrue(restarted.status()["stale"])
             self.assertIn("Instituto Hidrográfico", restarted.status()["error"])
             self.assertTrue(snapshot_path.exists())
+
+    def test_local_warning_service_reuses_database_snapshot_after_failure(self) -> None:
+        store = _FakeRuntimeStore()
+        service = LocalWarningService(
+            endpoint="https://example.test/warnings?currentPage=1",
+            cache_ttl_seconds=0,
+            failure_backoff_seconds=3600,
+            snapshot_path="",
+            store=store,
+        )
+        with patch(
+            "integrations.local_warning_service.requests.get",
+            return_value=_FakeResponse(
+                {
+                    "rows": [
+                        {
+                            "id": 1,
+                            "code": "123",
+                            "subject": "Trabalho subaquático",
+                            "locationDescription": "Setúbal",
+                            "description": "<p>Manter vigilância.</p>",
+                            "attachments": [],
+                            "entity": {"name": "Capitania do Porto de Setúbal"},
+                            "state": {"code": "promulgado", "name": "Promulgado"},
+                            "startDate": "2026-04-02T00:00:00Z",
+                            "endDate": "2026-04-03T00:00:00Z",
+                        }
+                    ],
+                    "totalPages": 1,
+                }
+            ),
+        ):
+            fresh = service.list_warnings()
+
+        restarted = LocalWarningService(
+            endpoint="https://example.test/warnings?currentPage=1",
+            cache_ttl_seconds=0,
+            failure_backoff_seconds=3600,
+            snapshot_path="",
+            store=store,
+        )
+        with patch(
+            "integrations.local_warning_service.requests.get",
+            side_effect=Exception("[Errno 111] Connection refused"),
+        ):
+            stale = restarted.list_warnings()
+
+        self.assertEqual(len(fresh), 1)
+        self.assertEqual(len(stale), 1)
+        self.assertEqual(stale[0]["display_code"], fresh[0]["display_code"])
+        self.assertTrue(restarted.status()["stale"])
+        self.assertIn("Instituto Hidrográfico", restarted.status()["error"])
+        self.assertIn("external.local_warnings_snapshot", store.state)
 
     def test_local_warning_service_retries_without_ssl_verification_on_ssl_error(self) -> None:
         service = LocalWarningService(

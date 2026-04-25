@@ -227,6 +227,7 @@ local_warning_service = LocalWarningService(
     ),
     snapshot_path=os.path.join(DATA_DIR, "local_warnings_cache.json"),
     allow_insecure_ssl_fallback=_env_flag("LOCAL_WARNING_ALLOW_INSECURE_SSL_FALLBACK", default="1"),
+    store=store,
 )
 whatsapp_service = WhatsAppCloudService.from_env()
 

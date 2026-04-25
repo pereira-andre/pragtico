@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
+LOCAL_WARNING_RUNTIME_STATE_KEY = "external.local_warnings_snapshot"
 
 PT_MONTHS = {
     1: "jan",
@@ -40,6 +41,8 @@ class LocalWarningService:
         snapshot_path: str = "",
         failure_backoff_seconds: Optional[int] = None,
         allow_insecure_ssl_fallback: bool = True,
+        store: Any = None,
+        runtime_state_key: str = LOCAL_WARNING_RUNTIME_STATE_KEY,
     ) -> None:
         self.endpoint = endpoint
         self.base_url = base_url.rstrip("/")
@@ -47,6 +50,8 @@ class LocalWarningService:
         self.timeout = timeout
         self.snapshot_path = snapshot_path
         self.allow_insecure_ssl_fallback = allow_insecure_ssl_fallback
+        self.store = store
+        self.runtime_state_key = (runtime_state_key or "").strip() or LOCAL_WARNING_RUNTIME_STATE_KEY
         self.failure_backoff_seconds = max(
             int(failure_backoff_seconds if failure_backoff_seconds is not None else self.cache_ttl_seconds or 0),
             0,
@@ -85,24 +90,63 @@ class LocalWarningService:
             "last_error_at": self._last_error_at,
         }
 
-    def _load_snapshot(self) -> None:
-        if not self.snapshot_path:
-            return
-        try:
-            with open(self.snapshot_path, "r", encoding="utf-8") as handle:
-                payload = json.load(handle)
-        except (FileNotFoundError, json.JSONDecodeError, OSError):
-            return
+    def _snapshot_sort_key(self, payload: Dict[str, Any]) -> tuple[float, float]:
+        return (
+            float(payload.get("cached_at") or 0.0),
+            float(payload.get("last_attempt_at") or 0.0),
+        )
+
+    def _is_valid_snapshot_payload(self, payload: Any) -> bool:
+        return isinstance(payload, dict) and isinstance(payload.get("data"), list)
+
+    def _apply_snapshot_payload(self, payload: Dict[str, Any]) -> bool:
+        if not self._is_valid_snapshot_payload(payload):
+            return False
         data = payload.get("data")
-        if not isinstance(data, list):
-            return
         self._cache = data
         self._cached_at = float(payload.get("cached_at") or 0.0)
         self._last_attempt_at = float(payload.get("last_attempt_at") or 0.0)
         self._last_error = str(payload.get("last_error") or "")
         self._last_error_at = float(payload.get("last_error_at") or 0.0)
+        return True
+
+    def _read_file_snapshot(self) -> Optional[Dict[str, Any]]:
+        if not self.snapshot_path:
+            return None
+        try:
+            with open(self.snapshot_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _read_store_snapshot(self) -> Optional[Dict[str, Any]]:
+        if not self.store or not self.runtime_state_key:
+            return None
+        try:
+            payload = self.store.get_runtime_state(self.runtime_state_key)
+        except Exception:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _load_snapshot(self) -> None:
+        candidates = [
+            payload
+            for payload in (self._read_store_snapshot(), self._read_file_snapshot())
+            if self._is_valid_snapshot_payload(payload)
+        ]
+        if not candidates:
+            return
+        freshest = max(candidates, key=self._snapshot_sort_key)
+        self._apply_snapshot_payload(freshest)
 
     def _persist_snapshot(self) -> None:
+        payload = self._snapshot_payload()
+        if self.store and self.runtime_state_key:
+            try:
+                self.store.set_runtime_state(self.runtime_state_key, payload)
+            except Exception:
+                pass
         if not self.snapshot_path:
             return
         try:
@@ -110,7 +154,7 @@ class LocalWarningService:
             if directory:
                 os.makedirs(directory, exist_ok=True)
             with open(self.snapshot_path, "w", encoding="utf-8") as handle:
-                json.dump(self._snapshot_payload(), handle, ensure_ascii=False, indent=2)
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
         except OSError:
             return
 
