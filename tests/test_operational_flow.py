@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 import unittest
+import zipfile
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -4077,7 +4078,10 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("Exportar", html)
+        self.assertIn("Exportar ZIP", html)
+        self.assertIn("Selecionar visíveis", html)
+        self.assertIn("Sem seleção manual. O ZIP inclui todas as conversas", html)
+        self.assertIn("/conversations/export", html)
         self.assertIn("export.txt", html)
         self.assertIn("export.pdf", html)
         self.assertIn("Nova", html)
@@ -4100,8 +4104,8 @@ class OperationalFlowTests(unittest.TestCase):
 
     def test_conversation_export_pdf_returns_pdf_bytes(self) -> None:
         conversation = self.store.create_conversation("admin", title="Estado operacional")
-        self.store.append_chat_message("admin", conversation["id"], "user", "Resumo do porto?")
-        self.store.append_chat_message("admin", conversation["id"], "assistant", "Duas entradas e uma saída.")
+        self.store.append_chat_message("admin", conversation["id"], "user", "Resumo do porto com maré?")
+        self.store.append_chat_message("admin", conversation["id"], "assistant", "Duas entradas, uma saída e operação à ré.")
 
         with app.app.test_client() as client:
             self._login_client_as_admin(client)
@@ -4110,6 +4114,53 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/pdf")
         self.assertTrue(response.data.startswith(b"%PDF-1.4"))
+        self.assertIn("maré".encode("cp1252"), response.data)
+        self.assertIn("à ré".encode("cp1252"), response.data)
+        self.assertIn(b"/WinAnsiEncoding", response.data)
+
+    def test_conversations_export_zip_uses_all_when_none_selected(self) -> None:
+        first = self.store.create_conversation("admin", title="Marés")
+        second = self.store.create_conversation("admin", title="Operação")
+        self.store.append_chat_message("admin", first["id"], "assistant", "Preia-mar às 15:13.")
+        self.store.append_chat_message("admin", second["id"], "assistant", "Saída à ré com apoio.")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get("/conversations/export", query_string={"export_format": "txt"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/zip")
+
+        archive = zipfile.ZipFile(BytesIO(response.data))
+        names = archive.namelist()
+        self.assertEqual(len(names), 2)
+        contents = [archive.read(name).decode("utf-8-sig") for name in names]
+        self.assertTrue(any("Preia-mar às 15:13." in item for item in contents))
+        self.assertTrue(any("Saída à ré com apoio." in item for item in contents))
+
+    def test_conversations_export_zip_respects_selected_ids_for_pdf(self) -> None:
+        first = self.store.create_conversation("admin", title="Marés")
+        second = self.store.create_conversation("admin", title="Operação")
+        self.store.append_chat_message("admin", first["id"], "assistant", "Preia-mar às 15:13.")
+        self.store.append_chat_message("admin", second["id"], "assistant", "Saída à ré com apoio.")
+
+        with app.app.test_client() as client:
+            self._login_client_as_admin(client)
+            response = client.get(
+                "/conversations/export",
+                query_string={"export_format": "pdf", "conversation_ids": [second["id"]]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/zip")
+
+        archive = zipfile.ZipFile(BytesIO(response.data))
+        names = archive.namelist()
+        self.assertEqual(len(names), 1)
+        pdf_bytes = archive.read(names[0])
+        self.assertTrue(pdf_bytes.startswith(b"%PDF-1.4"))
+        self.assertIn("Saída à ré com apoio.".encode("cp1252"), pdf_bytes)
+        self.assertIn(b"/WinAnsiEncoding", pdf_bytes)
 
     def test_local_warnings_report_txt_respects_filters_and_selection(self) -> None:
         warnings = [

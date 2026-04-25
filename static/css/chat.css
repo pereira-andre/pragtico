@@ -650,15 +650,45 @@
   padding-right: 4px;
 }
 
+.chat-selection-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chat-selection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .chat-sidebar-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   border-radius: 14px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.chat-sidebar-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-sidebar-select input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
 }
 
 .chat-sidebar-card.is-active {
@@ -734,6 +764,20 @@
   background: rgba(255, 255, 255, 0.09);
 }
 
+.chat-toolbar-menu-button {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-toolbar-menu-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .chat-sidebar-menu-toggle {
   display: inline-flex;
   align-items: center;
@@ -804,6 +848,11 @@
   .chat-sidebar-head,
   .chat-main-head,
   .chat-page-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chat-selection-bar {
     flex-direction: column;
     align-items: stretch;
   }

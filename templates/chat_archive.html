@@ -9,14 +9,17 @@
         <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
       </div>
       <div class="chat-sidebar-actions">
-        <details class="chat-toolbar-menu">
-          <summary class="mini-button secondary-button">Exportar</summary>
-          <div class="chat-toolbar-menu-body">
-            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_json', conversation_id=current_conversation.id) }}">JSON</a>
-            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_txt', conversation_id=current_conversation.id) }}">TXT</a>
-            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_pdf', conversation_id=current_conversation.id) }}">PDF</a>
-          </div>
-        </details>
+        <form method="get" action="{{ url_for('chat.export_conversations_bundle') }}" id="chat-batch-export-form">
+          <details class="chat-toolbar-menu">
+            <summary class="mini-button secondary-button">Exportar ZIP</summary>
+            <div class="chat-toolbar-menu-body">
+              <p class="chat-toolbar-menu-note">Sem seleção manual, exporta todas as conversas em ficheiros individuais.</p>
+              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="json">JSON</button>
+              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="txt">TXT</button>
+              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="pdf">PDF</button>
+            </div>
+          </details>
+        </form>
         <form method="post" action="{{ url_for('chat.create_conversation') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="redirect_to" value="archive">
@@ -30,10 +33,29 @@
       <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
     </label>
 
+    <div class="chat-selection-bar">
+      <div>
+        <p class="eyebrow">Seleção para exportação</p>
+        <p id="chat-selection-summary" class="muted">Sem seleção manual. O ZIP inclui todas as conversas em ficheiros individuais.</p>
+      </div>
+      <div class="chat-selection-actions">
+        <button type="button" class="mini-button secondary-button" id="chat-select-visible">Selecionar visíveis</button>
+        <button type="button" class="mini-button secondary-button" id="chat-clear-selection">Nenhuma</button>
+      </div>
+    </div>
+
     <div class="chat-sidebar-list" id="chat-sidebar-list">
       {% for conv in conversations %}
         {% set search_text = (conv.title ~ ' ' ~ conv.updated_at_label)|lower %}
         <article class="chat-sidebar-card {{ 'is-active' if conv.id == current_conversation.id }}" data-chat-conversation data-search="{{ search_text }}">
+          <label class="chat-sidebar-select" aria-label="Selecionar conversa {{ conv.title }}">
+            <input
+              type="checkbox"
+              class="chat-conversation-select"
+              name="conversation_ids"
+              value="{{ conv.id }}"
+              form="chat-batch-export-form">
+          </label>
           <a class="chat-sidebar-link" href="{{ url_for('chat.chat_archive', conversation_id=conv.id) }}">
             <strong title="{{ conv.title }}">{{ conv.title }}</strong>
             <span>Atualizada {{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
@@ -167,7 +189,9 @@
 <script>
   const conversationSearch = document.getElementById("chat-conversation-search");
   const conversationCards = Array.from(document.querySelectorAll("[data-chat-conversation]"));
+  const conversationBoxes = Array.from(document.querySelectorAll(".chat-conversation-select"));
   const conversationEmpty = document.getElementById("chat-sidebar-empty");
+  const conversationSummary = document.getElementById("chat-selection-summary");
   const chatLog = document.getElementById("chat-page-log");
   const chatForm = document.getElementById("chat-page-form");
   const chatQuestion = document.getElementById("chat-page-question");
@@ -180,6 +204,8 @@
   const pendingMissing = document.getElementById("chat-page-pending-missing");
   const pendingConfirm = document.getElementById("chat-page-pending-confirm");
   const pendingCancel = document.getElementById("chat-page-pending-cancel");
+  const selectVisibleButton = document.getElementById("chat-select-visible");
+  const clearSelectionButton = document.getElementById("chat-clear-selection");
   const autocomplete = window.PRAGticoChatCommandAutocomplete
     ? window.PRAGticoChatCommandAutocomplete.attach({
         textarea: chatQuestion,
@@ -382,6 +408,25 @@
     conversationEmpty.classList.toggle("hidden", visible !== 0);
   }
 
+  function updateConversationSelectionSummary() {
+    if (!conversationSummary) return;
+    const selected = conversationBoxes.filter((box) => box.checked).length;
+    if (selected > 0) {
+      conversationSummary.textContent = `${selected} conversa(s) selecionada(s). O ZIP inclui ficheiros individuais.`;
+      return;
+    }
+    conversationSummary.textContent = "Sem seleção manual. O ZIP inclui todas as conversas em ficheiros individuais.";
+  }
+
+  function setVisibleConversationSelection(checked) {
+    conversationCards.forEach((card) => {
+      if (card.classList.contains("hidden")) return;
+      const checkbox = card.querySelector(".chat-conversation-select");
+      if (checkbox) checkbox.checked = checked;
+    });
+    updateConversationSelectionSummary();
+  }
+
   function appendBubble(role, content, citations, messageId, timestampLabel) {
     function escapeHtml(value) {
       return String(value || "")
@@ -484,6 +529,12 @@
   }
 
   if (conversationSearch) conversationSearch.addEventListener("input", filterConversations);
+  conversationBoxes.forEach((box) => box.addEventListener("change", updateConversationSelectionSummary));
+  selectVisibleButton?.addEventListener("click", () => setVisibleConversationSelection(true));
+  clearSelectionButton?.addEventListener("click", () => {
+    conversationBoxes.forEach((box) => { box.checked = false; });
+    updateConversationSelectionSummary();
+  });
 
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -529,6 +580,7 @@
     event.preventDefault();
     submitMessageFeedback(button.closest("[data-feedback-box]"), button.dataset.feedbackChoice || "");
   });
+  updateConversationSelectionSummary();
   chatLog.scrollTop = chatLog.scrollHeight;
   fetchPending();
 </script>

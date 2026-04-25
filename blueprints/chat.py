@@ -1,10 +1,12 @@
 """Chat blueprint — API chat, conversations, feedback, pending actions."""
 
-import logging
 import json
+import logging
 import re
-import unicodedata
+from datetime import datetime
+from io import BytesIO
 from textwrap import wrap
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
@@ -18,6 +20,7 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from domain.document_processing import slugify
 from domain.error_catalog import error_payload, flash_error_message, log_error_event
 from core.security import api_limiter, rate_limit
 from core.helpers import (
@@ -46,6 +49,7 @@ bp = Blueprint("chat", __name__)
 APPROVED_MEMORY_SIMILARITY = 0.96
 REVIEW_GUARD_SIMILARITY = 0.9
 REVIEW_BLOCK_SIMILARITY = 0.97
+CONVERSATION_EXPORT_FORMATS = {"json", "txt", "pdf"}
 
 
 def _wants_archive_redirect() -> bool:
@@ -67,6 +71,13 @@ def _conversation_export_payload(username: str, conversation_id: str) -> tuple[d
     if conversation["id"] != conversation_id:
         return None, None
     return conversation, services.store.list_messages(username, conversation_id)
+
+
+def _conversation_export_json_payload(conversation: dict, messages: list[dict]) -> dict:
+    return {
+        "conversation": conversation,
+        "messages": messages,
+    }
 
 
 def _conversation_export_text(conversation: dict, messages: list[dict]) -> str:
@@ -109,8 +120,7 @@ def _conversation_export_text(conversation: dict, messages: list[dict]) -> str:
 
 
 def _pdf_safe_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", str(value or ""))
-    encoded = normalized.encode("latin-1", "replace").decode("latin-1")
+    encoded = str(value or "").encode("cp1252", "replace").decode("cp1252")
     return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
@@ -118,8 +128,12 @@ def _render_text_pdf(title: str, body: str) -> bytes:
     page_width = 595
     page_height = 842
     margin = 48
+    font_size = 10
     line_height = 14
-    max_chars = 96
+    usable_width = page_width - (margin * 2)
+    # Keep wrapping conservative so Helvetica lines never clip on the right edge.
+    avg_char_width = font_size * 0.62
+    max_chars = max(40, int(usable_width / avg_char_width))
 
     raw_lines = [title, "", *str(body or "").splitlines()]
     wrapped_lines: list[str] = []
@@ -157,13 +171,13 @@ def _render_text_pdf(title: str, body: str) -> bytes:
         next_id += 2
         page_ids.append(page_id)
 
-        stream_lines = ["BT", "/F1 10 Tf"]
+        stream_lines = ["BT", f"/F1 {font_size} Tf"]
         y = page_height - margin
         for line in page_lines:
             stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
             y -= line_height
         stream_lines.append("ET")
-        stream = "\n".join(stream_lines).encode("latin-1", "replace")
+        stream = "\n".join(stream_lines).encode("cp1252", "replace")
 
         objects[content_id] = (
             b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
@@ -173,7 +187,7 @@ def _render_text_pdf(title: str, body: str) -> bytes:
             f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
         ).encode("ascii")
 
-    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
     kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
     objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
     objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
@@ -198,6 +212,55 @@ def _render_text_pdf(title: str, body: str) -> bytes:
         ).encode("ascii")
     )
     return bytes(pdf)
+
+
+def _conversation_export_filename(conversation: dict, extension: str) -> str:
+    title = slugify(str(conversation.get("title") or "conversa"))
+    conversation_id = slugify(str(conversation.get("id") or "conversa"))
+    return f"conversa_{title}_{conversation_id}.{extension}"
+
+
+def _conversation_export_bytes(conversation: dict, messages: list[dict], export_format: str) -> tuple[bytes, str, str]:
+    export_format = str(export_format or "").strip().lower()
+    if export_format not in CONVERSATION_EXPORT_FORMATS:
+        raise ValueError("Formato de exportação inválido.")
+
+    if export_format == "json":
+        payload = _conversation_export_json_payload(conversation, messages)
+        return (
+            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+            "application/json; charset=utf-8",
+            _conversation_export_filename(conversation, "json"),
+        )
+    if export_format == "txt":
+        return (
+            _conversation_export_text(conversation, messages).encode("utf-8-sig"),
+            "text/plain; charset=utf-8",
+            _conversation_export_filename(conversation, "txt"),
+        )
+    pdf = _render_text_pdf(
+        title=f"Conversa · {conversation.get('title', 'Conversa')}",
+        body=_conversation_export_text(conversation, messages),
+    )
+    return pdf, "application/pdf", _conversation_export_filename(conversation, "pdf")
+
+
+def _selected_conversations_for_export(username: str, selected_ids: list[str]) -> list[dict]:
+    conversations = services.store.list_conversations(username)
+    if not selected_ids:
+        return conversations
+    selected_lookup = {str(item).strip() for item in selected_ids if str(item).strip()}
+    return [conversation for conversation in conversations if conversation.get("id") in selected_lookup]
+
+
+def _conversation_export_zip(username: str, conversations: list[dict], export_format: str) -> bytes:
+    bundle = BytesIO()
+    with ZipFile(bundle, "w", compression=ZIP_DEFLATED) as archive:
+        for conversation in conversations:
+            messages = services.store.list_messages(username, conversation["id"])
+            payload, _mimetype, filename = _conversation_export_bytes(conversation, messages, export_format)
+            archive.writestr(filename, payload)
+    return bundle.getvalue()
 
 
 def _feedback_timestamp(value: dict | None) -> str:
@@ -322,14 +385,10 @@ def export_conversation_json(conversation_id: str):
     if not conversation:
         flash("Conversa não encontrada.", "error")
         return redirect(url_for("chat.chat_archive"))
-    payload = {
-        "conversation": conversation,
-        "messages": messages,
-    }
-    filename = f"conversa_{conversation_id}.json"
+    payload, mimetype, filename = _conversation_export_bytes(conversation, messages, "json")
     return Response(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        mimetype="application/json; charset=utf-8",
+        payload,
+        mimetype=mimetype,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -342,10 +401,10 @@ def export_conversation_txt(conversation_id: str):
     if not conversation:
         flash("Conversa não encontrada.", "error")
         return redirect(url_for("chat.chat_archive"))
-    filename = f"conversa_{conversation_id}.txt"
+    payload, mimetype, filename = _conversation_export_bytes(conversation, messages, "txt")
     return Response(
-        _conversation_export_text(conversation, messages),
-        mimetype="text/plain; charset=utf-8",
+        payload,
+        mimetype=mimetype,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -358,14 +417,35 @@ def export_conversation_pdf(conversation_id: str):
     if not conversation:
         flash("Conversa não encontrada.", "error")
         return redirect(url_for("chat.chat_archive"))
-    pdf = _render_text_pdf(
-        title=f"Conversa · {conversation.get('title', 'Conversa')}",
-        body=_conversation_export_text(conversation, messages),
-    )
-    filename = f"conversa_{conversation_id}.pdf"
+    payload, mimetype, filename = _conversation_export_bytes(conversation, messages, "pdf")
     return Response(
-        pdf,
-        mimetype="application/pdf",
+        payload,
+        mimetype=mimetype,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@bp.route("/conversations/export", methods=["GET", "POST"])
+@login_required
+def export_conversations_bundle():
+    """Exportar conversas selecionadas, ou todas quando não há seleção, num ZIP por formato."""
+    export_format = (request.values.get("export_format") or "").strip().lower()
+    if export_format not in CONVERSATION_EXPORT_FORMATS:
+        flash("Formato de exportação inválido.", "error")
+        return redirect(url_for("chat.chat_archive"))
+
+    selected_ids = request.values.getlist("conversation_ids")
+    conversations = _selected_conversations_for_export(session["username"], selected_ids)
+    if not conversations:
+        flash("Nenhuma conversa encontrada para exportação.", "error")
+        return redirect(url_for("chat.chat_archive"))
+
+    payload = _conversation_export_zip(session["username"], conversations, export_format)
+    selection_label = "selecionadas" if selected_ids else "todas"
+    filename = f"conversas_{selection_label}_{export_format}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    return Response(
+        payload,
+        mimetype="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
