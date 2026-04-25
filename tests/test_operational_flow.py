@@ -4082,6 +4082,9 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Selecionar visíveis", html)
         self.assertIn("Sem seleção manual. O ZIP inclui todas as conversas", html)
         self.assertIn("/conversations/export", html)
+        self.assertIn("Esta área é privada por membro", html)
+        self.assertIn("Apagar todas", html)
+        self.assertIn("/conversations/delete-all", html)
         self.assertIn("export.txt", html)
         self.assertIn("export.pdf", html)
         self.assertIn("Nova", html)
@@ -4161,6 +4164,25 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(pdf_bytes.startswith(b"%PDF-1.4"))
         self.assertIn("Saída à ré com apoio.".encode("cp1252"), pdf_bytes)
         self.assertIn(b"/WinAnsiEncoding", pdf_bytes)
+
+    def test_delete_all_conversations_removes_user_archive(self) -> None:
+        first = self.store.create_conversation("admin", title="Marés")
+        second = self.store.create_conversation("admin", title="Operação")
+        self.store.append_chat_message("admin", first["id"], "assistant", "Preia-mar às 15:13.")
+        self.store.append_chat_message("admin", second["id"], "assistant", "Saída à ré com apoio.")
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+                flask_session["_csrf_token"] = "test-token"
+            response = client.post(
+                "/conversations/delete-all",
+                data={"redirect_to": "archive", "csrf_token": "test-token"},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.store.list_conversations("admin"), [])
 
     def test_local_warnings_report_txt_respects_filters_and_selection(self) -> None:
         warnings = [

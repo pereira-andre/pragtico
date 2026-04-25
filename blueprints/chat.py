@@ -503,6 +503,27 @@ def delete_conversation(conversation_id: str):
         return _redirect_after_conversation_action(conversation_id)
 
 
+@bp.route("/conversations/delete-all", methods=["POST"])
+@login_required
+def delete_all_conversations():
+    """Eliminar todas as conversas do utilizador atual."""
+    username = session["username"]
+    conversations = services.store.list_conversations(username)
+    removed_count = 0
+    for conversation in list(conversations):
+        conversation_id = str(conversation.get("id") or "").strip()
+        if not conversation_id:
+            continue
+        clear_pending_chat_action(username, conversation_id)
+        services.store.delete_conversation(username, conversation_id)
+        removed_count += 1
+    if removed_count:
+        flash(f"{removed_count} conversa(s) eliminada(s).", "success")
+    else:
+        flash("Não existiam conversas para eliminar.", "success")
+    return _redirect_after_conversation_action(None)
+
+
 @bp.route("/api/messages/<message_id>/feedback", methods=["POST"])
 @login_required
 def api_message_feedback(message_id: str):

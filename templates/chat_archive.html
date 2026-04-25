@@ -9,6 +9,11 @@
         <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
       </div>
       <div class="chat-sidebar-actions">
+        <form method="post" action="{{ url_for('chat.delete_all_conversations') }}" onsubmit="return confirm('Apagar permanentemente todas as conversas deste utilizador?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="redirect_to" value="archive">
+          <button type="submit" class="mini-button danger-button">Apagar todas</button>
+        </form>
         <form method="get" action="{{ url_for('chat.export_conversations_bundle') }}" id="chat-batch-export-form">
           <details class="chat-toolbar-menu">
             <summary class="mini-button secondary-button">Exportar ZIP</summary>
@@ -32,6 +37,17 @@
       <span class="mini-label">Filtrar conversas</span>
       <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
     </label>
+
+    <section class="chat-privacy-card">
+      <div class="chat-privacy-mark">Privado</div>
+      <div>
+        <p class="eyebrow">Consentimento e tratamento</p>
+        <p>
+          Esta área é privada por membro. Ao utilizar as conversas, consentes que o conteúdo seja usado para melhorar o treino
+          e o conhecimento operacional do bot, sem divulgação de informação pessoal identificável.
+        </p>
+      </div>
+    </section>
 
     <div class="chat-selection-bar">
       <div>
