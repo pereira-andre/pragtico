@@ -114,92 +114,94 @@
       </div>
     </section>
 
-    <div class="chat-main-head">
-      <div>
-        <p class="eyebrow">Conversa ativa</p>
-        <h2 id="chat-page-title">{{ current_conversation.title }}</h2>
+    <div class="chat-conversation-shell">
+      <div class="chat-main-head">
+        <div>
+          <p class="eyebrow">Conversa ativa</p>
+          <h2 id="chat-page-title">{{ current_conversation.title }}</h2>
+        </div>
+        <div class="chat-main-kpis">
+          <span class="ops-pill ops-pill-strong">{{ conversations|length }} conversas</span>
+          <span class="ops-pill">{{ messages|length }} mensagens</span>
+        </div>
       </div>
-      <div class="chat-main-kpis">
-        <span class="ops-pill ops-pill-strong">{{ conversations|length }} conversas</span>
-        <span class="ops-pill">{{ messages|length }} mensagens</span>
-      </div>
-    </div>
 
-    <div class="chat-page-log" id="chat-page-log">
-      {% if messages %}
-        {% for msg in messages %}
-          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-correction="{{ msg.feedback_correction or '' }}" data-feedback-correction-document="{{ msg.feedback_correction_document or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
-            <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
-            <div class="chatbot-bubble-meta">
-              <span>{{ msg.created_at_label }}</span>
-            </div>
-            {% if msg.citations %}
-              <details class="chatbot-citations">
-                <summary>Fontes</summary>
-                {% for c in msg.citations %}
-                  <span class="chatbot-citation-tag">{{ c.document }}</span>
-                {% endfor %}
-              </details>
-            {% endif %}
-            {% if msg.role == 'assistant' %}
-              <details class="feedback-box chatbot-feedback" data-feedback-box="1" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}">
-                <summary class="chatbot-feedback-summary">
-                  <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
-                  <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
-                    {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% else %}Sem feedback{% endif %}
-                  </span>
-                </summary>
-                <div class="chatbot-feedback-body">
-                  <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
-                  <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
-                  <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
-                  <div class="feedback-actions">
-                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
-                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
+      <div class="chat-page-log" id="chat-page-log">
+        {% if messages %}
+          {% for msg in messages %}
+            <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-correction="{{ msg.feedback_correction or '' }}" data-feedback-correction-document="{{ msg.feedback_correction_document or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
+              <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
+              <div class="chatbot-bubble-meta">
+                <span>{{ msg.created_at_label }}</span>
+              </div>
+              {% if msg.citations %}
+                <details class="chatbot-citations">
+                  <summary>Fontes</summary>
+                  {% for c in msg.citations %}
+                    <span class="chatbot-citation-tag">{{ c.document }}</span>
+                  {% endfor %}
+                </details>
+              {% endif %}
+              {% if msg.role == 'assistant' %}
+                <details class="feedback-box chatbot-feedback" data-feedback-box="1" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}">
+                  <summary class="chatbot-feedback-summary">
+                    <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
+                    <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
+                      {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% else %}Sem feedback{% endif %}
+                    </span>
+                  </summary>
+                  <div class="chatbot-feedback-body">
+                    <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                    <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
+                    <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
+                    <div class="feedback-actions">
+                      <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
+                      <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
+                    </div>
+                    <p class="chatbot-feedback-meta" data-feedback-meta>
+                      {% if msg.feedback_status %}
+                        {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
+                      {% else %}
+                        Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.
+                      {% endif %}
+                    </p>
                   </div>
-                  <p class="chatbot-feedback-meta" data-feedback-meta>
-                    {% if msg.feedback_status %}
-                      {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
-                    {% else %}
-                      Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.
-                    {% endif %}
-                  </p>
-                </div>
-              </details>
-            {% endif %}
+                </details>
+              {% endif %}
+            </article>
+          {% endfor %}
+        {% else %}
+          <article class="chatbot-bubble chatbot-bubble-assistant">
+            <p>Abre uma conversa ou começa já a pedir estado operacional, marés, meteorologia ou registo de manobras.</p>
           </article>
-        {% endfor %}
-      {% else %}
-        <article class="chatbot-bubble chatbot-bubble-assistant">
-          <p>Abre uma conversa ou começa já a pedir estado operacional, marés, meteorologia ou registo de manobras.</p>
-        </article>
-      {% endif %}
+        {% endif %}
+      </div>
+
+      <article class="chatbot-pending hidden" id="chat-page-pending">
+        <div class="chatbot-pending-head">
+          <strong id="chat-page-pending-title">Ação pendente</strong>
+          <span class="ops-pill" id="chat-page-pending-target"></span>
+        </div>
+        <p id="chat-page-pending-summary"></p>
+        <p class="chatbot-pending-missing hidden" id="chat-page-pending-missing"></p>
+        <div class="chatbot-pending-actions">
+          <button type="button" class="mini-button" id="chat-page-pending-confirm">Confirmar</button>
+          <button type="button" class="mini-button secondary-button" id="chat-page-pending-cancel">Cancelar</button>
+        </div>
+      </article>
+
+      <form class="chat-page-input" id="chat-page-form">
+        <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
+        <div class="chat-page-input-stack">
+          <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
+          <div class="chat-command-autocomplete hidden" id="chat-page-command-autocomplete"></div>
+        </div>
+        <div class="chat-page-toolbar">
+          <p class="chatbot-status" id="chat-page-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
+          <button type="submit" class="mini-button">Enviar</button>
+        </div>
+      </form>
     </div>
-
-    <article class="chatbot-pending hidden" id="chat-page-pending">
-      <div class="chatbot-pending-head">
-        <strong id="chat-page-pending-title">Ação pendente</strong>
-        <span class="ops-pill" id="chat-page-pending-target"></span>
-      </div>
-      <p id="chat-page-pending-summary"></p>
-      <p class="chatbot-pending-missing hidden" id="chat-page-pending-missing"></p>
-      <div class="chatbot-pending-actions">
-        <button type="button" class="mini-button" id="chat-page-pending-confirm">Confirmar</button>
-        <button type="button" class="mini-button secondary-button" id="chat-page-pending-cancel">Cancelar</button>
-      </div>
-    </article>
-
-    <form class="chat-page-input" id="chat-page-form">
-      <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
-      <div class="chat-page-input-stack">
-        <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
-        <div class="chat-command-autocomplete hidden" id="chat-page-command-autocomplete"></div>
-      </div>
-      <div class="chat-page-toolbar">
-        <p class="chatbot-status" id="chat-page-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
-        <button type="submit" class="mini-button">Enviar</button>
-      </div>
-    </form>
   </section>
 </main>
 
