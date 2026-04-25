@@ -586,7 +586,7 @@ def _render_text_pdf(title: str, body: str) -> bytes:
             f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
         ).encode("ascii")
 
-    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
     kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
     objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
     objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"

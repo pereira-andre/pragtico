@@ -4189,6 +4189,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertTrue(response.data.startswith(b"%PDF-1.4"))
         self.assertIn("Balização temporária".encode("cp1252"), response.data)
         self.assertIn("sinalização náutica".encode("cp1252"), response.data)
+        self.assertIn(b"/WinAnsiEncoding", response.data)
 
     def test_local_warnings_page_renders_selection_actions(self) -> None:
         warnings = [
