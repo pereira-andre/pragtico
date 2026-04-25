@@ -1866,7 +1866,7 @@ def _collect_live_environment_sections(
 
     if "warnings" in plan.live_facets:
         try:
-            warning_answer, warning_sources = _build_local_warning_lookup_answer()
+            warning_answer, warning_sources = _build_local_warning_lookup_answer(question, clean_question)
         except Exception as exc:
             logger.exception("Falha ao obter avisos locais para consulta direta.")
             warning_answer = f"Falha ao obter avisos locais: {exc}"
@@ -1962,7 +1962,20 @@ def _build_wave_lookup_answer() -> tuple[str, list[dict]]:
     return "\n".join(lines), sources
 
 
-def _build_local_warning_lookup_answer(limit: int = 5) -> tuple[str, list[dict]]:
+def _looks_like_warning_count_query(clean_question: str) -> bool:
+    if not clean_question:
+        return False
+    count_markers = {"quantos", "quantas", "quantidade", "numero", "número", "total"}
+    list_markers = {"lista", "listar", "mostra", "mostra-me", "quais"}
+    tokens = set(clean_question.split())
+    return bool(tokens & count_markers) and not bool(tokens & list_markers)
+
+
+def _build_local_warning_lookup_answer(
+    question: str = "",
+    clean_question: str = "",
+    limit: int = 5,
+) -> tuple[str, list[dict]]:
     warning_service = getattr(services, "local_warning_service", None)
     if not warning_service or not getattr(warning_service, "enabled", False):
         return "Os avisos locais live não estão configurados neste ambiente.", []
@@ -1974,14 +1987,18 @@ def _build_local_warning_lookup_answer(limit: int = 5) -> tuple[str, list[dict]]
             return f"Não consegui obter avisos locais em vigor: {status.get('error')}", []
         return "Sem avisos locais em vigor.", []
 
-    lines = ["Avisos locais em vigor:"]
-    for item in warnings[:limit]:
-        lines.append(
-            f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
-        )
-    remaining = len(warnings) - limit
-    if remaining > 0:
-        lines.append(f"- +{remaining} aviso(s) adicionais em vigor.")
+    lines: list[str]
+    if _looks_like_warning_count_query(clean_question):
+        lines = [f"Existem {len(warnings)} aviso(s) locais em vigor."]
+    else:
+        lines = ["Avisos locais em vigor:"]
+        for item in warnings[:limit]:
+            lines.append(
+                f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+            )
+        remaining = len(warnings) - limit
+        if remaining > 0:
+            lines.append(f"- +{remaining} aviso(s) adicionais em vigor.")
     if status.get("stale") and status.get("error"):
         lines.append(f"- Nota: snapshot em cache; origem live com erro: {status.get('error')}")
     context = warning_service.context_source(limit=limit) if hasattr(warning_service, "context_source") else None

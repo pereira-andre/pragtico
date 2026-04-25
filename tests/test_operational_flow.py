@@ -2497,6 +2497,44 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Corrente forte na barra", payload["answer"])
         answer_mock.assert_not_called()
 
+    def test_chat_local_warnings_count_question_returns_only_total(self) -> None:
+        warnings = [
+            {
+                "display_code": "Anav nr 102",
+                "subject": "Corrente forte na barra",
+                "location": "Barra de Setúbal",
+            },
+            {
+                "display_code": "Anav nr 103",
+                "subject": "Trabalhos subaquáticos",
+                "location": "Canal Norte",
+            },
+            {
+                "display_code": "Anav nr 104",
+                "subject": "Fogo de artifício",
+                "location": "Praia do Ouro",
+            },
+        ]
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with patch.object(services.rag, "answer") as answer_mock:
+                with app.app.test_client() as client:
+                    with client.session_transaction() as flask_session:
+                        flask_session["username"] = "admin"
+                        flask_session["role"] = "admin"
+
+                    response = client.post(
+                        "/api/chat",
+                        json={
+                            "question": "Quantos avisos locais existem em vigor?",
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "operational_live")
+        self.assertEqual(payload["answer"], "⚠️ Existem 3 aviso(s) locais em vigor.")
+        answer_mock.assert_not_called()
+
     def test_repeat_question_with_reviewed_feedback_is_blocked_before_llm(self) -> None:
         with app.app.test_client() as client:
             with client.session_transaction() as flask_session:
