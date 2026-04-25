@@ -347,6 +347,104 @@ class LocalWarningService:
                 return item
         return None
 
+    def _extract_warning_code(self, warning: Dict[str, Any]) -> str:
+        code = str(warning.get("code") or "").strip()
+        if code and code != "--":
+            return code
+        display_code = str(warning.get("display_code") or "").strip()
+        match = re.search(r"(\d+(?:/\d+)?)$", display_code)
+        return match.group(1) if match else ""
+
+    def _normalize_warning_query(self, value: str) -> str:
+        clean = (value or "").strip().lower()
+        clean = re.sub(r"\banav\b", "", clean)
+        clean = re.sub(r"\bnr\b", "", clean)
+        clean = clean.replace("nº", "").replace("º", "")
+        clean = re.sub(r"\s+", "", clean)
+        return clean
+
+    def find_warnings(self, query: str) -> List[Dict[str, Any]]:
+        clean_query = self._normalize_warning_query(query)
+        if not clean_query:
+            return []
+
+        exact_matches: List[Dict[str, Any]] = []
+        numeric_matches: List[Dict[str, Any]] = []
+        for item in self.list_warnings():
+            warning_id = str(item.get("id") or "").strip().lower()
+            warning_code = self._extract_warning_code(item)
+            normalized_code = self._normalize_warning_query(warning_code)
+            normalized_display = self._normalize_warning_query(str(item.get("display_code") or ""))
+            code_prefix = normalized_code.split("/", 1)[0] if normalized_code else ""
+            if clean_query in {warning_id, normalized_code, normalized_display}:
+                exact_matches.append(item)
+                continue
+            if clean_query.isdigit() and clean_query == code_prefix:
+                numeric_matches.append(item)
+        return exact_matches or numeric_matches
+
+    def browse_text(self) -> str:
+        warnings = self.list_warnings()
+        if not warnings:
+            return "Sem avisos locais em vigor."
+        lines = [f"Avisos locais em vigor ({len(warnings)}):"]
+        for item in warnings:
+            lines.append(
+                f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+            )
+        lines.extend(
+            [
+                "",
+                "Para consultar um aviso específico usa o código do aviso.",
+                "Exemplo: /avisos-locais 88/26",
+            ]
+        )
+        return "\n".join(lines)
+
+    def detail_text(self, query: str) -> str:
+        warnings = self.find_warnings(query)
+        clean_query = " ".join((query or "").strip().split())
+        if not clean_query:
+            return self.browse_text()
+        if not warnings:
+            return (
+                f'Não encontrei nenhum aviso local para "{clean_query}".\n'
+                "Usa /avisos-locais para ver todos os avisos em vigor."
+            )
+        if len(warnings) > 1:
+            lines = [
+                f'Encontrei mais do que um aviso para "{clean_query}". Usa o código completo.',
+                "",
+                "Candidatos:",
+            ]
+            for item in warnings:
+                lines.append(
+                    f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+                )
+            lines.extend(["", f"Exemplo: /avisos-locais {self._extract_warning_code(warnings[0]) or '88/26'}"])
+            return "\n".join(lines)
+
+        warning = warnings[0]
+        lines = [
+            warning.get("display_code", "--"),
+            f"Estado: {warning.get('status_label', '--')}",
+            f"Assunto: {warning.get('subject', '--')}",
+            f"Local: {warning.get('location', '--')}",
+            f"Período: {warning.get('start_date_label', '--')} até {warning.get('end_date_label', '--')}",
+        ]
+        cancel_date = warning.get("cancel_date_label")
+        if cancel_date:
+            lines.append(f"Cancelamento: {cancel_date}")
+        description_text = str(warning.get("description_text") or "").strip()
+        if description_text:
+            lines.extend(["", "Descrição:", description_text])
+        attachments = list(warning.get("attachments") or [])
+        if attachments:
+            lines.extend(["", "Anexos:"])
+            for item in attachments:
+                lines.append(f"- {(item or {}).get('name') or 'Anexo'}: {(item or {}).get('url') or '--'}")
+        return "\n".join(lines)
+
     def summary_text(self, limit: int = 12) -> str:
         warnings = self.list_warnings()
         if not warnings:

@@ -78,6 +78,13 @@ class ChatActionsTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "query")
         self.assertEqual(parsed["command"], "local_warnings")
 
+    def test_parse_slash_local_warnings_keeps_argument(self) -> None:
+        parsed = parse_slash_command("/avisos-locais 88/26", "piloto")
+
+        self.assertEqual(parsed["intent"], "query")
+        self.assertEqual(parsed["command"], "local_warnings")
+        self.assertEqual(parsed["argument"], "88/26")
+
     def test_parse_slash_wave_returns_query_intent(self) -> None:
         parsed = parse_slash_command("/ondulacao", "piloto")
 

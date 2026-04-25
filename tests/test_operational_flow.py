@@ -65,6 +65,71 @@ class _StubLocalWarningService:
                 return item
         return None
 
+    def _warning_code(self, item: dict) -> str:
+        code = str(item.get("code") or "").strip()
+        if code:
+            return code
+        display_code = str(item.get("display_code") or "").strip()
+        return display_code.replace("Anav nr ", "").strip()
+
+    def browse_text(self) -> str:
+        if not self._warnings:
+            return "Sem avisos locais em vigor."
+        lines = [f"Avisos locais em vigor ({len(self._warnings)}):"]
+        for item in self._warnings:
+            lines.append(
+                f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+            )
+        lines.extend(
+            [
+                "",
+                "Para consultar um aviso específico usa o código do aviso.",
+                "Exemplo: /avisos-locais 88/26",
+            ]
+        )
+        return "\n".join(lines)
+
+    def detail_text(self, query: str) -> str:
+        clean_query = " ".join((query or "").strip().split())
+        matches = []
+        for item in self._warnings:
+            code = self._warning_code(item)
+            if clean_query in {str(item.get("id") or ""), code, f"Anav nr {code}"}:
+                matches.append(item)
+                continue
+            if clean_query.isdigit() and code.split("/", 1)[0] == clean_query:
+                matches.append(item)
+        if not clean_query:
+            return self.browse_text()
+        if not matches:
+            return (
+                f'Não encontrei nenhum aviso local para "{clean_query}".\n'
+                "Usa /avisos-locais para ver todos os avisos em vigor."
+            )
+        if len(matches) > 1:
+            lines = [
+                f'Encontrei mais do que um aviso para "{clean_query}". Usa o código completo.',
+                "",
+                "Candidatos:",
+            ]
+            for item in matches:
+                lines.append(
+                    f"- {item.get('display_code', '--')} · {item.get('subject', '--')} · {item.get('location', '--')}"
+                )
+            lines.extend(["", f"Exemplo: /avisos-locais {self._warning_code(matches[0]) or '88/26'}"])
+            return "\n".join(lines)
+        warning = matches[0]
+        lines = [
+            warning.get("display_code", "--"),
+            f"Estado: {warning.get('status_label', '--')}",
+            f"Assunto: {warning.get('subject', '--')}",
+            f"Local: {warning.get('location', '--')}",
+            f"Período: {warning.get('start_date_label', '--')} até {warning.get('end_date_label', '--')}",
+        ]
+        if warning.get("description_text"):
+            lines.extend(["", "Descrição:", warning["description_text"]])
+        return "\n".join(lines)
+
 
 class _StubWaveService:
     enabled = True
@@ -2092,6 +2157,128 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("🌕 Marés para 09/04/2026", payload["answer"])
         self.assertIn("\n- 01:48 — Baixa-mar de 1.3 m", payload["answer"])
         self.assertIn("\n- 08:02 — Preia-mar de 2.4 m", payload["answer"])
+
+    def test_slash_local_warnings_lists_all_and_shows_selection_hint(self) -> None:
+        warnings = [
+            {
+                "id": 88,
+                "code": "88/26",
+                "display_code": "Anav nr 88/26",
+                "status_label": "Em vigor",
+                "subject": "Trabalhos de mergulho",
+                "location": "Portinho da Arrábida",
+                "start_date_label": "29 abr 2026",
+                "end_date_label": "01 mai 2026",
+                "description_text": "Operação subaquática em curso.",
+            },
+            {
+                "id": 77,
+                "code": "77/26",
+                "display_code": "Anav nr 77/26",
+                "status_label": "Em vigor",
+                "subject": "Pesca desportiva",
+                "location": "Praia Atlântica",
+                "start_date_label": "02 mai 2026",
+                "end_date_label": "03 mai 2026",
+                "description_text": "Prova de pesca desportiva.",
+            },
+        ]
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                with client.session_transaction() as flask_session:
+                    flask_session["username"] = "admin"
+                    flask_session["role"] = "admin"
+
+                response = client.post("/api/chat", json={"question": "/avisos-locais"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_local_warnings")
+        self.assertIn("Avisos locais em vigor (2)", payload["answer"])
+        self.assertIn("Anav nr 88/26 · Trabalhos de mergulho · Portinho da Arrábida", payload["answer"])
+        self.assertIn("Anav nr 77/26 · Pesca desportiva · Praia Atlântica", payload["answer"])
+        self.assertIn("/avisos-locais 88/26", payload["answer"])
+
+    def test_slash_local_warnings_returns_specific_warning_detail(self) -> None:
+        warnings = [
+            {
+                "id": 88,
+                "code": "88/26",
+                "display_code": "Anav nr 88/26",
+                "status_label": "Em vigor",
+                "subject": "Trabalhos de mergulho",
+                "location": "Portinho da Arrábida",
+                "start_date_label": "29 abr 2026",
+                "end_date_label": "01 mai 2026",
+                "description_text": "Operação subaquática em curso.",
+            },
+            {
+                "id": 77,
+                "code": "77/26",
+                "display_code": "Anav nr 77/26",
+                "status_label": "Em vigor",
+                "subject": "Pesca desportiva",
+                "location": "Praia Atlântica",
+                "start_date_label": "02 mai 2026",
+                "end_date_label": "03 mai 2026",
+                "description_text": "Prova de pesca desportiva.",
+            },
+        ]
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                with client.session_transaction() as flask_session:
+                    flask_session["username"] = "admin"
+                    flask_session["role"] = "admin"
+
+                response = client.post("/api/chat", json={"question": "/avisos-locais 88/26"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_local_warnings")
+        self.assertIn("Anav nr 88/26", payload["answer"])
+        self.assertIn("Assunto: Trabalhos de mergulho", payload["answer"])
+        self.assertIn("Local: Portinho da Arrábida", payload["answer"])
+        self.assertIn("Descrição:\nOperação subaquática em curso.", payload["answer"])
+
+    def test_slash_local_warnings_flags_ambiguous_numeric_code(self) -> None:
+        warnings = [
+            {
+                "id": 77,
+                "code": "77/26",
+                "display_code": "Anav nr 77/26",
+                "status_label": "Em vigor",
+                "subject": "Pesca desportiva",
+                "location": "Praia Atlântica",
+                "start_date_label": "02 mai 2026",
+                "end_date_label": "03 mai 2026",
+                "description_text": "Prova de pesca desportiva.",
+            },
+            {
+                "id": 177,
+                "code": "77/25",
+                "display_code": "Anav nr 77/25",
+                "status_label": "Em vigor",
+                "subject": "Fogo de artifício",
+                "location": "Praia do Ouro",
+                "start_date_label": "01 jul 2025",
+                "end_date_label": "02 jul 2025",
+                "description_text": "Evento pirotécnico.",
+            },
+        ]
+        with patch.object(services, "local_warning_service", _StubLocalWarningService(warnings)):
+            with app.app.test_client() as client:
+                with client.session_transaction() as flask_session:
+                    flask_session["username"] = "admin"
+                    flask_session["role"] = "admin"
+
+                response = client.post("/api/chat", json={"question": "/avisos-locais 77"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["answer_origin"], "slash_local_warnings")
+        self.assertIn('Encontrei mais do que um aviso para "77"', payload["answer"])
+        self.assertIn("Anav nr 77/26", payload["answer"])
+        self.assertIn("Anav nr 77/25", payload["answer"])
 
     def test_chat_current_weather_follow_up_prefers_live_operational_answer(self) -> None:
         with patch.object(services, "weather_service", _StubWeatherService()):

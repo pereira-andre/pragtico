@@ -3028,7 +3028,11 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
             return {"answer": "Os avisos locais não estão configurados neste ambiente.", "sources": [], "answer_origin": "slash_local_warnings"}
         try:
             return {
-                "answer": services.local_warning_service.codes_summary_text(),
+                "answer": (
+                    services.local_warning_service.detail_text(clean_argument)
+                    if clean_argument
+                    else services.local_warning_service.browse_text()
+                ),
                 "sources": [],
                 "answer_origin": "slash_local_warnings",
             }
