@@ -3591,6 +3591,12 @@ button:hover {
   text-decoration: none;
 }
 
+.mini-button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .voice-bubble-button[data-speaking="true"] {
   background: rgba(10, 108, 102, 0.12);
   border-color: rgba(10, 108, 102, 0.32);

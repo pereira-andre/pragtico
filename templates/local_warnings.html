@@ -83,7 +83,7 @@
         <button type="button" class="mini-button secondary-button" id="warnings-select-filtered">Selecionar tudo filtrado</button>
         <button type="button" class="mini-button secondary-button" id="warnings-clear-selection">Nenhum</button>
         <button type="button" class="mini-button secondary-button" id="warnings-export-txt">TXT</button>
-        <button type="button" class="mini-button" id="warnings-export-pdf">PDF</button>
+        <button type="button" class="mini-button secondary-button" id="warnings-export-pdf">PDF</button>
       </div>
     </div>
 
@@ -176,6 +176,8 @@
   const warningSummary = document.getElementById("warnings-selection-summary");
   const warningTxtUrl = "{{ url_for('dashboard_bp.local_warnings_report_txt') }}";
   const warningPdfUrl = "{{ url_for('dashboard_bp.local_warnings_report_pdf') }}";
+  const warningTxtButton = document.getElementById("warnings-export-txt");
+  const warningPdfButton = document.getElementById("warnings-export-pdf");
 
   function updateWarningSummary() {
     if (!warningSummary) return;
@@ -201,13 +203,24 @@
     return query ? `${baseUrl}?${query}` : baseUrl;
   }
 
+  function setWarningExportButtonState(activeButton) {
+    [warningTxtButton, warningPdfButton].forEach((button) => {
+      if (!button) return;
+      const isActive = button === activeButton;
+      button.classList.toggle("is-active", isActive);
+      button.classList.toggle("secondary-button", !isActive);
+    });
+  }
+
   warningBoxes.forEach((box) => box.addEventListener("change", updateWarningSummary));
   document.getElementById("warnings-select-filtered")?.addEventListener("click", () => setWarningSelection(true));
   document.getElementById("warnings-clear-selection")?.addEventListener("click", () => setWarningSelection(false));
-  document.getElementById("warnings-export-txt")?.addEventListener("click", () => {
+  warningTxtButton?.addEventListener("click", () => {
+    setWarningExportButtonState(warningTxtButton);
     window.location.href = buildWarningReportUrl(warningTxtUrl);
   });
-  document.getElementById("warnings-export-pdf")?.addEventListener("click", () => {
+  warningPdfButton?.addEventListener("click", () => {
+    setWarningExportButtonState(warningPdfButton);
     window.open(buildWarningReportUrl(warningPdfUrl), "_blank", "noopener");
   });
   updateWarningSummary();

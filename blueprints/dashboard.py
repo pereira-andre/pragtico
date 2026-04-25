@@ -522,8 +522,8 @@ def _warning_report_text(warnings: list[dict], filters: dict) -> str:
 
 
 def _pdf_safe_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", str(value or ""))
-    encoded = normalized.encode("latin-1", "replace").decode("latin-1")
+    normalized = unicodedata.normalize("NFC", str(value or ""))
+    encoded = normalized.encode("cp1252", "replace").decode("cp1252")
     return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
@@ -576,7 +576,7 @@ def _render_text_pdf(title: str, body: str) -> bytes:
             stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
             y -= line_height
         stream_lines.append("ET")
-        stream = "\n".join(stream_lines).encode("latin-1", "replace")
+        stream = "\n".join(stream_lines).encode("cp1252", "replace")
 
         objects[content_id] = (
             b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
@@ -956,9 +956,10 @@ def local_warnings_report_txt():
     filtered_warnings = _filter_warnings(warnings, warning_filters)
     selected_warnings = _selected_warnings(filtered_warnings)
     filename = f"avisos_locais_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
+    payload = ("\ufeff" + _warning_report_text(selected_warnings, warning_filters)).encode("utf-8")
     return Response(
-        _warning_report_text(selected_warnings, warning_filters),
-        mimetype="text/plain; charset=utf-8",
+        payload,
+        content_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

@@ -4131,10 +4131,10 @@ class OperationalFlowTests(unittest.TestCase):
             {
                 "id": 102,
                 "display_code": "Anav nr 102",
-                "subject": "Sondagens na barra",
+                "subject": "Sondagens na barra e balização temporária",
                 "location": "Barra",
-                "description_text": "Sondagens hidrográficas com embarcação de apoio.",
-                "excerpt": "Sondagens hidrográficas com embarcação de apoio.",
+                "description_text": "Sondagens hidrográficas com embarcação de apoio e área sinalizada com balização.",
+                "excerpt": "Sondagens hidrográficas com embarcação de apoio e área sinalizada com balização.",
                 "status_label": "Em vigor",
                 "start_date_label": "04 abr 2026",
                 "end_date_label": "12 abr 2026",
@@ -4152,20 +4152,23 @@ class OperationalFlowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/plain", response.mimetype)
-        body = response.get_data(as_text=True)
+        self.assertTrue(response.data.startswith(b"\xef\xbb\xbf"))
+        body = response.data.decode("utf-8-sig")
         self.assertIn("Anav nr 102", body)
         self.assertNotIn("Anav nr 101", body)
         self.assertIn("Croqui", body)
+        self.assertIn("balização temporária", body)
+        self.assertIn("hidrográficas", body)
 
     def test_local_warnings_report_pdf_returns_pdf_bytes(self) -> None:
         warnings = [
             {
                 "id": 201,
                 "display_code": "Anav nr 201",
-                "subject": "Balizagem temporária",
+                "subject": "Balização temporária",
                 "location": "Canal Sul",
-                "description_text": "Balizagem provisória em vigor.",
-                "excerpt": "Balizagem provisória em vigor.",
+                "description_text": "Balização provisória em vigor com sinalização náutica.",
+                "excerpt": "Balização provisória em vigor com sinalização náutica.",
                 "status_label": "Em vigor",
                 "start_date_label": "03 abr 2026",
                 "end_date_label": "05 abr 2026",
@@ -4184,6 +4187,8 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/pdf")
         self.assertTrue(response.data.startswith(b"%PDF-1.4"))
+        self.assertIn("Balização temporária".encode("cp1252"), response.data)
+        self.assertIn("sinalização náutica".encode("cp1252"), response.data)
 
     def test_local_warnings_page_renders_selection_actions(self) -> None:
         warnings = [
