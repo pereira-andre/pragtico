@@ -607,8 +607,8 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
     "LLM_NOT_CONFIGURED": {
         "code": 5050,
         "category": "chat",
-        "message": "LLM não configurado.",
-        "user_message": "Define a API key do LLM antes de usar o chatbot.",
+        "message": "Provider de geração não configurado.",
+        "user_message": "Define a API key do provider antes de usar o chatbot.",
     },
 
     # =====================================================================
@@ -663,8 +663,8 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
     "LLM_PROVIDER_UNAVAILABLE": {
         "code": 7001,
         "category": "integration",
-        "message": "Provider LLM indisponível.",
-        "user_message": "Serviço de IA temporariamente indisponível.",
+        "message": "Provider de geração indisponível.",
+        "user_message": "Serviço de resposta temporariamente indisponível.",
     },
     "TIDES_FETCH_FAILED": {
         "code": 7010,

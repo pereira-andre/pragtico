@@ -796,7 +796,7 @@ def playground_answer(
                 else:
                     if not services.rag.can_generate():
                         return {
-                            "answer": "Define a API key do LLM antes de usar o playground.",
+                            "answer": "Define a API key do provider antes de usar o playground.",
                             "sources": [],
                             "answer_origin": "error",
                         }
@@ -1269,7 +1269,7 @@ def handle_chat_turn(
                         answer = _build_review_guard_answer(review_guard_match)
                     else:
                         if not services.rag.can_generate():
-                            raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+                            raise RuntimeError("Define a API key do provider antes de usar o chatbot.")
                         answer = services.rag.answer(
                             question=clean_question,
                             retrieval_question=targeted_document_context["retrieval_question"],

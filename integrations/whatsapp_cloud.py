@@ -23,8 +23,8 @@ from storage.constants import (
 
 DEFAULT_WELCOME_MESSAGE = (
     "👋 Bem-vindo ao PRAGtico\n\n"
-    "O teu assistente inteligente para coordenação eficiente de manobras portuárias.\n"
-    "Em que posso ajudar? 🤖"
+    "Canal operacional para coordenação eficiente de manobras portuárias.\n"
+    "Em que posso ajudar?"
 )
 
 WHATSAPP_STATUS_STATE_PREFIX = "whatsapp:status:"

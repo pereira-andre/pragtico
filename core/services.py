@@ -16,7 +16,6 @@ whatsapp_service = None
 index_store = None
 
 # Module-level mutable state
-startup_migration_status = None
 reindex_thread = None
 reindex_thread_lock = None
 reindex_retry_scheduler = None

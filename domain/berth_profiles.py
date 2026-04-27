@@ -70,6 +70,28 @@ LOW_VALUE_ALIAS_TOKENS = {
     "doca",
     "docas",
 }
+NIGHT_QUERY_RE = re.compile(r"\b(noite|noturn[oa])\b", flags=re.IGNORECASE)
+OPERATIONAL_QUERY_RE = re.compile(
+    r"\b(manobra|manobrar|manobras|navio|navios|entrada|entrar|saida|sair|desatracar|atracar|"
+    r"loa|comprimento|limite|maxim[oa]s?|ate\s+que|pode|posso|possivel|permitid[oa])\b",
+    flags=re.IGNORECASE,
+)
+MAXIMUM_QUERY_RE = re.compile(
+    r"\b(maxim[oa]s?|limite|ate\s+que|qual|quanto)\b",
+    flags=re.IGNORECASE,
+)
+LOA_RE = re.compile(
+    r"\b(?:loa|comprimento|navio|navios|roro|ro\s*ro|ro-ro|ro/ro|graneleiro|reefer|estilha|contentores?)\b"
+    r"[^\n.;,]{0,80}?\b(\d{2,3}(?:[.,]\d+)?)\s*m\b"
+    r"|\b(\d{2,3}(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:loa|comprimento)\b"
+    r"|\bcom\s+(\d{2,3}(?:[.,]\d+)?)\s*m\b",
+    flags=re.IGNORECASE,
+)
+UP_TO_LIMIT_RE = re.compile(r"\b(?:ate|até)\s+(\d{2,3}(?:[.,]\d+)?)\s*m\b", flags=re.IGNORECASE)
+ABOVE_LIMIT_RE = re.compile(
+    r"\b(?:acima|superior|maior|mais)\s+(?:de|a)\s+(\d{2,3}(?:[.,]\d+)?)\s*m\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _normalize_text(value: str | None) -> str:
@@ -210,10 +232,155 @@ def _document_code(document: str) -> str:
     return match.group(1).upper() if match else str(document or "").strip()
 
 
+def _safe_float(raw_value: Any) -> float | None:
+    if raw_value in {None, ""}:
+        return None
+    try:
+        return float(str(raw_value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_meter_value(value: float | None) -> str:
+    if value is None:
+        return ""
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:g}".replace(".", ",")
+
+
+def _extract_loa(question: str) -> float | None:
+    match = LOA_RE.search(question or "")
+    if not match:
+        return None
+    return _safe_float(match.group(1) or match.group(2) or match.group(3))
+
+
+def _profile_short_name(profile: dict[str, Any]) -> str:
+    name = str(profile.get("name") or "").strip()
+    if " / " in name:
+        return name.split(" / ", 1)[0]
+    return name
+
+
+def _structured_operational_limits(profile: dict[str, Any]) -> dict[str, Any]:
+    value = profile.get("operational_limits")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _night_loa_limit(profile: dict[str, Any]) -> float | None:
+    structured = _structured_operational_limits(profile)
+    structured_limit = _safe_float(structured.get("night_loa_max_m"))
+    if structured_limit is not None:
+        return structured_limit
+
+    for key in ("night_rules", "vessel_limits", "restrictions"):
+        for item in profile.get(key, []) or []:
+            text = str(item or "").strip()
+            if not text:
+                continue
+            match = UP_TO_LIMIT_RE.search(text)
+            if match:
+                return _safe_float(match.group(1))
+            match = ABOVE_LIMIT_RE.search(text)
+            if match:
+                return _safe_float(match.group(1))
+    return None
+
+
+def _night_requires_reponto(profile: dict[str, Any]) -> bool:
+    structured = _structured_operational_limits(profile)
+    explicit = structured.get("night_requires_reponto")
+    if explicit is not None:
+        return bool(explicit)
+    combined = " ".join(
+        str(item or "")
+        for key in ("night_rules", "maneuver_rules", "restrictions", "vessel_limits")
+        for item in (profile.get(key) or [])
+    )
+    return "reponto" in _normalize_text(combined)
+
+
+def _night_above_limit_day_only(profile: dict[str, Any]) -> bool:
+    structured = _structured_operational_limits(profile)
+    explicit = structured.get("above_night_loa_day_only")
+    if explicit is not None:
+        return bool(explicit)
+    combined = " ".join(
+        str(item or "")
+        for key in ("night_rules", "vessel_limits", "restrictions")
+        for item in (profile.get(key) or [])
+    )
+    clean = _normalize_text(combined)
+    return "dia" in clean or "diurno" in clean
+
+
+def _looks_like_night_loa_question(question: str) -> bool:
+    clean = _normalize_text(question)
+    return bool(NIGHT_QUERY_RE.search(clean) and OPERATIONAL_QUERY_RE.search(clean))
+
+
+def _looks_like_maximum_loa_question(question: str) -> bool:
+    clean = _normalize_text(question)
+    return bool(MAXIMUM_QUERY_RE.search(clean) and re.search(r"\b(loa|comprimento|limite)\b", clean))
+
+
+def _build_night_loa_answer(question: str, profile: dict[str, Any]) -> str:
+    if not _looks_like_night_loa_question(question):
+        return ""
+
+    limit = _night_loa_limit(profile)
+    if limit is None:
+        return ""
+
+    facility = _profile_short_name(profile) or str(profile.get("name") or "").strip()
+    if not facility:
+        return ""
+
+    limit_label = _format_meter_value(limit)
+    vessel_loa = _extract_loa(question)
+    requires_reponto = _night_requires_reponto(profile)
+    above_limit_day_only = _night_above_limit_day_only(profile)
+
+    if vessel_loa is not None:
+        vessel_label = _format_meter_value(vessel_loa)
+        if vessel_loa <= limit:
+            answer = (
+                f"Sim. A noite, na {facility}, um navio com {vessel_label} m fica dentro do "
+                f"limite noturno de LOA, que e {limit_label} m."
+            )
+            if requires_reponto:
+                answer += " A manobra continua a ter de ser feita no reponto de mare."
+            return answer
+
+        answer = (
+            f"Nao. A noite, na {facility}, um navio com {vessel_label} m ultrapassa o "
+            f"limite noturno de LOA, que e {limit_label} m."
+        )
+        if above_limit_day_only:
+            answer += " Acima desse valor, a manobra fica limitada ao periodo diurno."
+        elif requires_reponto:
+            answer += " Mesmo abaixo desse limite, a manobra so deve ser feita no reponto de mare."
+        return answer
+
+    if _looks_like_maximum_loa_question(question):
+        answer = f"O comprimento maximo para manobrar a noite na {facility} e {limit_label} m."
+        if requires_reponto:
+            answer += " Esse limite aplica-se com a manobra junto do reponto de mare."
+        if above_limit_day_only:
+            answer += " Acima dele, a manobra fica limitada ao periodo diurno."
+        return answer
+
+    return ""
+
+
 def build_berth_profile_answer(question: str, profile_match: dict[str, Any] | None) -> str:
     if not profile_match:
         return ""
     profile = profile_match.get("profile") or {}
+    night_loa_answer = _build_night_loa_answer(question, profile)
+    if night_loa_answer:
+        return night_loa_answer
     intent = _profile_intent(question)
     if not intent or intent == "scalar":
         return ""
@@ -297,12 +464,18 @@ def build_berth_profile_sources(profile_match: dict[str, Any] | None) -> list[di
         "draft_rules",
         "maneuver_rules",
         "night_rules",
+        "operational_limits",
         "restrictions",
         "tug_guidance",
     ):
         value = profile.get(key)
         if isinstance(value, list):
             snippets.extend(str(item or "").strip() for item in value if str(item or "").strip())
+        elif isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                if sub_value is None or sub_value == "" or sub_value == []:
+                    continue
+                snippets.append(f"{sub_key}: {sub_value}")
         elif value:
             snippets.append(str(value).strip())
     snippet = f"Perfil estruturado de {name}: " + " ".join(dict.fromkeys(snippets))

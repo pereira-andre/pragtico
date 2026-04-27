@@ -138,7 +138,7 @@ def _polish_description(description: str) -> str:
     try:
         result = rag.generate_text(prompt)
     except Exception:
-        logger.exception("Falha ao formatar reporte de evento com LLM.")
+        logger.exception("Falha ao formatar reporte de evento com provider de geração.")
         return fallback
     candidate = str(getattr(result, "text", result) or "").strip()
     candidate = " ".join(candidate.split())

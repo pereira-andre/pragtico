@@ -659,8 +659,102 @@ def _starts_with_boolean_answer(value: str) -> bool:
     return bool(re.match(r"^(?:sim|não|nao)\b", _normalize_text(value)))
 
 
-def _humanize_companion_faq_answer(question: str, answer: str) -> str:
+def _declarative_subject_from_question(question: str) -> str:
+    clean_question = _clean_text(question).rstrip("?.! ")
+    if not clean_question:
+        return ""
+    subject_match = re.match(r"^qual\s+é\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        subject = subject_match.group(1).strip()
+        return subject[:1].upper() + subject[1:] if subject else ""
+    subject_match = re.match(r"^qual\s+o\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        return f"O {subject_match.group(1).strip()}"
+    subject_match = re.match(r"^qual\s+a\s+(.+)$", clean_question, flags=re.IGNORECASE)
+    if subject_match:
+        return f"A {subject_match.group(1).strip()}"
+    return ""
+
+
+def _polish_declarative_subject(subject: str) -> str:
+    clean = _clean_text(subject)
+    if not clean:
+        return ""
+    clean = re.sub(r"\bdurante\s+noite\b", "à noite", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\bdurante\s+o\s+dia\b", "de dia", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\bpara\s+se\s+manobrar\b", "para manobrar", clean, flags=re.IGNORECASE)
+    return clean
+
+
+def _soften_reused_scalar_explanation(text: str, value: str) -> str:
+    clean = _clean_text(text)
+    if not clean or not value:
+        return clean
+    value_pattern = re.escape(_clean_text(value))
+    replacements = (
+        (rf"\bnavios\s+com\s+loa\s+até\s+{value_pattern}\b", "navios até esse limite de LOA"),
+        (rf"\bloa\s+até\s+{value_pattern}\b", "LOA até esse limite"),
+        (rf"\bigual\s+ou\s+inferior\s+a\s+{value_pattern}\b", "até esse limite"),
+        (rf"\baté\s+{value_pattern}\b", "até esse limite"),
+        (rf"\bacima\s+de\s+{value_pattern}\b", "acima desse valor"),
+        (rf"\bsuperior(?:es)?\s+a\s+{value_pattern}\b", "acima desse valor"),
+        (rf"\bmaior(?:es)?\s+que\s+{value_pattern}\b", "acima desse valor"),
+    )
+    softened = clean
+    for pattern, replacement in replacements:
+        softened = re.sub(pattern, replacement, softened, flags=re.IGNORECASE)
+    softened = re.sub(r"\btanto\s+de\s+dia\s+como\s+de\s+noite\b", "de dia ou de noite", softened, flags=re.IGNORECASE)
+    softened = re.sub(
+        r"(^|(?<=[.!?]\s))([a-zà-ÿ])",
+        lambda match: f"{match.group(1)}{match.group(2).upper()}",
+        softened,
+    )
+    return softened
+
+
+def _looks_like_night_loa_limit_case(question: str, answer: str) -> bool:
+    combined = _normalize_text(f"{question} {answer}")
+    has_length = bool({"comprimento", "loa"} & set(combined.split()))
+    has_night = bool({"noite", "noturna", "noturno"} & set(combined.split()))
+    return has_length and has_night
+
+
+def humanize_reused_factual_answer(question: str, answer: str, *, context_label: str = "") -> str:
     clean_answer = _clean_answer_text(answer)
+    if not clean_answer:
+        return ""
+
+    subject = _polish_declarative_subject(_declarative_subject_from_question(question))
+    leading_value_match = re.match(
+        r"^([0-9][0-9.,]*(?:\s*(?:m|metros?|milhas(?:\s+náuticas)?|milhas(?:\s+nauticas)?|"
+        r"horas?|dias?|minutos?|%|nm)))\.\s+(.+)$",
+        clean_answer,
+        flags=re.IGNORECASE,
+    )
+    if leading_value_match and subject:
+        value = _clean_text(leading_value_match.group(1))
+        if _looks_like_night_loa_limit_case(question, clean_answer):
+            profile_reference = (
+                f" que consta do perfil operacional da instalação {context_label}"
+                if _clean_text(context_label)
+                else ""
+            )
+            return (
+                f"{subject} é {value}. "
+                f"Esse é o limite noturno de LOA{profile_reference}: "
+                "até esse valor, a manobra pode fazer-se em qualquer reponto de maré, "
+                "de dia ou de noite. Acima dele, fica limitada ao período diurno."
+            )
+        explanation = _ensure_sentence(
+            _soften_reused_scalar_explanation(leading_value_match.group(2), value)
+        )
+        return f"{subject} é {value}. {explanation}".strip()
+
+    return clean_answer
+
+
+def _humanize_companion_faq_answer(question: str, answer: str, *, context_label: str = "") -> str:
+    clean_answer = humanize_reused_factual_answer(question, answer, context_label=context_label)
     if not _is_brief_direct_answer(clean_answer):
         return clean_answer
 
@@ -892,10 +986,10 @@ def build_companion_sources(companion: dict, question: str) -> list[dict]:
     return sources
 
 
-def build_companion_answer(question: str, companion: dict) -> str:
+def build_companion_answer(question: str, companion: dict, *, context_label: str = "") -> str:
     faq_match = find_best_companion_faq(question, companion)
     if faq_match:
-        return _humanize_companion_faq_answer(question, faq_match["answer"])
+        return _humanize_companion_faq_answer(question, faq_match["answer"], context_label=context_label)
 
     if not is_companion_summary_request(question):
         return ""

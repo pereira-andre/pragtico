@@ -2,41 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import os
 import time
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
-
-
-def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
-    if not vec_a or not vec_b:
-        return 0.0
-    dot = sum(a * b for a, b in zip(vec_a, vec_b))
-    norm_a = math.sqrt(sum(a * a for a in vec_a))
-    norm_b = math.sqrt(sum(b * b for b in vec_b))
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot / (norm_a * norm_b)
-
-
-def has_embedding_payload(embedding) -> bool:
-    if embedding is None:
-        return False
-    try:
-        if isinstance(embedding, dict):
-            return len(embedding.get("values", [])) > 0
-        if isinstance(embedding, (list, tuple)):
-            return len(embedding) > 0
-        if hasattr(embedding, "tolist"):
-            return len(embedding.tolist()) > 0
-        if hasattr(embedding, "embedding"):
-            return len(getattr(embedding, "embedding", [])) > 0
-        return True
-    except Exception:
-        return True
 
 
 class BaseIndexStore(ABC):
@@ -55,36 +26,6 @@ class BaseIndexStore(ABC):
         raise NotImplementedError
 
 
-class LocalIndexStore(BaseIndexStore):
-    backend_name = "local"
-
-    def __init__(self, index_path: str) -> None:
-        self.index_path = index_path
-
-    def load_index(self) -> Dict:
-        if os.path.exists(self.index_path):
-            with open(self.index_path, "r", encoding="utf-8") as handle:
-                return json.load(handle)
-        return {"manifest": {}, "chunks": []}
-
-    def replace_index(self, manifest: Dict, chunks: List[Dict]) -> None:
-        payload = {"manifest": manifest, "chunks": chunks}
-        with open(self.index_path, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-
-    def semantic_search(self, query_vector: List[float], top_k: int) -> List[Dict]:
-        index = self.load_index()
-        scored = []
-        for item in index.get("chunks", []):
-            embedding = item.get("embedding")
-            if not has_embedding_payload(embedding):
-                continue
-            score = cosine_similarity(query_vector, embedding)
-            scored.append({**item, "score": score, "retrieval_mode": "semantic"})
-        scored.sort(key=lambda item: item["score"], reverse=True)
-        return scored[:top_k]
-
-
 class PgvectorIndexStore(BaseIndexStore):
     backend_name = "pgvector"
 
@@ -100,7 +41,7 @@ class PgvectorIndexStore(BaseIndexStore):
                 from pgvector.psycopg import register_vector
         except ImportError as exc:
             raise RuntimeError(
-                "Instala `psycopg[binary]` e `pgvector` para usar RAG_INDEX_BACKEND=pgvector."
+                "Instala `psycopg[binary]` e `pgvector` para usar o índice PostgreSQL."
             ) from exc
         max_wait_seconds = max(float(os.getenv("DATABASE_CONNECT_MAX_WAIT_SECONDS", "45")), 0.0)
         retry_interval_seconds = max(float(os.getenv("DATABASE_CONNECT_RETRY_INTERVAL_SECONDS", "2")), 0.1)
@@ -150,7 +91,7 @@ class PgvectorIndexStore(BaseIndexStore):
             if "extension" in message and "vector" in message:
                 raise RuntimeError(
                     "A base de dados ligada ao Railway não tem a extensão pgvector disponível. "
-                    "Usa um serviço PostgreSQL com pgvector ou muda RAG_INDEX_BACKEND."
+                    "Usa um serviço PostgreSQL com pgvector."
                 ) from exc
             raise
 
@@ -253,10 +194,7 @@ class PgvectorIndexStore(BaseIndexStore):
 
 
 def create_index_store(data_dir: str) -> BaseIndexStore:
-    backend = os.getenv("RAG_INDEX_BACKEND", "local").strip().lower()
-    if backend == "pgvector":
-        database_url = os.getenv("DATABASE_URL", "").strip()
-        if not database_url:
-            raise RuntimeError("Define DATABASE_URL para usar RAG_INDEX_BACKEND=pgvector.")
-        return PgvectorIndexStore(database_url=database_url)
-    return LocalIndexStore(index_path=os.path.join(data_dir, "rag_index.json"))
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("Define DATABASE_URL para inicializar o índice pgvector.")
+    return PgvectorIndexStore(database_url=database_url)

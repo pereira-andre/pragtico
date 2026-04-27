@@ -112,7 +112,6 @@ class SimpleRAGEngine:
         llm_provider: BaseLLMProvider | None = None,
         generation_fallback_provider: BaseLLMProvider | None = None,
         embedding_api_provider: BaseLLMProvider | None = None,
-        embedding_provider=None,
     ) -> None:
         self.api_key = api_key
         self.knowledge_dir = knowledge_dir
@@ -128,12 +127,9 @@ class SimpleRAGEngine:
             self.provider = create_llm_provider(api_key=api_key if api_key else None)
         self.generation_fallback_provider = generation_fallback_provider
 
-        # Embedding provider: local (sentence-transformers) or API-based
-        self.embedding_provider = embedding_provider
+        # Embeddings are generated through the configured API provider.
         self.embedding_api_provider = embedding_api_provider or self.provider
-        self._use_local_embeddings = (
-            embedding_provider is not None and embedding_provider.is_available
-        )
+        self._use_local_embeddings = False
 
         self._generation_candidates = self._build_provider_candidates(
             (self.provider, self.generation_model),
@@ -249,7 +245,7 @@ class SimpleRAGEngine:
         ]
         if reasons:
             return " | ".join(dict.fromkeys(reasons))
-        return "LLM provider unavailable."
+        return "Provider de geração indisponível."
 
     def _has_embedding_payload(self, embedding) -> bool:
         if embedding is None:
@@ -431,8 +427,7 @@ class SimpleRAGEngine:
     def _api_embedding_vectors(self, batch: List[str]) -> List[List[float]]:
         if not self._embedding_api_candidates and not self.client:
             raise RuntimeError(
-                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                f"ou configura {self.embedding_api_key_hint}."
+                f"Embeddings não disponíveis: configura {self.embedding_api_key_hint}."
             )
 
         errors: List[str] = []
@@ -632,12 +627,6 @@ class SimpleRAGEngine:
         return min(delay, self.embedding_max_retry_delay_seconds)
 
     def _embed_batch(self, batch: List[str], retry_callback=None, throttle_callback=None) -> List[List[float]]:
-        # LOCAL EMBEDDINGS: use sentence-transformers directly, no API, no quota
-        if self._use_local_embeddings:
-            embed_result = self.embedding_provider.embed(texts=batch)
-            return embed_result.vectors
-
-        # API EMBEDDINGS: use LLM provider with retry/throttle logic
         last_exc: Exception | None = None
         started_at = time.monotonic()
         for attempt in range(1, self.embedding_max_retries + 1):
@@ -678,8 +667,7 @@ class SimpleRAGEngine:
     ) -> List[List[float]]:
         if not self._use_local_embeddings and not self.client:
             raise RuntimeError(
-                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                f"ou configura {self.embedding_api_key_hint}."
+                f"Embeddings não disponíveis: configura {self.embedding_api_key_hint}."
             )
         vectors = []
         batch_size = self.embedding_batch_size
@@ -1178,7 +1166,7 @@ class SimpleRAGEngine:
     def generate_text(self, prompt: str):
         if not self.can_generate():
             raise RuntimeError(
-                "Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot."
+                "Define a API key do provider antes de usar o chatbot."
             )
 
         errors: List[str] = []
@@ -1328,7 +1316,7 @@ Pergunta:
 """.strip()
 
         if not self.can_generate():
-            raise RuntimeError("Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot.")
+            raise RuntimeError("Define a API key do provider antes de usar o chatbot.")
 
         try:
             gen_result = self.generate_text(prompt)

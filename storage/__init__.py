@@ -1,4 +1,4 @@
-"""Storage package — backward-compatible re-exports."""
+"""Storage package exports."""
 
 from .base import BaseStore
 from .constants import (
@@ -39,7 +39,6 @@ from .constants import (
     get_constraint_options,
     get_vessel_type_options,
 )
-from .local import LocalStore
 from .postgres import PostgresStore, create_store
 from .utils import (
     format_constraint_labels,
@@ -49,7 +48,6 @@ from .utils import (
 
 __all__ = [
     "BaseStore",
-    "LocalStore",
     "PostgresStore",
     "create_store",
     "PASSWORD_HASH_METHOD",

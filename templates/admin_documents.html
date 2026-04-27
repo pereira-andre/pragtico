@@ -1,15 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell documents-admin-page">
-  <section class="hero-card compact">
+<main class="ops-shell documents-admin-page documents-admin-v2">
+
+  {# ── Hero ─────────────────────────────────────────────────────── #}
+  <section class="hero-card documents-hero">
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Base documental</p>
         <h1>Gestão de documentos</h1>
-        <p class="lead">Catálogo filtrável com ações comprimidas, gestão em lote e monitorização da indexação semântica.</p>
+        <p class="lead">Catálogo oficial do conhecimento do bot. Acompanha a indexação semântica, adiciona novos ficheiros e controla o corpo ativo numa só vista.</p>
+      </div>
+      <div class="documents-hero-tools">
+        <form id="reindex-form" method="post" action="{{ url_for('admin.reindex_knowledge') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mini-button primary-button documents-hero-action">Reindexar incremental</button>
+        </form>
+        <a class="outline-link documents-hero-link" href="#documents-ingest">Adicionar ficheiros</a>
       </div>
     </div>
-    <div class="hero-meta-grid">
+    <div class="hero-meta-grid documents-hero-grid">
       <article class="hero-stat">
         <span>Documentos</span>
         <strong>{{ docs_total }}</strong>
@@ -21,6 +30,11 @@
         <small>{{ rag_stats.embedded_chunks }} com embedding</small>
       </article>
       <article class="hero-stat">
+        <span>Cobertura</span>
+        <strong>{{ reindex_status.semantic_chunk_coverage_pct or 0 }}%</strong>
+        <small>embeddings sobre chunks</small>
+      </article>
+      <article class="hero-stat">
         <span>Backend</span>
         <strong>{{ rag_stats.index_backend }}</strong>
         <small>índice documental</small>
@@ -28,48 +42,61 @@
     </div>
   </section>
 
-  <section class="panel section-panel">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Indexação</p>
-        <h2>Estado do índice documental</h2>
+  {# ── Consola de indexação ─────────────────────────────────────── #}
+  <section
+    class="panel section-panel index-console"
+    id="reindex-status-card"
+    data-reindex-card
+    data-state="{{ reindex_status.state }}"
+  >
+    <header class="index-console-masthead">
+      <div class="index-console-title">
+        <p class="eyebrow">Indexação semântica</p>
+        <h2 id="reindex-message">{{ reindex_status.message }}</h2>
+        <p
+          class="index-console-subtitle{% if not reindex_status.query_embedding_summary %} hidden{% endif %}"
+          id="reindex-query-summary"
+        >{{ reindex_status.query_embedding_summary or "" }}</p>
       </div>
-      <form id="reindex-form" method="post" action="{{ url_for('admin.reindex_knowledge') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="mini-button">Reindexar incremental</button>
-      </form>
-    </div>
-    <article
-      class="reindex-status-card is-{{ reindex_status.state }}"
-      id="reindex-status-card"
-      data-reindex-card
-    >
-      <div class="reindex-status-head">
-        <div class="reindex-status-copy">
-          <p class="mini-label">Estado da indexação</p>
-          <strong id="reindex-message">{{ reindex_status.message }}</strong>
-          <p class="reindex-query-summary{% if not reindex_status.query_embedding_summary %} hidden{% endif %}" id="reindex-query-summary">{{ reindex_status.query_embedding_summary or "" }}</p>
-        </div>
-        <div class="reindex-status-side">
-          <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
-            {{ reindex_status.state }}
-          </span>
-          <div class="reindex-coverage-card">
-            <span>Cobertura semântica</span>
+      <div class="index-console-status">
+        <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">{{ reindex_status.state }}</span>
+        <span class="index-console-provider-chip">
+          <small>provider</small>
+          <strong id="reindex-embedding-provider">{{ reindex_status.embedding_provider or "indisponivel" }}</strong>
+        </span>
+      </div>
+    </header>
+
+    <div class="index-console-gauge-row">
+      <article class="index-console-gauge-card">
+        <p class="mini-label">Cobertura semântica</p>
+        <div
+          class="index-console-gauge"
+          id="reindex-gauge"
+          role="img"
+          aria-label="Cobertura semântica"
+          style="--coverage: {{ reindex_status.semantic_chunk_coverage_pct or 0 }}"
+        >
+          <div class="index-console-gauge-inner">
             <strong id="reindex-semantic-coverage">{{ reindex_status.semantic_chunk_coverage_pct or 0 }}%</strong>
-            <small id="reindex-embedding-provider">{{ reindex_status.embedding_provider or "indisponivel" }}</small>
+            <small>chunks com vetor</small>
           </div>
         </div>
-      </div>
-      <div class="reindex-progress-panel">
-        <div class="reindex-progress-topline">
-          <div class="reindex-progress-heading">
-            <span>Progresso da reindexação</span>
+        <p class="index-console-gauge-caption">
+          <span id="reindex-embedding-provider-card">{{ reindex_status.embedding_provider or "indisponivel" }}</span>
+          <small>motor de embeddings ativo</small>
+        </p>
+      </article>
+
+      <article class="index-console-progress">
+        <div class="index-console-progress-head">
+          <div>
+            <p class="mini-label">Progresso da reindexação</p>
             <strong id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</strong>
           </div>
-          <div class="reindex-progress-context">
-            <span id="reindex-phase">{{ reindex_status.phase }}</span>
-            <span id="reindex-eta">
+          <div class="index-console-progress-meta">
+            <span class="index-console-pill" id="reindex-phase">{{ reindex_status.phase }}</span>
+            <span class="index-console-pill" id="reindex-eta">
               {% if reindex_status.eta_seconds %}
                 ETA {{ reindex_status.eta_seconds }}s
               {% elif reindex_status.scheduled_retry_eta_seconds %}
@@ -83,143 +110,167 @@
         <div class="reindex-progress-track" aria-hidden="true">
           <span id="reindex-progress-fill" style="width: {{ (reindex_status.progress_pct or 0)|round|int }}%"></span>
         </div>
-        <div class="reindex-meta-grid">
-          <article class="reindex-meta-card">
-            <span>Chunks com embedding</span>
+        <div class="index-console-counter-grid">
+          <article class="index-console-counter">
+            <span>Chunks embedded</span>
             <strong id="reindex-chunks">{{ reindex_status.embedded_chunks or 0 }}/{{ reindex_status.total_chunks or 0 }}</strong>
           </article>
-          <article class="reindex-meta-card">
+          <article class="index-console-counter">
             <span>Docs processados</span>
             <strong id="reindex-docs">{{ reindex_status.processed_documents or 0 }}/{{ reindex_status.total_documents or 0 }}</strong>
           </article>
-          <article class="reindex-meta-card">
+          <article class="index-console-counter">
             <span>Knowledge</span>
             <strong id="reindex-knowledge-docs">{{ reindex_status.knowledge_documents or 0 }}</strong>
           </article>
-          <article class="reindex-meta-card">
+          <article class="index-console-counter">
             <span>Índice</span>
             <strong id="reindex-index-docs">{{ reindex_status.indexed_documents or 0 }}</strong>
           </article>
         </div>
-      </div>
-      <div class="reindex-sync-grid">
-        <article class="reindex-sync-card reindex-sync-card-accent">
-          <span>Embeddings</span>
-          <strong id="reindex-embedding-provider-card">{{ reindex_status.embedding_provider or "indisponivel" }}</strong>
-          <small>fornecedor configurado</small>
-        </article>
-        <article class="reindex-sync-card reindex-sync-card-success">
-          <span>Docs completos</span>
-          <strong id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }}</strong>
-          <small>sem falhas de embedding</small>
-        </article>
-        <article class="reindex-sync-card">
-          <span>Docs parciais</span>
-          <strong id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }}</strong>
-          <small>ainda com cobertura parcial</small>
-        </article>
-        <article class="reindex-sync-card reindex-sync-card-warning">
-          <span>Chunks em falta</span>
-          <strong id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }}</strong>
-          <small>sem vetor gerado</small>
-        </article>
-        <article class="reindex-sync-card">
-          <span>Docs com falta</span>
-          <strong id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }}</strong>
-          <small>afetados no índice</small>
-        </article>
-        <article class="reindex-sync-card reindex-sync-card-warning">
-          <span>Docs pendentes</span>
-          <strong id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }}</strong>
-          <small>à espera de backfill</small>
-        </article>
-      </div>
-      <div class="reindex-note-grid">
-        <article class="reindex-note-card">
-          <span>Resumo de sincronização</span>
-          <p class="reindex-sync-summary" id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
-        </article>
-        <article class="reindex-note-card reindex-note-card-attention">
-          <span>Pendências</span>
-          <p class="reindex-pending-summary" id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
-        </article>
-      </div>
-      <details class="reindex-doc-detail">
-        <summary>Ver detalhe por documento</summary>
-        <div class="reindex-doc-list" id="reindex-doc-list">
-          {% for item in reindex_status.document_sync_rows or [] %}
-            <article class="reindex-doc-row reindex-doc-row-{{ item.status }}">
-              <div class="reindex-doc-row-head">
-                <div class="reindex-doc-row-main">
-                  <strong>{{ item.name }}</strong>
-                  <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding</p>
-                </div>
-                <div class="reindex-doc-row-side">
-                  <strong class="reindex-doc-coverage">{{ item.coverage_pct }}%</strong>
-                  <span class="reindex-doc-status">{{ item.status|replace("_", " ") }}</span>
-                </div>
-              </div>
-              <div class="reindex-doc-progress" aria-hidden="true">
-                <span style="width: {{ item.coverage_pct }}%"></span>
-              </div>
-              <div class="reindex-doc-meta">
-                <span>{{ item.total_chunks }} chunks</span>
-                <span>faltam {{ item.missing_chunks }}</span>
-              </div>
-            </article>
-          {% else %}
-            <p class="muted">Sem detalhe documental disponível.</p>
-          {% endfor %}
+      </article>
+    </div>
+
+    <div class="index-console-health">
+      <section class="index-console-health-zone">
+        <header class="index-console-zone-head">
+          <p class="mini-label">Cobertura</p>
+          <span class="muted small-note">Estado do corpo documental</span>
+        </header>
+        <div class="index-console-tile-grid">
+          <article class="index-console-tile is-success">
+            <span>Docs completos</span>
+            <strong id="reindex-fully-embedded-docs">{{ reindex_status.fully_embedded_documents or 0 }}</strong>
+            <small>embedded sem falhas</small>
+          </article>
+          <article class="index-console-tile">
+            <span>Docs parciais</span>
+            <strong id="reindex-partially-embedded-docs">{{ reindex_status.partially_embedded_documents or 0 }}</strong>
+            <small>cobertura parcial</small>
+          </article>
         </div>
-      </details>
-      {% if reindex_status.error %}
-        <p class="reindex-error" id="reindex-error">{{ reindex_status.error }}</p>
-      {% else %}
-        <p class="reindex-error hidden" id="reindex-error"></p>
-      {% endif %}
-    </article>
+      </section>
+      <section class="index-console-health-zone">
+        <header class="index-console-zone-head">
+          <p class="mini-label">Pendências</p>
+          <span class="muted small-note">Por processar ou com falhas</span>
+        </header>
+        <div class="index-console-tile-grid index-console-tile-grid-three">
+          <article class="index-console-tile is-warning">
+            <span>Chunks em falta</span>
+            <strong id="reindex-missing-chunks">{{ reindex_status.missing_embedding_chunks or 0 }}</strong>
+            <small>sem vetor gerado</small>
+          </article>
+          <article class="index-console-tile">
+            <span>Docs afetados</span>
+            <strong id="reindex-missing-docs">{{ reindex_status.documents_with_missing_embeddings or 0 }}</strong>
+            <small>com chunks em falta</small>
+          </article>
+          <article class="index-console-tile is-warning">
+            <span>Docs pendentes</span>
+            <strong id="reindex-pending-docs">{{ reindex_status.pending_documents_total or 0 }}</strong>
+            <small>aguardam backfill</small>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="index-console-notes">
+      <article class="index-console-note">
+        <p class="mini-label">Resumo de sincronização</p>
+        <p id="reindex-sync-summary">{{ reindex_status.sync_summary or "Resumo de sincronização indisponível." }}</p>
+      </article>
+      <article class="index-console-note is-attention">
+        <p class="mini-label">Pendências</p>
+        <p id="reindex-pending-summary">{{ reindex_status.pending_summary or "Sem pendências conhecidas." }}</p>
+      </article>
+    </div>
+
+    <details class="index-console-doc-detail">
+      <summary>
+        <span>Detalhe por documento</span>
+        <small class="muted">Cobertura e estado de cada ficheiro</small>
+      </summary>
+      <div class="index-console-doc-list" id="reindex-doc-list">
+        {% for item in reindex_status.document_sync_rows or [] %}
+          <article class="reindex-doc-row reindex-doc-row-{{ item.status }}">
+            <div class="reindex-doc-row-head">
+              <div class="reindex-doc-row-main">
+                <strong>{{ item.name }}</strong>
+                <p>{{ item.embedded_chunks }}/{{ item.total_chunks }} chunks com embedding</p>
+              </div>
+              <div class="reindex-doc-row-side">
+                <strong class="reindex-doc-coverage">{{ item.coverage_pct }}%</strong>
+                <span class="reindex-doc-status">{{ item.status|replace("_", " ") }}</span>
+              </div>
+            </div>
+            <div class="reindex-doc-progress" aria-hidden="true">
+              <span style="width: {{ item.coverage_pct }}%"></span>
+            </div>
+            <div class="reindex-doc-meta">
+              <span>{{ item.total_chunks }} chunks</span>
+              <span>faltam {{ item.missing_chunks }}</span>
+            </div>
+          </article>
+        {% else %}
+          <p class="muted">Sem detalhe documental disponível.</p>
+        {% endfor %}
+      </div>
+    </details>
+
+    {% if reindex_status.error %}
+      <p class="reindex-error" id="reindex-error">{{ reindex_status.error }}</p>
+    {% else %}
+      <p class="reindex-error hidden" id="reindex-error"></p>
+    {% endif %}
   </section>
 
-  <div class="knowledge-admin-grid documents-collapse-grid">
-    <details class="panel section-panel compact-ingest-panel documents-collapse-card">
-      <summary class="documents-collapse-summary">
+  {# ── Ingestão + Política ──────────────────────────────────────── #}
+  <div class="documents-ingest-row" id="documents-ingest">
+    <article class="panel section-panel documents-ingest-card">
+      <header class="documents-card-head">
         <div>
-          <p class="eyebrow">Ingestão</p>
+          <p class="eyebrow">Upload</p>
           <h2>Adicionar ficheiros</h2>
         </div>
-        <span class="ops-pill">upload</span>
-      </summary>
-      <div class="documents-collapse-body">
-        <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="stack">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <label>
-            Ficheiros documentais
-            <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required>
-          </label>
-          <p class="muted small-note">Sincroniza a base <code>knowledge/</code> e reindexa o conteúdo do bot.</p>
-          <button type="submit">Substituir ou adicionar</button>
-        </form>
-      </div>
-    </details>
+        <span class="ops-pill">.pdf .md .docx .txt .csv</span>
+      </header>
+      <form method="post" action="{{ url_for('admin.upload_documents') }}" enctype="multipart/form-data" class="documents-ingest-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="documents-ingest-drop" data-file-drop>
+          <input type="file" name="files" accept=".pdf,.md,.txt,.docx,.csv" multiple required data-file-input>
+          <span class="documents-ingest-drop-icon" aria-hidden="true">+</span>
+          <span class="documents-ingest-drop-copy">
+            <strong data-file-summary>Selecionar ficheiros</strong>
+            <small>Formatos aceites: PDF, MD, DOCX, TXT, CSV. Sincroniza a base <code>knowledge/</code> e reindexa.</small>
+          </span>
+        </label>
+        <button type="submit" class="mini-button primary-button">Substituir ou adicionar</button>
+      </form>
+    </article>
 
-    <details class="panel section-panel compact-ingest-panel documents-collapse-card">
-      <summary class="documents-collapse-summary">
+    <article class="panel section-panel documents-policy-card">
+      <header class="documents-card-head">
         <div>
           <p class="eyebrow">Política documental</p>
-          <h2>Conteúdo oficial apenas</h2>
+          <h2>Só conteúdo oficial</h2>
         </div>
         <span class="ops-pill">regras</span>
-      </summary>
-      <div class="documents-collapse-body">
-        <p class="muted small-note">
-          A criação manual no browser está desativada para evitar documentos não oficiais. Usa upload de ficheiros validados
-          ou coloca o documento diretamente em <code>knowledge/</code>.
-        </p>
-      </div>
-    </details>
+      </header>
+      <ul class="documents-policy-list">
+        <li><strong>Criação manual no browser está desativada</strong> para evitar documentos não oficiais.</li>
+        <li>Usa <strong>upload de ficheiros validados</strong> ou coloca o documento diretamente em <code>knowledge/</code>.</li>
+        <li>Qualquer alteração dispara <strong>reindexação automática</strong> do índice semântico.</li>
+      </ul>
+    </article>
   </div>
 
-  <details class="panel section-panel document-catalog-detail" id="document-catalog-detail" {% if document_filters.has_active_filters %}open{% endif %}>
+  {# ── Catálogo ─────────────────────────────────────────────────── #}
+  <details
+    class="panel section-panel document-catalog-detail"
+    id="document-catalog-detail"
+    {% if document_filters.has_active_filters %}open{% endif %}
+  >
     <summary class="documents-collapse-summary">
       <div>
         <p class="eyebrow">Catálogo</p>
@@ -228,7 +279,7 @@
       <span class="ops-pill ops-pill-strong">{{ docs|length }}/{{ docs_total }}</span>
     </summary>
     <div class="documents-collapse-body">
-      <form method="get" action="{{ url_for('admin.admin_documents') }}" class="archive-filter-form">
+      <form method="get" action="{{ url_for('admin.admin_documents') }}" class="archive-filter-form documents-filter-form">
         <div class="archive-filter-grid">
           <label class="archive-search-field">
             <span class="mini-label">Pesquisa</span>
@@ -271,7 +322,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="{{ documents_return_to }}">
         <div id="document-selected-inputs"></div>
-        <div class="archive-selection-bar">
+        <div class="archive-selection-bar documents-selection-bar">
           <div>
             <p class="eyebrow">Gestão em lote</p>
             <p id="document-selection-summary" class="muted">Sem seleção manual. Podes selecionar vários ficheiros filtrados para remoção.</p>
@@ -361,6 +412,7 @@
   const reindexEmbeddingProvider = document.getElementById("reindex-embedding-provider");
   const reindexEmbeddingProviderCard = document.getElementById("reindex-embedding-provider-card");
   const reindexSemanticCoverage = document.getElementById("reindex-semantic-coverage");
+  const reindexGauge = document.getElementById("reindex-gauge");
   const reindexFullyEmbeddedDocs = document.getElementById("reindex-fully-embedded-docs");
   const reindexPartiallyEmbeddedDocs = document.getElementById("reindex-partially-embedded-docs");
   const reindexKnowledgeDocs = document.getElementById("reindex-knowledge-docs");
@@ -419,7 +471,8 @@
     if (!p || !reindexCard) return;
     const s = p.state || "idle";
     const pct = Math.max(0, Math.min(100, Math.round(p.progress_pct || 0)));
-    reindexCard.className = "reindex-status-card is-" + s;
+    const coveragePct = Math.max(0, Math.min(100, Math.round(p.semantic_chunk_coverage_pct || 0)));
+    reindexCard.dataset.state = s;
     reindexMessage.textContent = p.message || "Sem atividade.";
     reindexStateChip.textContent = s;
     reindexStateChip.className = "reindex-chip is-" + s;
@@ -433,7 +486,8 @@
     else reindexEta.textContent = "ETA --";
     if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = p.embedding_provider || "indisponivel";
     if (reindexEmbeddingProviderCard) reindexEmbeddingProviderCard.textContent = p.embedding_provider || "indisponivel";
-    if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = (p.semantic_chunk_coverage_pct || 0) + "%";
+    if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = coveragePct + "%";
+    if (reindexGauge) reindexGauge.style.setProperty("--coverage", coveragePct);
     if (reindexFullyEmbeddedDocs) reindexFullyEmbeddedDocs.textContent = p.fully_embedded_documents || 0;
     if (reindexPartiallyEmbeddedDocs) reindexPartiallyEmbeddedDocs.textContent = p.partially_embedded_documents || 0;
     if (reindexKnowledgeDocs) reindexKnowledgeDocs.textContent = p.knowledge_documents || 0;
@@ -505,6 +559,28 @@
   fetchReindexStatus().then((p) => {
     if (p && (p.state === "running" || p.scheduled_retry_at)) scheduleReindexPolling();
   }).catch(() => {});
+
+  const fileDrop = document.querySelector("[data-file-drop]");
+  const fileInput = fileDrop ? fileDrop.querySelector("[data-file-input]") : null;
+  const fileSummary = fileDrop ? fileDrop.querySelector("[data-file-summary]") : null;
+  if (fileInput && fileSummary) {
+    const updateFileSummary = () => {
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) {
+        fileSummary.textContent = "Selecionar ficheiros";
+        fileDrop.classList.remove("has-files");
+        return;
+      }
+      fileDrop.classList.add("has-files");
+      if (files.length === 1) {
+        fileSummary.textContent = files[0].name;
+      } else {
+        fileSummary.textContent = files.length + " ficheiros selecionados";
+      }
+    };
+    fileInput.addEventListener("change", updateFileSummary);
+    updateFileSummary();
+  }
 
   const documentBoxes = Array.from(document.querySelectorAll(".document-select-box"));
   const documentSummary = document.getElementById("document-selection-summary");
