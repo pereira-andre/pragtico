@@ -85,6 +85,46 @@ def _berth_compact_key(value: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", "", ascii_value)
 
 
+def _lisnave_quay_aliases() -> Dict[str, str]:
+    aliases: Dict[str, str] = {}
+    side_terms = {
+        "a": ("a", "setubal", "ladosetubal"),
+        "b": ("b", "alcacer", "alcacerdosal", "ladoalcacer", "ladoalcacerdosal"),
+    }
+    for number in range(0, 4):
+        for side, terms in side_terms.items():
+            label = f"Lisnave - Cais {number} {side.upper()}"
+            values = {
+                f"cais{number}{side}",
+                f"c{number}{side}",
+                f"pontecais{number}{side}",
+                f"lisnavecais{number}{side}",
+                f"lisnavec{number}{side}",
+                f"lisnavepontecais{number}{side}",
+                f"lisnave{number}{side}",
+                f"{number}{side}lisnave",
+                f"{side}{number}lisnave",
+                f"lisnave{side}{number}",
+            }
+            for term in terms:
+                values.update(
+                    {
+                        f"cais{number}{term}",
+                        f"c{number}{term}",
+                        f"pontecais{number}{term}",
+                        f"lisnavecais{number}{term}",
+                        f"lisnavec{number}{term}",
+                        f"lisnavepontecais{number}{term}",
+                        f"lisnave{number}{term}",
+                    }
+                )
+            aliases.update({value: label for value in values})
+    return aliases
+
+
+LISNAVE_QUAY_ALIASES = _lisnave_quay_aliases()
+
+
 def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = None) -> str:
     clean = " ".join(str(label or "").strip().split())
     if not clean:
@@ -136,46 +176,11 @@ def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = Non
         "lisnaved31": "Lisnave - Doca 31",
         "lisnaved32": "Lisnave - Doca 32",
         "lisnaved33": "Lisnave - Doca 33",
-        "cais0a": "Lisnave - Cais 0 A",
-        "cais0b": "Lisnave - Cais 0 B",
-        "cais1a": "Lisnave - Cais 1 A",
-        "cais1b": "Lisnave - Cais 1 B",
-        "cais2a": "Lisnave - Cais 2 A",
-        "cais2b": "Lisnave - Cais 2 B",
-        "cais3a": "Lisnave - Cais 3 A",
-        "cais3b": "Lisnave - Cais 3 B",
-        "c0a": "Lisnave - Cais 0 A",
-        "c0b": "Lisnave - Cais 0 B",
-        "c1a": "Lisnave - Cais 1 A",
-        "c1b": "Lisnave - Cais 1 B",
-        "c2a": "Lisnave - Cais 2 A",
-        "c2b": "Lisnave - Cais 2 B",
-        "c3a": "Lisnave - Cais 3 A",
-        "c3b": "Lisnave - Cais 3 B",
-        "lisnavecais0a": "Lisnave - Cais 0 A",
-        "lisnavecais0b": "Lisnave - Cais 0 B",
-        "lisnavecais1a": "Lisnave - Cais 1 A",
-        "lisnavecais1b": "Lisnave - Cais 1 B",
-        "lisnavecais2a": "Lisnave - Cais 2 A",
-        "lisnavecais2b": "Lisnave - Cais 2 B",
-        "lisnavecais3a": "Lisnave - Cais 3 A",
-        "lisnavecais3b": "Lisnave - Cais 3 B",
-        "lisnavec0a": "Lisnave - Cais 0 A",
-        "lisnavec0b": "Lisnave - Cais 0 B",
-        "lisnavec1a": "Lisnave - Cais 1 A",
-        "lisnavec1b": "Lisnave - Cais 1 B",
-        "lisnavec2a": "Lisnave - Cais 2 A",
-        "lisnavec2b": "Lisnave - Cais 2 B",
-        "lisnavec3a": "Lisnave - Cais 3 A",
-        "lisnavec3b": "Lisnave - Cais 3 B",
-        "lisnave3a": "Lisnave - Cais 3 A",
-        "lisnave3b": "Lisnave - Cais 3 B",
-        "a3lisnave": "Lisnave - Cais 3 A",
-        "lisnavea3": "Lisnave - Cais 3 A",
         "tms2": "TMS 2",
         "terminalmultiusos2": "TMS 2",
         "terminalmultiusosdois": "TMS 2",
     }
+    alias_map.update(LISNAVE_QUAY_ALIASES)
     if compact in alias_map and alias_map[compact] in options:
         return alias_map[compact]
 

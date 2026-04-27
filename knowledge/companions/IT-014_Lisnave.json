@@ -8,6 +8,11 @@
     "IT-014",
     "IT-14",
     "014",
+    "LISNAVE",
+    "Estaleiros Mitrena",
+    "Mitrena",
+    "cais LISNAVE",
+    "docas LISNAVE",
     "REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)"
   ],
   "summary": "Este documento descreve as regras de estacionamento e execução de manobras na LISNAVE / Estaleiros Mitrena, uma instalação com Pontes-Cais 1, 2 e 3, Docas 20, 21 e 22, Cais 0, Cais de Descarga de Aço e Hidrolift com acesso às Docas secas 31, 32 e 33.",
@@ -16,6 +21,7 @@
     "Navios com LOA até 280 metros podem manobrar em qualquer reponto, de dia ou de noite; acima de 280 metros só podem manobrar de dia.",
     "O calado não tem um máximo único para toda a LISNAVE: depende do destino, da sonda ao ZH, da altura de maré e das margens operacionais.",
     "Sondas ao ZH: Cais 3 B 8,60 m; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m.",
+    "Nomenclatura dos cais: A é a face do lado de Setúbal e B é a face do lado de Alcácer do Sal.",
     "Docas 21 e 22 têm 6,10 m ao ZH na soleira com a comporta aberta e 5,49 m com a comporta fechada.",
     "As Docas secas 31, 32 e 33 têm acesso por um único Hidrolift, com boca máxima admissível de 32 m e sonda de acesso de 5,5 m."
   ],
@@ -30,7 +36,8 @@
         "lisnave",
         "doca 21",
         "doca 22",
-        "cais iii-b",
+        "cais 1 a",
+        "cais 3 b",
         "hidrolift",
         "docas secas 31 32 33"
       ]
@@ -48,6 +55,39 @@
         "doca 20",
         "hidrolift",
         "docas secas 31 32 33"
+      ]
+    },
+    {
+      "question": "Qual é a sonda do Cais 1 A da LISNAVE?",
+      "answer": "O Cais 1 A da LISNAVE tem sonda ao ZH de 7,14 metros, equivalente a 23 pés e 5 polegadas. A face A fica do lado de Setúbal.",
+      "keywords": [
+        "cais 1 a",
+        "c1a",
+        "sonda",
+        "zh",
+        "profundidade",
+        "lisnave",
+        "setúbal",
+        "setubal"
+      ]
+    },
+    {
+      "question": "Na LISNAVE, o que significam as faces A e B nos cais?",
+      "answer": "Na LISNAVE, a face A fica do lado de Setúbal e a face B fica do lado de Alcácer do Sal. A nomenclatura correta para as Pontes-Cais é Cais 1 A, Cais 1 B, Cais 2 A, Cais 2 B, Cais 3 A e Cais 3 B; o Cais 0 também tem Face A e Face B.",
+      "keywords": [
+        "face a",
+        "face b",
+        "lado setúbal",
+        "lado setubal",
+        "lado alcácer",
+        "lado alcacer",
+        "cais 1 a",
+        "cais 1 b",
+        "cais 2 a",
+        "cais 2 b",
+        "cais 3 a",
+        "cais 3 b",
+        "lisnave"
       ]
     },
     {

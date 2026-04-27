@@ -284,7 +284,8 @@ def build_berth_catalog_source(question: str) -> dict | None:
         f"- O catálogo operacional tem {berth_slot_count} slots de cais/berço/manobra, excluindo fundeadouros.",
         "- TMS 2 conta como 3 posições operacionais: A, B e C.",
         "- 'Lisnave' identifica o terminal/estaleiro; para registo operacional usa-se um cais ou doca específicos.",
-        "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A' -> 'Lisnave - Cais 2 A'.",
+        "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A', 'Lisnave 2A' e 'Cais 2 lado Setúbal' -> 'Lisnave - Cais 2 A'.",
+        "- Na Lisnave, face A é o lado de Setúbal e face B é o lado de Alcácer do Sal.",
         "- D31/D32/D33 são Docas secas Lisnave com acesso por um único Hidrolift/mini eclusa.",
         "- Cais/docas Lisnave disponíveis no sistema:",
     ]

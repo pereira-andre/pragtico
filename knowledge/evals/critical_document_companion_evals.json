@@ -30,6 +30,26 @@
     "expected_substrings": ["10,5", "10,0"]
   },
   {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é a sonda do Cais 1 A da LISNAVE?",
+    "expected_substrings": ["7,14", "Setúbal"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Na LISNAVE, a face B fica de que lado?",
+    "expected_substrings": ["Alcácer do Sal"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Quais são as faces dos Pontes-Cais 1, 2 e 3 da LISNAVE?",
+    "expected_substrings": ["1 A", "1 B", "2 A", "2 B", "3 A", "3 B"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é o cais da LISNAVE com maior profundidade disponível?",
+    "expected_substrings": ["Cais 3 B", "8,60"]
+  },
+  {
     "document": "RG-14_RegulamentoInterno.txt",
     "question": "O Piloto Coordenador pode aceitar uma saída com 30 minutos de antecedência?",
     "expected_substrings": ["menos de 1 hora", "anuência"]

@@ -52,6 +52,7 @@ from domain.chat_actions import (
     parse_slash_command,
 )
 from domain.chat_response_formatting import add_contextual_response_emojis
+from domain.berth_layout import canonicalize_berth_label
 from domain.berth_profiles import (
     build_berth_profile_answer,
     build_berth_profile_sources,
@@ -331,6 +332,7 @@ def _build_approved_casebook_sources(question: str) -> list[dict]:
     clean_question = _normalize_lookup_text(question)
     if not clean_question:
         return []
+    target_berths = _casebook_query_berth_labels(question)
 
     target_type = None
     for maneuver_type, tokens in _CASEBOOK_LOOKUP_TOKENS.items():
@@ -343,6 +345,13 @@ def _build_approved_casebook_sources(question: str) -> list[dict]:
             return False
         if target_type and (case.get("maneuver_type") or "").strip().lower() != target_type:
             return False
+        if target_berths:
+            case_berths = {
+                canonicalize_berth_label(case.get("origin_label")) or str(case.get("origin_label") or "").strip(),
+                canonicalize_berth_label(case.get("destination_label")) or str(case.get("destination_label") or "").strip(),
+            }
+            if not target_berths & case_berths:
+                return False
         searchable = " ".join(
             [
                 str(case.get("vessel_name") or ""),
@@ -382,6 +391,49 @@ def _normalize_lookup_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", str(value or ""))
     without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
     return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
+
+
+def _casebook_query_berth_labels(question: str) -> set[str]:
+    clean = _normalize_lookup_text(question)
+    compact = re.sub(r"[^a-z0-9]+", "", clean)
+    candidates = set()
+
+    for match in re.finditer(r"\b(?:lisnave\s+)?(?:ponte\s+cais|cais|c)\s*([0-3])\s*([ab])\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\blisnave\s+([0-3])\s*([ab])\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\b([0-3])\s*([ab])\s+lisnave\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\b([ab])\s*([0-3])\s+lisnave\b", clean):
+        candidates.add(f"Lisnave {match.group(2)}{match.group(1)}")
+    for match in re.finditer(r"\blisnave\s+([ab])\s*([0-3])\b", clean):
+        candidates.add(f"Lisnave {match.group(2)}{match.group(1)}")
+
+    for number in range(0, 4):
+        has_numbered_lisnave_quay = bool(
+            re.search(rf"\b(?:lisnave\s+)?(?:ponte\s+cais|cais|c)\s*{number}\b", clean)
+            or f"lisnave{number}" in compact
+        )
+        if has_numbered_lisnave_quay and "setubal" in clean:
+            candidates.add(f"Cais {number} lado Setubal")
+        if has_numbered_lisnave_quay and "alcacer" in clean:
+            candidates.add(f"Cais {number} lado Alcacer")
+        for side in ("a", "b"):
+            markers = (
+                f"c{number}{side}",
+                f"cais{number}{side}",
+                f"pontecais{number}{side}",
+                f"lisnavec{number}{side}",
+                f"lisnavecais{number}{side}",
+                f"lisnave{number}{side}",
+                f"{number}{side}lisnave",
+                f"{side}{number}lisnave",
+                f"lisnave{side}{number}",
+            )
+            if any(marker in compact for marker in markers):
+                candidates.add(f"Lisnave {number}{side}")
+
+    return {label for candidate in candidates if (label := canonicalize_berth_label(candidate))}
 
 
 def _extract_rule_codes(text: str) -> list[str]:
