@@ -5,7 +5,7 @@ import mimetypes
 import os
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +35,8 @@ EVENT_REPORT_STATUS_OPTIONS = (
     "resolvido",
     "arquivado",
 )
+
+NEW_EVENT_REPORT_EXPIRY_DAYS = 2
 
 NO_PHOTO_REPLIES = {
     "nao",
@@ -307,6 +309,13 @@ def _event_timestamp_label(value: Any) -> str:
     return dt.astimezone().strftime("%d/%m/%Y %H:%M")
 
 
+def _new_event_expires_at(value: Any) -> datetime | None:
+    dt = _parse_event_timestamp(value)
+    if dt.year == datetime.min.year:
+        return None
+    return dt + timedelta(days=NEW_EVENT_REPORT_EXPIRY_DAYS)
+
+
 def event_report_photo_path(event: dict[str, Any]) -> Path | None:
     raw_path = _clean_text(event.get("foto_path"))
     if not raw_path:
@@ -332,12 +341,39 @@ def _enrich_event_report(event: dict[str, Any]) -> dict[str, Any]:
     enriched = dict(event)
     enriched["estado"] = _normalize_event_status(enriched.get("estado"))
     enriched["timestamp_label"] = _event_timestamp_label(enriched.get("timestamp"))
+    new_expires_at = _new_event_expires_at(enriched.get("timestamp"))
+    enriched["new_expires_at"] = new_expires_at.isoformat() if new_expires_at else ""
+    enriched["new_expires_at_label"] = _event_timestamp_label(new_expires_at.isoformat()) if new_expires_at else ""
     enriched["has_photo"] = event_report_photo_path(enriched) is not None
     enriched["descricao"] = (
         _clean_text(enriched.get("descricao_processada"))
         or _clean_text(enriched.get("descricao_original"))
     )
     return enriched
+
+
+def expire_new_event_reports(now: datetime | None = None) -> int:
+    root = event_reports_root()
+    current_time = now or datetime.now(timezone.utc)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+    events = _read_events(root)
+    expired_count = 0
+    updated_events: list[dict[str, Any]] = []
+    for event in events:
+        updated = dict(event)
+        expires_at = _new_event_expires_at(updated.get("timestamp"))
+        if (
+            _normalize_event_status(updated.get("estado")) == "novo"
+            and expires_at is not None
+            and expires_at <= current_time
+        ):
+            updated["estado"] = "em_revisao"
+            expired_count += 1
+        updated_events.append(updated)
+    if expired_count:
+        _write_events(root, updated_events)
+    return expired_count
 
 
 def list_event_reports() -> list[dict[str, Any]]:
@@ -430,6 +466,42 @@ def delete_event_reports(event_ids: list[str]) -> int:
 
 def delete_event_report(event_id: str) -> bool:
     return delete_event_reports([event_id]) > 0
+
+
+def archive_resolved_event_reports(
+    event_ids: list[str],
+    *,
+    archived_by: str = "",
+    archived_at: str = "",
+) -> int:
+    root = event_reports_root()
+    target_ids: list[str] = []
+    for event_id in event_ids:
+        clean_id = _clean_text(event_id)
+        if clean_id and clean_id not in target_ids:
+            target_ids.append(clean_id)
+    if not target_ids:
+        return 0
+
+    events = _read_events(root)
+    archived_count = 0
+    updated_events: list[dict[str, Any]] = []
+    for event in events:
+        updated = dict(event)
+        if (
+            _clean_text(updated.get("id")) in target_ids
+            and _normalize_event_status(updated.get("estado")) == "resolvido"
+        ):
+            updated["estado"] = "arquivado"
+            if archived_by:
+                updated["revisto_por"] = _clean_text(archived_by)
+            if archived_at:
+                updated["revisto_em"] = _clean_text(archived_at)
+            archived_count += 1
+        updated_events.append(updated)
+    if archived_count:
+        _write_events(root, updated_events)
+    return archived_count
 
 
 def _next_event_id(events: list[dict[str, Any]], now: datetime) -> str:

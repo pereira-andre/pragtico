@@ -21,7 +21,12 @@
       <article class="hero-stat">
         <span>Em aberto</span>
         <strong>{{ stats.open }}</strong>
-        <small>novo ou em revisão</small>
+        <small>novo, em revisão ou resolvido</small>
+      </article>
+      <article class="hero-stat">
+        <span>Fechados</span>
+        <strong>{{ stats.closed }}</strong>
+        <small>resolvidos arquivados</small>
       </article>
       <article class="hero-stat">
         <span>Com foto</span>
@@ -89,6 +94,13 @@
         <input type="hidden" name="return_to" value="{{ reports_return_to }}">
         <div id="event-report-delete-inputs"></div>
       </form>
+      <form method="post" action="{{ url_for('admin.archive_resolved_event_reports_route') }}" id="event-report-archive-resolved-form" onsubmit="return confirm('Arquivar todos os relatórios resolvidos desta vista?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+        {% for event_id in archive_resolved_event_ids %}
+          <input type="hidden" name="event_ids" value="{{ event_id }}">
+        {% endfor %}
+      </form>
 
       <div class="archive-selection-bar">
         <div>
@@ -99,10 +111,20 @@
           <button type="button" class="mini-button secondary-button" id="event-report-select-filtered">Selecionar filtro</button>
           <button type="button" class="mini-button secondary-button" id="event-report-clear-selection">Nenhum</button>
           <button type="submit" class="mini-button" form="event-report-print-form" id="event-report-print-selected">Imprimir / PDF</button>
+          <button type="submit" class="mini-button secondary-button" form="event-report-archive-resolved-form" {% if not archive_resolved_event_ids %}disabled{% endif %}>Arquivar resolvidos</button>
           <button type="submit" class="mini-button danger-button" form="event-report-delete-form" id="event-report-delete-selected">Apagar selecionados</button>
         </div>
       </div>
 
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Eventos abertos</p>
+          <h2>Abertos e resolvidos por arquivar</h2>
+        </div>
+        {% if archive_resolved_event_ids %}
+          <span class="ops-pill ops-pill-strong">{{ archive_resolved_event_ids|length }} resolvido(s)</span>
+        {% endif %}
+      </div>
       <div class="document-window-table">
         <table class="planned-table event-report-table">
           <thead>
@@ -135,7 +157,12 @@
                   <p class="document-window-preview">{{ event.descricao or "Sem descrição." }}</p>
                 </td>
                 <td>{{ event.local or "--" }}</td>
-                <td><span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span></td>
+                <td>
+                  <span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span>
+                  {% if event.estado == "novo" and event.new_expires_at_label %}
+                    <p class="document-window-preview">Novo até {{ event.new_expires_at_label }}</p>
+                  {% endif %}
+                </td>
                 <td>
                   <strong>{{ event.utilizador or event.username or "--" }}</strong>
                   <p class="document-window-preview">{{ event.role or "operacional" }}</p>
@@ -151,6 +178,14 @@
                       {% endif %}
                       <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}#event-report-edit">Editar</a>
                       <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir PDF</a>
+                      {% if event.estado == "resolvido" %}
+                        <form method="post" action="{{ url_for('admin.archive_resolved_event_reports_route') }}" onsubmit="return confirm('Arquivar este relatório resolvido?');">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+                          <input type="hidden" name="event_ids" value="{{ event.id }}">
+                          <button type="submit" class="mini-button secondary-button">Arquivar</button>
+                        </form>
+                      {% endif %}
                       <form method="post" action="{{ url_for('admin.delete_event_report_route', event_id=event.id) }}" onsubmit="return confirm('Apagar este relatório de evento?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="return_to" value="{{ reports_return_to }}">
@@ -162,7 +197,88 @@
               </tr>
             {% else %}
               <tr>
-                <td colspan="7" class="planned-empty">Sem relatórios de evento para os filtros atuais.</td>
+                <td colspan="7" class="planned-empty">Sem eventos abertos para os filtros atuais.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel section-panel document-catalog-detail" id="event-report-closed-catalog" open>
+    <summary class="documents-collapse-summary">
+      <div>
+        <p class="eyebrow">Eventos fechados</p>
+        <h2>Arquivados</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ closed_events|length }}</span>
+    </summary>
+    <div class="documents-collapse-body">
+      <div class="document-window-table">
+        <table class="planned-table event-report-table">
+          <thead>
+            <tr>
+              <th class="archive-th-narrow">Sel.</th>
+              <th>Evento</th>
+              <th>Local</th>
+              <th>Estado</th>
+              <th>Reportado</th>
+              <th>Anexo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in closed_events %}
+              <tr>
+                <td class="archive-select-cell">
+                  <input
+                    type="checkbox"
+                    class="event-report-select-box"
+                    value="{{ event.id }}"
+                    aria-label="Selecionar {{ event.id }}">
+                </td>
+                <td>
+                  <strong>{{ event.id }}</strong>
+                  <div class="event-report-row-meta">
+                    <span class="doc-badge">{{ event.tag }}</span>
+                    <span>{{ event.timestamp_label }}</span>
+                  </div>
+                  <p class="document-window-preview">{{ event.descricao or "Sem descrição." }}</p>
+                </td>
+                <td>{{ event.local or "--" }}</td>
+                <td>
+                  <span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span>
+                  {% if event.revisto_em_label %}
+                    <p class="document-window-preview">Fechado em {{ event.revisto_em_label }}</p>
+                  {% endif %}
+                </td>
+                <td>
+                  <strong>{{ event.utilizador or event.username or "--" }}</strong>
+                  <p class="document-window-preview">{{ event.role or "operacional" }}</p>
+                </td>
+                <td>{% if event.has_photo %}<a class="inline-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Ver foto</a>{% else %}Sem foto{% endif %}</td>
+                <td>
+                  <details class="chat-sidebar-menu document-row-menu">
+                    <summary class="chat-sidebar-menu-toggle" aria-label="Opções do relatório fechado">⋯</summary>
+                    <div class="chat-sidebar-menu-body">
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}">Abrir texto</a>
+                      {% if event.has_photo %}
+                        <a class="chat-sidebar-menu-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Abrir foto</a>
+                      {% endif %}
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir PDF</a>
+                      <form method="post" action="{{ url_for('admin.delete_event_report_route', event_id=event.id) }}" onsubmit="return confirm('Apagar este relatório de evento?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+                        <button type="submit" class="mini-button danger-button">Apagar</button>
+                      </form>
+                    </div>
+                  </details>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="planned-empty">Sem eventos fechados para os filtros atuais.</td>
               </tr>
             {% endfor %}
           </tbody>

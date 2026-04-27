@@ -41,9 +41,11 @@ from domain.practice_experience import (
 from domain.event_reports import (
     EVENT_REPORT_STATUS_OPTIONS,
     EVENT_REPORT_TAG_OPTIONS,
+    archive_resolved_event_reports,
     delete_event_report,
     delete_event_reports,
     event_report_photo_path,
+    expire_new_event_reports,
     get_event_report,
     list_event_reports,
     update_event_report,
@@ -1116,6 +1118,7 @@ def _event_report_view(event: dict) -> dict:
         "descricao": description,
         "has_photo": has_photo,
         "revisto_em_label": _local_iso_to_label(event.get("revisto_em")) if event.get("revisto_em") else "",
+        "new_expires_at_label": _local_iso_to_label(event.get("new_expires_at")) if event.get("new_expires_at") else "",
         "photo_url": url_for("admin.event_report_photo", event_id=event.get("id")) if has_photo else "",
     }
 
@@ -1182,11 +1185,15 @@ def _filter_event_reports(events: list[dict], filters: dict) -> list[dict]:
 
 
 def _event_report_stats(events: list[dict], filtered_events: list[dict]) -> dict:
+    open_events = [item for item in events if item.get("estado") != "arquivado"]
+    closed_events = [item for item in events if item.get("estado") == "arquivado"]
     return {
         "total": len(events),
         "filtered": len(filtered_events),
         "with_photo": sum(1 for item in events if item.get("has_photo")),
-        "open": sum(1 for item in events if item.get("estado") in {"novo", "em_revisao"}),
+        "open": len(open_events),
+        "closed": len(closed_events),
+        "resolved_open": sum(1 for item in open_events if item.get("estado") == "resolvido"),
     }
 
 
@@ -1875,12 +1882,17 @@ def admin_casebooks():
 @role_required("admin")
 def admin_event_reports():
     """Painel admin para rever relatórios de evento operacionais."""
+    expire_new_event_reports()
     events = [_event_report_view(event) for event in list_event_reports()]
     filters = _build_event_report_filters(events)
     filtered_events = _filter_event_reports(events, filters)
+    open_events = [event for event in filtered_events if event.get("estado") != "arquivado"]
+    closed_events = [event for event in filtered_events if event.get("estado") == "arquivado"]
     return render_template(
         "admin_event_reports.html",
-        events=filtered_events,
+        events=open_events,
+        closed_events=closed_events,
+        archive_resolved_event_ids=[event.get("id") for event in open_events if event.get("estado") == "resolvido"],
         stats=_event_report_stats(events, filtered_events),
         filters=filters,
         reports_return_to=_current_request_return_to(),
@@ -1893,6 +1905,7 @@ def admin_event_reports():
 @role_required("admin")
 def print_event_reports():
     """Relatório imprimível dos relatórios selecionados."""
+    expire_new_event_reports()
     selected_ids = _selected_event_report_ids()
     all_events = [_event_report_view(event) for event in list_event_reports()]
     if selected_ids:
@@ -1907,6 +1920,35 @@ def print_event_reports():
         auto_print=(request.values.get("print") == "1"),
         title="Relatório de Eventos",
     )
+
+
+@bp.route("/admin/event-reports/archive-resolved", methods=["POST"])
+@login_required
+@role_required("admin")
+def archive_resolved_event_reports_route():
+    """Arquivar relatórios de evento resolvidos."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_event_reports")
+    selected_ids = _selected_event_report_ids()
+    if not selected_ids:
+        flash("Não há relatórios resolvidos para arquivar nesta vista.", "error")
+        return redirect(return_to)
+    try:
+        archived_count = archive_resolved_event_reports(
+            selected_ids,
+            archived_by=session.get("username", "admin"),
+            archived_at=datetime.now(timezone.utc).isoformat(),
+        )
+    except OSError:
+        logger.exception("Failed to archive resolved event reports")
+        flash("Não foi possível arquivar os relatórios resolvidos.", "error")
+        return redirect(return_to)
+    if archived_count == 1:
+        flash("1 relatório resolvido arquivado.", "success")
+    elif archived_count:
+        flash(f"{archived_count} relatórios resolvidos arquivados.", "success")
+    else:
+        flash("Nenhum relatório resolvido correspondente encontrado.", "error")
+    return redirect(return_to)
 
 
 @bp.route("/admin/event-reports/delete", methods=["POST"])
@@ -1939,6 +1981,7 @@ def delete_event_reports_route():
 @role_required("admin")
 def event_report_detail(event_id: str):
     """Página de detalhe e edição de um relatório de evento."""
+    expire_new_event_reports()
     event = get_event_report(event_id)
     if not event:
         abort(404)
@@ -1958,6 +2001,7 @@ def event_report_detail(event_id: str):
 @role_required("admin")
 def event_report_photo(event_id: str):
     """Mostrar a foto anexada ao relatório de evento."""
+    expire_new_event_reports()
     event = get_event_report(event_id)
     if not event:
         abort(404)

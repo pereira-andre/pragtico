@@ -4773,8 +4773,39 @@ class OperationalFlowTests(unittest.TestCase):
             user_label="Admin",
             description_processed="Amassadela na amurada.",
         )
+        expired_new_event = register_event_report(
+            {
+                "tag": "FALHA",
+                "local": "cais Teporset antigo",
+                "description_original": "baliza apagada ha varios dias",
+            },
+            username="admin",
+            role="admin",
+            user_label="Admin",
+            description_processed="Baliza apagada há vários dias.",
+        )
+        archived_event = register_event_report(
+            {
+                "tag": "INCIDENTE",
+                "local": "cais Teporset fechado",
+                "description_original": "evento ja fechado",
+            },
+            username="admin",
+            role="admin",
+            user_label="Admin",
+            description_processed="Evento já fechado.",
+        )
         photo_path = Path(event["foto_path"])
         events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+        stored_events = json.loads(events_path.read_text(encoding="utf-8"))
+        for stored_event in stored_events:
+            if stored_event["id"] == expired_new_event["id"]:
+                stored_event["timestamp"] = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+            if stored_event["id"] == archived_event["id"]:
+                stored_event["estado"] = "arquivado"
+                stored_event["revisto_em"] = datetime.now(timezone.utc).isoformat()
+                stored_event["revisto_por"] = "admin"
+        events_path.write_text(json.dumps(stored_events, ensure_ascii=False, indent=2), encoding="utf-8")
         self.store.create_user(
             "agente-eventos",
             "secret1",
@@ -4796,7 +4827,16 @@ class OperationalFlowTests(unittest.TestCase):
             html = response.get_data(as_text=True)
             self.assertIn("Relatórios de evento", html)
             self.assertIn("Apagar selecionados", html)
+            self.assertIn("Eventos abertos", html)
+            self.assertIn("Eventos fechados", html)
+            self.assertIn("Novo até", html)
             self.assertIn(event["id"], html)
+            self.assertIn(expired_new_event["id"], html)
+            self.assertIn(archived_event["id"], html)
+            self.assertIn("Em revisão", html)
+            events_after_listing = json.loads(events_path.read_text(encoding="utf-8"))
+            expired_after_listing = next(item for item in events_after_listing if item["id"] == expired_new_event["id"])
+            self.assertEqual(expired_after_listing["estado"], "em_revisao")
             open_text_index = html.index("Abrir texto")
             open_photo_index = html.index("Abrir foto")
             edit_index = html.index("Editar")
@@ -4833,6 +4873,19 @@ class OperationalFlowTests(unittest.TestCase):
             self.assertIn("Guincho no chão operacional após verificação.", report_html)
             self.assertIn("Coordenação: ação concluída.", report_html)
 
+            archive_resolved = client.post(
+                "/admin/event-reports/archive-resolved",
+                data={
+                    "csrf_token": "event-token",
+                    "return_to": "/admin/event-reports",
+                    "event_ids": event["id"],
+                },
+            )
+            self.assertEqual(archive_resolved.status_code, 302)
+            events_after_archive = json.loads(events_path.read_text(encoding="utf-8"))
+            archived_after_action = next(item for item in events_after_archive if item["id"] == event["id"])
+            self.assertEqual(archived_after_action["estado"], "arquivado")
+
             with client.session_transaction() as flask_session:
                 flask_session["username"] = "agente-eventos"
                 flask_session["role"] = "agente"
@@ -4865,7 +4918,7 @@ class OperationalFlowTests(unittest.TestCase):
                 data={
                     "csrf_token": "event-token",
                     "return_to": "/admin/event-reports",
-                    "event_ids": event["id"],
+                    "event_ids": [event["id"], expired_new_event["id"], archived_event["id"]],
                 },
             )
             self.assertEqual(bulk_delete.status_code, 302)
