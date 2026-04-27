@@ -177,8 +177,10 @@ O Cais de Reparação 1 é formado pela Ponte-Cais 1 (estrutura principal avanç
 sobre a água) e pelo Duque d'Alba 1 (estrutura de amarração isolada).
 
 CAIS 1 — SONDAS POR FACE:
-  Nota de nomenclatura: a face A fica do lado de Setúbal e a face B fica do lado
-  de Alcácer do Sal.
+  Nota local: a designação operacional é sempre Cais 1 A ou Cais 1 B. As
+  referências W/oeste e E/este servem apenas para identificar o lado físico:
+  A = W/oeste, referência local lado Setúbal; B = E/este, referência local lado
+  Alcácer do Sal.
   Cais 1 A (face A): sonda ao ZH = 7,14 metros (equivalente a 23 pés e 5 pol.).
   Cais 1 B (face B): sonda ao ZH = 7,40 metros (equivalente a 24 pés e 4 pol.).
 
@@ -204,8 +206,10 @@ CAIS DE REPARAÇÃO NÚMERO 2 (PONTE-CAIS 2 + DUQUE D'ALBA 2)
 ================================================================================
 
 CAIS 2 — SONDAS POR FACE (medidas a 10 metros da face do cais):
-  Nota de nomenclatura: a face A fica do lado de Setúbal e a face B fica do lado
-  de Alcácer do Sal.
+  Nota local: a designação operacional é sempre Cais 2 A ou Cais 2 B. As
+  referências W/oeste e E/este servem apenas para identificar o lado físico:
+  A = W/oeste, referência local lado Setúbal; B = E/este, referência local lado
+  Alcácer do Sal.
   Cais 2 A: sonda ao ZH a 10 metros do cais = 7 metros.
   Cais 2 B: sonda ao ZH a 10 metros do cais = 7 metros.
   NOTA: a sonda é medida a 10 metros da face do cais, não junto à face.

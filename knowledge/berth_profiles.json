@@ -258,7 +258,7 @@
       ],
       "draft_rules": [
         "Nao existe um calado maximo unico para toda a LISNAVE; depende do destino, da sonda ao ZH, da mare e das margens operacionais.",
-        "Referencias ao ZH: Cais 3 B 8,60 m a 10 m da face; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m. Faces A do lado de Setubal; faces B do lado de Alcacer do Sal.",
+        "Referencias ao ZH: Cais 3 B 8,60 m a 10 m da face; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m. A designacao operacional mantem sempre A/B; W/E e Setubal/Alcacer sao apenas referencias laterais: faces A = W/oeste, faces B = E/este.",
         "Docas 21/22: 6,10 m na soleira com comporta aberta e 5,49 m com comporta fechada; acesso as Docas 31/32/33 pelo Hidrolift: 5,5 m."
       ],
       "maneuver_rules": [

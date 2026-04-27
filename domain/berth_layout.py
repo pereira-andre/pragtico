@@ -88,8 +88,8 @@ def _berth_compact_key(value: str | None) -> str:
 def _lisnave_quay_aliases() -> Dict[str, str]:
     aliases: Dict[str, str] = {}
     side_terms = {
-        "a": ("a", "setubal", "ladosetubal"),
-        "b": ("b", "alcacer", "alcacerdosal", "ladoalcacer", "ladoalcacerdosal"),
+        "a": ("a", "w", "west", "oeste", "setubal", "ladosetubal", "ladow", "ladooeste"),
+        "b": ("b", "e", "east", "este", "leste", "alcacer", "alcacerdosal", "ladoalcacer", "ladoalcacerdosal", "ladoe", "ladoeste", "ladoleste"),
     }
     for number in range(0, 4):
         for side, terms in side_terms.items():

@@ -418,6 +418,14 @@ def _casebook_query_berth_labels(question: str) -> set[str]:
             candidates.add(f"Cais {number} lado Setubal")
         if has_numbered_lisnave_quay and "alcacer" in clean:
             candidates.add(f"Cais {number} lado Alcacer")
+        if has_numbered_lisnave_quay and re.search(r"\b(?:w|west|oeste|lado w)\b", clean):
+            candidates.add(f"Cais {number} W")
+        if has_numbered_lisnave_quay and re.search(r"\b(?:east|leste|lado este|lado leste|lado e)\b", clean):
+            candidates.add(f"Cais {number} E")
+        if any(marker in compact for marker in (f"c{number}w", f"cais{number}w", f"lisnave{number}w")):
+            candidates.add(f"Cais {number} W")
+        if any(marker in compact for marker in (f"c{number}e", f"cais{number}e", f"lisnave{number}e")):
+            candidates.add(f"Cais {number} E")
         for side in ("a", "b"):
             markers = (
                 f"c{number}{side}",

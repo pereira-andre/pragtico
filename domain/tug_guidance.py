@@ -123,6 +123,7 @@ def _infer_vessel_group(question: str, guidance: dict[str, Any]) -> str:
 
 def _infer_wind_component(question: str) -> tuple[str, str]:
     clean = _normalize_text(question)
+    raw_question = str(question or "")
     if re.search(r"\b(sudoeste|sw)\b", clean):
         return "south", "SW forte / caso critico"
     if re.search(r"\b(sul|vento s)\b", clean):
@@ -131,7 +132,7 @@ def _infer_wind_component(question: str) -> tuple[str, str]:
         return "south", "W tratado como S fraco"
     if re.search(r"\b(norte|vento n)\b", clean):
         return "north", "N"
-    if re.search(r"\b(este|leste|east|vento e)\b", clean):
+    if re.search(r"\bvento\s+E\b", raw_question) or re.search(r"\b(leste|east|vento este|vento leste)\b", clean):
         return "north", "E tratado como N fraco"
     if re.search(r"\b(nevoeiro|nevoa|nevoa)\b", clean):
         return "south", "nevoeiro: risco de SW forte"

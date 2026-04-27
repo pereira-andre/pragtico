@@ -71,6 +71,17 @@ PORT_FACILITY_INVENTORY_RE = re.compile(
     r".*\b(quais|quantos|quantas|existem|lista|listar|enumera|inventario|inventário)\b"
 )
 PORT_SCOPE_RE = re.compile(r"\b(porto|setubal|setúbal)\b")
+FACILITY_SCOPE_RE = re.compile(
+    r"\b(lisnave|mitrena|secil|sapec|tanquisado|eco\s*oil|ecooil|ecoil|praias|"
+    r"alstom|autoeuropa|auto\s*europa|tms\s*1|tms1|tms\s*2|tms2|teporset|"
+    r"tepor\s*set|termitrena|terminal|terminais|cais|doca|docas|fundeadouro|fundeadouros)\b"
+)
+FACILITY_TECHNICAL_RE = re.compile(
+    r"\b(comprimento|loa|calado|sonda|profundidade|altura|limite|limites|"
+    r"maximo|maxima|maximos|maximas|minimo|minima|noite|noturn[oa]|manobr\w*|"
+    r"atracar|desatracar|entrar|sair|reponto|reboque|reboques|rebocador|"
+    r"rebocadores|restric\w*|regra|regras|permitid\w*|pode|posso)\b"
+)
 RULE_CODE_RE = re.compile(r"\bit[\s\-_]?0*(\d{1,3})\b", flags=re.IGNORECASE)
 LIVE_REASONING_RE = re.compile(
     r"\b(avali\w*|consider\w*|recomend\w*|aconselh\w*|suger\w*|indic\w*|"
@@ -192,11 +203,15 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
     wants_tug_rules = wants_tug_recommendation or bool(
         TUG_TERMS_RE.search(clean_question) and DOCUMENT_QUERY_RE.search(clean_question)
     )
+    wants_facility_technical_synthesis = bool(
+        FACILITY_SCOPE_RE.search(clean_question) and FACILITY_TECHNICAL_RE.search(clean_question)
+    )
     wants_documents = (
         bool(explicit_rule_codes)
         or bool(DOCUMENT_QUERY_RE.search(clean_question))
         or wants_port_facility_inventory
         or wants_tug_rules
+        or wants_facility_technical_synthesis
     )
     asks_operational_decision = (
         bool(LIVE_REASONING_RE.search(clean_question) and OPERATIONAL_DECISION_RE.search(clean_question))
@@ -206,6 +221,7 @@ def build_chat_execution_plan(question: str) -> ChatExecutionPlan:
     requires_llm_synthesis = (
         requires_live_reasoning
         or wants_tug_recommendation
+        or wants_facility_technical_synthesis
         or (bool(live_facets) and wants_documents)
         or wants_port_facility_inventory
     )

@@ -65,7 +65,8 @@ WIND_PATTERNS = (
     (re.compile(r"\b(?:vento\s*s\b|sul)\b", flags=re.IGNORECASE), "vento Sul"),
     (re.compile(r"\b(?:vento\s*n\b|norte)\b", flags=re.IGNORECASE), "vento Norte"),
     (re.compile(r"\b(?:vento\s*w\b|oeste)\b", flags=re.IGNORECASE), "vento Oeste"),
-    (re.compile(r"\b(?:vento\s*e\b|este|leste)\b", flags=re.IGNORECASE), "vento Este"),
+    (re.compile(r"\bvento\s+E\b"), "vento Este"),
+    (re.compile(r"\b(?:vento\s+este\b|vento\s+leste\b|leste|east)\b", flags=re.IGNORECASE), "vento Este"),
     (re.compile(r"\b(?:nevoeiro|nevoa|névoa)\b", flags=re.IGNORECASE), "nevoeiro"),
 )
 PROPELLER_RE = re.compile(r"\bpasso\s+(direito|esquerdo)\b", flags=re.IGNORECASE)

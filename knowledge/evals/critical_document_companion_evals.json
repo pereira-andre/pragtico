@@ -32,12 +32,17 @@
   {
     "document": "IT-014_Lisnave.txt",
     "question": "Qual é a sonda do Cais 1 A da LISNAVE?",
-    "expected_substrings": ["7,14", "Setúbal"]
+    "expected_substrings": ["7,14", "W/oeste", "Setúbal"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é a sonda do Cais 1 W da LISNAVE?",
+    "expected_substrings": ["Cais 1 A", "7,14", "W/oeste"]
   },
   {
     "document": "IT-014_Lisnave.txt",
     "question": "Na LISNAVE, a face B fica de que lado?",
-    "expected_substrings": ["Alcácer do Sal"]
+    "expected_substrings": ["E/este", "Alcácer do Sal"]
   },
   {
     "document": "IT-014_Lisnave.txt",
