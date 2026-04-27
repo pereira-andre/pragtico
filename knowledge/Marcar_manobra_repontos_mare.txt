@@ -121,7 +121,7 @@ SECÇÃO 6 — SAÍDAS DOS CAIS LISNAVE (EXCEPTO DOCAS 21 E 22), TANQUISADO E EC
 ================================================================================
 
 Para navios a sair dos seguintes cais:
-  — Cais de Reparação I, II e III do Lisnave (Ponte-Cais I, II e III), excluindo
+  — Cais de Reparação 1, 2 e 3 do Lisnave (Ponte-Cais 1, 2 e 3), excluindo
     as Docas 21 e 22 (que têm regra própria — ver Secção 2).
   — Terminal Tanquisado.
   — Terminal Eco-Oil.
@@ -194,7 +194,7 @@ calado exacto. Para 10,5 m, aproximar de 1h30 antes da preia-mar.
 Pergunta: Um navio com 10 m de calado quer entrar no SAPEC Sólidos. Quando se marca?
 Resposta: 1 hora e 30 minutos antes da preia-mar.
 
-Pergunta: Um navio quer sair do Cais de Reparação II do Lisnave (Ponte-Cais II).
+Pergunta: Um navio quer sair do Cais de Reparação 2 do Lisnave (Ponte-Cais 2).
 Com que antecedência se marca?
 Resposta: 1 hora antes do reponto de maré. (Os cais de reparação do Lisnave,
 excepto as Docas 21 e 22, saem no reponto com 1 hora de antecedência.)
