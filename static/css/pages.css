@@ -738,6 +738,15 @@
   align-items: end;
 }
 
+.event-reports-admin-page .archive-selection-actions .mini-button {
+  width: 168px;
+  min-height: 44px;
+}
+
+.event-reports-admin-page .archive-selection-actions .danger-button {
+  width: 168px;
+}
+
 .archive-scale-card {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -3995,6 +4004,11 @@ button:hover {
   .archive-selection-bar,
   .archive-selection-actions {
     display: grid;
+  }
+
+  .event-reports-admin-page .archive-selection-actions .mini-button,
+  .event-reports-admin-page .archive-selection-actions .danger-button {
+    width: 100%;
   }
 
   .documents-admin-page .reindex-status-card {

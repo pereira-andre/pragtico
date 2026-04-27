@@ -172,20 +172,8 @@
                   <details class="chat-sidebar-menu document-row-menu">
                     <summary class="chat-sidebar-menu-toggle" aria-label="Opções do relatório">⋯</summary>
                     <div class="chat-sidebar-menu-body">
-                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}">Abrir texto</a>
-                      {% if event.has_photo %}
-                        <a class="chat-sidebar-menu-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Abrir foto</a>
-                      {% endif %}
                       <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}#event-report-edit">Editar</a>
                       <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir PDF</a>
-                      {% if event.estado == "resolvido" %}
-                        <form method="post" action="{{ url_for('admin.archive_resolved_event_reports_route') }}" onsubmit="return confirm('Arquivar este relatório resolvido?');">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="return_to" value="{{ reports_return_to }}">
-                          <input type="hidden" name="event_ids" value="{{ event.id }}">
-                          <button type="submit" class="mini-button secondary-button">Arquivar</button>
-                        </form>
-                      {% endif %}
                       <form method="post" action="{{ url_for('admin.delete_event_report_route', event_id=event.id) }}" onsubmit="return confirm('Apagar este relatório de evento?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="return_to" value="{{ reports_return_to }}">
@@ -262,10 +250,7 @@
                   <details class="chat-sidebar-menu document-row-menu">
                     <summary class="chat-sidebar-menu-toggle" aria-label="Opções do relatório fechado">⋯</summary>
                     <div class="chat-sidebar-menu-body">
-                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}">Abrir texto</a>
-                      {% if event.has_photo %}
-                        <a class="chat-sidebar-menu-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Abrir foto</a>
-                      {% endif %}
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}#event-report-edit">Editar</a>
                       <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir PDF</a>
                       <form method="post" action="{{ url_for('admin.delete_event_report_route', event_id=event.id) }}" onsubmit="return confirm('Apagar este relatório de evento?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -319,8 +304,6 @@
     }
     if (eventReportPrintSelected) {
       eventReportPrintSelected.disabled = selected.length === 0;
-      eventReportPrintSelected.classList.toggle("secondary-button", selected.length === 0);
-      eventReportPrintSelected.classList.toggle("is-active", selected.length > 0);
     }
     if (eventReportDeleteSelected) {
       eventReportDeleteSelected.disabled = selected.length === 0;
