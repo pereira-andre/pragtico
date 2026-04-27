@@ -1993,6 +1993,35 @@
   align-items: start;
 }
 
+.event-report-detail-page .hero-card.compact {
+  padding-bottom: 22px;
+}
+
+.event-report-detail-page .hero-card h1 {
+  font-size: clamp(1.7rem, 2.5vw, 2.45rem);
+  line-height: 1.05;
+}
+
+.event-report-detail-page .hero-card .lead {
+  font-size: 0.98rem;
+}
+
+.event-report-detail-page .section-panel {
+  border-radius: 12px;
+}
+
+.event-report-detail-page .section-head {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.event-report-detail-page .section-head h2 {
+  font-family: var(--font-sans);
+  font-size: 1.18rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
 .event-report-edit-form {
   display: grid;
   gap: 14px;
@@ -2014,6 +2043,38 @@
   gap: 16px;
 }
 
+.event-report-side-panel .admin-status-compact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.event-report-side-panel .admin-status-fact {
+  align-content: start;
+  min-height: 84px;
+  padding: 11px 12px;
+  border-radius: 10px;
+}
+
+.event-report-side-panel .admin-status-fact span {
+  font-size: 0.68rem;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+}
+
+.event-report-side-panel .admin-status-fact strong {
+  font-family: var(--font-sans);
+  font-size: 0.96rem;
+  line-height: 1.28;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.event-report-side-panel .admin-status-note {
+  border-radius: 10px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .event-report-photo-link {
   display: block;
   border: 1px solid var(--line);
@@ -2025,7 +2086,7 @@
 .event-report-photo-link img {
   display: block;
   width: 100%;
-  max-height: 420px;
+  max-height: 320px;
   object-fit: contain;
 }
 
@@ -3924,6 +3985,10 @@ button:hover {
   .event-report-filter-grid,
   .event-report-edit-form .form-grid.two-col,
   .archive-selection-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .event-report-side-panel .admin-status-compact-grid {
     grid-template-columns: 1fr;
   }
 
