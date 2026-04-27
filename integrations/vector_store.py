@@ -63,12 +63,22 @@ class LocalIndexStore(BaseIndexStore):
 
     def load_index(self) -> Dict:
         if os.path.exists(self.index_path):
-            with open(self.index_path, "r", encoding="utf-8") as handle:
-                return json.load(handle)
+            try:
+                with open(self.index_path, "r", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Índice RAG local inválido em %s; a usar índice vazio: %s", self.index_path, exc)
+                return {"manifest": {}, "chunks": []}
+            if isinstance(payload, dict):
+                payload.setdefault("manifest", {})
+                payload.setdefault("chunks", [])
+                return payload
+            logger.warning("Índice RAG local inválido em %s; a raiz deve ser um objeto JSON.", self.index_path)
         return {"manifest": {}, "chunks": []}
 
     def replace_index(self, manifest: Dict, chunks: List[Dict]) -> None:
         payload = {"manifest": manifest, "chunks": chunks}
+        os.makedirs(os.path.dirname(self.index_path) or ".", exist_ok=True)
         with open(self.index_path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2)
 

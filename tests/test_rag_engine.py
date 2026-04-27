@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import threading
@@ -120,6 +121,23 @@ class _SequencedProvider(_StubProvider):
 
 
 class SimpleRAGEngineTests(unittest.TestCase):
+    def test_local_index_store_treats_empty_or_invalid_json_as_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as sandbox:
+            index_path = os.path.join(sandbox, "rag_index.json")
+            store = LocalIndexStore(index_path=index_path)
+
+            with open(index_path, "w", encoding="utf-8"):
+                pass
+            self.assertEqual(store.load_index(), {"manifest": {}, "chunks": []})
+
+            with open(index_path, "w", encoding="utf-8") as handle:
+                handle.write("[]")
+            self.assertEqual(store.load_index(), {"manifest": {}, "chunks": []})
+
+            with open(index_path, "w", encoding="utf-8") as handle:
+                json.dump({"chunks": []}, handle)
+            self.assertEqual(store.load_index(), {"manifest": {}, "chunks": []})
+
     def _make_engine(
         self,
         *,

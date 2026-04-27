@@ -57,10 +57,12 @@ from core.helpers import (
 )
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.bot_insights import (
+    build_pipeline_snapshot,
     build_exceptions,
     build_learning_signals,
     build_quality_snapshot,
     build_sources_snapshot,
+    build_tuning_map_snapshot,
     compute_health_score,
 )
 from core.bot_settings import DEFAULTS as BOT_SETTINGS_DEFAULTS, load_bot_settings, reset_bot_settings, save_bot_settings
@@ -1062,6 +1064,8 @@ def _safe_return_to(value: str | None) -> str:
     rebuilt = parsed.path
     if parsed.query:
         rebuilt = f"{rebuilt}?{parsed.query}"
+    if parsed.fragment:
+        rebuilt = f"{rebuilt}#{parsed.fragment}"
     return rebuilt
 
 
@@ -1682,6 +1686,8 @@ def admin_bot():
     sources = build_sources_snapshot()
     quality = build_quality_snapshot()
     exceptions = build_exceptions(limit=12)
+    tuning = build_tuning_map_snapshot(settings=settings, quality=quality)
+    pipeline = build_pipeline_snapshot(tuning=tuning, quality=quality, sources=sources, exceptions=exceptions)
     health = compute_health_score(quality, signals, exceptions, sources)
     return render_template(
         "admin_bot.html",
@@ -1690,6 +1696,8 @@ def admin_bot():
         sources=sources,
         quality=quality,
         exceptions=exceptions,
+        pipeline=pipeline,
+        tuning=tuning,
         settings=settings,
         settings_defaults=BOT_SETTINGS_DEFAULTS,
         casebooks=_build_admin_casebooks_payload(),
@@ -1712,6 +1720,8 @@ def admin_bot_settings():
             updates[bool_key] = bool_key in request.form
         save_bot_settings(updates, updated_by=session.get("username") or "admin")
         flash("Definições do bot atualizadas.", "success")
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha ao guardar definições do bot.")
         flash(f"Falha ao guardar definições do bot: {exc}", "error")
@@ -1854,12 +1864,11 @@ def import_system_database():
 @role_required("admin")
 def admin_casebooks():
     """Painel admin detalhado de mensagens, casos e experiência prática."""
-    refresh_knowledge_state(force_reindex=False)
-    return render_template(
-        "admin_casebooks.html",
-        casebooks=_build_admin_casebooks_payload(),
-        title="Governança detalhada",
-    )
+    query = request.query_string.decode("utf-8", errors="ignore")
+    target = url_for("admin.admin_bot")
+    if query:
+        target = f"{target}?{query}"
+    return redirect(f"{target}#casebooks")
 
 
 @bp.route("/admin/event-reports")

@@ -19,6 +19,27 @@ def _infer_feedback_document(message: dict) -> str:
     if len(cited_documents) == 1:
         return cited_documents[0]
     return ""
+
+
+def _feedback_updated_by_admin(store, username: str) -> bool:
+    clean_username = str(username or "").strip().lower()
+    if not clean_username:
+        return False
+    if clean_username == "admin":
+        return True
+    try:
+        profile = store.get_user_profile(clean_username) if hasattr(store, "get_user_profile") else None
+    except Exception:
+        profile = None
+    return str((profile or {}).get("role") or "").strip().lower() == "admin"
+
+
+def _feedback_is_allowed_by_settings(store, message: dict, settings: dict) -> bool:
+    if not bool(settings.get("require_admin_validation", False)):
+        return True
+    return _feedback_updated_by_admin(store, message.get("feedback_updated_by", ""))
+
+
 def sync_feedback_correction_eval_case(store, username: str, conversation_id: str, message_id: str, *, source: str) -> dict | None:
     if not hasattr(store, "upsert_feedback_eval_case") or not hasattr(store, "delete_feedback_eval_case"):
         return None
@@ -41,6 +62,7 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
     auto_promote = bool(settings.get("auto_promote_corrections", True))
     should_register = (
         auto_promote
+        and _feedback_is_allowed_by_settings(store, target_message, settings)
         and (target_message.get("feedback_status") or "").strip().lower() == "review"
         and bool(corrected_answer)
         and bool(document_name)
