@@ -5,8 +5,8 @@
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Ocorrências operacionais</p>
-        <h1>Reportes de evento</h1>
-        <p class="lead">Revisão dos reportes recebidos pelo chat e WhatsApp, com fotos, notas administrativas e relatório pronto para imprimir.</p>
+        <h1>Relatórios de evento</h1>
+        <p class="lead">Revisão dos relatórios recebidos pelo chat e WhatsApp, com fotos, notas administrativas e relatório pronto para imprimir.</p>
       </div>
       <div class="admin-status-hero-tools">
         <a class="outline-link" href="{{ url_for('admin.print_event_reports', print='1') }}">Imprimir tudo</a>
@@ -82,79 +82,92 @@
       <form method="post" action="{{ url_for('admin.print_event_reports') }}" id="event-report-print-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="print" value="1">
-        <div id="event-report-selected-inputs"></div>
-        <div class="archive-selection-bar">
-          <div>
-            <p class="eyebrow">Seleção</p>
-            <p id="event-report-selection-summary" class="muted">Sem seleção manual. Podes imprimir vários reportes de uma vez.</p>
-          </div>
-          <div class="archive-selection-actions">
-            <button type="button" class="mini-button secondary-button" id="event-report-select-filtered">Selecionar filtro</button>
-            <button type="button" class="mini-button secondary-button" id="event-report-clear-selection">Nenhum</button>
-            <button type="submit" class="mini-button" id="event-report-print-selected">Imprimir / PDF</button>
-          </div>
-        </div>
-
-        <div class="document-window-table">
-          <table class="planned-table event-report-table">
-            <thead>
-              <tr>
-                <th class="archive-th-narrow">Sel.</th>
-                <th>Evento</th>
-                <th>Local</th>
-                <th>Estado</th>
-                <th>Reportado</th>
-                <th>Anexo</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for event in events %}
-                <tr>
-                  <td class="archive-select-cell">
-                    <input
-                      type="checkbox"
-                      class="event-report-select-box"
-                      value="{{ event.id }}"
-                      aria-label="Selecionar {{ event.id }}">
-                  </td>
-                  <td>
-                    <strong>{{ event.id }}</strong>
-                    <div class="event-report-row-meta">
-                      <span class="doc-badge">{{ event.tag }}</span>
-                      <span>{{ event.timestamp_label }}</span>
-                    </div>
-                    <p class="document-window-preview">{{ event.descricao or "Sem descrição." }}</p>
-                  </td>
-                  <td>{{ event.local or "--" }}</td>
-                  <td><span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span></td>
-                  <td>
-                    <strong>{{ event.utilizador or event.username or "--" }}</strong>
-                    <p class="document-window-preview">{{ event.role or "operacional" }}</p>
-                  </td>
-                  <td>{% if event.has_photo %}<a class="inline-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Ver foto</a>{% else %}Sem foto{% endif %}</td>
-                  <td>
-                    <details class="chat-sidebar-menu document-row-menu">
-                      <summary class="chat-sidebar-menu-toggle" aria-label="Opções do reporte">⋯</summary>
-                      <div class="chat-sidebar-menu-body">
-                        <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}">Abrir / editar</a>
-                        <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir este</a>
-                        {% if event.has_photo %}
-                          <a class="chat-sidebar-menu-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Abrir foto</a>
-                        {% endif %}
-                      </div>
-                    </details>
-                  </td>
-                </tr>
-              {% else %}
-                <tr>
-                  <td colspan="7" class="planned-empty">Sem reportes de evento para os filtros atuais.</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <div id="event-report-print-inputs"></div>
       </form>
+      <form method="post" action="{{ url_for('admin.delete_event_reports_route') }}" id="event-report-delete-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+        <div id="event-report-delete-inputs"></div>
+      </form>
+
+      <div class="archive-selection-bar">
+        <div>
+          <p class="eyebrow">Seleção</p>
+          <p id="event-report-selection-summary" class="muted">Sem seleção manual. Podes imprimir vários relatórios de uma vez ou apagar os selecionados.</p>
+        </div>
+        <div class="archive-selection-actions">
+          <button type="button" class="mini-button secondary-button" id="event-report-select-filtered">Selecionar filtro</button>
+          <button type="button" class="mini-button secondary-button" id="event-report-clear-selection">Nenhum</button>
+          <button type="submit" class="mini-button" form="event-report-print-form" id="event-report-print-selected">Imprimir / PDF</button>
+          <button type="submit" class="mini-button danger-button" form="event-report-delete-form" id="event-report-delete-selected">Apagar selecionados</button>
+        </div>
+      </div>
+
+      <div class="document-window-table">
+        <table class="planned-table event-report-table">
+          <thead>
+            <tr>
+              <th class="archive-th-narrow">Sel.</th>
+              <th>Evento</th>
+              <th>Local</th>
+              <th>Estado</th>
+              <th>Reportado</th>
+              <th>Anexo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in events %}
+              <tr>
+                <td class="archive-select-cell">
+                  <input
+                    type="checkbox"
+                    class="event-report-select-box"
+                    value="{{ event.id }}"
+                    aria-label="Selecionar {{ event.id }}">
+                </td>
+                <td>
+                  <strong>{{ event.id }}</strong>
+                  <div class="event-report-row-meta">
+                    <span class="doc-badge">{{ event.tag }}</span>
+                    <span>{{ event.timestamp_label }}</span>
+                  </div>
+                  <p class="document-window-preview">{{ event.descricao or "Sem descrição." }}</p>
+                </td>
+                <td>{{ event.local or "--" }}</td>
+                <td><span class="admin-status-badge is-{{ event.status_badge }}">{{ event.status_label }}</span></td>
+                <td>
+                  <strong>{{ event.utilizador or event.username or "--" }}</strong>
+                  <p class="document-window-preview">{{ event.role or "operacional" }}</p>
+                </td>
+                <td>{% if event.has_photo %}<a class="inline-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Ver foto</a>{% else %}Sem foto{% endif %}</td>
+                <td>
+                  <details class="chat-sidebar-menu document-row-menu">
+                    <summary class="chat-sidebar-menu-toggle" aria-label="Opções do relatório">⋯</summary>
+                    <div class="chat-sidebar-menu-body">
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}">Abrir texto</a>
+                      {% if event.has_photo %}
+                        <a class="chat-sidebar-menu-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">Abrir foto</a>
+                      {% endif %}
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.event_report_detail', event_id=event.id, return_to=reports_return_to) }}#event-report-edit">Editar</a>
+                      <a class="chat-sidebar-menu-link" href="{{ url_for('admin.print_event_reports', ids=event.id, print='1') }}">Imprimir PDF</a>
+                      <form method="post" action="{{ url_for('admin.delete_event_report_route', event_id=event.id) }}" onsubmit="return confirm('Apagar este relatório de evento?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_to" value="{{ reports_return_to }}">
+                        <button type="submit" class="mini-button danger-button">Apagar</button>
+                      </form>
+                    </div>
+                  </details>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="planned-empty">Sem relatórios de evento para os filtros atuais.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </details>
 </main>
@@ -162,28 +175,39 @@
 <script>
   const eventReportBoxes = Array.from(document.querySelectorAll(".event-report-select-box"));
   const eventReportSummary = document.getElementById("event-report-selection-summary");
-  const eventReportHiddenInputs = document.getElementById("event-report-selected-inputs");
+  const eventReportPrintInputs = document.getElementById("event-report-print-inputs");
+  const eventReportDeleteInputs = document.getElementById("event-report-delete-inputs");
   const eventReportPrintSelected = document.getElementById("event-report-print-selected");
+  const eventReportDeleteSelected = document.getElementById("event-report-delete-selected");
 
-  function syncSelectedEventReports() {
-    if (!eventReportHiddenInputs) return;
-    eventReportHiddenInputs.innerHTML = "";
-    const selected = eventReportBoxes.filter((box) => box.checked).map((box) => box.value);
+  function renderSelectedEventReportInputs(container, selected) {
+    if (!container) return;
+    container.innerHTML = "";
     selected.forEach((id) => {
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = "event_ids";
       input.value = id;
-      eventReportHiddenInputs.appendChild(input);
+      container.appendChild(input);
     });
+  }
+
+  function syncSelectedEventReports() {
+    const selected = eventReportBoxes.filter((box) => box.checked).map((box) => box.value);
+    renderSelectedEventReportInputs(eventReportPrintInputs, selected);
+    renderSelectedEventReportInputs(eventReportDeleteInputs, selected);
     if (eventReportSummary) {
       eventReportSummary.textContent = selected.length
-        ? `${selected.length} reporte(s) selecionado(s) para impressão.`
-        : "Sem seleção manual. Podes imprimir vários reportes de uma vez.";
+        ? `${selected.length} relatório(s) selecionado(s).`
+        : "Sem seleção manual. Podes imprimir vários relatórios de uma vez ou apagar os selecionados.";
     }
     if (eventReportPrintSelected) {
       eventReportPrintSelected.disabled = selected.length === 0;
     }
+    if (eventReportDeleteSelected) {
+      eventReportDeleteSelected.disabled = selected.length === 0;
+    }
+    return selected.length;
   }
 
   function setEventReportSelection(checked) {
@@ -195,8 +219,13 @@
   document.getElementById("event-report-select-filtered")?.addEventListener("click", () => setEventReportSelection(true));
   document.getElementById("event-report-clear-selection")?.addEventListener("click", () => setEventReportSelection(false));
   document.getElementById("event-report-print-form")?.addEventListener("submit", (event) => {
-    syncSelectedEventReports();
-    if (!eventReportHiddenInputs?.children.length) {
+    if (!syncSelectedEventReports()) {
+      event.preventDefault();
+    }
+  });
+  document.getElementById("event-report-delete-form")?.addEventListener("submit", (event) => {
+    const selectedCount = syncSelectedEventReports();
+    if (!selectedCount || !confirm(`Apagar ${selectedCount} relatório(s) de evento?`)) {
       event.preventDefault();
     }
   });

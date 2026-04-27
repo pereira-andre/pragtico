@@ -388,7 +388,48 @@ def update_event_report(event_id: str, updates: dict[str, Any]) -> dict[str, Any
         events[index] = updated
         _write_events(root, events)
         return _enrich_event_report(updated)
-    raise ValueError("Reporte de evento não encontrado.")
+    raise ValueError("Relatório de evento não encontrado.")
+
+
+def _delete_event_photo(event: dict[str, Any]) -> None:
+    photo_path = event_report_photo_path(event)
+    if not photo_path:
+        return
+    try:
+        photo_path.unlink()
+    except FileNotFoundError:
+        return
+
+
+def delete_event_reports(event_ids: list[str]) -> int:
+    root = event_reports_root()
+    target_ids: list[str] = []
+    for event_id in event_ids:
+        clean_id = _clean_text(event_id)
+        if clean_id and clean_id not in target_ids:
+            target_ids.append(clean_id)
+    if not target_ids:
+        return 0
+
+    events = _read_events(root)
+    remaining: list[dict[str, Any]] = []
+    removed: list[dict[str, Any]] = []
+    for event in events:
+        if _clean_text(event.get("id")) in target_ids:
+            removed.append(event)
+        else:
+            remaining.append(event)
+    if not removed:
+        return 0
+
+    for event in removed:
+        _delete_event_photo(event)
+    _write_events(root, remaining)
+    return len(removed)
+
+
+def delete_event_report(event_id: str) -> bool:
+    return delete_event_reports([event_id]) > 0
 
 
 def _next_event_id(events: list[dict[str, Any]], now: datetime) -> str:
@@ -471,7 +512,7 @@ def register_event_report(
 def format_event_report_answer(event: dict[str, Any]) -> str:
     has_photo = bool((event or {}).get("foto_path"))
     lines = [
-        "Reporte de evento registado",
+        "Relatório de evento registado",
         "",
         f"Referencia: #{event.get('id', '--')}",
         f"Tipo: {event.get('tag', '--')}",

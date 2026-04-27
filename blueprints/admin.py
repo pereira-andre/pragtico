@@ -41,6 +41,8 @@ from domain.practice_experience import (
 from domain.event_reports import (
     EVENT_REPORT_STATUS_OPTIONS,
     EVENT_REPORT_TAG_OPTIONS,
+    delete_event_report,
+    delete_event_reports,
     event_report_photo_path,
     get_event_report,
     list_event_reports,
@@ -1872,7 +1874,7 @@ def admin_casebooks():
 @login_required
 @role_required("admin")
 def admin_event_reports():
-    """Painel admin para rever reportes de evento operacionais."""
+    """Painel admin para rever relatórios de evento operacionais."""
     events = [_event_report_view(event) for event in list_event_reports()]
     filters = _build_event_report_filters(events)
     filtered_events = _filter_event_reports(events, filters)
@@ -1882,7 +1884,7 @@ def admin_event_reports():
         stats=_event_report_stats(events, filtered_events),
         filters=filters,
         reports_return_to=_current_request_return_to(),
-        title="Reportes de Evento",
+        title="Relatórios de Evento",
     )
 
 
@@ -1890,7 +1892,7 @@ def admin_event_reports():
 @login_required
 @role_required("admin")
 def print_event_reports():
-    """Relatório imprimível dos reportes selecionados."""
+    """Relatório imprimível dos relatórios selecionados."""
     selected_ids = _selected_event_report_ids()
     all_events = [_event_report_view(event) for event in list_event_reports()]
     if selected_ids:
@@ -1907,11 +1909,36 @@ def print_event_reports():
     )
 
 
+@bp.route("/admin/event-reports/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_event_reports_route():
+    """Apagar relatórios de evento selecionados."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_event_reports")
+    selected_ids = _selected_event_report_ids()
+    if not selected_ids:
+        flash("Seleciona pelo menos um relatório de evento para apagar.", "error")
+        return redirect(return_to)
+    try:
+        deleted_count = delete_event_reports(selected_ids)
+    except OSError:
+        logger.exception("Failed to delete event reports")
+        flash("Não foi possível apagar os relatórios selecionados.", "error")
+        return redirect(return_to)
+    if deleted_count == 1:
+        flash("1 relatório de evento apagado.", "success")
+    elif deleted_count:
+        flash(f"{deleted_count} relatórios de evento apagados.", "success")
+    else:
+        flash("Nenhum relatório de evento correspondente encontrado.", "error")
+    return redirect(return_to)
+
+
 @bp.route("/admin/event-reports/<event_id>")
 @login_required
 @role_required("admin")
 def event_report_detail(event_id: str):
-    """Página de detalhe e edição de um reporte de evento."""
+    """Página de detalhe e edição de um relatório de evento."""
     event = get_event_report(event_id)
     if not event:
         abort(404)
@@ -1922,7 +1949,7 @@ def event_report_detail(event_id: str):
         reports_return_to=return_to,
         status_options=_event_report_status_options(),
         tag_options=EVENT_REPORT_TAG_OPTIONS,
-        title=f"Reporte {event.get('id', '')}",
+        title=f"Relatório {event.get('id', '')}",
     )
 
 
@@ -1930,7 +1957,7 @@ def event_report_detail(event_id: str):
 @login_required
 @role_required("admin")
 def event_report_photo(event_id: str):
-    """Mostrar a foto anexada ao reporte de evento."""
+    """Mostrar a foto anexada ao relatório de evento."""
     event = get_event_report(event_id)
     if not event:
         abort(404)
@@ -1944,20 +1971,20 @@ def event_report_photo(event_id: str):
 @login_required
 @role_required("admin")
 def edit_event_report(event_id: str):
-    """Guardar revisão administrativa de um reporte de evento."""
+    """Guardar revisão administrativa de um relatório de evento."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.event_report_detail", event_id=event_id)
     try:
         tag = validate_required_text(request.form.get("tag", ""), "Tipo", max_length=60).upper()
         if tag == "OBSERVAÇÃO":
             tag = "OBSERVACAO"
         if tag not in EVENT_REPORT_TAG_OPTIONS:
-            raise ValueError("Escolhe uma tag válida para o reporte.")
+            raise ValueError("Escolhe uma tag válida para o relatório.")
         local = validate_required_text(request.form.get("local", ""), "Local", max_length=200)
         description = validate_required_text(request.form.get("descricao_processada", ""), "Descrição", max_length=5000)
         original_description = (request.form.get("descricao_original") or "").strip()
         status = (request.form.get("estado") or "").strip().lower()
         if status not in EVENT_REPORT_STATUS_OPTIONS:
-            raise ValueError("Escolhe um estado válido para o reporte.")
+            raise ValueError("Escolhe um estado válido para o relatório.")
         update_event_report(
             event_id,
             {
@@ -1971,9 +1998,28 @@ def edit_event_report(event_id: str):
                 "revisto_em": datetime.now(timezone.utc).isoformat(),
             },
         )
-        flash("Reporte de evento atualizado.", "success")
+        flash("Relatório de evento atualizado.", "success")
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
+    return redirect(return_to)
+
+
+@bp.route("/admin/event-reports/<event_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_event_report_route(event_id: str):
+    """Apagar um relatório de evento."""
+    return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_event_reports")
+    try:
+        deleted = delete_event_report(event_id)
+    except OSError:
+        logger.exception("Failed to delete event report %s", event_id)
+        flash("Não foi possível apagar o relatório de evento.", "error")
+        return redirect(return_to)
+    if deleted:
+        flash("Relatório de evento apagado.", "success")
+    else:
+        flash("Relatório de evento não encontrado.", "error")
     return redirect(return_to)
 
 

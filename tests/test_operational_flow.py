@@ -4722,7 +4722,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertIn("Queres anexar uma foto", first.get_json()["answer"])
         self.assertEqual(second.status_code, 200)
         answer = second.get_json()["answer"]
-        self.assertIn("Reporte de evento registado", answer)
+        self.assertIn("Relatório de evento registado", answer)
         self.assertIn("EVT-", answer)
         events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
         events = json.loads(events_path.read_text(encoding="utf-8"))
@@ -4758,6 +4758,31 @@ class OperationalFlowTests(unittest.TestCase):
             role="admin",
             user_label="Admin",
             description_processed="O guincho do cais não está a funcionar.",
+            attachment_bytes=b"fake-jpeg",
+            attachment_mime_type="image/jpeg",
+            attachment_filename="guincho.jpg",
+        )
+        secondary_event = register_event_report(
+            {
+                "tag": "DANO",
+                "local": "navio ATLANTIC STAR",
+                "description_original": "amassadela na amurada",
+            },
+            username="admin",
+            role="admin",
+            user_label="Admin",
+            description_processed="Amassadela na amurada.",
+        )
+        photo_path = Path(event["foto_path"])
+        events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+        self.store.create_user(
+            "agente-eventos",
+            "secret1",
+            "agente",
+            full_name="Agente Eventos",
+            organization="APSS",
+            email="agente-eventos@example.com",
+            phone="+351912345680",
         )
 
         with app.app.test_client() as client:
@@ -4769,12 +4794,21 @@ class OperationalFlowTests(unittest.TestCase):
             response = client.get("/admin/event-reports?q=Teporset")
             self.assertEqual(response.status_code, 200)
             html = response.get_data(as_text=True)
-            self.assertIn("Reportes de evento", html)
+            self.assertIn("Relatórios de evento", html)
+            self.assertIn("Apagar selecionados", html)
             self.assertIn(event["id"], html)
+            open_text_index = html.index("Abrir texto")
+            open_photo_index = html.index("Abrir foto")
+            edit_index = html.index("Editar")
+            self.assertLess(open_text_index, open_photo_index)
+            self.assertLess(open_photo_index, edit_index)
 
             detail = client.get(f"/admin/event-reports/{event['id']}?return_to=/admin/event-reports")
             self.assertEqual(detail.status_code, 200)
-            self.assertIn("Guardar revisão", detail.get_data(as_text=True))
+            detail_html = detail.get_data(as_text=True)
+            self.assertIn("Dados do relatório", detail_html)
+            self.assertIn('id="event-report-edit"', detail_html)
+            self.assertIn("Guardar revisão", detail_html)
 
             update = client.post(
                 f"/admin/event-reports/{event['id']}/edit",
@@ -4785,21 +4819,60 @@ class OperationalFlowTests(unittest.TestCase):
                     "estado": "resolvido",
                     "local": "cais Teporset 2",
                     "descricao_original": "o guincho do cais nao esta a funcionar",
-                    "descricao_processada": "Guincho operacional após verificação.",
-                    "nota_admin": "Validado pela coordenação.",
+                    "descricao_processada": "Guincho no chão operacional após verificação.",
+                    "nota_admin": "Coordenação: ação concluída.",
                 },
             )
             self.assertEqual(update.status_code, 302)
 
             report = client.get(f"/admin/event-reports/print?ids={event['id']}")
             self.assertEqual(report.status_code, 200)
-            self.assertIn("Relatório de eventos operacionais", report.get_data(as_text=True))
+            report_html = report.get_data(as_text=True)
+            self.assertIn('<meta charset="utf-8">', report_html)
+            self.assertIn("Relatório de eventos operacionais", report_html)
+            self.assertIn("Guincho no chão operacional após verificação.", report_html)
+            self.assertIn("Coordenação: ação concluída.", report_html)
 
-        events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "agente-eventos"
+                flask_session["role"] = "agente"
+            forbidden_delete = client.post(
+                f"/admin/event-reports/{secondary_event['id']}/delete",
+                data={
+                    "csrf_token": "event-token",
+                    "return_to": "/admin/event-reports",
+                },
+            )
+            self.assertEqual(forbidden_delete.status_code, 302)
+            events_after_forbidden = json.loads(events_path.read_text(encoding="utf-8"))
+            self.assertTrue(any(item["id"] == secondary_event["id"] for item in events_after_forbidden))
+
+            with client.session_transaction() as flask_session:
+                flask_session["username"] = "admin"
+                flask_session["role"] = "admin"
+
+            row_delete = client.post(
+                f"/admin/event-reports/{secondary_event['id']}/delete",
+                data={
+                    "csrf_token": "event-token",
+                    "return_to": "/admin/event-reports",
+                },
+            )
+            self.assertEqual(row_delete.status_code, 302)
+
+            bulk_delete = client.post(
+                "/admin/event-reports/delete",
+                data={
+                    "csrf_token": "event-token",
+                    "return_to": "/admin/event-reports",
+                    "event_ids": event["id"],
+                },
+            )
+            self.assertEqual(bulk_delete.status_code, 302)
+
         events = json.loads(events_path.read_text(encoding="utf-8"))
-        self.assertEqual(events[0]["tag"], "FALHA")
-        self.assertEqual(events[0]["estado"], "resolvido")
-        self.assertEqual(events[0]["nota_admin"], "Validado pela coordenação.")
+        self.assertEqual(events, [])
+        self.assertFalse(photo_path.exists())
 
     def test_whatsapp_reportar_evento_accepts_photo_and_archives_file(self) -> None:
         whatsapp_service = _StubWhatsAppService(allowed_numbers={"351962063664"})
@@ -4869,7 +4942,7 @@ class OperationalFlowTests(unittest.TestCase):
         self.assertEqual(first.get_json()["delivered"], 1)
         self.assertEqual(second.get_json()["delivered"], 1)
         self.assertIn("Queres anexar uma foto", whatsapp_service.sent_messages[0]["text"])
-        self.assertIn("Reporte de evento registado", whatsapp_service.sent_messages[1]["text"])
+        self.assertIn("Relatório de evento registado", whatsapp_service.sent_messages[1]["text"])
         self.assertIn("1 foto guardada", whatsapp_service.sent_messages[1]["text"])
         events_path = Path(os.environ["EVENT_REPORTS_DIR"]) / "eventos.json"
         events = json.loads(events_path.read_text(encoding="utf-8"))

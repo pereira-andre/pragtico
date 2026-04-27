@@ -1958,6 +1958,10 @@
   margin: 0;
 }
 
+.event-reports-admin-page .document-row-menu form {
+  margin: 0;
+}
+
 .event-reports-admin-page .document-window-table {
   border-radius: 8px;
   border-color: rgba(130, 160, 195, 0.14);

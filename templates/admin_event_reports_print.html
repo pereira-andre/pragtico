@@ -144,12 +144,12 @@
   <body>
     <main class="report-shell">
       <div class="report-toolbar">
-        <a class="report-button secondary" href="{{ url_for('admin.admin_event_reports') }}">Voltar aos reportes</a>
+        <a class="report-button secondary" href="{{ url_for('admin.admin_event_reports') }}">Voltar aos relatórios</a>
         <button type="button" class="report-button" onclick="window.print()">Imprimir / PDF</button>
       </div>
       <header class="report-header">
         <h1>Relatório de eventos operacionais</h1>
-        <p>Emitido em {{ generated_at_label }}. Total de reportes neste relatório: {{ selected_count }}.</p>
+        <p>Emitido em {{ generated_at_label }}. Total de relatórios neste relatório: {{ selected_count }}.</p>
       </header>
 
       <section class="report-events">
@@ -178,12 +178,12 @@
             {% endif %}
             {% if event.has_photo %}
               <div class="report-photo">
-                <img src="{{ event.photo_url }}" alt="Foto anexada ao reporte {{ event.id }}">
+                <img src="{{ event.photo_url }}" alt="Foto anexada ao relatório {{ event.id }}">
               </div>
             {% endif %}
           </article>
         {% else %}
-          <p class="empty">Sem reportes selecionados para imprimir.</p>
+          <p class="empty">Sem relatórios selecionados para imprimir.</p>
         {% endfor %}
       </section>
     </main>

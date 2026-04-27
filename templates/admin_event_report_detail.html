@@ -4,7 +4,7 @@
   <section class="hero-card compact">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Reporte de evento</p>
+        <p class="eyebrow">Relatório de evento</p>
         <h1>{{ event.id }}</h1>
         <p class="lead">{{ event.local or "Local por confirmar" }} · {{ event.timestamp_label }}</p>
       </div>
@@ -17,11 +17,11 @@
   </section>
 
   <div class="event-report-detail-grid">
-    <section class="panel section-panel">
+    <section class="panel section-panel" id="event-report-edit">
       <div class="section-head">
         <div>
           <p class="eyebrow">Revisão</p>
-          <h2>Dados do reporte</h2>
+          <h2>Dados do relatório</h2>
         </div>
       </div>
       <form method="post" action="{{ url_for('admin.edit_event_report', event_id=event.id) }}" class="event-report-edit-form">
@@ -98,10 +98,10 @@
       {% endif %}
       {% if event.has_photo %}
         <a class="event-report-photo-link" href="{{ event.photo_url }}" target="_blank" rel="noopener noreferrer">
-          <img src="{{ event.photo_url }}" alt="Foto anexada ao reporte {{ event.id }}">
+          <img src="{{ event.photo_url }}" alt="Foto anexada ao relatório {{ event.id }}">
         </a>
       {% else %}
-        <p class="admin-status-note">Este reporte foi arquivado sem foto.</p>
+        <p class="admin-status-note">Este relatório foi arquivado sem foto.</p>
       {% endif %}
     </aside>
   </div>
