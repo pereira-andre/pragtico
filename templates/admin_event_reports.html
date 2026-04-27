@@ -110,7 +110,7 @@
         <div class="archive-selection-actions">
           <button type="button" class="mini-button secondary-button" id="event-report-select-filtered">Selecionar filtro</button>
           <button type="button" class="mini-button secondary-button" id="event-report-clear-selection">Nenhum</button>
-          <button type="submit" class="mini-button" form="event-report-print-form" id="event-report-print-selected">Imprimir / PDF</button>
+          <button type="submit" class="mini-button secondary-button" form="event-report-print-form" id="event-report-print-selected">Imprimir / PDF</button>
           <button type="submit" class="mini-button secondary-button" form="event-report-archive-resolved-form" {% if not archive_resolved_event_ids %}disabled{% endif %}>Arquivar resolvidos</button>
           <button type="submit" class="mini-button danger-button" form="event-report-delete-form" id="event-report-delete-selected">Apagar selecionados</button>
         </div>
@@ -319,6 +319,8 @@
     }
     if (eventReportPrintSelected) {
       eventReportPrintSelected.disabled = selected.length === 0;
+      eventReportPrintSelected.classList.toggle("secondary-button", selected.length === 0);
+      eventReportPrintSelected.classList.toggle("is-active", selected.length > 0);
     }
     if (eventReportDeleteSelected) {
       eventReportDeleteSelected.disabled = selected.length === 0;
