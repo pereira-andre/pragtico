@@ -12,19 +12,36 @@
     "rebocadores lisnave",
     "docas lisnave",
     "doca 33 lisnave",
-    "c3a lisnave"
+    "c3a lisnave",
+    "posição de embarque dos pilotos",
+    "posicao de embarque pilotos",
+    "embarque pilotos barra"
   ],
   "summary": "real. Complementa as regras formais das IT com distâncias, proas, correntes, marcas e dicas operacionais não documentadas nas instruções de trabalho oficiais. O corredor dragado na Barra tem menos de 200 metros de largura e 12 metros de profundidade. É um canal estreito que exige atenção permanente ao alinhamento.",
   "key_points": [
     "0,2 NM é o resguardo a manter das bóias na Barra.",
     "0,2 NM é o resguardo a manter de terra/cais no Canal Norte.",
     "0,2 NM é a distância a manter da costa no Canal Sul.",
+    "A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da Barra.",
     "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são 10,5 NM pelo Canal Sul completo.",
     "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são cerca de 10,0 NM pelo atalho/corta-mato.",
     "Navios para docas Lisnave usam pelo menos 4 rebocadores e ficam com proa a norte.",
     "Navios nos cais Lisnave ficam com proa a sul; navios pequenos para cais podem manobrar com 3 rebocadores."
   ],
   "faq": [
+    {
+      "question": "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+      "answer": "A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da barra.",
+      "keywords": [
+        "posição de embarque",
+        "posicao de embarque",
+        "embarque",
+        "pilotos",
+        "entrada da barra",
+        "barra",
+        "1 milha náutica"
+      ]
+    },
     {
       "question": "Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE?",
       "answer": "Tomando como referência operacional o Pilar n.º 2 da Barra (Bóia n.º 2), a distância total até à LISNAVE pelo Canal Sul completo é de 10,5 milhas náuticas. Pelo atalho ou corta-mato, fica em cerca de 10,0 milhas náuticas.",

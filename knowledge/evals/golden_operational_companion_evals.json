@@ -30,6 +30,16 @@
     "expected_substrings": ["6,10 metros", "20 pés", "5,49 metros"]
   },
   {
+    "document": "IT-005_TMS1.txt",
+    "question": "Qual o tipo de defensas que o TMS 1 dispõe?",
+    "expected_substrings": ["defensas", "borracha", "Yokohama"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+    "expected_substrings": ["posição de embarque", "pilotos", "1 milha náutica", "entrada da barra"]
+  },
+  {
     "document": "regras_operacionais_lisnave",
     "eval_type": "direct_operational",
     "expected_answer_origin": "operational_rule",

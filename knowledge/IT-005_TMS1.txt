@@ -121,6 +121,12 @@ afastadores são equipamentos físicos instalados no cais, vulgarmente designado
 permitindo operar em zonas de menor profundidade.
 
 ================================================================================
+DEFENSAS
+================================================================================
+
+No TMS 1 são utilizadas defensas de borracha do tipo Yokohama.
+
+================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
 ================================================================================
 
@@ -153,6 +159,9 @@ de marés vivas, caso o navio esteja condicionado a atracar pelo bordo de estibo
 
 Pergunta: Qual a separação mínima entre navios na rampa do TMS1?
 Resposta: 30 metros em relação ao navio a jusante.
+
+Pergunta: Qual o tipo de defensas que o TMS 1 dispõe?
+Resposta: No TMS 1 são utilizadas defensas de borracha do tipo Yokohama.
 
 Pergunta: Quem valida as requisições de manobra no TMS1?
 Resposta: O Piloto Coordenador.

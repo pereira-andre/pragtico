@@ -39,6 +39,11 @@ RECOMENDAÇÃO GERAL DE POSICIONAMENTO NA BARRA:
 na costa do parque de Setúbal actuam como amortecedores por causa da corrente
 forte do Canal Sul.
 
+POSIÇÃO DE EMBARQUE DOS PILOTOS FORA DA BARRA:
+A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da
+Barra. Esta referência é distinta das distâncias de percurso entre o Pilar 2 e
+os terminais ou fundeadouros.
+
 ================================================================================
 PROAS E DISTÂNCIAS — BARRA ATÉ CANAL NORTE ATÉ SAPEC LÍQUIDOS (ENTRADA)
 ================================================================================
@@ -582,6 +587,10 @@ eficazmente a 3 nós. Os rebocadores com azipodes (como o "Lisboa", "Danado" e
 Pergunta: Qual a distância do Pilar 2 ao LISNAVE pelo percurso normal?
 Resposta: 10,5 milhas náuticas pelo Canal Sul. Com o atalho (corta-mato), são
 10,0 milhas náuticas. A 8 nós o percurso normal demora aproximadamente 79 minutos.
+
+Pergunta: A que distância está a posição de embarque dos pilotos da entrada da barra?
+Resposta: A posição de embarque dos pilotos encontra-se a 1 milha náutica da
+entrada da Barra.
 
 Pergunta: Qual o canal VHF para combinar com rebocadores e amarradores?
 Resposta: Canal 10.

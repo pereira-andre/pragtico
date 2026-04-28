@@ -161,6 +161,12 @@ DISTANCE_TERMS = {
     "milha",
     "milhas",
 }
+PILOT_BOARDING_TERMS = {
+    "embarque",
+    "piloto",
+    "pilotos",
+    "posicao",
+}
 TIME_PLANNING_TERMS = {
     "antecedencia",
     "horas",
@@ -872,6 +878,21 @@ def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) 
     asks_beam_or_access = bool(question_tokens & BEAM_ACCESS_TERMS)
     candidate_has_beam_or_access = bool(candidate_tokens & BEAM_ACCESS_TERMS)
     if asks_beam_or_access and not candidate_has_beam_or_access:
+        return True
+
+    asks_pilot_boarding_position = (
+        "barra" in question_tokens
+        and bool(PILOT_BOARDING_TERMS & question_tokens)
+        and "embarque" in question_tokens
+        and bool({"piloto", "pilotos"} & question_tokens)
+    )
+    candidate_has_pilot_boarding_position = (
+        "barra" in candidate_tokens
+        and bool(PILOT_BOARDING_TERMS & candidate_tokens)
+        and "embarque" in candidate_tokens
+        and bool({"piloto", "pilotos"} & candidate_tokens)
+    )
+    if asks_pilot_boarding_position and not candidate_has_pilot_boarding_position:
         return True
 
     if _is_berth_inventory_question(question, question_tokens):
