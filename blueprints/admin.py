@@ -589,7 +589,7 @@ def _import_bot_database_payload(payload: dict) -> dict:
             stats["skipped"] += 1
             continue
         feedback_status = str(item.get("feedback_status") or "").strip().lower()
-        if feedback_status not in {"approved", "review", "ignored"}:
+        if feedback_status not in {"approved", "corrected", "review", "ignored"}:
             continue
         username = str(item.get("username") or item.get("owner_username") or "").strip().lower()
         conversation_id = str(item.get("conversation_id") or "").strip()
@@ -1114,9 +1114,11 @@ def _normalized_filter_value(value: str | None, allowed: set[str], default: str)
 def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
     clean = (value or "").strip().lower()
     if clean == "approved":
-        return "Aprovada para reutilização", "online"
+        return "Resposta original aprovada", "online"
+    if clean == "corrected":
+        return "Correção reutilizável", "online"
     if clean == "review":
-        return "Bloqueada / rever", "degraded"
+        return "Bloqueada para revisão", "degraded"
     if clean == "ignored":
         return "Ignorada", "neutral"
     return "Por rever", "neutral"
@@ -1222,7 +1224,7 @@ def _build_casebook_match_rows(case: dict, case_pool: list[dict], limit: int = 3
 
 
 def _build_admin_casebooks_payload() -> dict:
-    chat_feedback_allowed = {"all", "pending", "approved", "review", "ignored"}
+    chat_feedback_allowed = {"all", "pending", "approved", "corrected", "review", "ignored"}
     case_feedback_allowed = {"all", "pending", "approved", "avoid", "review"}
     case_type_allowed = {"", "entry", "departure", "shift"}
     source_type_allowed = {"all", "chat", "maneuver", "practice"}
@@ -1260,7 +1262,7 @@ def _build_admin_casebooks_payload() -> dict:
         status = (item.get("feedback_status") or "").strip().lower()
         if chat_feedback == "pending":
             visible = not status
-        elif chat_feedback in {"approved", "review", "ignored"}:
+        elif chat_feedback in {"approved", "corrected", "review", "ignored"}:
             visible = status == chat_feedback
         else:
             visible = True
@@ -1477,6 +1479,7 @@ def _build_admin_casebooks_payload() -> dict:
         "has_active_filters": bool(q or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
         "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
         "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
+        "chat_corrected_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "corrected"),
         "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
         "chat_ignored_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "ignored"),
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
@@ -1966,13 +1969,20 @@ def admin_casebooks_message_feedback(message_id: str):
     try:
         if not owner_username or not conversation_id:
             raise ValueError("Mensagem inválida para revisão.")
+        feedback_status = validate_feedback_status(request.form.get("feedback_status", ""))
+        feedback_note = (request.form.get("feedback_note") or "").strip()
+        feedback_correction = (request.form.get("feedback_correction") or "").strip()
+        if feedback_status == "corrected" and not feedback_correction:
+            raise ValueError("Para guardar uma correção reutilizável, preenche a resposta corrigida.")
+        if feedback_status == "review" and not feedback_note:
+            raise ValueError("Para manter bloqueada para revisão, indica o motivo.")
         services.store.update_message_feedback(
             username=owner_username,
             conversation_id=conversation_id,
             message_id=message_id,
-            feedback_status=validate_feedback_status(request.form.get("feedback_status", "")),
-            feedback_note=(request.form.get("feedback_note") or "").strip(),
-            feedback_correction=(request.form.get("feedback_correction") or "").strip(),
+            feedback_status=feedback_status,
+            feedback_note=feedback_note,
+            feedback_correction=feedback_correction,
             feedback_correction_document=(request.form.get("feedback_correction_document") or "").strip(),
             feedback_updated_by=session["username"],
         )

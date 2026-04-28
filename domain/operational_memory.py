@@ -49,11 +49,15 @@ def _review_memory_lines(items: Iterable[dict]) -> list[str]:
     lines: list[str] = []
     for index, item in enumerate(items, start=1):
         similarity = float(item.get("similarity") or 0)
+        status = _clean_text(item.get("feedback_status"), max_chars=40).lower()
         correction = _clean_text(item.get("feedback_correction"))
         note = _clean_text(item.get("feedback_note"), max_chars=320)
         if similarity < REVIEW_MEMORY_MIN_SIMILARITY and not correction and not note:
             continue
-        lines.append(f"Revisão pendente {index} (semelhança {similarity:.3f}):")
+        if status == "corrected":
+            lines.append(f"Correção validada {index} (semelhança {similarity:.3f}):")
+        else:
+            lines.append(f"Revisão pendente {index} (semelhança {similarity:.3f}):")
         lines.append(f"- Pergunta original: {_clean_text(item.get('question'), max_chars=260)}")
         if note:
             lines.append(f"- Nota do operador: {note}")
@@ -106,9 +110,9 @@ def build_feedback_memory_sources(
     if review_lines:
         snippet = "\n".join(
             [
-                "Memória operacional em revisão.",
+                "Memória operacional corrigida ou em revisão.",
                 f"Pergunta atual: {_clean_text(question, max_chars=260)}",
-                "Usar como aviso de risco: não repetir respostas marcadas para revisão sem confirmação documental.",
+                "Usar correções validadas como referência forte; usar revisões pendentes como aviso de risco.",
                 *review_lines,
             ]
         )

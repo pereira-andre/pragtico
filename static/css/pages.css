@@ -3645,6 +3645,11 @@ button:hover {
   color: #0a6c66;
 }
 
+.feedback-status.is-corrected {
+  background: rgba(10, 108, 102, 0.12);
+  color: #0a6c66;
+}
+
 .feedback-status.is-review {
   background: rgba(179, 66, 42, 0.14);
   color: #9f371f;

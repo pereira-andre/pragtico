@@ -83,7 +83,7 @@ class PostgresFeedbackMixin:
                 feedback_question = _question_for_assistant_message(message_rows, message_id)
                 correction_text = (
                     normalize_feedback_correction(feedback_question, feedback_correction)
-                    if feedback_status == "review"
+                    if feedback_status == "corrected"
                     else ""
                 )
                 correction_document = (

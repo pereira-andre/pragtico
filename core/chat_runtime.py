@@ -878,7 +878,7 @@ def playground_answer(
             username,
             clean_question,
             limit=3,
-            feedback_statuses={"review"},
+            feedback_statuses={"corrected", "review"},
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
@@ -1076,7 +1076,7 @@ def handle_chat_turn(
             username,
             clean_question,
             limit=3,
-            feedback_statuses={"review"},
+            feedback_statuses={"corrected", "review"},
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)

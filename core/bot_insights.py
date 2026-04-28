@@ -123,13 +123,13 @@ def build_learning_signals(*, window_hours: int = 168) -> dict:
             for topic in _topics_from_question(question)[:4]:
                 topic_counter[topic] += 1
 
-        if feedback_status == "approved":
+        if feedback_status in {"approved", "corrected"}:
             if feedback_updated_at and window_start <= feedback_updated_at <= window_end:
                 positives_current += 1
                 recent_events.append(
                     {
                         "type": "positive",
-                        "label": "Resposta aprovada",
+                        "label": "Correção guardada" if feedback_status == "corrected" else "Resposta aprovada",
                         "detail": question or (msg.get("content") or "")[:120],
                         "timestamp": feedback_updated_at.isoformat(),
                     }

@@ -426,7 +426,7 @@ def delete_conversation(conversation_id: str):
 @bp.route("/api/messages/<message_id>/feedback", methods=["POST"])
 @login_required
 def api_message_feedback(message_id: str):
-    """API para submeter feedback de aprovação, revisão ou ignorar uma mensagem do assistente."""
+    """API para submeter feedback governado numa mensagem do assistente."""
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     feedback_status = (payload.get("feedback_status") or "").strip().lower()
@@ -435,10 +435,12 @@ def api_message_feedback(message_id: str):
     feedback_correction_document = (payload.get("feedback_correction_document") or "").strip()
     if not conversation_id:
         return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
-    if feedback_status not in {"approved", "review", "ignored"}:
+    if feedback_status not in {"approved", "corrected", "review", "ignored"}:
         return jsonify({"error": flash_error_message("Estado de feedback inválido.")}), 400
-    if feedback_status == "review" and not feedback_note and not feedback_correction:
-        return jsonify({"error": flash_error_message("Ao pedir revisão indica o motivo ou a resposta corrigida.")}), 400
+    if feedback_status == "corrected" and not feedback_correction:
+        return jsonify({"error": flash_error_message("Para corrigir, escreve a resposta corrigida reutilizável.")}), 400
+    if feedback_status == "review" and not feedback_note:
+        return jsonify({"error": flash_error_message("Para manter em revisão, indica o motivo.")}), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,

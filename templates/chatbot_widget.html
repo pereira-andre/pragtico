@@ -59,7 +59,7 @@
               <summary class="chatbot-feedback-summary">
                 <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
                 <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
-                  {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% else %}Sem feedback{% endif %}
+                  {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% else %}Sem feedback{% endif %}
                 </span>
               </summary>
               <div class="chatbot-feedback-body">
@@ -68,12 +68,13 @@
                 <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
                 <div class="feedback-actions">
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
-                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
+                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'corrected' %}is-active{% endif %}" data-feedback-choice="corrected">Corrigir</button>
+                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Rever sem reutilizar</button>
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'ignored' %}is-active{% endif %}" data-feedback-choice="ignored">Ignorar</button>
                 </div>
                 <p class="chatbot-feedback-meta" data-feedback-meta>
                   {% if msg.feedback_status %}
-                    {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
+                    {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'corrected' and msg.feedback_correction %}. Correção reutilizável guardada.{% else %}.{% endif %}
                   {% else %}
                     Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.
                   {% endif %}
@@ -159,6 +160,7 @@
 
   function feedbackStatusLabel(status) {
     if (status === "approved") return "Aprovada";
+    if (status === "corrected") return "Corrigida";
     if (status === "review") return "Rever";
     if (status === "ignored") return "Ignorada";
     return "Sem feedback";
@@ -170,11 +172,14 @@
       return updatedAtLabel ? "Ignorada em " + updatedAtLabel + ". Fora da aprendizagem." : "Ignorada. Fora da aprendizagem.";
     }
     const hasCorrection = String(correction || "").trim().length > 0;
-    if (status === "review" && hasCorrection && updatedAtLabel) {
-      return "Rever em " + updatedAtLabel + ". Correção guardada.";
+    if (status === "corrected" && hasCorrection && updatedAtLabel) {
+      return "Corrigida em " + updatedAtLabel + ". Correção reutilizável guardada.";
     }
-    if (status === "review" && hasCorrection) {
-      return "Rever. Correção guardada.";
+    if (status === "corrected" && hasCorrection) {
+      return "Corrigida. Correção reutilizável guardada.";
+    }
+    if (status === "review") {
+      return updatedAtLabel ? "Em revisão desde " + updatedAtLabel + ". Não reutiliza." : "Em revisão. Não reutiliza.";
     }
     if (updatedAtLabel) return feedbackStatusLabel(status) + " em " + updatedAtLabel + ".";
     return feedbackStatusLabel(status) + ".";
@@ -257,7 +262,8 @@
     actions.className = "feedback-actions";
     [
       ["approved", "Aprovar"],
-      ["review", "Pedir revisão"],
+      ["corrected", "Corrigir"],
+      ["review", "Rever sem reutilizar"],
       ["ignored", "Ignorar"],
     ].forEach(([value, label]) => {
       const button = document.createElement("button");
@@ -303,9 +309,14 @@
     const correctionField = box.querySelector("[data-feedback-correction]");
     const correctionDocumentField = box.querySelector("[data-feedback-correction-document]");
     if (!messageId || !convIdField.value || !status) return;
-    if (status === "review" && !(noteField?.value || "").trim() && !(correctionField?.value || "").trim()) {
-      statusEl.textContent = "Ao pedir revisão indica o motivo ou a resposta corrigida.";
+    if (status === "corrected" && !(correctionField?.value || "").trim()) {
+      statusEl.textContent = "Para corrigir, escreve a resposta corrigida reutilizável.";
       correctionField?.focus();
+      return;
+    }
+    if (status === "review" && !(noteField?.value || "").trim()) {
+      statusEl.textContent = "Para rever sem reutilizar, indica o motivo.";
+      noteField?.focus();
       return;
     }
 

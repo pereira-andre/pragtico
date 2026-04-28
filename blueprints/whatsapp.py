@@ -1077,7 +1077,7 @@ def whatsapp_webhook_receive():
                         correction_username,
                         correction_conversation_id,
                         correction_message_id,
-                        "review",
+                        "corrected",
                         str(pending_feedback_correction.get("feedback_note") or "").strip(),
                         feedback_correction=text,
                         feedback_updated_by=profile["username"],

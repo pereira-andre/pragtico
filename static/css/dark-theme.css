@@ -432,6 +432,7 @@ label {
   margin-top: 8px;
 }
 .feedback-status.is-approved { color: var(--success); }
+.feedback-status.is-corrected { color: var(--success); }
 .feedback-status.is-review { color: var(--warning); }
 .feedback-status.is-ignored { color: var(--muted); }
 
