@@ -59,7 +59,7 @@
               <summary class="chatbot-feedback-summary">
                 <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
                 <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
-                  {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% else %}Sem feedback{% endif %}
+                  {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% else %}Sem feedback{% endif %}
                 </span>
               </summary>
               <div class="chatbot-feedback-body">
@@ -69,12 +69,13 @@
                 <div class="feedback-actions">
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
+                  <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'ignored' %}is-active{% endif %}" data-feedback-choice="ignored">Ignorar</button>
                 </div>
                 <p class="chatbot-feedback-meta" data-feedback-meta>
                   {% if msg.feedback_status %}
-                    {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
+                    {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
                   {% else %}
-                    Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.
+                    Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.
                   {% endif %}
                 </p>
               </div>
@@ -159,11 +160,15 @@
   function feedbackStatusLabel(status) {
     if (status === "approved") return "Aprovada";
     if (status === "review") return "Rever";
+    if (status === "ignored") return "Ignorada";
     return "Sem feedback";
   }
 
   function feedbackMetaLabel(status, updatedAtLabel, correction) {
-    if (!status) return "Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.";
+    if (!status) return "Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.";
+    if (status === "ignored") {
+      return updatedAtLabel ? "Ignorada em " + updatedAtLabel + ". Fora da aprendizagem." : "Ignorada. Fora da aprendizagem.";
+    }
     const hasCorrection = String(correction || "").trim().length > 0;
     if (status === "review" && hasCorrection && updatedAtLabel) {
       return "Rever em " + updatedAtLabel + ". Correção guardada.";
@@ -253,6 +258,7 @@
     [
       ["approved", "Aprovar"],
       ["review", "Pedir revisão"],
+      ["ignored", "Ignorar"],
     ].forEach(([value, label]) => {
       const button = document.createElement("button");
       button.type = "button";

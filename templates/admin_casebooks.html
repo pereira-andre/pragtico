@@ -99,6 +99,11 @@
         <small>prontas para reutilização supervisionada</small>
       </article>
       <article class="hero-stat">
+        <span>Mensagens ignoradas</span>
+        <strong>{{ casebooks.chat_ignored_total }}</strong>
+        <small>fora da aprendizagem e dos evals</small>
+      </article>
+      <article class="hero-stat">
         <span>Casos por validar</span>
         <strong>{{ casebooks.case_pending_total }}</strong>
         <small>correlações em observação</small>
@@ -133,6 +138,7 @@
             <option value="pending" {% if casebooks.filters.chat_feedback == "pending" %}selected{% endif %}>Por rever</option>
             <option value="approved" {% if casebooks.filters.chat_feedback == "approved" %}selected{% endif %}>Aprovadas</option>
             <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas / rever</option>
+            <option value="ignored" {% if casebooks.filters.chat_feedback == "ignored" %}selected{% endif %}>Ignoradas</option>
             <option value="all" {% if casebooks.filters.chat_feedback == "all" %}selected{% endif %}>Todas</option>
           </select>
         </label>
@@ -216,6 +222,7 @@
                 <select name="feedback_status" required>
                   <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar para reutilização</option>
                   <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Cancelar reutilização / rever</option>
+                  <option value="ignored" {% if item.feedback_status == "ignored" %}selected{% endif %}>Ignorar: sem aprendizagem</option>
                 </select>
               </label>
               <label>

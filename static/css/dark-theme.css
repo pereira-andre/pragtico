@@ -433,6 +433,7 @@ label {
 }
 .feedback-status.is-approved { color: var(--success); }
 .feedback-status.is-review { color: var(--warning); }
+.feedback-status.is-ignored { color: var(--muted); }
 
 /* Constraint badges */
 .constraint-badge img {

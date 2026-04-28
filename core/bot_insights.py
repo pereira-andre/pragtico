@@ -114,6 +114,8 @@ def build_learning_signals(*, window_hours: int = 168) -> dict:
 
     for msg in messages:
         feedback_status = (msg.get("feedback_status") or "").strip().lower()
+        if feedback_status == "ignored":
+            continue
         feedback_updated_at = _iso_to_datetime(msg.get("feedback_updated_at"))
         created_at = _iso_to_datetime(msg.get("created_at"))
         question = msg.get("question") or ""

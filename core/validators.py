@@ -233,7 +233,7 @@ def validate_role(value: Optional[str]) -> str:
     return validate_choice(value, ALLOWED_ROLES, "Role")
 
 
-ALLOWED_FEEDBACK_STATUSES = {"approved", "review"}
+ALLOWED_FEEDBACK_STATUSES = {"approved", "review", "ignored"}
 
 
 def validate_feedback_status(value: Optional[str]) -> str:

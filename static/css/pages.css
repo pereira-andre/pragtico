@@ -3650,6 +3650,11 @@ button:hover {
   color: #9f371f;
 }
 
+.feedback-status.is-ignored {
+  background: rgba(95, 105, 104, 0.14);
+  color: var(--muted);
+}
+
 .feedback-note,
 .feedback-correction {
   min-height: 64px;
