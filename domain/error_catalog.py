@@ -596,7 +596,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 5033,
         "category": "chat",
         "message": "Revisão sem motivo.",
-        "user_message": "Ao pedir revisão indica o motivo ou a resposta corrigida.",
+        "user_message": "Para rever sem reutilizar indica o motivo. Para reutilizar uma correção, usa Corrigir.",
     },
     "CONVERSATION_ID_MISSING": {
         "code": 5060,

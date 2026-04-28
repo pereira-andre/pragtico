@@ -200,6 +200,12 @@ def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: li
     return best_review
 
 
+def _is_corrected_feedback_match(item: dict) -> bool:
+    status = (item.get("feedback_status") or "").strip().lower()
+    has_correction = bool((item.get("feedback_correction") or "").strip())
+    return status == "corrected" or (status == "review" and has_correction)
+
+
 def _select_review_correction_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
     correction_threshold = _review_correction_threshold()
     best_review = next(
@@ -208,6 +214,7 @@ def _select_review_correction_match(reviewed_answers: list[dict], trusted_answer
             for item in reviewed_answers
             if item.get("similarity", 0) >= correction_threshold
             and (item.get("feedback_correction") or "").strip()
+            and _is_corrected_feedback_match(item)
         ),
         None,
     )
@@ -317,6 +324,50 @@ def _build_supplemental_sources(
         build_feedback_memory_sources(question, trusted_answers, reviewed_answers)
     )
     return supplemental_sources
+
+
+def _clean_revision_text(value: object, *, max_chars: int = 1800) -> str:
+    clean = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(clean) <= max_chars:
+        return clean
+    return clean[: max_chars - 1].rstrip() + "..."
+
+
+def _build_answer_revision_source(revision_context: dict | None) -> dict | None:
+    if not revision_context:
+        return None
+    original_question = _clean_revision_text(revision_context.get("original_question"), max_chars=800)
+    previous_answer = _clean_revision_text(revision_context.get("previous_answer"), max_chars=1800)
+    user_note = _clean_revision_text(revision_context.get("user_note"), max_chars=600)
+    if not original_question and not previous_answer:
+        return None
+    lines = [
+        "Pedido de reanálise da resposta anterior.",
+        "Objetivo: voltar a consultar o conhecimento disponível, procurar omissões ou confusões e produzir nova resposta.",
+        "Não repetir literalmente a resposta anterior. Se a conclusão factual se mantiver, explicar que foi revalidada e reformular a síntese.",
+    ]
+    if original_question:
+        lines.append(f"Pergunta original: {original_question}")
+    if previous_answer:
+        lines.append(f"Resposta anterior a rever: {previous_answer}")
+    if user_note:
+        lines.append(f"Observação do utilizador: {user_note}")
+    snippet = "\n".join(lines)
+    return {
+        "source_id": "REV1",
+        "document": "pedido_reanalise_resposta",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "answer_revision_context",
+        "snippet": snippet,
+        "text": snippet,
+    }
+
+
+def _answers_are_effectively_same(first: object, second: object) -> bool:
+    first_norm = re.sub(r"\W+", "", unicodedata.normalize("NFKD", str(first or "")).lower())
+    second_norm = re.sub(r"\W+", "", unicodedata.normalize("NFKD", str(second or "")).lower())
+    return bool(first_norm and second_norm and first_norm == second_norm)
 
 
 def _source_mode_counts(sources: list[dict] | None) -> list[dict]:
@@ -1047,6 +1098,7 @@ def handle_chat_turn(
     inbound_message_id: str = "",
     inbound_message_metadata: dict | None = None,
     pre_response_messages: list[dict] | None = None,
+    revision_context: dict | None = None,
 ) -> dict:
     """Process a single chat turn and persist the resulting messages."""
     clean_question = (question or "").strip()
@@ -1055,9 +1107,16 @@ def handle_chat_turn(
 
     with chat_actor_context(username=username, role=role):
         refresh_knowledge_state(force_reindex=False)
+        revision_context = revision_context or {}
+        is_revision_attempt = bool(revision_context)
+        lookup_question = (
+            str(revision_context.get("original_question") or "").strip()
+            if is_revision_attempt
+            else ""
+        ) or clean_question
         conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
         history = services.store.list_messages(username, conversation["id"])
-        execution_plan = build_chat_execution_plan(clean_question)
+        execution_plan = build_chat_execution_plan(lookup_question)
         existing_pending = load_pending_chat_action(username, conversation["id"])
         if existing_pending and not allow_mutations:
             clear_pending_chat_action(username, conversation["id"])
@@ -1066,7 +1125,7 @@ def handle_chat_turn(
         if load_bot_settings().get("auto_trust_positive_feedback", True):
             trusted_answers = services.store.find_feedback_matches(
                 username,
-                clean_question,
+                lookup_question,
                 limit=3,
                 feedback_statuses={"approved"},
             )
@@ -1074,7 +1133,7 @@ def handle_chat_turn(
             trusted_answers = []
         reviewed_answers = services.store.find_feedback_matches(
             username,
-            clean_question,
+            lookup_question,
             limit=3,
             feedback_statuses={"corrected", "review"},
         )
@@ -1244,7 +1303,7 @@ def handle_chat_turn(
                         "sources": [],
                         "answer_origin": "slash_rejected",
                     }
-        elif answer is None:
+        elif answer is None and not is_revision_attempt:
             answer = answer_direct_operational_query(clean_question, plan=execution_plan)
 
         if answer is None:
@@ -1410,35 +1469,38 @@ def handle_chat_turn(
         if answer is None:
             runtime_history = history + [user_message]
             conversation_state = build_conversation_reasoning_state(
-                clean_question,
+                lookup_question,
                 runtime_history,
                 execution_plan,
             )
             targeted_document_context = _build_targeted_document_context(
-                clean_question,
+                lookup_question,
                 history,
                 trusted_answers,
                 reviewed_answers,
             )
-            berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
-            berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
+            berth_profile_match = find_best_berth_profile(lookup_question, _active_knowledge_dir())
+            berth_profile_answer = build_berth_profile_answer(lookup_question, berth_profile_match)
             supplemental_sources = _build_supplemental_sources(
-                clean_question,
+                lookup_question,
                 plan=execution_plan,
                 conversation_state=conversation_state,
                 trusted_answers=synthesis_trusted_answers,
                 reviewed_answers=synthesis_reviewed_answers,
             )
-            compound_message_source = build_compound_message_analysis_source(clean_question)
+            revision_source = _build_answer_revision_source(revision_context)
+            if revision_source:
+                supplemental_sources.insert(0, revision_source)
+            compound_message_source = build_compound_message_analysis_source(lookup_question)
             if compound_message_source:
                 supplemental_sources.append(compound_message_source)
             supplemental_sources.extend(build_berth_profile_sources(berth_profile_match))
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
-            allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+            allow_companion_shortcut = not execution_plan.requires_llm_synthesis and not is_revision_attempt
             if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
-                clean_question,
+                lookup_question,
                 targeted_document_context["companion_answer"],
             ):
                 answer = {
@@ -1463,7 +1525,7 @@ def handle_chat_turn(
                     }
             else:
                 global_companion_match = find_best_global_companion_match(
-                    clean_question,
+                    lookup_question,
                     _active_knowledge_dir(),
                 )
                 if global_companion_match and not allow_companion_shortcut:
@@ -1483,7 +1545,7 @@ def handle_chat_turn(
                             "sources": global_companion_match["sources"],
                             "answer_origin": "document_companion_global",
                         }
-                elif review_correction_match and not execution_plan.requires_llm_synthesis:
+                elif review_correction_match and not execution_plan.requires_llm_synthesis and not is_revision_attempt:
                     answer = _build_review_correction_answer(review_correction_match)
                 else:
                     if (
@@ -1497,7 +1559,7 @@ def handle_chat_turn(
                             raise RuntimeError("Define a API key do provider antes de usar o chatbot.")
                         answer = services.rag.answer(
                             question=clean_question,
-                            retrieval_question=targeted_document_context["retrieval_question"],
+                            retrieval_question=targeted_document_context["retrieval_question"] or lookup_question,
                             role=role,
                             history=runtime_history[-10:],
                             supplemental_sources=supplemental_sources,
@@ -1516,6 +1578,16 @@ def handle_chat_turn(
                                 "feedback_correction": synthesis_trusted_answers[0].get("feedback_correction", ""),
                                 "feedback_correction_document": synthesis_trusted_answers[0].get("feedback_correction_document", ""),
                             }
+
+        if is_revision_attempt and _answers_are_effectively_same(
+            (answer or {}).get("answer", ""),
+            revision_context.get("previous_answer", ""),
+        ):
+            answer["answer"] = (
+                "Reanalisei a pergunta e não encontrei base documental para alterar a conclusão. "
+                "Reformulando de forma explícita: "
+                + str(answer.get("answer") or "").strip()
+            )
 
         answer = add_contextual_response_emojis(answer, clean_question)
 

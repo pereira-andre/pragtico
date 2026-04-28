@@ -86,6 +86,13 @@ def _topics_from_question(question: str) -> list[str]:
     return topics
 
 
+def _normalized_chat_feedback_status(message: dict) -> str:
+    status = (message.get("feedback_status") or "").strip().lower()
+    if status == "review" and (message.get("feedback_correction") or "").strip():
+        return "corrected"
+    return status
+
+
 def build_learning_signals(*, window_hours: int = 168) -> dict:
     store = getattr(services, "store", None)
     if not store:
@@ -113,7 +120,7 @@ def build_learning_signals(*, window_hours: int = 168) -> dict:
     topic_counter: Counter[str] = Counter()
 
     for msg in messages:
-        feedback_status = (msg.get("feedback_status") or "").strip().lower()
+        feedback_status = _normalized_chat_feedback_status(msg)
         if feedback_status == "ignored":
             continue
         feedback_updated_at = _iso_to_datetime(msg.get("feedback_updated_at"))
@@ -246,7 +253,7 @@ def build_exceptions(*, limit: int = 10) -> dict:
         cases = []
 
     for msg in messages:
-        if (msg.get("feedback_status") or "").strip().lower() == "review":
+        if _normalized_chat_feedback_status(msg) == "review":
             message_id = str(msg.get("id") or "").strip()
             items.append(
                 {

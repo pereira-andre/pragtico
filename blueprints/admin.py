@@ -1124,6 +1124,13 @@ def _chat_feedback_state_meta(value: str | None) -> tuple[str, str]:
     return "Por rever", "neutral"
 
 
+def _normalized_chat_feedback_status(item: dict) -> str:
+    status = (item.get("feedback_status") or "").strip().lower()
+    if status == "review" and (item.get("feedback_correction") or "").strip():
+        return "corrected"
+    return status
+
+
 def _case_feedback_state_meta(value: str | None) -> tuple[str, str]:
     clean = (value or "").strip().lower()
     if clean == "approved":
@@ -1259,7 +1266,7 @@ def _build_admin_casebooks_payload() -> dict:
     def _message_visible(item: dict) -> bool:
         if source_type not in {"all", "chat"}:
             return False
-        status = (item.get("feedback_status") or "").strip().lower()
+        status = _normalized_chat_feedback_status(item)
         if chat_feedback == "pending":
             visible = not status
         elif chat_feedback in {"approved", "corrected", "review", "ignored"}:
@@ -1353,7 +1360,8 @@ def _build_admin_casebooks_payload() -> dict:
 
     chat_rows = []
     for item in visible_chat_messages[:display_limit]:
-        status_label, badge = _chat_feedback_state_meta(item.get("feedback_status"))
+        status_clean = _normalized_chat_feedback_status(item)
+        status_label, badge = _chat_feedback_state_meta(status_clean)
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
         chat_rows.append(
@@ -1366,7 +1374,7 @@ def _build_admin_casebooks_payload() -> dict:
                 "question_preview": _preview_text(question, limit=220) or "Sem pergunta anterior identificada.",
                 "answer": answer,
                 "answer_preview": _preview_text(answer, limit=420) or "Sem resposta guardada.",
-                "feedback_status": (item.get("feedback_status") or "").strip().lower(),
+                "feedback_status": status_clean,
                 "feedback_status_label": status_label,
                 "feedback_badge": badge,
                 "feedback_note": item.get("feedback_note", ""),
@@ -1477,11 +1485,11 @@ def _build_admin_casebooks_payload() -> dict:
         "next_limit": next_limit,
         "allowed_limits": ADMIN_CASEBOOK_ALLOWED_LIMITS,
         "has_active_filters": bool(q or source_type != "all" or chat_feedback != "pending" or case_feedback != "pending" or case_type),
-        "chat_pending_total": sum(1 for item in all_chat_messages if not (item.get("feedback_status") or "").strip()),
-        "chat_approved_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "approved"),
-        "chat_corrected_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "corrected"),
-        "chat_review_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "review"),
-        "chat_ignored_total": sum(1 for item in all_chat_messages if (item.get("feedback_status") or "").strip() == "ignored"),
+        "chat_pending_total": sum(1 for item in all_chat_messages if not _normalized_chat_feedback_status(item)),
+        "chat_approved_total": sum(1 for item in all_chat_messages if _normalized_chat_feedback_status(item) == "approved"),
+        "chat_corrected_total": sum(1 for item in all_chat_messages if _normalized_chat_feedback_status(item) == "corrected"),
+        "chat_review_total": sum(1 for item in all_chat_messages if _normalized_chat_feedback_status(item) == "review"),
+        "chat_ignored_total": sum(1 for item in all_chat_messages if _normalized_chat_feedback_status(item) == "ignored"),
         "case_pending_total": sum(1 for item in all_cases if not (item.get("feedback_status") or "").strip()),
         "case_approved_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() == "approved"),
         "case_review_total": sum(1 for item in all_cases if (item.get("feedback_status") or "").strip() in {"avoid", "review"}),

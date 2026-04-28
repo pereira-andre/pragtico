@@ -71,6 +71,7 @@
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'corrected' %}is-active{% endif %}" data-feedback-choice="corrected">Corrigir</button>
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Rever sem reutilizar</button>
                   <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'ignored' %}is-active{% endif %}" data-feedback-choice="ignored">Ignorar</button>
+                  <button type="button" class="mini-button secondary-button" data-feedback-retry>Nova tentativa</button>
                 </div>
                 <p class="chatbot-feedback-meta" data-feedback-meta>
                   {% if msg.feedback_status %}
@@ -273,6 +274,12 @@
       button.textContent = label;
       actions.appendChild(button);
     });
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.className = "mini-button secondary-button";
+    retryButton.dataset.feedbackRetry = "1";
+    retryButton.textContent = "Nova tentativa";
+    actions.appendChild(retryButton);
 
     const meta = document.createElement("p");
     meta.className = "chatbot-feedback-meta";
@@ -348,6 +355,42 @@
       statusEl.textContent = "Feedback guardado.";
     } catch (error) {
       statusEl.textContent = "Erro ao guardar feedback: " + error.message;
+    } finally {
+      delete box.dataset.submitting;
+      box.querySelectorAll("button, textarea, input").forEach((control) => {
+        control.disabled = false;
+      });
+    }
+  }
+
+  async function submitMessageRetry(box) {
+    const article = box.closest("[data-message-id]");
+    const messageId = article?.dataset.messageId || "";
+    const noteField = box.querySelector("[data-feedback-note]");
+    if (!messageId || !convIdField.value) return;
+
+    box.dataset.submitting = "1";
+    box.querySelectorAll("button, textarea, input").forEach((control) => {
+      control.disabled = true;
+    });
+    statusEl.textContent = "A pedir nova tentativa...";
+    try {
+      const response = await fetch("/api/messages/" + encodeURIComponent(messageId) + "/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: convIdField.value,
+          note: noteField?.value || "",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Falha ao pedir nova tentativa.");
+      applyConversationPayload(payload, { replaceMessages: false });
+      appendBubble("user", payload.retry_prompt || "Revê a tua resposta anterior.", [], "", new Date().toLocaleString("pt-PT"));
+      appendBubble("assistant", payload.answer, payload.sources || [], payload.message_id || "", payload.created_at_label || "");
+      statusEl.textContent = "Nova tentativa recebida.";
+    } catch (error) {
+      statusEl.textContent = "Erro ao pedir nova tentativa: " + error.message;
     } finally {
       delete box.dataset.submitting;
       box.querySelectorAll("button, textarea, input").forEach((control) => {
@@ -763,6 +806,12 @@
     mountFeedbackBox(article);
   });
   log.addEventListener("click", (event) => {
+    const retryButton = event.target.closest("[data-feedback-retry]");
+    if (retryButton) {
+      event.preventDefault();
+      submitMessageRetry(retryButton.closest("[data-feedback-box]"));
+      return;
+    }
     const button = event.target.closest("[data-feedback-choice]");
     if (!button) return;
     event.preventDefault();

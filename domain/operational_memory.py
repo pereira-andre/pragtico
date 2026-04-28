@@ -54,7 +54,7 @@ def _review_memory_lines(items: Iterable[dict]) -> list[str]:
         note = _clean_text(item.get("feedback_note"), max_chars=320)
         if similarity < REVIEW_MEMORY_MIN_SIMILARITY and not correction and not note:
             continue
-        if status == "corrected":
+        if status == "corrected" or (status == "review" and correction):
             lines.append(f"Correção validada {index} (semelhança {similarity:.3f}):")
         else:
             lines.append(f"Revisão pendente {index} (semelhança {similarity:.3f}):")
