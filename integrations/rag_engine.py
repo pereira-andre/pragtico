@@ -1263,6 +1263,7 @@ Regras:
 - Fontes com modo `berth_profile` são perfis estruturados de cais/terminal; usa-as para normalizar dimensões, calados, janelas de manobra, restrições e orientação de rebocadores antes de sintetizar.
 - Fontes com modo `operational_safety_limits` são limites de suspensão de manobras; se indicarem suspensão por nevoeiro ou vento, começa pela conclusão de que as manobras ficam suspensas.
 - Fontes com modo `operational_tug_guidance` são regra prática operacional para rebocadores; usa-as como baseline da recomendação. A IT-016 confirma ou agrava mínimos legais/DWT/carga perigosa, mas não deve reduzir essa regra prática.
+- Fontes com modo `operational_feedback_memory` são memória operacional revista por operadores; usa-as como sinal forte, mas reconcilia com documentos, perfis de cais e dados live. Nunca copies literalmente essa memória.
 - Fontes com modo `message_analysis` separam mensagens compostas em contexto e perguntas; responde a cada pergunta explícita e usa os factos declarativos como premissas.
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte de factos e decisão, mas reformula-a no contexto atual.
 - Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.

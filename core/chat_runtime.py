@@ -65,6 +65,10 @@ from domain.knowledge_companions import (
     find_best_global_companion_match,
     load_document_companion,
 )
+from domain.operational_memory import (
+    build_feedback_memory_sources,
+    filter_feedback_for_synthesis,
+)
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
 from core.bot_settings import load_bot_settings
@@ -301,12 +305,17 @@ def _build_supplemental_sources(
     question: str,
     plan: ChatExecutionPlan | None = None,
     conversation_state: dict | None = None,
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
 ) -> list[dict]:
-    supplemental_sources = build_operational_chat_sources(question)
+    supplemental_sources = build_operational_chat_sources(question, plan=plan)
     supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
     if conversation_state and conversation_state.get("source"):
         supplemental_sources.append(conversation_state["source"])
     supplemental_sources.extend(_build_approved_casebook_sources(question))
+    supplemental_sources.extend(
+        build_feedback_memory_sources(question, trusted_answers, reviewed_answers)
+    )
     return supplemental_sources
 
 
@@ -771,6 +780,10 @@ def playground_answer(
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
+        synthesis_trusted_answers, synthesis_reviewed_answers = filter_feedback_for_synthesis(
+            trusted_answers,
+            reviewed_answers,
+        )
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
@@ -794,6 +807,8 @@ def playground_answer(
             clean_question,
             plan=execution_plan,
             conversation_state=conversation_state,
+            trusted_answers=synthesis_trusted_answers,
+            reviewed_answers=synthesis_reviewed_answers,
         )
         compound_message_source = build_compound_message_analysis_source(clean_question)
         if compound_message_source:
@@ -866,8 +881,8 @@ def playground_answer(
                         role=role,
                         history=[],
                         supplemental_sources=supplemental_sources,
-                        trusted_answers=trusted_answers,
-                        reviewed_answers=reviewed_answers,
+                        trusted_answers=synthesis_trusted_answers,
+                        reviewed_answers=synthesis_reviewed_answers,
                         execution_plan=execution_plan.to_dict(),
                         conversation_state=conversation_state,
                     )
@@ -921,6 +936,10 @@ def handle_chat_turn(
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
+        synthesis_trusted_answers, synthesis_reviewed_answers = filter_feedback_for_synthesis(
+            trusted_answers,
+            reviewed_answers,
+        )
         user_message = services.store.append_chat_message(
             username=username,
             conversation_id=conversation["id"],
@@ -1263,6 +1282,8 @@ def handle_chat_turn(
                 clean_question,
                 plan=execution_plan,
                 conversation_state=conversation_state,
+                trusted_answers=synthesis_trusted_answers,
+                reviewed_answers=synthesis_reviewed_answers,
             )
             compound_message_source = build_compound_message_analysis_source(clean_question)
             if compound_message_source:
@@ -1336,20 +1357,20 @@ def handle_chat_turn(
                             role=role,
                             history=runtime_history[-10:],
                             supplemental_sources=supplemental_sources,
-                            trusted_answers=trusted_answers,
-                            reviewed_answers=reviewed_answers,
+                            trusted_answers=synthesis_trusted_answers,
+                            reviewed_answers=synthesis_reviewed_answers,
                             execution_plan=execution_plan.to_dict(),
                             conversation_state=conversation_state,
                         )
                         answer["answer_origin"] = "llm"
-                        if trusted_answers:
+                        if synthesis_trusted_answers:
                             answer["feedback_match"] = {
-                                "similarity": trusted_answers[0]["similarity"],
-                                "message_id": trusted_answers[0]["message_id"],
-                                "question": trusted_answers[0]["question"],
-                                "feedback_note": trusted_answers[0].get("feedback_note", ""),
-                                "feedback_correction": trusted_answers[0].get("feedback_correction", ""),
-                                "feedback_correction_document": trusted_answers[0].get("feedback_correction_document", ""),
+                                "similarity": synthesis_trusted_answers[0]["similarity"],
+                                "message_id": synthesis_trusted_answers[0]["message_id"],
+                                "question": synthesis_trusted_answers[0]["question"],
+                                "feedback_note": synthesis_trusted_answers[0].get("feedback_note", ""),
+                                "feedback_correction": synthesis_trusted_answers[0].get("feedback_correction", ""),
+                                "feedback_correction_document": synthesis_trusted_answers[0].get("feedback_correction_document", ""),
                             }
 
         answer = add_contextual_response_emojis(answer, clean_question)

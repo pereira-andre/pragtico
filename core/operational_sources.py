@@ -25,6 +25,26 @@ from domain.tug_guidance import build_tug_operational_guidance_source
 
 logger = logging.getLogger(__name__)
 
+PORTAL_ACTIVITY_CONTEXT_RE = re.compile(
+    r"\b(navio|navios|escala|escalas|planead\w*|previst\w*|programad\w*|"
+    r"marcad\w*|arquivo|historico|histórico|eta|etd|recent\w*|ultim\w*|"
+    r"em porto|em cais|quadro|ocupad\w*|ocupac\w*|agent\w*|piloto|pilotos)\b"
+)
+PORTAL_MOVEMENT_CONTEXT_RE = re.compile(
+    r"\b(chegada|chegadas|entrada|entradas|saida|saída|saidas|saídas|partida|partidas)\b"
+    r".*\b(navio|navios|escala|escalas|previst\w*|planead\w*|recent\w*|ultim\w*|hoje|amanha|amanhã|eta|etd)\b"
+    r"|"
+    r"\b(navio|navios|escala|escalas|previst\w*|planead\w*|recent\w*|ultim\w*|hoje|amanha|amanhã|eta|etd)\b"
+    r".*\b(chegada|chegadas|entrada|entradas|saida|saída|saidas|saídas|partida|partidas)\b"
+)
+PORTAL_MANEUVER_CONTEXT_RE = re.compile(
+    r"\bmanobras?\b.*\b(planead\w*|previst\w*|programad\w*|marcad\w*|"
+    r"arquivo|historico|histórico|hoje|amanha|amanhã|ontem)\b"
+    r"|"
+    r"\b(planead\w*|previst\w*|programad\w*|marcad\w*|arquivo|historico|histórico|"
+    r"hoje|amanha|amanhã|ontem)\b.*\bmanobras?\b"
+)
+
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
     """Flatten hourly weather groups into a single ordered timeline list up to max_hours entries."""
@@ -315,15 +335,44 @@ def build_lisnave_operational_rule_source(question: str) -> dict | None:
     }
 
 
-def build_operational_chat_sources(question: str) -> list[dict]:
+def _needs_portal_activity_context(question: str, plan: ChatExecutionPlan | None = None) -> bool:
+    plan = plan or build_chat_execution_plan(question)
+    clean = plan.normalized_question or _operational_lookup_key(question)
+    if plan.wants_operational_lookup:
+        return True
+    if plan.maneuver_lookup_type and (
+        PORTAL_ACTIVITY_CONTEXT_RE.search(clean)
+        or PORTAL_MOVEMENT_CONTEXT_RE.search(clean)
+        or PORTAL_MANEUVER_CONTEXT_RE.search(clean)
+    ):
+        return True
+    if (
+        PORTAL_ACTIVITY_CONTEXT_RE.search(clean)
+        or PORTAL_MOVEMENT_CONTEXT_RE.search(clean)
+        or PORTAL_MANEUVER_CONTEXT_RE.search(clean)
+    ):
+        return True
+    return False
+
+
+def build_operational_chat_sources(
+    question: str,
+    plan: ChatExecutionPlan | None = None,
+) -> list[dict]:
     """Assemble supplemental operational context sources for the chat RAG pipeline."""
-    recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
-    historical_port_activity = services.store.get_port_activity_snapshot(window_days=3650)
-    sources = [
-        build_operational_snapshot_source(recent_port_activity),
-        build_maneuver_archive_source(question, historical_port_activity),
-        build_scale_registry_source(question, historical_port_activity),
-    ]
+    recent_port_activity: dict | None = None
+    sources: list[dict] = []
+    needs_portal_activity = _needs_portal_activity_context(question, plan=plan)
+    if needs_portal_activity:
+        recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
+        historical_port_activity = services.store.get_port_activity_snapshot(window_days=3650)
+        sources.extend(
+            [
+                build_operational_snapshot_source(recent_port_activity),
+                build_maneuver_archive_source(question, historical_port_activity),
+                build_scale_registry_source(question, historical_port_activity),
+            ]
+        )
     berth_catalog_source = build_berth_catalog_source(question)
     if berth_catalog_source:
         sources.append(berth_catalog_source)
@@ -337,10 +386,13 @@ def build_operational_chat_sources(question: str) -> list[dict]:
     tug_guidance_source = build_tug_operational_guidance_source(question, knowledge_dir)
     if tug_guidance_source:
         sources.append(tug_guidance_source)
-    maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
-    if maneuver_case_source:
-        sources.append(maneuver_case_source)
-    cost_source = build_cost_context_source(question, recent_port_activity)
+    if needs_portal_activity:
+        maneuver_case_source = build_maneuver_case_context_source(question, current_resolvable_port_calls())
+        if maneuver_case_source:
+            sources.append(maneuver_case_source)
+    if recent_port_activity is None and _looks_like_cost_question(question):
+        recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
+    cost_source = build_cost_context_source(question, recent_port_activity or {})
     if cost_source:
         sources.append(cost_source)
     return sources
@@ -368,8 +420,6 @@ def answer_direct_operational_query(
     planned_maneuvers_answer = _answer_planned_maneuvers_query(question, clean_question)
     if planned_maneuvers_answer:
         return planned_maneuvers_answer
-    port_calls = current_resolvable_port_calls()
-    matched_port_call = _match_port_call_from_question(question, port_calls)
 
     maneuver_type = plan.maneuver_lookup_type or ""
     maneuver_label = "manobra"
@@ -385,6 +435,8 @@ def answer_direct_operational_query(
 
     if not plan.wants_operational_lookup:
         return None
+    port_calls = current_resolvable_port_calls()
+    matched_port_call = _match_port_call_from_question(question, port_calls)
     if not matched_port_call:
         return None
 
