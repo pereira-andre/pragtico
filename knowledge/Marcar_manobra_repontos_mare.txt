@@ -20,6 +20,22 @@ A antecedência varia consoante o terminal de destino e a origem do navio
 (se vem de fora da barra, de fundeadouro próximo ou de cais vizinho), porque
 o tempo de trânsito até ao local é diferente em cada caso.
 
+Tempos práticos de trânsito desde a entrada da Barra:
+  — Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena:
+    cerca de 1h30 a 2h.
+  — Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro (Cais 10 e Cais 11):
+    cerca de 1h.
+  — Praias do Sado e SAPEC: cerca de 1h20.
+  — SECIL: cerca de 30 minutos.
+  — Fundeadouro Norte: cerca de 45 minutos.
+  — Fundeadouro Sul: cerca de 45 minutos a 1h, conforme a posição seja mais
+    próxima do PAN/Tróia ou fique no fim do canal.
+
+Tempos práticos de embarque da lancha de pilotos desde a estação:
+  — Perto do Outão: cerca de 15 minutos.
+  — Fora da Barra, na posição oficial de embarque: cerca de 30 minutos.
+  — Fundeadouros: cerca de 15 minutos.
+
 ================================================================================
 SECÇÃO 1 — MANOBRAS COM REPONTO DE MARÉ PARA LISNAVE, TEPORSET E TERMITRENA
 ================================================================================

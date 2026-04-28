@@ -42,7 +42,27 @@
   {
     "document": "Notas_Pilotagem.txt",
     "question": "Quanto tempo um navio leva desde a entrada da barra até ao estaleiro da Lisnave?",
-    "expected_substrings": ["Pilar", "10,5", "79 minutos", "8 nós", "75 minutos"]
+    "expected_substrings": ["Canal Sul", "1 hora e 30 minutos", "2 horas", "10,5"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo um navio leva desde a entrada da barra até ao Tanquisado ou Eco-Oil?",
+    "expected_substrings": ["Canal Sul", "Tanquisado", "Eco-Oil", "1 hora e 30 minutos", "2 horas"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo demora da barra ao TMS2 e à Autoeuropa?",
+    "expected_substrings": ["Canal Norte", "TMS 2", "Autoeuropa", "1 hora"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva até à Secil, Praias do Sado, SAPEC e fundeadouros?",
+    "expected_substrings": ["SECIL", "30 minutos", "Praias do Sado", "SAPEC", "1 hora e 20 minutos", "Fundeadouro Norte", "45 minutos", "Fundeadouro Sul"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?",
+    "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "fundeadouros"]
   },
   {
     "document": "regras_operacionais_lisnave",

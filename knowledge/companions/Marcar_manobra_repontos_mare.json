@@ -11,6 +11,9 @@
     "2 horas antes do reponto de maré pretendido.",
     "1 hora antes do reponto de maré.",
     "1 hora e 30 minutos antes do reponto de maré.",
+    "Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h desde a Barra.",
+    "Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 min.",
+    "Fundeadouro Norte demora cerca de 45 min; Fundeadouro Sul cerca de 45 min a 1h conforme a posição.",
     "2 horas antes da preia-mar.",
     "2 horas antes da preia-mar.",
     "Entre 1 hora e 1 hora e 30 minutos antes da preia-mar, dependendo do calado exacto."
@@ -18,7 +21,7 @@
   "faq": [
     {
       "question": "Com quanto tempo de antecedência se marca uma entrada de fora da barra",
-      "answer": "2 horas antes do reponto de maré pretendido.",
+      "answer": "Para Lisnave, Teporset, Termitrena, Tanquisado ou Eco-Oil, marca-se cerca de 2 horas antes do reponto de maré pretendido. A razão operacional é o trânsito pelo Canal Sul, que desde fora da Barra demora cerca de 1h30 a 2h.",
       "keywords": [
         "antecedencia",
         "barra",
@@ -26,7 +29,38 @@
         "fora",
         "marca",
         "quanto",
-        "tempo"
+        "tempo",
+        "canal sul",
+        "lisnave",
+        "teporset",
+        "termitrena",
+        "tanquisado",
+        "eco oil"
+      ]
+    },
+    {
+      "question": "Quais são os tempos práticos de trânsito desde a Barra para marcar manobras?",
+      "answer": "Referência prática desde a entrada da Barra: Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h; Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1h conforme a posição.",
+      "keywords": [
+        "tempos",
+        "transito",
+        "trânsito",
+        "barra",
+        "marcar",
+        "manobras",
+        "canal sul",
+        "canal norte",
+        "tanquisado",
+        "eco oil",
+        "lisnave",
+        "teporset",
+        "termitrena",
+        "tms",
+        "autoeuropa",
+        "praias",
+        "sapec",
+        "secil",
+        "fundeadouro"
       ]
     },
     {

@@ -375,25 +375,41 @@ Fundeadouro Norte → LISNAVE:    7,0 NM
 SAPEC → LISNAVE:               10,5 NM
 TMS 2 → LISNAVE:                9,0 NM
 
-ESTIMATIVAS DE TEMPO DE PERCURSO A 8 NÓS DE VELOCIDADE MÉDIA:
+TEMPOS OPERACIONAIS PRÁTICOS DE TRÂNSITO E MARCAÇÃO:
 
-A velocidade típica de trânsito no porto varia entre 6 e 10 nós consoante o
-trecho e o tipo de navio. Os exemplos seguintes utilizam uma velocidade média
-de 8 nós como referência de planeamento.
+Quando a pergunta é "quanto tempo leva", "quando marcar" ou "chega a tempo",
+usar os tempos práticos seguintes como referência operacional. Estes tempos
+incluem a realidade da manobra, canal, embarque, ajuste de velocidade, tráfego,
+rebocadores e aproximação ao local. As distâncias em milhas náuticas servem
+como contexto, mas não substituem estes tempos práticos de planeamento.
 
-Pilar número 2 até ao Fundeadouro Norte (5,0 NM): aproximadamente 38 minutos.
-Pilar número 2 até ao Fundeadouro Sul (8,0 NM): aproximadamente 60 minutos.
-Pilar número 2 até ao TMS 2 (6,5 NM): aproximadamente 49 minutos.
-Pilar número 2 até ao SAPEC (8,2 NM): aproximadamente 62 minutos.
-Pilar número 2 até ao LISNAVE (10,5 NM): aproximadamente 79 minutos.
-Pilar número 2 até ao LISNAVE pelo atalho (10,0 NM): aproximadamente 75 minutos.
-TMS 2 até ao LISNAVE (9,0 NM): aproximadamente 68 minutos.
-Fundeadouro Sul até ao LISNAVE (2,6 NM): aproximadamente 20 minutos.
-Fundeadouro Norte até ao LISNAVE (7,0 NM): aproximadamente 53 minutos.
+Canal Sul para Tanquisado, Eco-Oil, LISNAVE, Teporset ou Termitrena:
+aproximadamente 1 hora e 30 minutos a 2 horas desde fora da Barra/entrada do
+porto. É por esta razão que muitas destas manobras são marcadas com essa
+antecedência face ao reponto ou à preia-mar relevante.
 
-Estes tempos são estimativas de planeamento. O tempo real depende de condições
-de maré, tráfego no canal, operações de reboque a estabelecer, e restrições de
-velocidade em determinados troços.
+Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro (Cais 10 e Cais 11):
+aproximadamente 1 hora desde a entrada da Barra.
+
+Praias do Sado e SAPEC: aproximadamente 1 hora e 20 minutos desde a entrada da
+Barra.
+
+SECIL: aproximadamente 30 minutos desde a Barra até ao cais. Por isso, as
+manobras da SECIL para reponto podem ser marcadas com cerca de 30 minutos de
+antecedência face à hora de maré.
+
+Fundeadouro Norte: aproximadamente 45 minutos desde a entrada da Barra.
+
+Fundeadouro Sul: aproximadamente 45 minutos a 1 hora desde a entrada da Barra,
+consoante a posição. É mais perto quando a posição fica junto ao PAN/Tróia e
+mais demorado quando fica no fim do canal.
+
+TEMPOS DE EMBARQUE DA LANCHA DE PILOTOS:
+
+Pilotos a sair da estação para embarque perto do Outão: cerca de 15 minutos.
+Pilotos a sair da estação para a posição oficial de embarque fora da Barra:
+cerca de 30 minutos.
+Pilotos a sair da estação para embarque nos fundeadouros: cerca de 15 minutos.
 
 ================================================================================
 ABORDAGEM ESPECÍFICA A TERMINAIS — DICAS OPERACIONAIS
@@ -542,12 +558,13 @@ SECÇÃO DE PERGUNTAS E RESPOSTAS — RECUPERAÇÃO SEMÂNTICA
 ================================================================================
 
 Pergunta: Qual a distância do Pilar 2 ao Fundeadouro Norte?
-Resposta: 5,0 milhas náuticas. A este ritmo de 8 nós, o percurso demora
-aproximadamente 38 minutos.
+Resposta: 5,0 milhas náuticas. Como referência operacional prática, o trânsito
+desde a entrada da Barra até ao Fundeadouro Norte demora cerca de 45 minutos.
 
 Pergunta: Qual a distância do Pilar 2 ao Fundeadouro Sul?
-Resposta: 8,0 milhas náuticas, pelo Canal Sul. A este ritmo de 8 nós, o percurso
-demora aproximadamente 60 minutos.
+Resposta: 8,0 milhas náuticas, pelo Canal Sul. Como referência operacional
+prática, o trânsito demora cerca de 45 minutos a 1 hora, consoante a posição:
+mais perto junto ao PAN/Tróia e mais demorado no fim do canal.
 
 Pergunta: Qual a distância do Fundeadouro Sul ao estaleiro LISNAVE?
 Resposta: 2,6 milhas náuticas. Esta proximidade torna o Fundeadouro Sul o ponto
@@ -557,8 +574,9 @@ relativamente estreita (cerca de 20 minutos a 8 nós).
 
 Pergunta: Qual a distância do Fundeadouro Norte ao estaleiro LISNAVE?
 Resposta: 7,0 milhas náuticas — uma distância significativamente maior que a do
-Fundeadouro Sul. O trânsito a 8 nós demora aproximadamente 53 minutos, o que
-exige partir do Fundeadouro Norte com maior antecedência em relação ao reponto.
+Fundeadouro Sul. Na prática exige partir com maior antecedência em relação ao
+reponto, porque o trânsito desde o Fundeadouro Norte para a zona Lisnave /
+Teporset / Termitrena é planeado com cerca de 1 hora e 30 minutos.
 
 Pergunta: Qual o resguardo a manter dos Pilares 2 e 4?
 Resposta: Mínimo de 0,2 milhas náuticas (370 metros). O "número mágico" de 0,2 NM
@@ -587,14 +605,28 @@ eficazmente a 3 nós. Os rebocadores com azipodes (como o "Lisboa", "Danado" e
 
 Pergunta: Qual a distância do Pilar 2 ao LISNAVE pelo percurso normal?
 Resposta: 10,5 milhas náuticas pelo Canal Sul. Com o atalho (corta-mato), são
-10,0 milhas náuticas. A 8 nós o percurso normal demora aproximadamente 79 minutos.
+10,0 milhas náuticas. Em tempo operacional prático, uma viagem pelo Canal Sul
+para LISNAVE, Teporset, Termitrena, Tanquisado ou Eco-Oil é planeada com cerca
+de 1 hora e 30 minutos a 2 horas.
 
 Pergunta: Quanto tempo demora um navio desde a entrada da Barra até ao Estaleiro LISNAVE?
 Resposta: Usando o Pilar 2 como referência da entrada da Barra, o percurso normal
-até ao Estaleiro LISNAVE/Mitrena tem 10,5 milhas náuticas e demora cerca de
-79 minutos a 8 nós. Pelo atalho/corta-mato, o percurso tem cerca de 10,0 milhas
-náuticas e demora cerca de 75 minutos. Estes valores são estimativas de
-planeamento e dependem de maré, tráfego, rebocadores e restrições de velocidade.
+até ao Estaleiro LISNAVE/Mitrena tem 10,5 milhas náuticas. Em tempo operacional
+prático, deve ser planeado com cerca de 1 hora e 30 minutos a 2 horas, porque
+inclui Canal Sul, ajuste de velocidade, tráfego, aproximação e preparação da
+manobra. É por isso que estas manobras são marcadas com essa antecedência.
+
+Pergunta: Quais são os tempos práticos desde a Barra para os principais destinos?
+Resposta: Canal Sul para Tanquisado, Eco-Oil, LISNAVE, Teporset ou Termitrena:
+1h30 a 2h. Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro (Cais 10 e 11):
+cerca de 1h. Praias do Sado e SAPEC: cerca de 1h20. SECIL: cerca de 30 min.
+Fundeadouro Norte: cerca de 45 min. Fundeadouro Sul: cerca de 45 min a 1h,
+dependendo se a posição fica perto do PAN/Tróia ou no fim do canal.
+
+Pergunta: Quanto tempo levam os pilotos a embarcar depois de saírem da estação?
+Resposta: Para embarque perto do Outão, cerca de 15 minutos. Para embarque fora
+da Barra na posição oficial, cerca de 30 minutos. Para embarque nos fundeadouros,
+cerca de 15 minutos.
 
 Pergunta: A que distância está a posição de embarque dos pilotos da entrada da barra?
 Resposta: A posição de embarque dos pilotos encontra-se a 1 milha náutica da

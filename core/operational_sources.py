@@ -737,11 +737,15 @@ def _looks_like_route_duration_query(clean_question: str) -> bool:
         return False
     has_origin = re.search(r"\b(desde|da entrada|do pilar|pilar|barra)\b", clean_question)
     has_destination = re.search(
-        r"\b(ate|ao|a|para)\b.*\b(lisnave|mitrena|estaleiro|terminal|cais|doca|fundeadouro|sapec|tms|secil)\b",
+        r"\b(ate|ao|a|para)\b.*\b(lisnave|mitrena|estaleiro|terminal|cais|doca|"
+        r"fundeadouro|sapec|tms|secil|tanquisado|eco\s*oil|ecooil|ecoil|"
+        r"teporset|tepor\s*set|termitrena|autoeuropa|auto\s*europa|praias)\b",
         clean_question,
     )
     reverse_destination = re.search(
-        r"\b(lisnave|mitrena|estaleiro|terminal|cais|doca|fundeadouro|sapec|tms|secil)\b.*\b(ate|ao|a|para)\b",
+        r"\b(lisnave|mitrena|estaleiro|terminal|cais|doca|fundeadouro|sapec|tms|"
+        r"secil|tanquisado|eco\s*oil|ecooil|ecoil|teporset|tepor\s*set|"
+        r"termitrena|autoeuropa|auto\s*europa|praias)\b.*\b(ate|ao|a|para)\b",
         clean_question,
     )
     return bool(has_origin and (has_destination or reverse_destination))
