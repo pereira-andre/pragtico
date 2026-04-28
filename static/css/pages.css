@@ -4391,6 +4391,80 @@ button:hover {
 }
 
 /* Quality */
+.admin-bot-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.admin-bot-quality-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+.admin-bot-quality-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-status-facts.compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.admin-status-facts.compact .admin-status-fact {
+  padding: 8px 9px;
+  border-radius: 10px;
+}
+.admin-bot-protected-collapse {
+  margin-bottom: 12px;
+}
+.admin-bot-protected-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.admin-bot-protected-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+.admin-bot-protected-list strong {
+  display: block;
+  font-size: 0.9rem;
+}
+.admin-bot-protected-list p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.admin-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  background: var(--muted);
+}
+.admin-status-dot.is-online {
+  background: #22c55e;
+}
+.admin-status-dot.is-degraded {
+  background: #f59e0b;
+}
+.admin-status-dot.is-offline {
+  background: #ef4444;
+}
 .admin-bot-failure-list {
   list-style: none;
   padding: 0;

@@ -513,6 +513,57 @@ def build_quality_snapshot() -> dict:
     passed = sum(1 for item in results if item.get("passed"))
     failed = [item for item in results if not item.get("passed")]
     pass_rate = round((passed / len(results)) * 100) if results else 0
+    eval_type_labels = {
+        "companion": "Companions/RAG curado",
+        "direct_operational": "Decisão operacional direta",
+        "full_pipeline": "Pipeline completo",
+    }
+    type_summary: dict[str, dict] = {}
+    for item in results:
+        eval_type = str(item.get("eval_type") or "companion").strip() or "companion"
+        bucket = type_summary.setdefault(
+            eval_type,
+            {
+                "type": eval_type,
+                "label": eval_type_labels.get(eval_type, eval_type.replace("_", " ")),
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+            },
+        )
+        bucket["total"] += 1
+        if item.get("passed"):
+            bucket["passed"] += 1
+        else:
+            bucket["failed"] += 1
+    type_rows = []
+    for data in type_summary.values():
+        total = data["total"] or 1
+        state = "online" if data["failed"] == 0 and data["total"] else "degraded" if data["total"] else "offline"
+        type_rows.append({**data, "coverage_pct": round((data["passed"] / total) * 100), "state": state})
+    type_rows.sort(key=lambda item: (-item["failed"], item["label"]))
+
+    protected_candidates = [
+        item
+        for item in results
+        if str(item.get("eval_type") or "companion") != "companion"
+        or str(item.get("expected_answer_origin") or "").strip()
+    ]
+    protected_rows = []
+    for item in protected_candidates[:12]:
+        protected_rows.append(
+            {
+                "document": item.get("document", ""),
+                "question": item.get("question", ""),
+                "eval_type": item.get("eval_type") or "companion",
+                "answer_origin": item.get("answer_origin") or "",
+                "expected_answer_origin": item.get("expected_answer_origin") or "",
+                "passed": bool(item.get("passed")),
+                "state": "online" if item.get("passed") else "degraded",
+            }
+        )
+    protected_total = len(protected_candidates)
+    protected_passed = sum(1 for item in protected_candidates if item.get("passed"))
 
     document_summary: dict[str, dict] = {}
     for case in deduped:
@@ -614,6 +665,11 @@ def build_quality_snapshot() -> dict:
         "failed_total": len(failed),
         "static_cases_total": len(static_cases),
         "feedback_cases_total": len(feedback_cases),
+        "type_rows": type_rows,
+        "protected_total": protected_total,
+        "protected_passed": protected_passed,
+        "protected_failed": protected_total - protected_passed,
+        "protected_rows": protected_rows,
         "document_rows": document_rows[:12],
         "failure_rows": failure_rows,
     }

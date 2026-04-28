@@ -326,6 +326,58 @@
           </form>
         </div>
       </div>
+      {% if quality.type_rows %}
+        <div class="admin-bot-quality-grid">
+          {% for row in quality.type_rows %}
+            <article class="admin-bot-quality-card">
+              <div class="admin-bot-quality-card-head">
+                <strong>{{ row.label }}</strong>
+                <span class="admin-status-badge is-{{ row.state }}">{{ row.coverage_pct }}%</span>
+              </div>
+              <div class="admin-status-facts compact">
+                <div class="admin-status-fact">
+                  <span>Casos</span>
+                  <strong>{{ row.total }}</strong>
+                </div>
+                <div class="admin-status-fact">
+                  <span>Passam</span>
+                  <strong>{{ row.passed }}</strong>
+                </div>
+                <div class="admin-status-fact">
+                  <span>Falham</span>
+                  <strong>{{ row.failed }}</strong>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if quality.protected_total %}
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-protected-collapse" open>
+          <summary class="documents-collapse-summary">
+            <div>
+              <h3>Casos críticos protegidos</h3>
+              <span class="muted">{{ quality.protected_passed }}/{{ quality.protected_total }} decisões compostas a passar</span>
+            </div>
+            <span class="admin-status-badge is-{{ 'online' if quality.protected_failed == 0 else 'degraded' }}">
+              {{ 'verde' if quality.protected_failed == 0 else quality.protected_failed ~ ' falha(s)' }}
+            </span>
+          </summary>
+          <div class="documents-collapse-body">
+            <ul class="admin-bot-protected-list">
+              {% for item in quality.protected_rows %}
+                <li>
+                  <span class="admin-status-dot is-{{ item.state }}"></span>
+                  <div>
+                    <strong>{{ item.question }}</strong>
+                    <p>{{ item.document }} · {{ item.eval_type }}{% if item.expected_answer_origin %} · origem {{ item.answer_origin or 'n/d' }}{% endif %}</p>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </details>
+      {% endif %}
       {% if quality.failure_rows %}
         <details class="documents-collapse-card admin-bot-collapse" open>
           <summary class="documents-collapse-summary">
