@@ -11,7 +11,8 @@
         <p class="lead muted">Estado vivo das fontes de conhecimento, sinais de aprendizagem e exceções a rever.</p>
       </div>
       <div class="admin-status-hero-tools">
-        <span class="admin-status-badge is-{{ health.state }}">{{ health.label }}</span>
+        <span class="admin-status-badge is-{{ health.state }}" data-health-label>{{ health.label }}</span>
+        <span class="admin-bot-live-clock">Atualizado: <strong data-bot-monitor-clock>{{ monitor.checked_at_label }}</strong></span>
         <a class="outline-link" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
         <a class="outline-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
       </div>
@@ -19,34 +20,118 @@
 
     <div class="admin-bot-health-grid">
       <article class="admin-bot-health-score admin-bot-health-score-{{ health.state }}">
-        <div class="admin-bot-health-score-value">{{ health.score }}</div>
+        <div class="admin-bot-health-score-value" data-health-score>{{ health.score }}</div>
         <span class="admin-bot-health-score-unit">/ 100</span>
         <p class="muted">Score composto</p>
       </article>
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Evals</span>
-        <strong>{{ health.pass_rate_pct }}%</strong>
+        <strong data-health-pass-rate>{{ health.pass_rate_pct }}%</strong>
         <small>{{ quality.passed_total }} / {{ quality.active_cases_total }} casos a passar</small>
       </article>
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Cobertura</span>
-        <strong>{{ health.coverage_pct }}%</strong>
+        <strong data-health-coverage>{{ health.coverage_pct }}%</strong>
         <small>{{ sources|selectattr('state', 'equalto', 'online')|list|length }} / {{ sources|length }} fontes ativas</small>
       </article>
       <article class="admin-bot-health-stat">
         <span class="eyebrow">Sinais</span>
-        <strong>{{ health.feedback_bias_pct }}%</strong>
+        <strong data-health-feedback>{{ health.feedback_bias_pct }}%</strong>
         <small>positivos na última janela</small>
       </article>
       <article class="admin-bot-health-stat {{ 'is-danger' if exceptions.severity_counts.high else '' }}">
         <span class="eyebrow">Exceções</span>
-        <strong>{{ exceptions.total }}</strong>
-        <small>{{ exceptions.severity_counts.high }} prioritária(s)</small>
+        <strong data-health-exceptions>{{ exceptions.total }}</strong>
+        <small data-health-exceptions-detail>{{ exceptions.severity_counts.high }} prioritária(s)</small>
       </article>
     </div>
   </section>
 
-  {# ── Zona 2 · Playground inline ─────────────────────────────────── #}
+  {# ── Zona 2 · Monitor e processo ───────────────────────────────── #}
+  <section class="panel section-panel admin-bot-monitor" id="monitor">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Monitor live</p>
+        <h2>Como o bot está a operar agora</h2>
+      </div>
+      <span class="muted small-note">Atualização automática a cada 20 s</span>
+    </div>
+
+    <div class="admin-bot-monitor-grid">
+      <div class="admin-bot-runtime-grid">
+        {% for card in monitor.runtime_cards %}
+          <article class="admin-bot-runtime-card admin-bot-state-{{ card.state }}" data-monitor-card="{{ card.id }}">
+            <span class="admin-bot-runtime-label">{{ card.label }}</span>
+            <strong data-monitor-card-value>{{ card.value }}</strong>
+            <small data-monitor-card-detail>{{ card.detail }}</small>
+          </article>
+        {% endfor %}
+      </div>
+
+      <article class="admin-bot-health-breakdown">
+        <div class="admin-bot-score-ring" style="--score: {{ health.score|int }}%;" data-health-ring>
+          <span data-health-score>{{ health.score }}</span>
+        </div>
+        <div class="admin-bot-breakdown-bars">
+          {% for item in monitor.health_breakdown %}
+            <div class="admin-bot-breakdown-row" data-health-breakdown="{{ item.id }}">
+              <span>{{ item.label }}</span>
+              <div class="admin-bot-bar-track">
+                <i class="admin-bot-bar-fill admin-bot-state-{{ item.state }}" style="--bar: {{ item.bar_pct|int }}%;"></i>
+              </div>
+              <strong data-health-breakdown-value>{{ item.value }}{{ item.suffix }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+    </div>
+
+    <div class="admin-bot-live-detail-grid">
+      {% for item in monitor.live_details %}
+        <article class="admin-bot-live-detail admin-bot-state-{{ item.state }}">
+          <strong>{{ item.label }}</strong>
+          <span>{{ item.detail }}</span>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel section-panel admin-bot-process" id="processo">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Processo</p>
+        <h2>Fluxo de decisão do assistente</h2>
+      </div>
+    </div>
+    <div class="admin-bot-process-flow">
+      {% for step in monitor.pipeline_steps %}
+        <article class="admin-bot-process-step admin-bot-state-{{ step.state }}">
+          <span class="admin-bot-process-index">{{ loop.index }}</span>
+          <strong>{{ step.label }}</strong>
+          <p>{{ step.detail }}</p>
+        </article>
+      {% endfor %}
+    </div>
+    <div class="admin-bot-context-mix">
+      <div>
+        <p class="eyebrow">Composição de fontes</p>
+        <h3>Contexto disponível ao RAG</h3>
+      </div>
+      <div class="admin-bot-context-bars">
+        {% for item in monitor.context_mix %}
+          <div class="admin-bot-context-row" data-source-row="{{ item.id }}">
+            <span>{{ item.label }}</span>
+            <div class="admin-bot-bar-track">
+              <i class="admin-bot-bar-fill admin-bot-state-{{ item.state }}" style="--bar: {{ item.bar_pct|int }}%;"></i>
+            </div>
+            <strong data-source-count>{{ item.count }}</strong>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {# ── Zona 3 · Playground inline ─────────────────────────────────── #}
   <section class="panel section-panel admin-bot-playground" id="playground">
     <div class="section-head compact-head">
       <div>
@@ -79,7 +164,7 @@
 
   <div class="admin-status-layout">
 
-    {# ── Zona 3 · Fontes de conhecimento ──────────────────────────── #}
+    {# ── Zona 4 · Fontes de conhecimento ──────────────────────────── #}
     <section class="panel section-panel" id="sources">
       <div class="section-head compact-head">
         <div>
@@ -111,7 +196,7 @@
       </div>
     </section>
 
-    {# ── Zona 4 · Sinais de aprendizagem ──────────────────────────── #}
+    {# ── Zona 5 · Sinais de aprendizagem ──────────────────────────── #}
     <section class="panel section-panel" id="signals">
       <div class="section-head compact-head">
         <div>
@@ -190,7 +275,7 @@
       {% endif %}
     </section>
 
-    {# ── Zona 5 · Exceções ────────────────────────────────────────── #}
+    {# ── Zona 6 · Exceções ────────────────────────────────────────── #}
     <section class="panel section-panel" id="exceptions">
       <div class="section-head compact-head">
         <div>
@@ -220,7 +305,7 @@
       {% endif %}
     </section>
 
-    {# ── Zona 6 · Qualidade (evals) ───────────────────────────────── #}
+    {# ── Zona 7 · Qualidade (evals) ───────────────────────────────── #}
     <section class="panel section-panel" id="quality">
       <div class="section-head compact-head">
         <div>
@@ -290,7 +375,7 @@
       {% endif %}
     </section>
 
-    {# ── Zona 7 · Controlos admin / Toolbox ──────────────────────── #}
+    {# ── Zona 8 · Controlos admin / Toolbox ──────────────────────── #}
     <section class="panel section-panel admin-bot-toolbox" id="toolbox">
       <div class="section-head compact-head">
         <div>
@@ -300,6 +385,14 @@
         <span class="muted small-note">
           {% if settings.updated_at %}última alteração: {{ settings.updated_at }}{% else %}defaults{% endif %}
         </span>
+      </div>
+      <div class="admin-bot-config-strip">
+        {% for item in monitor.config_profile %}
+          <article class="admin-bot-config-pill admin-bot-state-{{ item.state }}">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </article>
+        {% endfor %}
       </div>
       <form method="post" action="{{ url_for('admin.admin_bot_settings') }}" class="admin-bot-settings-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -330,26 +423,32 @@
           <label>
             Janela dos sinais (horas)
             <input type="number" name="signals_window_hours" value="{{ settings.signals_window_hours }}" min="24" max="720">
+            <small class="muted">Default: {{ settings_defaults.signals_window_hours }}. Controla tendências e alertas recentes.</small>
           </label>
           <label>
             Similaridade de guard (review)
             <input type="number" step="0.01" min="0.5" max="1" name="review_guard_similarity" value="{{ settings.review_guard_similarity }}">
+            <small class="muted">Default: {{ settings_defaults.review_guard_similarity }}. Acima disto uma revisão parecida bloqueia reutilização cega.</small>
           </label>
           <label>
             Similaridade de bloqueio
             <input type="number" step="0.01" min="0.5" max="1" name="review_block_similarity" value="{{ settings.review_block_similarity }}">
+            <small class="muted">Default: {{ settings_defaults.review_block_similarity }}. Bloqueio rígido para respostas quase iguais.</small>
           </label>
           <label>
             Similaridade de correção
             <input type="number" step="0.01" min="0.5" max="1" name="review_correction_similarity" value="{{ settings.review_correction_similarity }}">
+            <small class="muted">Default: {{ settings_defaults.review_correction_similarity }}. Usa correção do operador quando a pergunta bate forte.</small>
           </label>
           <label>
             Hint de documento confiável
             <input type="number" step="0.01" min="0.5" max="1" name="trusted_document_hint_similarity" value="{{ settings.trusted_document_hint_similarity }}">
+            <small class="muted">Default: {{ settings_defaults.trusted_document_hint_similarity }}. Ajuda a resolver o documento certo por feedback.</small>
           </label>
           <label>
             Outlier de manobra
             <input type="number" step="0.01" min="0.5" max="1" name="outlier_review_threshold" value="{{ settings.outlier_review_threshold }}">
+            <small class="muted">Default: {{ settings_defaults.outlier_review_threshold }}. Define quando casos operacionais pedem revisão.</small>
           </label>
         </div>
         <div class="admin-bot-toolbox-actions">
@@ -400,7 +499,7 @@
       </div>
     </section>
 
-    {# ── Zona 8 · Casebooks legados (collapsible, para quem precisar) ── #}
+    {# ── Zona 9 · Casebooks legados (collapsible, para quem precisar) ── #}
     <details class="panel section-panel admin-bot-legacy-casebooks" id="casebooks">
       <summary class="documents-collapse-summary admin-bot-legacy-summary">
         <div>
@@ -450,51 +549,140 @@
   const sourcesWrapper = document.getElementById("bot-playground-sources-wrapper");
   const sourcesList = document.getElementById("bot-playground-sources");
   const origin = document.getElementById("bot-playground-origin");
-  if (!form) return;
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const question = (data.get("question") || "").toString().trim();
-    if (!question) return;
-    origin.textContent = "A consultar o bot...";
-    result.hidden = false;
-    answerBox.textContent = "";
-    sourcesList.innerHTML = "";
-    sourcesWrapper.hidden = true;
-    try {
-      const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": data.get("csrf_token"),
-        },
-        body: JSON.stringify({ question }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        origin.textContent = "";
-        answerBox.textContent = body.error || `Falha ${response.status}`;
-        return;
-      }
-      const payload = await response.json();
-      answerBox.textContent = payload.answer || "(sem resposta)";
-      origin.textContent = payload.answer_origin ? `Origem: ${payload.answer_origin}` : "";
-      const sources = payload.sources || [];
-      if (sources.length) {
-        sources.forEach((src) => {
-          const li = document.createElement("li");
-          const doc = src.document || src.source_id || "Fonte";
-          const snippet = (src.snippet || "").slice(0, 220);
-          li.textContent = snippet ? `${doc} — ${snippet}${snippet.length === 220 ? '…' : ''}` : doc;
-          sourcesList.appendChild(li);
+  if (form) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const question = (data.get("question") || "").toString().trim();
+      if (!question) return;
+      origin.textContent = "A consultar o bot...";
+      result.hidden = false;
+      answerBox.textContent = "";
+      sourcesList.innerHTML = "";
+      sourcesWrapper.hidden = true;
+      try {
+        const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": data.get("csrf_token"),
+          },
+          body: JSON.stringify({ question }),
         });
-        sourcesWrapper.hidden = false;
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          origin.textContent = "";
+          answerBox.textContent = body.error || `Falha ${response.status}`;
+          return;
+        }
+        const payload = await response.json();
+        answerBox.textContent = payload.answer || "(sem resposta)";
+        origin.textContent = payload.answer_origin ? `Origem: ${payload.answer_origin}` : "";
+        const sources = payload.sources || [];
+        if (sources.length) {
+          sources.forEach((src) => {
+            const li = document.createElement("li");
+            const doc = src.document || src.source_id || "Fonte";
+            const snippet = (src.snippet || "").slice(0, 220);
+            li.textContent = snippet ? `${doc} — ${snippet}${snippet.length === 220 ? "…" : ""}` : doc;
+            sourcesList.appendChild(li);
+          });
+          sourcesWrapper.hidden = false;
+        }
+      } catch (err) {
+        origin.textContent = "";
+        answerBox.textContent = `Erro: ${err.message}`;
       }
-    } catch (err) {
-      origin.textContent = "";
-      answerBox.textContent = `Erro: ${err.message}`;
+    });
+  }
+
+  function updateText(selector, value) {
+    document.querySelectorAll(selector).forEach((el) => {
+      el.textContent = value;
+    });
+  }
+
+  function replaceStateClass(el, prefix, state) {
+    if (!el) return;
+    Array.from(el.classList).forEach((name) => {
+      if (name.startsWith(prefix)) el.classList.remove(name);
+    });
+    el.classList.add(`${prefix}${state}`);
+  }
+
+  function updateMonitor(payload) {
+    const health = payload.health || {};
+    const monitor = payload.monitor || {};
+    updateText("[data-bot-monitor-clock]", monitor.checked_at_label || "");
+    updateText("[data-health-score]", health.score ?? "--");
+    updateText("[data-health-pass-rate]", `${health.pass_rate_pct ?? 0}%`);
+    updateText("[data-health-coverage]", `${health.coverage_pct ?? 0}%`);
+    updateText("[data-health-feedback]", `${health.feedback_bias_pct ?? 0}%`);
+    updateText("[data-health-exceptions]", (payload.exceptions || {}).total ?? 0);
+    updateText(
+      "[data-health-exceptions-detail]",
+      `${((payload.exceptions || {}).severity_counts || {}).high || 0} prioritária(s)`
+    );
+    updateText("[data-health-label]", health.label || "");
+    document.querySelectorAll("[data-health-label]").forEach((el) => {
+      replaceStateClass(el, "is-", health.state || "degraded");
+    });
+    document.querySelectorAll(".admin-bot-health-score").forEach((el) => {
+      replaceStateClass(el, "admin-bot-health-score-", health.state || "degraded");
+    });
+    const ring = document.querySelector("[data-health-ring]");
+    if (ring) ring.style.setProperty("--score", `${Number(health.score || 0)}%`);
+
+    (monitor.runtime_cards || []).forEach((card) => {
+      const el = document.querySelector(`[data-monitor-card="${card.id}"]`);
+      if (!el) return;
+      replaceStateClass(el, "admin-bot-state-", card.state || "offline");
+      const valueEl = el.querySelector("[data-monitor-card-value]");
+      const detailEl = el.querySelector("[data-monitor-card-detail]");
+      if (valueEl) valueEl.textContent = card.value || "--";
+      if (detailEl) detailEl.textContent = card.detail || "";
+    });
+
+    (monitor.health_breakdown || []).forEach((item) => {
+      const el = document.querySelector(`[data-health-breakdown="${item.id}"]`);
+      if (!el) return;
+      const valueEl = el.querySelector("[data-health-breakdown-value]");
+      const fillEl = el.querySelector(".admin-bot-bar-fill");
+      if (valueEl) valueEl.textContent = `${item.value}${item.suffix || ""}`;
+      if (fillEl) {
+        fillEl.style.setProperty("--bar", `${Number(item.bar_pct || 0)}%`);
+        replaceStateClass(fillEl, "admin-bot-state-", item.state || "offline");
+      }
+    });
+
+    (monitor.context_mix || []).forEach((item) => {
+      const el = document.querySelector(`[data-source-row="${item.id}"]`);
+      if (!el) return;
+      const countEl = el.querySelector("[data-source-count]");
+      const fillEl = el.querySelector(".admin-bot-bar-fill");
+      if (countEl) countEl.textContent = item.count ?? 0;
+      if (fillEl) {
+        fillEl.style.setProperty("--bar", `${Number(item.bar_pct || 0)}%`);
+        replaceStateClass(fillEl, "admin-bot-state-", item.state || "offline");
+      }
+    });
+  }
+
+  async function pollMonitor() {
+    try {
+      const response = await fetch("{{ url_for('admin.admin_bot_monitor') }}", {
+        headers: { "Accept": "application/json" },
+      });
+      if (!response.ok) return;
+      updateMonitor(await response.json());
+    } catch (_err) {
+      // O painel mantém o último snapshot renderizado se o polling falhar.
     }
-  });
+  }
+
+  if (document.querySelector("[data-monitor-card]")) {
+    window.setInterval(pollMonitor, 20000);
+  }
 })();
 </script>
 {% endblock %}

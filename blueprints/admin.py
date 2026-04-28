@@ -56,6 +56,7 @@ from core.knowledge_runtime import (
 )
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.bot_insights import (
+    build_bot_monitor_snapshot,
     build_exceptions,
     build_learning_signals,
     build_quality_snapshot,
@@ -1518,6 +1519,14 @@ def admin_bot():
     quality = build_quality_snapshot()
     exceptions = build_exceptions(limit=12)
     health = compute_health_score(quality, signals, exceptions, sources)
+    monitor = build_bot_monitor_snapshot(
+        settings=settings,
+        sources=sources,
+        quality=quality,
+        signals=signals,
+        exceptions=exceptions,
+        health=health,
+    )
     return render_template(
         "admin_bot.html",
         health=health,
@@ -1525,10 +1534,42 @@ def admin_bot():
         sources=sources,
         quality=quality,
         exceptions=exceptions,
+        monitor=monitor,
         settings=settings,
         settings_defaults=BOT_SETTINGS_DEFAULTS,
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
+    )
+
+
+@bp.route("/admin/bot/monitor")
+@login_required
+@role_required("admin")
+def admin_bot_monitor():
+    """Estado JSON para atualização periódica do painel do bot."""
+    settings = load_bot_settings()
+    signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
+    sources = build_sources_snapshot()
+    quality = build_quality_snapshot()
+    exceptions = build_exceptions(limit=12)
+    health = compute_health_score(quality, signals, exceptions, sources)
+    monitor = build_bot_monitor_snapshot(
+        settings=settings,
+        sources=sources,
+        quality=quality,
+        signals=signals,
+        exceptions=exceptions,
+        health=health,
+    )
+    return jsonify(
+        {
+            "health": health,
+            "signals": signals,
+            "sources": sources,
+            "quality": quality,
+            "exceptions": exceptions,
+            "monitor": monitor,
+        }
     )
 
 

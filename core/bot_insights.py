@@ -586,3 +586,299 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
         "feedback_bias_pct": feedback_bias,
         "penalty": penalty,
     }
+
+
+# ----------------------------------------------------------------------------
+# Runtime monitor — compact operational picture for the admin bot cockpit
+
+
+def _source_by_id(sources: list[dict], source_id: str) -> dict:
+    for source in sources or []:
+        if source.get("id") == source_id:
+            return source
+    return {}
+
+
+def _enabled_state(enabled: bool, *, degraded: bool = False) -> str:
+    if not enabled:
+        return "offline"
+    return "degraded" if degraded else "online"
+
+
+def _service_enabled(service: Any) -> bool:
+    if service is None:
+        return False
+    enabled = getattr(service, "enabled", True)
+    return bool(enabled() if callable(enabled) else enabled)
+
+
+def _service_status_detail(service: Any, fallback: str) -> str:
+    if service is None:
+        return "Serviço não inicializado."
+    status_method = getattr(service, "status", None)
+    if not callable(status_method):
+        return fallback
+    try:
+        status = status_method()
+    except Exception as exc:
+        return f"Estado indisponível: {exc}"
+    if status.get("error"):
+        return str(status.get("error"))
+    if status.get("count") is not None:
+        return f"{status.get('count')} aviso(s); cache {status.get('cache_updated_at_label') or 'sem cache'}."
+    if status.get("cache_updated_at_label"):
+        return f"Cache {status.get('cache_updated_at_label')}."
+    return fallback
+
+
+def _runtime_card(card_id: str, label: str, value: str, detail: str, state: str) -> dict:
+    return {
+        "id": card_id,
+        "label": label,
+        "value": value,
+        "detail": detail,
+        "state": state,
+    }
+
+
+def _context_mix(sources: list[dict]) -> list[dict]:
+    max_count = max([int(source.get("count") or 0) for source in sources or []] + [1])
+    rows: list[dict] = []
+    for source in sources or []:
+        count = int(source.get("count") or 0)
+        rows.append(
+            {
+                "id": source.get("id", ""),
+                "label": source.get("label", ""),
+                "count": count,
+                "state": source.get("state", "offline"),
+                "bar_pct": max(4, round((count / max_count) * 100)) if count else 2,
+                "meta": source.get("meta", ""),
+            }
+        )
+    return rows
+
+
+def build_bot_monitor_snapshot(
+    *,
+    settings: dict,
+    sources: list[dict],
+    quality: dict,
+    signals: dict,
+    exceptions: dict,
+    health: dict,
+) -> dict:
+    """Return real-time admin dashboard data for the bot operating loop."""
+    rag = getattr(services, "rag", None)
+    if rag:
+        try:
+            from core.knowledge_runtime import current_reindex_status_payload
+
+            reindex = current_reindex_status_payload()
+        except Exception as exc:
+            logger.exception("Falha a obter estado de reindexação para monitor do bot.")
+            reindex = {"state": "error", "message": str(exc), "semantic_chunk_coverage_pct": 0}
+    else:
+        reindex = {
+            "state": "offline",
+            "message": "Motor RAG não inicializado.",
+            "semantic_chunk_coverage_pct": 0,
+        }
+    can_generate = bool(rag and rag.can_generate())
+    generation_model = str(getattr(rag, "generation_model", "") or "sem modelo")
+    provider = str(getattr(rag, "provider_name", "") or getattr(rag, "generation_provider_label", "") or "").strip()
+    index_state = str(reindex.get("state") or "offline")
+    semantic_coverage = int(float(reindex.get("semantic_chunk_coverage_pct") or reindex.get("progress_pct") or 0))
+    rag_state = (
+        "online"
+        if index_state == "completed" and semantic_coverage >= 80
+        else "degraded"
+        if index_state in {"running", "pending", "completed"} and semantic_coverage > 0
+        else "offline"
+    )
+
+    portal_source = _source_by_id(sources, "operational_data")
+    live_items = [
+        ("portal", portal_source.get("state") == "online"),
+        ("marés", getattr(services, "tide_service", None) is not None),
+        ("meteo", _service_enabled(getattr(services, "weather_service", None))),
+        ("ondulação", _service_enabled(getattr(services, "wave_service", None))),
+        ("avisos", _service_enabled(getattr(services, "local_warning_service", None))),
+    ]
+    live_online = sum(1 for _, enabled in live_items if enabled)
+    live_state = "online" if live_online >= 4 else "degraded" if live_online else "offline"
+
+    feedback_cases = int(quality.get("feedback_cases_total") or 0)
+    feedback_enabled = bool(
+        settings.get("auto_promote_corrections")
+        or settings.get("auto_trust_positive_feedback")
+        or feedback_cases
+    )
+    feedback_state = _enabled_state(
+        feedback_enabled,
+        degraded=bool(exceptions.get("severity_counts", {}).get("high")),
+    )
+
+    runtime_cards = [
+        _runtime_card(
+            "llm",
+            "LLM",
+            generation_model,
+            provider or ("pronto para síntese" if can_generate else "provider sem chave ativa"),
+            "online" if can_generate else "offline",
+        ),
+        _runtime_card(
+            "rag",
+            "RAG",
+            f"{semantic_coverage}%",
+            str(reindex.get("message") or reindex.get("query_embedding_summary") or "Índice documental."),
+            rag_state,
+        ),
+        _runtime_card(
+            "live",
+            "Dados live",
+            f"{live_online}/{len(live_items)}",
+            " · ".join(name for name, enabled in live_items if enabled) or "sem fontes live ativas",
+            live_state,
+        ),
+        _runtime_card(
+            "feedback",
+            "Memória",
+            f"{feedback_cases}",
+            "correções promovidas + feedback aprovado/revisto",
+            feedback_state,
+        ),
+        _runtime_card(
+            "quality",
+            "Evals",
+            f"{quality.get('passed_total', 0)}/{quality.get('active_cases_total', 0)}",
+            f"{quality.get('failed_total', 0)} caso(s) a falhar",
+            "online" if quality.get("failed_total", 0) == 0 and quality.get("active_cases_total", 0) else "degraded",
+        ),
+    ]
+
+    pipeline_steps = [
+        {
+            "id": "input",
+            "label": "Entrada",
+            "detail": "Web ou WhatsApp; comandos operacionais seguem validação própria.",
+            "state": "online",
+        },
+        {
+            "id": "planner",
+            "label": "Planner",
+            "detail": "Classifica pergunta: live direto, RAG, síntese técnica ou ação.",
+            "state": "online",
+        },
+        {
+            "id": "context",
+            "label": "Contexto",
+            "detail": "Seleciona documentos, companions, berth profiles, live e casebooks relevantes.",
+            "state": rag_state,
+        },
+        {
+            "id": "synthesis",
+            "label": "Síntese",
+            "detail": "LLM cruza fontes; respostas simples de maré/meteo podem ser determinísticas.",
+            "state": "online" if can_generate else "offline",
+        },
+        {
+            "id": "guard",
+            "label": "Guardas",
+            "detail": "Feedback em revisão bloqueia repetições; critic reforça decisões operacionais.",
+            "state": feedback_state,
+        },
+        {
+            "id": "answer",
+            "label": "Resposta",
+            "detail": "Resposta final sem ids internos; fontes ficam disponíveis para auditoria.",
+            "state": health.get("state", "degraded"),
+        },
+    ]
+
+    health_breakdown = [
+        {
+            "id": "pass_rate_pct",
+            "label": "Evals",
+            "value": int(health.get("pass_rate_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("pass_rate_pct") or 0),
+            "state": "online" if int(health.get("pass_rate_pct") or 0) >= 85 else "degraded",
+        },
+        {
+            "id": "coverage_pct",
+            "label": "Fontes",
+            "value": int(health.get("coverage_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("coverage_pct") or 0),
+            "state": "online" if int(health.get("coverage_pct") or 0) >= 80 else "degraded",
+        },
+        {
+            "id": "feedback_bias_pct",
+            "label": "Feedback",
+            "value": int(health.get("feedback_bias_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("feedback_bias_pct") or 0),
+            "state": "online" if int(health.get("feedback_bias_pct") or 0) >= 70 else "degraded",
+        },
+        {
+            "id": "penalty",
+            "label": "Penalização",
+            "value": int(health.get("penalty") or 0),
+            "suffix": "",
+            "bar_pct": min(100, int(health.get("penalty") or 0) * 2),
+            "state": "offline" if int(health.get("penalty") or 0) else "online",
+        },
+    ]
+
+    config_profile = [
+        {
+            "label": "Aprendizagem",
+            "value": "Automática" if settings.get("auto_promote_corrections") else "Manual",
+            "state": "online" if settings.get("auto_promote_corrections") else "degraded",
+        },
+        {
+            "label": "Feedback positivo",
+            "value": "Ativo" if settings.get("auto_trust_positive_feedback") else "Conservador",
+            "state": "online" if settings.get("auto_trust_positive_feedback") else "degraded",
+        },
+        {
+            "label": "Validação admin",
+            "value": "Obrigatória" if settings.get("require_admin_validation") else "Por exceção",
+            "state": "degraded" if settings.get("require_admin_validation") else "online",
+        },
+    ]
+
+    weather_enabled = _service_enabled(getattr(services, "weather_service", None))
+    wave_enabled = _service_enabled(getattr(services, "wave_service", None))
+    warning_enabled = _service_enabled(getattr(services, "local_warning_service", None))
+    wave_detail = _service_status_detail(getattr(services, "wave_service", None), "Ondulação configurada.")
+    warning_detail = _service_status_detail(
+        getattr(services, "local_warning_service", None),
+        "Avisos locais configurados.",
+    )
+    live_details = [
+        {"label": "Portal", "state": portal_source.get("state", "offline"), "detail": portal_source.get("meta", "")},
+        {"label": "Marés", "state": "online" if getattr(services, "tide_service", None) else "offline", "detail": "CSV local ativo."},
+        {
+            "label": "Meteorologia",
+            "state": _enabled_state(weather_enabled),
+            "detail": "WeatherAPI configurada." if weather_enabled else "Sem chave/localização ativa.",
+        },
+        {"label": "Ondulação", "state": _enabled_state(wave_enabled), "detail": wave_detail},
+        {"label": "Avisos", "state": _enabled_state(warning_enabled), "detail": warning_detail},
+        {"label": "AIS", "state": "degraded", "detail": "Disponível como mapa/embed; não é fonte textual do chat."},
+    ]
+
+    checked_at = _now_utc()
+    return {
+        "checked_at": checked_at.isoformat(),
+        "checked_at_label": checked_at.strftime("%d/%m/%Y %H:%M UTC"),
+        "runtime_cards": runtime_cards,
+        "pipeline_steps": pipeline_steps,
+        "health_breakdown": health_breakdown,
+        "context_mix": _context_mix(sources),
+        "config_profile": config_profile,
+        "live_details": live_details,
+        "reindex": reindex,
+    }
