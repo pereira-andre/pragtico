@@ -980,7 +980,10 @@ def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict 
     if best_match["score"] < 0.72:
         return None
     if second_best and (best_match["score"] - second_best["score"]) < 0.14:
-        return None
+        best_reference_question = _normalize_text(best_match["faq_match"].get("question", ""))
+        second_reference_question = _normalize_text(second_best["faq_match"].get("question", ""))
+        if not best_reference_question or best_reference_question != second_reference_question:
+            return None
     companion = best_match["companion"]
     return {
         "answer": _humanize_companion_faq_answer(question, best_match["faq_match"]["answer"]),

@@ -14,6 +14,8 @@
     "Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h desde a Barra.",
     "Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 min.",
     "Fundeadouro Norte demora cerca de 45 min; Fundeadouro Sul cerca de 45 min a 1h conforme a posição.",
+    "Do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 min; para SECIL 20 min; para cais a sul cerca de 1h.",
+    "Do Canal Sul para cais do sul são 30 min a 1h; para cais a norte 1h a 1h20; para SECIL 40 min.",
     "2 horas antes da preia-mar.",
     "2 horas antes da preia-mar.",
     "Entre 1 hora e 1 hora e 30 minutos antes da preia-mar, dependendo do calado exacto."
@@ -40,7 +42,7 @@
     },
     {
       "question": "Quais são os tempos práticos de trânsito desde a Barra para marcar manobras?",
-      "answer": "Referência prática desde a entrada da Barra: Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h; Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1h conforme a posição.",
+      "answer": "Referência prática desde a entrada da Barra: Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h; Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1h conforme a posição. Para mudanças internas: do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 minutos; para SECIL 20 minutos; para cais a sul cerca de 1h. Do Canal Sul para cais do sul são 30 minutos a 1h; para cais a norte 1h a 1h20; para SECIL 40 minutos.",
       "keywords": [
         "tempos",
         "transito",
@@ -60,7 +62,70 @@
         "praias",
         "sapec",
         "secil",
-        "fundeadouro"
+        "fundeadouro",
+        "fundeadouro norte",
+        "cais norte",
+        "cais a norte",
+        "cais sul",
+        "cais a sul"
+      ]
+    },
+    {
+      "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e SECIL?",
+      "answer": "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca de 20 minutos. Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, conta com cerca de 1 hora.",
+      "keywords": [
+        "tempo",
+        "leva",
+        "demora",
+        "fundeadouro norte",
+        "cais a norte",
+        "cais norte",
+        "tms 1",
+        "tms1",
+        "sapec liquidos",
+        "sapec líquidos",
+        "sapec",
+        "secil",
+        "cais a sul",
+        "cais sul",
+        "tanquisado",
+        "eco oil",
+        "lisnave",
+        "termitrena",
+        "teporset",
+        "15 a 25 minutos",
+        "20 minutos",
+        "1 hora"
+      ]
+    },
+    {
+      "question": "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
+      "answer": "Dentro do porto, a partir do Canal Sul: para cais do sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset) conta com 30 minutos a 1 hora; para cais a norte (TMS 1 até SAPEC Líquidos), 1 hora a 1 hora e 20 minutos; para a SECIL, cerca de 40 minutos.",
+      "keywords": [
+        "tempo",
+        "leva",
+        "demora",
+        "canal sul",
+        "cais do sul",
+        "cais a sul",
+        "cais sul",
+        "tanquisado",
+        "eco oil",
+        "lisnave",
+        "termitrena",
+        "teporset",
+        "cais a norte",
+        "cais norte",
+        "tms 1",
+        "tms1",
+        "sapec liquidos",
+        "sapec líquidos",
+        "sapec",
+        "secil",
+        "30 minutos",
+        "1 hora",
+        "1 hora e 20 minutos",
+        "40 minutos"
       ]
     },
     {

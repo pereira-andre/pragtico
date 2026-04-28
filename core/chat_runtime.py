@@ -120,13 +120,15 @@ ROUTE_DURATION_TOPIC_RE = re.compile(
 )
 ROUTE_FOLLOW_UP_RE = re.compile(
     r"^(?:e\s+)?(?:se\s+(?:fosse|for|fossemos|fôssemos|era)|para|ate|até|ao|a|à)\b"
+    r"|^(?:e\s+)?(?:do|da|dos|das|desde)\b"
     r"|\be\s+se\s+(?:fosse|for|era)\b"
     r"|\be\s+para\b"
 )
 ROUTE_DESTINATION_RE = re.compile(
     r"\b(canal norte|canal sul|lisnave|mitrena|tanquisado|eco\s*oil|ecooil|ecoil|"
     r"teporset|tepor\s*set|termitrena|tms\s*1|tms1|tms\s*2|tms2|"
-    r"autoeuropa|auto\s*europa|ro\s*ro|roro|cais\s*10|cais\s*11|"
+    r"autoeuropa|auto\s*europa|ro\s*ro|roro|cais\s+a\s+norte|cais\s+do\s+norte|"
+    r"cais\s+norte|cais\s+a\s+sul|cais\s+do\s+sul|cais\s+sul|cais\s*10|cais\s*11|"
     r"praias|sapec|secil|fundeadouro|fundeadouros)\b"
 )
 ROUTE_ORIGIN_BARRA_RE = re.compile(r"\b(barra|entrada da barra|fora da barra|pilar\s*2|boia\s*2|bóia\s*2)\b")
@@ -611,6 +613,10 @@ def _strip_follow_up_lead_in(question: str) -> str:
 def _contextual_lookup_question(question: str, history: list[dict]) -> str:
     if not _looks_like_route_duration_follow_up(question):
         return question
+    stripped_question = _strip_follow_up_lead_in(question)
+    normalized_stripped = _normalize_lookup_text(stripped_question)
+    if re.match(r"^(?:do|da|dos|das|desde|de)\s+(?:fundeadouro|fundeadouros|canal|barra|entrada|pilar)\b", normalized_stripped):
+        return f"Quanto tempo leva {stripped_question}"
     previous_route_question = _last_user_route_duration_question(history)
     if not previous_route_question:
         return question
@@ -619,7 +625,7 @@ def _contextual_lookup_question(question: str, history: list[dict]) -> str:
         if ROUTE_ORIGIN_BARRA_RE.search(_normalize_lookup_text(previous_route_question))
         else "desde o mesmo ponto de origem"
     )
-    return f"Quanto tempo leva {origin} {_strip_follow_up_lead_in(question)}"
+    return f"Quanto tempo leva {origin} {stripped_question}"
 
 
 def _casebook_query_berth_labels(question: str) -> set[str]:

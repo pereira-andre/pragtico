@@ -404,6 +404,31 @@ Fundeadouro Sul: aproximadamente 45 minutos a 1 hora desde a entrada da Barra,
 consoante a posição. É mais perto quando a posição fica junto ao PAN/Tróia e
 mais demorado quando fica no fim do canal.
 
+MUDANÇAS A PARTIR DO FUNDEADOURO NORTE:
+
+Nesta referência, "cais a norte" significa o conjunto de terminais desde TMS 1
+até SAPEC Líquidos, incluindo TMS 1, TMS 2, Autoeuropa/Ro-Ro, Praias do Sado,
+SAPEC Sólidos e SAPEC Líquidos. "Cais a sul" significa Tanquisado, Eco-Oil,
+LISNAVE, Termitrena e Teporset.
+
+Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos): cerca de
+15 a 25 minutos a navegar, até SAPEC.
+
+Fundeadouro Norte para SECIL: cerca de 20 minutos.
+
+Fundeadouro Norte para cais a sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena
+ou Teporset): cerca de 1 hora.
+
+MUDANÇAS A PARTIR DO CANAL SUL:
+
+Canal Sul para cais do sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena ou
+Teporset): cerca de 30 minutos a 1 hora.
+
+Canal Sul para cais a norte (TMS 1 até SAPEC Líquidos): cerca de 1 hora a
+1 hora e 20 minutos.
+
+Canal Sul para SECIL: cerca de 40 minutos.
+
 TEMPOS DE EMBARQUE DA LANCHA DE PILOTOS:
 
 Pilotos a sair da estação para embarque perto do Outão: cerca de 15 minutos.
@@ -622,6 +647,18 @@ Resposta: Canal Sul para Tanquisado, Eco-Oil, LISNAVE, Teporset ou Termitrena:
 cerca de 1h. Praias do Sado e SAPEC: cerca de 1h20. SECIL: cerca de 30 min.
 Fundeadouro Norte: cerca de 45 min. Fundeadouro Sul: cerca de 45 min a 1h,
 dependendo se a posição fica perto do PAN/Tróia ou no fim do canal.
+
+Pergunta: Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e SECIL?
+Resposta: Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC
+Líquidos, conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca
+de 20 minutos. Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE,
+Termitrena ou Teporset, conta com cerca de 1 hora.
+
+Pergunta: Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?
+Resposta: Do Canal Sul para cais do sul, isto é, Tanquisado, Eco-Oil, LISNAVE,
+Termitrena ou Teporset, conta com cerca de 30 minutos a 1 hora. Do Canal Sul
+para cais a norte, isto é, de TMS 1 até SAPEC Líquidos, conta com cerca de
+1 hora a 1 hora e 20 minutos. Do Canal Sul para a SECIL, cerca de 40 minutos.
 
 Pergunta: Quanto tempo levam os pilotos a embarcar depois de saírem da estação?
 Resposta: Para embarque perto do Outão, cerca de 15 minutos. Para embarque fora

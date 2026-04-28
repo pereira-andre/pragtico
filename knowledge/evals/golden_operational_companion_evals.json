@@ -61,6 +61,16 @@
   },
   {
     "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
+    "expected_substrings": ["Fundeadouro Norte", "cais a norte", "15 a 25 minutos", "SAPEC Líquidos", "SECIL", "20 minutos", "cais a sul", "1 hora"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
+    "expected_substrings": ["Canal Sul", "cais do sul", "30 minutos", "1 hora", "cais a norte", "1 hora e 20 minutos", "SECIL", "40 minutos"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
     "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?",
     "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "fundeadouros"]
   },

@@ -735,7 +735,10 @@ def _looks_like_route_duration_query(clean_question: str) -> bool:
     )
     if not route_measure:
         return False
-    has_origin = re.search(r"\b(desde|da entrada|do pilar|pilar|barra)\b", clean_question)
+    has_origin = re.search(
+        r"\b(desde|da entrada|do pilar|pilar|barra|fundeadouro|fundeadouros|canal norte|canal sul)\b",
+        clean_question,
+    )
     has_destination = re.search(
         r"\b(ate|ao|a|para)\b.*\b(lisnave|mitrena|estaleiro|terminal|cais|doca|"
         r"fundeadouro|sapec|tms|secil|tanquisado|eco\s*oil|ecooil|ecoil|"

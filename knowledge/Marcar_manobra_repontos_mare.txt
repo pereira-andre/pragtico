@@ -30,6 +30,14 @@ Tempos práticos de trânsito desde a entrada da Barra:
   — Fundeadouro Norte: cerca de 45 minutos.
   — Fundeadouro Sul: cerca de 45 minutos a 1h, conforme a posição seja mais
     próxima do PAN/Tróia ou fique no fim do canal.
+  — Do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos):
+    15 a 25 minutos, até SAPEC.
+  — Do Fundeadouro Norte para cais a sul (Tanquisado, Lisnave, Termitrena,
+    Teporset, Eco-Oil): cerca de 1h.
+  — Do Fundeadouro Norte para SECIL: cerca de 20 minutos.
+  — Do Canal Sul para cais do sul: 30 minutos a 1h.
+  — Do Canal Sul para cais a norte: 1h a 1h20.
+  — Do Canal Sul para SECIL: cerca de 40 minutos.
 
 Tempos práticos de embarque da lancha de pilotos desde a estação:
   — Perto do Outão: cerca de 15 minutos.
