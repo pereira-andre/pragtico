@@ -1,0 +1,87 @@
+[
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é o comprimento máximo para manobrar na LISNAVE à noite?",
+    "expected_substrings": ["280 metros", "dia", "noite", "período diurno"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Um navio com 300 metros de LOA pode entrar no LISNAVE de noite?",
+    "expected_substrings": ["Não", "superior a 280 metros", "dia"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Um navio com 250 metros de LOA pode entrar no LISNAVE de noite?",
+    "expected_substrings": ["Sim", "LOA até 280 metros", "dia", "noite"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Porque é que as manobras no LISNAVE têm de ser no reponto?",
+    "expected_substrings": ["perpendicularmente", "corrente de maré", "corrente nula"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Podem dois navios grandes manobrar ao mesmo tempo no LISNAVE?",
+    "expected_substrings": ["marés vivas", "uma manobra por reponto", "LOA superior a 200 metros"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é a profundidade disponível na entrada da Doca 21 com a comporta aberta?",
+    "expected_substrings": ["6,10 metros", "20 pés", "5,49 metros"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Quantos rebocadores são necessários para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster?",
+    "expected_substrings": ["2 rebocadores grandes", "1 pequeno", "GGp"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Qual é a diferença entre rebocador grande e rebocador pequeno?",
+    "expected_substrings": ["25 toneladas", "inferior a 25 toneladas"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Qual é a velocidade máxima do navio durante o estabelecimento do cabo de reboque?",
+    "expected_substrings": ["5 nós", "água"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "O Mestre do rebocador pode recusar estabelecer o cabo?",
+    "expected_substrings": ["recusar", "velocidade", "má visibilidade", "seguras"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Qual é a diferença entre marcar para o reponto e marcar para a preia-mar?",
+    "expected_substrings": ["corrente nula", "profundidade suficiente", "Lisnave/Teporset/Termitrena", "TMS e SAPEC"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Com quanto tempo de antecedência se marca uma entrada de fora da barra para a LISNAVE?",
+    "expected_substrings": ["2 horas antes do reponto de maré pretendido"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Um navio quer sair da Doca 22 do Lisnave. Quando se marca?",
+    "expected_substrings": ["2 horas antes da preia-mar"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "A partir de que velocidade de vento as manobras ficam condicionadas?",
+    "expected_substrings": ["20 nós", "25 nós"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "Quando se considera maré viva no Porto de Setúbal?",
+    "expected_substrings": ["baixa-mar", "inferior a 1,0 m", "preia-mar", "superior a 3,0 m"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "O que fazer quando há nevoeiro?",
+    "expected_substrings": ["pilotagem é suspensa", "fila de prioridade", "requisições continuam"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "Qual é o critério de prioridade entre manobras?",
+    "expected_substrings": ["reponto de maré", "passageiros", "RoRo", "contentores", "saídas sobre entradas"]
+  }
+]

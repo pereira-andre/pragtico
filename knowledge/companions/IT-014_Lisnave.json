@@ -133,10 +133,14 @@
       ]
     },
     {
-      "question": "Por que razão todas as manobras no LISNAVE se fazem nos repontos",
+      "question": "Porque é que todas as manobras no LISNAVE se fazem nos repontos de maré?",
       "answer": "Os cais dos Estaleiros Mitrena estão dispostos perpendicularmente à corrente de maré. Com corrente ativa, esta atua lateralmente sobre o navio, tornando a manobra incontrolável. Só no reponto, com corrente nula, é possível manobrar com segurança.",
       "keywords": [
         "fazem",
+        "porque",
+        "corrente",
+        "corrente nula",
+        "perpendicular",
         "lisnave",
         "manobras",
         "razao",

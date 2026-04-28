@@ -248,6 +248,18 @@ def _tokenize(value: str) -> set[str]:
     }
 
 
+def _numeric_mentions(value: object) -> set[str]:
+    numbers: set[str] = set()
+    for match in re.finditer(r"\b\d+(?:[.,]\d+)*\b", str(value or "")):
+        raw = match.group(0)
+        if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", raw):
+            normalized = re.sub(r"[.,]", "", raw)
+        else:
+            normalized = raw.replace(",", ".")
+        numbers.add(normalized)
+    return numbers
+
+
 def _clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
@@ -863,6 +875,7 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
     question_tokens = _tokenize(question)
     if not question_tokens:
         return None
+    question_numbers = _numeric_mentions(question)
 
     best_match = None
     best_score = 0.0
@@ -875,6 +888,9 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
         if not signal_tokens:
             continue
         if _faq_intent_conflicts(question, question_tokens, item):
+            continue
+        candidate_numbers = _numeric_mentions(item.get("question", ""))
+        if question_numbers and candidate_numbers and not (question_numbers & candidate_numbers):
             continue
         overlap_score = len(question_tokens & faq_tokens) / max(len(question_tokens), 1)
         keyword_score = len(question_tokens & keyword_tokens) / max(len(question_tokens), 1) if keyword_tokens else 0.0
