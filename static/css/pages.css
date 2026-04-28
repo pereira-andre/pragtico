@@ -4181,7 +4181,8 @@ button:hover {
   line-height: 1.55;
   font-size: 0.96rem;
 }
-.admin-bot-playground-sources {
+.admin-bot-playground-sources,
+.admin-bot-playground-trace {
   margin-top: 10px;
 }
 .admin-bot-playground-sources ul {
@@ -4191,6 +4192,29 @@ button:hover {
   gap: 4px;
   color: var(--muted);
   font-size: 0.86rem;
+}
+.admin-bot-trace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.admin-bot-trace-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+.admin-bot-trace-card strong {
+  font-size: 0.88rem;
+}
+.admin-bot-trace-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 /* Sources grid */
@@ -4380,11 +4404,43 @@ button:hover {
   background: rgba(179, 66, 42, 0.06);
   border: 1px solid rgba(179, 66, 42, 0.2);
   display: grid;
-  gap: 4px;
+  gap: 8px;
+}
+.admin-bot-failure-head,
+.admin-bot-failure-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .admin-bot-failure-list .admin-bot-failure-question {
   margin: 0;
   font-weight: 600;
+}
+.admin-bot-failure-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.admin-bot-failure-compare div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 9px 10px;
+}
+.admin-bot-failure-compare span,
+.admin-bot-failure-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.admin-bot-failure-compare p {
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+.admin-bot-failure-meta a {
+  color: var(--accent);
+  text-decoration: none;
 }
 
 /* Toolbox */

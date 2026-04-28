@@ -474,8 +474,25 @@ def build_quality_snapshot() -> dict:
 
     static_cases = load_eval_cases_from_dir(os.path.join(knowledge_dir, "evals")) if knowledge_dir else []
     feedback_cases = load_eval_cases_from_store(store) if store else []
+    static_cases = [
+        {
+            **case,
+            "origin": "static_eval",
+            "origin_label": "Eval fixo",
+        }
+        for case in static_cases
+    ]
+    feedback_cases = [
+        {
+            **case,
+            "origin": "feedback_promoted",
+            "origin_label": "Feedback promovido",
+        }
+        for case in feedback_cases
+    ]
 
     seen: set[tuple[str, str]] = set()
+    by_key: dict[tuple[str, str], dict] = {}
     deduped: list[dict] = []
     for case in static_cases + feedback_cases:
         key = (
@@ -483,8 +500,13 @@ def build_quality_snapshot() -> dict:
             (case.get("question") or "").strip().lower(),
         )
         if key in seen:
+            existing = by_key.get(key)
+            if existing and existing.get("origin") != case.get("origin"):
+                existing["origin"] = "mixed"
+                existing["origin_label"] = "Eval fixo + feedback"
             continue
         seen.add(key)
+        by_key[key] = case
         deduped.append(case)
 
     results = evaluate_companion_cases(deduped, knowledge_dir) if (deduped and knowledge_dir) else []
@@ -497,20 +519,57 @@ def build_quality_snapshot() -> dict:
         name = (case.get("document") or "").strip()
         if not name:
             continue
-        bucket = document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
+        bucket = document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            },
+        )
         bucket["total"] += 1
+        origin = case.get("origin")
+        if origin == "feedback_promoted":
+            bucket["feedback"] += 1
+        elif origin == "mixed":
+            bucket["feedback"] += 1
+            bucket["static"] += 1
+        else:
+            bucket["static"] += 1
     for case in feedback_cases:
         name = (case.get("document") or "").strip()
         if not name:
             continue
-        document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
-        document_summary[name]["feedback"] += 1
+        document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            },
+        )
     for result in results:
         name = (result.get("document") or "").strip()
         if not name:
             continue
         if name not in document_summary:
-            document_summary[name] = {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0}
+            document_summary[name] = {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            }
         if result.get("passed"):
             document_summary[name]["passed"] += 1
         else:
@@ -527,11 +586,21 @@ def build_quality_snapshot() -> dict:
     failure_rows = []
     for item in failed[:10]:
         missing = list(item.get("missing_substrings") or []) or list(item.get("missing_terms") or [])[:4]
+        expected_answer = str(item.get("expected_answer") or "").strip()
+        current_answer = str(item.get("answer") or "").strip()
         failure_rows.append(
             {
                 "document": item.get("document", ""),
                 "question": item.get("question", ""),
                 "missing_summary": ", ".join(missing) or "Resposta vazia ou fora do esperado.",
+                "expected_summary": expected_answer[:420],
+                "current_answer": current_answer[:420],
+                "origin": item.get("origin") or "static_eval",
+                "origin_label": item.get("origin_label") or "Eval fixo",
+                "term_coverage_pct": round(float(item.get("term_coverage") or 0) * 100),
+                "source_message_id": item.get("source_message_id", ""),
+                "updated_by": item.get("updated_by", ""),
+                "action_url": "/admin/documents",
             }
         )
 

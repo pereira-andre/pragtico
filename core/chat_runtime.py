@@ -319,6 +319,108 @@ def _build_supplemental_sources(
     return supplemental_sources
 
 
+def _source_mode_counts(sources: list[dict] | None) -> list[dict]:
+    counts: dict[str, int] = {}
+    for source in sources or []:
+        mode = (
+            str(source.get("retrieval_mode") or source.get("type") or "sem_modo").strip()
+            or "sem_modo"
+        )
+        counts[mode] = counts.get(mode, 0) + 1
+    return [
+        {"mode": mode, "count": count}
+        for mode, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def _compact_feedback_trace(items: list[dict] | None) -> list[dict]:
+    compacted: list[dict] = []
+    for item in (items or [])[:3]:
+        compacted.append(
+            {
+                "similarity": round(float(item.get("similarity") or 0), 3),
+                "question": str(item.get("question") or "")[:180],
+                "message_id": str(item.get("message_id") or ""),
+                "feedback_note": str(item.get("feedback_note") or "")[:180],
+                "feedback_correction_document": str(item.get("feedback_correction_document") or ""),
+            }
+        )
+    return compacted
+
+
+def _compact_review_match(match: dict | None) -> dict | None:
+    if not match:
+        return None
+    return {
+        "similarity": round(float(match.get("similarity") or 0), 3),
+        "question": str(match.get("question") or "")[:180],
+        "message_id": str(match.get("message_id") or ""),
+        "feedback_note": str(match.get("feedback_note") or "")[:180],
+        "feedback_correction_document": str(match.get("feedback_correction_document") or ""),
+    }
+
+
+def _build_playground_trace(
+    *,
+    execution_plan: ChatExecutionPlan | None,
+    answer_origin: str,
+    sources: list[dict] | None,
+    targeted_document_context: dict | None = None,
+    berth_profile_match: dict | None = None,
+    global_companion_match: dict | None = None,
+    conversation_state: dict | None = None,
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
+    review_guard_match: dict | None = None,
+    review_correction_match: dict | None = None,
+    direct_answer_used: bool = False,
+) -> dict:
+    target_record = (targeted_document_context or {}).get("record") or {}
+    document_sources = (targeted_document_context or {}).get("document_sources") or []
+    companion_sources = (targeted_document_context or {}).get("companion_sources") or []
+    global_companion = (global_companion_match or {}).get("companion") or {}
+    global_companion_sources = (global_companion_match or {}).get("sources") or []
+    global_companion_document = (
+        global_companion.get("document")
+        or (global_companion_sources[0].get("document") if global_companion_sources else "")
+        or ""
+    )
+    berth_label = (
+        (berth_profile_match or {}).get("canonical_label")
+        or (berth_profile_match or {}).get("label")
+        or (berth_profile_match or {}).get("name")
+        or ""
+    )
+    return {
+        "execution_plan": execution_plan.to_dict() if execution_plan else {},
+        "answer_origin": answer_origin,
+        "source_count": len(sources or []),
+        "source_mode_counts": _source_mode_counts(sources),
+        "target_document": str(target_record.get("name") or ""),
+        "target_document_hit": bool(target_record),
+        "document_target_chunks": len(document_sources),
+        "document_companion_hit": bool((targeted_document_context or {}).get("companion_answer") or companion_sources),
+        "global_companion_hit": bool(global_companion_match),
+        "global_companion_document": str(global_companion_document),
+        "berth_profile_hit": bool(berth_profile_match),
+        "berth_profile_label": str(berth_label),
+        "conversation_state_hit": bool(conversation_state and conversation_state.get("source")),
+        "trusted_matches": _compact_feedback_trace(trusted_answers),
+        "review_matches": _compact_feedback_trace(reviewed_answers),
+        "review_guard": _compact_review_match(review_guard_match),
+        "review_correction": _compact_review_match(review_correction_match),
+        "used_llm": answer_origin == "llm",
+        "used_direct_answer": direct_answer_used,
+        "used_shortcut": answer_origin in {
+            "berth_profile",
+            "document_companion",
+            "document_companion_global",
+            "review_correction_memory",
+            "review_guard",
+        },
+    }
+
+
 _CASEBOOK_LOOKUP_TOKENS = {
     "entry": ("entrada", "entrar", "chegada", "chegar"),
     "departure": ("saida", "saída", "sair", "sair", "partida"),
@@ -787,6 +889,16 @@ def playground_answer(
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
+            direct_answer["trace"] = _build_playground_trace(
+                execution_plan=execution_plan,
+                answer_origin=direct_answer.get("answer_origin", "direct_operational"),
+                sources=direct_answer.get("sources", []),
+                trusted_answers=synthesis_trusted_answers,
+                reviewed_answers=synthesis_reviewed_answers,
+                review_guard_match=review_guard_match,
+                review_correction_match=review_correction_match,
+                direct_answer_used=True,
+            )
             return direct_answer
 
         runtime_history: list[dict] = []
@@ -819,6 +931,7 @@ def playground_answer(
 
         allow_companion_shortcut = not execution_plan.requires_llm_synthesis
         answer: dict | None = None
+        global_companion_match: dict | None = None
         if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
             clean_question,
             targeted_document_context["companion_answer"],
@@ -870,11 +983,25 @@ def playground_answer(
                     answer = _build_review_guard_answer(review_guard_match)
                 else:
                     if not services.rag.can_generate():
-                        return {
+                        answer = {
                             "answer": "Define a API key do provider antes de usar o playground.",
                             "sources": [],
                             "answer_origin": "error",
                         }
+                        answer["trace"] = _build_playground_trace(
+                            execution_plan=execution_plan,
+                            answer_origin=answer["answer_origin"],
+                            sources=answer["sources"],
+                            targeted_document_context=targeted_document_context,
+                            berth_profile_match=berth_profile_match,
+                            global_companion_match=global_companion_match,
+                            conversation_state=conversation_state,
+                            trusted_answers=synthesis_trusted_answers,
+                            reviewed_answers=synthesis_reviewed_answers,
+                            review_guard_match=review_guard_match,
+                            review_correction_match=review_correction_match,
+                        )
+                        return answer
                     answer = services.rag.answer(
                         question=clean_question,
                         retrieval_question=targeted_document_context["retrieval_question"],
@@ -888,7 +1015,24 @@ def playground_answer(
                     )
                     answer["answer_origin"] = "llm"
 
-        return add_contextual_response_emojis(answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"}, clean_question)
+        answer = add_contextual_response_emojis(
+            answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"},
+            clean_question,
+        )
+        answer["trace"] = _build_playground_trace(
+            execution_plan=execution_plan,
+            answer_origin=answer.get("answer_origin", ""),
+            sources=answer.get("sources", []),
+            targeted_document_context=targeted_document_context,
+            berth_profile_match=berth_profile_match,
+            global_companion_match=global_companion_match,
+            conversation_state=conversation_state,
+            trusted_answers=synthesis_trusted_answers,
+            reviewed_answers=synthesis_reviewed_answers,
+            review_guard_match=review_guard_match,
+            review_correction_match=review_correction_match,
+        )
+        return answer
 
 
 def handle_chat_turn(

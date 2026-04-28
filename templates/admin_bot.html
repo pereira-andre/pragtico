@@ -158,6 +158,10 @@
           <summary>Fontes usadas</summary>
           <ul id="bot-playground-sources"></ul>
         </details>
+        <details class="admin-bot-playground-trace" id="bot-playground-trace-wrapper" hidden open>
+          <summary>Trace da decisão</summary>
+          <div class="admin-bot-trace-grid" id="bot-playground-trace"></div>
+        </details>
       </article>
     </div>
   </section>
@@ -334,9 +338,29 @@
             <ul class="admin-bot-failure-list">
               {% for item in quality.failure_rows %}
                 <li>
-                  <strong>{{ item.document }}</strong>
+                  <div class="admin-bot-failure-head">
+                    <strong>{{ item.document }}</strong>
+                    <span class="admin-status-badge is-degraded">{{ item.origin_label }}</span>
+                  </div>
                   <p class="admin-bot-failure-question">{{ item.question }}</p>
                   <p class="muted">Falta: {{ item.missing_summary }}</p>
+                  <div class="admin-bot-failure-compare">
+                    <div>
+                      <span>Esperado</span>
+                      <p>{{ item.expected_summary or 'Sem resposta esperada registada.' }}</p>
+                    </div>
+                    <div>
+                      <span>Atual</span>
+                      <p>{{ item.current_answer or 'O companion não devolveu resposta.' }}</p>
+                    </div>
+                  </div>
+                  <div class="admin-bot-failure-meta">
+                    <span>Cobertura de termos: {{ item.term_coverage_pct }}%</span>
+                    {% if item.source_message_id %}
+                      <span>Feedback: {{ item.source_message_id }}</span>
+                    {% endif %}
+                    <a href="{{ item.action_url }}">Abrir documentos</a>
+                  </div>
                 </li>
               {% endfor %}
             </ul>
@@ -548,7 +572,72 @@
   const answerBox = document.getElementById("bot-playground-answer");
   const sourcesWrapper = document.getElementById("bot-playground-sources-wrapper");
   const sourcesList = document.getElementById("bot-playground-sources");
+  const traceWrapper = document.getElementById("bot-playground-trace-wrapper");
+  const traceBox = document.getElementById("bot-playground-trace");
   const origin = document.getElementById("bot-playground-origin");
+
+  function appendTraceCard(title, lines) {
+    if (!traceBox) return;
+    const card = document.createElement("article");
+    card.className = "admin-bot-trace-card";
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    card.appendChild(heading);
+    lines.filter(Boolean).forEach((line) => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      card.appendChild(p);
+    });
+    traceBox.appendChild(card);
+  }
+
+  function boolLabel(value) {
+    return value ? "sim" : "não";
+  }
+
+  function renderTrace(trace) {
+    if (!traceBox || !traceWrapper) return;
+    traceBox.innerHTML = "";
+    if (!trace || !Object.keys(trace).length) {
+      traceWrapper.hidden = true;
+      return;
+    }
+    const plan = trace.execution_plan || {};
+    const liveFacets = (plan.live_facets || []).join(", ") || "nenhum";
+    const sourceModes = (trace.source_mode_counts || [])
+      .map((item) => `${item.mode}: ${item.count}`)
+      .join(" · ") || "sem fontes";
+    appendTraceCard("Plano", [
+      `Intenção: ${plan.primary_intent || "n/d"}`,
+      `Dados live: ${liveFacets}`,
+      `Síntese LLM: ${boolLabel(plan.requires_llm_synthesis)}`,
+    ]);
+    appendTraceCard("Decisão", [
+      `Origem: ${trace.answer_origin || "n/d"}`,
+      `Resposta direta: ${boolLabel(trace.used_direct_answer)}`,
+      `Atalho estruturado: ${boolLabel(trace.used_shortcut)}`,
+      `LLM usado: ${boolLabel(trace.used_llm)}`,
+    ]);
+    appendTraceCard("Conhecimento", [
+      `Documento alvo: ${trace.target_document || "sem alvo"}`,
+      `Chunks do documento: ${trace.document_target_chunks || 0}`,
+      `Companion do documento: ${boolLabel(trace.document_companion_hit)}`,
+      `Companion global: ${trace.global_companion_document || boolLabel(trace.global_companion_hit)}`,
+      `Perfil de cais: ${trace.berth_profile_label || boolLabel(trace.berth_profile_hit)}`,
+    ]);
+    appendTraceCard("Feedback", [
+      `Aprovados usados: ${(trace.trusted_matches || []).length}`,
+      `Em revisão vistos: ${(trace.review_matches || []).length}`,
+      `Guard rail ativo: ${boolLabel(trace.review_guard)}`,
+      `Correção ativa: ${boolLabel(trace.review_correction)}`,
+    ]);
+    appendTraceCard("Fontes", [
+      `${trace.source_count || 0} fonte(s) no contexto`,
+      sourceModes,
+    ]);
+    traceWrapper.hidden = false;
+  }
+
   if (form) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -560,6 +649,8 @@
       answerBox.textContent = "";
       sourcesList.innerHTML = "";
       sourcesWrapper.hidden = true;
+      if (traceBox) traceBox.innerHTML = "";
+      if (traceWrapper) traceWrapper.hidden = true;
       try {
         const response = await fetch("{{ url_for('admin.admin_bot_playground') }}", {
           method: "POST",
@@ -589,6 +680,7 @@
           });
           sourcesWrapper.hidden = false;
         }
+        renderTrace(payload.trace || {});
       } catch (err) {
         origin.textContent = "";
         answerBox.textContent = `Erro: ${err.message}`;

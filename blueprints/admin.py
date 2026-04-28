@@ -1652,6 +1652,7 @@ def admin_bot_playground():
             "answer": result.get("answer", ""),
             "sources": result.get("sources", []),
             "answer_origin": result.get("answer_origin", ""),
+            "trace": result.get("trace", {}),
         }
     )
 
