@@ -57,6 +57,59 @@
     "expected_substrings": ["recusar", "velocidade", "má visibilidade", "seguras"]
   },
   {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Quantos reboques para RORO de 180m a entrar com vento norte?",
+    "expected_substrings": ["3 rebocadores grandes", "Ro-Ro com vento Norte a entrar", "não deve reduzir esta recomendação"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Um Graneleiro de 190m a sair com vento sul forte, quantos rebocadores leva?",
+    "expected_substrings": ["2 rebocadores grandes", "vento Sul a sair", "DWT", "thrusters"]
+  },
+  {
+    "document": "operational_safety_limits.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_safety_limit",
+    "question": "Um roro vai sair agora da Autoeuropa. Tem 200 m e já pus 2 reboques. Pode sair? Ah, mas ficou nevoeiro!",
+    "expected_substrings": ["Não", "nevoeiro em porto", "manobras ficam suspensas", "visibilidade operacional"]
+  },
+  {
+    "document": "operational_safety_limits.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_safety_limit",
+    "question": "Se não fosse nevoeiro e estivesse 31 kts de vento, já podia sair desde que tivesse 4 reboques?",
+    "expected_substrings": ["Não", "31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"]
+  },
+  {
+    "document": "IT-015_Fundeadouros.txt",
+    "question": "Que fundeadouro recomendas para um navio de grande calado superior a 9 metros?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "mais profundo", "mais amplo", "Fundeadouro Norte", "emergência"]
+  },
+  {
+    "document": "IT-029_SAPEC.txt",
+    "question": "Posso atracar um navio com 12 m no cais da SAPEC Líquidos?",
+    "expected_substrings": ["Não", "9,5 metros", "10,0 metros", "12 m", "ultrapassa ambos os limites"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Com que antecedência se marca uma entrada para a Secil vinda de fora da Barra?",
+    "expected_substrings": ["30 a 45 minutos", "reponto de maré", "preia-mar", "baixa-mar", "Piloto Coordenador"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Com que antecedência se marca uma saída da Secil?",
+    "expected_substrings": ["15 minutos", "reponto de maré", "preia-mar", "baixa-mar", "10 a 15 minutos"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Se um navio sai da Secil no reponto das 13:51 e outro vem do Fundeadouro Norte para o mesmo cais, como se marcam as manobras?",
+    "expected_substrings": ["13:36", "45 minutos", "1 hora", "12:51", "13:06", "10 a 15 minutos"]
+  },
+  {
     "document": "Marcar_manobra_repontos_mare.txt",
     "question": "Qual é a diferença entre marcar para o reponto e marcar para a preia-mar?",
     "expected_substrings": ["corrente nula", "profundidade suficiente", "Lisnave/Teporset/Termitrena", "TMS e SAPEC"]

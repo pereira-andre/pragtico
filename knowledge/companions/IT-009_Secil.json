@@ -17,7 +17,10 @@
     "Não. Navios com LOA superior a 170 metros só podem ser movimentados no Cais de Oeste com luz do dia e junto da preia-mar. A manobra noturna está proibida para navios com LOA > 1...",
     "Não. Navios com LOA superior a 170 metros só podem ser movimentados junto da preia-mar. A baixa-mar não é permitida para estes navios neste cais.",
     "O documento não proíbe explicitamente a manobra noturna para navios com LOA igual ou inferior a 170 metros no Cais de Oeste.",
-    "121 metros."
+    "121 metros.",
+    "Prática local de marcação Secil: entradas de fora da Barra ou do Fundeadouro Norte normalmente 30 a 45 minutos antes do reponto; de Tróia ou de outro cais, 45 minutos a 1 hora antes.",
+    "Saídas da Secil: marcar cerca de 15 minutos antes do reponto; usam-se preia-mar e baixa-mar, e a saída é normalmente rápida, deixando o cais livre em 10 a 15 minutos.",
+    "Estas margens de marcação são prática operacional e não substituem as restrições documentais de LOA, calado, luz do dia e validação pelo Piloto Coordenador."
   ],
   "faq": [
     {
@@ -141,6 +144,58 @@
         "secil",
         "terminal",
         "valida"
+      ]
+    },
+    {
+      "question": "Com que antecedência se marca uma entrada para a Secil vinda de fora da Barra?",
+      "answer": "Pela prática local, uma entrada para a Secil vinda de fora da Barra é normalmente marcada 30 a 45 minutos antes do reponto de maré. Isto aplica-se tanto a preia-mar como a baixa-mar. Esta antecedência é uma regra de marcação; continua a ser necessário validar as restrições documentais do cais, LOA, calado, luz do dia e decisão do Piloto Coordenador.",
+      "keywords": [
+        "antecedencia",
+        "barra",
+        "entrada",
+        "fora",
+        "marcar",
+        "reponto",
+        "secil"
+      ]
+    },
+    {
+      "question": "Com que antecedência se marca uma mudança do Fundeadouro Norte para a Secil?",
+      "answer": "Para mudança do Fundeadouro Norte para a Secil, a prática local é marcar entre 45 minutos e 1 hora antes do reponto. Se vier de fora da Barra ou do próprio Fundeadouro Norte, 30 a 45 minutos costuma bastar para entrada simples; se vier de Tróia ou de outro cais, usar 45 minutos a 1 hora.",
+      "keywords": [
+        "fundeadouro norte",
+        "mudanca",
+        "mudança",
+        "secil",
+        "45 minutos",
+        "1 hora",
+        "reponto"
+      ]
+    },
+    {
+      "question": "Com que antecedência se marca uma saída da Secil?",
+      "answer": "As saídas da Secil marcam-se cerca de 15 minutos antes do reponto de maré. Usam-se tanto os repontos de preia-mar como os de baixa-mar. A saída costuma ser rápida e o cais fica livre em cerca de 10 a 15 minutos.",
+      "keywords": [
+        "saida",
+        "saída",
+        "secil",
+        "15 minutos",
+        "reponto",
+        "preia-mar",
+        "baixa-mar"
+      ]
+    },
+    {
+      "question": "Se um navio sai da Secil no reponto das 13:51 e outro vem do Fundeadouro Norte para o mesmo cais, como se marcam as manobras?",
+      "answer": "Para o reponto das 13:51, marca a saída da Secil cerca de 15 minutos antes, por volta das 13:36. A mudança do Fundeadouro Norte para o mesmo cais deve ser marcada entre 45 minutos e 1 hora antes do reponto, ou seja, entre as 12:51 e as 13:06. A saída é rápida e normalmente deixa o cais livre em 10 a 15 minutos.",
+      "keywords": [
+        "13:51",
+        "13:36",
+        "12:51",
+        "13:06",
+        "fundeadouro norte",
+        "mesmo cais",
+        "secil"
       ]
     }
   ]

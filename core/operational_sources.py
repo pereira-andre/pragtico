@@ -390,6 +390,124 @@ def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> 
     }
 
 
+def _extract_wind_kts_from_question(question: str) -> float | None:
+    text = str(question or "").lower().replace(",", ".")
+    patterns = (
+        r"\b(\d+(?:\.\d+)?)\s*(?:kt|kts|n[oó]s)\b",
+        r"\bvento\s*(?:de|a|=|:)?\s*(\d+(?:\.\d+)?)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(manobra|manobras|sair|saida|saída|atracar|entrar|navio|reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+
+    wind_kts = _extract_wind_kts_from_question(question)
+    if wind_kts is not None and wind_kts > 30:
+        wind_label = f"{wind_kts:g}".replace(".", ",")
+        answer = (
+            f"Não. Com vento sustentado ou rajada superior a 30 kt ({wind_label} kt no caso indicado), "
+            "as manobras ficam suspensas por segurança. Ter mais rebocadores não anula este limite. "
+            "Se a suspensão foi acionada por vento, a retoma só deve ser considerada quando o vento baixar para menos de 25 kt."
+        )
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "operational_safety_limits.json",
+                    "source_id": "SAFE_WIND_LIMIT",
+                    "chunk_id": 1,
+                    "score": 1.0,
+                    "retrieval_mode": "operational_safety_limits",
+                    "snippet": "Com vento superior a 30 kt, todas as manobras ficam suspensas; retoma apenas abaixo de 25 kt.",
+                }
+            ],
+            "answer_origin": "operational_safety_limit",
+        }
+
+    if re.search(r"\b(nevoeiro|nevoa|neblina|fog|mist)\b", clean_question):
+        answer = (
+            "Não. Com nevoeiro em porto, as manobras ficam suspensas até a visibilidade operacional ser restaurada. "
+            "O número de rebocadores não elimina esta restrição; depois da visibilidade voltar, reavalia-se a manobra e os meios necessários."
+        )
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "operational_safety_limits.json",
+                    "source_id": "SAFE_FOG_LIMIT",
+                    "chunk_id": 1,
+                    "score": 1.0,
+                    "retrieval_mode": "operational_safety_limits",
+                    "snippet": "Com nevoeiro em porto, todas as manobras ficam suspensas até que a visibilidade seja restaurada.",
+                }
+            ],
+            "answer_origin": "operational_safety_limit",
+        }
+
+    return None
+
+
+def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente)\b", clean_question):
+        return None
+
+    source = build_tug_operational_guidance_source(question, _active_knowledge_dir() or "knowledge")
+    if not source:
+        return None
+    snippet = str(source.get("snippet") or "")
+    applicable = []
+    in_rules = False
+    for raw_line in snippet.splitlines():
+        line = raw_line.strip()
+        if line == "Regras diretamente aplicaveis:":
+            in_rules = True
+            continue
+        if in_rules and not line.startswith("- "):
+            break
+        if in_rules and line.startswith("- "):
+            applicable.append(line[2:].strip())
+    if not applicable:
+        return None
+
+    first_rule = applicable[0]
+    count_match = re.search(r"\b(\d+)\s+rebocadores?\b", first_rule, flags=re.IGNORECASE)
+    if not count_match:
+        return None
+    count = int(count_match.group(1))
+    size_label = "grandes" if re.search(r"\bgrandes?\b|LOA inferido: (?:1[2-9]\d|[2-9]\d\d)", snippet, flags=re.IGNORECASE) else ""
+    tug_label = f"{count} rebocador" + ("" if count == 1 else "es")
+    if size_label:
+        tug_label += f" {size_label}"
+
+    answer_lines = [
+        f"Recomendo {tug_label}.",
+        f"Regra prática aplicável: {first_rule}",
+    ]
+    if len(applicable) > 1:
+        answer_lines.append("Outras regras relevantes: " + " ".join(applicable[1:3]))
+    if "Prioridade:" in snippet:
+        answer_lines.append(
+            "Confirma DWT, carga perigosa, estado carregado/vazio e thrusters; a IT-016 pode agravar mínimos, mas não deve reduzir esta recomendação prática."
+        )
+    return {
+        "answer": "\n".join(answer_lines),
+        "sources": [source],
+        "answer_origin": "operational_tug_guidance",
+    }
+
+
 def _needs_portal_activity_context(question: str, plan: ChatExecutionPlan | None = None) -> bool:
     plan = plan or build_chat_execution_plan(question)
     clean = plan.normalized_question or _operational_lookup_key(question)
@@ -460,9 +578,15 @@ def answer_direct_operational_query(
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     plan = plan or build_chat_execution_plan(question)
     clean_question = plan.normalized_question or _operational_lookup_key(question)
+    safety_answer = _answer_safety_hard_limit(question, clean_question)
+    if safety_answer:
+        return safety_answer
     hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
     if hard_limit_answer:
         return hard_limit_answer
+    tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
+    if tug_guidance_answer:
+        return tug_guidance_answer
     if plan.requires_llm_synthesis:
         return None
 

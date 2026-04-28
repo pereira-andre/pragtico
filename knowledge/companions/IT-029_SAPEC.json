@@ -95,6 +95,20 @@
       ]
     },
     {
+      "question": "Posso atracar um navio com 12 m no cais da SAPEC Líquidos?",
+      "answer": "Não. No SAPEC Líquidos / TGL, o calado máximo é 9,5 metros para carga IMO/perigosa e 10,0 metros para carga não IMO. Um navio com 12 m de calado ultrapassa ambos os limites e não deve ser aceite em condições normais, salvo validação excecional documentada pelo Piloto Coordenador.",
+      "keywords": [
+        "12 m",
+        "12 metros",
+        "sapec liquidos",
+        "sapec líquidos",
+        "tgl",
+        "calado",
+        "nao pode",
+        "não pode"
+      ]
+    },
+    {
       "question": "Qual a distância entre os duques d'alba extremos do TGL?",
       "answer": "70 metros.",
       "keywords": [
