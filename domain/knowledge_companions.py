@@ -815,14 +815,14 @@ def _humanize_companion_faq_answer(question: str, answer: str, *, context_label:
     if _starts_with_boolean_answer(clean_answer):
         return f"Neste caso, a resposta é: {answer_sentence}"
 
-    if question_tokens & CONTACT_REFERENCE_TERMS:
-        return f"Usa esta referência: {answer_sentence}"
-
     if question_tokens & TIME_PLANNING_TERMS:
         return (
             f"Para planeamento, conta com {answer_sentence} "
             "Depois valida os restantes condicionantes da manobra."
         )
+
+    if question_tokens & CONTACT_REFERENCE_TERMS:
+        return f"Usa esta referência: {answer_sentence}"
 
     if question_tokens & DISTANCE_TERMS:
         return (

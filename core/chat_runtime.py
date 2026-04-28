@@ -114,6 +114,23 @@ DOCUMENT_FOLLOW_UP_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
+ROUTE_DURATION_TOPIC_RE = re.compile(
+    r"\b(quanto tempo|tempo|demora|leva|transito|trânsito|percurso|viagem|"
+    r"marcar|marcacao|marcação|antecedencia|antecedência)\b"
+)
+ROUTE_FOLLOW_UP_RE = re.compile(
+    r"^(?:e\s+)?(?:se\s+(?:fosse|for|fossemos|fôssemos|era)|para|ate|até|ao|a|à)\b"
+    r"|\be\s+se\s+(?:fosse|for|era)\b"
+    r"|\be\s+para\b"
+)
+ROUTE_DESTINATION_RE = re.compile(
+    r"\b(canal norte|canal sul|lisnave|mitrena|tanquisado|eco\s*oil|ecooil|ecoil|"
+    r"teporset|tepor\s*set|termitrena|tms\s*1|tms1|tms\s*2|tms2|"
+    r"autoeuropa|auto\s*europa|ro\s*ro|roro|cais\s*10|cais\s*11|"
+    r"praias|sapec|secil|fundeadouro|fundeadouros)\b"
+)
+ROUTE_ORIGIN_BARRA_RE = re.compile(r"\b(barra|entrada da barra|fora da barra|pilar\s*2|boia\s*2|bóia\s*2)\b")
+
 
 DOCUMENT_MATCH_STOPWORDS = {
     "apss",
@@ -553,6 +570,56 @@ def _normalize_lookup_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", str(value or ""))
     without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
     return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
+
+
+def _looks_like_route_duration_topic(text: str) -> bool:
+    clean = _normalize_lookup_text(text)
+    if not clean:
+        return False
+    return bool(ROUTE_DURATION_TOPIC_RE.search(clean) and ROUTE_DESTINATION_RE.search(clean))
+
+
+def _looks_like_route_duration_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean:
+        return False
+    return bool(ROUTE_DESTINATION_RE.search(clean) and ROUTE_FOLLOW_UP_RE.search(clean))
+
+
+def _last_user_route_duration_question(history: list[dict]) -> str:
+    for entry in reversed(history):
+        if (entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if _looks_like_route_duration_topic(content):
+            return content
+    return ""
+
+
+def _strip_follow_up_lead_in(question: str) -> str:
+    cleaned = re.sub(
+        r"^\s*e\s+se\s+(?:fosse|for|fossemos|fôssemos|era)\s+",
+        "",
+        str(question or "").strip(),
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"^\s*e\s+para\s+", "para ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^\s*e\s+", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip() or str(question or "").strip()
+
+
+def _contextual_lookup_question(question: str, history: list[dict]) -> str:
+    if not _looks_like_route_duration_follow_up(question):
+        return question
+    previous_route_question = _last_user_route_duration_question(history)
+    if not previous_route_question:
+        return question
+    origin = (
+        "desde a entrada da Barra"
+        if ROUTE_ORIGIN_BARRA_RE.search(_normalize_lookup_text(previous_route_question))
+        else "desde o mesmo ponto de origem"
+    )
+    return f"Quanto tempo leva {origin} {_strip_follow_up_lead_in(question)}"
 
 
 def _casebook_query_berth_labels(question: str) -> set[str]:
@@ -1109,13 +1176,13 @@ def handle_chat_turn(
         refresh_knowledge_state(force_reindex=False)
         revision_context = revision_context or {}
         is_revision_attempt = bool(revision_context)
+        conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
+        history = services.store.list_messages(username, conversation["id"])
         lookup_question = (
             str(revision_context.get("original_question") or "").strip()
             if is_revision_attempt
             else ""
-        ) or clean_question
-        conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
-        history = services.store.list_messages(username, conversation["id"])
+        ) or _contextual_lookup_question(clean_question, history)
         execution_plan = build_chat_execution_plan(lookup_question)
         existing_pending = load_pending_chat_action(username, conversation["id"])
         if existing_pending and not allow_mutations:

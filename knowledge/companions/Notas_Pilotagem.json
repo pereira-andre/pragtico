@@ -155,7 +155,7 @@
       ]
     },
     {
-      "question": "Quanto tempo demora da Barra ao TMS 1, TMS 2 e Autoeuropa?",
+      "question": "Quanto tempo leva desde a entrada da Barra pelo Canal Norte até ao TMS 1, TMS 2 e Autoeuropa?",
       "answer": "cerca de 1 hora desde a entrada da Barra pelo Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro (Cais 10 e Cais 11).",
       "keywords": [
         "tempo",
@@ -176,7 +176,7 @@
       ]
     },
     {
-      "question": "Quanto tempo demora da Barra à SECIL, Praias do Sado, SAPEC e fundeadouros?",
+      "question": "Quanto tempo leva desde a entrada da Barra até à SECIL, Praias do Sado, SAPEC e fundeadouros?",
       "answer": "Da entrada da Barra, a SECIL demora cerca de 30 minutos; Praias do Sado e SAPEC demoram cerca de 1 hora e 20 minutos; o Fundeadouro Norte demora cerca de 45 minutos; e o Fundeadouro Sul demora cerca de 45 minutos a 1 hora, conforme a posição seja mais perto do PAN/Tróia ou no fim do canal.",
       "keywords": [
         "tempo",
