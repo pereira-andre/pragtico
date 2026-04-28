@@ -173,7 +173,7 @@
     {% if casebooks.chat_rows %}
       <div class="admin-bot-case-grid">
         {% for item in casebooks.chat_rows %}
-          <article class="admin-bot-case admin-casebook-card">
+          <article class="admin-bot-case admin-casebook-card" id="chat-{{ item.id }}">
             <div class="admin-bot-case-head">
               <div>
                 <strong>{{ item.owner_username }}</strong>

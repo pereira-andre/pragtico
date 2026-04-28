@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import quote
 
 from core import services
 from core.bot_settings import load_bot_settings
@@ -244,13 +245,17 @@ def build_exceptions(*, limit: int = 10) -> dict:
 
     for msg in messages:
         if (msg.get("feedback_status") or "").strip().lower() == "review":
+            message_id = str(msg.get("id") or "").strip()
             items.append(
                 {
                     "type": "correction_review",
                     "severity": "high",
                     "label": "Correção bloqueada",
                     "detail": msg.get("question") or (msg.get("content") or "")[:120],
-                    "url": f"/admin/bot#chat-{msg.get('id', '')}",
+                    "url": (
+                        "/admin/casebooks?chat_feedback=review&case_feedback=all"
+                        f"#chat-{quote(message_id, safe='')}"
+                    ),
                 }
             )
 

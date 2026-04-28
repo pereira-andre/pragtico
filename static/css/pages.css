@@ -2556,6 +2556,11 @@
   align-content: start;
 }
 
+.admin-casebook-card:target {
+  border-color: rgba(179, 66, 42, 0.45);
+  box-shadow: 0 0 0 3px rgba(179, 66, 42, 0.12);
+}
+
 .admin-casebook-route {
   margin: 4px 0 0;
   color: var(--muted);
