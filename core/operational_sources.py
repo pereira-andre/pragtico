@@ -335,6 +335,61 @@ def build_lisnave_operational_rule_source(question: str) -> dict | None:
     }
 
 
+def _extract_hidrolift_beam_m(question: str) -> float | None:
+    text = str(question or "").lower().replace(",", ".")
+    patterns = (
+        r"\b(\d+(?:\.\d+)?)\s*m(?:etros?)?\s+de\s+(?:boca|largura)\b",
+        r"\b(?:boca|largura)\s*(?:de|=|:)?\s*(\d+(?:\.\d+)?)\s*m\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question:
+        return None
+    if not any(token in clean_question for token in ("hidrolift", "eclusa", "doca 31", "doca 32", "doca 33", "d31", "d32", "d33")):
+        return None
+    beam_m = _extract_hidrolift_beam_m(question)
+    if beam_m is None or beam_m <= 32:
+        return None
+
+    beam_label = f"{beam_m:g}".replace(".", ",")
+    answer = (
+        "Não. Há um bloqueio dimensional antes de discutir a hora da manobra: "
+        f"o Hidrolift/Docas 31-33 da LISNAVE admite boca máxima de 32 m e o navio indicado tem {beam_label} m de boca. "
+        "Assim, a manobra não deve seguir para o Hidrolift como está marcada; será preciso escolher outro cais/doca ou obter validação operacional específica.\n\n"
+        "O que ainda deve ser confirmado:\n"
+        "- Calado: o acesso ao Hidrolift tem sonda de 5,5 m ao ZH, somando a altura de água disponível e margem de segurança.\n"
+        "- Meios: entradas em docas Lisnave exigem pelo menos 4 rebocadores.\n"
+        "- Hora: marcar 2 h antes do reponto/preia-mar para um navio que vem de fora da Barra pode estar coerente, mas não resolve a incompatibilidade da boca."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "regras_operacionais_lisnave",
+                "source_id": "OPS_HIDROLIFT_LIMIT",
+                "chunk_id": 1,
+                "score": 1.0,
+                "retrieval_mode": "operational_rule",
+                "snippet": (
+                    "Hidrolift/Docas 31-33: boca máxima admissível 32 m; "
+                    "sonda de acesso 5,5 m ao ZH; docas Lisnave exigem pelo menos 4 rebocadores."
+                ),
+            }
+        ],
+        "answer_origin": "operational_rule",
+    }
+
+
 def _needs_portal_activity_context(question: str, plan: ChatExecutionPlan | None = None) -> bool:
     plan = plan or build_chat_execution_plan(question)
     clean = plan.normalized_question or _operational_lookup_key(question)
@@ -405,6 +460,9 @@ def answer_direct_operational_query(
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     plan = plan or build_chat_execution_plan(question)
     clean_question = plan.normalized_question or _operational_lookup_key(question)
+    hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
+    if hard_limit_answer:
+        return hard_limit_answer
     if plan.requires_llm_synthesis:
         return None
 

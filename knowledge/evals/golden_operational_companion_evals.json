@@ -30,6 +30,13 @@
     "expected_substrings": ["6,10 metros", "20 pés", "5,49 metros"]
   },
   {
+    "document": "regras_operacionais_lisnave",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_rule",
+    "question": "Vou entrar com um navio de 150 m de comprimento e 40 m de boca para o hidrolift da LISNAVE. Marquei manobra agora às 13:54, 2 horas antes da maré para o piloto que embarca lá fora chegar a tempo do reponto de maré. Alguma observação que me esteja a faltar?",
+    "expected_substrings": ["Não", "boca máxima de 32 m", "40 m de boca", "não deve seguir", "5,5 m ao ZH", "4 rebocadores"]
+  },
+  {
     "document": "IT-016_Rebocadores.txt",
     "question": "Quantos rebocadores são necessários para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster?",
     "expected_substrings": ["2 rebocadores grandes", "1 pequeno", "GGp"]

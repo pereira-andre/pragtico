@@ -355,6 +355,10 @@
                     </div>
                   </div>
                   <div class="admin-bot-failure-meta">
+                    <span>Tipo: {{ item.eval_type }}</span>
+                    {% if item.expected_answer_origin %}
+                      <span>Origem: {{ item.answer_origin or 'n/d' }} / esperado {{ item.expected_answer_origin }}</span>
+                    {% endif %}
                     <span>Cobertura de termos: {{ item.term_coverage_pct }}%</span>
                     {% if item.source_message_id %}
                       <span>Feedback: {{ item.source_message_id }}</span>

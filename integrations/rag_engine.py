@@ -1286,6 +1286,7 @@ Regras:
 - Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots de cais ocupados.
 - Não digas que um navio "não cabe" num cais só porque a extensão nominal do cais é menor do que o LOA do navio.
 - Se a pergunta for sobre dimensões do cais ou do navio, limita-te aos factos documentais disponíveis e evita conclusões automáticas de incompatibilidade.
+- Exceção: quando a fonte indicar um limite dimensional rígido de acesso, como boca máxima, largura máxima, calado máximo, LOA máximo absoluto ou limite do Hidrolift/eclusa, compara o valor dado pelo utilizador com esse limite. Se exceder, começa pela conclusão prática de que a manobra não deve seguir assim.
 - Quando o plano interno indicar `live_reasoning`, usa os dados live como evidência para responder a uma decisão operacional.
 - Em perguntas de avaliação ou suficiência, começa pela conclusão prática e só depois justifica.
 - Não respondas a uma pergunta de avaliação com um dump de meteorologia, marés, ondulação ou avisos sem concluir algo operacional.
