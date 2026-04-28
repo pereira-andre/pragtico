@@ -71,6 +71,32 @@
   },
   {
     "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Fundeadouro Sul / Tróia até à Autoeuropa?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "Autoeuropa", "mudança interna direta", "1 hora e 50 minutos", "2 horas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "Quanto tempo leva da entrada da Barra até aos estaleiros da LISNAVE?",
+    "expected_substrings": ["entrada da Barra", "LISNAVE", "1 hora e 30 minutos", "2 horas", "10,5 milhas náuticas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "Qual a distância do pilar 2 até à LISNAVE?",
+    "expected_substrings": ["Pilar 2", "10,5 milhas náuticas", "10,0 milhas náuticas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "E quanto tempo levo do fundeadouro sul até ao cais da Autoeuropa?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "Autoeuropa", "mudança interna direta", "não como Fundeadouro Sul -> Barra -> Canal Norte", "1 hora e 50 minutos", "2 horas"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
     "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?",
     "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "fundeadouros"]
   },

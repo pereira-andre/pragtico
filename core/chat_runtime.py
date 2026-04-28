@@ -959,12 +959,19 @@ def _blocked_mutation_answer(channel: str) -> dict:
 
 
 def _should_prefer_berth_profile_answer(question: str, companion_answer: str) -> bool:
+    clean_question = _normalize_lookup_text(question)
+    asks_route_metric = bool(
+        re.search(r"\b(quanto tempo|tempo|demora|leva|levo|distancia|distancias|milhas|percurso|viagem)\b", clean_question)
+        and re.search(r"\b(barra|pilar|boia|canal|fundeadouro|fundeadouros|ate|para)\b", clean_question)
+    )
+    if asks_route_metric:
+        return False
+
     clean_answer = re.sub(r"\s+", " ", str(companion_answer or "")).strip()
     if not clean_answer:
         return True
     if clean_answer.startswith(("A resposta direta:", "O valor a reter é")):
         return True
-    clean_question = _normalize_lookup_text(question)
     asks_general_profile = bool(
         re.search(r"\b(fala|sabes|conheces|termos gerais|geral|restricoes|restrições|regras|limites)\b", clean_question)
     )
@@ -1376,8 +1383,11 @@ def handle_chat_turn(
                         "sources": [],
                         "answer_origin": "slash_rejected",
                     }
-        elif answer is None and not is_revision_attempt:
-            answer = answer_direct_operational_query(clean_question, plan=execution_plan)
+        elif answer is None:
+            answer = answer_direct_operational_query(
+                lookup_question if is_revision_attempt else clean_question,
+                plan=execution_plan,
+            )
 
         if answer is None:
             if existing_pending:

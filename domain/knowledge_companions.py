@@ -652,6 +652,57 @@ def _faq_candidate_text(item: dict) -> str:
     return " ".join(str(part or "") for part in parts)
 
 
+def _mentions_fundeadouro_norte(clean_text: str) -> bool:
+    return bool(re.search(r"\bfundeadouro\s+norte\b|\bfund\s+norte\b", clean_text))
+
+
+def _mentions_fundeadouro_sul(clean_text: str) -> bool:
+    return bool(
+        re.search(
+            r"\bfundeadouro\s+sul\b|\bfundeadouro\s+(?:de\s+)?troia\b|\bfund\s+troia\b|\bf\s*s\b",
+            clean_text,
+        )
+    )
+
+
+def _mentions_origin_canal_norte(clean_text: str) -> bool:
+    return bool(re.search(r"\b(?:do|da|desde|de)\s+canal\s+norte\b", clean_text))
+
+
+def _mentions_origin_canal_sul(clean_text: str) -> bool:
+    return bool(re.search(r"\b(?:do|da|desde|de)\s+canal\s+sul\b", clean_text))
+
+
+def _route_anchor_conflicts(question: str, candidate_text: str) -> bool:
+    clean_question = _normalize_text(question)
+    clean_candidate = _normalize_text(candidate_text)
+    if (
+        _mentions_fundeadouro_sul(clean_question)
+        and _mentions_fundeadouro_norte(clean_candidate)
+        and not _mentions_fundeadouro_sul(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_fundeadouro_norte(clean_question)
+        and _mentions_fundeadouro_sul(clean_candidate)
+        and not _mentions_fundeadouro_norte(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_origin_canal_sul(clean_question)
+        and _mentions_origin_canal_norte(clean_candidate)
+        and not _mentions_origin_canal_sul(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_origin_canal_norte(clean_question)
+        and _mentions_origin_canal_sul(clean_candidate)
+        and not _mentions_origin_canal_norte(clean_candidate)
+    ):
+        return True
+    return False
+
+
 def _is_berth_inventory_question(question: str, question_tokens: set[str]) -> bool:
     normalized_question = _normalize_text(question)
     if not BERTH_INVENTORY_RE.search(normalized_question):
@@ -939,6 +990,9 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
             keyword_tokens.update(_tokenize(keyword))
         signal_tokens = _faq_match_signal_tokens(question_tokens, faq_tokens, keyword_tokens)
         if not signal_tokens:
+            continue
+        candidate_text = _faq_candidate_text(item)
+        if _route_anchor_conflicts(question, candidate_text):
             continue
         if _faq_intent_conflicts(question, question_tokens, item):
             continue

@@ -21,6 +21,7 @@ from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
 from domain.operational_safety import build_operational_safety_source, build_weather_safety_status_lines
+from domain.route_transit import route_transit_answer
 from domain.tug_guidance import build_tug_operational_guidance_source
 
 logger = logging.getLogger(__name__)
@@ -587,6 +588,9 @@ def answer_direct_operational_query(
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return tug_guidance_answer
+    route_answer = route_transit_answer(question, clean_question)
+    if route_answer:
+        return route_answer
     if plan.requires_llm_synthesis:
         return None
 

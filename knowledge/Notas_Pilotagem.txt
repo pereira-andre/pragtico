@@ -419,6 +419,16 @@ Fundeadouro Norte para SECIL: cerca de 20 minutos.
 Fundeadouro Norte para cais a sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena
 ou Teporset): cerca de 1 hora.
 
+MUDANÇAS A PARTIR DO FUNDEADOURO SUL / TRÓIA:
+
+Fundeadouro Sul / Tróia para Autoeuropa / Ro-Ro (Cais 10 ou Cais 11): tratar
+como mudança interna direta dentro do porto. Não calcular como
+Fundeadouro Sul → Barra → Canal Norte, porque operacionalmente não faz sentido
+sair à Barra para voltar a entrar. A referência prática dos casebooks para
+Tróia / F. S. → Autoeuropa fica perto de 2 horas, normalmente cerca de
+1 hora e 50 minutos a 2 horas, conforme a posição concreta no fundeadouro,
+corrente e tráfego.
+
 MUDANÇAS A PARTIR DO CANAL SUL:
 
 Canal Sul para cais do sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena ou
@@ -659,6 +669,13 @@ Resposta: Do Canal Sul para cais do sul, isto é, Tanquisado, Eco-Oil, LISNAVE,
 Termitrena ou Teporset, conta com cerca de 30 minutos a 1 hora. Do Canal Sul
 para cais a norte, isto é, de TMS 1 até SAPEC Líquidos, conta com cerca de
 1 hora a 1 hora e 20 minutos. Do Canal Sul para a SECIL, cerca de 40 minutos.
+
+Pergunta: Quanto tempo leva do Fundeadouro Sul / Tróia até à Autoeuropa?
+Resposta: Do Fundeadouro Sul / Tróia até à Autoeuropa / Ro-Ro (Cais 10 ou
+Cais 11), tratar como mudança interna direta dentro do porto. Não calcular como
+Fundeadouro Sul para a Barra e depois Barra para Canal Norte. A referência
+prática dos casebooks é cerca de 1 hora e 50 minutos a 2 horas, conforme a
+posição no fundeadouro, corrente e tráfego.
 
 Pergunta: Quanto tempo levam os pilotos a embarcar depois de saírem da estação?
 Resposta: Para embarque perto do Outão, cerca de 15 minutos. Para embarque fora

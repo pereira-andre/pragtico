@@ -38,6 +38,7 @@
     "Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1 hora; Praias do Sado e SAPEC cerca de 1 hora e 20 minutos.",
     "SECIL demora cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1 hora conforme a posição.",
     "Do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 minutos; para SECIL 20 minutos; para cais a sul 1 hora.",
+    "Do Fundeadouro Sul / Tróia para Autoeuropa/Ro-Ro (Cais 10/11) a referência prática dos casebooks é cerca de 1 hora e 50 minutos a 2 horas; é uma mudança interna direta, não via Barra.",
     "Do Canal Sul para cais do sul são 30 minutos a 1 hora; para cais a norte 1 hora a 1 hora e 20 minutos; para SECIL 40 minutos.",
     "Pilotos desde a estação: cerca de 15 minutos para Outão, 30 minutos para fora da Barra e 15 minutos para fundeadouros.",
     "Navios para docas Lisnave usam pelo menos 4 rebocadores e ficam com proa a norte.",
@@ -256,6 +257,32 @@
         "1 hora",
         "1 hora e 20 minutos",
         "40 minutos"
+      ]
+    },
+    {
+      "question": "Quanto tempo leva do Fundeadouro Sul / Tróia até à Autoeuropa?",
+      "answer": "Do Fundeadouro Sul / Tróia até à Autoeuropa/Ro-Ro (Cais 10 ou Cais 11), trata como uma mudança interna direta dentro do porto. Não calcules como Fundeadouro Sul para a Barra e depois Barra para Canal Norte. A referência prática dos casebooks é cerca de 1 hora e 50 minutos a 2 horas, conforme a posição no fundeadouro, corrente e tráfego.",
+      "keywords": [
+        "tempo",
+        "leva",
+        "demora",
+        "fundeadouro sul",
+        "fundeadouro de troia",
+        "fundeadouro de tróia",
+        "troia",
+        "tróia",
+        "f s",
+        "autoeuropa",
+        "auto europa",
+        "ro-ro",
+        "roro",
+        "cais 10",
+        "cais 11",
+        "mudança interna",
+        "mudanca interna",
+        "casebooks",
+        "1 hora e 50 minutos",
+        "2 horas"
       ]
     },
     {

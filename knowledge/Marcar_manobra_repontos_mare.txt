@@ -35,6 +35,9 @@ Tempos práticos de trânsito desde a entrada da Barra:
   — Do Fundeadouro Norte para cais a sul (Tanquisado, Lisnave, Termitrena,
     Teporset, Eco-Oil): cerca de 1h.
   — Do Fundeadouro Norte para SECIL: cerca de 20 minutos.
+  — Do Fundeadouro Sul / Tróia para Autoeuropa / Ro-Ro (Cais 10/11):
+    cerca de 1h50 a 2h, como mudança interna direta dentro do porto; não
+    calcular como ida à Barra e regresso pelo Canal Norte.
   — Do Canal Sul para cais do sul: 30 minutos a 1h.
   — Do Canal Sul para cais a norte: 1h a 1h20.
   — Do Canal Sul para SECIL: cerca de 40 minutos.
