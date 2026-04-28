@@ -386,6 +386,7 @@ Pilar número 2 até ao Fundeadouro Sul (8,0 NM): aproximadamente 60 minutos.
 Pilar número 2 até ao TMS 2 (6,5 NM): aproximadamente 49 minutos.
 Pilar número 2 até ao SAPEC (8,2 NM): aproximadamente 62 minutos.
 Pilar número 2 até ao LISNAVE (10,5 NM): aproximadamente 79 minutos.
+Pilar número 2 até ao LISNAVE pelo atalho (10,0 NM): aproximadamente 75 minutos.
 TMS 2 até ao LISNAVE (9,0 NM): aproximadamente 68 minutos.
 Fundeadouro Sul até ao LISNAVE (2,6 NM): aproximadamente 20 minutos.
 Fundeadouro Norte até ao LISNAVE (7,0 NM): aproximadamente 53 minutos.
@@ -587,6 +588,13 @@ eficazmente a 3 nós. Os rebocadores com azipodes (como o "Lisboa", "Danado" e
 Pergunta: Qual a distância do Pilar 2 ao LISNAVE pelo percurso normal?
 Resposta: 10,5 milhas náuticas pelo Canal Sul. Com o atalho (corta-mato), são
 10,0 milhas náuticas. A 8 nós o percurso normal demora aproximadamente 79 minutos.
+
+Pergunta: Quanto tempo demora um navio desde a entrada da Barra até ao Estaleiro LISNAVE?
+Resposta: Usando o Pilar 2 como referência da entrada da Barra, o percurso normal
+até ao Estaleiro LISNAVE/Mitrena tem 10,5 milhas náuticas e demora cerca de
+79 minutos a 8 nós. Pelo atalho/corta-mato, o percurso tem cerca de 10,0 milhas
+náuticas e demora cerca de 75 minutos. Estes valores são estimativas de
+planeamento e dependem de maré, tráfego, rebocadores e restrições de velocidade.
 
 Pergunta: A que distância está a posição de embarque dos pilotos da entrada da barra?
 Resposta: A posição de embarque dos pilotos encontra-se a 1 milha náutica da

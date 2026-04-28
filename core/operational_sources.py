@@ -716,6 +716,8 @@ def _answer_recent_departures_query(question: str, clean_question: str) -> dict 
 def _looks_like_expected_arrivals_query(clean_question: str) -> bool:
     if not clean_question:
         return False
+    if _looks_like_route_duration_query(clean_question):
+        return False
     arrival_terms = {"chegada", "chegadas", "chegar", "chega", "entrada", "entradas", "previstos", "prevista", "previstas", "esperado", "esperados", "esperadas", "eta"}
     tokens = set(clean_question.split())
     if not (tokens & arrival_terms):
@@ -724,6 +726,25 @@ def _looks_like_expected_arrivals_query(clean_question: str) -> bool:
     if tokens & scope_markers:
         return True
     return "que vao chegar" in clean_question or "a chegar" in clean_question or "vao entrar" in clean_question
+
+
+def _looks_like_route_duration_query(clean_question: str) -> bool:
+    route_measure = re.search(
+        r"\b(quanto tempo|tempo|demora|leva|distancia|percurso|milhas|milha nautica|milhas nauticas)\b",
+        clean_question,
+    )
+    if not route_measure:
+        return False
+    has_origin = re.search(r"\b(desde|da entrada|do pilar|pilar|barra)\b", clean_question)
+    has_destination = re.search(
+        r"\b(ate|ao|a|para)\b.*\b(lisnave|mitrena|estaleiro|terminal|cais|doca|fundeadouro|sapec|tms|secil)\b",
+        clean_question,
+    )
+    reverse_destination = re.search(
+        r"\b(lisnave|mitrena|estaleiro|terminal|cais|doca|fundeadouro|sapec|tms|secil)\b.*\b(ate|ao|a|para)\b",
+        clean_question,
+    )
+    return bool(has_origin and (has_destination or reverse_destination))
 
 
 def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict | None:

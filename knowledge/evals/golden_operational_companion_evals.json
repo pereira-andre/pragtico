@@ -40,6 +40,11 @@
     "expected_substrings": ["posição de embarque", "pilotos", "1 milha náutica", "entrada da barra"]
   },
   {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo um navio leva desde a entrada da barra até ao estaleiro da Lisnave?",
+    "expected_substrings": ["Pilar", "10,5", "79 minutos", "8 nós", "75 minutos"]
+  },
+  {
     "document": "regras_operacionais_lisnave",
     "eval_type": "direct_operational",
     "expected_answer_origin": "operational_rule",

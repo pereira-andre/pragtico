@@ -25,6 +25,7 @@
     "A posição de embarque dos pilotos encontra-se a 1 milha náutica da entrada da Barra.",
     "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são 10,5 NM pelo Canal Sul completo.",
     "Da entrada da Barra (Pilar n.º 2) até à LISNAVE são cerca de 10,0 NM pelo atalho/corta-mato.",
+    "A 8 nós, o percurso normal do Pilar n.º 2 até à LISNAVE demora cerca de 79 minutos; pelo atalho/corta-mato demora cerca de 75 minutos.",
     "Navios para docas Lisnave usam pelo menos 4 rebocadores e ficam com proa a norte.",
     "Navios nos cais Lisnave ficam com proa a sul; navios pequenos para cais podem manobrar com 3 rebocadores."
   ],
@@ -69,6 +70,23 @@
         "milhas nauticas",
         "canal sul",
         "pilar 2"
+      ]
+    },
+    {
+      "question": "Quanto tempo um navio leva desde a entrada da barra até ao estaleiro da LISNAVE?",
+      "answer": "Usando o Pilar n.º 2 / Bóia n.º 2 como referência operacional da entrada da Barra, o percurso normal até ao Estaleiro LISNAVE/Mitrena tem 10,5 milhas náuticas e demora cerca de 79 minutos a 8 nós. Pelo atalho/corta-mato, são cerca de 10,0 milhas náuticas e cerca de 75 minutos. É uma estimativa de planeamento; o tempo real depende de maré, tráfego, rebocadores e restrições de velocidade.",
+      "keywords": [
+        "tempo",
+        "demora",
+        "entrada da barra",
+        "barra",
+        "lisnave",
+        "estaleiro",
+        "mitrena",
+        "pilar 2",
+        "79 minutos",
+        "75 minutos",
+        "8 nós"
       ]
     },
     {

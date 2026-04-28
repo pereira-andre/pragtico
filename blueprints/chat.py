@@ -445,7 +445,11 @@ def api_message_feedback(message_id: str):
     if feedback_status == "corrected" and not feedback_correction:
         return jsonify({"error": flash_error_message("Para corrigir, escreve a resposta corrigida reutilizável.")}), 400
     if feedback_status == "review" and not feedback_note:
-        return jsonify({"error": flash_error_message("Para manter em revisão, indica o motivo.")}), 400
+        return jsonify({
+            "error": flash_error_message(
+                "Para manter em revisão, indica o motivo. Para gerar outra resposta, usa Nova tentativa."
+            )
+        }), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,

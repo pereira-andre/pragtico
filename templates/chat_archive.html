@@ -354,8 +354,7 @@
       return;
     }
     if (status === "review" && !(noteField?.value || "").trim()) {
-      chatStatus.textContent = "Para rever sem reutilizar, indica o motivo.";
-      noteField?.focus();
+      await submitMessageRetry(box);
       return;
     }
 
