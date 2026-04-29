@@ -143,6 +143,25 @@ class PgvectorIndexStore(BaseIndexStore):
                     metadata = {
                         "preview": item.get("text", "")[:220],
                     }
+                    metadata.update(
+                        {
+                            key: value
+                            for key, value in item.items()
+                            if key
+                            not in {
+                                "id",
+                                "document",
+                                "chunk_id",
+                                "text",
+                                "embedding",
+                                "raw_text",
+                                "has_embedding",
+                                "score",
+                                "retrieval_mode",
+                            }
+                            and value not in (None, "")
+                        }
+                    )
                     cur.execute(
                         """
                         INSERT INTO rag_chunks (id, document_name, chunk_id, text, embedding, metadata)

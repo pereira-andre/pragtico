@@ -35,3 +35,7 @@ TODO*
 docs/
 tests/
 scripts/
+!tests/
+!tests/*.py
+!scripts/
+!scripts/*.py

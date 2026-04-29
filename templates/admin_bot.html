@@ -695,6 +695,16 @@
       `Guard rail ativo: ${boolLabel(trace.review_guard)}`,
       `Correção ativa: ${boolLabel(trace.review_correction)}`,
     ]);
+    const retrievalValidation = trace.retrieval_validation || {};
+    if (Object.keys(retrievalValidation).length) {
+      appendTraceCard("RAG documental", [
+        `Pode responder: ${boolLabel(retrievalValidation.can_answer)}`,
+        `Entidade correta: ${retrievalValidation.entity_match === null ? "n/a" : boolLabel(retrievalValidation.entity_match)}`,
+        `Qualidade: ${retrievalValidation.source_quality || "n/d"}`,
+        `Razão: ${retrievalValidation.reason || "n/d"}`,
+        `Em falta: ${(retrievalValidation.missing_information || []).join(", ") || "nada assinalado"}`,
+      ]);
+    }
     appendTraceCard("Fontes", [
       `${trace.source_count || 0} fonte(s) no contexto`,
       sourceModes,
@@ -738,8 +748,11 @@
           sources.forEach((src) => {
             const li = document.createElement("li");
             const doc = src.document || src.source_id || "Fonte";
+            const section = src.section ? ` · ${src.section}` : "";
+            const entities = (src.entity_names || []).length ? ` · ${src.entity_names.join(", ")}` : "";
+            const scope = src.content_scope ? ` · ${src.content_scope}` : "";
             const snippet = (src.snippet || "").slice(0, 220);
-            li.textContent = snippet ? `${doc} — ${snippet}${snippet.length === 220 ? "…" : ""}` : doc;
+            li.textContent = snippet ? `${doc}${section}${entities}${scope} — ${snippet}${snippet.length === 220 ? "…" : ""}` : `${doc}${section}${entities}${scope}`;
             sourcesList.appendChild(li);
           });
           sourcesWrapper.hidden = false;

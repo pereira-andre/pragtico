@@ -69,6 +69,7 @@ from domain.operational_memory import (
     build_feedback_memory_sources,
     filter_feedback_for_synthesis,
 )
+from domain.port_entities import detect_port_entities, entity_names_from_matches, specific_entities
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
 from core.bot_settings import load_bot_settings
@@ -443,6 +444,7 @@ def _build_playground_trace(
     reviewed_answers: list[dict] | None = None,
     review_guard_match: dict | None = None,
     review_correction_match: dict | None = None,
+    retrieval_validation: dict | None = None,
     direct_answer_used: bool = False,
 ) -> dict:
     target_record = (targeted_document_context or {}).get("record") or {}
@@ -479,6 +481,7 @@ def _build_playground_trace(
         "review_matches": _compact_feedback_trace(reviewed_answers),
         "review_guard": _compact_review_match(review_guard_match),
         "review_correction": _compact_review_match(review_correction_match),
+        "retrieval_validation": retrieval_validation or {},
         "used_llm": answer_origin == "llm",
         "used_direct_answer": direct_answer_used,
         "used_shortcut": answer_origin in {
@@ -610,7 +613,60 @@ def _strip_follow_up_lead_in(question: str) -> str:
     return cleaned.strip() or str(question or "").strip()
 
 
+def _looks_like_entity_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean:
+        return False
+    if _starts_like_follow_up(clean):
+        return True
+    return len(clean.split()) <= 6 and bool(detect_port_entities(question))
+
+
+def _starts_like_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    return bool(re.match(r"^(?:e|entao|então|mas|agora)\b", clean))
+
+
+def _last_user_question_with_reusable_intent(history: list[dict]) -> str:
+    for entry in reversed(history):
+        if (entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if content and not _starts_like_follow_up(content):
+            return content
+    return ""
+
+
+def _intent_template_from_question(question: str) -> str:
+    clean = _normalize_lookup_text(question)
+    if any(token in clean for token in ("restricao", "restricoes", "restrições", "limite", "limites")):
+        return "Que restrições operacionais documentadas existem para {entity}?"
+    if any(token in clean for token in ("calado", "calados", "profundidade", "sonda")):
+        return "Que regras documentadas de calado existem para {entity}?"
+    if any(token in clean for token in ("rebocador", "rebocadores", "reboque", "reboques")):
+        return "O que dizem os documentos sobre rebocadores para {entity}?"
+    if any(token in clean for token in ("geral", "gerais", "fala", "resumo", "informacao", "informação")):
+        return "Fala-me de {entity} em termos gerais, com base na documentação."
+    return "O que diz a documentação sobre {entity}?"
+
+
+def _contextual_entity_lookup_question(question: str, history: list[dict]) -> str:
+    if not _looks_like_entity_follow_up(question):
+        return question
+    entities = specific_entities(detect_port_entities(question))
+    if not entities:
+        return question
+    previous_question = _last_user_question_with_reusable_intent(history)
+    if not previous_question:
+        return question
+    entity_name = entity_names_from_matches(entities)[0]
+    return _intent_template_from_question(previous_question).format(entity=entity_name)
+
+
 def _contextual_lookup_question(question: str, history: list[dict]) -> str:
+    entity_question = _contextual_entity_lookup_question(question, history)
+    if entity_question != question:
+        return entity_question
     if not _looks_like_route_duration_follow_up(question):
         return question
     stripped_question = _strip_follow_up_lead_in(question)
@@ -1162,6 +1218,7 @@ def playground_answer(
             reviewed_answers=synthesis_reviewed_answers,
             review_guard_match=review_guard_match,
             review_correction_match=review_correction_match,
+            retrieval_validation=answer.get("retrieval_validation"),
         )
         return answer
 
