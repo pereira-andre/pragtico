@@ -6,6 +6,7 @@ from core import services
 from blueprints.port_calls import (
     VESSEL_CATALOG_STATE_KEY,
     _coerce_port_call_payload_with_catalog,
+    _delete_all_vessel_catalog_records,
     _filter_vessel_catalog_options,
     _sync_vessel_catalog_record_to_active_port_calls,
     _vessel_catalog_txt,
@@ -59,6 +60,14 @@ class FakeStore:
 
     def set_runtime_state(self, key: str, value):
         self.runtime_state[key] = value
+
+    def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
+        return {
+            "arrivals": [self.port_calls[0]],
+            "in_port": [],
+            "departed": [self.port_calls[1]],
+            "aborted": [],
+        }
 
 
 class VesselCatalogSyncTests(unittest.TestCase):
@@ -189,6 +198,36 @@ class VesselCatalogSyncTests(unittest.TestCase):
         self.assertEqual(form_data["vessel_type"], "Roll-on/Roll-off")
         self.assertEqual(form_data["vessel_loa_m"], "199.9")
         self.assertEqual(form_data["vessel_bow_thruster"], "yes")
+
+    def test_delete_all_vessel_catalog_records_hides_stored_and_derived_vessels(self) -> None:
+        services.store.runtime_state[VESSEL_CATALOG_STATE_KEY] = {
+            "items": [
+                {
+                    "key": "imo:1234567",
+                    "vessel_name": "CATALOG ONLY",
+                    "vessel_imo": "1234567",
+                    "vessel_call_sign": "CATO",
+                    "vessel_flag": "PT",
+                    "vessel_type": "Carga geral",
+                    "vessel_loa_m": "100",
+                    "vessel_beam_m": "20",
+                    "vessel_gt_t": "5000",
+                    "vessel_dwt_t": "2500",
+                    "vessel_max_draft_m": "5.5",
+                    "vessel_bow_thruster": "unknown",
+                    "vessel_stern_thruster": "unknown",
+                }
+            ],
+            "deleted_keys": [],
+        }
+
+        removed_count = _delete_all_vessel_catalog_records()
+
+        state = services.store.runtime_state[VESSEL_CATALOG_STATE_KEY]
+        self.assertEqual(removed_count, 2)
+        self.assertEqual(state["items"], [])
+        self.assertIn("imo:1234567", state["deleted_keys"])
+        self.assertIn("imo:9876543", state["deleted_keys"])
 
 
 if __name__ == "__main__":

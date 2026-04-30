@@ -563,6 +563,20 @@ def _remove_vessel_catalog_record(key: str, *, hide: bool) -> dict:
     return removed or {"key": clean_key}
 
 
+def _delete_all_vessel_catalog_records() -> int:
+    vessels = _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+    deleted_keys = _read_deleted_vessel_catalog_keys()
+    removed_count = 0
+    for vessel in vessels:
+        key = vessel.get("key") or _vessel_catalog_key(vessel)
+        if not key:
+            continue
+        deleted_keys.add(key)
+        removed_count += 1
+    _write_vessel_catalog_records([], deleted_keys=deleted_keys)
+    return removed_count
+
+
 def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: bool = True) -> dict:
     record = _validate_vessel_catalog_record(payload) if validate else _coerce_vessel_catalog_payload(payload)
     if not record.get("vessel_name") or not record.get("vessel_imo"):
@@ -1559,6 +1573,28 @@ def delete_vessel_catalog_record(vessel_key: str):
         return redirect(url_for("port_calls.vessel_catalog"))
 
     flash(f"Navio {removed.get('vessel_name') or vessel_key} removido do catálogo.", "success")
+    return redirect(url_for("port_calls.vessel_catalog"))
+
+
+@bp.route("/port-calls/vessels/delete-all", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_all_vessel_catalog_records():
+    """Remover todos os navios do catálogo reutilizável visível ao admin."""
+    try:
+        confirm_text = request.form.get("confirm_text", "").strip().upper()
+        if confirm_text != "APAGAR NAVIOS":
+            raise ValueError("Para remover todos os navios escreve APAGAR NAVIOS.")
+        removed_count = _delete_all_vessel_catalog_records()
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+    except Exception:
+        logger.exception("Falha inesperada ao apagar todos os navios do catálogo.")
+        flash("Falha inesperada ao apagar o catálogo de navios.", "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+
+    flash(f"{removed_count} navio(s) removido(s) do catálogo.", "success")
     return redirect(url_for("port_calls.vessel_catalog"))
 
 

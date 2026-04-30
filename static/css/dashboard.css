@@ -1085,10 +1085,83 @@
   margin-top: 18px;
 }
 
-.vessel-management-grid {
+.vessel-management-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 16, 29, 0.24);
+}
+
+.vessel-management-toolbar .mini-button {
+  width: auto !important;
+}
+
+.vessel-management-toolbar .mini-button.is-active {
+  background: rgba(10, 108, 102, 0.2) !important;
+  border-color: rgba(10, 108, 102, 0.36) !important;
+  color: var(--accent-strong) !important;
+}
+
+.vessel-management-toolbar .danger-button.is-active {
+  background: rgba(179, 66, 42, 0.24) !important;
+  border-color: rgba(179, 66, 42, 0.42) !important;
+  color: #fff !important;
+}
+
+.vessel-management-stage {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vessel-management-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed rgba(130, 160, 195, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.vessel-management-pane {
+  display: none;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.vessel-management-pane.is-active {
+  display: grid;
+}
+
+.vessel-management-pane-head,
+.vessel-edit-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vessel-management-pane-head h3,
+.vessel-edit-card-head h3 {
+  margin: 2px 0 0;
+}
+
+.vessel-management-pane-head .mini-button,
+.vessel-edit-card-head .mini-button,
+.vessel-delete-all-pane .danger-button {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.vessel-delete-all-pane {
+  border-color: rgba(179, 66, 42, 0.28);
+  background: rgba(179, 66, 42, 0.08);
 }
 
 .vessel-export-actions {
@@ -1101,11 +1174,16 @@
   margin-top: 18px;
 }
 
-.vessel-table {
+.planned-table.vessel-table {
   min-width: 1120px;
 }
 
-.vessel-table td {
+.planned-table.vessel-table th,
+.planned-table.vessel-table td {
+  padding: 9px 12px;
+}
+
+.planned-table.vessel-table td {
   vertical-align: top;
 }
 
@@ -1115,49 +1193,75 @@
   display: block;
 }
 
-.vessel-data-row td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+.vessel-table .vessel-data-row:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.vessel-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.vessel-table .vessel-data-row:hover td {
+  background: rgba(10, 108, 102, 0.08);
 }
 
-.vessel-row-actions .mini-button {
-  padding: 7px 9px;
+.vessel-actions-th,
+.vessel-actions-cell {
+  width: 74px;
+  text-align: right;
 }
 
-.vessel-edit-row td {
-  padding: 0 12px 10px;
-  border-top: 0;
+.vessel-actions-cell {
+  position: relative;
 }
 
-.vessel-row-editor {
-  border: 1px solid rgba(8, 67, 63, 0.1);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+.vessel-row-menu {
+  display: inline-flex;
+  justify-content: flex-end;
 }
 
-.vessel-row-editor summary {
+.vessel-row-menu .chat-sidebar-menu-body {
+  min-width: 190px;
+  text-align: left;
+}
+
+.vessel-row-menu form {
+  margin: 0;
+}
+
+.vessel-row-menu .danger-menu-link {
+  width: 100%;
+  border: 0;
+  color: #fecaca;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  list-style: none;
-  padding: 9px 12px;
-  color: var(--accent-strong);
-  font-size: 0.82rem;
-  font-weight: 700;
+  background: rgba(179, 66, 42, 0.18);
 }
 
-.vessel-row-editor summary::-webkit-details-marker {
-  display: none;
+.vessel-row-menu .danger-menu-link:hover {
+  background: rgba(179, 66, 42, 0.28);
 }
 
-.vessel-row-editor-body {
+.vessel-edit-panel {
   display: grid;
   gap: 12px;
-  padding: 0 12px 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(130, 160, 195, 0.14);
+}
+
+.vessel-edit-empty {
+  margin: 0;
+}
+
+.vessel-edit-card {
+  display: none;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 16, 29, 0.26);
+}
+
+.vessel-edit-card.is-active {
+  display: grid;
 }
 
 .vessel-fact-mini {
@@ -1224,8 +1328,15 @@
 }
 
 @media (max-width: 860px) {
-  .vessel-management-grid {
-    grid-template-columns: 1fr;
+  .vessel-management-pane-head,
+  .vessel-edit-card-head {
+    flex-direction: column;
+  }
+
+  .vessel-management-pane-head .mini-button,
+  .vessel-edit-card-head .mini-button,
+  .vessel-delete-all-pane .danger-button {
+    width: 100% !important;
   }
 }
 

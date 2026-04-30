@@ -101,22 +101,45 @@
   <section class="panel ops-form-card planning-block vessel-management-panel">
     <div class="planning-block-heading">
       <p class="eyebrow">Gestão</p>
-      <h3>Criar e importar</h3>
-      <p class="planning-block-lead">Usa estes blocos quando precisares de adicionar fichas novas ou carregar várias fichas por JSON.</p>
+      <h3>Ações do catálogo</h3>
+      <p class="planning-block-lead">Escolhe uma ação para abrir o formulário respetivo nesta área.</p>
     </div>
-    <div class="vessel-management-grid">
-      <details class="planning-optional-box planning-json-import-box">
-        <summary>Novo navio</summary>
-        <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-optional-body planning-form planning-json-import-form">
+
+    <div class="vessel-management-toolbar" role="toolbar" aria-label="Gestão de navios">
+      <button type="button" class="mini-button secondary-button" data-vessel-management-action="new">Novo navio</button>
+      <button type="button" class="mini-button secondary-button" data-vessel-management-action="import">Importar JSON</button>
+      <button type="button" class="mini-button danger-button" data-vessel-management-action="delete">Remover catálogo</button>
+    </div>
+
+    <div class="vessel-management-stage">
+      <article class="ops-empty vessel-management-empty" data-vessel-management-empty>
+        <p>Seleciona uma ação acima para criar, importar ou remover fichas frequentes.</p>
+      </article>
+
+      <article class="vessel-management-pane" data-vessel-management-pane="new">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow">Novo navio</p>
+            <h3>Criar ficha frequente</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-form planning-json-import-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           {{ vessel_form_fields({}) }}
           <button type="submit">Guardar navio</button>
         </form>
-      </details>
+      </article>
 
-      <details class="planning-optional-box planning-json-import-box">
-        <summary>Importar navios por JSON</summary>
-        <div class="stack planning-optional-body planning-json-import-body">
+      <article class="vessel-management-pane" data-vessel-management-pane="import">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow">Importação</p>
+            <h3>Importar navios por JSON</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <div class="stack planning-json-import-body">
           <p class="muted">Podes colar um objeto, uma lista, ou <code>{"vessels":[...]}</code>.</p>
           <form
             method="post"
@@ -143,7 +166,30 @@
             <pre class="planning-json-template">{{ vessel_catalog_json_template }}</pre>
           </div>
         </div>
-      </details>
+      </article>
+
+      <article class="vessel-management-pane vessel-delete-all-pane" data-vessel-management-pane="delete">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow danger">Zona de risco</p>
+            <h3>Remover catálogo</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <form
+          method="post"
+          action="{{ url_for('port_calls.delete_all_vessel_catalog_records') }}"
+          class="stack planning-form planning-json-import-form"
+          onsubmit="return confirm('Remover todos os navios frequentes? As escalas e manobras existentes não são apagadas.') && confirm('Confirma novamente: remover todo o catálogo de navios frequentes?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <p class="muted">Remove todos os navios frequentes da lista de preenchimento automático. Não apaga escalas nem manobras já registadas.</p>
+          <label>
+            Confirmação
+            <input type="text" name="confirm_text" placeholder="Escreve APAGAR NAVIOS" required>
+          </label>
+          <button type="submit" class="mini-button danger-button">Remover todos os navios</button>
+        </form>
+      </article>
     </div>
   </section>
 
@@ -169,7 +215,7 @@
             <th>GT / DWT</th>
             <th>Escalas</th>
             <th>Última escala</th>
-            <th>Exportar</th>
+            <th class="vessel-actions-th">Opções</th>
           </tr>
         </thead>
         <tbody>
@@ -193,27 +239,17 @@
                 <span>{{ vessel.latest_scale_reference or "--" }}</span>
                 <small class="muted">{{ vessel.latest_eta_label or "" }}</small>
               </td>
-              <td>
-                <div class="vessel-row-actions">
-                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">JSON</a>
-                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">TXT</a>
-                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">PDF</a>
-                </div>
-              </td>
-            </tr>
-            <tr class="vessel-edit-row">
-              <td colspan="10">
-                <details class="vessel-row-editor">
-                  <summary>Editar / apagar {{ vessel.vessel_name }}</summary>
-                  <div class="vessel-row-editor-body">
-                    <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+              <td class="vessel-actions-cell">
+                <details class="chat-sidebar-menu document-row-menu vessel-row-menu">
+                  <summary class="chat-sidebar-menu-toggle" aria-label="Opções de {{ vessel.vessel_name }}">⋯</summary>
+                  <div class="chat-sidebar-menu-body">
+                    <a class="chat-sidebar-menu-link" href="#vessel-edit-{{ loop.index }}" data-vessel-edit-link>Editar ficha</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">Exportar JSON</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">Exportar TXT</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">Imprimir / PDF</a>
+                    <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" onsubmit="return confirm('Remover este navio dos frequentes? As escalas e manobras existentes não são apagadas.');">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      {{ vessel_form_fields(vessel) }}
-                      <button type="submit">Guardar alterações</button>
-                    </form>
-                    <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" class="ops-inline-form" onsubmit="return confirm('Remover este navio dos frequentes? As escalas e manobras existentes não são apagadas.');">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="mini-button danger-button">Apagar navio frequente</button>
+                      <button type="submit" class="chat-sidebar-menu-link danger-menu-link">Apagar navio</button>
                     </form>
                   </div>
                 </details>
@@ -227,6 +263,99 @@
         </tbody>
       </table>
     </div>
+
+    <section class="vessel-edit-panel" id="vessel-edit-panel">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Edição</p>
+          <h3>Ficha do navio</h3>
+        </div>
+      </div>
+      <article class="ops-empty vessel-edit-empty" data-vessel-edit-empty>
+        <p>Escolhe “Editar ficha” no menu de opções de um navio para abrir a edição aqui.</p>
+      </article>
+      {% for vessel in vessels %}
+        <article class="vessel-edit-card" id="vessel-edit-{{ loop.index }}" data-vessel-edit-card>
+          <div class="vessel-edit-card-head">
+            <div>
+              <span class="planning-candidate-label">IMO {{ vessel.vessel_imo or "--" }}</span>
+              <h3>{{ vessel.vessel_name }}</h3>
+              <p class="muted">{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }} · {{ vessel.vessel_flag or "--" }}</p>
+            </div>
+            <a class="mini-button secondary-button" href="#vessel-edit-panel" data-vessel-edit-close>Fechar</a>
+          </div>
+          <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {{ vessel_form_fields(vessel) }}
+            <button type="submit">Guardar alterações</button>
+          </form>
+        </article>
+      {% endfor %}
+    </section>
   </section>
 </main>
+<script>
+(() => {
+  const managementEmpty = document.querySelector("[data-vessel-management-empty]");
+  const managementPanes = Array.from(document.querySelectorAll("[data-vessel-management-pane]"));
+  const managementActions = Array.from(document.querySelectorAll("[data-vessel-management-action]"));
+  const showManagementPane = (name) => {
+    let selected = null;
+    managementPanes.forEach((pane) => {
+      const isSelected = pane.dataset.vesselManagementPane === name;
+      pane.classList.toggle("is-active", isSelected);
+      if (isSelected) selected = pane;
+    });
+    managementActions.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.vesselManagementAction === name);
+    });
+    if (managementEmpty) {
+      managementEmpty.classList.toggle("hidden", Boolean(selected));
+    }
+  };
+
+  managementActions.forEach((button) => {
+    button.addEventListener("click", () => {
+      showManagementPane(button.dataset.vesselManagementAction || "");
+    });
+  });
+  document.querySelectorAll("[data-vessel-management-close]").forEach((button) => {
+    button.addEventListener("click", () => showManagementPane(""));
+  });
+
+  const editPanel = document.getElementById("vessel-edit-panel");
+  const emptyState = document.querySelector("[data-vessel-edit-empty]");
+  const cards = Array.from(document.querySelectorAll("[data-vessel-edit-card]"));
+  const showCard = (id, shouldScroll = true) => {
+    let selected = null;
+    cards.forEach((card) => {
+      const isSelected = card.id === id;
+      card.classList.toggle("is-active", isSelected);
+      if (isSelected) selected = card;
+    });
+    if (emptyState) {
+      emptyState.classList.toggle("hidden", Boolean(selected));
+    }
+    if (selected && shouldScroll) {
+      editPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  document.querySelectorAll("[data-vessel-edit-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      showCard((link.getAttribute("href") || "").replace("#", ""));
+      link.closest("details")?.removeAttribute("open");
+    });
+  });
+  document.querySelectorAll("[data-vessel-edit-close]").forEach((link) => {
+    link.addEventListener("click", () => {
+      cards.forEach((card) => card.classList.remove("is-active"));
+      if (emptyState) emptyState.classList.remove("hidden");
+    });
+  });
+  if (window.location.hash) {
+    showCard(window.location.hash.replace("#", ""), false);
+  }
+})();
+</script>
 {% endblock %}
