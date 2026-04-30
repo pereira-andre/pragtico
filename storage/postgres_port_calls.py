@@ -52,6 +52,8 @@ def _find_active_duplicate_port_call(
         normalized = _normalize_port_call_record(record)
         if normalized.get("status") not in active_statuses:
             continue
+        if normalized.get("approval_status") == PORT_CALL_APPROVAL_ABORTED:
+            continue
         if clean_imo and _clean_text(str(normalized.get("vessel_imo", ""))) == clean_imo:
             return "imo", normalized
         if clean_call_sign and _clean_text(str(normalized.get("vessel_call_sign", ""))) == clean_call_sign:

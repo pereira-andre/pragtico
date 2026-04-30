@@ -88,6 +88,41 @@ class PortCallDuplicateValidationTests(unittest.TestCase):
         self.assertEqual(duplicate[0], "imo")
         self.assertEqual(duplicate[1]["id"], "active")
 
+    def test_aborted_scheduled_record_does_not_block_duplicate_imo(self) -> None:
+        aborted = {
+            "id": "aborted",
+            "vessel_name": "ARKLOW GLOBE",
+            "vessel_imo": "9874105",
+            "vessel_call_sign": "ABC123",
+            "status": "scheduled",
+            "approval_status": "aborted",
+            "created_by": "agent",
+            "berth": "Secil W",
+            "last_port": "Sines",
+            "next_port": "Vigo",
+            "eta": "2026-04-30T15:00:00+01:00",
+            "maneuver_history": [
+                {
+                    "id": "entry-aborted",
+                    "type": "entry",
+                    "state": "aborted",
+                    "planned_at": "2026-04-30T15:00:00+01:00",
+                    "origin": "Sines",
+                    "destination": "Secil W",
+                    "created_by": "agent",
+                    "decided_at": "2026-04-30T15:10:00+01:00",
+                }
+            ],
+        }
+
+        self.assertIsNone(
+            _find_active_duplicate_port_call(
+                [aborted],
+                clean_imo="9874105",
+                clean_call_sign="ABC123",
+            )
+        )
+
     def test_tracking_list_includes_pending_arrivals_without_planned_row(self) -> None:
         tracked = build_tracked_scales(
             {
@@ -142,6 +177,29 @@ class PortCallDuplicateValidationTests(unittest.TestCase):
         )
 
         self.assertEqual([item["id"] for item in activity["arrivals"]], ["overdue"])
+
+    def test_scheduled_port_call_without_parseable_eta_is_visible_in_activity_window(self) -> None:
+        activity = _build_port_activity_snapshot(
+            [
+                {
+                    "id": "missing-eta",
+                    "vessel_name": "ARKLOW GLOBE",
+                    "vessel_imo": "9874105",
+                    "vessel_call_sign": "ABC123",
+                    "status": "scheduled",
+                    "approval_status": "pending",
+                    "created_by": "agent",
+                    "berth": "Secil W",
+                    "last_port": "Lisboa",
+                    "next_port": "Faro",
+                    "eta": "",
+                    "maneuver_history": [],
+                }
+            ],
+            window_days=5,
+        )
+
+        self.assertEqual([item["id"] for item in activity["arrivals"]], ["missing-eta"])
 
 
 if __name__ == "__main__":

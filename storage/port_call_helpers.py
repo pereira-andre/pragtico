@@ -1112,8 +1112,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         if (
             status == PORT_CALL_STATUS_SCHEDULED
             and approval_status != PORT_CALL_APPROVAL_ABORTED
-            and eta_dt
-            and past_limit <= eta_dt <= future_limit
+            and (not eta_dt or past_limit <= eta_dt <= future_limit)
         ):
             arrivals.append(item)
         elif status == PORT_CALL_STATUS_IN_PORT:
