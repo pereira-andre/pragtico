@@ -4,6 +4,8 @@ import unittest
 
 from core import services
 from blueprints.port_calls import (
+    VESSEL_CATALOG_STATE_KEY,
+    _coerce_port_call_payload_with_catalog,
     _filter_vessel_catalog_options,
     _sync_vessel_catalog_record_to_active_port_calls,
     _vessel_catalog_txt,
@@ -14,6 +16,7 @@ from blueprints.port_calls import (
 class FakeStore:
     def __init__(self) -> None:
         self.updated: list[dict] = []
+        self.runtime_state: dict = {}
         self.port_calls = [
             {
                 "id": "way-forward",
@@ -50,6 +53,12 @@ class FakeStore:
     def edit_port_call(self, **kwargs) -> dict:
         self.updated.append(kwargs)
         return kwargs
+
+    def get_runtime_state(self, key: str):
+        return self.runtime_state.get(key)
+
+    def set_runtime_state(self, key: str, value):
+        self.runtime_state[key] = value
 
 
 class VesselCatalogSyncTests(unittest.TestCase):
@@ -139,6 +148,47 @@ class VesselCatalogSyncTests(unittest.TestCase):
         self.assertIn("PRAGtico - Ficha do Navio", body)
         self.assertIn("Navio: WAY FORWARD", body)
         self.assertIn("Tipo: Roll-on/Roll-off", body)
+
+    def test_port_call_import_fills_missing_vessel_fields_from_catalog(self) -> None:
+        services.store.runtime_state[VESSEL_CATALOG_STATE_KEY] = {
+            "items": [
+                {
+                    "key": "imo:9876543",
+                    "vessel_name": "WAY FORWARD",
+                    "vessel_imo": "9876543",
+                    "vessel_call_sign": "WAYF",
+                    "vessel_flag": "PT",
+                    "vessel_type": "Roll-on/Roll-off",
+                    "vessel_loa_m": "199.9",
+                    "vessel_beam_m": "32.2",
+                    "vessel_gt_t": "52000",
+                    "vessel_dwt_t": "18000",
+                    "vessel_max_draft_m": "9.8",
+                    "vessel_bow_thruster": "yes",
+                    "vessel_stern_thruster": "unknown",
+                }
+            ],
+            "deleted_keys": [],
+        }
+
+        form_data = _coerce_port_call_payload_with_catalog(
+            {
+                "vessel_imo": "9876543",
+                "eta": "2026-05-02T15:00:00+01:00",
+                "berth": "Cais 10 / Autoeuropa",
+                "last_port": "Southampton",
+                "next_port": "Vigo",
+                "draft_m": "8.7",
+                "tug_count": 2,
+                "constraints": [],
+                "notes": "Entrada prevista.",
+            }
+        )
+
+        self.assertEqual(form_data["vessel_name"], "WAY FORWARD")
+        self.assertEqual(form_data["vessel_type"], "Roll-on/Roll-off")
+        self.assertEqual(form_data["vessel_loa_m"], "199.9")
+        self.assertEqual(form_data["vessel_bow_thruster"], "yes")
 
 
 if __name__ == "__main__":

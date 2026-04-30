@@ -141,6 +141,25 @@ VESSEL_CATALOG_FIELDS = (
     "tup_reduction_profile",
     "service_notes",
 )
+VESSEL_CATALOG_IMPORT_ALIASES = {
+    "vessel_name": ("vessel_name", "name", "ship_name"),
+    "vessel_imo": ("vessel_imo", "imo"),
+    "vessel_call_sign": ("vessel_call_sign", "call_sign", "callsign"),
+    "vessel_flag": ("vessel_flag", "flag"),
+    "vessel_type": ("vessel_type", "ship_type", "type"),
+    "vessel_loa_m": ("vessel_loa_m", "loa", "loa_m"),
+    "vessel_beam_m": ("vessel_beam_m", "beam", "beam_m"),
+    "vessel_gt_t": ("vessel_gt_t", "gt", "gt_t"),
+    "vessel_dwt_t": ("vessel_dwt_t", "dwt", "dwt_t"),
+    "vessel_max_draft_m": ("vessel_max_draft_m", "max_draft", "max_draft_m"),
+    "vessel_bow_thruster": ("vessel_bow_thruster", "bow_thruster"),
+    "vessel_stern_thruster": ("vessel_stern_thruster", "stern_thruster"),
+    "service_rate_profile": ("service_rate_profile", "tax_profile", "service_profile"),
+    "regular_line_calls_365d": ("regular_line_calls_365d", "scale_count_365d", "calls_365d"),
+    "pilotage_up_rate": ("pilotage_up_rate", "custom_up_rate"),
+    "tup_reduction_profile": ("tup_reduction_profile", "tup_profile"),
+    "service_notes": ("service_notes", "tax_notes"),
+}
 
 
 def _demo_future_iso(days: int, *, hour: int, minute: int = 0) -> str:
@@ -463,6 +482,63 @@ def _catalog_record_for_vessel(record: dict) -> dict:
         if current_key == key:
             return current
     return {}
+
+
+def _catalog_record_for_import_payload(payload: dict, coerced: dict | None = None) -> dict:
+    deleted_keys = _read_deleted_vessel_catalog_keys()
+    payload_imo = re.sub(r"\D", "", _string_payload_value(payload, "vessel_imo", "imo"))
+    if coerced and not payload_imo:
+        payload_imo = re.sub(r"\D", "", _string_payload_value(coerced, "vessel_imo"))
+    payload_call_sign = _string_payload_value(payload, "vessel_call_sign", "call_sign", "callsign").casefold()
+    if coerced and not payload_call_sign:
+        payload_call_sign = _string_payload_value(coerced, "vessel_call_sign").casefold()
+    payload_name = _string_payload_value(payload, "vessel_name", "name", "ship_name").casefold()
+    if coerced and not payload_name:
+        payload_name = _string_payload_value(coerced, "vessel_name").casefold()
+
+    for current in _read_vessel_catalog_records():
+        current_key = current.get("key") or _vessel_catalog_key(current)
+        if current_key in deleted_keys:
+            continue
+        current_imo = re.sub(r"\D", "", _string_payload_value(current, "vessel_imo"))
+        if payload_imo and current_imo and payload_imo == current_imo:
+            return current
+        current_call_sign = _string_payload_value(current, "vessel_call_sign", "call_sign").casefold()
+        if payload_call_sign and current_call_sign and payload_call_sign == current_call_sign:
+            return current
+        current_name = _string_payload_value(current, "vessel_name", "name").casefold()
+        if payload_name and current_name and payload_name == current_name:
+            return current
+    return {}
+
+
+def _payload_has_catalog_field(payload: dict, field: str) -> bool:
+    for key in VESSEL_CATALOG_IMPORT_ALIASES.get(field, (field,)):
+        if key not in payload:
+            continue
+        value = payload.get(key)
+        if value is not None and str(value).strip():
+            return True
+    return False
+
+
+def _coerce_port_call_payload_with_catalog(payload: dict) -> dict:
+    form_data = _coerce_port_call_payload(payload)
+    catalog_record = _catalog_record_for_import_payload(payload, form_data)
+    if not catalog_record:
+        return form_data
+
+    for field in VESSEL_CATALOG_FIELDS:
+        catalog_value = catalog_record.get(field)
+        if catalog_value in {"", None}:
+            continue
+        if field in {"vessel_bow_thruster", "vessel_stern_thruster"}:
+            if not _payload_has_catalog_field(payload, field) and form_data.get(field) in {"", None, "unknown"}:
+                form_data[field] = catalog_value
+            continue
+        if not str(form_data.get(field) or "").strip():
+            form_data[field] = catalog_value
+    return form_data
 
 
 def _remove_vessel_catalog_record(key: str, *, hide: bool) -> dict:
@@ -1331,7 +1407,7 @@ def import_port_call_json():
         payloads = _load_port_call_json_payloads()
         imported = []
         for payload in payloads:
-            form_data = _coerce_port_call_payload(payload)
+            form_data = _coerce_port_call_payload_with_catalog(payload)
             catalog_record = _validate_vessel_catalog_record({**payload, **form_data})
             port_call = _create_port_call_from_payload(
                 form_data,

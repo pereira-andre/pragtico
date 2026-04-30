@@ -211,7 +211,7 @@
         <details class="planning-optional-box planning-json-import-box">
           <summary>Importar escala por JSON</summary>
           <div class="stack planning-optional-body planning-json-import-body">
-            <p class="muted">Podes colar um objeto, uma lista, ou <code>{"port_calls":[...]}</code>. A validação é a mesma do formulário manual.</p>
+            <p class="muted">Podes colar um objeto, uma lista, ou <code>{"port_calls":[...]}</code>. Se o navio já existir no catálogo, basta indicar IMO, indicativo ou nome e os campos técnicos em falta são preenchidos automaticamente.</p>
             <p><a class="inline-link" href="{{ url_for('port_calls.export_port_calls_json') }}">Exportar escalas por JSON</a></p>
             <form
               method="post"
