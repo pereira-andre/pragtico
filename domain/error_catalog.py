@@ -380,6 +380,24 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "message": "Entrada é automática.",
         "user_message": "A entrada inicial já fica criada quando registas a escala.",
     },
+    "PILOT_HOUR_CAPACITY": {
+        "code": 3045,
+        "category": "business_rule",
+        "message": "Limite de pilotos atingido.",
+        "user_message": "Já existem 4 manobras aprovadas para esta hora. Ajusta a hora ou valida outra manobra.",
+    },
+    "DEPARTURE_APPROVAL_BEFORE_ENTRY": {
+        "code": 3046,
+        "category": "business_rule",
+        "message": "Saída antes de entrada concluída.",
+        "user_message": "A saída só pode ser aprovada depois da entrada estar concluída.",
+    },
+    "SHIFT_APPROVAL_BEFORE_ENTRY": {
+        "code": 3047,
+        "category": "business_rule",
+        "message": "Mudança antes de entrada concluída.",
+        "user_message": "A mudança só pode ser aprovada depois da entrada estar concluída.",
+    },
     "ARRIVAL_NOT_APPROVED": {
         "code": 3050,
         "category": "business_rule",

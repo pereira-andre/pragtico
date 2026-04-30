@@ -352,21 +352,36 @@ def _parse_iso_datetime(value: str | None) -> Optional[datetime]:
         return None
 
 
-def _latest_departure_maneuver(item: Dict, states: set[str] | None = None) -> Optional[Dict]:
-    departures = [
-        maneuver
-        for maneuver in item.get("maneuver_history", []) or []
-        if (maneuver.get("type") or "").strip().lower() == "departure"
-    ]
-    if states is not None:
-        departures = [
-            maneuver
-            for maneuver in departures
-            if (maneuver.get("state") or "").strip().lower() in states
-        ]
-    if not departures:
+def _latest_approved_berth_release_maneuver(
+    item: Dict,
+    item_canonical: str,
+    *,
+    release_base_capacity: bool,
+    berth_options: Iterable[str] | None = None,
+) -> Optional[Dict]:
+    options = list(berth_options or BERTH_OPTIONS)
+    item_base = _berth_base_label(item_canonical, options)
+    candidates: List[Dict] = []
+    for maneuver in item.get("maneuver_history", []) or []:
+        maneuver_type = (maneuver.get("type") or "").strip().lower()
+        state = (maneuver.get("state") or "").strip().lower()
+        if state != "approved":
+            continue
+        if maneuver_type == "departure":
+            candidates.append(maneuver)
+            continue
+        if maneuver_type != "shift":
+            continue
+        origin = canonicalize_berth_label(maneuver.get("origin"), options)
+        destination = canonicalize_berth_label(maneuver.get("destination"), options)
+        if origin != item_canonical or destination == item_canonical:
+            continue
+        if release_base_capacity and _berth_base_label(destination, options) == item_base:
+            continue
+        candidates.append(maneuver)
+    if not candidates:
         return None
-    departures.sort(
+    candidates.sort(
         key=lambda maneuver: (
             maneuver.get("planned_at")
             or maneuver.get("completed_at")
@@ -375,22 +390,34 @@ def _latest_departure_maneuver(item: Dict, states: set[str] | None = None) -> Op
             or ""
         )
     )
-    return departures[-1]
+    return candidates[-1]
 
 
-def _berth_is_released_by_validated_departure(item: Dict, target_planned_at: str | None) -> bool:
-    departure = _latest_departure_maneuver(item, {"approved"})
-    if not departure:
+def _berth_is_released_by_validated_maneuver(
+    item: Dict,
+    item_canonical: str,
+    target_planned_at: str | None,
+    *,
+    release_base_capacity: bool,
+    berth_options: Iterable[str] | None = None,
+) -> bool:
+    release_maneuver = _latest_approved_berth_release_maneuver(
+        item,
+        item_canonical,
+        release_base_capacity=release_base_capacity,
+        berth_options=berth_options,
+    )
+    if not release_maneuver:
         return False
     target_dt = _parse_iso_datetime(target_planned_at)
-    departure_dt = (
-        _parse_iso_datetime(departure.get("planned_at"))
-        or _parse_iso_datetime(departure.get("completed_at"))
-        or _parse_iso_datetime(departure.get("decided_at"))
+    release_dt = (
+        _parse_iso_datetime(release_maneuver.get("planned_at"))
+        or _parse_iso_datetime(release_maneuver.get("completed_at"))
+        or _parse_iso_datetime(release_maneuver.get("decided_at"))
     )
-    if not target_dt or not departure_dt:
+    if not target_dt or not release_dt:
         return True
-    return departure_dt <= target_dt
+    return release_dt <= target_dt
 
 
 def _group_vessels_by_berth(
@@ -476,11 +503,23 @@ def find_occupied_berth_conflict(
         item_berth = item.get("berth_label") or item.get("berth") or ""
         item_canonical = canonicalize_berth_label(item_berth, options)
         if item_canonical == target_canonical:
-            if _berth_is_released_by_validated_departure(item, target_planned_at):
+            if _berth_is_released_by_validated_maneuver(
+                item,
+                item_canonical,
+                target_planned_at,
+                release_base_capacity=False,
+                berth_options=options,
+            ):
                 continue
             return item
         if _berth_base_label(item_canonical, options) == target_base:
-            if _berth_is_released_by_validated_departure(item, target_planned_at):
+            if _berth_is_released_by_validated_maneuver(
+                item,
+                item_canonical,
+                target_planned_at,
+                release_base_capacity=True,
+                berth_options=options,
+            ):
                 continue
             occupied_same_base.append(item)
     if target_capacity > 1 and len(occupied_same_base) >= target_capacity:

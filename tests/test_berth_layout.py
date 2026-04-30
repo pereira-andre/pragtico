@@ -94,6 +94,63 @@ class BerthLayoutTests(unittest.TestCase):
             occupant,
         )
 
+    def test_approved_shift_releases_berth_for_later_approval(self) -> None:
+        occupant = {
+            "id": "in-port",
+            "vessel_name": "Loaded Vessel",
+            "berth_label": "SAPEC Sólidos",
+            "maneuver_history": [
+                {
+                    "type": "shift",
+                    "state": "approved",
+                    "planned_at": "2026-04-30T12:00:00+01:00",
+                    "origin": "SAPEC Sólidos",
+                    "destination": "TMS 2 - Posição A",
+                }
+            ],
+        }
+
+        self.assertIsNone(
+            find_occupied_berth_conflict(
+                "SAPEC Sólidos",
+                [occupant],
+                target_planned_at="2026-04-30T13:00:00+01:00",
+            )
+        )
+        self.assertEqual(
+            find_occupied_berth_conflict(
+                "SAPEC Sólidos",
+                [occupant],
+                target_planned_at="2026-04-30T11:00:00+01:00",
+            ),
+            occupant,
+        )
+
+    def test_pending_shift_keeps_berth_occupied(self) -> None:
+        occupant = {
+            "id": "in-port",
+            "vessel_name": "Loaded Vessel",
+            "berth_label": "SAPEC Sólidos",
+            "maneuver_history": [
+                {
+                    "type": "shift",
+                    "state": "pending",
+                    "planned_at": "2026-04-30T12:00:00+01:00",
+                    "origin": "SAPEC Sólidos",
+                    "destination": "TMS 2 - Posição A",
+                }
+            ],
+        }
+
+        self.assertEqual(
+            find_occupied_berth_conflict(
+                "SAPEC Sólidos",
+                [occupant],
+                target_planned_at="2026-04-30T13:00:00+01:00",
+            ),
+            occupant,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

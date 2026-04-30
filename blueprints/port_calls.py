@@ -16,6 +16,7 @@ from core.helpers import (
     build_pilot_report_note,
     build_scale_context,
     build_shift_plan_note,
+    ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
     login_required,
     normalize_portal_berth,
@@ -861,6 +862,7 @@ def approve_port_call(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         target_type = "entry" if current.get("status") == "scheduled" else "departure"
+        ensure_maneuver_hour_capacity_for_approval(current, target_type)
         if target_type == "entry":
             _ensure_maneuver_destination_can_be_approved(current, "entry", label="Cais")
         port_call = services.store.approve_port_call(
@@ -1044,6 +1046,7 @@ def approve_shift_plan(port_call_id: str):
     """Aprovar o planeamento de mudança de cais pendente."""
     try:
         current = services.store.get_port_call(port_call_id)
+        ensure_maneuver_hour_capacity_for_approval(current, "shift")
         _ensure_maneuver_destination_can_be_approved(current, "shift", label="Cais destino")
         port_call = services.store.approve_shift_plan(
             port_call_id=port_call_id, decided_by=session["username"],

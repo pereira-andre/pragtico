@@ -5,6 +5,7 @@ import unittest
 from flask import Flask, session
 
 from core import services
+from core.form_helpers import ensure_maneuver_hour_capacity_for_approval
 from core.maneuver_context import build_scale_context
 from storage.port_call_helpers import (
     _decorate_port_call,
@@ -14,11 +15,8 @@ from storage.port_call_helpers import (
 
 
 class FakeStore:
-    def get_user_profile(self, username: str) -> dict:
-        return {}
-
-    def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
-        return {
+    def __init__(self, activity: dict | None = None) -> None:
+        self.activity = activity or {
             "arrivals": [],
             "in_port": [],
             "departed": [],
@@ -27,6 +25,12 @@ class FakeStore:
             "planned_maneuvers": [],
             "archived_maneuvers": [],
         }
+
+    def get_user_profile(self, username: str) -> dict:
+        return {}
+
+    def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
+        return self.activity
 
 
 def _scheduled_port_call() -> dict:
@@ -84,6 +88,60 @@ class ManeuverFollowupPlanningTests(unittest.TestCase):
         self.assertTrue(scale_context["actions"]["can_plan_shift"])
         self.assertFalse(scale_context["actions"]["can_approve_departure"])
         self.assertFalse(scale_context["actions"]["can_approve_shift"])
+
+    def test_approval_capacity_blocks_fifth_maneuver_in_same_hour(self) -> None:
+        services.store.activity = {
+            "planned_maneuvers": [
+                {
+                    "maneuver_id": f"approved-{index}",
+                    "situation_class": "approved",
+                    "planned_value": f"2026-05-01T10:{index:02d}:00+01:00",
+                }
+                for index in range(4)
+            ]
+        }
+        target = {
+            "id": "target",
+            "maneuver_history": [
+                {
+                    "id": "target-entry",
+                    "type": "entry",
+                    "state": "pending",
+                    "planned_at": "2026-05-01T10:45:00+01:00",
+                }
+            ],
+        }
+
+        with self.assertRaisesRegex(ValueError, "Já existem 4 manobras aprovadas"):
+            ensure_maneuver_hour_capacity_for_approval(target, "entry")
+
+    def test_approval_capacity_allows_fourth_maneuver_in_same_hour(self) -> None:
+        services.store.activity = {
+            "planned_maneuvers": [
+                {
+                    "maneuver_id": f"approved-{index}",
+                    "situation_class": "approved",
+                    "planned_value": f"2026-05-01T10:{index:02d}:00+01:00",
+                }
+                for index in range(3)
+            ]
+        }
+        target = {
+            "id": "target",
+            "maneuver_history": [
+                {
+                    "id": "target-entry",
+                    "type": "entry",
+                    "state": "pending",
+                    "planned_at": "2026-05-01T10:45:00+01:00",
+                }
+            ],
+        }
+
+        self.assertEqual(
+            ensure_maneuver_hour_capacity_for_approval(target, "entry")["id"],
+            "target-entry",
+        )
 
 
 if __name__ == "__main__":

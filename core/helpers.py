@@ -19,11 +19,13 @@ from core.form_helpers import (
     build_entry_request_note,
     build_pilot_report_note,
     build_shift_plan_note,
+    ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
     get_current_conversation,
     normalize_portal_berth,
     parse_local_datetime_input,
     parse_optional_local_datetime_input,
+    pending_maneuver_for_approval,
     require_form_text,
 )
 from core.knowledge_runtime import (

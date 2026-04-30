@@ -14,6 +14,7 @@ from core.form_helpers import (
     build_entry_request_note,
     build_pilot_report_note,
     build_shift_plan_note,
+    ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
     normalize_portal_berth,
     parse_local_datetime_input,
@@ -1157,27 +1158,11 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             change_reason=require_form_text(field_text("change_reason", field_text("reason")), "Motivo da alteração"),
         )
 
-    def ensure_destination_available_for_approval(current_maneuver_type: str, label: str = "Cais destino") -> None:
-        if current_maneuver_type not in {"entry", "shift"}:
-            return
+    def ensure_maneuver_can_be_approved(current_maneuver_type: str, label: str = "Cais destino") -> None:
         refreshed_port_call = services.store.get_port_call(port_call_id)
-        candidates = [
-            item
-            for item in refreshed_port_call.get("maneuver_history", []) or []
-            if (item.get("type") or "").strip().lower() == current_maneuver_type
-            and (item.get("state") or "").strip().lower() == "pending"
-        ]
-        if not candidates:
+        maneuver = ensure_maneuver_hour_capacity_for_approval(refreshed_port_call, current_maneuver_type)
+        if not maneuver or current_maneuver_type not in {"entry", "shift"}:
             return
-        candidates.sort(
-            key=lambda item: (
-                item.get("planned_at")
-                or item.get("completed_at")
-                or item.get("created_at")
-                or ""
-            )
-        )
-        maneuver = candidates[-1]
         ensure_portal_berth_is_available(
             maneuver.get("destination", ""),
             current_port_call_id=port_call_id,
@@ -1275,7 +1260,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 
     if action == "approve_entry":
         apply_plan_updates_before_approval(port_call, "entry")
-        ensure_destination_available_for_approval("entry", label="Cais")
+        ensure_maneuver_can_be_approved("entry", label="Cais")
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Entrada aprovada para {result['vessel_name']}."
     if action == "abort_entry":
@@ -1332,7 +1317,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Saída planeada para {result['vessel_name']} às {result['planned_departure_label']}."
     if action == "approve_departure":
+        if port_call.get("status") != "in_port":
+            raise ValueError("A saída só pode ser aprovada depois da entrada estar concluída.")
         apply_plan_updates_before_approval(port_call, "departure")
+        ensure_maneuver_can_be_approved("departure")
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Saída aprovada para {result['vessel_name']}."
     if action == "abort_departure":
@@ -1390,8 +1378,10 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         )
         return result, f"Mudança planeada para {result['vessel_name']} às {result['planned_shift_label']}."
     if action == "approve_shift":
+        if port_call.get("status") != "in_port":
+            raise ValueError("A mudança só pode ser aprovada depois da entrada estar concluída.")
         apply_plan_updates_before_approval(port_call, "shift")
-        ensure_destination_available_for_approval("shift", label="Cais destino")
+        ensure_maneuver_can_be_approved("shift", label="Cais destino")
         result = services.store.approve_shift_plan(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Mudança aprovada para {result['vessel_name']}."
     if action == "abort_shift":

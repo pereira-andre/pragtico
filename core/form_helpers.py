@@ -13,6 +13,8 @@ from domain.berth_layout import (
 from storage import format_constraint_labels
 
 
+MAX_APPROVED_MANEUVERS_PER_HOUR = 4
+
 
 def parse_local_datetime_input(value: str, label: str = "ETA") -> str:
     """Parse a local datetime string from a form input and return it as a timezone-aware ISO string."""
@@ -98,6 +100,77 @@ def ensure_portal_berth_is_available(
         conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
         raise ValueError(f"{label} {canonical} já está ocupado por {conflict_name}.")
     return canonical
+
+
+def pending_maneuver_for_approval(
+    port_call: dict,
+    maneuver_type: str,
+    *,
+    maneuver_id: str = "",
+) -> dict | None:
+    """Return the pending maneuver that the generic approval action would validate."""
+    clean_type = " ".join(str(maneuver_type or "").strip().split()).lower()
+    target_id = " ".join(str(maneuver_id or "").strip().split())
+    candidates = [
+        item
+        for item in port_call.get("maneuver_history", []) or []
+        if " ".join(str(item.get("type") or "").strip().split()).lower() == clean_type
+        and " ".join(str(item.get("state") or "").strip().split()).lower() == "pending"
+    ]
+    if target_id:
+        return next((item for item in candidates if str(item.get("id") or "").strip() == target_id), None)
+    if not candidates:
+        return None
+    candidates.sort(
+        key=lambda item: (
+            item.get("planned_at")
+            or item.get("completed_at")
+            or item.get("created_at")
+            or "",
+            item.get("id") or "",
+        )
+    )
+    return candidates[-1]
+
+
+def _approval_hour_key(value: str | None) -> str:
+    if not value:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return parsed.astimezone().replace(minute=0, second=0, microsecond=0).isoformat()
+
+
+def ensure_maneuver_hour_capacity_for_approval(
+    port_call: dict,
+    maneuver_type: str,
+    *,
+    maneuver_id: str = "",
+) -> dict | None:
+    """Block approval when four other maneuvers are already validated for the same local hour."""
+    maneuver = pending_maneuver_for_approval(port_call, maneuver_type, maneuver_id=maneuver_id)
+    if not maneuver:
+        return None
+    target_hour = _approval_hour_key(maneuver.get("planned_at"))
+    if not target_hour:
+        return maneuver
+
+    activity = services.store.get_port_activity_snapshot(window_days=3650)
+    approved_same_hour = []
+    for row in activity.get("planned_maneuvers", []) or []:
+        if (row.get("situation_class") or "").strip().lower() != "approved":
+            continue
+        if str(row.get("maneuver_id") or "").strip() == str(maneuver.get("id") or "").strip():
+            continue
+        row_hour = _approval_hour_key(row.get("planned_value") or row.get("date_value"))
+        if row_hour == target_hour:
+            approved_same_hour.append(row)
+
+    if len(approved_same_hour) >= MAX_APPROVED_MANEUVERS_PER_HOUR:
+        raise ValueError("Já existem 4 manobras aprovadas para esta hora. Ajusta a hora ou valida outra manobra.")
+    return maneuver
 
 
 def format_note_datetime(value: str) -> str:
