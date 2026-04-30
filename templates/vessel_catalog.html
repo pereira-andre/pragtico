@@ -30,7 +30,7 @@
   </div>
   <div class="mini-grid planned-mini-grid">
     <label>Perfil de serviços <input type="text" name="service_rate_profile" value="{{ vessel.get('service_rate_profile', '') }}"></label>
-    <label>Escalas linha regular (365 dias) <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ vessel.get('regular_line_calls_365d', '') }}"></label>
+    <label>Ajuste manual faturação/linha regular <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ vessel.get('regular_line_calls_365d', '') }}" placeholder="0"></label>
     <label>UP pilotagem <input type="text" name="pilotage_up_rate" value="{{ vessel.get('pilotage_up_rate', '') }}"></label>
   </div>
   <label>Perfil redução TUP <input type="text" name="tup_reduction_profile" value="{{ vessel.get('tup_reduction_profile', '') }}"></label>
