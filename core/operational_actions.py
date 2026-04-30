@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import session
 
 from core import services
-from core.access_control import ensure_port_call_scope_access
+from core.access_control import ensure_port_call_scope_access, filter_port_activity_for_session
 from core.form_helpers import (
     _build_created_port_call_message,
     _iso_to_datetime_local_value,
@@ -234,6 +234,64 @@ def _pilot_label(profile_label: str, profile: dict | None) -> str:
     return organization or label
 
 
+def _planned_maneuver_datetime(item: dict) -> datetime | None:
+    for key in ("date_value", "planned_value", "planned_at"):
+        value = item.get(key)
+        if not value:
+            continue
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+    return None
+
+
+def _planned_maneuver_sort_key(item: dict) -> tuple[float, str]:
+    planned_dt = _planned_maneuver_datetime(item)
+    return (
+        planned_dt.timestamp() if planned_dt else float("inf"),
+        " ".join(str(item.get("vessel_name") or "").split()),
+    )
+
+
+def _planned_maneuver_day_time(item: dict) -> tuple[str, str]:
+    planned_dt = _planned_maneuver_datetime(item)
+    day_label = " ".join(str(item.get("date_label") or "").split())
+    time_label = " ".join(str(item.get("planned_label") or "").split())
+    if planned_dt:
+        if not day_label:
+            day_label = planned_dt.strftime("%d/%m/%Y")
+        if not time_label:
+            time_label = planned_dt.strftime("%H:%M")
+    return day_label or "--", time_label or "--"
+
+
+def _format_planning_query_answer() -> str:
+    port_activity = filter_port_activity_for_session(
+        services.store.get_port_activity_snapshot(window_days=3650),
+        public_operational=True,
+    )
+    planned = list(port_activity.get("planned_maneuvers", []) or [])
+    if not planned:
+        return "Não há manobras no planeamento neste momento."
+
+    planned.sort(key=_planned_maneuver_sort_key)
+    lines = [f"Planeamento de manobras ({len(planned)}):"]
+    for item in planned:
+        day_label, time_label = _planned_maneuver_day_time(item)
+        maneuver_id = str(item.get("maneuver_id") or "").strip()
+        short_id = maneuver_id[:8].upper() if maneuver_id else "--"
+        origin = " ".join(str(item.get("local_origin") or "--").split()) or "--"
+        destination = " ".join(str(item.get("local_destination") or "--").split()) or "--"
+        lines.append(
+            f"- {day_label} {time_label} · {item.get('maneuver_label') or 'Manobra'} · "
+            f"{item.get('vessel_name') or '--'} · {origin} -> {destination} · "
+            f"Estado: {item.get('situation_label') or '--'} · "
+            f"Manobra: {short_id} · Agente/agência: {_agent_label_with_agency(item)}"
+        )
+    return "\n".join(lines)
+
+
 def _format_scale_query_answer(port_call: dict, *, include_cost: bool = False) -> str:
     lines = [
         f"Escala {port_call.get('reference_code') or port_call.get('id', '--')}",
@@ -340,6 +398,12 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
         if context:
             return {"answer": context.get("text") or context.get("snippet", "Sem previsão disponível."), "sources": [], "answer_origin": "slash_weather"}
         return {"answer": f"Sem previsão disponível para {question}.", "sources": [], "answer_origin": "slash_weather"}
+    if command == "planning":
+        return {
+            "answer": _format_planning_query_answer(),
+            "sources": [],
+            "answer_origin": "slash_planning",
+        }
     if command == "rule":
         code_match = re.search(r"\b(\d{3})\b", clean_argument)
         if not code_match:

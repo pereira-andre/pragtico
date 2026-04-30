@@ -603,6 +603,8 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         return {"intent": "query", "command": "tides", "argument": body}
     if command == "weather":
         return {"intent": "query", "command": "weather", "argument": body}
+    if command == "planning":
+        return {"intent": "query", "command": "planning", "argument": body}
     if command == "rule":
         return {"intent": "query", "command": "rule", "argument": body or tail.strip()}
     if command in {

@@ -207,6 +207,8 @@ def build_slash_help(role: str) -> str:
         "  mostra marés por dia ou data pedida",
         "/meteorologia hoje",
         "  mostra a previsão meteorológica",
+        "/planeamento",
+        "  lista todas as manobras planeadas com dia, hora, rota, estado e agência",
         "/regras",
         "  lista os códigos de regras/instruções disponíveis",
         "/regra 015",
@@ -339,4 +341,3 @@ def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = N
 
 def build_abort_reply_template(missing_fields: Optional[List[str]] = None) -> str:
     return build_command_abort_reply_template()
-

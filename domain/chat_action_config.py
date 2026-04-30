@@ -303,6 +303,9 @@ SLASH_COMMAND_ALIASES = {
     "verificar": "validate_maneuver",
     "validar": "validate_maneuver",
     "checklist-manobra": "validate_maneuver",
+    "planeamento": "planning",
+    "manobras-planeadas": "planning",
+    "manobras-previstas": "planning",
     "consultar-escala": "consult_scale",
     "consultar-manobra": "consult_maneuver",
     "consultar-escala-custo": "consult_scale_cost",
@@ -569,4 +572,3 @@ MANEUVER_REPORT_FIELD_HINTS = {
 ABORT_FIELD_HINTS = {
     "aborted_reason",
 }
-
