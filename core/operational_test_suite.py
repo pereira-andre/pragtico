@@ -3,9 +3,21 @@
 from __future__ import annotations
 
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
+from blueprints.port_calls import (
+    VESSEL_CATALOG_STATE_KEY,
+    _build_vessel_catalog_options,
+    _coerce_port_call_payload_with_catalog,
+    _filter_vessel_catalog_options,
+    _remove_vessel_catalog_record,
+    _sync_vessel_catalog_record_to_active_port_calls,
+    _upsert_vessel_catalog_record,
+    _validate_vessel_catalog_record,
+    _vessel_catalog_txt,
+)
 from core import services
 from core.form_helpers import (
     ensure_maneuver_hour_capacity_for_approval,
@@ -13,8 +25,8 @@ from core.form_helpers import (
     ensure_portal_berth_is_physically_available,
 )
 from core.maneuver_context import answer_slash_validation
-from core.operational_actions import answer_slash_query
-from core.operational_sources import answer_direct_operational_query
+from core.operational_actions import answer_slash_query, finalize_operational_proposal
+from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 from core.portal_notifications import latest_maneuver_by_type
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
@@ -283,6 +295,25 @@ class OperationalFlowSuite:
             state="passed" if condition else "failed",
         )
 
+    def _check_state(
+        self,
+        scenario: dict,
+        label: str,
+        element: str,
+        expected: str,
+        observed: str,
+        *,
+        state: str,
+    ) -> None:
+        self._record_step(
+            scenario,
+            label=label,
+            element=element,
+            expected=expected,
+            observed=observed,
+            state=state,
+        )
+
     def _finish_scenario(self, scenario: dict) -> None:
         scenario["state"] = _state_from_steps(scenario["steps"])
         scenario["state_badge"] = _status_badge(scenario["state"])
@@ -295,6 +326,45 @@ class OperationalFlowSuite:
             if vessel or ref:
                 return " · ".join(str(part) for part in (ref, vessel, status) if part)
         return "OK"
+
+    def _runtime_state_snapshot(self, key: str) -> dict | None:
+        if not hasattr(services.store, "get_runtime_state"):
+            return None
+        value = services.store.get_runtime_state(key)
+        return deepcopy(value) if isinstance(value, dict) else None
+
+    def _restore_runtime_state(self, key: str, snapshot: dict | None) -> None:
+        if not hasattr(services.store, "set_runtime_state"):
+            return
+        if snapshot is None and hasattr(services.store, "delete_runtime_state"):
+            services.store.delete_runtime_state(key)
+            return
+        services.store.set_runtime_state(key, deepcopy(snapshot or {}))
+
+    def _catalog_payload(
+        self,
+        index: int,
+        *,
+        name: str,
+        vessel_type: str = "Carga geral",
+        call_sign: str = "",
+    ) -> dict:
+        payload = {
+            "vessel_name": f"{TEST_VESSEL_PREFIX} {name} {self.run_token}",
+            **self._profile(index, vessel_type=vessel_type),
+        }
+        if call_sign:
+            payload["vessel_call_sign"] = call_sign
+        return payload
+
+    def _created_records(self) -> list[dict]:
+        records: list[dict] = []
+        for port_call_id in self.created_ids:
+            try:
+                records.append(services.store.get_port_call(port_call_id))
+            except Exception:
+                continue
+        return records
 
     def _create_port_call(
         self,
@@ -574,13 +644,25 @@ class OperationalFlowSuite:
             f"{final.get('status')} · entrada {self._latest(final, 'entry').get('state')} · saída {self._latest(final, 'departure').get('state')}",
         )
         snapshot = services.store.get_port_activity_snapshot(window_days=3650)
+        departed_ids = {
+            row.get("id") or row.get("port_call_id")
+            for row in snapshot.get("departed", []) or []
+        }
+        archived_departure_ids = {
+            row.get("port_call_id")
+            for row in snapshot.get("archived_maneuvers", []) or []
+            if row.get("maneuver_type") == "departure"
+        }
         self._check(
             scenario,
             "Live feed operacional",
             "Saídas recentes/arquivo",
-            "A saída concluída aparece no snapshot operacional.",
-            any(row.get("port_call_id") == final["id"] for row in snapshot.get("departed", [])),
-            f"{len(snapshot.get('departed', []))} saída(s) no snapshot.",
+            "A saída concluída aparece nas saídas recentes e no arquivo de manobras.",
+            final["id"] in departed_ids and final["id"] in archived_departure_ids,
+            (
+                f"{len(snapshot.get('departed', []))} saída(s); "
+                f"{len(snapshot.get('archived_maneuvers', []))} manobra(s) arquivada(s)."
+            ),
         )
         self._finish_scenario(scenario)
 
@@ -964,16 +1046,276 @@ class OperationalFlowSuite:
         )
         self._finish_scenario(scenario)
 
+    def _scenario_vessel_catalog_management(self) -> None:
+        scenario = self._new_scenario(
+            "Catálogo de navios",
+            "Gestão controlada de navios frequentes",
+            "Valida criação/importação lógica, preenchimento por catálogo, sincronização com escalas ativas, filtros, exportação TXT e remoção sem deixar alterações definitivas.",
+        )
+        original_state = self._runtime_state_snapshot(VESSEL_CATALOG_STATE_KEY)
+        catalog_only: dict = {}
+        sync_record: dict = {}
+        active_port_call: dict | None = None
+        try:
+            catalog_only_payload = self._catalog_payload(
+                30,
+                name="CATALOGO PURO",
+                vessel_type="roro",
+                call_sign=f"TQACAT{self.run_token[-3:]}",
+            )
+            catalog_only_payload.update(
+                {
+                    "service_rate_profile": "Linha regular",
+                    "regular_line_calls_365d": "12",
+                    "tup_reduction_profile": "regular_line",
+                    "service_notes": "Teste controlado de ficha sem escala ativa.",
+                }
+            )
+            catalog_only = self._step(
+                scenario,
+                "Criar ficha de catálogo",
+                "Importação/upsert de navio",
+                "A ficha é validada, normaliza aliases de tipo e fica guardada no catálogo.",
+                lambda: _upsert_vessel_catalog_record(catalog_only_payload, updated_by=self.actor_username),
+            ) or {}
+            self._check(
+                scenario,
+                "Tipo canónico",
+                "Alias Ro-Ro",
+                "O alias roro passa para Roll-on/Roll-off.",
+                isinstance(catalog_only, dict) and catalog_only.get("vessel_type") == "Roll-on/Roll-off",
+                catalog_only.get("vessel_type", "--") if isinstance(catalog_only, dict) else "--",
+            )
+
+            filled_payload = self._step(
+                scenario,
+                "Preencher escala por catálogo",
+                "Importação de escala com IMO existente",
+                "Uma escala importada pode indicar só o IMO e herdar a ficha técnica do catálogo.",
+                lambda: _coerce_port_call_payload_with_catalog(
+                    {
+                        "vessel_imo": catalog_only_payload["vessel_imo"],
+                        "eta": self._future(days=13, hour=9),
+                        "berth": "Cais 10 / Autoeuropa",
+                        "last_port": "Southampton",
+                        "next_port": "Vigo",
+                        "draft_m": "7.8",
+                        "tug_count": 2,
+                        "constraints": [],
+                        "notes": "Teste: escala preenchida a partir do catálogo.",
+                    }
+                ),
+            ) or {}
+            self._check(
+                scenario,
+                "Ficha herdada",
+                "Dados do navio na escala importada",
+                "Nome, tipo e dimensões vêm da ficha guardada.",
+                isinstance(filled_payload, dict)
+                and filled_payload.get("vessel_name") == catalog_only_payload["vessel_name"]
+                and filled_payload.get("vessel_type") == "Roll-on/Roll-off"
+                and filled_payload.get("vessel_loa_m") == catalog_only_payload["vessel_loa_m"],
+                (
+                    f"{filled_payload.get('vessel_name', '--')} · {filled_payload.get('vessel_type', '--')} · "
+                    f"LOA {filled_payload.get('vessel_loa_m', '--')}"
+                    if isinstance(filled_payload, dict)
+                    else "--"
+                ),
+            )
+
+            catalog_answer = self._step(
+                scenario,
+                "Consultar ficha por bot",
+                "Ficha de catálogo sem escala ativa",
+                "A consulta por nome/call sign encontra o navio guardado.",
+                lambda: answer_direct_operational_query(
+                    f"Dados navio {catalog_only_payload['vessel_name']} call sign {catalog_only_payload['vessel_call_sign']}"
+                ),
+            )
+            catalog_text = (catalog_answer or {}).get("answer", "") if isinstance(catalog_answer, dict) else ""
+            self._check(
+                scenario,
+                "Resposta ficha catálogo",
+                "Dados técnicos do navio",
+                "A resposta mostra ficha, IMO, indicativo e dados técnicos.",
+                catalog_only_payload["vessel_name"] in catalog_text
+                and catalog_only_payload["vessel_call_sign"] in catalog_text
+                and "Ficha de catálogo" in catalog_text
+                and "GT" in catalog_text,
+                catalog_text[:260] or "--",
+            )
+
+            active_port_call = self._create_port_call(
+                scenario,
+                index=31,
+                name="CATALOGO SINCRONIZAR",
+                eta=self._future(days=13, hour=11),
+                berth="Cais 11 / Autoeuropa",
+                last_port="Leixões",
+                next_port="Sines",
+                vessel_type="Carga geral",
+            )
+            if active_port_call:
+                sync_payload = {
+                    **_validate_vessel_catalog_record(
+                        {
+                            "vessel_name": active_port_call.get("vessel_name", ""),
+                            "vessel_imo": active_port_call.get("vessel_imo", ""),
+                            "vessel_call_sign": active_port_call.get("vessel_call_sign", ""),
+                            "vessel_flag": active_port_call.get("vessel_flag", ""),
+                            "vessel_type": "roro",
+                            "vessel_loa_m": "199.9",
+                            "vessel_beam_m": "32.2",
+                            "vessel_gt_t": "52000",
+                            "vessel_dwt_t": "18000",
+                            "vessel_max_draft_m": "9.8",
+                            "vessel_bow_thruster": "yes",
+                            "vessel_stern_thruster": "unknown",
+                        }
+                    ),
+                    "regular_line_calls_365d": "37",
+                    "service_notes": "Teste: sincronização de ficha ativa.",
+                }
+                sync_record = self._step(
+                    scenario,
+                    "Atualizar ficha com escala ativa",
+                    "Edição do catálogo",
+                    "A ficha editada fica guardada e pronta para sincronizar a escala ativa.",
+                    lambda: _upsert_vessel_catalog_record(sync_payload, updated_by=self.actor_username, validate=False),
+                ) or {}
+                synced_count = self._step(
+                    scenario,
+                    "Sincronizar escala ativa",
+                    "Catálogo -> escala",
+                    "A alteração do catálogo atualiza a ficha do navio na escala ativa correspondente.",
+                    lambda: _sync_vessel_catalog_record_to_active_port_calls(
+                        sync_record,
+                        updated_by=self.actor_username,
+                    ),
+                )
+                refreshed = services.store.get_port_call(active_port_call["id"])
+                self._check(
+                    scenario,
+                    "Escala sincronizada",
+                    "Tipo e dimensões na escala ativa",
+                    "A escala ativa passa a refletir o tipo e LOA editados no catálogo.",
+                    bool(synced_count)
+                    and refreshed.get("vessel_type") == "Roll-on/Roll-off"
+                    and refreshed.get("vessel_loa_m") == "199.9",
+                    f"{synced_count or 0} sincronizada(s) · {refreshed.get('vessel_type', '--')} · LOA {refreshed.get('vessel_loa_m', '--')}",
+                )
+
+            activity = services.store.get_port_activity_snapshot(window_days=3650)
+            vessels = _build_vessel_catalog_options(activity)
+            filtered = _filter_vessel_catalog_options(
+                vessels,
+                q=catalog_only_payload["vessel_call_sign"],
+                vessel_type="Roll-on/Roll-off",
+            )
+            self._check(
+                scenario,
+                "Filtros de catálogo",
+                "Busca e tipo de navio",
+                "A exportação/consulta filtrada devolve apenas navios compatíveis com os filtros.",
+                bool(filtered)
+                and all(catalog_only_payload["vessel_call_sign"] in (item.get("vessel_call_sign") or "") for item in filtered),
+                f"{len(filtered)} resultado(s) para {catalog_only_payload['vessel_call_sign']}.",
+            )
+
+            txt_body = self._step(
+                scenario,
+                "Exportar ficha TXT",
+                "Ficha imprimível/exportável",
+                "A ficha de navio gera texto com identificação e dados técnicos.",
+                lambda: _vessel_catalog_txt(catalog_only),
+            )
+            self._check(
+                scenario,
+                "Conteúdo TXT",
+                "Exportação individual",
+                "O texto exportado inclui nome, IMO e tipo.",
+                isinstance(txt_body, str)
+                and catalog_only_payload["vessel_name"] in txt_body
+                and catalog_only_payload["vessel_imo"] in txt_body
+                and "Roll-on/Roll-off" in txt_body,
+                (txt_body or "")[:220] if isinstance(txt_body, str) else "--",
+            )
+
+            removed = self._step(
+                scenario,
+                "Remover navio individual",
+                "Apagar ficha frequente",
+                "A remoção individual oculta a ficha sem apagar escalas.",
+                lambda: _remove_vessel_catalog_record(catalog_only.get("key", ""), hide=True),
+            ) or {}
+            after_remove = _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+            self._check(
+                scenario,
+                "Ficha removida",
+                "Catálogo visível",
+                "O navio removido deixa de aparecer no catálogo.",
+                removed.get("key") == catalog_only.get("key")
+                and not any(item.get("key") == catalog_only.get("key") for item in after_remove),
+                removed.get("vessel_name") or removed.get("key", "--"),
+            )
+
+            _upsert_vessel_catalog_record(catalog_only_payload, updated_by=self.actor_username)
+            test_vessels_before_clear = [
+                item
+                for item in _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+                if str(item.get("vessel_name") or "").startswith(TEST_VESSEL_PREFIX)
+            ]
+            removed_keys = self._step(
+                scenario,
+                "Remover todos os navios TESTE QA",
+                "Limpeza global controlada",
+                "O teste exercita a remoção em lote apenas sobre fichas TESTE QA, sem ocultar navios reais do catálogo.",
+                lambda: [
+                    _remove_vessel_catalog_record(item.get("key", ""), hide=True).get("key")
+                    for item in test_vessels_before_clear
+                    if item.get("key")
+                ],
+            ) or []
+            test_vessels_after_clear = [
+                item
+                for item in _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+                if str(item.get("vessel_name") or "").startswith(TEST_VESSEL_PREFIX)
+            ]
+            self._check(
+                scenario,
+                "Lote TESTE QA removido",
+                "Remoção em lote sem impacto real",
+                "As fichas de teste são ocultadas e navios reais não são tocados.",
+                bool(removed_keys) and not test_vessels_after_clear,
+                f"{len(removed_keys)} chave(s) TESTE QA removida(s).",
+            )
+        finally:
+            try:
+                self._restore_runtime_state(VESSEL_CATALOG_STATE_KEY, original_state)
+                self._record_step(
+                    scenario,
+                    label="Repor catálogo",
+                    element="Estado original do catálogo",
+                    expected="O teste não deixa alterações definitivas no catálogo.",
+                    observed="Snapshot inicial reposto.",
+                    state="passed",
+                )
+            except Exception as exc:
+                self._record_step(
+                    scenario,
+                    label="Repor catálogo",
+                    element="Estado original do catálogo",
+                    expected="O teste não deixa alterações definitivas no catálogo.",
+                    observed=str(exc),
+                    state="failed",
+                )
+        self._finish_scenario(scenario)
+
     def _slash_datetime_label(self, *, days: int, hour: int, minute: int = 0) -> str:
         return datetime.fromisoformat(self._future(days=days, hour=hour, minute=minute)).strftime("%d/%m/%Y, %H:%M")
 
     def _slash_context(self) -> dict:
-        records = []
-        for port_call_id in self.created_ids:
-            try:
-                records.append(services.store.get_port_call(port_call_id))
-            except Exception:
-                continue
+        records = self._created_records()
         if not records:
             return {
                 "ref": "PTSET26TEST0001",
@@ -1187,6 +1529,30 @@ class OperationalFlowSuite:
                 isinstance(parsed, dict) and observed_intent in expected_intents,
                 f"intent={observed_intent or '--'} · destino={observed_target or '--'}",
             )
+
+            proposal = (parsed or {}).get("proposal") if isinstance(parsed, dict) else None
+            if isinstance(proposal, dict) and proposal.get("action"):
+                finalized = self._step(
+                    scenario,
+                    f"Resolver alvo /{alias}",
+                    "Ref/ID/campos do comando",
+                    "O comando resolve escala/manobra por Ref ou ID sem obrigar a repetir todos os campos.",
+                    lambda proposal=proposal: finalize_operational_proposal(deepcopy(proposal)),
+                )
+                self._check(
+                    scenario,
+                    f"Diagnóstico /{alias}",
+                    "Campos reconhecidos e em falta",
+                    "O diagnóstico fica explícito e sem erro inesperado.",
+                    isinstance(finalized, dict)
+                    and finalized.get("intent") in {"action", "template", "unsupported"}
+                    and "#ERR-9000" not in str(finalized),
+                    (
+                        f"intent={(finalized or {}).get('intent', '--') if isinstance(finalized, dict) else '--'} · "
+                        f"ação={(finalized or {}).get('action', '--') if isinstance(finalized, dict) else '--'} · "
+                        f"em falta={', '.join((finalized or {}).get('missing_fields') or []) if isinstance(finalized, dict) else '--'}"
+                    ),
+                )
 
             if isinstance(parsed, dict) and parsed.get("intent") == "query":
                 payload = self._step(
@@ -1446,6 +1812,287 @@ class OperationalFlowSuite:
         )
         self._finish_scenario(scenario)
 
+    def _scenario_site_queries_and_archive(self) -> None:
+        scenario = self._new_scenario(
+            "Consultas site/live feed",
+            "Ficha, escala, manobra e arquivo",
+            "Valida respostas determinísticas e fontes do portal para ficha de navio, detalhes de escala/manobra, saídas recentes e arquivo.",
+        )
+        port_call = self._create_port_call(
+            scenario,
+            index=42,
+            name="CONSULTAS SITE",
+            eta=self._future(days=14, hour=8),
+            berth="Tanquisado (lado jusante)",
+            last_port="Sines",
+            next_port="Lisboa",
+            vessel_type="Graneis líquidos",
+            constraints=["gas"],
+        )
+        if not port_call:
+            self._finish_scenario(scenario)
+            return
+
+        port_call = self._step(
+            scenario,
+            "Preparar entrada concluída",
+            "Dados base para consultas",
+            "A escala fica com entrada aprovada, concluída e registada.",
+            lambda: services.store.attach_entry_report(
+                self._complete_entry(
+                    self._approve_entry(port_call),
+                    at=self._event_time(days=14, hour=9),
+                )["id"],
+                updated_by=self.actor_username,
+                maneuver_started_at=self._event_time(days=14, hour=8, minute=10),
+                maneuver_finished_at=self._event_time(days=14, hour=9),
+                draft_m="7.1",
+                notes="Teste: entrada para consultas do site.",
+                maneuver_id=self._latest(port_call, "entry").get("id"),
+            ),
+        ) or port_call
+        port_call = self._step(
+            scenario,
+            "Preparar saída arquivada",
+            "Arquivo de manobras",
+            "A escala fica com saída aprovada, concluída e registada para consulta histórica.",
+            lambda: services.store.attach_departure_report(
+                self._complete_departure(
+                    self._approve_departure(
+                        services.store.schedule_departure_plan(
+                            port_call["id"],
+                            planned_departure_at=self._future(days=15, hour=10),
+                            updated_by=self.actor_username,
+                            next_port="Lisboa",
+                            constraints=["gas"],
+                            departure_plan_note="Teste: saída para arquivo.",
+                            draft_m="7.2",
+                            tug_count="2",
+                        )
+                    ),
+                    at=self._event_time(days=15, hour=10, minute=45),
+                )["id"],
+                updated_by=self.actor_username,
+                maneuver_started_at=self._event_time(days=15, hour=10),
+                maneuver_finished_at=self._event_time(days=15, hour=10, minute=45),
+                draft_m="7.0",
+                notes="Teste: saída arquivada para consultas.",
+                maneuver_id=self._latest(port_call, "departure").get("id"),
+            ),
+        ) or port_call
+        port_call = services.store.get_port_call(port_call["id"])
+        departure = self._latest(port_call, "departure")
+        departure_id = departure.get("id", "")
+        departure_short = departure_id[:8].upper()
+        reference = port_call.get("reference_code", "")
+        vessel_name = port_call.get("vessel_name", "")
+
+        vessel_answer = self._step(
+            scenario,
+            "Consultar ficha de navio",
+            "Dados técnicos e operacionais",
+            "A pergunta natural devolve ficha, escala, localização, manobras e agência.",
+            lambda: answer_direct_operational_query(f"Dados navio {vessel_name} call sign {port_call.get('vessel_call_sign', '')}"),
+        )
+        vessel_text = (vessel_answer or {}).get("answer", "") if isinstance(vessel_answer, dict) else ""
+        self._check(
+            scenario,
+            "Resposta ficha navio",
+            "Ficha do navio no bot",
+            "A resposta inclui identificação, ficha técnica, estado/localização e manobras.",
+            vessel_name in vessel_text
+            and reference in vessel_text
+            and "GT" in vessel_text
+            and "DWT" in vessel_text
+            and "Manobras conhecidas" in vessel_text
+            and departure_id in vessel_text,
+            vessel_text[:300] or "--",
+        )
+
+        id_answer = self._step(
+            scenario,
+            "Consultar IDs",
+            "Escala e manobra",
+            "A pergunta por ID distingue referência da escala e ID real da manobra.",
+            lambda: answer_direct_operational_query(
+                f"Qual o id da escala do {vessel_name}? Depois diz também o id da manobra de saída."
+            ),
+        )
+        id_text = (id_answer or {}).get("answer", "") if isinstance(id_answer, dict) else ""
+        self._check(
+            scenario,
+            "Resposta IDs",
+            "Tracking escala/manobra",
+            "A resposta contém a referência da escala e o ID de manobra, não repete a Ref como se fosse manobra.",
+            reference in id_text and departure_id in id_text and "ID da manobra" in id_text,
+            id_text[:300] or "--",
+        )
+
+        approver_answer = self._step(
+            scenario,
+            "Consultar aprovação",
+            "Quem aprovou e quem executou",
+            "A pergunta sobre aprovação mostra validador, executante e ID da manobra.",
+            lambda: answer_direct_operational_query(f"Quem aprovou a manobra do {vessel_name} para sair?"),
+        )
+        approver_text = (approver_answer or {}).get("answer", "") if isinstance(approver_answer, dict) else ""
+        self._check(
+            scenario,
+            "Resposta aprovação",
+            "Validador/piloto executante",
+            "A resposta identifica aprovação, execução e manobra.",
+            "aprovada por" in approver_text.casefold()
+            and "execut" in approver_text.casefold()
+            and departure_id in approver_text,
+            approver_text[:300] or "--",
+        )
+
+        agent_answer = self._step(
+            scenario,
+            "Consultar agente/agência",
+            "Agente de navegação",
+            "Sempre que fala do agente deve incluir também a agência quando existe perfil.",
+            lambda: answer_direct_operational_query(f"Qual era o agente do {vessel_name} na saída?"),
+        )
+        agent_text = (agent_answer or {}).get("answer", "") if isinstance(agent_answer, dict) else ""
+        self._check(
+            scenario,
+            "Resposta agente",
+            "Agente e agência",
+            "A resposta menciona agente de navegação e agência/perfil.",
+            "Agente de navegação" in agent_text
+            and ("(" in agent_text or "agência" in agent_text.casefold() or "APSS" in agent_text),
+            agent_text[:260] or "--",
+        )
+
+        recent_answer = self._step(
+            scenario,
+            "Consultar saídas recentes",
+            "Partidas/arquivo público",
+            "A pergunta natural sobre saídas recentes lista ATD, rota, manobra, agente, aprovação e execução.",
+            lambda: answer_direct_operational_query("Alguma saída recente?"),
+        )
+        recent_text = (recent_answer or {}).get("answer", "") if isinstance(recent_answer, dict) else ""
+        self._check(
+            scenario,
+            "Resposta saídas recentes",
+            "Live feed de partidas",
+            "A saída de teste aparece com piloto aprovador e executante.",
+            vessel_name in recent_text
+            and departure_short in recent_text.upper()
+            and "aprovada por" in recent_text.casefold()
+            and "executada por" in recent_text.casefold(),
+            recent_text[:320] or "--",
+        )
+
+        scale_sources = self._step(
+            scenario,
+            "Fonte de escala",
+            "Registo de escalas do portal",
+            "As fontes do bot incluem a escala quando a pergunta aponta para a Ref.",
+            lambda: build_operational_chat_sources(f"Dados da escala {reference} do navio {vessel_name}"),
+        ) or []
+        scale_text = "\n".join(str(source.get("snippet") or "") for source in scale_sources if isinstance(source, dict))
+        self._check(
+            scenario,
+            "Escala nas fontes",
+            "Contexto do site",
+            "A fonte de escalas contém Ref, navio, estado, cais e agente.",
+            reference in scale_text and vessel_name in scale_text and "Registo de escalas" in scale_text,
+            scale_text[:320] or "--",
+        )
+
+        archive_sources = self._step(
+            scenario,
+            "Fonte de arquivo",
+            "Arquivo de manobras",
+            "As fontes do bot incluem manobras arquivadas com ID, rota e intervenientes.",
+            lambda: build_operational_chat_sources(f"Arquivo de manobras do {vessel_name} saída {departure_short}"),
+        ) or []
+        archive_text = "\n".join(str(source.get("snippet") or "") for source in archive_sources if isinstance(source, dict))
+        self._check(
+            scenario,
+            "Arquivo nas fontes",
+            "Histórico operacional",
+            "O arquivo contém a manobra concluída, rota, validador, executante e agente.",
+            vessel_name in archive_text
+            and departure_id in archive_text
+            and "validado por" in archive_text.casefold()
+            and "executado por" in archive_text.casefold(),
+            archive_text[:360] or "--",
+        )
+        self._finish_scenario(scenario)
+
+    def _scenario_live_environment_queries(self) -> None:
+        scenario = self._new_scenario(
+            "Live feed/snapshot",
+            "Ambiente live e avisos",
+            "Exercita perguntas live de luz do dia, lua, meteorologia e avisos locais com erro tratado quando uma fonte externa estiver indisponível.",
+        )
+        checks = [
+            (
+                "Luz do dia",
+                "Qual o período luminoso para hoje?",
+                ("Período luminoso", "meteorologia live", "não está configurada", "não consegui"),
+            ),
+            (
+                "Fase da lua",
+                "Qual a fase da lua hoje?",
+                ("Fase da lua", "Lua", "meteorologia live", "não está configurada", "não consegui"),
+            ),
+            (
+                "Meteorologia hoje",
+                "Quais as previsões meteorológicas para hoje?",
+                ("Previsão meteorológica", "Resumo das próximas horas", "meteorologia live", "não está configurada", "não consegui"),
+            ),
+            (
+                "Meteorologia próximos dias",
+                "Meteo próximos dias",
+                ("Previsão geral", "vento médio", "meteorologia live", "não está configurada", "não consegui"),
+            ),
+            (
+                "Avisos locais",
+                "Que avisos locais estão em vigor?",
+                ("Avisos locais", "aviso", "não estão configurados", "não consegui", "Sem avisos"),
+            ),
+            (
+                "Aviso local individual",
+                "Qual é o aviso local 91/26?",
+                ("91/26", "Aviso", "Anav", "não estão configurados", "não consegui", "Sem avisos"),
+            ),
+        ]
+        for label, question, expected_tokens in checks:
+            payload = self._step(
+                scenario,
+                label,
+                "Resposta live direta",
+                "A consulta devolve resposta ou mensagem explícita de indisponibilidade, sem exceção.",
+                lambda question=question: answer_direct_operational_query(question),
+            )
+            answer = (payload or {}).get("answer", "") if isinstance(payload, dict) else ""
+            ok = isinstance(payload, dict) and bool(answer.strip()) and any(token in answer for token in expected_tokens)
+            unavailable = any(
+                marker in answer.casefold()
+                for marker in (
+                    "não está configurad",
+                    "nao esta configurad",
+                    "não estão configurad",
+                    "nao estao configurad",
+                    "não consegui",
+                    "nao consegui",
+                    "sem avisos",
+                )
+            )
+            self._check_state(
+                scenario,
+                f"{label} tratada",
+                "Erro trapping live",
+                "A resposta é informativa; indisponibilidade externa conta como aviso, não como erro da página.",
+                answer[:260] or "--",
+                state="passed" if ok and not unavailable else "warning" if answer else "failed",
+            )
+        self._finish_scenario(scenario)
+
     def _build_module_summaries(self) -> list[dict]:
         modules: dict[str, dict] = {}
         for scenario in self.scenarios:
@@ -1521,8 +2168,11 @@ class OperationalFlowSuite:
             self._scenario_abort_keeps_block()
             self._scenario_capacity_limit()
             self._scenario_anchorages_and_duplicates()
+            self._scenario_vessel_catalog_management()
             self._scenario_slash_commands()
+            self._scenario_site_queries_and_archive()
             self._scenario_live_feed_snapshot()
+            self._scenario_live_environment_queries()
         finally:
             if self.cleanup_after:
                 cleanup_result = cleanup_operational_test_records()
