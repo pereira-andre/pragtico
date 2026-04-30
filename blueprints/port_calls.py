@@ -32,7 +32,7 @@ from core.portal_notifications import (
     maneuver_by_id,
     record_maneuver_notification,
 )
-from storage import normalize_constraint_codes
+from storage import VESSEL_TYPE_LOOKUP, _lookup_key, normalize_constraint_codes
 from core.validators import (
     validate_datetime_range,
     validate_operational_feedback_status,
@@ -257,6 +257,14 @@ def _integer_payload_value(payload: dict, *keys: str, default: str = "") -> str:
     return str(number)
 
 
+def _canonical_vessel_type_label(value: str) -> str:
+    clean = require_form_text(value, "Tipo de navio")
+    meta = VESSEL_TYPE_LOOKUP.get(_lookup_key(clean))
+    if not meta:
+        raise ValueError("Tipo de navio inválido. Escolhe um dos tipos com ícone definidos no sistema.")
+    return meta["label"]
+
+
 def _load_json_upload_payload(label: str) -> object:
     uploaded_file = request.files.get("payload_file")
     raw_payload = ""
@@ -350,7 +358,7 @@ def _validate_vessel_catalog_record(payload: dict) -> dict:
     record["vessel_imo"] = validate_imo(record["vessel_imo"])
     record["vessel_call_sign"] = require_form_text(record["vessel_call_sign"], "Indicativo")
     record["vessel_flag"] = require_form_text(record["vessel_flag"], "Bandeira")
-    record["vessel_type"] = require_form_text(record["vessel_type"], "Tipo de navio")
+    record["vessel_type"] = _canonical_vessel_type_label(record["vessel_type"])
     record.update(validate_vessel_dimensions(record))
     record["vessel_bow_thruster"] = normalize_thruster_state(record.get("vessel_bow_thruster"), "Bow thruster")
     record["vessel_stern_thruster"] = normalize_thruster_state(record.get("vessel_stern_thruster"), "Stern thruster")
@@ -466,6 +474,74 @@ def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: b
     return saved
 
 
+def _port_call_matches_vessel_catalog_record(port_call: dict, record: dict, *, keys: set[str] | None = None) -> bool:
+    port_call_key = _vessel_catalog_key(_vessel_catalog_record_from_port_call(port_call))
+    if keys and port_call_key in keys:
+        return True
+    record_imo = re.sub(r"\D", "", _string_payload_value(record, "vessel_imo"))
+    port_call_imo = re.sub(r"\D", "", _string_payload_value(port_call, "vessel_imo"))
+    if record_imo and port_call_imo and record_imo == port_call_imo:
+        return True
+    record_call_sign = _string_payload_value(record, "vessel_call_sign", "call_sign").casefold()
+    port_call_call_sign = _string_payload_value(port_call, "vessel_call_sign", "call_sign").casefold()
+    if record_call_sign and port_call_call_sign and record_call_sign == port_call_call_sign:
+        return True
+    record_name = _string_payload_value(record, "vessel_name", "name").casefold()
+    port_call_name = _string_payload_value(port_call, "vessel_name", "name").casefold()
+    return bool(record_name and port_call_name and record_name == port_call_name)
+
+
+def _sync_vessel_catalog_record_to_active_port_calls(
+    record: dict,
+    *,
+    updated_by: str,
+    previous_key: str = "",
+) -> int:
+    keys = {_vessel_catalog_key(record)}
+    if previous_key:
+        keys.add(previous_key)
+    keys = {key for key in keys if key}
+    synced = 0
+    try:
+        port_calls = services.store.list_port_calls()
+    except Exception:
+        logger.exception("Falha ao listar escalas para sincronizar ficha de navio.")
+        return synced
+
+    for port_call in port_calls:
+        if port_call.get("status") not in {"scheduled", "in_port"}:
+            continue
+        if not _port_call_matches_vessel_catalog_record(port_call, record, keys=keys):
+            continue
+        try:
+            services.store.edit_port_call(
+                port_call_id=port_call["id"],
+                updated_by=updated_by,
+                vessel_name=record.get("vessel_name") or port_call.get("vessel_name", ""),
+                eta=port_call.get("eta") or "",
+                berth=port_call.get("berth") or port_call.get("berth_label", ""),
+                last_port=port_call.get("last_port", ""),
+                next_port=port_call.get("next_port", ""),
+                notes=port_call.get("notes", ""),
+                vessel_imo=record.get("vessel_imo") or port_call.get("vessel_imo", ""),
+                vessel_call_sign=record.get("vessel_call_sign") or port_call.get("vessel_call_sign", ""),
+                vessel_flag=record.get("vessel_flag") or port_call.get("vessel_flag", ""),
+                vessel_type=record.get("vessel_type") or port_call.get("vessel_type", ""),
+                vessel_loa_m=record.get("vessel_loa_m") or port_call.get("vessel_loa_m", ""),
+                vessel_beam_m=record.get("vessel_beam_m") or port_call.get("vessel_beam_m", ""),
+                vessel_gt_t=record.get("vessel_gt_t") or port_call.get("vessel_gt_t", ""),
+                vessel_max_draft_m=record.get("vessel_max_draft_m") or port_call.get("vessel_max_draft_m", ""),
+                vessel_dwt_t=record.get("vessel_dwt_t") or port_call.get("vessel_dwt_t", ""),
+                vessel_bow_thruster=record.get("vessel_bow_thruster") or port_call.get("vessel_bow_thruster", "unknown"),
+                vessel_stern_thruster=record.get("vessel_stern_thruster") or port_call.get("vessel_stern_thruster", "unknown"),
+                change_reason="Atualização da ficha do navio no catálogo.",
+            )
+            synced += 1
+        except Exception:
+            logger.exception("Falha ao sincronizar ficha de navio com escala %s.", port_call.get("id"))
+    return synced
+
+
 def _load_vessel_catalog_json_payload() -> list[dict]:
     return _payload_list_from_json(
         _load_json_upload_payload("navios"),
@@ -576,6 +652,7 @@ def _create_port_call_from_payload(form_data: dict, *, created_by: str) -> dict:
     draft_m = validate_positive_number(form_data["draft_m"], "Calado (m)", max_value=30.0)
     tug_count = validate_tug_count(form_data["tug_count"])
     validate_imo(form_data["vessel_imo"])
+    form_data["vessel_type"] = _canonical_vessel_type_label(form_data["vessel_type"])
     form_data["constraints"] = normalize_constraint_codes(form_data.get("constraints"))
     validated_dims = validate_vessel_dimensions(form_data)
     form_data.update(validated_dims)
@@ -1052,10 +1129,15 @@ def import_vessel_catalog_json():
     """Importar ou atualizar fichas de navios reutilizáveis no registo de escalas."""
     try:
         payloads = _load_vessel_catalog_json_payload()
-        imported = [
-            _upsert_vessel_catalog_record(payload, updated_by=session["username"])
-            for payload in payloads
-        ]
+        imported = []
+        synced_count = 0
+        for payload in payloads:
+            saved = _upsert_vessel_catalog_record(payload, updated_by=session["username"])
+            imported.append(saved)
+            synced_count += _sync_vessel_catalog_record_to_active_port_calls(
+                saved,
+                updated_by=session["username"],
+            )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_register"))
@@ -1070,7 +1152,8 @@ def import_vessel_catalog_json():
         )
         return redirect(url_for("port_calls.port_call_register"))
 
-    flash(f"{len(imported)} navio(s) importado(s) ou atualizado(s) no catálogo.", "success")
+    sync_note = f" {synced_count} escala(s) ativa(s) sincronizada(s)." if synced_count else ""
+    flash(f"{len(imported)} navio(s) importado(s) ou atualizado(s) no catálogo.{sync_note}", "success")
     return redirect(url_for("port_calls.port_call_register"))
 
 
@@ -1103,8 +1186,13 @@ def edit_vessel_catalog_record(vessel_key: str):
             for field in VESSEL_CATALOG_FIELDS
         }
         record = _validate_vessel_catalog_record(payload)
-        _remove_vessel_catalog_record(vessel_key, hide=True)
+        previous = _remove_vessel_catalog_record(vessel_key, hide=True)
         saved = _upsert_vessel_catalog_record(record, updated_by=session["username"], validate=False)
+        synced_count = _sync_vessel_catalog_record_to_active_port_calls(
+            saved,
+            updated_by=session["username"],
+            previous_key=previous.get("key") or vessel_key,
+        )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_register"))
@@ -1113,7 +1201,8 @@ def edit_vessel_catalog_record(vessel_key: str):
         flash("Falha inesperada ao editar o navio.", "error")
         return redirect(url_for("port_calls.port_call_register"))
 
-    flash(f"Navio {saved.get('vessel_name', 'sem nome')} atualizado no catálogo.", "success")
+    sync_note = f" {synced_count} escala(s) ativa(s) sincronizada(s)." if synced_count else ""
+    flash(f"Navio {saved.get('vessel_name', 'sem nome')} atualizado no catálogo.{sync_note}", "success")
     return redirect(url_for("port_calls.port_call_register"))
 
 
@@ -1258,7 +1347,7 @@ def edit_port_call(port_call_id: str):
             vessel_imo=form_data["vessel_imo"],
             vessel_call_sign=require_form_text(form_data["vessel_call_sign"], "Indicativo"),
             vessel_flag=require_form_text(form_data["vessel_flag"], "Bandeira"),
-            vessel_type=require_form_text(form_data["vessel_type"], "Tipo de navio"),
+            vessel_type=_canonical_vessel_type_label(form_data["vessel_type"]),
             vessel_loa_m=form_data["vessel_loa_m"],
             vessel_beam_m=form_data["vessel_beam_m"],
             vessel_gt_t=form_data["vessel_gt_t"],

@@ -149,7 +149,20 @@ VESSEL_TYPE_META = (
     {
         "label": "Roll-on/Roll-off",
         "icon": "roll-on-roll-off.png",
-        "aliases": ("roll on roll off", "ro ro", "ro-ro", "ro ro pcc", "ro-ro / pcc", "pcc"),
+        "aliases": (
+            "roll on roll off",
+            "roll-on roll-off",
+            "ro ro",
+            "ro-ro",
+            "ro/ro",
+            "roro",
+            "roro pcc",
+            "ro ro pcc",
+            "ro-ro / pcc",
+            "pcc",
+            "pctc",
+            "car carrier",
+        ),
     },
     {
         "label": "Transporte especializado carga seca",
