@@ -150,6 +150,16 @@ def _match_port_call_from_question(question: str, port_calls: list[dict]) -> dic
             by_name.append(item)
     if len(by_name) == 1:
         return by_name[0]
+
+    by_identifier = []
+    for item in port_calls:
+        for field in ("vessel_imo", "ship_imo_label", "vessel_call_sign", "ship_call_sign_label"):
+            identifier_key = _operational_lookup_key(item.get(field))
+            if identifier_key and identifier_key != "--" and f" {identifier_key} " in padded_question:
+                by_identifier.append(item)
+                break
+    if len(by_identifier) == 1:
+        return by_identifier[0]
     return None
 
 
@@ -1161,6 +1171,12 @@ def build_scale_context(port_call: dict) -> dict:
             else "Registar mudança" if bool(reportable_shift)
             else ""
         ),
+        "active_entry_id": (active_entry or {}).get("id", ""),
+        "active_entry_status": (active_entry or {}).get("state_label", ""),
+        "active_departure_id": (active_departure or {}).get("id", ""),
+        "active_departure_status": (active_departure or {}).get("state_label", ""),
+        "active_shift_id": (active_shift or {}).get("id", ""),
+        "active_shift_status": (active_shift or {}).get("state_label", ""),
         "entry_report_exists": entry_report_exists,
         "departure_report_exists": departure_report_exists,
         "shift_report_exists": shift_report_exists,

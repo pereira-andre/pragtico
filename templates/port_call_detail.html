@@ -340,6 +340,11 @@
                   <section class="scale-plan-panel scale-plan-panel-entry">
                     {% if can_create_entry %}
                       {{ entry_plan_form(scale, port_call, constraint_options) }}
+                    {% elif scale.actions.active_entry_id %}
+                      <article class="ops-empty scale-action-placeholder">
+                        <p>Já existe uma entrada {{ scale.actions.active_entry_status|lower }} para esta escala.</p>
+                        <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=scale.actions.active_entry_id) }}">Abrir entrada</a>
+                      </article>
                     {% else %}
                       <article class="ops-empty scale-action-placeholder"><p>A entrada só fica disponível quando a escala está prevista e não tem entrada pendente/aprovada.</p></article>
                     {% endif %}
@@ -347,6 +352,11 @@
                   <section class="scale-plan-panel scale-plan-panel-departure">
                     {% if can_create_departure %}
                       {{ departure_plan_form(scale, port_call, constraint_options) }}
+                    {% elif scale.actions.active_departure_id %}
+                      <article class="ops-empty scale-action-placeholder">
+                        <p>Já existe uma saída {{ scale.actions.active_departure_status|lower }} para esta escala.</p>
+                        <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=scale.actions.active_departure_id) }}">Abrir saída</a>
+                      </article>
                     {% else %}
                       <article class="ops-empty scale-action-placeholder"><p>A saída só fica disponível depois da entrada estar concluída e sem saída ativa.</p></article>
                     {% endif %}
@@ -354,6 +364,11 @@
                   <section class="scale-plan-panel scale-plan-panel-shift">
                     {% if can_create_shift %}
                       {{ shift_plan_form(scale, port_call, constraint_options) }}
+                    {% elif scale.actions.active_shift_id %}
+                      <article class="ops-empty scale-action-placeholder">
+                        <p>Já existe uma mudança {{ scale.actions.active_shift_status|lower }} para esta escala.</p>
+                        <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=scale.actions.active_shift_id) }}">Abrir mudança</a>
+                      </article>
                     {% else %}
                       <article class="ops-empty scale-action-placeholder"><p>A mudança só fica disponível com o navio em porto e sem mudança ativa.</p></article>
                     {% endif %}

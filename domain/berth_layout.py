@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from datetime import datetime
 from typing import Dict, Iterable, List, Optional
 
 BERTH_OPTIONS = [
@@ -222,7 +223,7 @@ def _tms2_slot_label(label: str | None, berth_options: Iterable[str] | None = No
     elif slot_match:
         slot = slot_match.group(1)
     if not slot:
-        return TMS2_BASE_LABEL
+        return TMS2_SLOT_LABELS[0]
     return TMS2_SLOT_LABELS[{"a": 0, "b": 1, "c": 2}[slot]]
 
 
@@ -330,7 +331,8 @@ def dropdown_berth_options(berth_options: Iterable[str] | None = None) -> List[s
 
 
 def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None) -> tuple[int, str]:
-    key = _berth_key(label)
+    canonical = canonicalize_berth_label(label, berth_options=berth_options)
+    key = _berth_key(canonical or label)
     options = list(berth_options or BERTH_OPTIONS)
     indexed = {_berth_key(item): index for index, item in enumerate(options)}
     if key in indexed:
@@ -339,6 +341,56 @@ def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None
         if option_key and (option_key in key or key in option_key):
             return (index, key)
     return (len(indexed) + 1, key)
+
+
+def _parse_iso_datetime(value: str | None) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _latest_departure_maneuver(item: Dict, states: set[str] | None = None) -> Optional[Dict]:
+    departures = [
+        maneuver
+        for maneuver in item.get("maneuver_history", []) or []
+        if (maneuver.get("type") or "").strip().lower() == "departure"
+    ]
+    if states is not None:
+        departures = [
+            maneuver
+            for maneuver in departures
+            if (maneuver.get("state") or "").strip().lower() in states
+        ]
+    if not departures:
+        return None
+    departures.sort(
+        key=lambda maneuver: (
+            maneuver.get("planned_at")
+            or maneuver.get("completed_at")
+            or maneuver.get("decided_at")
+            or maneuver.get("created_at")
+            or ""
+        )
+    )
+    return departures[-1]
+
+
+def _berth_is_released_by_validated_departure(item: Dict, target_planned_at: str | None) -> bool:
+    departure = _latest_departure_maneuver(item, {"approved"})
+    if not departure:
+        return False
+    target_dt = _parse_iso_datetime(target_planned_at)
+    departure_dt = (
+        _parse_iso_datetime(departure.get("planned_at"))
+        or _parse_iso_datetime(departure.get("completed_at"))
+        or _parse_iso_datetime(departure.get("decided_at"))
+    )
+    if not target_dt or not departure_dt:
+        return True
+    return departure_dt <= target_dt
 
 
 def _group_vessels_by_berth(
@@ -400,6 +452,7 @@ def find_occupied_berth_conflict(
     in_port_items: Iterable[Dict],
     *,
     current_port_call_id: str = "",
+    target_planned_at: str | None = None,
     berth_options: Iterable[str] | None = None,
 ) -> Optional[Dict]:
     options = list(berth_options or BERTH_OPTIONS)
@@ -423,8 +476,12 @@ def find_occupied_berth_conflict(
         item_berth = item.get("berth_label") or item.get("berth") or ""
         item_canonical = canonicalize_berth_label(item_berth, options)
         if item_canonical == target_canonical:
+            if _berth_is_released_by_validated_departure(item, target_planned_at):
+                continue
             return item
         if _berth_base_label(item_canonical, options) == target_base:
+            if _berth_is_released_by_validated_departure(item, target_planned_at):
+                continue
             occupied_same_base.append(item)
     if target_capacity > 1 and len(occupied_same_base) >= target_capacity:
         return occupied_same_base[0]

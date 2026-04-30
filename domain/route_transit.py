@@ -66,6 +66,13 @@ DEST_AUTOEUROPA = (
     r"\bcais\s*10\b",
     r"\bcais\s*11\b",
 )
+DEST_TMS2 = (
+    r"\btms\s*2\b",
+    r"\btms2\b",
+    r"\bterminal\s+multiusos\s+2\b",
+    r"\bterminal\s+multiusos\s+zona\s+2\b",
+    r"\bterminal\s+de\s+contentores\b",
+)
 DEST_NORTH_QUAYS = (
     r"\bcais\s+(?:a\s+)?norte\b",
     r"\bcais\s+do\s+norte\b",
@@ -97,6 +104,7 @@ class RouteTransitFact:
     source_document: str
     source_id: str
     specificity: int = 10
+    reverse_answer: str = ""
 
 
 ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
@@ -112,6 +120,27 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
         source_document="Notas_Pilotagem.txt",
         source_id="ROUTE_BARRA_LISNAVE_DISTANCE",
         specificity=30,
+        reverse_answer=(
+            "Da LISNAVE/Mitrena até ao Pilar 2 / entrada da Barra são cerca de "
+            "10,5 milhas náuticas pelo Canal Sul completo. Pelo atalho ou corta-mato, "
+            "considera cerca de 10,0 milhas náuticas."
+        ),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_BARRA,
+        destination_patterns=DEST_TMS2,
+        answer=(
+            "Do Pilar 2 / entrada da Barra até ao TMS 2 são cerca de 6,5 milhas "
+            "náuticas pelo Canal Norte."
+        ),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_BARRA_TMS2_DISTANCE",
+        specificity=32,
+        reverse_answer=(
+            "Do TMS 2 até ao Pilar 2 / entrada da Barra são cerca de 6,5 milhas "
+            "náuticas pelo Canal Norte."
+        ),
     ),
     RouteTransitFact(
         metric="time",
@@ -126,6 +155,12 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
         source_document="Notas_Pilotagem.txt",
         source_id="ROUTE_BARRA_LISNAVE_TIME",
         specificity=30,
+        reverse_answer=(
+            "Da LISNAVE/Mitrena até ao Pilar 2 / entrada da Barra, o tempo operacional "
+            "prático é cerca de 1 hora e 30 minutos a 2 horas pelo Canal Sul. "
+            "A distância de referência é 10,5 milhas náuticas pelo Canal Sul completo, "
+            "ou cerca de 10,0 milhas pelo corta-mato."
+        ),
     ),
     RouteTransitFact(
         metric="time",
@@ -283,6 +318,16 @@ def _matches_any(clean_question: str, patterns: tuple[str, ...]) -> bool:
     return any(re.search(pattern, clean_question) for pattern in patterns)
 
 
+def _first_match_index(clean_question: str, patterns: tuple[str, ...]) -> int | None:
+    indexes = [
+        match.start()
+        for pattern in patterns
+        for match in [re.search(pattern, clean_question)]
+        if match
+    ]
+    return min(indexes) if indexes else None
+
+
 def _query_metric(clean_question: str) -> str:
     wants_distance = bool(DISTANCE_QUERY_RE.search(clean_question))
     wants_time = bool(TIME_QUERY_RE.search(clean_question))
@@ -314,14 +359,23 @@ def route_transit_answer(question: str, clean_question: str | None = None) -> di
         return None
 
     fact = sorted(matches, key=lambda item: item.specificity, reverse=True)[0]
+    origin_index = _first_match_index(clean, fact.origin_patterns)
+    destination_index = _first_match_index(clean, fact.destination_patterns)
+    is_reverse = (
+        origin_index is not None
+        and destination_index is not None
+        and destination_index < origin_index
+        and fact.reverse_answer
+    )
+    answer = fact.reverse_answer if is_reverse else fact.answer
     return {
-        "answer": fact.answer,
+        "answer": answer,
         "sources": [
             {
                 "document": fact.source_document,
                 "source_id": fact.source_id,
                 "retrieval_mode": "route_transit_fact",
-                "snippet": fact.answer,
+                "snippet": answer,
                 "question": question,
             }
         ],

@@ -110,8 +110,45 @@ def ensure_port_call_scope_access(port_call_id: str) -> None:
         raise PermissionError(f"{error_ref('AGENCY_MISMATCH')} Esta escala pertence a outra agência.")
 
 
-def filter_port_activity_for_session(port_activity: dict) -> dict:
-    """Filter port activity down to entries visible to the current session's agency scope."""
+def _sanitize_public_activity_item(item: dict, scope_key: str) -> dict:
+    """Keep public movement fields while hiding private agent/report context for other agencies."""
+    if _item_organization_scope_key(item) == scope_key:
+        return item
+    sanitized = dict(item)
+    for key in (
+        "notes",
+        "detail_note",
+        "approval_note",
+        "aborted_reason",
+        "agent_profile",
+        "pilot_profile",
+        "reported_by_profile",
+        "created_by_profile",
+        "validated_by_profile",
+        "executed_by_profile",
+        "change_log",
+        "vessel_gt",
+        "vessel_gt_t",
+        "vessel_loa_m",
+        "vessel_beam_m",
+        "vessel_dwt_t",
+        "vessel_max_draft_m",
+        "ship_loa_label",
+        "ship_beam_label",
+        "ship_gt_label",
+        "ship_dwt_label",
+        "ship_max_draft_label",
+    ):
+        if key in sanitized:
+            sanitized[key] = {} if key.endswith("_profile") else "" if key != "change_log" else []
+    for key in ("agent_label", "pilot_label", "validated_by_label", "executed_by_label", "reported_by_label"):
+        if key in sanitized:
+            sanitized[key] = "--"
+    return sanitized
+
+
+def filter_port_activity_for_session(port_activity: dict, *, public_operational: bool = False) -> dict:
+    """Filter port activity down to entries visible to the current session's role and agency scope."""
     scope_key = _current_agent_scope_key()
     if scope_key is None:
         return port_activity
@@ -132,6 +169,24 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         item for item in port_activity.get("archived_scales", [])
         if _item_organization_scope_key(item) == scope_key
     ]
+
+    if public_operational:
+        arrivals = [
+            _sanitize_public_activity_item(item, scope_key)
+            for item in port_activity.get("arrivals", []) or []
+        ]
+        in_port = [
+            _sanitize_public_activity_item(item, scope_key)
+            for item in port_activity.get("in_port", []) or []
+        ]
+        departed = [
+            _sanitize_public_activity_item(item, scope_key)
+            for item in port_activity.get("departed", []) or []
+        ]
+        planned_maneuvers = [
+            _sanitize_public_activity_item(item, scope_key)
+            for item in port_activity.get("planned_maneuvers", []) or []
+        ]
 
     visible_port_call_ids = {
         item.get("id")
@@ -173,10 +228,14 @@ def filter_port_activity_for_session(port_activity: dict) -> dict:
         "archived_scales": archived_scales,
         "planned_groups": planned_groups,
         "departure_candidates": [
-            item for item in port_activity.get("departure_candidates", [])
+            _sanitize_public_activity_item(item, scope_key) if public_operational else item
+            for item in port_activity.get("departure_candidates", [])
             if item.get("id") in visible_port_call_ids
         ],
-        "maneuvers": port_activity.get("maneuvers", []),
+        "maneuvers": [
+            _sanitize_public_activity_item(item, scope_key)
+            for item in port_activity.get("maneuvers", [])
+        ] if public_operational else port_activity.get("maneuvers", []),
     }
     filtered_activity["stats"] = {
         **(port_activity.get("stats") or {}),

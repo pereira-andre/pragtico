@@ -18,6 +18,7 @@ from core.maneuver_context import _match_port_call_from_question, build_maneuver
 from core.operational_common import _operational_lookup_key, current_resolvable_port_calls
 from core.rule_catalog import _active_knowledge_dir
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
+from domain.chat_actions import visible_port_calls_from_activity
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
 from domain.operational_safety import build_operational_safety_source, build_weather_safety_status_lines
@@ -45,6 +46,45 @@ PORTAL_MANEUVER_CONTEXT_RE = re.compile(
     r"\b(planead\w*|previst\w*|programad\w*|marcad\w*|arquivo|historico|histórico|"
     r"hoje|amanha|amanhã|ontem)\b.*\bmanobras?\b"
 )
+DAYLIGHT_QUERY_RE = re.compile(
+    r"\b(luz do dia|periodo luminoso|periodos luminosos|periodo de luz|periodos de luz|"
+    r"nascer do sol|por do sol|poe se o sol|pôr do sol|daylight)\b"
+)
+MOON_QUERY_RE = re.compile(r"\b(lua|fase da lua|fase lunar|moon)\b")
+WEATHER_FORECAST_TODAY_RE = re.compile(
+    r"\b(previsao|previsoes|previsao meteorologica|previsoes meteorologicas|prognostico|"
+    r"como vai estar|vai estar|meteo)\b.*\b(hoje|resto do dia|proximas horas|próximas horas)\b"
+    r"|"
+    r"\b(hoje|resto do dia)\b.*\b(previsao|previsoes|prognostico|meteorologia|meteo|tempo)\b"
+)
+WEATHER_FORECAST_DAYS_RE = re.compile(
+    r"\b(proximos dias|próximos dias|dias seguintes|amanha|amanhã|depois de amanha|depois de amanhã|"
+    r"previsao geral|previsões gerais|previsoes gerais)\b"
+)
+LOCAL_WARNING_CODE_RE = re.compile(r"\b(?:anav\s*)?(?:n[.ºo]*\s*)?(\d{1,3}/\d{2,4})\b", re.IGNORECASE)
+BERTHED_VESSELS_QUERY_RE = re.compile(
+    r"\b(navios?|embarcacoes|embarcações)\b.*\b(em cais|atracad\w*|amarrad\w*)\b"
+    r"|"
+    r"\b(em cais|atracad\w*|amarrad\w*)\b.*\b(navios?|embarcacoes|embarcações)\b"
+)
+VESSEL_DETAIL_QUERY_RE = re.compile(
+    r"\b(dados|detalhes|informacao|informação|caracteristicas|características|ficha|perfil)\b"
+    r".*\b(navio|embarcacao|embarcação|imo|indicativo|call sign)\b"
+    r"|"
+    r"\b(navio|embarcacao|embarcação|imo|indicativo|call sign)\b"
+    r".*\b(dados|detalhes|informacao|informação|caracteristicas|características|ficha|perfil)\b"
+)
+MANEUVER_APPROVER_QUERY_RE = re.compile(
+    r"\b(quem|qual)\b.*\b(aprovou|aprovado|aprovada|validou|validado|validada|validador)\b.*\b(manobra|entrada|saida|saída|mudanca|mudança)\b"
+    r"|"
+    r"\b(aprovou|validou)\b.*\b(manobra|entrada|saida|saída|mudanca|mudança)\b"
+)
+AGENT_AGENCY_QUERY_RE = re.compile(
+    r"\b(agencia|agência)\b.*\b(agent\w*|trabalha|pertence|qual|que)\b"
+    r"|"
+    r"\b(agent\w*|trabalha|pertence)\b.*\b(agencia|agência)\b"
+)
+AGENT_LOOKUP_QUERY_RE = re.compile(r"\b(qual|quem)\b.*\bagente\b|\bagente\b.*\b(navio|escala|manobra)\b")
 
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
@@ -83,12 +123,13 @@ def build_operational_snapshot_source(port_activity: dict, max_rows: int = 12) -
         ),
     ]
     for item in port_activity.get("planned_maneuvers", [])[:max_rows]:
+        maneuver_id = item.get("maneuver_id") or "--"
         lines.append(
-            f"- {item['date_label']} | {item['reference_code']} | {item['vessel_name']} | "
+            f"- {item['date_label']} | escala {item['reference_code']} | manobra {maneuver_id} | {item['vessel_name']} | "
             f"{item['maneuver_label']} | situação {item['situation_label']} | "
             f"Hora {item['planned_label']} | "
             f"{item['local_origin']} -> {item['local_destination']} | "
-            f"agente {item['agent_label']} | piloto {item['pilot_label']}"
+            f"agente {_agent_display(item)} | piloto {_pilot_display(item)}"
         )
         if item.get("detail_note"):
             lines.append(f"  observações: {item['detail_note']}")
@@ -125,6 +166,224 @@ def _constraint_labels_from_badges(item: dict) -> str:
     return ", ".join(labels) or "--"
 
 
+def _profile_organization(profile: dict | None) -> str:
+    return " ".join(str((profile or {}).get("organization") or "").split())
+
+
+def _actor_display_from_profile(label: str | None, profile: dict | None, *, include_missing_agency: bool = False) -> str:
+    clean_label = " ".join(str(label or "").strip().split()) or "--"
+    organization = _profile_organization(profile)
+    if organization and clean_label not in {"--", organization}:
+        return f"{clean_label} ({organization})"
+    if organization:
+        return organization
+    if include_missing_agency and clean_label != "--":
+        return f"{clean_label} (agência não registada)"
+    return clean_label
+
+
+def _agent_display(item: dict, *, include_missing_agency: bool = True) -> str:
+    return _actor_display_from_profile(
+        item.get("agent_label"),
+        item.get("agent_profile"),
+        include_missing_agency=include_missing_agency,
+    )
+
+
+def _pilot_display(item: dict, label_key: str = "pilot_label", profile_key: str = "pilot_profile") -> str:
+    return _actor_display_from_profile(item.get(label_key), item.get(profile_key), include_missing_agency=False)
+
+
+def _format_measure(value: object, suffix: str = "") -> str:
+    clean = " ".join(str(value if value is not None else "").strip().split())
+    if not clean:
+        return "--"
+    return f"{clean}{suffix}" if suffix and clean != "--" else clean
+
+
+def _format_weather_slot(hour: dict) -> str:
+    return (
+        f"{hour.get('time', '--')} | {hour.get('condition', '--')} | "
+        f"{hour.get('temp_c', '--')} °C | vento {hour.get('wind_kts', '--')} kts "
+        f"{hour.get('wind_dir', '--')} | rajadas {hour.get('gust_kts', '--')} kts | "
+        f"chuva {hour.get('chance_of_rain', '--')}%"
+    )
+
+
+def _weather_wind_summary(hours: list[dict]) -> dict:
+    wind_values = [float(item["wind_kts"]) for item in hours if item.get("wind_kts") is not None]
+    gust_values = [float(item["gust_kts"]) for item in hours if item.get("gust_kts") is not None]
+    return {
+        "avg_wind_kts": round(sum(wind_values) / len(wind_values), 1) if wind_values else None,
+        "max_wind_kts": round(max(wind_values), 1) if wind_values else None,
+        "max_gust_kts": round(max(gust_values), 1) if gust_values else None,
+    }
+
+
+def _select_weather_days(forecast: dict, weather_service, question: str, *, default_count: int = 1) -> list[dict]:
+    days = list(forecast.get("forecast_days") or [])
+    if not days:
+        return []
+    reference_dt = _parse_weather_reference_datetime(forecast)
+    target_dates: list[str] = []
+    if reference_dt and hasattr(weather_service, "_resolve_query_dates"):
+        try:
+            target_dates = list(weather_service._resolve_query_dates(question, reference_dt.date()))
+        except Exception:
+            target_dates = []
+    if target_dates:
+        selected = [item for item in days if item.get("date") in target_dates]
+        if selected:
+            return selected
+    return days[:default_count]
+
+
+def _hours_for_weather_day(forecast: dict, day: dict) -> list[dict]:
+    target_date = day.get("date")
+    for group in forecast.get("hourly_groups", []) or []:
+        if group.get("date") == target_date:
+            return list(group.get("hours") or [])
+    return []
+
+
+PT_MONTH_QUERY = {
+    "janeiro": 1,
+    "fevereiro": 2,
+    "marco": 3,
+    "março": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
+}
+
+
+def _question_date_parts(question: str) -> list[tuple[int, int, int | None]]:
+    clean = str(question or "").lower()
+    dates: list[tuple[int, int, int | None]] = []
+    for match in re.finditer(r"\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b", clean):
+        year = int(match.group(3)) if match.group(3) else None
+        if year is not None and year < 100:
+            year += 2000
+        dates.append((int(match.group(1)), int(match.group(2)), year))
+    month_pattern = "|".join(PT_MONTH_QUERY)
+    for match in re.finditer(rf"\b(\d{{1,2}})\s+de\s+({month_pattern})(?:\s+de\s+(\d{{2,4}}))?\b", clean):
+        year = int(match.group(3)) if match.group(3) else None
+        if year is not None and year < 100:
+            year += 2000
+        dates.append((int(match.group(1)), PT_MONTH_QUERY[match.group(2)], year))
+    return dates
+
+
+def _row_datetime(row: dict) -> datetime | None:
+    for key in ("actual_value", "completed_at", "planned_value", "date_value", "departure_at", "eta", "ata"):
+        value = row.get(key)
+        if not value:
+            continue
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+    return None
+
+
+def _row_timestamp(row: dict) -> float:
+    row_dt = _row_datetime(row)
+    return row_dt.timestamp() if row_dt else 0.0
+
+
+def _row_matches_question_date(row: dict, date_parts: list[tuple[int, int, int | None]]) -> bool:
+    if not date_parts:
+        return True
+    row_dt = _row_datetime(row)
+    if not row_dt:
+        return False
+    local_dt = row_dt.astimezone()
+    return any(
+        local_dt.day == day
+        and local_dt.month == month
+        and (year is None or local_dt.year == year)
+        for day, month, year in date_parts
+    )
+
+
+def _vessel_match_score(question: str, item: dict) -> int:
+    clean_question = f" {_operational_lookup_key(question)} "
+    score = 0
+    for key, weight in (("vessel_name", 12), ("vessel_imo", 12), ("vessel_call_sign", 10), ("reference_code", 8)):
+        value = _operational_lookup_key(item.get(key))
+        if value and f" {value} " in clean_question:
+            score += weight
+    return score
+
+
+def _visible_activity(window_days: int = 3650) -> dict:
+    return filter_port_activity_for_session(
+        services.store.get_port_activity_snapshot(window_days=window_days),
+        public_operational=True,
+    )
+
+
+def _visible_port_call_rows(port_activity: dict) -> list[dict]:
+    return visible_port_calls_from_activity(port_activity)
+
+
+def _find_visible_vessel(question: str, port_activity: dict) -> dict | None:
+    candidates = []
+    for item in _visible_port_call_rows(port_activity):
+        score = _vessel_match_score(question, item)
+        if score:
+            candidates.append((score, item.get("departure_at") or item.get("eta") or item.get("date_value") or "", item))
+    candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    return candidates[0][2] if candidates else None
+
+
+def _activity_maneuver_rows(question: str, clean_question: str, port_activity: dict, maneuver_type: str = "") -> list[dict]:
+    date_parts = _question_date_parts(question)
+    rows = list(port_activity.get("planned_maneuvers") or []) + list(port_activity.get("archived_maneuvers") or [])
+    if maneuver_type:
+        rows = [item for item in rows if (item.get("maneuver_type") or "").strip().lower() == maneuver_type]
+    vessel_scored = [(score, item) for item in rows if (score := _vessel_match_score(question, item))]
+    if vessel_scored:
+        rows = [item for _, item in vessel_scored]
+    if date_parts:
+        rows = [item for item in rows if _row_matches_question_date(item, date_parts)]
+    if "saida" in clean_question or "saidas" in clean_question or "saída" in question.lower():
+        rows = [item for item in rows if (item.get("maneuver_type") or "").strip().lower() == "departure"]
+    elif "entrada" in clean_question:
+        rows = [item for item in rows if (item.get("maneuver_type") or "").strip().lower() == "entry"]
+    elif "mudanca" in clean_question or "mudança" in question.lower():
+        rows = [item for item in rows if (item.get("maneuver_type") or "").strip().lower() == "shift"]
+    rows.sort(
+        key=lambda item: (
+            _row_timestamp(item),
+            item.get("vessel_name") or "",
+        ),
+        reverse=True,
+    )
+    return rows
+
+
+def _maneuver_route_label(row: dict) -> str:
+    origin = row.get("local_origin") or "--"
+    destination = row.get("local_destination") or "--"
+    return f"{origin} -> {destination}"
+
+
+def _maneuver_noun_label(row: dict) -> str:
+    maneuver_type = (row.get("maneuver_type") or "").strip().lower()
+    return {
+        "entry": "entrada",
+        "departure": "saída",
+        "shift": "mudança",
+    }.get(maneuver_type, (row.get("maneuver_label") or "manobra").lower())
+
+
 def build_maneuver_archive_source(question: str, port_activity: dict, max_rows: int = 12) -> dict:
     """Build a chat supplemental source from archived maneuvers ranked by relevance to the question."""
     archive_rows = port_activity.get("archived_maneuvers", [])
@@ -149,12 +408,13 @@ def build_maneuver_archive_source(question: str, port_activity: dict, max_rows: 
         f"- Total no arquivo disponível para consulta: {port_activity['stats'].get('archive_count', 0)}",
     ]
     for item in selected:
+        maneuver_id = item.get("maneuver_id") or "--"
         lines.append(
-            f"- {item.get('date_label', '--')} | {item.get('reference_code', '--')} | {item.get('vessel_name', '--')} | "
+            f"- {item.get('date_label', '--')} | escala {item.get('reference_code', '--')} | manobra {maneuver_id} | {item.get('vessel_name', '--')} | "
             f"{item.get('maneuver_label', '--')} | Hora {item.get('execution_window_label') or item.get('actual_label') or item.get('planned_label') or '--'} | "
             f"{item.get('local_origin', '--')} -> {item.get('local_destination', '--')} | "
-            f"agente {item.get('agent_label', '--')} | validado por {item.get('validated_by_label', '--')} | "
-            f"executado por {item.get('executed_by_label', '--')} | rebocadores {item.get('tug_count_label', '--')} | "
+            f"agente {_agent_display(item)} | validado por {_pilot_display(item, 'validated_by_label', 'validated_by_profile')} | "
+            f"executado por {_pilot_display(item, 'executed_by_label', 'executed_by_profile')} | rebocadores {item.get('tug_count_label', '--')} | "
             f"restrições {_constraint_labels_from_badges(item)}"
         )
         if item.get("detail_note"):
@@ -222,7 +482,8 @@ def build_scale_registry_source(question: str, port_activity: dict, max_rows: in
             f"- {item.get('reference_code', '--')} | {item.get('vessel_name', '--')} | estado {status_label} | "
             f"ETA {item.get('eta_label', '--')} | cais {item.get('berth_label', '--')} | "
             f"porto anterior {item.get('last_port', '--') or '--'} | próximo destino {item.get('next_port', '--') or '--'} | "
-            f"agente {item.get('agent_label', '--')} | piloto {item.get('pilot_label', '--')}"
+            f"agente {_agent_display(item)} | piloto {_pilot_display(item)} | "
+            f"IMO {item.get('vessel_imo') or item.get('ship_imo_label') or '--'} | indicativo {item.get('vessel_call_sign') or item.get('ship_call_sign_label') or '--'}"
         )
         if item.get("notes"):
             lines.append(f"  observações: {item['notes']}")
@@ -538,8 +799,14 @@ def build_operational_chat_sources(
     sources: list[dict] = []
     needs_portal_activity = _needs_portal_activity_context(question, plan=plan)
     if needs_portal_activity:
-        recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
-        historical_port_activity = services.store.get_port_activity_snapshot(window_days=3650)
+        recent_port_activity = filter_port_activity_for_session(
+            services.store.get_port_activity_snapshot(window_days=30),
+            public_operational=True,
+        )
+        historical_port_activity = filter_port_activity_for_session(
+            services.store.get_port_activity_snapshot(window_days=3650),
+            public_operational=True,
+        )
         sources.extend(
             [
                 build_operational_snapshot_source(recent_port_activity),
@@ -565,7 +832,10 @@ def build_operational_chat_sources(
         if maneuver_case_source:
             sources.append(maneuver_case_source)
     if recent_port_activity is None and _looks_like_cost_question(question):
-        recent_port_activity = services.store.get_port_activity_snapshot(window_days=30)
+        recent_port_activity = filter_port_activity_for_session(
+            services.store.get_port_activity_snapshot(window_days=30),
+            public_operational=True,
+        )
     cost_source = build_cost_context_source(question, recent_port_activity or {})
     if cost_source:
         sources.append(cost_source)
@@ -597,6 +867,24 @@ def answer_direct_operational_query(
     live_environment_answer = _answer_live_environment_query(question, clean_question, plan=plan)
     if live_environment_answer:
         return live_environment_answer
+    berthed_vessels_answer = _answer_berthed_vessels_query(question, clean_question)
+    if berthed_vessels_answer:
+        return berthed_vessels_answer
+    vessel_detail_answer = _answer_vessel_detail_query(question, clean_question)
+    if vessel_detail_answer:
+        return vessel_detail_answer
+    maneuver_actor_answer = _answer_maneuver_actor_query(question, clean_question, plan=plan)
+    if maneuver_actor_answer:
+        return maneuver_actor_answer
+    agent_lookup_answer = _answer_agent_lookup_query(question, clean_question, plan=plan)
+    if agent_lookup_answer:
+        return agent_lookup_answer
+    agent_agency_answer = _answer_agent_agency_query(question, clean_question)
+    if agent_agency_answer:
+        return agent_agency_answer
+    maneuver_id_answer = _answer_maneuver_id_query(question, clean_question, plan=plan)
+    if maneuver_id_answer:
+        return maneuver_id_answer
     recent_departures_answer = _answer_recent_departures_query(question, clean_question)
     if recent_departures_answer:
         return recent_departures_answer
@@ -664,6 +952,283 @@ def answer_direct_operational_query(
     }
 
 
+def _source_from_answer(document: str, source_id: str, answer: str, question: str) -> list[dict]:
+    return [
+        {
+            "document": document,
+            "source_id": source_id,
+            "retrieval_mode": "operational_live",
+            "snippet": answer,
+            "question": question,
+        }
+    ]
+
+
+def _planned_rows_for_port_call(port_activity: dict, port_call_id: str) -> list[dict]:
+    rows = [
+        item
+        for item in list(port_activity.get("planned_maneuvers") or []) + list(port_activity.get("archived_maneuvers") or [])
+        if item.get("port_call_id") == port_call_id
+    ]
+    rows.sort(key=_row_timestamp)
+    return rows
+
+
+def _format_activity_maneuver_line(row: dict, *, include_actors: bool = True) -> str:
+    maneuver_id = row.get("maneuver_id") or "--"
+    time_label = (
+        row.get("execution_window_label")
+        or row.get("actual_label")
+        or row.get("planned_label")
+        or _local_iso_to_label(row.get("date_value"))
+    )
+    line = (
+        f"- {row.get('maneuver_label') or 'Manobra'} · ID {maneuver_id} · "
+        f"{row.get('situation_label') or '--'} · {time_label} · {_maneuver_route_label(row)}"
+    )
+    if include_actors:
+        line += (
+            f" · aprovada por {_pilot_display(row, 'validated_by_label', 'validated_by_profile')} "
+            f"· executada por {_pilot_display(row, 'executed_by_label', 'executed_by_profile')}"
+        )
+    return line
+
+
+def _answer_berthed_vessels_query(question: str, clean_question: str) -> dict | None:
+    if not BERTHED_VESSELS_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=30)
+    berthed = [
+        item for item in port_activity.get("in_port", []) or []
+        if not is_anchorage_berth(item.get("berth_label") or item.get("berth"))
+    ]
+    stats = port_activity.get("stats") or {}
+    if not berthed:
+        answer = "Não há navios atracados em cais neste momento."
+        return {
+            "answer": answer,
+            "sources": _source_from_answer("Navios em cais do portal", "OPS_BERTHED_VESSELS", answer, question),
+            "answer_origin": "operational_live",
+        }
+
+    lines = [
+        (
+            f"Navios atracados em cais: {len(berthed)} "
+            f"({stats.get('occupied_slot_count', len(berthed))}/{stats.get('slot_capacity_count', '--')} slots ocupados)."
+        )
+    ]
+    for item in berthed[:8]:
+        planned_rows = _planned_rows_for_port_call(port_activity, item.get("id", ""))
+        next_maneuver = next((row for row in planned_rows if row.get("situation_class") in {"pending", "approved"}), None)
+        suffix = ""
+        if next_maneuver:
+            suffix = (
+                f" · próxima manobra: {next_maneuver.get('maneuver_label') or 'Manobra'} "
+                f"{next_maneuver.get('planned_label') or '--'} "
+                f"(ID {next_maneuver.get('maneuver_id') or '--'})"
+            )
+        lines.append(
+            f"- {item.get('vessel_name', '--')} · {item.get('berth_label') or item.get('berth') or '--'} "
+            f"· escala {item.get('reference_code') or '--'} · agente {_agent_display(item)}{suffix}"
+        )
+    if len(berthed) > 8:
+        lines.append(f"- +{len(berthed) - 8} navio(s) adicionais em cais.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": _source_from_answer("Navios em cais do portal", "OPS_BERTHED_VESSELS", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _status_label_for_port_call(item: dict) -> str:
+    status = (item.get("status") or "").strip().lower()
+    berth = item.get("berth_label") or item.get("berth")
+    if status == "in_port" and is_anchorage_berth(berth):
+        return "Em quadro"
+    if status == "in_port":
+        return "Em porto"
+    if status == "departed":
+        return "Concluída"
+    if status == "scheduled":
+        return "Prevista"
+    return item.get("status_label") or status or "--"
+
+
+def _answer_vessel_detail_query(question: str, clean_question: str) -> dict | None:
+    if not VESSEL_DETAIL_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=3650)
+    vessel = _find_visible_vessel(question, port_activity)
+    if not vessel:
+        return None
+
+    port_call_id = vessel.get("id") or vessel.get("port_call_id") or ""
+    maneuver_rows = _planned_rows_for_port_call(port_activity, port_call_id)
+    berth_label = vessel.get("berth_label") or vessel.get("berth") or "--"
+    lines = [
+        f"Navio {vessel.get('vessel_name') or '--'}",
+        f"- Escala: {vessel.get('reference_code') or '--'}",
+        f"- Identificação: IMO {vessel.get('vessel_imo') or vessel.get('ship_imo_label') or '--'}; indicativo {vessel.get('vessel_call_sign') or vessel.get('ship_call_sign_label') or '--'}; bandeira {vessel.get('vessel_flag') or vessel.get('ship_flag_label') or '--'}.",
+        f"- Ficha: tipo {vessel.get('ship_type_label') or vessel.get('vessel_type') or '--'}; LOA {_format_measure(vessel.get('ship_loa_label') or vessel.get('vessel_loa_m'), ' m')}; boca {_format_measure(vessel.get('ship_beam_label') or vessel.get('vessel_beam_m'), ' m')}; GT {_format_measure(vessel.get('ship_gt_label') or vessel.get('vessel_gt_t') or vessel.get('vessel_gt'))}; DWT {_format_measure(vessel.get('ship_dwt_label') or vessel.get('vessel_dwt_t'))}; calado máx. {_format_measure(vessel.get('ship_max_draft_label') or vessel.get('vessel_max_draft_m'), ' m')}.",
+        f"- Meios do navio: bow thruster {vessel.get('ship_bow_thruster_label') or '--'}; stern thruster {vessel.get('ship_stern_thruster_label') or '--'}.",
+        f"- Estado/localização: {_status_label_for_port_call(vessel)} · {berth_label}.",
+        f"- Tráfego: {vessel.get('last_port') or '--'} -> {vessel.get('next_port') or '--'}.",
+        f"- Agente de navegação: {_agent_display(vessel)}.",
+    ]
+    if maneuver_rows:
+        lines.extend(["", "Manobras conhecidas:"])
+        for row in maneuver_rows[-6:]:
+            lines.append(_format_activity_maneuver_line(row))
+            constraints = _constraint_labels_from_badges(row)
+            if constraints != "--" or (row.get("tug_count_label") and row.get("tug_count_label") != "--"):
+                lines.append(
+                    f"  Meios/restrições: rebocadores {row.get('tug_count_label') or '--'}; restrições {constraints}."
+                )
+    else:
+        lines.extend(["", "Manobras conhecidas:", "- Sem manobras planeadas ou arquivadas visíveis para esta escala."])
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": _source_from_answer(vessel.get("vessel_name") or "Navio", vessel.get("reference_code") or "OPS_VESSEL_DETAIL", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _answer_maneuver_actor_query(
+    question: str,
+    clean_question: str,
+    *,
+    plan: ChatExecutionPlan | None = None,
+) -> dict | None:
+    if not MANEUVER_APPROVER_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=3650)
+    has_vessel = bool(_find_visible_vessel(question, port_activity))
+    has_date = bool(_question_date_parts(question))
+    if not has_vessel and not has_date:
+        return None
+    rows = _activity_maneuver_rows(question, clean_question, port_activity, (plan.maneuver_lookup_type if plan else "") or "")
+    if not rows:
+        return None
+    row = rows[0]
+    validated_by = _pilot_display(row, "validated_by_label", "validated_by_profile")
+    executed_by = _pilot_display(row, "executed_by_label", "executed_by_profile")
+    answer = (
+        f"A manobra {row.get('maneuver_label', 'Manobra').lower()} do {row.get('vessel_name', '--')} "
+        f"({row.get('date_label') or '--'}, {_maneuver_route_label(row)}) foi aprovada por {validated_by}."
+    )
+    if executed_by and executed_by != "--":
+        answer += f" O registo de execução indica {executed_by} como piloto executante."
+    if row.get("maneuver_id"):
+        answer += f" ID da manobra: {row.get('maneuver_id')}."
+    return {
+        "answer": answer,
+        "sources": _source_from_answer("Arquivo de manobras do portal", row.get("maneuver_id") or "OPS_MANEUVER_ACTOR", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _answer_agent_lookup_query(
+    question: str,
+    clean_question: str,
+    *,
+    plan: ChatExecutionPlan | None = None,
+) -> dict | None:
+    if not AGENT_LOOKUP_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=3650)
+    vessel = _find_visible_vessel(question, port_activity)
+    rows = _activity_maneuver_rows(question, clean_question, port_activity, (plan.maneuver_lookup_type if plan else "") or "")
+    if rows:
+        item = rows[0]
+    elif vessel:
+        item = vessel
+    else:
+        return None
+    answer = (
+        f"Agente de navegação do {item.get('vessel_name', 'navio')}: "
+        f"{_agent_display(item)}."
+    )
+    if item.get("reference_code"):
+        answer += f" Escala: {item.get('reference_code')}."
+    if item.get("maneuver_id"):
+        answer += f" Manobra: {item.get('maneuver_id')}."
+    return {
+        "answer": answer,
+        "sources": _source_from_answer("Agente de navegação do portal", "OPS_AGENT_LOOKUP", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _answer_agent_agency_query(question: str, clean_question: str) -> dict | None:
+    if not AGENT_AGENCY_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=3650)
+    candidates = []
+    for collection in ("arrivals", "in_port", "departed", "planned_maneuvers", "archived_maneuvers", "archived_scales"):
+        for item in port_activity.get(collection, []) or []:
+            label = item.get("agent_label") or ""
+            label_key = _operational_lookup_key(label)
+            if label_key and f" {label_key} " in f" {clean_question} ":
+                candidates.append(item)
+    if not candidates:
+        return None
+    item = candidates[0]
+    agent = item.get("agent_label") or "--"
+    organization = _profile_organization(item.get("agent_profile"))
+    if organization:
+        answer = f"{agent} está registado como agente de navegação da agência {organization}."
+    else:
+        answer = f"{agent} está registado como agente de navegação, mas a agência não está preenchida no perfil visível."
+    return {
+        "answer": answer,
+        "sources": _source_from_answer("Perfis de agentes do portal", "OPS_AGENT_AGENCY", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _answer_maneuver_id_query(
+    question: str,
+    clean_question: str,
+    *,
+    plan: ChatExecutionPlan | None = None,
+) -> dict | None:
+    if not (re.search(r"\b(id|identificador)\b", clean_question) and "manobra" in clean_question):
+        return None
+    port_activity = _visible_activity(window_days=3650)
+    vessel = _find_visible_vessel(question, port_activity)
+    has_specific_target = bool(vessel) or bool(_question_date_parts(question)) or bool(re.search(r"\bptset[a-z0-9]+\b", clean_question))
+    if not has_specific_target:
+        return None
+    rows = _activity_maneuver_rows(question, clean_question, port_activity, (plan.maneuver_lookup_type if plan else "") or "")
+    if rows:
+        scale_reference = vessel.get("reference_code") if vessel else rows[0].get("reference_code")
+        lines = []
+        if "escala" in clean_question:
+            lines.append(f"ID da escala: {scale_reference or '--'}.")
+        if len(rows) == 1:
+            row = rows[0]
+            lines.append(
+                f"ID da manobra de {_maneuver_noun_label(row)}: {row.get('maneuver_id') or '--'} "
+                f"(escala {row.get('reference_code') or scale_reference or '--'} · {row.get('vessel_name', '--')} · "
+                f"{row.get('date_label') or '--'} · {_maneuver_route_label(row)})."
+            )
+        else:
+            lines.append("Manobras encontradas:")
+            for row in rows[:6]:
+                lines.append(_format_activity_maneuver_line(row, include_actors=False))
+            if len(rows) > 6:
+                lines.append(f"- +{len(rows) - 6} manobra(s) adicionais.")
+        answer = "\n".join(lines)
+        return {
+            "answer": answer,
+            "sources": _source_from_answer("IDs de manobras do portal", "OPS_MANEUVER_IDS", answer, question),
+            "answer_origin": "operational_lookup",
+        }
+    return None
+
+
 def _looks_like_recent_departures_query(clean_question: str) -> bool:
     if not clean_question:
         return False
@@ -678,9 +1243,18 @@ def _looks_like_recent_departures_query(clean_question: str) -> bool:
 def _answer_recent_departures_query(question: str, clean_question: str) -> dict | None:
     if not _looks_like_recent_departures_query(clean_question):
         return None
-    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=3650))
+    port_activity = filter_port_activity_for_session(
+        services.store.get_port_activity_snapshot(window_days=3650),
+        public_operational=True,
+    )
+    departed_rows = [
+        item for item in port_activity.get("archived_maneuvers", []) or []
+        if (item.get("maneuver_type") or "").strip().lower() == "departure"
+        and item.get("situation_class") == "completed"
+    ]
+    departed_rows.sort(key=_row_timestamp, reverse=True)
     departed = list(port_activity.get("departed", []) or [])
-    if not departed:
+    if not departed_rows and not departed:
         answer = "Não há saídas registadas no portal no histórico operacional disponível."
         return {
             "answer": answer,
@@ -695,12 +1269,22 @@ def _answer_recent_departures_query(question: str, clean_question: str) -> dict 
             "answer_origin": "operational_live",
         }
     lines = ["Sim. Saídas recentes registadas no portal:"]
-    for item in departed[:5]:
-        vessel_name = item.get("vessel_name") or "--"
-        atd_label = item.get("departure_label") or _local_iso_to_label(item.get("departure_at"))
-        origin = item.get("berth_label") or item.get("berth") or "--"
-        destination = item.get("next_port") or "--"
-        lines.append(f"- {vessel_name} - ATD {atd_label} - {origin} -> {destination}.")
+    if departed_rows:
+        for item in departed_rows[:5]:
+            atd_label = item.get("actual_label") or item.get("execution_finished_label") or _local_iso_to_label(item.get("actual_value"))
+            lines.append(
+                f"- {item.get('vessel_name') or '--'} · ATD {atd_label} · {_maneuver_route_label(item)} · "
+                f"manobra {item.get('maneuver_id') or '--'} · agente {_agent_display(item)} · "
+                f"aprovada por {_pilot_display(item, 'validated_by_label', 'validated_by_profile')} · "
+                f"executada por {_pilot_display(item, 'executed_by_label', 'executed_by_profile')}."
+            )
+    else:
+        for item in departed[:5]:
+            vessel_name = item.get("vessel_name") or "--"
+            atd_label = item.get("departure_label") or _local_iso_to_label(item.get("departure_at"))
+            origin = item.get("berth_label") or item.get("berth") or "--"
+            destination = item.get("next_port") or "--"
+            lines.append(f"- {vessel_name} · ATD {atd_label} · {origin} -> {destination} · agente {_agent_display(item)}.")
     answer = "\n".join(lines)
     return {
         "answer": answer,
@@ -761,7 +1345,10 @@ def _looks_like_route_duration_query(clean_question: str) -> bool:
 def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict | None:
     if not _looks_like_expected_arrivals_query(clean_question):
         return None
-    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=30))
+    port_activity = filter_port_activity_for_session(
+        services.store.get_port_activity_snapshot(window_days=30),
+        public_operational=True,
+    )
     arrivals = list(port_activity.get("arrivals", []) or [])
     if not arrivals:
         answer = "Não há chegadas previstas registadas no portal para os próximos dias."
@@ -783,7 +1370,10 @@ def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict 
         eta_label = item.get("arrival_label") or item.get("planned_label") or _local_iso_to_label(item.get("arrival_at") or item.get("date_value"))
         origin = item.get("last_port") or item.get("local_origin") or "--"
         destination = item.get("berth_label") or item.get("berth") or item.get("local_destination") or "--"
-        lines.append(f"- {vessel_name} - ETA {eta_label} - {origin} -> {destination}.")
+        lines.append(
+            f"- {vessel_name} · ETA {eta_label} · {origin} -> {destination} · "
+            f"escala {item.get('reference_code') or '--'} · agente {_agent_display(item)}."
+        )
     answer = "\n".join(lines)
     return {
         "answer": answer,
@@ -816,7 +1406,10 @@ def _looks_like_planned_maneuvers_query(clean_question: str) -> bool:
 def _answer_planned_maneuvers_query(question: str, clean_question: str) -> dict | None:
     if not _looks_like_planned_maneuvers_query(clean_question):
         return None
-    port_activity = filter_port_activity_for_session(services.store.get_port_activity_snapshot(window_days=30))
+    port_activity = filter_port_activity_for_session(
+        services.store.get_port_activity_snapshot(window_days=30),
+        public_operational=True,
+    )
     planned = list(port_activity.get("planned_maneuvers", []) or [])
     if not planned:
         answer = "Não há manobras planeadas registadas no portal neste momento."
@@ -841,7 +1434,11 @@ def _answer_planned_maneuvers_query(question: str, clean_question: str) -> dict 
         destination = item.get("local_destination") or "--"
         situation = item.get("situation_label") or ""
         situation_suffix = f" [{situation}]" if situation else ""
-        lines.append(f"- {vessel_name} - {maneuver_label} {planned_label} - {origin} -> {destination}{situation_suffix}.")
+        lines.append(
+            f"- {vessel_name} · {maneuver_label} {planned_label} · {origin} -> {destination}{situation_suffix} · "
+            f"manobra {item.get('maneuver_id') or '--'} · agente {_agent_display(item)} · "
+            f"piloto {_pilot_display(item)}."
+        )
     answer = "\n".join(lines)
     return {
         "answer": answer,
@@ -886,6 +1483,101 @@ def _build_tide_lookup_answer(question: str) -> tuple[str, list[dict]]:
     return "\n".join(lines), sources
 
 
+def _build_daylight_answer(question: str, forecast: dict, weather_service) -> tuple[str, list[dict]] | None:
+    days = _select_weather_days(forecast, weather_service, question, default_count=1)
+    if not days:
+        return None
+    lines = []
+    for day in days:
+        lines.extend(
+            [
+                f"Período luminoso em Setúbal para {day.get('date_label') or day.get('date', '--')}:",
+                f"- Nascer do sol: {day.get('sunrise') or '--'}",
+                f"- Pôr do sol: {day.get('sunset') or '--'}",
+                f"- Duração da luz do dia: {day.get('daylight_duration_label') or '--'}",
+                f"- Período noturno: {day.get('night_duration_label') or '--'}",
+            ]
+        )
+    context = weather_service.context_for_question(question)
+    return "\n".join(lines), [context] if context else []
+
+
+def _build_moon_answer(question: str, forecast: dict, weather_service) -> tuple[str, list[dict]] | None:
+    days = _select_weather_days(forecast, weather_service, question, default_count=1)
+    if not days:
+        return None
+    lines = []
+    for day in days:
+        lines.extend(
+            [
+                f"Fase da lua em Setúbal para {day.get('date_label') or day.get('date', '--')}:",
+                f"- Fase: {day.get('moon_phase_icon') or '🌙'} {day.get('moon_phase_label') or day.get('moon_phase') or '--'}",
+                f"- Iluminação: {day.get('moon_illumination') or '--'}%",
+                f"- Nascer da lua: {day.get('moonrise') or '--'}",
+                f"- Ocaso da lua: {day.get('moonset') or '--'}",
+            ]
+        )
+    context = weather_service.context_for_question(question)
+    return "\n".join(lines), [context] if context else []
+
+
+def _build_today_forecast_answer(question: str, forecast: dict, weather_service) -> tuple[str, list[dict]] | None:
+    days = _select_weather_days(forecast, weather_service, question, default_count=1)
+    if not days:
+        return None
+    day = days[0]
+    hours = _hours_for_weather_day(forecast, day)
+    wind_summary = _weather_wind_summary(hours)
+    location = forecast.get("location", {})
+    current = forecast.get("current", {})
+    lines = [
+        f"Previsão meteorológica para hoje em {location.get('name', 'Setúbal')} ({location.get('localtime', '--')}):",
+        f"- Agora: {current.get('condition', '--')}; {current.get('temp_c', '--')} °C; vento {current.get('wind_kts', '--')} kts {current.get('wind_dir', '--')}; rajadas {current.get('gust_kts', '--')} kts.",
+        f"- Dia: {day.get('condition') or '--'}; temperatura {day.get('min_temp_c', '--')}–{day.get('max_temp_c', '--')} °C; precipitação total {day.get('rain_mm', '--')} mm.",
+        (
+            f"- Vento previsto: médio {wind_summary.get('avg_wind_kts') if wind_summary.get('avg_wind_kts') is not None else '--'} kts; "
+            f"máximo {wind_summary.get('max_wind_kts') if wind_summary.get('max_wind_kts') is not None else day.get('max_wind_kts', '--')} kts; "
+            f"rajada máxima {wind_summary.get('max_gust_kts') if wind_summary.get('max_gust_kts') is not None else day.get('max_gust_kts', '--')} kts."
+        ),
+        f"- Luz do dia: {day.get('sunrise') or '--'}–{day.get('sunset') or '--'} ({day.get('daylight_duration_label') or '--'}).",
+    ]
+    if day.get("moon_phase"):
+        lines.append(
+            f"- Lua: {day.get('moon_phase_icon') or '🌙'} {day.get('moon_phase_label') or day.get('moon_phase')} ({day.get('moon_illumination') or '--'}% iluminação)."
+        )
+    if hours:
+        lines.extend(["", "Resumo das próximas horas:"])
+        for hour in hours[:8]:
+            lines.append(f"- {_format_weather_slot(hour)}")
+        if len(hours) > 8:
+            lines.append(f"- +{len(hours) - 8} slot(s) horários até ao fim do dia.")
+    context = weather_service.context_for_question(question)
+    return "\n".join(lines), [context] if context else []
+
+
+def _build_next_days_forecast_answer(question: str, forecast: dict, weather_service) -> tuple[str, list[dict]] | None:
+    days = _select_weather_days(forecast, weather_service, question, default_count=3)
+    if not days:
+        return None
+    location = forecast.get("location", {})
+    lines = [f"Previsão geral para {location.get('name', 'Setúbal')} nos próximos dias:"]
+    for day in days[:3]:
+        hours = _hours_for_weather_day(forecast, day)
+        wind_summary = _weather_wind_summary(hours)
+        avg_wind = wind_summary.get("avg_wind_kts")
+        max_wind = wind_summary.get("max_wind_kts") if wind_summary.get("max_wind_kts") is not None else day.get("max_wind_kts")
+        max_gust = wind_summary.get("max_gust_kts") if wind_summary.get("max_gust_kts") is not None else day.get("max_gust_kts")
+        lines.append(
+            f"- {day.get('date_label') or day.get('date', '--')}: {day.get('condition') or '--'}; "
+            f"{day.get('min_temp_c', '--')}–{day.get('max_temp_c', '--')} °C; "
+            f"vento médio {avg_wind if avg_wind is not None else '--'} kts, máx. {max_wind or '--'} kts, "
+            f"rajadas {max_gust or '--'} kts; chuva {day.get('rain_mm', '--')} mm; "
+            f"luz {day.get('sunrise') or '--'}–{day.get('sunset') or '--'}."
+        )
+    context = weather_service.context_for_question(question)
+    return "\n".join(lines), [context] if context else []
+
+
 def _build_weather_lookup_answer(
     question: str,
     clean_question: str,
@@ -899,6 +1591,23 @@ def _build_weather_lookup_answer(
     forecast = weather_service.get_forecast(days=3)
     if not forecast:
         return "Não consegui obter as condições meteorológicas atuais.", []
+
+    if DAYLIGHT_QUERY_RE.search(clean_question):
+        daylight_answer = _build_daylight_answer(question, forecast, weather_service)
+        if daylight_answer:
+            return daylight_answer
+    if MOON_QUERY_RE.search(clean_question):
+        moon_answer = _build_moon_answer(question, forecast, weather_service)
+        if moon_answer:
+            return moon_answer
+    if WEATHER_FORECAST_DAYS_RE.search(clean_question):
+        days_answer = _build_next_days_forecast_answer(question, forecast, weather_service)
+        if days_answer:
+            return days_answer
+    if WEATHER_FORECAST_TODAY_RE.search(clean_question):
+        today_answer = _build_today_forecast_answer(question, forecast, weather_service)
+        if today_answer:
+            return today_answer
 
     location = forecast.get("location", {})
     current = forecast.get("current", {})
@@ -1215,6 +1924,19 @@ def _build_local_warning_lookup_answer(
         return "Sem avisos locais em vigor.", []
 
     lines: list[str]
+    code_match = LOCAL_WARNING_CODE_RE.search(question or "")
+    if code_match and hasattr(warning_service, "detail_text"):
+        answer = warning_service.detail_text(code_match.group(1))
+        context = {
+            "source_id": "LW_DETAIL",
+            "document": "Aviso local em vigor",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "live_api",
+            "snippet": answer,
+            "text": answer,
+        }
+        return answer, [context]
     if _looks_like_warning_count_query(clean_question):
         lines = [f"Existem {len(warnings)} aviso(s) locais em vigor."]
     else:

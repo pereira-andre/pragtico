@@ -140,6 +140,26 @@ def _emit_maneuver_notification(
         )
 
 
+def _ensure_maneuver_destination_can_be_approved(
+    port_call: dict,
+    maneuver_type: str,
+    *,
+    label: str = "Cais destino",
+) -> None:
+    """Validate berth occupation at pilot approval time for entry/shift maneuvers."""
+    maneuver = latest_maneuver_by_type(port_call, maneuver_type)
+    if not maneuver or maneuver.get("state") != "pending":
+        return
+    if maneuver_type not in {"entry", "shift"}:
+        return
+    ensure_portal_berth_is_available(
+        maneuver.get("destination", ""),
+        current_port_call_id=port_call.get("id", ""),
+        label=label,
+        target_planned_at=maneuver.get("planned_at"),
+    )
+
+
 def _iso_to_local_input_value(value: str | None) -> str:
     if not value:
         return ""
@@ -841,6 +861,8 @@ def approve_port_call(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         target_type = "entry" if current.get("status") == "scheduled" else "departure"
+        if target_type == "entry":
+            _ensure_maneuver_destination_can_be_approved(current, "entry", label="Cais")
         port_call = services.store.approve_port_call(
             port_call_id=port_call_id, decided_by=session["username"],
             approval_note=request.form.get("approval_note", "").strip(),
@@ -1021,6 +1043,8 @@ def schedule_shift_plan(port_call_id: str):
 def approve_shift_plan(port_call_id: str):
     """Aprovar o planeamento de mudança de cais pendente."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        _ensure_maneuver_destination_can_be_approved(current, "shift", label="Cais destino")
         port_call = services.store.approve_shift_plan(
             port_call_id=port_call_id, decided_by=session["username"],
             approval_note=request.form.get("approval_note", "").strip(),

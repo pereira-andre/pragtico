@@ -210,6 +210,28 @@ def _scale_cost_summary(port_call: dict, *, maneuver: dict | None = None) -> str
     return format_cost_summary(estimate)
 
 
+def _profile_organization(profile: dict | None) -> str:
+    return " ".join(str((profile or {}).get("organization") or "").split())
+
+
+def _agent_label_with_agency(port_call: dict) -> str:
+    label = " ".join(str(port_call.get("agent_label") or "--").split()) or "--"
+    organization = _profile_organization(port_call.get("agent_profile") or port_call.get("created_by_profile"))
+    if organization and label not in {"--", organization}:
+        return f"{label} ({organization})"
+    if organization:
+        return organization
+    return f"{label} (agência não registada)" if label != "--" else "--"
+
+
+def _pilot_label(profile_label: str, profile: dict | None) -> str:
+    label = " ".join(str(profile_label or "--").split()) or "--"
+    organization = _profile_organization(profile)
+    if organization and label not in {"--", organization}:
+        return f"{label} ({organization})"
+    return organization or label
+
+
 def _format_scale_query_answer(port_call: dict, *, include_cost: bool = False) -> str:
     lines = [
         f"Escala {port_call.get('reference_code') or port_call.get('id', '--')}",
@@ -219,7 +241,7 @@ def _format_scale_query_answer(port_call: dict, *, include_cost: bool = False) -
         f"ETA: {port_call.get('eta_label') or '--'}",
         f"ATA: {port_call.get('ata_label') or '--'}",
         f"ATD: {port_call.get('departure_label') or '--'}",
-        f"Agente: {port_call.get('agent_label') or '--'}",
+        f"Agente de navegação: {_agent_label_with_agency(port_call)}",
     ]
     if include_cost:
         lines.extend(["", _scale_cost_summary(port_call)])
@@ -239,6 +261,8 @@ def _format_maneuver_query_answer(port_call: dict, maneuver: dict, *, include_co
         f"Destino: {maneuver.get('destination') or '--'}",
         f"Prevista: {maneuver.get('planned_label') or '--'}",
         f"Executada: {maneuver.get('completed_label') or maneuver.get('finished_label') or '--'}",
+        f"Aprovada por: {_pilot_label(maneuver.get('pilot_label'), maneuver.get('pilot_profile'))}",
+        f"Executada/registada por: {_pilot_label(maneuver.get('reported_by_label'), maneuver.get('reported_by_profile'))}",
     ]
     if include_cost:
         lines.extend(["", _scale_cost_summary(port_call, maneuver=maneuver)])
@@ -258,6 +282,10 @@ def _format_vessel_query_answer(port_call: dict) -> str:
             f"GT: {port_call.get('vessel_gt_t') or '--'}",
             f"DWT: {port_call.get('vessel_dwt_t') or '--'}",
             f"Calado max.: {port_call.get('vessel_max_draft_m') or '--'} m",
+            f"Bow thruster: {port_call.get('ship_bow_thruster_label') or port_call.get('vessel_bow_thruster') or '--'}",
+            f"Stern thruster: {port_call.get('ship_stern_thruster_label') or port_call.get('vessel_stern_thruster') or '--'}",
+            f"Estado/localização: {port_call.get('status_label') or port_call.get('status') or '--'} · {port_call.get('berth_label') or port_call.get('berth') or '--'}",
+            f"Agente de navegação: {_agent_label_with_agency(port_call)}",
             f"Ultima escala visivel: {port_call.get('reference_code') or '--'}",
         ]
     )
@@ -1129,6 +1157,34 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             change_reason=require_form_text(field_text("change_reason", field_text("reason")), "Motivo da alteração"),
         )
 
+    def ensure_destination_available_for_approval(current_maneuver_type: str, label: str = "Cais destino") -> None:
+        if current_maneuver_type not in {"entry", "shift"}:
+            return
+        refreshed_port_call = services.store.get_port_call(port_call_id)
+        candidates = [
+            item
+            for item in refreshed_port_call.get("maneuver_history", []) or []
+            if (item.get("type") or "").strip().lower() == current_maneuver_type
+            and (item.get("state") or "").strip().lower() == "pending"
+        ]
+        if not candidates:
+            return
+        candidates.sort(
+            key=lambda item: (
+                item.get("planned_at")
+                or item.get("completed_at")
+                or item.get("created_at")
+                or ""
+            )
+        )
+        maneuver = candidates[-1]
+        ensure_portal_berth_is_available(
+            maneuver.get("destination", ""),
+            current_port_call_id=port_call_id,
+            label=label,
+            target_planned_at=maneuver.get("planned_at"),
+        )
+
     if action == "create_port_call":
         eta = parse_local_datetime_input(field_text("eta_local"), "ETA")
         validate_not_past_datetime(eta, "ETA")
@@ -1219,6 +1275,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
 
     if action == "approve_entry":
         apply_plan_updates_before_approval(port_call, "entry")
+        ensure_destination_available_for_approval("entry", label="Cais")
         result = services.store.approve_port_call(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Entrada aprovada para {result['vessel_name']}."
     if action == "abort_entry":
@@ -1334,6 +1391,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         return result, f"Mudança planeada para {result['vessel_name']} às {result['planned_shift_label']}."
     if action == "approve_shift":
         apply_plan_updates_before_approval(port_call, "shift")
+        ensure_destination_available_for_approval("shift", label="Cais destino")
         result = services.store.approve_shift_plan(port_call_id=port_call_id, decided_by=username, approval_note=field_text("approval_note", field_text("change_reason", field_text("reason", field_text("notes")))))
         return result, f"Mudança aprovada para {result['vessel_name']}."
     if action == "abort_shift":
