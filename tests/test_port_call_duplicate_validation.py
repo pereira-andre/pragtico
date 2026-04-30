@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from core.operational_actions import build_tracked_scales
+from storage.port_call_helpers import _build_port_activity_snapshot
 from storage.postgres_port_calls import _find_active_duplicate_port_call
 
 
@@ -107,6 +109,39 @@ class PortCallDuplicateValidationTests(unittest.TestCase):
         self.assertEqual(len(tracked), 1)
         self.assertEqual(tracked[0]["id"], "arklow-hidden")
         self.assertIn("ARKLOW GLOBE", tracked[0]["vessel_name"])
+
+    def test_overdue_scheduled_port_call_is_visible_in_activity_window(self) -> None:
+        eta = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        activity = _build_port_activity_snapshot(
+            [
+                {
+                    "id": "overdue",
+                    "vessel_name": "ARKLOW GLOBE",
+                    "vessel_imo": "9874105",
+                    "vessel_call_sign": "ABC123",
+                    "status": "scheduled",
+                    "created_by": "agent",
+                    "berth": "Secil W",
+                    "last_port": "Lisboa",
+                    "next_port": "Faro",
+                    "eta": eta,
+                    "maneuver_history": [
+                        {
+                            "id": "entry-overdue",
+                            "type": "entry",
+                            "state": "pending",
+                            "planned_at": eta,
+                            "origin": "Lisboa",
+                            "destination": "Secil W",
+                            "created_by": "agent",
+                        }
+                    ],
+                }
+            ],
+            window_days=5,
+        )
+
+        self.assertEqual([item["id"] for item in activity["arrivals"]], ["overdue"])
 
 
 if __name__ == "__main__":

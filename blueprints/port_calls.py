@@ -5,7 +5,7 @@ import logging
 import re
 from datetime import datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, session, url_for
 
 from core import services
 from domain.error_catalog import flash_error_message
@@ -73,6 +73,7 @@ PORT_CALL_JSON_TEMPLATE = {
 }
 
 VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
+VESSEL_CATALOG_DELETED_KEYS_KEY = "deleted_keys"
 VESSEL_CATALOG_JSON_TEMPLATE = {
     "vessels": [
         {
@@ -94,6 +95,30 @@ VESSEL_CATALOG_JSON_TEMPLATE = {
             "tup_reduction_profile": "regular_line",
             "service_notes": "Perfil comercial de demonstração.",
         }
+    ]
+}
+MANEUVER_JSON_TEMPLATE = {
+    "maneuvers": [
+        {
+            "port_call_id": "PTSET26MSCL0001",
+            "type": "departure",
+            "planned_at": "2026-04-20T19:30:00+01:00",
+            "next_port": "Vigo",
+            "draft_m": "10.8",
+            "tug_count": 2,
+            "constraints": ["daylight"],
+            "notes": "Saída planeada pelo agente.",
+        },
+        {
+            "reference_code": "PTSET26MSCL0001",
+            "type": "shift",
+            "planned_at": "2026-04-20T16:00:00+01:00",
+            "destination_berth": "TMS 2 - Posição A",
+            "draft_m": "10.8",
+            "tug_count": 1,
+            "constraints": [],
+            "notes": "Mudança interna.",
+        },
     ]
 }
 VESSEL_CATALOG_FIELDS = (
@@ -231,6 +256,50 @@ def _integer_payload_value(payload: dict, *keys: str, default: str = "") -> str:
     return str(number)
 
 
+def _load_json_upload_payload(label: str) -> object:
+    uploaded_file = request.files.get("payload_file")
+    raw_payload = ""
+    if uploaded_file and uploaded_file.filename:
+        raw_payload = uploaded_file.read().decode("utf-8-sig")
+    if not raw_payload.strip():
+        raw_payload = request.form.get("payload_json", "")
+    if not raw_payload.strip():
+        raise ValueError(f"Indica o JSON de {label} ou carrega um ficheiro .json.")
+    relaxed_payload = raw_payload
+    relaxed_payload = re.sub(r'("constraints"\s*:\s*)(?=(,|\}))', r"\1[]", relaxed_payload)
+    relaxed_payload = re.sub(r",(\s*[}\]])", r"\1", relaxed_payload)
+    try:
+        return json.loads(relaxed_payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
+
+
+def _payload_list_from_json(
+    payload: object,
+    *,
+    plural_keys: tuple[str, ...],
+    singular_keys: tuple[str, ...],
+    label: str,
+) -> list[dict]:
+    if isinstance(payload, dict):
+        for key in plural_keys:
+            if isinstance(payload.get(key), list):
+                payload = payload[key]
+                break
+        else:
+            for key in singular_keys:
+                if isinstance(payload.get(key), dict):
+                    payload = [payload[key]]
+                    break
+            else:
+                payload = [payload]
+    if not isinstance(payload, list) or not payload:
+        raise ValueError(f"O JSON de {label} tem de conter um objeto ou uma lista de objetos.")
+    if not all(isinstance(item, dict) for item in payload):
+        raise ValueError(f"Cada item no JSON de {label} tem de ser um objeto.")
+    return payload
+
+
 def _vessel_catalog_key(record: dict) -> str:
     imo = re.sub(r"\D", "", _string_payload_value(record, "vessel_imo"))
     if imo:
@@ -288,24 +357,41 @@ def _validate_vessel_catalog_record(payload: dict) -> dict:
 
 
 def _read_vessel_catalog_records() -> list[dict]:
-    state = services.store.get_runtime_state(VESSEL_CATALOG_STATE_KEY) or {}
+    state = _read_vessel_catalog_state()
     records = state.get("items") or []
     return [item for item in records if isinstance(item, dict)]
 
 
-def _write_vessel_catalog_records(records: list[dict]) -> None:
+def _read_vessel_catalog_state() -> dict:
+    state = services.store.get_runtime_state(VESSEL_CATALOG_STATE_KEY) or {}
+    return state if isinstance(state, dict) else {}
+
+
+def _read_deleted_vessel_catalog_keys() -> set[str]:
+    state = _read_vessel_catalog_state()
+    return {
+        str(key)
+        for key in (state.get(VESSEL_CATALOG_DELETED_KEYS_KEY) or [])
+        if str(key).strip()
+    }
+
+
+def _write_vessel_catalog_records(records: list[dict], *, deleted_keys: set[str] | None = None) -> None:
+    if deleted_keys is None:
+        deleted_keys = _read_deleted_vessel_catalog_keys()
     services.store.set_runtime_state(
         VESSEL_CATALOG_STATE_KEY,
         {
-            "version": 1,
+            "version": 2,
             "items": records,
+            VESSEL_CATALOG_DELETED_KEYS_KEY: sorted(deleted_keys),
         },
     )
 
 
 def _catalog_record_for_vessel(record: dict) -> dict:
     key = _vessel_catalog_key(record)
-    if not key:
+    if not key or key in _read_deleted_vessel_catalog_keys():
         return {}
     for current in _read_vessel_catalog_records():
         current_key = current.get("key") or _vessel_catalog_key(current)
@@ -314,12 +400,36 @@ def _catalog_record_for_vessel(record: dict) -> dict:
     return {}
 
 
+def _remove_vessel_catalog_record(key: str, *, hide: bool) -> dict:
+    clean_key = str(key or "").strip()
+    if not clean_key:
+        raise ValueError("Navio não identificado.")
+    records = _read_vessel_catalog_records()
+    deleted_keys = _read_deleted_vessel_catalog_keys()
+    kept: list[dict] = []
+    removed: dict = {}
+    for current in records:
+        current_key = current.get("key") or _vessel_catalog_key(current)
+        if current_key == clean_key:
+            removed = current
+            continue
+        kept.append(current)
+    if hide:
+        deleted_keys.add(clean_key)
+    else:
+        deleted_keys.discard(clean_key)
+    _write_vessel_catalog_records(kept, deleted_keys=deleted_keys)
+    return removed or {"key": clean_key}
+
+
 def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: bool = True) -> dict:
     record = _validate_vessel_catalog_record(payload) if validate else _coerce_vessel_catalog_payload(payload)
     if not record.get("vessel_name") or not record.get("vessel_imo"):
         return record
     key = _vessel_catalog_key(record)
     records = _read_vessel_catalog_records()
+    deleted_keys = _read_deleted_vessel_catalog_keys()
+    deleted_keys.discard(key)
     now = datetime.now().astimezone().isoformat()
     saved = {
         **record,
@@ -329,7 +439,7 @@ def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: b
     }
     replaced = False
     for index, current in enumerate(records):
-        if _vessel_catalog_key(current) != key:
+        if (current.get("key") or _vessel_catalog_key(current)) != key:
             continue
         created_at = current.get("created_at") or now
         saved_values = {
@@ -351,40 +461,17 @@ def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: b
     records.sort(
         key=lambda item: (item.get("vessel_name", "").casefold(), item.get("vessel_imo", ""))
     )
-    _write_vessel_catalog_records(records)
+    _write_vessel_catalog_records(records, deleted_keys=deleted_keys)
     return saved
 
 
 def _load_vessel_catalog_json_payload() -> list[dict]:
-    uploaded_file = request.files.get("payload_file")
-    raw_payload = ""
-    if uploaded_file and uploaded_file.filename:
-        raw_payload = uploaded_file.read().decode("utf-8-sig")
-    if not raw_payload.strip():
-        raw_payload = request.form.get("payload_json", "")
-    if not raw_payload.strip():
-        raise ValueError("Indica o JSON dos navios ou carrega um ficheiro .json.")
-    relaxed_payload = re.sub(r",(\s*[}\]])", r"\1", raw_payload)
-    try:
-        payload = json.loads(relaxed_payload)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
-
-    if isinstance(payload, dict) and isinstance(payload.get("vessels"), list):
-        payload = payload["vessels"]
-    elif isinstance(payload, dict) and isinstance(payload.get("ships"), list):
-        payload = payload["ships"]
-    elif isinstance(payload, dict) and isinstance(payload.get("vessel"), dict):
-        payload = [payload["vessel"]]
-    elif isinstance(payload, dict) and isinstance(payload.get("ship"), dict):
-        payload = [payload["ship"]]
-    elif isinstance(payload, dict):
-        payload = [payload]
-    if not isinstance(payload, list) or not payload:
-        raise ValueError("O JSON dos navios tem de conter um objeto ou uma lista de objetos.")
-    if not all(isinstance(item, dict) for item in payload):
-        raise ValueError("Cada navio no JSON tem de ser um objeto.")
-    return payload
+    return _payload_list_from_json(
+        _load_json_upload_payload("navios"),
+        plural_keys=("vessels", "ships", "items"),
+        singular_keys=("vessel", "ship"),
+        label="navios",
+    )
 
 
 def _vessel_catalog_record_from_port_call(port_call: dict) -> dict:
@@ -406,8 +493,11 @@ def _vessel_catalog_record_from_port_call(port_call: dict) -> dict:
 
 def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
     records_by_key = {}
+    deleted_keys = _read_deleted_vessel_catalog_keys()
     for record in _read_vessel_catalog_records():
         key = record.get("key") or _vessel_catalog_key(record)
+        if key in deleted_keys:
+            continue
         if key:
             records_by_key[key] = {**record, "key": key, "scale_count": 0}
 
@@ -426,7 +516,7 @@ def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
             seen_scale_ids.add(port_call_id)
             record = _vessel_catalog_record_from_port_call(port_call)
             key = _vessel_catalog_key(record)
-            if not key:
+            if not key or key in deleted_keys:
                 continue
             current = records_by_key.setdefault(key, {**record, "key": key, "scale_count": 0})
             current["scale_count"] = int(current.get("scale_count") or 0) + 1
@@ -514,34 +604,210 @@ def _create_port_call_from_payload(form_data: dict, *, created_by: str) -> dict:
     )
 
 
-def _load_port_call_json_payload() -> dict:
-    uploaded_file = request.files.get("payload_file")
-    raw_payload = ""
-    if uploaded_file and uploaded_file.filename:
-        raw_payload = uploaded_file.read().decode("utf-8-sig")
-    if not raw_payload.strip():
-        raw_payload = request.form.get("payload_json", "")
-    if not raw_payload.strip():
-        raise ValueError("Indica o JSON da escala ou carrega um ficheiro .json.")
-    relaxed_payload = raw_payload
-    relaxed_payload = re.sub(r'("constraints"\s*:\s*)(?=(,|\}))', r"\1[]", relaxed_payload)
-    relaxed_payload = re.sub(r",(\s*[}\]])", r"\1", relaxed_payload)
-    try:
-        payload = json.loads(relaxed_payload)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"JSON inválido na linha {exc.lineno}, coluna {exc.colno}.") from exc
+def _load_port_call_json_payloads() -> list[dict]:
+    return _payload_list_from_json(
+        _load_json_upload_payload("escalas"),
+        plural_keys=("port_calls", "scales", "items"),
+        singular_keys=("port_call", "scale"),
+        label="escalas",
+    )
 
-    if isinstance(payload, list):
-        if len(payload) != 1 or not isinstance(payload[0], dict):
-            raise ValueError("O JSON tem de conter um único objeto de escala.")
-        payload = payload[0]
-    if isinstance(payload, dict) and isinstance(payload.get("scale"), dict):
-        payload = payload["scale"]
-    elif isinstance(payload, dict) and isinstance(payload.get("port_call"), dict):
-        payload = payload["port_call"]
-    if not isinstance(payload, dict):
-        raise ValueError("O JSON da escala tem de ser um objeto.")
-    return payload
+
+def _load_maneuver_json_payloads() -> list[dict]:
+    return _payload_list_from_json(
+        _load_json_upload_payload("manobras"),
+        plural_keys=("maneuvers", "manoeuvres", "items"),
+        singular_keys=("maneuver", "manoeuvre"),
+        label="manobras",
+    )
+
+
+def _json_download_response(payload: dict, filename: str) -> Response:
+    body = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    return Response(
+        body,
+        mimetype="application/json; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _export_filename(stem: str) -> str:
+    stamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M")
+    return f"pragtico-{stem}-{stamp}.json"
+
+
+def _port_call_lookup(records: list[dict]) -> dict[str, dict]:
+    lookup: dict[str, dict] = {}
+    for port_call in records:
+        for value in (
+            port_call.get("id"),
+            port_call.get("reference_code"),
+            port_call.get("scale_reference"),
+        ):
+            key = str(value or "").strip()
+            if key:
+                lookup[key] = port_call
+    return lookup
+
+
+def _resolve_port_call_for_maneuver(payload: dict, lookup: dict[str, dict]) -> dict:
+    for key_name in ("port_call_id", "scale_id", "reference_code", "scale_reference"):
+        key = _string_payload_value(payload, key_name)
+        if key and key in lookup:
+            return lookup[key]
+    raise ValueError("Cada manobra tem de indicar port_call_id ou reference_code de uma escala existente.")
+
+
+def _maneuver_payload_type(payload: dict) -> str:
+    maneuver_type = _string_payload_value(payload, "type", "maneuver_type", "kind").lower()
+    aliases = {
+        "entrada": "entry",
+        "entry": "entry",
+        "chegada": "entry",
+        "saida": "departure",
+        "saída": "departure",
+        "departure": "departure",
+        "shift": "shift",
+        "mudanca": "shift",
+        "mudança": "shift",
+    }
+    resolved = aliases.get(maneuver_type)
+    if not resolved:
+        raise ValueError("Tipo de manobra inválido. Usa entry, departure ou shift.")
+    return resolved
+
+
+def _maneuver_payload_planned_at(payload: dict, maneuver_type: str) -> str:
+    value = _string_payload_value(
+        payload,
+        "planned_at",
+        "planned_at_local",
+        "eta",
+        "eta_local",
+        "planned_departure_at_local",
+        "planned_shift_at_local",
+    )
+    return parse_local_datetime_input(value, "Hora prevista da manobra")
+
+
+def _schedule_maneuver_from_payload(payload: dict, *, lookup: dict[str, dict], updated_by: str) -> dict:
+    port_call = _resolve_port_call_for_maneuver(payload, lookup)
+    maneuver_type = _maneuver_payload_type(payload)
+    planned_at = _maneuver_payload_planned_at(payload, maneuver_type)
+    validate_not_past_datetime(planned_at, "Hora prevista da manobra")
+    constraints = normalize_constraint_codes(_first_payload_value(payload, "constraints", default=[]))
+    draft_m = validate_positive_number(_string_payload_value(payload, "draft_m", "draft"), "Calado (m)", max_value=30.0)
+    tug_count = validate_tug_count(_string_payload_value(payload, "tug_count", "tugs"))
+    notes = _string_payload_value(payload, "notes", "plan_note", "observations")
+
+    if maneuver_type == "entry":
+        origin_port = require_form_text(
+            _string_payload_value(payload, "origin_port", "origin", "last_port"),
+            "Porto anterior",
+        )
+        destination_berth = normalize_portal_berth(
+            _string_payload_value(payload, "destination_berth", "destination", "berth"),
+            "Cais previsto",
+        )
+        return services.store.schedule_entry_plan(
+            port_call_id=port_call["id"],
+            planned_entry_at=planned_at,
+            updated_by=updated_by,
+            origin_port=origin_port,
+            destination_berth=destination_berth,
+            constraints=constraints,
+            entry_plan_note=build_entry_request_note(
+                {
+                    "last_port": origin_port,
+                    "berth": destination_berth,
+                    "draft_m": draft_m,
+                    "tug_count": tug_count,
+                    "constraints": constraints,
+                    "notes": notes,
+                }
+            ),
+            draft_m=draft_m,
+            tug_count=tug_count,
+        )
+
+    if maneuver_type == "departure":
+        next_port = require_form_text(
+            _string_payload_value(payload, "next_port", "destination", "destination_port"),
+            "Próximo destino",
+        )
+        return services.store.schedule_departure_plan(
+            port_call_id=port_call["id"],
+            planned_departure_at=planned_at,
+            updated_by=updated_by,
+            next_port=next_port,
+            constraints=constraints,
+            departure_plan_note=build_departure_plan_note(
+                {
+                    "origin_berth": port_call.get("berth", ""),
+                    "draft_m": draft_m,
+                    "tug_count": tug_count,
+                    "constraints": constraints,
+                    "notes": notes,
+                }
+            ),
+            draft_m=draft_m,
+            tug_count=tug_count,
+        )
+
+    destination_berth = normalize_portal_berth(
+        _string_payload_value(payload, "destination_berth", "destination", "berth"),
+        "Cais destino",
+    )
+    return services.store.schedule_shift_plan(
+        port_call_id=port_call["id"],
+        planned_shift_at=planned_at,
+        updated_by=updated_by,
+        destination_berth=destination_berth,
+        constraints=constraints,
+        shift_plan_note=build_shift_plan_note(
+            {
+                "origin_berth": port_call.get("berth", ""),
+                "destination_berth": destination_berth,
+                "draft_m": draft_m,
+                "tug_count": tug_count,
+                "constraints": constraints,
+                "notes": notes,
+            }
+        ),
+        draft_m=draft_m,
+        tug_count=tug_count,
+    )
+
+
+def _maneuver_export_items(port_calls: list[dict]) -> list[dict]:
+    items: list[dict] = []
+    for port_call in port_calls:
+        for maneuver in port_call.get("maneuver_history", []) or []:
+            if not isinstance(maneuver, dict):
+                continue
+            items.append(
+                {
+                    "port_call_id": port_call.get("id", ""),
+                    "reference_code": port_call.get("reference_code", ""),
+                    "vessel_name": port_call.get("vessel_name", ""),
+                    "maneuver_id": maneuver.get("id", ""),
+                    "type": maneuver.get("type", ""),
+                    "state": maneuver.get("state", ""),
+                    "planned_at": maneuver.get("planned_at", ""),
+                    "origin": maneuver.get("origin", ""),
+                    "destination": maneuver.get("destination", ""),
+                    "planned_draft_m": maneuver.get("planned_draft_m", ""),
+                    "tug_count": maneuver.get("tug_count", ""),
+                    "constraints": maneuver.get("constraints", []),
+                    "plan_note": maneuver.get("plan_note", ""),
+                    "approved_by": maneuver.get("decided_by", ""),
+                    "approved_at": maneuver.get("decided_at", ""),
+                    "completed_at": maneuver.get("completed_at", ""),
+                    "reported_by": maneuver.get("reported_by", ""),
+                    "report_note": maneuver.get("report_note", ""),
+                }
+            )
+    return items
 
 
 def _build_port_call_register_context(register_form: dict | None = None) -> dict:
@@ -558,6 +824,7 @@ def _build_port_call_register_context(register_form: dict | None = None) -> dict
         "vessel_catalog_json": json.dumps(vessel_catalog, ensure_ascii=False),
         "port_call_json_template": json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
         "vessel_catalog_json_template": json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        "maneuver_json_template": json.dumps(MANEUVER_JSON_TEMPLATE, ensure_ascii=False, indent=2),
         "register_form": register_form or {},
         "title": "Escalas",
     }
@@ -720,16 +987,19 @@ def create_port_call():
 @login_required
 @role_required("admin")
 def import_port_call_json():
-    """Criar uma nova escala a partir de um payload JSON colado ou carregado no browser."""
+    """Criar uma ou mais escalas a partir de JSON colado ou carregado no browser."""
     try:
-        payload = _load_port_call_json_payload()
-        form_data = _coerce_port_call_payload(payload)
-        catalog_record = _validate_vessel_catalog_record({**payload, **form_data})
-        port_call = _create_port_call_from_payload(
-            form_data,
-            created_by=session["username"],
-        )
-        _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
+        payloads = _load_port_call_json_payloads()
+        imported = []
+        for payload in payloads:
+            form_data = _coerce_port_call_payload(payload)
+            catalog_record = _validate_vessel_catalog_record({**payload, **form_data})
+            port_call = _create_port_call_from_payload(
+                form_data,
+                created_by=session["username"],
+            )
+            _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
+            imported.append(port_call)
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("port_calls.port_call_register"))
@@ -742,14 +1012,36 @@ def import_port_call_json():
             flash("Falha inesperada ao importar a escala por JSON.", "error")
         return redirect(url_for("port_calls.port_call_register"))
 
-    flash(f"Escala importada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
-    _emit_maneuver_notification(
-        port_call=port_call,
-        maneuver=latest_maneuver_by_type(port_call, "entry"),
-        event_type="created",
-        actor_username=session["username"],
-    )
+    for port_call in imported:
+        _emit_maneuver_notification(
+            port_call=port_call,
+            maneuver=latest_maneuver_by_type(port_call, "entry"),
+            event_type="created",
+            actor_username=session["username"],
+        )
+    if len(imported) == 1:
+        port_call = imported[0]
+        flash(f"Escala importada para {port_call['vessel_name']} com ETA {port_call['eta_label']}.", "success")
+    else:
+        flash(f"{len(imported)} escala(s) importada(s) por JSON.", "success")
     return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/export-json")
+@login_required
+@role_required("admin")
+def export_port_calls_json():
+    """Exportar todas as escalas em JSON. Apenas admin."""
+    records = services.store.list_port_calls()
+    return _json_download_response(
+        {
+            "kind": "pragtico.port_calls",
+            "version": 1,
+            "exported_at": datetime.now().astimezone().isoformat(),
+            "items": records,
+        },
+        _export_filename("port-calls"),
+    )
 
 
 @bp.route("/port-calls/vessels/import-json", methods=["POST"])
@@ -779,6 +1071,128 @@ def import_vessel_catalog_json():
 
     flash(f"{len(imported)} navio(s) importado(s) ou atualizado(s) no catálogo.", "success")
     return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/vessels/export-json")
+@login_required
+@role_required("admin")
+def export_vessel_catalog_json():
+    """Exportar o catálogo de navios visível ao admin."""
+    activity = services.store.get_port_activity_snapshot(window_days=3650)
+    vessels = _build_vessel_catalog_options(activity)
+    return _json_download_response(
+        {
+            "kind": "pragtico.vessels",
+            "version": 1,
+            "exported_at": datetime.now().astimezone().isoformat(),
+            "items": vessels,
+        },
+        _export_filename("vessels"),
+    )
+
+
+@bp.route("/port-calls/vessels/<path:vessel_key>/edit", methods=["POST"])
+@login_required
+@role_required("admin")
+def edit_vessel_catalog_record(vessel_key: str):
+    """Editar uma ficha de navio reutilizável. Apenas admin."""
+    try:
+        payload = {
+            field: request.form.get(field, "").strip()
+            for field in VESSEL_CATALOG_FIELDS
+        }
+        record = _validate_vessel_catalog_record(payload)
+        _remove_vessel_catalog_record(vessel_key, hide=True)
+        saved = _upsert_vessel_catalog_record(record, updated_by=session["username"], validate=False)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.port_call_register"))
+    except Exception:
+        logger.exception("Falha inesperada ao editar navio %s.", vessel_key)
+        flash("Falha inesperada ao editar o navio.", "error")
+        return redirect(url_for("port_calls.port_call_register"))
+
+    flash(f"Navio {saved.get('vessel_name', 'sem nome')} atualizado no catálogo.", "success")
+    return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/vessels/<path:vessel_key>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_vessel_catalog_record(vessel_key: str):
+    """Ocultar/remover um navio do catálogo reutilizável. Apenas admin."""
+    try:
+        removed = _remove_vessel_catalog_record(vessel_key, hide=True)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.port_call_register"))
+    except Exception:
+        logger.exception("Falha inesperada ao apagar navio %s.", vessel_key)
+        flash("Falha inesperada ao apagar o navio.", "error")
+        return redirect(url_for("port_calls.port_call_register"))
+
+    flash(f"Navio {removed.get('vessel_name') or vessel_key} removido do catálogo.", "success")
+    return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/maneuvers/import-json", methods=["POST"])
+@login_required
+@role_required("admin")
+def import_maneuvers_json():
+    """Importar planeamentos de manobras para escalas existentes. Apenas admin."""
+    try:
+        payloads = _load_maneuver_json_payloads()
+        port_calls = services.store.list_port_calls()
+        lookup = _port_call_lookup(port_calls)
+        imported = []
+        for payload in payloads:
+            maneuver_type = _maneuver_payload_type(payload)
+            port_call = _schedule_maneuver_from_payload(
+                payload,
+                lookup=lookup,
+                updated_by=session["username"],
+            )
+            imported.append((port_call, maneuver_type))
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.port_call_register"))
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar manobras por JSON para %s.", session.get("username"))
+        detail = " ".join(str(exc).strip().split())
+        flash(
+            f"Falha inesperada ao importar manobras por JSON: {detail}"
+            if detail
+            else "Falha inesperada ao importar manobras por JSON.",
+            "error",
+        )
+        return redirect(url_for("port_calls.port_call_register"))
+
+    for port_call, maneuver_type in imported:
+        _emit_maneuver_notification(
+            port_call=port_call,
+            maneuver=latest_maneuver_by_type(port_call, maneuver_type),
+            event_type="created",
+            actor_username=session["username"],
+        )
+    flash(f"{len(imported)} manobra(s) importada(s) por JSON.", "success")
+    return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/maneuvers/export-json")
+@login_required
+@role_required("admin")
+def export_maneuvers_json():
+    """Exportar todas as manobras conhecidas em JSON. Apenas admin."""
+    records = services.store.list_port_calls()
+    return _json_download_response(
+        {
+            "kind": "pragtico.maneuvers",
+            "version": 1,
+            "exported_at": datetime.now().astimezone().isoformat(),
+            "items": _maneuver_export_items(records),
+        },
+        _export_filename("maneuvers"),
+    )
 
 
 @bp.route("/port-calls/<port_call_id>/edit", methods=["POST"])

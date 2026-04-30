@@ -76,6 +76,18 @@ class PostgresPortCallMixin:
             raise ValueError("Escala não encontrada.")
         return _decorate_port_call(payload)
 
+    def list_port_calls(self) -> List[Dict]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"{self._port_call_select_clause()} ORDER BY created_at DESC")
+                rows = cur.fetchall()
+        records = [
+            _normalize_port_call_record(payload)
+            for payload in (self._row_to_port_call_record(row) for row in rows)
+            if payload
+        ]
+        return [_decorate_port_call(record) for record in records]
+
     def edit_port_call(
         self,
         port_call_id: str,

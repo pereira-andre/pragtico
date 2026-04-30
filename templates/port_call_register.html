@@ -211,7 +211,8 @@
         <details class="planning-optional-box planning-json-import-box">
           <summary>Importar escala por JSON</summary>
           <div class="stack planning-optional-body planning-json-import-body">
-            <p class="muted">Podes colar um objeto JSON ou carregar um ficheiro <code>.json</code>. A validação é a mesma do formulário manual.</p>
+            <p class="muted">Podes colar um objeto, uma lista, ou <code>{"port_calls":[...]}</code>. A validação é a mesma do formulário manual.</p>
+            <p><a class="inline-link" href="{{ url_for('port_calls.export_port_calls_json') }}">Exportar escalas por JSON</a></p>
             <form
               method="post"
               action="{{ url_for('port_calls.import_port_call_json') }}"
@@ -242,6 +243,7 @@
           <summary>Importar navios por JSON</summary>
           <div class="stack planning-optional-body planning-json-import-body">
             <p class="muted">Podes importar uma lista de navios frequentes para preencher fichas técnicas e dados de serviços na criação de novas escalas.</p>
+            <p><a class="inline-link" href="{{ url_for('port_calls.export_vessel_catalog_json') }}">Exportar navios por JSON</a></p>
             <form
               method="post"
               action="{{ url_for('port_calls.import_vessel_catalog_json') }}"
@@ -266,6 +268,100 @@
               <span class="mini-label">Modelo</span>
               <pre class="planning-json-template">{{ vessel_catalog_json_template }}</pre>
             </div>
+          </div>
+        </details>
+        <details class="planning-optional-box planning-json-import-box">
+          <summary>Importar manobras por JSON</summary>
+          <div class="stack planning-optional-body planning-json-import-body">
+            <p class="muted">Importa planeamentos de entrada, saída ou mudança para escalas existentes. A aprovação e a ocupação de cais continuam validadas na aprovação pelo piloto.</p>
+            <p><a class="inline-link" href="{{ url_for('port_calls.export_maneuvers_json') }}">Exportar manobras por JSON</a></p>
+            <form
+              method="post"
+              action="{{ url_for('port_calls.import_maneuvers_json') }}"
+              enctype="multipart/form-data"
+              class="stack planning-form planning-json-import-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label>
+                Ficheiro JSON
+                <input type="file" name="payload_file" accept=".json,application/json">
+              </label>
+              <label>
+                JSON das manobras
+                <textarea
+                  name="payload_json"
+                  rows="14"
+                  class="planning-json-textarea"
+                  placeholder='{"maneuvers":[{"port_call_id":"PTSET26...", "type":"departure", ...}]}'></textarea>
+              </label>
+              <button type="submit">Importar Manobras por JSON</button>
+            </form>
+            <div class="planning-json-template-block">
+              <span class="mini-label">Modelo</span>
+              <pre class="planning-json-template">{{ maneuver_json_template }}</pre>
+            </div>
+          </div>
+        </details>
+        <details class="planning-optional-box planning-json-import-box">
+          <summary>Gerir navios frequentes</summary>
+          <div class="stack planning-optional-body planning-json-import-body">
+            <p class="muted">Editar corrige a ficha reutilizável. Apagar remove o navio da lista de preenchimento automático, sem apagar escalas ou manobras já registadas.</p>
+            {% for vessel in vessel_catalog %}
+              <details class="ops-card planning-candidate-card">
+                <summary>{{ vessel.vessel_name }} · IMO {{ vessel.vessel_imo or "--" }}</summary>
+                <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="mini-grid planned-mini-grid">
+                    <label>Navio <input type="text" name="vessel_name" value="{{ vessel.vessel_name }}" required></label>
+                    <label>IMO <input type="text" name="vessel_imo" value="{{ vessel.vessel_imo }}" required></label>
+                    <label>Indicativo <input type="text" name="vessel_call_sign" value="{{ vessel.vessel_call_sign }}" required></label>
+                  </div>
+                  <div class="mini-grid planned-mini-grid">
+                    <label>Bandeira <input type="text" name="vessel_flag" value="{{ vessel.vessel_flag }}" required></label>
+                    <label>Tipo <input type="text" name="vessel_type" value="{{ vessel.vessel_type }}" required></label>
+                    <label>LOA (m) <input type="text" name="vessel_loa_m" value="{{ vessel.vessel_loa_m }}" required></label>
+                  </div>
+                  <div class="mini-grid planned-mini-grid">
+                    <label>Boca (m) <input type="text" name="vessel_beam_m" value="{{ vessel.vessel_beam_m }}" required></label>
+                    <label>GT (t) <input type="text" name="vessel_gt_t" value="{{ vessel.vessel_gt_t }}" required></label>
+                    <label>DWT (t) <input type="text" name="vessel_dwt_t" value="{{ vessel.vessel_dwt_t }}" required></label>
+                  </div>
+                  <div class="mini-grid planned-mini-grid">
+                    <label>Calado max. <input type="text" name="vessel_max_draft_m" value="{{ vessel.vessel_max_draft_m }}" required></label>
+                    <label>
+                      Bow thruster
+                      <select name="vessel_bow_thruster" required>
+                        <option value="unknown" {% if vessel.vessel_bow_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                        <option value="no" {% if vessel.vessel_bow_thruster == "no" %}selected{% endif %}>Não</option>
+                        <option value="yes" {% if vessel.vessel_bow_thruster == "yes" %}selected{% endif %}>Sim</option>
+                      </select>
+                    </label>
+                    <label>
+                      Stern thruster
+                      <select name="vessel_stern_thruster" required>
+                        <option value="unknown" {% if vessel.vessel_stern_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                        <option value="no" {% if vessel.vessel_stern_thruster == "no" %}selected{% endif %}>Não</option>
+                        <option value="yes" {% if vessel.vessel_stern_thruster == "yes" %}selected{% endif %}>Sim</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="mini-grid planned-mini-grid">
+                    <label>Perfil de serviços <input type="text" name="service_rate_profile" value="{{ vessel.service_rate_profile }}"></label>
+                    <label>Escalas linha regular (365 dias) <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ vessel.regular_line_calls_365d }}"></label>
+                    <label>UP pilotagem <input type="text" name="pilotage_up_rate" value="{{ vessel.pilotage_up_rate }}"></label>
+                  </div>
+                  <label>Perfil redução TUP <input type="text" name="tup_reduction_profile" value="{{ vessel.tup_reduction_profile }}"></label>
+                  <label>Notas de serviços e taxas <textarea name="service_notes" rows="2">{{ vessel.service_notes }}</textarea></label>
+                  <button type="submit">Guardar Navio</button>
+                </form>
+                <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" class="ops-inline-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="mini-button danger-button">Apagar navio</button>
+                </form>
+              </details>
+            {% endfor %}
+            {% if not vessel_catalog %}
+              <p class="muted">Ainda não há navios frequentes no catálogo.</p>
+            {% endif %}
           </div>
         </details>
       {% endif %}
