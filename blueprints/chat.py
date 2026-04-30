@@ -697,6 +697,16 @@ def api_chat():
             endpoint="/api/chat",
         )
         return jsonify(error_payload("CHAT_RUNTIME_FAILED", detail=str(exc), expose_detail=True)), 500
+    except Exception as exc:
+        log_error_event(
+            logger,
+            "CHAT_RUNTIME_FAILED",
+            detail=str(exc),
+            channel="web",
+            username=username,
+            endpoint="/api/chat",
+        )
+        return jsonify(error_payload("CHAT_RUNTIME_FAILED", detail=str(exc), expose_detail=True)), 500
 
     shell = _conversation_shell(username, result["conversation_id"])
     return jsonify({

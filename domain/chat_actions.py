@@ -487,6 +487,9 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     clean = " ".join(str(raw_value or "").strip().split())
     if not clean:
         return ""
+    clean_key = _lookup_key(clean)
+    if _is_placeholder_field_value(canonical, clean, clean_key):
+        return ""
     clean = re.split(
         r"\bFicha do Navio\b|\bDados Operacionais\b|\bRestri[cç][õo]es?\b",
         clean,
@@ -506,6 +509,54 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
         numeric_value = match.group(0)
         return re.sub(r"(?<=\d)\s+(?=\d)", "", numeric_value)
     return clean
+
+
+def _is_placeholder_field_value(canonical: str, value: str, lookup_value: str | None = None) -> bool:
+    clean_key = lookup_value if lookup_value is not None else _lookup_key(value)
+    if not clean_key:
+        return True
+    placeholder_keys = {
+        "dd mm aaaa hh mm",
+        "aaaa mm dd hh mm",
+        "sim nao desconhecido",
+        "yes no unknown",
+        "entrada saida mudanca",
+        "entry departure shift",
+        "saida mudanca",
+        "departure shift",
+    }
+    if clean_key in placeholder_keys:
+        return True
+    if canonical in {
+        "eta_local",
+        "planned_at_local",
+        "planned_departure_at_local",
+        "planned_shift_at_local",
+        "maneuver_started_local",
+        "maneuver_finished_local",
+    } and re.search(r"\b(dd|aaaa|yyyy|hh)\b", clean_key):
+        return True
+    if canonical == "maneuver_type":
+        type_hits = sum(
+            1
+            for token in ("entrada", "entry", "saida", "departure", "mudanca", "shift")
+            if re.search(rf"\b{token}\b", clean_key)
+        )
+        if type_hits > 1:
+            return True
+    if canonical == "constraints" and clean_key in {
+        "daylight gas estrategico",
+        "daylight gas estrategico opcoes",
+    }:
+        return True
+    if canonical in {"vessel_bow_thruster", "vessel_stern_thruster"} and clean_key in {
+        "sim nao",
+        "sim nao desconhecido",
+        "yes no",
+        "yes no unknown",
+    }:
+        return True
+    return False
 
 
 def _line_label_lookup(alias_map: Dict[str, List[str]]) -> Dict[str, str]:
@@ -612,6 +663,8 @@ def _normalize_command_name(value: str) -> str:
 
 def _normalize_maneuver_type_label(value: str) -> str:
     clean = _lookup_key(value)
+    if _is_placeholder_field_value("maneuver_type", value, clean):
+        return ""
     mapping = {
         "entrada": "entry",
         "entry": "entry",
@@ -684,6 +737,29 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
 
 
 def _extract_slash_maneuver_type(value: str) -> str:
+    if "\n" in (value or ""):
+        alias_lookup = _line_label_lookup({"maneuver_type": SLASH_COMMAND_FIELD_ALIASES["maneuver_type"]})
+        for raw_line in (value or "").splitlines():
+            line = raw_line.strip()
+            if not line or (":" not in line and "=" not in line):
+                continue
+            separator_indexes = [
+                index
+                for index in (line.find(":"), line.find("="))
+                if index >= 0
+            ]
+            if not separator_indexes:
+                continue
+            separator_index = min(separator_indexes)
+            raw_label = line[:separator_index].strip(" \t-*•")
+            if alias_lookup.get(_lookup_key(raw_label)) == "maneuver_type":
+                return _normalize_maneuver_type_label(line[separator_index + 1 :])
+    labelled = _extract_values_from_alias_map(
+        value or "",
+        {"maneuver_type": SLASH_COMMAND_FIELD_ALIASES["maneuver_type"]},
+    )
+    if "maneuver_type" in labelled:
+        return _normalize_maneuver_type_label(str(labelled.get("maneuver_type") or ""))
     match = re.search(
         r"\btipo\s+de\s+manobra\s*(?:=|:|\beh\b|\be\b)\s*(entrada|saida|saída|mudanca|mudança|entry|departure|shift)\b",
         value or "",
@@ -1614,21 +1690,28 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     target = port_call or {}
     proposal_target = proposal.get("target", {}) or {}
     fields = proposal.get("fields") or {}
-    lines = [f"Proposta pronta para confirmar: {label}."]
-    if target or proposal_target.get("reference_code") or proposal_target.get("vessel_name"):
-        lines.append(
-            f"Escala: {(target.get('reference_code') if target else proposal_target.get('reference_code')) or '--'} · {(target.get('vessel_name') if target else proposal_target.get('vessel_name')) or '--'}."
-        )
-    if proposal_target.get("maneuver_id") or proposal.get("maneuver_id"):
-        lines.append(f"ID da manobra: {proposal_target.get('maneuver_id') or proposal.get('maneuver_id')}.")
-    if proposal.get("target", {}).get("maneuver_type"):
-        maneuver_type = proposal["target"]["maneuver_type"]
+    missing_fields = proposal.get("missing_fields") or []
+    if missing_fields:
+        lines = [f"Comando recebido: {label}. Ainda não está pronto para confirmar."]
+    else:
+        lines = [f"Proposta pronta para confirmar: {label}."]
+
+    recognized: List[str] = []
+    scale_reference = (target.get("reference_code") if target else proposal_target.get("reference_code")) or ""
+    vessel_name = (target.get("vessel_name") if target else proposal_target.get("vessel_name")) or ""
+    if scale_reference or vessel_name:
+        recognized.append(f"Escala: {scale_reference or '--'} · {vessel_name or '--'}")
+    maneuver_id = proposal_target.get("maneuver_id") or proposal.get("maneuver_id")
+    if maneuver_id:
+        recognized.append(f"ID da manobra: {maneuver_id}")
+    maneuver_type = proposal.get("target", {}).get("maneuver_type")
+    if maneuver_type:
         maneuver_label = {
             "entry": "entrada",
             "departure": "saída",
             "shift": "mudança",
         }.get(maneuver_type, maneuver_type)
-        lines.append(f"Manobra: {maneuver_label}.")
+        recognized.append(f"Tipo de manobra: {maneuver_label}")
     for key, value in fields.items():
         if value in ("", None, []):
             continue
@@ -1636,21 +1719,27 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
             clean_value = ", ".join(value)
         else:
             clean_value = str(value)
-        lines.append(f"{DISPLAY_FIELD_LABELS.get(key, key)}: {clean_value}.")
-    if proposal.get("reason"):
-        clean_reason = " ".join(str(proposal["reason"]).strip().split())
-        if clean_reason:
-            suffix = "" if clean_reason[-1:] in ".!?" else "."
-            lines.append(f"Nota: {clean_reason}{suffix}")
-    missing_fields = proposal.get("missing_fields") or []
+        recognized.append(f"{DISPLAY_FIELD_LABELS.get(key, key)}: {clean_value}")
+    if recognized:
+        lines.append("")
+        lines.append("Elementos reconhecidos:")
+        lines.extend(f"- {item}." if not item.endswith(".") else f"- {item}" for item in recognized)
+    else:
+        lines.append("")
+        lines.append("Elementos reconhecidos: nenhum dado operacional preenchido.")
+
     if missing_fields:
-        lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")
+        lines.append("")
+        lines.append("Em falta/corrigir:")
+        lines.extend(f"- {item}." for item in missing_fields)
         template = build_action_reply_template(action, missing_fields)
         if template:
             lines.append("")
             lines.append(template)
-        lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
+        lines.append("")
+        lines.append("Completa só os campos em falta ou corrige os campos indicados.")
     else:
+        lines.append("")
         lines.append("Confirma para aplicar a alteração no portal.")
     return "\n".join(lines)
 

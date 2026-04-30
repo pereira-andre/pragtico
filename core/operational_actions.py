@@ -1,7 +1,7 @@
 """Operational chat action proposal and execution helpers."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import session
 
@@ -41,6 +41,7 @@ from domain.chat_actions import (
     extract_json_object,
     extract_pending_field_updates,
     extract_pending_target_updates,
+    format_action_summary,
     infer_maneuver_type,
     looks_like_abort_payload,
     looks_like_maneuver_report_payload,

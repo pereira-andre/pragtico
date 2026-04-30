@@ -4,7 +4,7 @@ import unittest
 
 from core import services
 from core.operational_actions import finalize_operational_proposal
-from domain.chat_actions import parse_slash_command, proposal_missing_field_labels
+from domain.chat_actions import format_action_summary, parse_slash_command, proposal_missing_field_labels
 
 
 class FakeStore:
@@ -85,6 +85,45 @@ class SlashActionTargetTests(unittest.TestCase):
         self.assertEqual(proposal["target"]["maneuver_type"], "departure")
         self.assertEqual(proposal["missing_fields"], ["próximo porto", "hora prevista de saída"])
 
+    def test_maneuver_commands_with_id_do_not_require_ref_or_type(self) -> None:
+        cases = [
+            "/aprovar\nID da manobra: 391513b3",
+            "/apagar-manobra\nID da manobra: 391513b3",
+            (
+                "/registar-manobra\n"
+                "ID da manobra: 391513b3\n"
+                "Início da manobra: 01/05/2026, 18:00\n"
+                "Fim da manobra: 01/05/2026, 19:00\n"
+                "Calado: 7.2"
+            ),
+            (
+                "/editar-registo-manobra\n"
+                "ID da manobra: 391513b3\n"
+                "Calado: 7.3\n"
+                "Motivo da alteração: correção"
+            ),
+            "/apagar-registo-manobra\nID da manobra: 391513b3",
+            "/abortar\nID da manobra: 391513b3\nMotivo: indisponibilidade",
+        ]
+
+        for command in cases:
+            with self.subTest(command=command.splitlines()[0]):
+                proposal = self._proposal(command)
+                self.assertNotIn("ref ou nome do navio", proposal["missing_fields"])
+                self.assertNotIn("tipo de manobra", proposal["missing_fields"])
+
+    def test_scale_commands_by_ref_do_not_require_full_scale_identity(self) -> None:
+        edit_proposal = self._proposal(
+            "/editar-escala\n"
+            "Ref: PTSET26ABCD1234\n"
+            "ETA de chegada: 02/05/2026, 15:00\n"
+            "Motivo da alteração: correção de ETA"
+        )
+        delete_proposal = self._proposal("/apagar-escala\nRef: PTSET26ABCD1234")
+
+        self.assertEqual(edit_proposal["missing_fields"], [])
+        self.assertEqual(delete_proposal["missing_fields"], [])
+
     def test_edit_scale_with_one_change_does_not_require_other_scale_fields(self) -> None:
         missing = proposal_missing_field_labels(
             "edit_port_call",
@@ -158,6 +197,49 @@ class SlashActionTargetTests(unittest.TestCase):
         )
 
         self.assertEqual(proposal["missing_fields"], ["motivo da alteração"])
+
+    def test_copied_edit_maneuver_template_does_not_count_placeholders_as_values(self) -> None:
+        parsed = parse_slash_command(
+            "/editar-manobra\n"
+            "ID da manobra: \n"
+            "Ref: \n"
+            "Tipo de manobra: entrada | saída | mudança\n"
+            "Hora prevista: DD/MM/AAAA, HH:MM\n"
+            "Origem: \n"
+            "Destino: \n"
+            "Calado: \n"
+            "Rebocadores: \n"
+            "Restrições: daylight, gas, estrategico\n"
+            "Observações: \n"
+            "Motivo da alteração:\n",
+            "admin",
+        )
+
+        self.assertEqual(parsed["intent"], "template")
+        proposal = parsed["proposal"]
+        self.assertEqual(proposal["target"]["maneuver_type"], "")
+        self.assertNotIn("planned_at_local", proposal["fields"])
+        self.assertEqual(proposal["fields"]["constraints"], [])
+        self.assertEqual(
+            proposal["missing_fields"],
+            ["motivo da alteração", "ref ou nome do navio", "tipo de manobra", "campo a alterar"],
+        )
+
+    def test_action_summary_lists_recognized_and_missing_fields(self) -> None:
+        proposal = self._proposal(
+            "/editar-manobra\n"
+            "ID da manobra: 86683899\n"
+            "Tipo de manobra: saída\n"
+            "Hora prevista: 01/05/2026, 19:00\n"
+            "Motivo da alteração: Carga atrasada\n"
+        )
+
+        summary = format_action_summary(proposal)
+
+        self.assertIn("Elementos reconhecidos:", summary)
+        self.assertIn("ID da manobra: 86683899", summary)
+        self.assertIn("Tipo de manobra: saída", summary)
+        self.assertIn("hora prevista: 01/05/2026, 19:00", summary)
 
     def test_inline_labelled_maneuver_id_prefers_full_label_over_id_alias(self) -> None:
         proposal = self._proposal(

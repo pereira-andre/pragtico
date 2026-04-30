@@ -505,6 +505,7 @@ REQUIRED_FIELDS_BY_ACTION = {
 }
 DISPLAY_FIELD_LABELS = {
     "maneuver_id": "ID da manobra",
+    "maneuver_type": "tipo de manobra",
     "target_port_call": "ref ou nome do navio",
     "vessel_name": "nome do navio",
     "vessel_imo": "IMO",

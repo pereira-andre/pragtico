@@ -47,6 +47,7 @@ from core.helpers import (
 )
 from domain.chat_actions import (
     build_action_reply_template,
+    format_action_summary,
     looks_like_operational_command,
     looks_like_slash_command,
     parse_slash_command,
@@ -1393,16 +1394,30 @@ def handle_chat_turn(
                 if not allow_mutations:
                     answer = _blocked_mutation_answer(channel)
                 else:
-                    pending_action = save_pending_chat_action(
-                        username=username,
-                        conversation_id=conversation["id"],
-                        proposal=proposal,
-                        question=clean_question,
-                    )
+                    try:
+                        pending_action = save_pending_chat_action(
+                            username=username,
+                            conversation_id=conversation["id"],
+                            proposal=proposal,
+                            question=clean_question,
+                        )
+                    except Exception:
+                        logger.exception("Falha ao guardar proposta de comando slash.")
+                        pending_action = {
+                            "summary": (
+                                "Não consegui guardar a proposta pendente, mas estes são os dados lidos:\n\n"
+                                + format_action_summary(proposal)
+                            )
+                        }
+                    try:
+                        pending_payload = load_pending_chat_action(username, conversation["id"])
+                    except Exception:
+                        logger.exception("Falha ao carregar proposta pendente após comando slash.")
+                        pending_payload = None
                     answer = {
                         "answer": pending_action["summary"],
                         "sources": [],
-                        "pending_action": load_pending_chat_action(username, conversation["id"]),
+                        "pending_action": pending_payload,
                         "answer_origin": "slash_template",
                     }
             else:
@@ -1453,16 +1468,30 @@ def handle_chat_turn(
                     }
                     action_proposal = None
                 if answer is None and action_proposal and action_proposal.get("intent") == "action":
-                    pending_action = save_pending_chat_action(
-                        username=username,
-                        conversation_id=conversation["id"],
-                        proposal=action_proposal,
-                        question=clean_question,
-                    )
+                    try:
+                        pending_action = save_pending_chat_action(
+                            username=username,
+                            conversation_id=conversation["id"],
+                            proposal=action_proposal,
+                            question=clean_question,
+                        )
+                    except Exception:
+                        logger.exception("Falha ao guardar proposta operacional do comando slash.")
+                        pending_action = {
+                            "summary": (
+                                "Não consegui guardar a proposta pendente, mas estes são os dados lidos:\n\n"
+                                + format_action_summary(action_proposal)
+                            )
+                        }
+                    try:
+                        pending_payload = load_pending_chat_action(username, conversation["id"])
+                    except Exception:
+                        logger.exception("Falha ao carregar proposta operacional pendente.")
+                        pending_payload = None
                     answer = {
                         "answer": pending_action["summary"],
                         "sources": [],
-                        "pending_action": load_pending_chat_action(username, conversation["id"]),
+                        "pending_action": pending_payload,
                         "answer_origin": "slash_proposal",
                     }
                 elif answer is None:
@@ -1477,6 +1506,9 @@ def handle_chat_turn(
                     )
                     if template:
                         reason = f"{reason}\n\n{template}"
+                    diagnostic = format_action_summary(proposal) if proposal.get("action") else ""
+                    if diagnostic:
+                        reason = f"{reason}\n\n{diagnostic}"
                     answer = {
                         "answer": reason,
                         "sources": [],

@@ -15,7 +15,7 @@ def build_scale_edit_reply_template() -> str:
             "Responde neste formato para editar a escala. Usa a Ref e preenche só os campos a alterar:",
             "Ref: ",
             "Nome do navio: ",
-            "ETA de chegada: DD/MM/AAAA, HH:MM",
+            "ETA de chegada: ",
             "Cais previsto: ",
             "Último porto: ",
             "Próximo destino: ",
@@ -28,10 +28,12 @@ def build_scale_edit_reply_template() -> str:
             "GT (t): ",
             "DWT (t): ",
             "Calado máximo (m): ",
-            "Bow thruster: sim | não | desconhecido",
-            "Stern thruster: sim | não | desconhecido",
+            "Bow thruster: ",
+            "Stern thruster: ",
             "Observações: ",
             "Motivo da alteração: ",
+            "Formato de datas: DD/MM/AAAA, HH:MM.",
+            "Opções thruster: sim, não, desconhecido.",
         ]
     )
 
@@ -50,14 +52,17 @@ def build_create_maneuver_reply_template() -> str:
         [
             "Responde neste formato para criar a manobra (o ID é gerado automaticamente):",
             "Ref: ",
-            "Tipo de manobra: saída | mudança",
-            "Hora prevista: DD/MM/AAAA, HH:MM",
+            "Tipo de manobra: ",
+            "Hora prevista: ",
             "Destino: ",
             "Calado: ",
             "Rebocadores: ",
-            "Restrições: daylight, gas, estrategico",
+            "Restrições: ",
             "Observações: ",
             "Nota: a origem segue automaticamente o último local conhecido do navio.",
+            "Formato de datas: DD/MM/AAAA, HH:MM.",
+            "Tipos aceites: saída, mudança.",
+            "Restrições aceites: daylight, gas, estrategico.",
         ]
     )
 
@@ -68,15 +73,18 @@ def build_edit_maneuver_plan_reply_template() -> str:
             "Responde neste formato para editar o planeamento. Com ID da manobra não precisas de repetir Ref/Tipo; preenche só os campos a alterar:",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Hora prevista: DD/MM/AAAA, HH:MM",
+            "Tipo de manobra: ",
+            "Hora prevista: ",
             "Origem: ",
             "Destino: ",
             "Calado: ",
             "Rebocadores: ",
-            "Restrições: daylight, gas, estrategico",
+            "Restrições: ",
             "Observações: ",
             "Motivo da alteração: ",
+            "Formato de datas: DD/MM/AAAA, HH:MM.",
+            "Tipos aceites: entrada, saída, mudança.",
+            "Restrições aceites: daylight, gas, estrategico.",
         ]
     )
 
@@ -96,8 +104,9 @@ def build_approval_reply_template() -> str:
             "Responde neste formato para aprovar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
+            "Tipo de manobra: ",
             "Observações: ",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -108,11 +117,13 @@ def build_command_report_reply_template() -> str:
             "Responde neste formato para registar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Início da manobra: DD/MM/AAAA, HH:MM",
-            "Fim da manobra: DD/MM/AAAA, HH:MM",
+            "Tipo de manobra: ",
+            "Início da manobra: ",
+            "Fim da manobra: ",
             "Calado: ",
             "Observações: ",
+            "Formato de datas: DD/MM/AAAA, HH:MM.",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -123,12 +134,14 @@ def build_edit_report_reply_template() -> str:
             "Responde neste formato para editar o registo da manobra. Com ID da manobra não precisas de repetir Ref/Tipo; preenche só os campos a alterar:",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Início da manobra: DD/MM/AAAA, HH:MM",
-            "Fim da manobra: DD/MM/AAAA, HH:MM",
+            "Tipo de manobra: ",
+            "Início da manobra: ",
+            "Fim da manobra: ",
             "Calado: ",
             "Observações: ",
             "Motivo da alteração: ",
+            "Formato de datas: DD/MM/AAAA, HH:MM.",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -139,8 +152,9 @@ def build_command_abort_reply_template() -> str:
             "Responde neste formato para abortar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
+            "Tipo de manobra: ",
             "Motivo: ",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -151,7 +165,8 @@ def build_delete_report_reply_template() -> str:
             "Responde neste formato para apagar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
+            "Tipo de manobra: ",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -162,7 +177,8 @@ def build_validate_maneuver_reply_template() -> str:
             "Responde neste formato para validar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
             "ID da manobra: ",
             "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
+            "Tipo de manobra: ",
+            "Tipos aceites: entrada, saída, mudança.",
         ]
     )
 
@@ -325,7 +341,7 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
     lines = [
         "Se preferires, responde já neste formato e eu trato do registo:",
         "Nome: ",
-        "ETA de chegada: DD/MM/AAAA, HH:MM",
+        "ETA de chegada: ",
         "Cais previsto: ",
         "Último porto: ",
         "Próximo destino: ",
@@ -338,11 +354,13 @@ def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -
         "GT (t): ",
         "DWT (t): ",
         "Calado (m): ",
-        "Bow thruster: sim | não | desconhecido",
-        "Stern thruster: sim | não | desconhecido",
+        "Bow thruster: ",
+        "Stern thruster: ",
         "Calado (operacional): ",
         "Rebocadores: ",
         "Observações: ",
+        "Formato de datas: DD/MM/AAAA, HH:MM.",
+        "Opções thruster: sim, não, desconhecido.",
     ]
     return "\n".join(lines)
 
