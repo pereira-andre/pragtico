@@ -550,14 +550,14 @@
           </details>
         {% endif %}
       </section>
-      <section class="traffic-column traffic-column-departed">
+      <section class="traffic-column">
         <div class="traffic-head">
           <h3>Saídas recentes</h3>
           <span class="ops-pill">{{ port_activity.stats.departed_count }}</span>
         </div>
         <div class="ops-list">
           {% for item in port_activity.departed[:2] %}
-            <article class="ops-card ops-card-departed">
+            <article class="ops-card">
               <div class="ops-card-head">
                 <div class="planned-vessel-type">
                   {% if item.ship_type_icon %}
@@ -567,7 +567,7 @@
                 </div>
                 <span class="ops-tag">ATD {{ item.departure_label }}</span>
               </div>
-              <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
+              <p>Cais origem <strong>{{ item.berth_label }}</strong> → Destino <strong>{{ item.next_port or "--" }}</strong></p>
             </article>
           {% else %}
             <article class="ops-empty"><p>Sem saídas registadas.</p></article>
@@ -578,7 +578,7 @@
             <summary>Ver histórico recente</summary>
             <div class="ops-list ops-list-scroll">
               {% for item in port_activity.departed[2:] %}
-                <article class="ops-card ops-card-departed">
+                <article class="ops-card">
                   <div class="ops-card-head">
                     <div class="planned-vessel-type">
                       {% if item.ship_type_icon %}
@@ -588,7 +588,7 @@
                     </div>
                     <span class="ops-tag">ATD {{ item.departure_label }}</span>
                   </div>
-                  <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
+                  <p>Cais origem <strong>{{ item.berth_label }}</strong> → Destino <strong>{{ item.next_port or "--" }}</strong></p>
                 </article>
               {% endfor %}
             </div>
