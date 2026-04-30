@@ -352,20 +352,28 @@ def _parse_iso_datetime(value: str | None) -> Optional[datetime]:
         return None
 
 
-def _latest_approved_berth_release_maneuver(
+def _latest_berth_release_maneuver(
     item: Dict,
     item_canonical: str,
     *,
     release_base_capacity: bool,
+    release_states: Iterable[str] | None = None,
     berth_options: Iterable[str] | None = None,
 ) -> Optional[Dict]:
     options = list(berth_options or BERTH_OPTIONS)
+    allowed_states = {
+        str(state or "").strip().lower()
+        for state in (release_states if release_states is not None else ("approved",))
+        if str(state or "").strip()
+    }
+    if not allowed_states:
+        return None
     item_base = _berth_base_label(item_canonical, options)
     candidates: List[Dict] = []
     for maneuver in item.get("maneuver_history", []) or []:
         maneuver_type = (maneuver.get("type") or "").strip().lower()
         state = (maneuver.get("state") or "").strip().lower()
-        if state != "approved":
+        if state not in allowed_states:
             continue
         if maneuver_type == "departure":
             candidates.append(maneuver)
@@ -399,12 +407,14 @@ def _berth_is_released_by_validated_maneuver(
     target_planned_at: str | None,
     *,
     release_base_capacity: bool,
+    release_states: Iterable[str] | None = None,
     berth_options: Iterable[str] | None = None,
 ) -> bool:
-    release_maneuver = _latest_approved_berth_release_maneuver(
+    release_maneuver = _latest_berth_release_maneuver(
         item,
         item_canonical,
         release_base_capacity=release_base_capacity,
+        release_states=release_states,
         berth_options=berth_options,
     )
     if not release_maneuver:
@@ -480,6 +490,7 @@ def find_occupied_berth_conflict(
     *,
     current_port_call_id: str = "",
     target_planned_at: str | None = None,
+    release_states: Iterable[str] | None = None,
     berth_options: Iterable[str] | None = None,
 ) -> Optional[Dict]:
     options = list(berth_options or BERTH_OPTIONS)
@@ -508,6 +519,7 @@ def find_occupied_berth_conflict(
                 item_canonical,
                 target_planned_at,
                 release_base_capacity=False,
+                release_states=release_states,
                 berth_options=options,
             ):
                 continue
@@ -518,6 +530,7 @@ def find_occupied_berth_conflict(
                 item_canonical,
                 target_planned_at,
                 release_base_capacity=True,
+                release_states=release_states,
                 berth_options=options,
             ):
                 continue

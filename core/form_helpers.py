@@ -70,6 +70,7 @@ def occupied_portal_berth_conflict(
     *,
     current_port_call_id: str = "",
     target_planned_at: str | None = None,
+    release_states: tuple[str, ...] | None = None,
 ) -> dict | None:
     """Return the conflicting in-port vessel occupying a quay berth, ignoring anchorages."""
     port_activity = services.store.get_port_activity_snapshot(window_days=3650)
@@ -78,6 +79,7 @@ def occupied_portal_berth_conflict(
         port_activity.get("in_port", []) or [],
         current_port_call_id=current_port_call_id,
         target_planned_at=target_planned_at,
+        release_states=release_states,
         berth_options=services.BERTH_OPTIONS,
     )
 
@@ -99,6 +101,28 @@ def ensure_portal_berth_is_available(
     if conflict:
         conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
         raise ValueError(f"{label} {canonical} já está ocupado por {conflict_name}.")
+    return canonical
+
+
+def ensure_portal_berth_is_physically_available(
+    berth: str,
+    *,
+    current_port_call_id: str = "",
+    label: str = "Cais",
+) -> str:
+    """Require the quay to be free before physically completing an entry or berth shift."""
+    canonical = normalize_portal_berth(berth, label=label)
+    conflict = occupied_portal_berth_conflict(
+        canonical,
+        current_port_call_id=current_port_call_id,
+        release_states=("completed",),
+    )
+    if conflict:
+        conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
+        raise ValueError(
+            f"{label} {canonical} ainda está ocupado por {conflict_name}. "
+            "Conclui primeiro a saída ou mudança desse navio."
+        )
     return canonical
 
 

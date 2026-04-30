@@ -71,6 +71,40 @@ class BerthLayoutTests(unittest.TestCase):
             occupant,
         )
 
+    def test_approved_departure_does_not_release_berth_for_physical_completion(self) -> None:
+        occupant = {
+            "id": "in-port",
+            "vessel_name": "Loaded Vessel",
+            "berth_label": "SAPEC Sólidos",
+            "maneuver_history": [
+                {
+                    "type": "departure",
+                    "state": "approved",
+                    "planned_at": "2026-04-30T12:00:00+01:00",
+                }
+            ],
+        }
+
+        self.assertEqual(
+            find_occupied_berth_conflict(
+                "SAPEC Sólidos",
+                [occupant],
+                target_planned_at="2026-04-30T13:00:00+01:00",
+                release_states=("completed",),
+            ),
+            occupant,
+        )
+
+        occupant["maneuver_history"][0]["state"] = "completed"
+        self.assertIsNone(
+            find_occupied_berth_conflict(
+                "SAPEC Sólidos",
+                [occupant],
+                target_planned_at="2026-04-30T13:00:00+01:00",
+                release_states=("completed",),
+            )
+        )
+
     def test_pending_departure_keeps_berth_occupied(self) -> None:
         occupant = {
             "id": "in-port",

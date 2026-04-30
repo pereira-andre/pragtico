@@ -16,6 +16,7 @@ from core.form_helpers import (
     build_shift_plan_note,
     ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
+    ensure_portal_berth_is_physically_available,
     normalize_portal_berth,
     parse_local_datetime_input,
     parse_optional_local_datetime_input,
@@ -1285,13 +1286,19 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
     if action == "complete_entry":
         arrived_at_value = field_text("arrived_at_local", field_text("maneuver_finished_local"))
         target_berth = field_text("berth", port_call.get("berth"))
-        berth_for_arrival = ensure_portal_berth_is_available(target_berth, current_port_call_id=port_call_id, label="Cais")
+        berth_for_arrival = ensure_portal_berth_is_physically_available(target_berth, current_port_call_id=port_call_id, label="Cais")
         result = services.store.mark_port_call_arrived(port_call_id=port_call_id, arrived_at=parse_optional_local_datetime_input(arrived_at_value, "ATA") or datetime.now().astimezone().isoformat(), updated_by=username, berth=berth_for_arrival)
         return result, f"Entrada confirmada para {result['vessel_name']} às {result['ata_label']}. Já podes preencher o registo operacional."
     if action == "entry_report":
         target_maneuver = resolve_target_maneuver(port_call, action, "entry")
         if not target_maneuver:
             raise ValueError("A proposta não identifica a manobra a registar.")
+        if target_maneuver.get("state") == "approved":
+            ensure_portal_berth_is_physically_available(
+                target_maneuver.get("destination") or port_call.get("berth", ""),
+                current_port_call_id=port_call_id,
+                label="Cais",
+            )
         started_at = parse_local_datetime_input(field_text("maneuver_started_local"), "Início da manobra")
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")
@@ -1411,13 +1418,19 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             field_text("destination_berth", port_call.get("shift_destination_berth", "") or port_call.get("berth", "")),
             "Cais destino",
         )
-        ensure_portal_berth_is_available(shift_destination, current_port_call_id=port_call_id, label="Cais destino")
+        ensure_portal_berth_is_physically_available(shift_destination, current_port_call_id=port_call_id, label="Cais destino")
         result = services.store.mark_shift_completed(port_call_id=port_call_id, shifted_at=parse_optional_local_datetime_input(shifted_at_value, "Hora da mudança") or datetime.now().astimezone().isoformat(), updated_by=username)
         return result, f"Mudança concluída para {result['vessel_name']} às {result['shift_label']}. Já podes preencher o registo operacional."
     if action == "shift_report":
         target_maneuver = resolve_target_maneuver(port_call, action, "shift")
         if not target_maneuver:
             raise ValueError("A proposta não identifica a manobra a registar.")
+        if target_maneuver.get("state") == "approved":
+            ensure_portal_berth_is_physically_available(
+                target_maneuver.get("destination") or port_call.get("shift_destination_berth", "") or port_call.get("berth", ""),
+                current_port_call_id=port_call_id,
+                label="Cais destino",
+            )
         started_at = parse_local_datetime_input(field_text("maneuver_started_local"), "Início da manobra")
         finished_at = parse_local_datetime_input(field_text("maneuver_finished_local"), "Fim da manobra")
         draft_m = require_form_text(field_text("draft_m"), "Calado")

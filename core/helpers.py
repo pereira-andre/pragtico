@@ -21,6 +21,7 @@ from core.form_helpers import (
     build_shift_plan_note,
     ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
+    ensure_portal_berth_is_physically_available,
     get_current_conversation,
     normalize_portal_berth,
     parse_local_datetime_input,

@@ -18,6 +18,7 @@ from core.helpers import (
     build_shift_plan_note,
     ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
+    ensure_portal_berth_is_physically_available,
     login_required,
     normalize_portal_berth,
     parse_local_datetime_input,
@@ -1586,7 +1587,7 @@ def mark_shift_completed(port_call_id: str):
     """Confirmar a conclusão da mudança de cais e atualizar a localização do navio."""
     try:
         current = services.store.get_port_call(port_call_id)
-        ensure_portal_berth_is_available(
+        ensure_portal_berth_is_physically_available(
             current.get("shift_destination_berth") or current.get("berth", ""),
             current_port_call_id=port_call_id,
             label="Cais destino",
@@ -1616,7 +1617,7 @@ def mark_port_call_arrived(port_call_id: str):
     """Registar a chegada do navio ao porto e confirmar a manobra de entrada."""
     try:
         current = services.store.get_port_call(port_call_id)
-        berth = ensure_portal_berth_is_available(
+        berth = ensure_portal_berth_is_physically_available(
             request.form.get("berth", "").strip() or current.get("berth", ""),
             current_port_call_id=port_call_id,
             label="Cais",
@@ -1671,6 +1672,17 @@ def mark_port_call_departed(port_call_id: str):
 def attach_entry_report(port_call_id: str):
     """Guardar o registo de pilotagem da manobra de entrada."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        target = (
+            maneuver_by_id(current, request.form.get("maneuver_id", "").strip())
+            or latest_maneuver_by_type(current, "entry")
+        )
+        if (target or {}).get("state") == "approved":
+            ensure_portal_berth_is_physically_available(
+                target.get("destination") or current.get("berth", ""),
+                current_port_call_id=port_call_id,
+                label="Cais",
+            )
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
@@ -1725,6 +1737,17 @@ def attach_departure_report(port_call_id: str):
 def attach_shift_report(port_call_id: str):
     """Guardar o registo de pilotagem da manobra de mudança de cais."""
     try:
+        current = services.store.get_port_call(port_call_id)
+        target = (
+            maneuver_by_id(current, request.form.get("maneuver_id", "").strip())
+            or latest_maneuver_by_type(current, "shift")
+        )
+        if (target or {}).get("state") == "approved":
+            ensure_portal_berth_is_physically_available(
+                target.get("destination") or current.get("shift_destination_berth") or current.get("berth", ""),
+                current_port_call_id=port_call_id,
+                label="Cais destino",
+            )
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
         validate_datetime_range(maneuver_started_at, maneuver_finished_at)
