@@ -297,6 +297,34 @@ def _row_timestamp(row: dict) -> float:
     return row_dt.timestamp() if row_dt else 0.0
 
 
+def _short_maneuver_id(value: object) -> str:
+    clean = str(value or "").strip()
+    return clean[:8].upper() if clean else "--"
+
+
+def _arrival_entry_maneuver_id(item: dict) -> str:
+    direct_id = str(item.get("maneuver_id") or "").strip()
+    if direct_id:
+        return direct_id
+    entry_maneuvers = [
+        maneuver
+        for maneuver in item.get("maneuver_history", []) or []
+        if str(maneuver.get("type") or "").strip().lower() == "entry"
+    ]
+    if not entry_maneuvers:
+        return ""
+    entry_maneuvers.sort(
+        key=lambda maneuver: (
+            maneuver.get("planned_at")
+            or maneuver.get("completed_at")
+            or maneuver.get("created_at")
+            or "",
+            maneuver.get("id") or "",
+        )
+    )
+    return str(entry_maneuvers[-1].get("id") or "").strip()
+
+
 def _row_matches_question_date(row: dict, date_parts: list[tuple[int, int, int | None]]) -> bool:
     if not date_parts:
         return True
@@ -1367,12 +1395,19 @@ def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict 
     lines = ["Chegadas previstas registadas no portal:"]
     for item in arrivals[:5]:
         vessel_name = item.get("vessel_name") or "--"
-        eta_label = item.get("arrival_label") or item.get("planned_label") or _local_iso_to_label(item.get("arrival_at") or item.get("date_value"))
+        eta_label = (
+            item.get("eta_label")
+            or item.get("arrival_label")
+            or item.get("planned_label")
+            or _local_iso_to_label(item.get("eta") or item.get("arrival_at") or item.get("date_value"))
+        )
         origin = item.get("last_port") or item.get("local_origin") or "--"
         destination = item.get("berth_label") or item.get("berth") or item.get("local_destination") or "--"
+        entry_maneuver_id = _short_maneuver_id(_arrival_entry_maneuver_id(item))
         lines.append(
             f"- {vessel_name} · ETA {eta_label} · {origin} -> {destination} · "
-            f"escala {item.get('reference_code') or '--'} · agente {_agent_display(item)}."
+            f"escala {item.get('reference_code') or '--'} · entrada {entry_maneuver_id} · "
+            f"agente {_agent_display(item)}."
         )
     answer = "\n".join(lines)
     return {

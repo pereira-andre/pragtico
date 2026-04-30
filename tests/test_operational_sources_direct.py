@@ -244,6 +244,35 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("vento médio", answer)
         self.assertIn("rajadas", answer)
 
+    def test_expected_arrivals_uses_port_call_eta(self) -> None:
+        self.activity["arrivals"] = [
+            {
+                "id": "pc-arrival",
+                "reference_code": "PTSET26ARKLAF927D",
+                "vessel_name": "ARKLOW GLOBE",
+                "eta": "2026-04-30T15:00:00+01:00",
+                "eta_label": "30 Apr 15:00",
+                "last_port": "Lisboa",
+                "berth_label": "SAPEC Sólidos",
+                "agent_label": "Administrador",
+                "agent_profile": {"organization": "APSS"},
+                "maneuver_history": [
+                    {
+                        "id": "entry-12345678",
+                        "type": "entry",
+                        "planned_at": "2026-04-30T15:00:00+01:00",
+                    }
+                ],
+            }
+        ]
+
+        answer = self._answer("Algum navio nas previsões de chegada?")
+
+        self.assertIn("ARKLOW GLOBE", answer)
+        self.assertIn("ETA 30 Apr 15:00", answer)
+        self.assertIn("entrada ENTRY-12", answer)
+        self.assertNotIn("ETA Sem hora", answer)
+
 
 if __name__ == "__main__":
     unittest.main()
