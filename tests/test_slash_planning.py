@@ -112,9 +112,23 @@ class SlashPlanningTests(unittest.TestCase):
         self.assertNotIn("GALBOT", pending_payload["answer"])
 
     def test_help_mentions_planeamento(self) -> None:
-        self.assertIn("/planeamento", build_slash_help("piloto"))
-        self.assertIn("/manobras-planeadas", build_slash_help("piloto"))
-        self.assertIn("/manobras-previstas", build_slash_help("piloto"))
+        help_text = build_slash_help("piloto")
+
+        self.assertIn("📋 Comandos disponíveis:", help_text)
+        self.assertIn("/planeamento", help_text)
+        self.assertIn("/manobras-planeadas", help_text)
+        self.assertIn("/manobras-previstas", help_text)
+        self.assertIn("/ondulação", help_text)
+        self.assertIn("/leitura-costeira", help_text)
+
+    def test_help_mentions_current_admin_aliases(self) -> None:
+        help_text = build_slash_help("admin")
+
+        self.assertIn("/nova-escala", help_text)
+        self.assertIn("/cancelar-manobra", help_text)
+        self.assertIn("/abortar-manobra", help_text)
+        self.assertIn("/reportar_evento", help_text)
+        self.assertIn("/apagar-registo-manobra", help_text)
 
 
 if __name__ == "__main__":

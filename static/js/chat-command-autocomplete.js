@@ -50,6 +50,27 @@
         template: "/meteorologia hoje",
       },
       {
+        command: "/planeamento",
+        label: "Planeamento",
+        description: "Lista todas as manobras no planeamento.",
+        keywords: "planeamento manobras todas",
+        template: "/planeamento",
+      },
+      {
+        command: "/manobras-planeadas",
+        label: "Planeadas",
+        description: "Lista só as manobras já aprovadas.",
+        keywords: "planeadas aprovadas manobras",
+        template: "/manobras-planeadas",
+      },
+      {
+        command: "/manobras-previstas",
+        label: "Previstas",
+        description: "Lista só as manobras ainda pendentes.",
+        keywords: "previstas pendentes manobras",
+        template: "/manobras-previstas",
+      },
+      {
         command: "/regras",
         label: "Regras",
         description: "Lista os códigos de regras e instruções disponíveis.",
@@ -74,6 +95,64 @@
           "Ref: ",
           "Tipo de manobra: entrada | saída | mudança",
         ]),
+      },
+      {
+        command: "/consultar-escala",
+        label: "Consultar escala",
+        description: "Mostra os dados básicos da escala.",
+        keywords: "consultar escala ref",
+        template: joinLines([
+          "/consultar-escala",
+          "Ref: ",
+        ]),
+      },
+      {
+        command: "/consultar-escala-custo",
+        label: "Custo escala",
+        description: "Mostra a escala com estimativa de custos.",
+        keywords: "consultar custo escala faturacao",
+        template: joinLines([
+          "/consultar-escala-custo",
+          "Ref: ",
+        ]),
+      },
+      {
+        command: "/consultar-manobra",
+        label: "Consultar manobra",
+        description: "Mostra os dados básicos da manobra.",
+        keywords: "consultar manobra id ref tipo",
+        template: joinLines([
+          "/consultar-manobra",
+          "ID da manobra: ",
+          "Ref: ",
+          "Tipo de manobra: entrada | saída | mudança",
+        ]),
+      },
+      {
+        command: "/consultar-manobra-custo",
+        label: "Custo manobra",
+        description: "Mostra a manobra com estimativa de custo.",
+        keywords: "consultar custo manobra faturacao",
+        template: joinLines([
+          "/consultar-manobra-custo",
+          "ID da manobra: ",
+          "Ref: ",
+          "Tipo de manobra: entrada | saída | mudança",
+        ]),
+      },
+      {
+        command: "/consultar-navio",
+        label: "Consultar navio",
+        description: "Mostra a ficha do navio conhecida no portal.",
+        keywords: "consultar navio imo nome ficha",
+        template: "/consultar-navio ",
+      },
+      {
+        command: "/reportar-evento",
+        label: "Reportar evento",
+        description: "Regista uma ocorrência operacional.",
+        keywords: "reportar evento ocorrencia tag local",
+        template: "/reportar-evento TAG. LOCAL. DESCRIPTION",
       },
     ];
 
