@@ -254,6 +254,18 @@ def _planned_maneuver_sort_key(item: dict) -> tuple[float, str]:
     )
 
 
+def _planned_maneuver_status_key(item: dict) -> str:
+    clean_status = (item.get("situation_class") or "").strip().lower()
+    if clean_status:
+        return clean_status
+    label_key = _operational_lookup_key(item.get("situation_label") or "")
+    if "aprovad" in label_key:
+        return "approved"
+    if "pendent" in label_key or "previst" in label_key:
+        return "pending"
+    return label_key
+
+
 def _planned_maneuver_day_time(item: dict) -> tuple[str, str]:
     planned_dt = _planned_maneuver_datetime(item)
     day_label = " ".join(str(item.get("date_label") or "").split())
@@ -266,17 +278,38 @@ def _planned_maneuver_day_time(item: dict) -> tuple[str, str]:
     return day_label or "--", time_label or "--"
 
 
-def _format_planning_query_answer() -> str:
+def _format_planning_query_answer(status_filter: str = "") -> str:
     port_activity = filter_port_activity_for_session(
         services.store.get_port_activity_snapshot(window_days=3650),
         public_operational=True,
     )
     planned = list(port_activity.get("planned_maneuvers", []) or [])
+    clean_filter = (status_filter or "").strip().lower()
+    if clean_filter:
+        planned = [
+            item
+            for item in planned
+            if _planned_maneuver_status_key(item) == clean_filter
+        ]
+    emoji = "🗓️"
+    if clean_filter == "approved":
+        emoji = "✅"
+    elif clean_filter == "pending":
+        emoji = "⏳"
     if not planned:
-        return "Não há manobras no planeamento neste momento."
+        if clean_filter == "approved":
+            return f"{emoji} Não há manobras planeadas/aprovadas no planeamento neste momento."
+        if clean_filter == "pending":
+            return f"{emoji} Não há manobras previstas/pendentes no planeamento neste momento."
+        return f"{emoji} Não há manobras no planeamento neste momento."
 
     planned.sort(key=_planned_maneuver_sort_key)
-    lines = [f"Planeamento de manobras ({len(planned)}):"]
+    title = "Planeamento de manobras"
+    if clean_filter == "approved":
+        title = "Manobras planeadas/aprovadas"
+    elif clean_filter == "pending":
+        title = "Manobras previstas/pendentes"
+    lines = [f"{emoji} {title} ({len(planned)}):"]
     for item in planned:
         day_label, time_label = _planned_maneuver_day_time(item)
         maneuver_id = str(item.get("maneuver_id") or "").strip()
@@ -398,9 +431,14 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
         if context:
             return {"answer": context.get("text") or context.get("snippet", "Sem previsão disponível."), "sources": [], "answer_origin": "slash_weather"}
         return {"answer": f"Sem previsão disponível para {question}.", "sources": [], "answer_origin": "slash_weather"}
-    if command == "planning":
+    if command in {"planning", "planning_approved", "planning_pending"}:
+        status_filter = ""
+        if command == "planning_approved":
+            status_filter = "approved"
+        elif command == "planning_pending":
+            status_filter = "pending"
         return {
-            "answer": _format_planning_query_answer(),
+            "answer": _format_planning_query_answer(status_filter),
             "sources": [],
             "answer_origin": "slash_planning",
         }

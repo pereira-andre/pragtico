@@ -35,6 +35,7 @@ class SlashPlanningTests(unittest.TestCase):
                     "maneuver_id": "768ab23c-d9dc-4d5d-b722-49915d90a739",
                     "maneuver_label": "Entrar",
                     "situation_label": "Pendente",
+                    "situation_class": "pending",
                     "date_value": "2026-05-02T15:00:00+01:00",
                     "local_origin": "Southampton",
                     "local_destination": "Cais 10 / Autoeuropa",
@@ -46,6 +47,7 @@ class SlashPlanningTests(unittest.TestCase):
                     "maneuver_id": "391513b3-f521-4b90-9cdf-aafcc183b756",
                     "maneuver_label": "Sair",
                     "situation_label": "Aprovada",
+                    "situation_class": "approved",
                     "date_label": "01/05/2026",
                     "planned_label": "09:30",
                     "date_value": "2026-05-01T09:30:00+01:00",
@@ -67,13 +69,20 @@ class SlashPlanningTests(unittest.TestCase):
         self.assertEqual(parsed["intent"], "query")
         self.assertEqual(parsed["command"], "planning")
 
+    def test_parse_filtered_planning_commands_as_queries(self) -> None:
+        planned = parse_slash_command("/manobras-planeadas", "piloto")
+        expected = parse_slash_command("/manobras-previstas", "piloto")
+
+        self.assertEqual(planned["command"], "planning_approved")
+        self.assertEqual(expected["command"], "planning_pending")
+
     def test_planeamento_lists_all_planned_maneuvers_with_state_and_agency(self) -> None:
         with self.app.test_request_context("/"):
             payload = answer_slash_query("planning", "", "piloto")
 
         answer = payload["answer"]
         self.assertEqual(payload["answer_origin"], "slash_planning")
-        self.assertIn("Planeamento de manobras (2):", answer)
+        self.assertIn("🗓️ Planeamento de manobras (2):", answer)
         self.assertIn("01/05/2026 09:30 · Sair · GALBOT", answer)
         self.assertIn("Estado: Aprovada", answer)
         self.assertIn("Manobra: 391513B3", answer)
@@ -88,10 +97,24 @@ class SlashPlanningTests(unittest.TestCase):
         with self.app.test_request_context("/"):
             payload = answer_slash_query("planning", "", "piloto")
 
-        self.assertEqual(payload["answer"], "Não há manobras no planeamento neste momento.")
+        self.assertEqual(payload["answer"], "🗓️ Não há manobras no planeamento neste momento.")
+
+    def test_filtered_planning_commands_limit_by_state(self) -> None:
+        with self.app.test_request_context("/"):
+            approved_payload = answer_slash_query("planning_approved", "", "piloto")
+            pending_payload = answer_slash_query("planning_pending", "", "piloto")
+
+        self.assertIn("✅ Manobras planeadas/aprovadas (1):", approved_payload["answer"])
+        self.assertIn("GALBOT", approved_payload["answer"])
+        self.assertNotIn("WAY FORWARD", approved_payload["answer"])
+        self.assertIn("⏳ Manobras previstas/pendentes (1):", pending_payload["answer"])
+        self.assertIn("WAY FORWARD", pending_payload["answer"])
+        self.assertNotIn("GALBOT", pending_payload["answer"])
 
     def test_help_mentions_planeamento(self) -> None:
         self.assertIn("/planeamento", build_slash_help("piloto"))
+        self.assertIn("/manobras-planeadas", build_slash_help("piloto"))
+        self.assertIn("/manobras-previstas", build_slash_help("piloto"))
 
 
 if __name__ == "__main__":
