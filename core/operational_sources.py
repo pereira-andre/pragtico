@@ -5,6 +5,8 @@ import math
 import re
 from datetime import datetime
 
+from flask import has_request_context, session
+
 from core import services
 from core.access_control import filter_port_activity_for_session
 from core.chat_planner import (
@@ -85,6 +87,8 @@ AGENT_AGENCY_QUERY_RE = re.compile(
     r"\b(agent\w*|trabalha|pertence)\b.*\b(agencia|agência)\b"
 )
 AGENT_LOOKUP_QUERY_RE = re.compile(r"\b(qual|quem)\b.*\bagente\b|\bagente\b.*\b(navio|escala|manobra)\b")
+VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
+VESSEL_CATALOG_DELETED_KEYS_KEY = "deleted_keys"
 
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
@@ -348,6 +352,89 @@ def _vessel_match_score(question: str, item: dict) -> int:
         if value and f" {value} " in clean_question:
             score += weight
     return score
+
+
+def _catalog_vessel_key(record: dict) -> str:
+    imo = re.sub(r"\D", "", str(record.get("vessel_imo") or ""))
+    if imo:
+        return f"imo:{imo}"
+    name = re.sub(r"\s+", " ", str(record.get("vessel_name") or "").strip()).casefold()
+    return f"name:{name}" if name else ""
+
+
+def _catalog_vessel_rows() -> list[dict]:
+    if has_request_context() and (session.get("role") or "").strip().lower() == "agente":
+        return []
+    if not hasattr(services.store, "get_runtime_state"):
+        return []
+    try:
+        state = services.store.get_runtime_state(VESSEL_CATALOG_STATE_KEY) or {}
+    except Exception:
+        logger.exception("Falha ao ler catálogo de navios para resposta operacional.")
+        return []
+    if not isinstance(state, dict):
+        return []
+    deleted_keys = {
+        str(key)
+        for key in (state.get(VESSEL_CATALOG_DELETED_KEYS_KEY) or [])
+        if str(key).strip()
+    }
+    rows = []
+    for record in state.get("items") or []:
+        if not isinstance(record, dict):
+            continue
+        key = record.get("key") or _catalog_vessel_key(record)
+        if not key or key in deleted_keys:
+            continue
+        rows.append({**record, "key": key, "catalog_only": True})
+    return rows
+
+
+def _find_catalog_vessel(question: str) -> dict | None:
+    candidates = []
+    for item in _catalog_vessel_rows():
+        score = _vessel_match_score(question, item)
+        if score:
+            candidates.append((score, item.get("updated_at") or item.get("created_at") or "", item))
+    candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    return candidates[0][2] if candidates else None
+
+
+def build_vessel_catalog_source(question: str) -> dict | None:
+    vessel = _find_catalog_vessel(question)
+    if not vessel:
+        return None
+    lines = [
+        "Ficha de navio guardada no catálogo PRAGtico:",
+        (
+            f"- {vessel.get('vessel_name') or '--'} | IMO {vessel.get('vessel_imo') or '--'} | "
+            f"indicativo {vessel.get('vessel_call_sign') or '--'} | bandeira {vessel.get('vessel_flag') or '--'}"
+        ),
+        (
+            f"- Tipo {vessel.get('vessel_type') or '--'} | LOA {vessel.get('vessel_loa_m') or '--'} m | "
+            f"boca {vessel.get('vessel_beam_m') or '--'} m | GT {vessel.get('vessel_gt_t') or '--'} | "
+            f"DWT {vessel.get('vessel_dwt_t') or '--'} | calado max. {vessel.get('vessel_max_draft_m') or '--'} m"
+        ),
+        (
+            f"- Bow thruster {_format_thruster_label(vessel.get('vessel_bow_thruster'))}; "
+            f"stern thruster {_format_thruster_label(vessel.get('vessel_stern_thruster'))}"
+        ),
+    ]
+    if vessel.get("service_rate_profile") or vessel.get("service_notes"):
+        lines.append(
+            f"- Serviços/taxas: {vessel.get('service_rate_profile') or '--'}; "
+            f"base linha regular {vessel.get('regular_line_calls_365d') or '0'}; "
+            f"{vessel.get('service_notes') or 'sem notas'}"
+        )
+    return {
+        "source_id": "OPS_VESSEL_CATALOG",
+        "document": f"Ficha de navio · {vessel.get('vessel_name') or 'Catálogo'}",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "vessel_catalog",
+        "snippet": "\n".join(lines),
+        "text": "\n".join(lines),
+    }
 
 
 def _visible_activity(window_days: int = 3650) -> dict:
@@ -845,6 +932,9 @@ def build_operational_chat_sources(
     berth_catalog_source = build_berth_catalog_source(question)
     if berth_catalog_source:
         sources.append(berth_catalog_source)
+    vessel_catalog_source = build_vessel_catalog_source(question)
+    if vessel_catalog_source:
+        sources.append(vessel_catalog_source)
     lisnave_rule_source = build_lisnave_operational_rule_source(question)
     if lisnave_rule_source:
         sources.append(lisnave_rule_source)
@@ -1083,11 +1173,24 @@ def _status_label_for_port_call(item: dict) -> str:
     return item.get("status_label") or status or "--"
 
 
+def _format_thruster_label(value: object) -> str:
+    clean = " ".join(str(value or "").strip().split()).lower()
+    if clean in {"yes", "sim", "true", "1"}:
+        return "Sim"
+    if clean in {"no", "nao", "não", "false", "0"}:
+        return "Não"
+    return "Desconhecido"
+
+
 def _answer_vessel_detail_query(question: str, clean_question: str) -> dict | None:
     if not VESSEL_DETAIL_QUERY_RE.search(clean_question):
         return None
     port_activity = _visible_activity(window_days=3650)
     vessel = _find_visible_vessel(question, port_activity)
+    catalog_only = False
+    if not vessel:
+        vessel = _find_catalog_vessel(question)
+        catalog_only = bool(vessel)
     if not vessel:
         return None
 
@@ -1096,14 +1199,21 @@ def _answer_vessel_detail_query(question: str, clean_question: str) -> dict | No
     berth_label = vessel.get("berth_label") or vessel.get("berth") or "--"
     lines = [
         f"Navio {vessel.get('vessel_name') or '--'}",
-        f"- Escala: {vessel.get('reference_code') or '--'}",
+        f"- Escala: {'sem escala ativa associada' if catalog_only else vessel.get('reference_code') or '--'}",
         f"- Identificação: IMO {vessel.get('vessel_imo') or vessel.get('ship_imo_label') or '--'}; indicativo {vessel.get('vessel_call_sign') or vessel.get('ship_call_sign_label') or '--'}; bandeira {vessel.get('vessel_flag') or vessel.get('ship_flag_label') or '--'}.",
         f"- Ficha: tipo {vessel.get('ship_type_label') or vessel.get('vessel_type') or '--'}; LOA {_format_measure(vessel.get('ship_loa_label') or vessel.get('vessel_loa_m'), ' m')}; boca {_format_measure(vessel.get('ship_beam_label') or vessel.get('vessel_beam_m'), ' m')}; GT {_format_measure(vessel.get('ship_gt_label') or vessel.get('vessel_gt_t') or vessel.get('vessel_gt'))}; DWT {_format_measure(vessel.get('ship_dwt_label') or vessel.get('vessel_dwt_t'))}; calado máx. {_format_measure(vessel.get('ship_max_draft_label') or vessel.get('vessel_max_draft_m'), ' m')}.",
-        f"- Meios do navio: bow thruster {vessel.get('ship_bow_thruster_label') or '--'}; stern thruster {vessel.get('ship_stern_thruster_label') or '--'}.",
-        f"- Estado/localização: {_status_label_for_port_call(vessel)} · {berth_label}.",
+        f"- Meios do navio: bow thruster {vessel.get('ship_bow_thruster_label') or _format_thruster_label(vessel.get('vessel_bow_thruster'))}; stern thruster {vessel.get('ship_stern_thruster_label') or _format_thruster_label(vessel.get('vessel_stern_thruster'))}.",
+        f"- Estado/localização: {'Ficha de catálogo' if catalog_only else _status_label_for_port_call(vessel)} · {berth_label}.",
         f"- Tráfego: {vessel.get('last_port') or '--'} -> {vessel.get('next_port') or '--'}.",
-        f"- Agente de navegação: {_agent_display(vessel)}.",
     ]
+    if catalog_only and (vessel.get("service_rate_profile") or vessel.get("regular_line_calls_365d") or vessel.get("service_notes")):
+        lines.append(
+            f"- Serviços/taxas: {vessel.get('service_rate_profile') or '--'}; "
+            f"base linha regular {vessel.get('regular_line_calls_365d') or '0'}; "
+            f"{vessel.get('service_notes') or 'sem notas'}."
+        )
+    if not catalog_only:
+        lines.append(f"- Agente de navegação: {_agent_display(vessel)}.")
     if maneuver_rows:
         lines.extend(["", "Manobras conhecidas:"])
         for row in maneuver_rows[-6:]:
@@ -1114,7 +1224,10 @@ def _answer_vessel_detail_query(question: str, clean_question: str) -> dict | No
                     f"  Meios/restrições: rebocadores {row.get('tug_count_label') or '--'}; restrições {constraints}."
                 )
     else:
-        lines.extend(["", "Manobras conhecidas:", "- Sem manobras planeadas ou arquivadas visíveis para esta escala."])
+        if catalog_only:
+            lines.extend(["", "Manobras conhecidas:", "- Sem escala ativa/arquivada visível ligada a esta ficha de catálogo."])
+        else:
+            lines.extend(["", "Manobras conhecidas:", "- Sem manobras planeadas ou arquivadas visíveis para esta escala."])
     answer = "\n".join(lines)
     return {
         "answer": answer,

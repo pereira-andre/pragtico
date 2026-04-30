@@ -91,10 +91,10 @@ VESSEL_CATALOG_JSON_TEMPLATE = {
             "vessel_bow_thruster": "yes",
             "vessel_stern_thruster": "unknown",
             "service_rate_profile": "Linha regular",
-            "regular_line_calls_365d": "7",
+            "regular_line_calls_365d": "0",
             "pilotage_up_rate": "",
             "tup_reduction_profile": "regular_line",
-            "service_notes": "Perfil comercial de demonstração.",
+            "service_notes": "Base 0: o PRAGtico soma as escalas executadas a partir da data de registo durante 365 dias.",
         }
     ]
 }
@@ -315,12 +315,12 @@ def _integer_payload_value(payload: dict, *keys: str, default: str = "") -> str:
     try:
         numeric_value = float(value.replace(",", "."))
     except ValueError as exc:
-        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.") from exc
+        raise ValueError("Base linha regular deve ser um número inteiro.") from exc
     if not numeric_value.is_integer():
-        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.")
+        raise ValueError("Base linha regular deve ser um número inteiro.")
     number = int(numeric_value)
     if number < 0 or number > 999:
-        raise ValueError("Escalas últimos 365 dias deve estar entre 0 e 999.")
+        raise ValueError("Base linha regular deve estar entre 0 e 999.")
     return str(number)
 
 
@@ -413,6 +413,9 @@ def _coerce_vessel_catalog_payload(payload: dict) -> dict:
         "service_rate_profile": _string_payload_value(payload, "service_rate_profile", "tax_profile", "service_profile"),
         "regular_line_calls_365d": _integer_payload_value(
             payload, "regular_line_calls_365d", "scale_count_365d", "calls_365d"
+        ),
+        "regular_line_calls_anchor_at": _string_payload_value(
+            payload, "regular_line_calls_anchor_at", "regular_line_anchor_at", "calls_anchor_at"
         ),
         "pilotage_up_rate": validate_positive_number(
             _string_payload_value(payload, "pilotage_up_rate", "custom_up_rate"),
@@ -563,6 +566,69 @@ def _remove_vessel_catalog_record(key: str, *, hide: bool) -> dict:
     return removed or {"key": clean_key}
 
 
+def _parse_catalog_datetime(value: object) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone()
+    except ValueError:
+        return None
+
+
+def _catalog_date_label(value: object) -> str:
+    parsed = _parse_catalog_datetime(value)
+    return parsed.strftime("%d/%m/%Y") if parsed else "--"
+
+
+def _catalog_port_call_count_datetime(port_call: dict) -> datetime | None:
+    status = (port_call.get("status") or "").strip().lower()
+    if status == "departed":
+        keys = ("departure_at", "ata", "eta")
+    elif status == "in_port":
+        keys = ("ata", "eta")
+    else:
+        return None
+    for key in keys:
+        parsed = _parse_catalog_datetime(port_call.get(key))
+        if parsed:
+            return parsed
+    return None
+
+
+def _regular_line_counter_meta(record: dict, port_calls: list[dict], *, now: datetime | None = None) -> dict:
+    now = now or datetime.now().astimezone()
+    try:
+        base_calls = int(float(str(record.get("regular_line_calls_365d") or "0").replace(",", ".")))
+    except ValueError:
+        base_calls = 0
+    anchor_at = (
+        _parse_catalog_datetime(record.get("regular_line_calls_anchor_at"))
+        or _parse_catalog_datetime(record.get("updated_at"))
+        or _parse_catalog_datetime(record.get("created_at"))
+    )
+    base_expires_at = anchor_at + timedelta(days=365) if anchor_at else None
+    base_is_active = bool(anchor_at and base_expires_at and now < base_expires_at)
+    effective_base = base_calls if base_is_active else 0
+    count_start = anchor_at if base_is_active and anchor_at else now - timedelta(days=365)
+    counted_scales = 0
+    for port_call in port_calls:
+        counted_at = _catalog_port_call_count_datetime(port_call)
+        if counted_at and count_start <= counted_at <= now:
+            counted_scales += 1
+    effective_calls = effective_base + counted_scales
+    return {
+        "regular_line_calls_365d": str(effective_base) if base_calls and not base_is_active else record.get("regular_line_calls_365d", ""),
+        "regular_line_base_calls_365d": effective_base,
+        "regular_line_counted_scales_365d": counted_scales,
+        "regular_line_effective_calls_365d": effective_calls,
+        "regular_line_calls_anchor_at": anchor_at.isoformat() if anchor_at else record.get("regular_line_calls_anchor_at", ""),
+        "regular_line_calls_anchor_label": _catalog_date_label(anchor_at),
+        "regular_line_calls_expires_at": base_expires_at.isoformat() if base_expires_at else "",
+        "regular_line_calls_expires_label": _catalog_date_label(base_expires_at),
+        "regular_line_base_expired": bool(base_calls and not base_is_active),
+    }
+
+
 def _delete_all_vessel_catalog_records() -> int:
     vessels = _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
     deleted_keys = _read_deleted_vessel_catalog_keys()
@@ -585,18 +651,32 @@ def _upsert_vessel_catalog_record(payload: dict, *, updated_by: str, validate: b
     records = _read_vessel_catalog_records()
     deleted_keys = _read_deleted_vessel_catalog_keys()
     deleted_keys.discard(key)
-    now = datetime.now().astimezone().isoformat()
+    now_dt = datetime.now().astimezone()
+    now = now_dt.isoformat()
     saved = {
         **record,
         "key": key,
         "updated_by": updated_by,
         "updated_at": now,
     }
+    if not saved.get("regular_line_calls_anchor_at"):
+        saved["regular_line_calls_anchor_at"] = now
     replaced = False
     for index, current in enumerate(records):
         if (current.get("key") or _vessel_catalog_key(current)) != key:
             continue
         created_at = current.get("created_at") or now
+        current_anchor = _parse_catalog_datetime(current.get("regular_line_calls_anchor_at"))
+        current_anchor_active = bool(current_anchor and now_dt < current_anchor + timedelta(days=365))
+        if (
+            str(current.get("regular_line_calls_365d") or "")
+            == str(saved.get("regular_line_calls_365d") or "")
+            and current.get("regular_line_calls_anchor_at")
+            and current_anchor_active
+        ):
+            saved["regular_line_calls_anchor_at"] = current["regular_line_calls_anchor_at"]
+        else:
+            saved["regular_line_calls_anchor_at"] = now
         saved_values = {
             field: value
             for field, value in saved.items()
@@ -722,7 +802,7 @@ def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
         if key in deleted_keys:
             continue
         if key:
-            records_by_key[key] = {**record, "key": key, "scale_count": 0}
+            records_by_key[key] = {**record, "key": key, "scale_count": 0, "_catalog_port_calls": []}
 
     if activity is None:
         try:
@@ -741,8 +821,9 @@ def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
             key = _vessel_catalog_key(record)
             if not key or key in deleted_keys:
                 continue
-            current = records_by_key.setdefault(key, {**record, "key": key, "scale_count": 0})
+            current = records_by_key.setdefault(key, {**record, "key": key, "scale_count": 0, "_catalog_port_calls": []})
             current["scale_count"] = int(current.get("scale_count") or 0) + 1
+            current.setdefault("_catalog_port_calls", []).append(port_call)
             for field in VESSEL_CATALOG_FIELDS:
                 if not current.get(field) and record.get(field):
                     current[field] = record[field]
@@ -752,7 +833,10 @@ def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
             current["latest_eta_label"] = port_call.get("eta_label", current.get("latest_eta_label", ""))
 
     options = list(records_by_key.values())
+    now = datetime.now().astimezone()
     for item in options:
+        port_calls = item.pop("_catalog_port_calls", [])
+        item.update(_regular_line_counter_meta(item, port_calls, now=now))
         vessel_type_meta = _vessel_type_meta(item.get("vessel_type"))
         item["vessel_type_label"] = vessel_type_meta.get("label", item.get("vessel_type") or "Restantes")
         item["vessel_type_icon"] = vessel_type_meta.get("icon", "")
@@ -1152,7 +1236,11 @@ def _vessel_catalog_txt(record: dict) -> str:
         "",
         "Serviços e taxas",
         f"Perfil de serviços: {record.get('service_rate_profile') or '--'}",
-        f"Escalas linha regular 365 dias: {record.get('regular_line_calls_365d') or '--'}",
+        f"Base linha regular 365 dias: {record.get('regular_line_base_calls_365d', record.get('regular_line_calls_365d') or 0)}",
+        f"Escalas PRAGtico após base: {record.get('regular_line_counted_scales_365d', 0)}",
+        f"Total linha regular 365 dias: {record.get('regular_line_effective_calls_365d', record.get('regular_line_calls_365d') or 0)}",
+        f"Base válida desde: {record.get('regular_line_calls_anchor_label') or '--'}",
+        f"Base expira em: {record.get('regular_line_calls_expires_label') or '--'}",
         f"UP pilotagem: {record.get('pilotage_up_rate') or '--'}",
         f"Perfil redução TUP: {record.get('tup_reduction_profile') or '--'}",
         f"Notas: {record.get('service_notes') or '--'}",

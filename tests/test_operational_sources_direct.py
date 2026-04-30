@@ -11,9 +11,13 @@ from core.operational_sources import answer_direct_operational_query
 class FakeStore:
     def __init__(self, activity: dict) -> None:
         self.activity = activity
+        self.runtime_state: dict = {}
 
     def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
         return self.activity
+
+    def get_runtime_state(self, key: str):
+        return self.runtime_state.get(key)
 
 
 class FakeWeatherService:
@@ -216,6 +220,35 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("TMS 2 - Posição A", answer)
         self.assertIn("dep-12345678", answer)
         self.assertIn("Navex Setúbal", answer)
+
+    def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
+        services.store.runtime_state["port_call_vessel_catalog"] = {
+            "items": [
+                {
+                    "key": "imo:9329981",
+                    "vessel_name": "GALBOT",
+                    "vessel_imo": "9329981",
+                    "vessel_call_sign": "9HA2522",
+                    "vessel_flag": "Malta",
+                    "vessel_type": "Graneis líquidos",
+                    "vessel_loa_m": "128.6",
+                    "vessel_beam_m": "20.4",
+                    "vessel_gt_t": "7123",
+                    "vessel_dwt_t": "10450",
+                    "vessel_max_draft_m": "7.2",
+                    "vessel_bow_thruster": "yes",
+                    "vessel_stern_thruster": "unknown",
+                }
+            ],
+            "deleted_keys": [],
+        }
+
+        answer = self._answer("Dados navio GALBOT call sign 9HA2522")
+
+        self.assertIn("GALBOT", answer)
+        self.assertIn("9HA2522", answer)
+        self.assertIn("GT 7123", answer)
+        self.assertIn("Ficha de catálogo", answer)
 
     def test_daylight_answer_uses_weather_astro_data(self) -> None:
         answer = self._answer("Qual o período luminoso para hoje?")

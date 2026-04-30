@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta
 
 from core import services
 from blueprints.port_calls import (
     VESSEL_CATALOG_STATE_KEY,
+    _build_vessel_catalog_options,
     _coerce_port_call_payload_with_catalog,
     _delete_all_vessel_catalog_records,
     _filter_vessel_catalog_options,
@@ -45,6 +47,7 @@ class FakeStore:
                 "status": "departed",
                 "vessel_name": "WAY FORWARD",
                 "vessel_imo": "9876543",
+                "departure_at": datetime.now().astimezone().isoformat(),
             },
         ]
 
@@ -228,6 +231,71 @@ class VesselCatalogSyncTests(unittest.TestCase):
         self.assertEqual(state["items"], [])
         self.assertIn("imo:1234567", state["deleted_keys"])
         self.assertIn("imo:9876543", state["deleted_keys"])
+
+    def test_regular_line_base_counts_executed_scales_after_anchor(self) -> None:
+        anchor_at = (datetime.now().astimezone() - timedelta(days=1)).isoformat()
+        services.store.runtime_state[VESSEL_CATALOG_STATE_KEY] = {
+            "items": [
+                {
+                    "key": "imo:9876543",
+                    "vessel_name": "WAY FORWARD",
+                    "vessel_imo": "9876543",
+                    "vessel_call_sign": "WAYF",
+                    "vessel_flag": "PT",
+                    "vessel_type": "Roll-on/Roll-off",
+                    "vessel_loa_m": "199.9",
+                    "vessel_beam_m": "32.2",
+                    "vessel_gt_t": "52000",
+                    "vessel_dwt_t": "18000",
+                    "vessel_max_draft_m": "9.8",
+                    "vessel_bow_thruster": "yes",
+                    "vessel_stern_thruster": "unknown",
+                    "regular_line_calls_365d": "37",
+                    "regular_line_calls_anchor_at": anchor_at,
+                }
+            ],
+            "deleted_keys": [],
+        }
+
+        vessels = _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+
+        way_forward = next(item for item in vessels if item["vessel_name"] == "WAY FORWARD")
+        self.assertEqual(way_forward["regular_line_base_calls_365d"], 37)
+        self.assertEqual(way_forward["regular_line_counted_scales_365d"], 1)
+        self.assertEqual(way_forward["regular_line_effective_calls_365d"], 38)
+
+    def test_regular_line_base_expires_after_one_year(self) -> None:
+        anchor_at = (datetime.now().astimezone() - timedelta(days=366)).isoformat()
+        services.store.runtime_state[VESSEL_CATALOG_STATE_KEY] = {
+            "items": [
+                {
+                    "key": "imo:9876543",
+                    "vessel_name": "WAY FORWARD",
+                    "vessel_imo": "9876543",
+                    "vessel_call_sign": "WAYF",
+                    "vessel_flag": "PT",
+                    "vessel_type": "Roll-on/Roll-off",
+                    "vessel_loa_m": "199.9",
+                    "vessel_beam_m": "32.2",
+                    "vessel_gt_t": "52000",
+                    "vessel_dwt_t": "18000",
+                    "vessel_max_draft_m": "9.8",
+                    "vessel_bow_thruster": "yes",
+                    "vessel_stern_thruster": "unknown",
+                    "regular_line_calls_365d": "37",
+                    "regular_line_calls_anchor_at": anchor_at,
+                }
+            ],
+            "deleted_keys": [],
+        }
+
+        vessels = _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650))
+
+        way_forward = next(item for item in vessels if item["vessel_name"] == "WAY FORWARD")
+        self.assertEqual(way_forward["regular_line_base_calls_365d"], 0)
+        self.assertEqual(way_forward["regular_line_counted_scales_365d"], 1)
+        self.assertEqual(way_forward["regular_line_effective_calls_365d"], 1)
+        self.assertTrue(way_forward["regular_line_base_expired"])
 
 
 if __name__ == "__main__":
