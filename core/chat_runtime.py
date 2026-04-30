@@ -1329,11 +1329,26 @@ def handle_chat_turn(
                     "answer_origin": "event_report_pending",
                 }
 
-        slash_command = (
-            parse_slash_command(clean_question, role)
-            if answer is None and looks_like_slash_command(clean_question)
-            else None
-        )
+        slash_command = None
+        if answer is None and looks_like_slash_command(clean_question):
+            try:
+                slash_command = parse_slash_command(clean_question, role)
+            except (PermissionError, ValueError) as exc:
+                answer = {
+                    "answer": f"Não consegui interpretar o comando. Motivo: {exc}",
+                    "sources": [],
+                    "answer_origin": "slash_error",
+                }
+            except Exception:
+                logger.exception("Falha inesperada ao interpretar comando slash.")
+                answer = {
+                    "answer": (
+                        "Falha inesperada ao interpretar o comando. "
+                        "Confirma os campos obrigatórios com `/help` e volta a tentar."
+                    ),
+                    "sources": [],
+                    "answer_origin": "slash_error",
+                }
         if slash_command and slash_command.get("intent") == "help":
             answer = {
                 "answer": slash_command["answer"],
@@ -1406,11 +1421,38 @@ def handle_chat_turn(
             if not allow_mutations:
                 answer = _blocked_mutation_answer(channel)
             else:
-                action_proposal = finalize_operational_proposal(
-                    slash_command.get("proposal"),
-                    current_resolvable_port_calls(),
-                )
-                if action_proposal and action_proposal.get("intent") == "action":
+                try:
+                    action_proposal = finalize_operational_proposal(
+                        slash_command.get("proposal"),
+                        current_resolvable_port_calls(),
+                    )
+                except (PermissionError, ValueError) as exc:
+                    proposal = slash_command.get("proposal") or {}
+                    template = build_action_reply_template(
+                        proposal.get("action", ""),
+                        proposal.get("missing_fields", []),
+                    )
+                    message = f"Não consegui preparar o comando. Motivo: {exc}"
+                    if template:
+                        message = f"{message}\n\n{template}"
+                    answer = {
+                        "answer": message,
+                        "sources": [],
+                        "answer_origin": "slash_error",
+                    }
+                    action_proposal = None
+                except Exception:
+                    logger.exception("Falha inesperada ao preparar comando slash operacional.")
+                    answer = {
+                        "answer": (
+                            "Falha inesperada ao preparar o comando operacional. "
+                            "Confirma a Ref da escala, o ID da manobra e os campos alterados."
+                        ),
+                        "sources": [],
+                        "answer_origin": "slash_error",
+                    }
+                    action_proposal = None
+                if answer is None and action_proposal and action_proposal.get("intent") == "action":
                     pending_action = save_pending_chat_action(
                         username=username,
                         conversation_id=conversation["id"],
@@ -1423,7 +1465,7 @@ def handle_chat_turn(
                         "pending_action": load_pending_chat_action(username, conversation["id"]),
                         "answer_origin": "slash_proposal",
                     }
-                else:
+                elif answer is None:
                     proposal = slash_command.get("proposal") or {}
                     template = build_action_reply_template(
                         proposal.get("action", ""),
@@ -1505,11 +1547,26 @@ def handle_chat_turn(
                                 "answer_origin": "pending_action_confirmed",
                             }
                 else:
-                    pending_update = refine_pending_operational_action(
-                        clean_question,
-                        existing_pending.get("proposal", {}),
-                        role,
-                    )
+                    try:
+                        pending_update = refine_pending_operational_action(
+                            clean_question,
+                            existing_pending.get("proposal", {}),
+                            role,
+                        )
+                    except (PermissionError, ValueError) as exc:
+                        pending_update = {
+                            "intent": "unsupported",
+                            "reason": f"Não consegui atualizar a ação pendente. Motivo: {exc}",
+                        }
+                    except Exception:
+                        logger.exception("Falha inesperada ao atualizar ação operacional pendente.")
+                        pending_update = {
+                            "intent": "unsupported",
+                            "reason": (
+                                "Falha inesperada ao atualizar a ação pendente. "
+                                "Confirma os campos obrigatórios e volta a tentar."
+                            ),
+                        }
                     if (
                         pending_update
                         and pending_update.get("intent") == "update"

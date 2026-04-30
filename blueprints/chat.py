@@ -685,6 +685,8 @@ def api_chat():
             channel="web",
             allow_mutations=True,
         )
+    except (PermissionError, ValueError) as exc:
+        return jsonify({"error": flash_error_message(str(exc))}), 400
     except RuntimeError as exc:
         log_error_event(
             logger,

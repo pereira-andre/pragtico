@@ -508,14 +508,66 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     return clean
 
 
+def _line_label_lookup(alias_map: Dict[str, List[str]]) -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    alias_items: List[tuple[str, str]] = []
+    for canonical, aliases in alias_map.items():
+        for alias in aliases:
+            clean_alias = _lookup_key(alias)
+            if clean_alias:
+                alias_items.append((clean_alias, canonical))
+    for clean_alias, canonical in sorted(alias_items, key=lambda item: len(item[0]), reverse=True):
+        lookup.setdefault(clean_alias, canonical)
+    return lookup
+
+
+def _extract_line_labelled_values(question: str, alias_map: Dict[str, List[str]]) -> Optional[Dict[str, object]]:
+    if "\n" not in (question or ""):
+        return None
+    alias_lookup = _line_label_lookup(alias_map)
+    extracted: Dict[str, object] = {}
+    saw_label = False
+    for raw_line in (question or "").splitlines():
+        line = raw_line.strip()
+        if not line or (":" not in line and "=" not in line):
+            continue
+        separator_indexes = [
+            index
+            for index in (line.find(":"), line.find("="))
+            if index >= 0
+        ]
+        if not separator_indexes:
+            continue
+        separator_index = min(separator_indexes)
+        raw_label = line[:separator_index].strip(" \t-*•")
+        canonical = alias_lookup.get(_lookup_key(raw_label))
+        if not canonical:
+            continue
+        saw_label = True
+        raw_value = line[separator_index + 1 :]
+        clean_value = _clean_extracted_value(canonical, raw_value)
+        if clean_value:
+            extracted[canonical] = clean_value
+    return extracted if saw_label else None
+
+
 def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]]) -> Dict[str, object]:
+    line_values = _extract_line_labelled_values(question, alias_map)
+    if line_values is not None:
+        return line_values
+
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
     search_text, index_map = _normalized_ascii_text_with_index_map(text)
     raw_hits = []
     for canonical, aliases in alias_map.items():
-        for alias in aliases:
+        sorted_aliases = sorted(
+            aliases,
+            key=lambda item: len(_normalized_ascii_text(item)),
+            reverse=True,
+        )
+        for alias in sorted_aliases:
             needle = _normalized_ascii_text(alias).strip()
             pattern = re.compile(
                 rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b|\bé\b)\s*",

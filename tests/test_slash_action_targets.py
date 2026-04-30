@@ -121,6 +121,57 @@ class SlashActionTargetTests(unittest.TestCase):
 
         self.assertEqual(missing, ["campo a alterar"])
 
+    def test_multiline_edit_maneuver_keeps_blank_fields_empty(self) -> None:
+        proposal = self._proposal(
+            "/editar-manobra\n"
+            "ID da manobra: 86683899\n"
+            "Ref: \n"
+            "Tipo de manobra: saída\n"
+            "Hora prevista: 01/05/2026, 19:00\n"
+            "Origem: \n"
+            "Destino: \n"
+            "Calado: \n"
+            "Rebocadores: 0\n"
+            "Restrições: daylight, gas, estrategico\n"
+            "Observações: \n"
+            "Motivo da alteração: Carga atrasada\n"
+        )
+
+        self.assertEqual(proposal["target"]["maneuver_id"], "86683899")
+        self.assertEqual(proposal["target"]["reference_code"], "")
+        self.assertEqual(proposal["target"]["maneuver_type"], "departure")
+        self.assertEqual(proposal["fields"]["planned_at_local"], "01/05/2026, 19:00")
+        self.assertNotIn("origin", proposal["fields"])
+        self.assertNotIn("destination", proposal["fields"])
+        self.assertNotIn("draft_m", proposal["fields"])
+        self.assertEqual(proposal["fields"]["tug_count"], "0")
+        self.assertEqual(proposal["fields"]["change_reason"], "Carga atrasada")
+        self.assertEqual(proposal["missing_fields"], [])
+
+    def test_multiline_edit_maneuver_missing_reason_is_explicit(self) -> None:
+        proposal = self._proposal(
+            "/editar-manobra\n"
+            "ID da manobra: 86683899\n"
+            "Tipo de manobra: saída\n"
+            "Hora prevista: 01/05/2026, 19:00\n"
+            "Motivo da alteração:\n"
+        )
+
+        self.assertEqual(proposal["missing_fields"], ["motivo da alteração"])
+
+    def test_inline_labelled_maneuver_id_prefers_full_label_over_id_alias(self) -> None:
+        proposal = self._proposal(
+            "/editar-manobra ID da manobra: 86683899 "
+            "Tipo de manobra: saída "
+            "Hora prevista: 01/05/2026, 19:00 "
+            "Motivo da alteração: Carga atrasada"
+        )
+
+        self.assertEqual(proposal["target"]["maneuver_id"], "86683899")
+        self.assertEqual(proposal["target"]["maneuver_type"], "departure")
+        self.assertEqual(proposal["fields"]["change_reason"], "Carga atrasada")
+        self.assertEqual(proposal["missing_fields"], [])
+
     def test_finalize_edit_maneuver_by_id_keeps_existing_time_implicit(self) -> None:
         port_call = self._port_call()
         services.store = FakeStore(port_call)
