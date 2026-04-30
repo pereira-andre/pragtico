@@ -58,6 +58,11 @@ from core.knowledge_runtime import (
     safe_rebuild_index,
     start_reindex_job,
 )
+from core.operational_test_suite import (
+    cleanup_operational_test_records,
+    operational_test_inventory,
+    run_operational_flow_suite,
+)
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.bot_insights import (
     build_bot_monitor_snapshot,
@@ -1530,6 +1535,39 @@ def admin_status():
     """Painel de estado do sistema para administradores."""
     refresh_knowledge_state(force_reindex=False)
     return render_template("admin_status.html", admin=load_admin_status())
+
+
+@bp.route("/admin/tests", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def admin_operational_tests():
+    """Página admin para correr testes controlados de escalas e manobras."""
+    result = None
+    if request.method == "POST":
+        action = request.form.get("action", "run").strip().lower()
+        if action == "cleanup":
+            result = cleanup_operational_test_records()
+            flash(
+                f"Limpeza concluída: {result.get('deleted_count', 0)} escala(s) de teste removida(s)."
+                if result.get("state") == "passed"
+                else "A limpeza dos dados de teste encontrou erros.",
+                "success" if result.get("state") == "passed" else "error",
+            )
+        else:
+            keep_records = request.form.get("keep_records") == "on"
+            result = run_operational_flow_suite(
+                actor_username=session.get("username", "admin"),
+                cleanup_after=not keep_records,
+            )
+            flash(
+                f"Testes operacionais concluídos: {result.get('passed_steps', 0)}/{result.get('total_steps', 0)} passo(s) passaram.",
+                "success" if result.get("state") == "passed" else "error",
+            )
+    return render_template(
+        "admin_operational_tests.html",
+        result=result,
+        inventory=operational_test_inventory(),
+    )
 
 
 @bp.route("/admin/bot")

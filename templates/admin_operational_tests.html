@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell admin-status-page operational-tests-page">
+  <section class="hero-card admin-status-hero">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Validação operacional</p>
+        <h1>Testes operacionais</h1>
+        <p class="lead">Execução admin controlada para validar escalas, manobras, comandos slash e live feed com resultados visíveis por módulo.</p>
+      </div>
+      <div class="admin-status-hero-tools">
+        {% if result %}
+          <span class="admin-status-badge is-{{ result.state_badge }}">{{ result.state_label }}</span>
+        {% else %}
+          <span class="admin-status-badge is-degraded">Pronto</span>
+        {% endif %}
+        <a class="outline-link" href="{{ url_for('admin.admin_status') }}">Estado</a>
+        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Quadro</a>
+      </div>
+    </div>
+
+    <div class="hero-meta-grid admin-status-hero-grid">
+      <article class="hero-stat">
+        <span>Módulos</span>
+        <strong>{{ result.modules|length if result and result.kind == "run" else 5 }}</strong>
+        <small>fluxos, regras, comandos, live feed e limpeza</small>
+      </article>
+      <article class="hero-stat">
+        <span>Passos</span>
+        <strong>{{ result.total_steps if result and result.kind == "run" else "--" }}</strong>
+        <small>{{ result.passed_steps if result and result.kind == "run" else 0 }} OK · {{ result.failed_steps if result and result.kind == "run" else 0 }} erro(s)</small>
+      </article>
+      <article class="hero-stat">
+        <span>Dados retidos</span>
+        <strong>{{ inventory.count }}</strong>
+        <small>escala(s) TESTE QA visíveis</small>
+      </article>
+      <article class="hero-stat">
+        <span>Duração</span>
+        <strong>{{ result.duration_ms if result else "--" }}{% if result %}ms{% endif %}</strong>
+        <small>{{ result.finished_at_label if result else "sem execução nesta vista" }}</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel section-panel operational-tests-controls">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Execução</p>
+        <h2>Correr suite controlada</h2>
+      </div>
+    </div>
+    <div class="admin-status-split">
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Teste completo</strong>
+          <span class="admin-status-badge is-online">Admin</span>
+        </div>
+        <p class="admin-status-note">Por defeito, os dados temporários são apagados no fim. Marca a opção abaixo se quiseres abrir as escalas criadas e inspecionar no portal.</p>
+        <form method="post" class="stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="run">
+          <label class="checkbox-line">
+            <input type="checkbox" name="keep_records">
+            Manter dados TESTE QA depois da execução
+          </label>
+          <button type="submit" class="mini-button">Executar testes agora</button>
+        </form>
+      </article>
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Limpeza</strong>
+          <span class="admin-status-badge is-{{ 'degraded' if inventory.count else 'online' }}">{{ inventory.count }}</span>
+        </div>
+        {% if inventory.error %}
+          <p class="admin-status-note is-danger">{{ inventory.error }}</p>
+        {% elif inventory.count %}
+          <p class="admin-status-note">Existem dados de teste retidos. Remove-os antes de voltar a correr a suite se quiseres um ensaio limpo.</p>
+        {% else %}
+          <p class="admin-status-note">Não existem escalas TESTE QA retidas neste momento.</p>
+        {% endif %}
+        <form method="post" onsubmit="return confirm('Remover todos os dados TESTE QA?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="cleanup">
+          <button type="submit" class="mini-button secondary-button">Limpar dados de teste</button>
+        </form>
+      </article>
+    </div>
+  </section>
+
+  {% if result and result.kind == "cleanup" %}
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Resultado</p>
+          <h2>Limpeza de dados</h2>
+        </div>
+        <span class="admin-status-badge is-{{ result.state_badge }}">{{ result.state_label }}</span>
+      </div>
+      <p class="admin-status-note">{{ result.deleted_count }} escala(s) TESTE QA removida(s).</p>
+      {% if result.errors %}
+        <div class="admin-status-alert-list">
+          {% for error in result.errors %}
+            <article class="admin-status-alert">{{ error }}</article>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if result and result.kind == "run" %}
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Resumo</p>
+          <h2>Resultado por módulo</h2>
+        </div>
+        <span class="admin-status-badge is-{{ result.state_badge }}">{{ result.state_label }}</span>
+      </div>
+      <div class="admin-status-metric-grid operational-tests-module-grid">
+        {% for module in result.modules %}
+          <article class="admin-status-metric is-{{ 'danger' if module.state == 'failed' else 'warning' if module.state == 'warning' else 'success' }}">
+            <span>{{ module.name }}</span>
+            <strong>{{ module.passed_steps }}/{{ module.total_steps }}</strong>
+            <small>{{ module.failed_steps }} erro(s) · {{ module.warning_steps }} aviso(s)</small>
+          </article>
+        {% endfor %}
+      </div>
+      {% if result.cleanup_after %}
+        <p class="admin-status-note">Os dados temporários foram limpos no fim da execução.</p>
+      {% else %}
+        <p class="admin-status-note is-danger">Os dados temporários foram mantidos para inspeção manual. Usa a limpeza quando terminares.</p>
+      {% endif %}
+    </section>
+
+    {% for module in result.modules %}
+      <section class="panel section-panel operational-tests-module">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Módulo</p>
+            <h2>{{ module.name }}</h2>
+          </div>
+          <span class="admin-status-badge is-{{ module.state_badge }}">
+            {{ module.passed_steps }}/{{ module.total_steps }} OK
+          </span>
+        </div>
+
+        <div class="operational-tests-scenario-list">
+          {% for scenario in module.scenarios %}
+            <details class="planning-optional-box operational-tests-scenario" {% if scenario.state != "passed" %}open{% endif %}>
+              <summary>
+                <span>{{ scenario.name }}</span>
+                <span class="admin-status-badge is-{{ scenario.state_badge }}">{{ scenario.state }}</span>
+              </summary>
+              <div class="stack planning-optional-body">
+                <p class="admin-status-note">{{ scenario.purpose }}</p>
+                <div class="document-window-table">
+                  <table class="planned-table operational-tests-table">
+                    <thead>
+                      <tr>
+                        <th>Estado</th>
+                        <th>Passo</th>
+                        <th>Elemento avaliado</th>
+                        <th>Esperado</th>
+                        <th>Observado / erro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for step in scenario.steps %}
+                        <tr class="operational-tests-row is-{{ step.state }}">
+                          <td><span class="admin-status-badge is-{{ step.state_badge }}">{{ step.state }}</span></td>
+                          <td>{{ step.label }}</td>
+                          <td>{{ step.element }}</td>
+                          <td>{{ step.expected }}</td>
+                          <td><code>{{ step.observed }}</code></td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </details>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+
+    {% if result.retained_records %}
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Inspeção manual</p>
+            <h2>Escalas mantidas</h2>
+          </div>
+        </div>
+        <div class="document-window-table">
+          <table class="planned-table">
+            <thead>
+              <tr>
+                <th>Escala</th>
+                <th>Navio</th>
+                <th>Abrir</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in result.retained_records %}
+                <tr>
+                  <td>{{ record.reference_code }}</td>
+                  <td>{{ record.vessel_name }}</td>
+                  <td><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=record.id) }}">Abrir escala</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+  {% endif %}
+</main>
+{% endblock %}

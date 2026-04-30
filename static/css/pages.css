@@ -2452,6 +2452,47 @@
   background: rgba(239, 68, 68, 0.07);
 }
 
+.operational-tests-module-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.operational-tests-scenario-list {
+  display: grid;
+  gap: 12px;
+}
+
+.operational-tests-scenario summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.operational-tests-table {
+  min-width: 980px;
+}
+
+.operational-tests-table td {
+  font-size: 0.86rem;
+}
+
+.operational-tests-table code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.operational-tests-row.is-failed {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.operational-tests-row.is-warning {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.operational-tests-row.is-passed {
+  background: rgba(34, 197, 94, 0.035);
+}
+
 .admin-status-split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
