@@ -40,6 +40,25 @@ from .utils import (
 )
 
 
+def _find_active_duplicate_port_call(
+    records: List[Dict],
+    *,
+    clean_imo: str = "",
+    clean_call_sign: str = "",
+) -> tuple[str, Dict] | None:
+    """Find a duplicate whose normalized port-call state is still active."""
+    active_statuses = {PORT_CALL_STATUS_SCHEDULED, PORT_CALL_STATUS_IN_PORT}
+    for record in records:
+        normalized = _normalize_port_call_record(record)
+        if normalized.get("status") not in active_statuses:
+            continue
+        if clean_imo and _clean_text(str(normalized.get("vessel_imo", ""))) == clean_imo:
+            return "imo", normalized
+        if clean_call_sign and _clean_text(str(normalized.get("vessel_call_sign", ""))) == clean_call_sign:
+            return "call_sign", normalized
+    return None
+
+
 class PostgresPortCallMixin:
     def clear_port_calls(self) -> int:
         with self._connect() as conn:
@@ -231,7 +250,7 @@ class PostgresPortCallMixin:
             ),
         )
 
-        # --- Verificar duplicados em escalas ativas (scheduled / in_port) ---
+        # --- Verificar duplicados em escalas realmente ativas (scheduled / in_port normalizado) ---
         clean_imo = _clean_text(vessel_imo)
         clean_cs = _clean_text(vessel_call_sign)
         if clean_imo or clean_cs:
@@ -247,14 +266,23 @@ class PostgresPortCallMixin:
                         params.append(clean_cs)
                     where = " OR ".join(conditions)
                     cur.execute(
-                        f"SELECT vessel_name, vessel_imo, vessel_call_sign FROM port_calls "
-                        f"WHERE status IN ('scheduled', 'in_port') AND ({where})",
+                        f"{self._port_call_select_clause()} WHERE {where}",
                         params,
                     )
-                    dup = cur.fetchone()
-                    if isinstance(dup, dict) and dup:
-                        dup_name = dup.get("vessel_name", dup.get("vessel_name", ""))
-                        if clean_imo and _clean_text(str(dup.get("vessel_imo", ""))) == clean_imo:
+                    candidates = [
+                        payload
+                        for payload in (self._row_to_port_call_record(row) for row in cur.fetchall())
+                        if payload
+                    ]
+                    duplicate = _find_active_duplicate_port_call(
+                        candidates,
+                        clean_imo=clean_imo,
+                        clean_call_sign=clean_cs,
+                    )
+                    if duplicate:
+                        duplicate_type, dup = duplicate
+                        dup_name = dup.get("vessel_name", "")
+                        if duplicate_type == "imo":
                             raise ValueError(f"Já existe uma escala ativa com o IMO {clean_imo} ({dup_name}).")
                         raise ValueError(f"Já existe uma escala ativa com o indicativo {clean_cs} ({dup_name}).")
 
