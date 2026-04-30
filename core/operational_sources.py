@@ -69,6 +69,13 @@ BERTHED_VESSELS_QUERY_RE = re.compile(
     r"|"
     r"\b(em cais|atracad\w*|amarrad\w*)\b.*\b(navios?|embarcacoes|embarcações)\b"
 )
+PLANNED_MANEUVER_SUBJECT_RE = re.compile(
+    r"\b(navios?|manobras?|entradas?|saidas?|saídas|partidas?|mudancas?|mudanças)\b"
+)
+PLANNED_MANEUVER_MARKER_RE = re.compile(
+    r"\b(planeamento|planead\w*|previst\w*|programad\w*|agendad\w*|marcad\w*|"
+    r"agenda|futur\w*|proxim\w*)\b"
+)
 VESSEL_DETAIL_QUERY_RE = re.compile(
     r"\b(dados|detalhes|informacao|informação|caracteristicas|características|ficha|perfil)\b"
     r".*\b(navio|embarcacao|embarcação|imo|indicativo|call sign)\b"
@@ -1541,11 +1548,23 @@ def _answer_expected_arrivals_query(question: str, clean_question: str) -> dict 
 def _looks_like_planned_maneuvers_query(clean_question: str) -> bool:
     if not clean_question:
         return False
+    if PLANNED_MANEUVER_SUBJECT_RE.search(clean_question) and PLANNED_MANEUVER_MARKER_RE.search(clean_question):
+        return True
     maneuver_terms = {"manobra", "manobras", "planeadas", "planeado", "planeados", "agendadas", "agendados"}
     tokens = set(clean_question.split())
     if not (tokens & maneuver_terms):
         return False
-    planned_markers = {"proxima", "proximas", "hoje", "amanha", "hoje", "previstas", "futuras", "agenda", "programa"}
+    planned_markers = {
+        "proxima",
+        "proximas",
+        "hoje",
+        "amanha",
+        "previstas",
+        "futuras",
+        "agenda",
+        "programa",
+        "planeamento",
+    }
     if tokens & planned_markers:
         return True
     return "que estao planeadas" in clean_question or "que vao acontecer" in clean_question or "proximas manobras" in clean_question
@@ -1582,9 +1601,10 @@ def _answer_planned_maneuvers_query(question: str, clean_question: str) -> dict 
         destination = item.get("local_destination") or "--"
         situation = item.get("situation_label") or ""
         situation_suffix = f" [{situation}]" if situation else ""
+        maneuver_id = _short_maneuver_id(item.get("maneuver_id"))
         lines.append(
             f"- {vessel_name} · {maneuver_label} {planned_label} · {origin} -> {destination}{situation_suffix} · "
-            f"manobra {item.get('maneuver_id') or '--'} · agente {_agent_display(item)} · "
+            f"manobra {maneuver_id} · agente {_agent_display(item)} · "
             f"piloto {_pilot_display(item)}."
         )
     answer = "\n".join(lines)

@@ -306,6 +306,58 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("entrada ENTRY-12", answer)
         self.assertNotIn("ETA Sem hora", answer)
 
+    def test_vessels_in_planning_question_returns_planned_maneuvers(self) -> None:
+        self.activity["planned_maneuvers"] = [
+            {
+                "port_call_id": "pc-galbot",
+                "reference_code": "PTSET26GALB123456",
+                "vessel_name": "GALBOT",
+                "maneuver_id": "391513b3-f521-4b90-9cdf-aafcc183b756",
+                "maneuver_type": "entry",
+                "maneuver_label": "Entrar",
+                "situation_label": "Pendente",
+                "situation_class": "pending",
+                "planned_label": "19:12",
+                "date_value": "2026-04-30T19:12:00+01:00",
+                "local_origin": "Sines",
+                "local_destination": "Tanquisado (lado jusante)",
+                "agent_label": "Administrador",
+                "agent_profile": {"organization": "APSS"},
+                "pilot_label": "",
+            }
+        ]
+
+        answer = self._answer("Que navios estão no planeamento?")
+
+        self.assertIn("Manobras planeadas registadas", answer)
+        self.assertIn("GALBOT", answer)
+        self.assertIn("Tanquisado (lado jusante)", answer)
+        self.assertIn("manobra 391513B3", answer)
+
+    def test_planned_maneuvers_question_returns_planning(self) -> None:
+        self.activity["planned_maneuvers"] = [
+            {
+                "port_call_id": "pc-way",
+                "reference_code": "PTSET26WAYFC171CA",
+                "vessel_name": "WAY FORWARD",
+                "maneuver_id": "768ab23c-d9dc-4d5d-b722-49915d90a739",
+                "maneuver_type": "entry",
+                "maneuver_label": "Entrar",
+                "situation_label": "Pendente",
+                "planned_label": "15:00",
+                "local_origin": "Southampton",
+                "local_destination": "Cais 10 / Autoeuropa",
+                "agent_label": "Administrador",
+                "agent_profile": {"organization": "APSS"},
+            }
+        ]
+
+        answer = self._answer("Que manobras estão previstas no planeamento?")
+
+        self.assertIn("WAY FORWARD", answer)
+        self.assertIn("Entrar 15:00", answer)
+        self.assertIn("manobra 768AB23C", answer)
+
 
 if __name__ == "__main__":
     unittest.main()

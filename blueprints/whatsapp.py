@@ -46,6 +46,8 @@ from domain.sos_alerts import (
 
 bp = Blueprint("whatsapp", __name__)
 
+WHATSAPP_TEXT_CHUNK_LIMIT = 3600
+
 
 def _normalize_whatsapp_role(value: str | None) -> str:
     role = (value or "").strip().lower()
@@ -66,6 +68,10 @@ def _welcome_sent_key(from_number: str) -> str:
 
 def _pending_feedback_correction_key(from_number: str) -> str:
     return f"whatsapp:feedback-correction:{from_number}"
+
+
+def _outbound_message_alias_key(external_message_id: str) -> str:
+    return f"whatsapp:outbound:{external_message_id}"
 
 
 def _sos_user_label(profile: dict | None, fallback_name: str = "") -> str:
@@ -157,19 +163,28 @@ def _send_sos_alerts(
                     event_type=event_type,
                 )
             else:
-                send_response = service.send_text_message(number, alert_text, reply_to_message_id="")
-                outbound_id = _extract_outbound_message_id(send_response)
-                services.store.record_channel_event(
-                    channel="whatsapp",
-                    event_type=event_type,
-                    payload=send_response,
-                    username=requester_username,
-                    conversation_id=requester_conversation_id,
-                    local_message_id="",
-                    channel_user_id=number,
-                    external_event_id=outbound_id,
-                    external_message_id=outbound_id,
-                )
+                text_parts = _split_whatsapp_text(alert_text)
+                for index, text_part in enumerate(text_parts, start=1):
+                    send_response = service.send_text_message(number, text_part, reply_to_message_id="")
+                    outbound_id = _extract_outbound_message_id(send_response)
+                    event_payload = send_response
+                    if len(text_parts) > 1:
+                        event_payload = {
+                            **send_response,
+                            "part_index": index,
+                            "part_total": len(text_parts),
+                        }
+                    services.store.record_channel_event(
+                        channel="whatsapp",
+                        event_type=event_type,
+                        payload=event_payload,
+                        username=requester_username,
+                        conversation_id=requester_conversation_id,
+                        local_message_id="",
+                        channel_user_id=number,
+                        external_event_id=outbound_id,
+                        external_message_id=outbound_id,
+                    )
             sent += 1
         except Exception as exc:
             current_app.logger.exception("Falha ao enviar alerta SOS para %s.", number)
@@ -454,6 +469,79 @@ def _build_answer_retry_prompt(user_note: str) -> str:
     return retry_prompt
 
 
+def _find_whatsapp_message_by_external_id(external_message_id: str) -> dict | None:
+    clean_external_id = (external_message_id or "").strip()
+    if not clean_external_id:
+        return None
+    matched_message = services.store.find_message_by_channel_message_id("whatsapp", clean_external_id)
+    if matched_message:
+        return matched_message
+
+    alias = services.store.get_runtime_state(_outbound_message_alias_key(clean_external_id)) or {}
+    username = str(alias.get("username") or "").strip()
+    conversation_id = str(alias.get("conversation_id") or "").strip()
+    local_message_id = str(alias.get("local_message_id") or "").strip()
+    if not username or not conversation_id or not local_message_id:
+        return None
+    try:
+        messages = services.store.list_messages(username, conversation_id)
+    except Exception:
+        current_app.logger.exception(
+            "Falha ao resolver alias de outbound WhatsApp (wamid=%s).",
+            clean_external_id,
+        )
+        return None
+    for message in messages:
+        if message.get("id") == local_message_id:
+            resolved = dict(message)
+            resolved.setdefault("username", username)
+            resolved.setdefault("conversation_id", conversation_id)
+            return resolved
+    return None
+
+
+def _take_text_chunk(text: str, limit: int) -> tuple[str, str]:
+    if len(text) <= limit:
+        return text.strip(), ""
+
+    split_at = max(
+        text.rfind(delimiter, 0, limit + 1) + len(delimiter)
+        for delimiter in ("\n\n", "\n", ". ", "; ", ", ", " ")
+    )
+    if split_at < max(1, int(limit * 0.45)):
+        split_at = limit
+
+    chunk = text[:split_at].strip()
+    remainder = text[split_at:].strip()
+    return chunk, remainder
+
+
+def _split_whatsapp_text(text: str, *, limit: int = WHATSAPP_TEXT_CHUNK_LIMIT) -> list[str]:
+    clean = str(text or "").strip()
+    if not clean:
+        return [""]
+    if limit < 32:
+        raise ValueError("Limite WhatsApp demasiado baixo para dividir mensagens.")
+    if len(clean) <= limit:
+        return [clean]
+
+    part_limit = limit - 12
+    chunks: list[str] = []
+    remaining = clean
+    while remaining:
+        chunk, remaining = _take_text_chunk(remaining, part_limit)
+        if not chunk and remaining:
+            chunk = remaining[:part_limit].strip()
+            remaining = remaining[part_limit:].strip()
+        if chunk:
+            chunks.append(chunk)
+
+    if len(chunks) <= 1:
+        return chunks or [clean[:limit]]
+    total = len(chunks)
+    return [f"({index}/{total}) {chunk}" for index, chunk in enumerate(chunks, start=1)]
+
+
 def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str) -> dict:
     username = _whatsapp_username(from_number)
     profile = services.store.get_user_profile(username)
@@ -492,13 +580,38 @@ def _send_and_record_outbound_message(
             language_code=template_language.strip() or "pt_PT",
             reply_to_message_id=reply_to_message_id,
         )
+        send_responses = [send_response]
     else:
-        send_response = service.send_text_message(
-            to_number,
-            content,
-            reply_to_message_id=reply_to_message_id,
+        text_parts = _split_whatsapp_text(content)
+        send_responses = []
+        for index, text_part in enumerate(text_parts):
+            send_responses.append(
+                service.send_text_message(
+                    to_number,
+                    text_part,
+                    reply_to_message_id=reply_to_message_id if index == 0 else "",
+                )
+            )
+        send_response = (
+            send_responses[0]
+            if len(send_responses) == 1
+            else {
+                "messages": [
+                    message
+                    for response in send_responses
+                    for message in list(response.get("messages") or [])
+                ],
+                "message_count": len(send_responses),
+                "responses": send_responses,
+            }
         )
-    outbound_message_id = _extract_outbound_message_id(send_response)
+    outbound_message_ids = [
+        message_id
+        for response in send_responses
+        for message_id in [_extract_outbound_message_id(response)]
+        if message_id
+    ]
+    outbound_message_id = outbound_message_ids[0] if outbound_message_ids else ""
     try:
         services.store.update_message_channel_metadata(
             username,
@@ -507,20 +620,42 @@ def _send_and_record_outbound_message(
             external_message_id=outbound_message_id or None,
             channel_metadata={
                 "send_response": send_response,
+                "external_message_ids": outbound_message_ids,
                 "last_status": "accepted",
+                "message_count": len(send_responses),
             },
         )
-        services.store.record_channel_event(
-            channel="whatsapp",
-            event_type=event_type,
-            payload=send_response,
-            username=username,
-            conversation_id=conversation_id,
-            local_message_id=local_message_id,
-            channel_user_id=to_number,
-            external_event_id=outbound_message_id,
-            external_message_id=outbound_message_id,
-        )
+        for message_id in outbound_message_ids[1:]:
+            services.store.set_runtime_state(
+                _outbound_message_alias_key(message_id),
+                {
+                    "username": username,
+                    "conversation_id": conversation_id,
+                    "local_message_id": local_message_id,
+                    "external_message_id": message_id,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+        for index, response in enumerate(send_responses, start=1):
+            part_message_id = _extract_outbound_message_id(response)
+            event_payload = response
+            if len(send_responses) > 1:
+                event_payload = {
+                    **response,
+                    "part_index": index,
+                    "part_total": len(send_responses),
+                }
+            services.store.record_channel_event(
+                channel="whatsapp",
+                event_type=event_type,
+                payload=event_payload,
+                username=username,
+                conversation_id=conversation_id,
+                local_message_id=local_message_id,
+                channel_user_id=to_number,
+                external_event_id=part_message_id,
+                external_message_id=part_message_id,
+            )
     except Exception:
         current_app.logger.exception(
             "Resposta WhatsApp enviada, mas falhou o registo local do outbound (msg=%s, wamid=%s).",
@@ -670,7 +805,7 @@ def whatsapp_webhook_receive():
         event_type = (event.get("event_type") or "").strip().lower()
         if event_type == "message_status":
             message_id = (event.get("message_id") or "").strip()
-            matched_message = services.store.find_message_by_channel_message_id("whatsapp", message_id)
+            matched_message = _find_whatsapp_message_by_external_id(message_id)
             services.store.record_channel_event(
                 channel="whatsapp",
                 event_type="message_status",
@@ -719,10 +854,7 @@ def whatsapp_webhook_receive():
             )
 
             if event_type == "message_reaction":
-                target_message = services.store.find_message_by_channel_message_id(
-                    "whatsapp",
-                    event.get("target_message_id", ""),
-                )
+                target_message = _find_whatsapp_message_by_external_id(event.get("target_message_id", ""))
                 services.store.record_channel_event(
                     channel="whatsapp",
                     event_type="incoming_reaction",
