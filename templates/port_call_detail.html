@@ -358,7 +358,7 @@
                         <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=scale.actions.active_departure_id) }}">Abrir saída</a>
                       </article>
                     {% else %}
-                      <article class="ops-empty scale-action-placeholder"><p>A saída só fica disponível depois da entrada estar concluída e sem saída ativa.</p></article>
+                      <article class="ops-empty scale-action-placeholder"><p>A saída fica disponível quando a escala está prevista ou em porto, sem saída ativa.</p></article>
                     {% endif %}
                   </section>
                   <section class="scale-plan-panel scale-plan-panel-shift">
@@ -370,7 +370,7 @@
                         <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=port_call.id, maneuver_id=scale.actions.active_shift_id) }}">Abrir mudança</a>
                       </article>
                     {% else %}
-                      <article class="ops-empty scale-action-placeholder"><p>A mudança só fica disponível com o navio em porto e sem mudança ativa.</p></article>
+                      <article class="ops-empty scale-action-placeholder"><p>A mudança fica disponível quando a escala está prevista ou em porto, sem mudança ativa.</p></article>
                     {% endif %}
                   </section>
                 </div>

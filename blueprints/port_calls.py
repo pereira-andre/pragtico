@@ -947,7 +947,7 @@ def schedule_entry_plan(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def schedule_departure_plan(port_call_id: str):
-    """Planear a manobra de saída de um navio em porto."""
+    """Planear a manobra de saída de uma escala prevista ou navio em porto."""
     try:
         current = services.store.get_port_call(port_call_id)
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
@@ -1002,7 +1002,7 @@ def abort_departure_plan(port_call_id: str):
 @role_required("admin", "agente")
 @port_call_scope_required
 def schedule_shift_plan(port_call_id: str):
-    """Planear uma mudança de cais para um navio em porto."""
+    """Planear uma mudança de cais para uma escala prevista ou navio em porto."""
     try:
         current = services.store.get_port_call(port_call_id)
         planned_shift_at = parse_local_datetime_input(request.form.get("planned_shift_at_local", "").strip(), "Hora prevista da mudança")

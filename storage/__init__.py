@@ -41,6 +41,7 @@ from .constants import (
     get_constraint_options,
     get_vessel_type_options,
 )
+from .port_call_helpers import can_plan_followup_maneuver_status
 from .postgres import PostgresStore, create_store
 from .utils import (
     format_constraint_labels,
@@ -93,4 +94,5 @@ __all__ = [
     "is_user_profile_complete",
     "normalize_constraint_codes",
     "format_constraint_labels",
+    "can_plan_followup_maneuver_status",
 ]

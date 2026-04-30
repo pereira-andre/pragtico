@@ -237,6 +237,12 @@ def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
     return False
 
 
+def can_plan_followup_maneuver_status(status: Optional[str]) -> bool:
+    """Return whether a port call can receive departure/shift planning."""
+    clean_status = " ".join(str(status or "").strip().split()).lower()
+    return clean_status in {PORT_CALL_STATUS_SCHEDULED, PORT_CALL_STATUS_IN_PORT}
+
+
 def _extract_labeled_report(note: str, label: str) -> str:
     clean = (note or "").strip()
     marker = f"Registo simplificado de pilotagem · {label}"

@@ -105,6 +105,7 @@
       {% set is_completed = maneuver.status_key == "completed" %}
       {% set can_manage_request = current_role in ["admin", "agente"] %}
       {% set can_validate_or_report = current_role in ["admin", "piloto"] %}
+      {% set can_approve_current = (maneuver.type == "entry" and scale.actions.can_approve_entry) or (maneuver.type == "departure" and scale.actions.can_approve_departure) or (maneuver.type == "shift" and scale.actions.can_approve_shift) %}
       {% set report_action = url_for('port_calls.edit_maneuver_report', port_call_id=port_call.id, maneuver_id=maneuver.id) if maneuver.report_completed else url_for('port_calls.attach_entry_report', port_call_id=port_call.id) if maneuver.type == 'entry' else url_for('port_calls.attach_departure_report', port_call_id=port_call.id) if maneuver.type == 'departure' else url_for('port_calls.attach_shift_report', port_call_id=port_call.id) %}
       <section class="panel inset-panel scale-actions-panel maneuver-operations-panel">
         <div class="section-head compact-head">
@@ -193,7 +194,7 @@
               <p>{% if is_pending %}A manobra fica executável depois da aprovação.{% else %}A decisão fica registada no histórico da manobra.{% endif %}</p>
             </div>
             <div class="maneuver-action-controls">
-              {% if can_validate_or_report and is_pending %}
+              {% if can_validate_or_report and is_pending and can_approve_current %}
                 <form method="post" action="{% if maneuver.type == 'shift' %}{{ url_for('port_calls.approve_shift_plan', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.approve_port_call', port_call_id=port_call.id) }}{% endif %}" class="ops-form-card maneuver-inline-form">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="redirect_to" value="maneuver">

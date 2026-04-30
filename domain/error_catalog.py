@@ -354,7 +354,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 3040,
         "category": "business_rule",
         "message": "Navio não está em porto.",
-        "user_message": "Só podes planear saída para navios que estão em porto.",
+        "user_message": "Só podes planear saída para escalas previstas ou navios em porto.",
     },
     "DEPARTURE_ALREADY_ACTIVE": {
         "code": 3041,
@@ -366,7 +366,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 3042,
         "category": "business_rule",
         "message": "Navio não está em porto.",
-        "user_message": "Só podes planear mudança para navios em porto.",
+        "user_message": "Só podes planear mudança para escalas previstas ou navios em porto.",
     },
     "SHIFT_ALREADY_ACTIVE": {
         "code": 3043,

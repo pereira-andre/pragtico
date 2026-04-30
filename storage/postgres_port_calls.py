@@ -28,6 +28,7 @@ from .port_call_helpers import (
     _remove_embedded_report_note,
     _replace_embedded_report_note,
     _sync_port_call_from_history,
+    can_plan_followup_maneuver_status,
 )
 from .utils import (
     _build_actor_snapshot,
@@ -661,8 +662,8 @@ class PostgresPortCallMixin:
         actor_username = _normalize_username(updated_by) or "system"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
-            if current["status"] != PORT_CALL_STATUS_IN_PORT:
-                raise ValueError("Só podes planear saída para navios que estão em porto.")
+            if not can_plan_followup_maneuver_status(current.get("status")):
+                raise ValueError("Só podes planear saída para escalas previstas ou navios em porto.")
             if _latest_maneuver(current.get("maneuver_history", []), "departure", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED}):
                 raise ValueError("Já existe uma saída ativa para esta escala.")
             departure = _normalize_maneuver_record(
@@ -904,8 +905,8 @@ class PostgresPortCallMixin:
         actor_username = _normalize_username(updated_by) or "system"
         actor_profile = self.get_user_profile(actor_username)
         def mutator(current: Dict) -> Dict:
-            if current["status"] != PORT_CALL_STATUS_IN_PORT:
-                raise ValueError("Só podes planear mudança para navios em porto.")
+            if not can_plan_followup_maneuver_status(current.get("status")):
+                raise ValueError("Só podes planear mudança para escalas previstas ou navios em porto.")
             if _latest_maneuver(current.get("maneuver_history", []), "shift", {PORT_CALL_APPROVAL_PENDING, PORT_CALL_APPROVAL_APPROVED}):
                 raise ValueError("Já existe uma mudança ativa para esta escala.")
             shift = _normalize_maneuver_record(

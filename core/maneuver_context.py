@@ -19,7 +19,7 @@ from domain.chat_actions import (
     resolve_port_call,
 )
 from domain.lisnave_rules import build_lisnave_rule_items
-from storage import format_constraint_labels
+from storage import can_plan_followup_maneuver_status, format_constraint_labels
 from storage.maneuver_case_helpers import build_case_environment_signature
 
 logger = logging.getLogger(__name__)
@@ -1146,20 +1146,21 @@ def build_scale_context(port_call: dict) -> dict:
         "bow_thruster_value": port_call.get("vessel_bow_thruster", "unknown") or "unknown",
         "stern_thruster_value": port_call.get("vessel_stern_thruster", "unknown") or "unknown",
     }
+    can_plan_followup = can_plan_followup_maneuver_status(port_call.get("status"))
     actions = {
         "can_approve_entry": port_call.get("status") == "scheduled" and port_call.get("approval_status") == "pending",
         "can_cancel_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "pending",
         "can_abort_entry": port_call.get("status") == "scheduled" and bool(entry) and entry.get("state") == "approved",
         "can_complete_entry": False,
         "can_plan_entry": port_call.get("status") == "scheduled" and not active_entry,
-        "can_plan_departure": port_call.get("status") == "in_port" and not active_departure and not completed_departure,
+        "can_plan_departure": can_plan_followup and not active_departure and not completed_departure,
         "can_approve_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
         "can_cancel_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "pending",
         "can_abort_departure": port_call.get("status") == "in_port" and bool(active_departure) and active_departure.get("state") == "approved",
         "can_complete_departure": False,
         "can_register_entry": bool(reportable_entry),
         "can_register_departure": bool(reportable_departure),
-        "can_plan_shift": port_call.get("status") == "in_port" and not active_shift,
+        "can_plan_shift": can_plan_followup and not active_shift,
         "can_approve_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "pending",
         "can_cancel_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "pending",
         "can_abort_shift": port_call.get("status") == "in_port" and bool(active_shift) and active_shift.get("state") == "approved",
