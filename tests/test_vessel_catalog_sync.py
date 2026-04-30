@@ -4,7 +4,9 @@ import unittest
 
 from core import services
 from blueprints.port_calls import (
+    _filter_vessel_catalog_options,
     _sync_vessel_catalog_record_to_active_port_calls,
+    _vessel_catalog_txt,
     _validate_vessel_catalog_record,
 )
 
@@ -104,6 +106,39 @@ class VesselCatalogSyncTests(unittest.TestCase):
         self.assertEqual(synced_count, 1)
         self.assertEqual(services.store.updated[0]["port_call_id"], "way-forward")
         self.assertEqual(services.store.updated[0]["vessel_type"], "Roll-on/Roll-off")
+
+    def test_vessel_catalog_filter_searches_imo_and_type_label(self) -> None:
+        vessels = [
+            {
+                "vessel_name": "WAY FORWARD",
+                "vessel_imo": "9876543",
+                "vessel_type": "Roll-on/Roll-off",
+                "vessel_type_label": "Roll-on/Roll-off",
+            },
+            {
+                "vessel_name": "OCEAN MERCURY",
+                "vessel_imo": "9182736",
+                "vessel_type": "Graneis sólidos",
+                "vessel_type_label": "Graneis sólidos",
+            },
+        ]
+
+        filtered = _filter_vessel_catalog_options(vessels, q="9876543", vessel_type="Roll-on/Roll-off")
+
+        self.assertEqual([item["vessel_name"] for item in filtered], ["WAY FORWARD"])
+
+    def test_vessel_catalog_txt_contains_exportable_profile(self) -> None:
+        body = _vessel_catalog_txt(
+            {
+                "vessel_name": "WAY FORWARD",
+                "vessel_imo": "9876543",
+                "vessel_type_label": "Roll-on/Roll-off",
+            }
+        )
+
+        self.assertIn("PRAGtico - Ficha do Navio", body)
+        self.assertIn("Navio: WAY FORWARD", body)
+        self.assertIn("Tipo: Roll-on/Roll-off", body)
 
 
 if __name__ == "__main__":

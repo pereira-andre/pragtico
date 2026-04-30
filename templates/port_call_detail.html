@@ -144,7 +144,12 @@
         <div class="scale-badge-strip">
           <span class="scale-chip">{{ scale.ship_profile.imo }}</span>
           <span class="scale-chip">{{ scale.ship_profile.flag }}</span>
-          <span class="scale-chip">{{ scale.ship_profile.type }}</span>
+          <span class="scale-chip scale-type-chip">
+            {% if scale.ship_profile.type_icon %}
+              <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ scale.ship_profile.type_icon) }}" alt="{{ scale.ship_profile.type }}">
+            {% endif %}
+            {{ scale.ship_profile.type }}
+          </span>
           <span class="scale-chip scale-chip-strong">{{ scale.summary.status_label }}</span>
         </div>
       </div>
@@ -383,6 +388,45 @@
           {% endif %}
         </div>
       </details>
+
+      {% if current_role == "admin" %}
+        <details class="panel inset-panel scale-actions-panel scale-compact-details">
+          <summary>
+            <span>
+              <span class="eyebrow">JSON</span>
+              <strong>Importar manobras</strong>
+            </span>
+            <span class="scale-compact-toggle">Abrir</span>
+          </summary>
+          <div class="stack scale-compact-details-body planning-json-import-body">
+            <p class="muted">Importa entradas, saídas ou mudanças diretamente para esta escala. Se o JSON não indicar <code>port_call_id</code> ou <code>reference_code</code>, é assumida a escala {{ scale.summary.scale_reference }}.</p>
+            <form
+              method="post"
+              action="{{ url_for('port_calls.import_port_call_maneuvers_json', port_call_id=port_call.id) }}"
+              enctype="multipart/form-data"
+              class="stack planning-form planning-json-import-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label>
+                Ficheiro JSON
+                <input type="file" name="payload_file" accept=".json,application/json">
+              </label>
+              <label>
+                JSON das manobras
+                <textarea
+                  name="payload_json"
+                  rows="12"
+                  class="planning-json-textarea"
+                  placeholder='{"maneuvers":[{"type":"departure", ...}]}'></textarea>
+              </label>
+              <button type="submit" class="mini-button">Importar manobras por JSON</button>
+            </form>
+            <div class="planning-json-template-block">
+              <span class="mini-label">Modelo desta escala</span>
+              <pre class="planning-json-template">{{ maneuver_json_template }}</pre>
+            </div>
+          </div>
+        </details>
+      {% endif %}
 
       {% if current_role in ["admin", "agente"] %}
         <details class="panel inset-panel scale-admin-editor scale-compact-details">

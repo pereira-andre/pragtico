@@ -56,6 +56,9 @@
               {% if current_role in ["admin", "agente"] %}
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'port_calls.port_call_register' else '' }}" href="{{ url_for('port_calls.port_call_register') }}">Escalas</a>
               {% endif %}
+              {% if current_role == "admin" %}
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['port_calls.vessel_catalog', 'port_calls.print_vessel_catalog_record'] else '' }}" href="{{ url_for('port_calls.vessel_catalog') }}">Navios</a>
+              {% endif %}
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.maneuver_archive' else '' }}" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
@@ -77,6 +80,9 @@
                 <option value="{{ url_for('dashboard_bp.dashboard') }}">Quadro</option>
                 {% if current_role in ["admin", "agente"] %}
                   <option value="{{ url_for('port_calls.port_call_register') }}">Escalas</option>
+                {% endif %}
+                {% if current_role == "admin" %}
+                  <option value="{{ url_for('port_calls.vessel_catalog') }}">Navios</option>
                 {% endif %}
                 <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
                 <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>

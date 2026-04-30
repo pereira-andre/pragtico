@@ -967,10 +967,17 @@
 .constraint-option img,
 .constraint-badge img,
 .planned-vessel-type img,
-.scale-inline-meta img {
+.scale-inline-meta img,
+.scale-type-chip img {
   width: 20px;
   height: 20px;
   object-fit: contain;
+}
+
+.scale-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .planning-optional-box {
@@ -1019,6 +1026,128 @@
   background: rgba(9, 24, 44, 0.08);
   overflow-x: auto;
   white-space: pre-wrap;
+}
+
+.vessel-catalog-list {
+  gap: 12px;
+}
+
+.vessel-catalog-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.vessel-catalog-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.vessel-catalog-summary-row::-webkit-details-marker {
+  display: none;
+}
+
+.vessel-catalog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.vessel-catalog-title img,
+.vessel-print-heading img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.vessel-catalog-title strong {
+  display: block;
+}
+
+.vessel-catalog-title small {
+  display: block;
+  color: var(--muted);
+}
+
+.vessel-catalog-card-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.vessel-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vessel-fact-mini {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vessel-print-sheet {
+  display: grid;
+  gap: 18px;
+}
+
+.vessel-print-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vessel-print-heading h1 {
+  margin: 0;
+}
+
+.vessel-print-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vessel-print-section {
+  margin: 0;
+}
+
+.vessel-print-note {
+  margin: 12px 0 0;
+}
+
+@media print {
+  .portal-nav,
+  .site-footer,
+  .flash-stack,
+  .portal-toast-stack,
+  .chatbot-fab,
+  .chatbot-drawer,
+  .print-actions {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  .page-shell,
+  .ops-shell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .panel,
+  .inset-panel,
+  .vessel-print-sheet {
+    box-shadow: none !important;
+    border-color: #d7dde7 !important;
+    background: #fff !important;
+  }
 }
 
 .planned-table-wrap {

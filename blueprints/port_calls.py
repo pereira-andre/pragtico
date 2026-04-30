@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, Response, flash, redirect, render_template, request, session, url_for
 
@@ -143,6 +143,54 @@ VESSEL_CATALOG_FIELDS = (
 )
 
 
+def _demo_future_iso(days: int, *, hour: int, minute: int = 0) -> str:
+    now = datetime.now().astimezone()
+    candidate = (now + timedelta(days=days)).replace(
+        hour=hour,
+        minute=minute,
+        second=0,
+        microsecond=0,
+    )
+    if candidate <= now:
+        candidate += timedelta(days=1)
+    return candidate.isoformat()
+
+
+def _build_port_call_json_template() -> dict:
+    return {
+        **PORT_CALL_JSON_TEMPLATE,
+        "eta": _demo_future_iso(2, hour=14, minute=30),
+    }
+
+
+def _build_maneuver_json_template(port_call: dict | None = None) -> dict:
+    reference_code = (port_call or {}).get("reference_code") or "PTSET26MSCL0001"
+    return {
+        "maneuvers": [
+            {
+                "reference_code": reference_code,
+                "type": "departure",
+                "planned_at": _demo_future_iso(2, hour=19, minute=30),
+                "next_port": (port_call or {}).get("next_port") or "Vigo",
+                "draft_m": "10.8",
+                "tug_count": 2,
+                "constraints": ["daylight"],
+                "notes": "Saída planeada pelo agente.",
+            },
+            {
+                "reference_code": reference_code,
+                "type": "shift",
+                "planned_at": _demo_future_iso(3, hour=10),
+                "destination_berth": "TMS 2 - Posição A",
+                "draft_m": "10.8",
+                "tug_count": 1,
+                "constraints": [],
+                "notes": "Mudança interna.",
+            },
+        ]
+    }
+
+
 def _emit_maneuver_notification(
     *,
     port_call: dict,
@@ -263,6 +311,14 @@ def _canonical_vessel_type_label(value: str) -> str:
     if not meta:
         raise ValueError("Tipo de navio inválido. Escolhe um dos tipos com ícone definidos no sistema.")
     return meta["label"]
+
+
+def _vessel_type_meta(value: str | None) -> dict:
+    return (
+        VESSEL_TYPE_LOOKUP.get(_lookup_key(value))
+        or VESSEL_TYPE_LOOKUP.get(_lookup_key("Restantes"))
+        or {"label": "Restantes", "icon": ""}
+    )
 
 
 def _load_json_upload_payload(label: str) -> object:
@@ -606,10 +662,58 @@ def _build_vessel_catalog_options(activity: dict | None = None) -> list[dict]:
             current["latest_eta_label"] = port_call.get("eta_label", current.get("latest_eta_label", ""))
 
     options = list(records_by_key.values())
+    for item in options:
+        vessel_type_meta = _vessel_type_meta(item.get("vessel_type"))
+        item["vessel_type_label"] = vessel_type_meta.get("label", item.get("vessel_type") or "Restantes")
+        item["vessel_type_icon"] = vessel_type_meta.get("icon", "")
     options.sort(
         key=lambda item: (item.get("vessel_name", "").casefold(), item.get("vessel_imo", ""))
     )
     return options
+
+
+def _filter_vessel_catalog_options(vessels: list[dict], *, q: str = "", vessel_type: str = "") -> list[dict]:
+    query = _lookup_key(q)
+    type_key = _lookup_key(vessel_type)
+    filtered: list[dict] = []
+    for vessel in vessels:
+        current_type_key = _lookup_key(vessel.get("vessel_type_label") or vessel.get("vessel_type"))
+        if type_key and current_type_key != type_key:
+            continue
+        if query:
+            haystack = _lookup_key(
+                " ".join(
+                    str(vessel.get(field) or "")
+                    for field in (
+                        "vessel_name",
+                        "vessel_imo",
+                        "vessel_call_sign",
+                        "vessel_flag",
+                        "vessel_type",
+                        "vessel_type_label",
+                        "latest_scale_reference",
+                    )
+                )
+            )
+            if query not in haystack:
+                continue
+        filtered.append(vessel)
+    return filtered
+
+
+def _vessel_catalog_summary(vessels: list[dict], filtered_vessels: list[dict]) -> dict:
+    type_count = len(
+        {
+            vessel.get("vessel_type_label") or vessel.get("vessel_type") or "Restantes"
+            for vessel in vessels
+        }
+    )
+    return {
+        "total_count": len(vessels),
+        "filtered_count": len(filtered_vessels),
+        "type_count": type_count,
+        "scale_count": sum(int(vessel.get("scale_count") or 0) for vessel in vessels),
+    }
 
 
 def _coerce_port_call_payload(payload: dict) -> dict:
@@ -900,12 +1004,75 @@ def _build_port_call_register_context(register_form: dict | None = None) -> dict
         "tracked_scales": build_tracked_scales(historical_activity),
         "vessel_catalog": vessel_catalog,
         "vessel_catalog_json": json.dumps(vessel_catalog, ensure_ascii=False),
-        "port_call_json_template": json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
-        "vessel_catalog_json_template": json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
-        "maneuver_json_template": json.dumps(MANEUVER_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        "port_call_json_template": json.dumps(_build_port_call_json_template(), ensure_ascii=False, indent=2),
         "register_form": register_form or {},
         "title": "Escalas",
     }
+
+
+def _build_vessel_catalog_context() -> dict:
+    activity = services.store.get_port_activity_snapshot(window_days=3650)
+    vessels = _build_vessel_catalog_options(activity)
+    q = request.args.get("q", "").strip()
+    selected_type = request.args.get("vessel_type", "").strip()
+    filtered_vessels = _filter_vessel_catalog_options(
+        vessels,
+        q=q,
+        vessel_type=selected_type,
+    )
+    return {
+        "vessels": filtered_vessels,
+        "vessel_catalog": vessels,
+        "vessel_summary": _vessel_catalog_summary(vessels, filtered_vessels),
+        "vessel_filters": {
+            "q": q,
+            "vessel_type": selected_type,
+        },
+        "vessel_catalog_json_template": json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        "title": "Navios",
+    }
+
+
+def _get_vessel_catalog_record_or_404(vessel_key: str) -> dict:
+    clean_key = str(vessel_key or "").strip()
+    deleted_keys = _read_deleted_vessel_catalog_keys()
+    for vessel in _build_vessel_catalog_options(services.store.get_port_activity_snapshot(window_days=3650)):
+        key = vessel.get("key") or _vessel_catalog_key(vessel)
+        if key == clean_key and key not in deleted_keys:
+            return {**vessel, "key": key}
+    raise ValueError("Navio não encontrado no catálogo.")
+
+
+def _vessel_catalog_txt(record: dict) -> str:
+    lines = [
+        "PRAGtico - Ficha do Navio",
+        "",
+        f"Navio: {record.get('vessel_name') or '--'}",
+        f"IMO: {record.get('vessel_imo') or '--'}",
+        f"Indicativo: {record.get('vessel_call_sign') or '--'}",
+        f"Bandeira: {record.get('vessel_flag') or '--'}",
+        f"Tipo: {record.get('vessel_type_label') or record.get('vessel_type') or '--'}",
+        f"LOA: {record.get('vessel_loa_m') or '--'} m",
+        f"Boca: {record.get('vessel_beam_m') or '--'} m",
+        f"GT: {record.get('vessel_gt_t') or '--'}",
+        f"DWT: {record.get('vessel_dwt_t') or '--'}",
+        f"Calado máximo: {record.get('vessel_max_draft_m') or '--'} m",
+        f"Bow thruster: {record.get('vessel_bow_thruster') or '--'}",
+        f"Stern thruster: {record.get('vessel_stern_thruster') or '--'}",
+        "",
+        "Serviços e taxas",
+        f"Perfil de serviços: {record.get('service_rate_profile') or '--'}",
+        f"Escalas linha regular 365 dias: {record.get('regular_line_calls_365d') or '--'}",
+        f"UP pilotagem: {record.get('pilotage_up_rate') or '--'}",
+        f"Perfil redução TUP: {record.get('tup_reduction_profile') or '--'}",
+        f"Notas: {record.get('service_notes') or '--'}",
+        "",
+        "Histórico",
+        f"Escalas registadas: {record.get('scale_count') or 0}",
+        f"Última escala: {record.get('latest_scale_reference') or '--'}",
+        f"Última ETA: {record.get('latest_eta_label') or '--'}",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 @bp.route("/port-calls/register")
@@ -917,6 +1084,99 @@ def port_call_register():
         "port_call_register.html",
         **_build_port_call_register_context(),
     )
+
+
+@bp.route("/vessels")
+@login_required
+@role_required("admin")
+def vessel_catalog():
+    """Página dedicada à consulta e gestão de navios frequentes."""
+    return render_template(
+        "vessel_catalog.html",
+        **_build_vessel_catalog_context(),
+    )
+
+
+@bp.route("/vessels", methods=["POST"])
+@login_required
+@role_required("admin")
+def create_vessel_catalog_record():
+    """Criar uma ficha de navio reutilizável. Apenas admin."""
+    try:
+        payload = {
+            field: request.form.get(field, "").strip()
+            for field in VESSEL_CATALOG_FIELDS
+        }
+        record = _validate_vessel_catalog_record(payload)
+        saved = _upsert_vessel_catalog_record(record, updated_by=session["username"], validate=False)
+        synced_count = _sync_vessel_catalog_record_to_active_port_calls(
+            saved,
+            updated_by=session["username"],
+        )
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+    except Exception:
+        logger.exception("Falha inesperada ao criar navio frequente.")
+        flash("Falha inesperada ao criar o navio.", "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+
+    sync_note = f" {synced_count} escala(s) ativa(s) sincronizada(s)." if synced_count else ""
+    flash(f"Navio {saved.get('vessel_name', 'sem nome')} guardado no catálogo.{sync_note}", "success")
+    return redirect(url_for("port_calls.vessel_catalog"))
+
+
+@bp.route("/vessels/<path:vessel_key>/export.json")
+@login_required
+@role_required("admin")
+def export_vessel_catalog_record_json(vessel_key: str):
+    """Exportar a ficha de um navio em JSON."""
+    try:
+        vessel = _get_vessel_catalog_record_or_404(vessel_key)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+    filename_key = re.sub(r"[^a-z0-9]+", "-", (vessel.get("vessel_name") or "navio").lower()).strip("-")
+    return _json_download_response(
+        {
+            "kind": "pragtico.vessel",
+            "version": 1,
+            "exported_at": datetime.now().astimezone().isoformat(),
+            "vessel": vessel,
+        },
+        f"pragtico-vessel-{filename_key or 'navio'}.json",
+    )
+
+
+@bp.route("/vessels/<path:vessel_key>/export.txt")
+@login_required
+@role_required("admin")
+def export_vessel_catalog_record_txt(vessel_key: str):
+    """Exportar a ficha de um navio em TXT."""
+    try:
+        vessel = _get_vessel_catalog_record_or_404(vessel_key)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+    filename_key = re.sub(r"[^a-z0-9]+", "-", (vessel.get("vessel_name") or "navio").lower()).strip("-")
+    return Response(
+        _vessel_catalog_txt(vessel),
+        mimetype="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="pragtico-vessel-{filename_key or "navio"}.txt"'},
+    )
+
+
+@bp.route("/vessels/<path:vessel_key>/print")
+@login_required
+@role_required("admin")
+def print_vessel_catalog_record(vessel_key: str):
+    """Abrir uma ficha de navio pronta para impressão/PDF."""
+    try:
+        vessel = _get_vessel_catalog_record_or_404(vessel_key)
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.vessel_catalog"))
+    return render_template("vessel_print.html", vessel=vessel, title=f"Ficha {vessel.get('vessel_name', '')}")
 
 
 @bp.route("/port-calls/<port_call_id>")
@@ -938,6 +1198,7 @@ def port_call_detail(port_call_id: str):
         port_call=port_call,
         scale=build_scale_context(port_call),
         scale_edit_defaults=_build_scale_edit_defaults(port_call),
+        maneuver_json_template=json.dumps(_build_maneuver_json_template(port_call), ensure_ascii=False, indent=2),
         title=f"Escala {port_call['vessel_name']}",
     )
 
@@ -1140,7 +1401,7 @@ def import_vessel_catalog_json():
             )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
     except Exception as exc:
         logger.exception("Falha inesperada ao importar navios por JSON para %s.", session.get("username"))
         detail = " ".join(str(exc).strip().split())
@@ -1150,11 +1411,11 @@ def import_vessel_catalog_json():
             else "Falha inesperada ao importar navios por JSON.",
             "error",
         )
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
 
     sync_note = f" {synced_count} escala(s) ativa(s) sincronizada(s)." if synced_count else ""
     flash(f"{len(imported)} navio(s) importado(s) ou atualizado(s) no catálogo.{sync_note}", "success")
-    return redirect(url_for("port_calls.port_call_register"))
+    return redirect(url_for("port_calls.vessel_catalog"))
 
 
 @bp.route("/port-calls/vessels/export-json")
@@ -1195,15 +1456,15 @@ def edit_vessel_catalog_record(vessel_key: str):
         )
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
     except Exception:
         logger.exception("Falha inesperada ao editar navio %s.", vessel_key)
         flash("Falha inesperada ao editar o navio.", "error")
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
 
     sync_note = f" {synced_count} escala(s) ativa(s) sincronizada(s)." if synced_count else ""
     flash(f"Navio {saved.get('vessel_name', 'sem nome')} atualizado no catálogo.{sync_note}", "success")
-    return redirect(url_for("port_calls.port_call_register"))
+    return redirect(url_for("port_calls.vessel_catalog"))
 
 
 @bp.route("/port-calls/vessels/<path:vessel_key>/delete", methods=["POST"])
@@ -1215,14 +1476,14 @@ def delete_vessel_catalog_record(vessel_key: str):
         removed = _remove_vessel_catalog_record(vessel_key, hide=True)
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
     except Exception:
         logger.exception("Falha inesperada ao apagar navio %s.", vessel_key)
         flash("Falha inesperada ao apagar o navio.", "error")
-        return redirect(url_for("port_calls.port_call_register"))
+        return redirect(url_for("port_calls.vessel_catalog"))
 
     flash(f"Navio {removed.get('vessel_name') or vessel_key} removido do catálogo.", "success")
-    return redirect(url_for("port_calls.port_call_register"))
+    return redirect(url_for("port_calls.vessel_catalog"))
 
 
 @bp.route("/port-calls/maneuvers/import-json", methods=["POST"])
@@ -1266,6 +1527,55 @@ def import_maneuvers_json():
         )
     flash(f"{len(imported)} manobra(s) importada(s) por JSON.", "success")
     return redirect(url_for("port_calls.port_call_register"))
+
+
+@bp.route("/port-calls/<port_call_id>/maneuvers/import-json", methods=["POST"])
+@login_required
+@role_required("admin")
+@port_call_scope_required
+def import_port_call_maneuvers_json(port_call_id: str):
+    """Importar planeamentos de manobras para a escala aberta. Apenas admin."""
+    try:
+        current = services.store.get_port_call(port_call_id)
+        payloads = _load_maneuver_json_payloads()
+        lookup = _port_call_lookup([current])
+        imported = []
+        for payload in payloads:
+            scoped_payload = dict(payload)
+            if not any(_string_payload_value(scoped_payload, key) for key in ("port_call_id", "scale_id", "reference_code", "scale_reference")):
+                scoped_payload["port_call_id"] = current["id"]
+            maneuver_type = _maneuver_payload_type(scoped_payload)
+            port_call = _schedule_maneuver_from_payload(
+                scoped_payload,
+                lookup=lookup,
+                updated_by=session["username"],
+            )
+            imported.append((port_call, maneuver_type))
+            current = port_call
+            lookup = _port_call_lookup([current])
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+        return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+    except Exception as exc:
+        logger.exception("Falha inesperada ao importar manobras por JSON para escala %s.", port_call_id)
+        detail = " ".join(str(exc).strip().split())
+        flash(
+            f"Falha inesperada ao importar manobras por JSON: {detail}"
+            if detail
+            else "Falha inesperada ao importar manobras por JSON.",
+            "error",
+        )
+        return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
+
+    for port_call, maneuver_type in imported:
+        _emit_maneuver_notification(
+            port_call=port_call,
+            maneuver=latest_maneuver_by_type(port_call, maneuver_type),
+            event_type="created",
+            actor_username=session["username"],
+        )
+    flash(f"{len(imported)} manobra(s) importada(s) por JSON para esta escala.", "success")
+    return redirect(url_for("port_calls.port_call_detail", port_call_id=port_call_id))
 
 
 @bp.route("/port-calls/maneuvers/export-json")

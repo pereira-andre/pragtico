@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% macro thruster_select(name, value) %}
+  {% set current = value or "unknown" %}
+  <select name="{{ name }}" required>
+    <option value="unknown" {% if current == "unknown" %}selected{% endif %}>Desconhecido</option>
+    <option value="no" {% if current == "no" %}selected{% endif %}>Não</option>
+    <option value="yes" {% if current == "yes" %}selected{% endif %}>Sim</option>
+  </select>
+{% endmacro %}
+{% macro vessel_form_fields(vessel) %}
+  <div class="mini-grid planned-mini-grid">
+    <label>Navio <input type="text" name="vessel_name" value="{{ vessel.get('vessel_name', '') }}" required></label>
+    <label>IMO <input type="text" name="vessel_imo" value="{{ vessel.get('vessel_imo', '') }}" required></label>
+    <label>Indicativo <input type="text" name="vessel_call_sign" value="{{ vessel.get('vessel_call_sign', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Bandeira <input type="text" name="vessel_flag" value="{{ vessel.get('vessel_flag', '') }}" required></label>
+    <label>Tipo <input type="text" name="vessel_type" list="vessel-type-options" value="{{ vessel.get('vessel_type_label') or vessel.get('vessel_type', '') }}" required></label>
+    <label>LOA (m) <input type="text" name="vessel_loa_m" value="{{ vessel.get('vessel_loa_m', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Boca (m) <input type="text" name="vessel_beam_m" value="{{ vessel.get('vessel_beam_m', '') }}" required></label>
+    <label>GT (t) <input type="text" name="vessel_gt_t" value="{{ vessel.get('vessel_gt_t', '') }}" required></label>
+    <label>DWT (t) <input type="text" name="vessel_dwt_t" value="{{ vessel.get('vessel_dwt_t', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Calado max. <input type="text" name="vessel_max_draft_m" value="{{ vessel.get('vessel_max_draft_m', '') }}" required></label>
+    <label>Bow thruster {{ thruster_select("vessel_bow_thruster", vessel.get("vessel_bow_thruster", "unknown")) }}</label>
+    <label>Stern thruster {{ thruster_select("vessel_stern_thruster", vessel.get("vessel_stern_thruster", "unknown")) }}</label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Perfil de serviços <input type="text" name="service_rate_profile" value="{{ vessel.get('service_rate_profile', '') }}"></label>
+    <label>Escalas linha regular (365 dias) <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ vessel.get('regular_line_calls_365d', '') }}"></label>
+    <label>UP pilotagem <input type="text" name="pilotage_up_rate" value="{{ vessel.get('pilotage_up_rate', '') }}"></label>
+  </div>
+  <label>Perfil redução TUP <input type="text" name="tup_reduction_profile" value="{{ vessel.get('tup_reduction_profile', '') }}"></label>
+  <label>Notas de serviços e taxas <textarea name="service_notes" rows="2">{{ vessel.get('service_notes', '') }}</textarea></label>
+{% endmacro %}
+{% block content %}
+<main class="ops-shell vessel-admin-page">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Navios</p>
+        <h1>Navios</h1>
+        <p class="lead">Consulta e gestão das fichas de navios frequentes usadas para preencher escalas, faturação e contexto operacional.</p>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Navios registados</span>
+        <strong>{{ vessel_summary.total_count }}</strong>
+        <small>{{ vessel_summary.filtered_count }} visíveis no filtro atual</small>
+      </article>
+      <article class="hero-stat">
+        <span>Tipos de navio</span>
+        <strong>{{ vessel_summary.type_count }}</strong>
+        <small>com ícones operacionais</small>
+      </article>
+      <article class="hero-stat">
+        <span>Escalas associadas</span>
+        <strong>{{ vessel_summary.scale_count }}</strong>
+        <small>histórico usado no preenchimento automático</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel planned-panel">
+    <div class="section-head archive-head">
+      <div>
+        <p class="eyebrow">Gerir navios frequentes</p>
+        <h2>Pesquisa e catálogo</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }}/{{ vessel_summary.total_count }}</span>
+    </div>
+
+    <form method="get" action="{{ url_for('port_calls.vessel_catalog') }}" class="archive-filter-form">
+      <div class="archive-filter-grid">
+        <label class="archive-search-field">
+          <span class="mini-label">Pesquisa</span>
+          <input name="q" type="search" value="{{ vessel_filters.q }}" placeholder="Navio, IMO, indicativo, bandeira, escala...">
+        </label>
+        <label>
+          <span class="mini-label">Tipo de navio</span>
+          <select name="vessel_type">
+            <option value="" {% if not vessel_filters.vessel_type %}selected{% endif %}>Todos</option>
+            {% for vessel_type in vessel_type_options %}
+              <option value="{{ vessel_type.label }}" {% if vessel_filters.vessel_type == vessel_type.label %}selected{% endif %}>{{ vessel_type.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="archive-actions">
+        <button type="submit" class="mini-button">Aplicar filtros</button>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.vessel_catalog') }}">Limpar</a>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json') }}">Exportar catálogo JSON</a>
+      </div>
+    </form>
+  </section>
+
+  <div class="planning-register-grid">
+    <section class="panel ops-form-card planning-block planning-register-card">
+      <div class="planning-block-heading">
+        <p class="eyebrow">Novo navio</p>
+        <h3>Criar ficha</h3>
+        <p class="planning-block-lead">A ficha fica disponível como navio frequente na criação de novas escalas.</p>
+      </div>
+      <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-form planning-json-import-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {{ vessel_form_fields({}) }}
+        <button type="submit">Guardar navio</button>
+      </form>
+
+      <details class="planning-optional-box planning-json-import-box">
+        <summary>Importar navios por JSON</summary>
+        <div class="stack planning-optional-body planning-json-import-body">
+          <p class="muted">Podes colar um objeto, uma lista, ou <code>{"vessels":[...]}</code>.</p>
+          <form
+            method="post"
+            action="{{ url_for('port_calls.import_vessel_catalog_json') }}"
+            enctype="multipart/form-data"
+            class="stack planning-form planning-json-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Ficheiro JSON
+              <input type="file" name="payload_file" accept=".json,application/json">
+            </label>
+            <label>
+              JSON dos navios
+              <textarea
+                name="payload_json"
+                rows="14"
+                class="planning-json-textarea"
+                placeholder='{"vessels":[{"vessel_name":"MSC Lyria", ...}]}'></textarea>
+            </label>
+            <button type="submit">Importar navios por JSON</button>
+          </form>
+          <div class="planning-json-template-block">
+            <span class="mini-label">Modelo</span>
+            <pre class="planning-json-template">{{ vessel_catalog_json_template }}</pre>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel ops-form-card planning-block planning-block-secondary planning-register-card">
+      <div class="planning-block-heading">
+        <p class="eyebrow">Catálogo</p>
+        <h3>Navios frequentes</h3>
+        <p class="planning-block-lead">Editar sincroniza escalas ativas do mesmo navio. Apagar remove apenas a ficha frequente.</p>
+      </div>
+
+      <div class="ops-list planning-register-list vessel-catalog-list">
+        {% for vessel in vessels %}
+          <details class="ops-card planning-candidate-card vessel-catalog-card">
+            <summary class="vessel-catalog-summary-row">
+              <span class="vessel-catalog-title">
+                {% if vessel.vessel_type_icon %}
+                  <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.vessel_type_icon) }}" alt="{{ vessel.vessel_type_label }}">
+                {% endif %}
+                <span>
+                  <span class="planning-candidate-label">IMO {{ vessel.vessel_imo or "--" }}</span>
+                  <strong>{{ vessel.vessel_name }}</strong>
+                  <small>{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }} · {{ vessel.vessel_flag or "--" }}</small>
+                </span>
+              </span>
+              <span class="planned-status planned-status-pending">{{ vessel.scale_count or 0 }} escala{% if (vessel.scale_count or 0) != 1 %}s{% endif %}</span>
+            </summary>
+            <div class="vessel-catalog-card-body">
+              <div class="vessel-export-actions">
+                <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">JSON</a>
+                <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">TXT</a>
+                <a class="mini-button secondary-button" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">Imprimir / PDF</a>
+              </div>
+              <div class="scale-fact-sheet vessel-fact-mini">
+                <article class="scale-fact-row"><span>Indicativo</span><strong>{{ vessel.vessel_call_sign or "--" }}</strong></article>
+                <article class="scale-fact-row"><span>LOA</span><strong>{{ vessel.vessel_loa_m or "--" }} m</strong></article>
+                <article class="scale-fact-row"><span>Boca</span><strong>{{ vessel.vessel_beam_m or "--" }} m</strong></article>
+                <article class="scale-fact-row"><span>GT</span><strong>{{ vessel.vessel_gt_t or "--" }}</strong></article>
+                <article class="scale-fact-row"><span>DWT</span><strong>{{ vessel.vessel_dwt_t or "--" }}</strong></article>
+                <article class="scale-fact-row"><span>Última escala</span><strong>{{ vessel.latest_scale_reference or "--" }}</strong></article>
+              </div>
+              <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ vessel_form_fields(vessel) }}
+                <button type="submit">Guardar alterações</button>
+              </form>
+              <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" class="ops-inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mini-button danger-button">Apagar navio</button>
+              </form>
+            </div>
+          </details>
+        {% endfor %}
+
+        {% if not vessels %}
+          <article class="ops-empty planning-register-empty">
+            <p>Sem navios correspondentes ao filtro atual.</p>
+          </article>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

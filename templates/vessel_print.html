@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell vessel-print-page">
+  <section class="panel vessel-print-sheet">
+    <div class="section-head archive-head">
+      <div class="vessel-print-heading">
+        {% if vessel.vessel_type_icon %}
+          <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.vessel_type_icon) }}" alt="{{ vessel.vessel_type_label }}">
+        {% endif %}
+        <div>
+          <p class="eyebrow">Ficha do Navio</p>
+          <h1>{{ vessel.vessel_name }}</h1>
+          <p class="muted">IMO {{ vessel.vessel_imo or "--" }} · {{ vessel.vessel_type_label or vessel.vessel_type or "--" }} · {{ vessel.vessel_flag or "--" }}</p>
+        </div>
+      </div>
+      <div class="archive-actions print-actions">
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">JSON</a>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">TXT</a>
+        <button type="button" class="mini-button" onclick="window.print()">Imprimir / PDF</button>
+      </div>
+    </div>
+
+    <div class="scale-fact-sheet vessel-print-grid">
+      <article class="scale-fact-row"><span>Navio</span><strong>{{ vessel.vessel_name or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>IMO</span><strong>{{ vessel.vessel_imo or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>Indicativo</span><strong>{{ vessel.vessel_call_sign or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>Bandeira</span><strong>{{ vessel.vessel_flag or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>Tipo</span><strong>{{ vessel.vessel_type_label or vessel.vessel_type or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>LOA</span><strong>{{ vessel.vessel_loa_m or "--" }} m</strong></article>
+      <article class="scale-fact-row"><span>Boca</span><strong>{{ vessel.vessel_beam_m or "--" }} m</strong></article>
+      <article class="scale-fact-row"><span>GT</span><strong>{{ vessel.vessel_gt_t or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>DWT</span><strong>{{ vessel.vessel_dwt_t or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>Calado máximo</span><strong>{{ vessel.vessel_max_draft_m or "--" }} m</strong></article>
+      <article class="scale-fact-row"><span>Bow thruster</span><strong>{{ vessel.vessel_bow_thruster or "--" }}</strong></article>
+      <article class="scale-fact-row"><span>Stern thruster</span><strong>{{ vessel.vessel_stern_thruster or "--" }}</strong></article>
+    </div>
+
+    <section class="panel inset-panel vessel-print-section">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Serviços</p>
+          <h2>Dados comerciais e taxas</h2>
+        </div>
+      </div>
+      <div class="scale-fact-sheet vessel-print-grid">
+        <article class="scale-fact-row"><span>Perfil de serviços</span><strong>{{ vessel.service_rate_profile or "--" }}</strong></article>
+        <article class="scale-fact-row"><span>Escalas linha regular 365 dias</span><strong>{{ vessel.regular_line_calls_365d or "--" }}</strong></article>
+        <article class="scale-fact-row"><span>UP pilotagem</span><strong>{{ vessel.pilotage_up_rate or "--" }}</strong></article>
+        <article class="scale-fact-row"><span>Perfil redução TUP</span><strong>{{ vessel.tup_reduction_profile or "--" }}</strong></article>
+      </div>
+      <p class="muted vessel-print-note">{{ vessel.service_notes or "Sem notas de serviços e taxas." }}</p>
+    </section>
+
+    <section class="panel inset-panel vessel-print-section">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Histórico</p>
+          <h2>Utilização em escalas</h2>
+        </div>
+      </div>
+      <div class="scale-fact-sheet vessel-print-grid">
+        <article class="scale-fact-row"><span>Escalas registadas</span><strong>{{ vessel.scale_count or 0 }}</strong></article>
+        <article class="scale-fact-row"><span>Última escala</span><strong>{{ vessel.latest_scale_reference or "--" }}</strong></article>
+        <article class="scale-fact-row"><span>Última ETA</span><strong>{{ vessel.latest_eta_label or "--" }}</strong></article>
+        <article class="scale-fact-row"><span>Atualizado por</span><strong>{{ vessel.updated_by or "--" }}</strong></article>
+      </div>
+    </section>
+  </section>
+</main>
+{% endblock %}
