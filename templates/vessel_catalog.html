@@ -93,7 +93,7 @@
       <div class="archive-actions">
         <button type="submit" class="mini-button">Aplicar filtros</button>
         <a class="mini-button secondary-button" href="{{ url_for('port_calls.vessel_catalog') }}">Limpar</a>
-        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json') }}">Exportar catálogo JSON</a>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json', q=vessel_filters.q, vessel_type=vessel_filters.vessel_type) }}">Exportar catálogo JSON</a>
       </div>
     </form>
   </section>

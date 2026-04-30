@@ -1603,12 +1603,21 @@ def export_vessel_catalog_json():
     """Exportar o catálogo de navios visível ao admin."""
     activity = services.store.get_port_activity_snapshot(window_days=3650)
     vessels = _build_vessel_catalog_options(activity)
+    q = request.args.get("q", "").strip()
+    selected_type = request.args.get("vessel_type", "").strip()
+    filtered_vessels = _filter_vessel_catalog_options(vessels, q=q, vessel_type=selected_type)
     return _json_download_response(
         {
             "kind": "pragtico.vessels",
             "version": 1,
             "exported_at": datetime.now().astimezone().isoformat(),
-            "items": vessels,
+            "filters": {
+                "q": q,
+                "vessel_type": selected_type,
+            },
+            "total_count": len(vessels),
+            "filtered_count": len(filtered_vessels),
+            "items": filtered_vessels,
         },
         _export_filename("vessels"),
     )

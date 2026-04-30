@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 
+from flask import Flask
+
 from core import services
+from blueprints import port_calls
 from blueprints.port_calls import (
     VESSEL_CATALOG_STATE_KEY,
     _build_vessel_catalog_options,
@@ -71,6 +74,9 @@ class FakeStore:
             "departed": [self.port_calls[1]],
             "aborted": [],
         }
+
+    def get_user_profile(self, username: str) -> dict:
+        return {"username": username, "role": "admin", "organization": "APSS"}
 
 
 class VesselCatalogSyncTests(unittest.TestCase):
@@ -296,6 +302,44 @@ class VesselCatalogSyncTests(unittest.TestCase):
         self.assertEqual(way_forward["regular_line_counted_scales_365d"], 1)
         self.assertEqual(way_forward["regular_line_effective_calls_365d"], 1)
         self.assertTrue(way_forward["regular_line_base_expired"])
+
+    def test_vessel_catalog_export_respects_current_filters(self) -> None:
+        services.store.runtime_state[VESSEL_CATALOG_STATE_KEY] = {
+            "items": [
+                {
+                    "key": "imo:9182736",
+                    "vessel_name": "OCEAN MERCURY",
+                    "vessel_imo": "9182736",
+                    "vessel_call_sign": "OCME",
+                    "vessel_flag": "PT",
+                    "vessel_type": "Graneis sólidos",
+                    "vessel_loa_m": "180",
+                    "vessel_beam_m": "28",
+                    "vessel_gt_t": "22000",
+                    "vessel_dwt_t": "30000",
+                    "vessel_max_draft_m": "10.5",
+                    "vessel_bow_thruster": "unknown",
+                    "vessel_stern_thruster": "unknown",
+                }
+            ],
+            "deleted_keys": [],
+        }
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(port_calls.bp)
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["username"] = "admin@porto.pt"
+                sess["role"] = "admin"
+            response = client.get("/port-calls/vessels/export-json?q=ocean&vessel_type=Graneis+sólidos")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["total_count"], 2)
+        self.assertEqual(payload["filtered_count"], 1)
+        self.assertEqual(payload["filters"]["q"], "ocean")
+        self.assertEqual(payload["items"][0]["vessel_name"], "OCEAN MERCURY")
 
 
 if __name__ == "__main__":
