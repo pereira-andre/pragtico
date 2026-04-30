@@ -143,6 +143,43 @@
       const liveFeedUrl = {{ (url_for('api.api_portal_live_feed') if current_user else '')|tojson }};
       const seenPortalEventIds = new Set();
       let lastPortalEventAt = new Date().toISOString();
+      const localMinuteValue = (date) => {
+        const pad = (value) => String(value).padStart(2, "0");
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      };
+      const syncFutureDatetimeMinimums = () => {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        const currentMinute = localMinuteValue(now);
+        document.querySelectorAll("[data-future-datetime]").forEach((field) => {
+          field.min = currentMinute;
+        });
+        return currentMinute;
+      };
+      const validateFutureDatetimeForm = (form) => {
+        const currentMinute = syncFutureDatetimeMinimums();
+        for (const field of form.querySelectorAll("[data-future-datetime]")) {
+          field.setCustomValidity("");
+          if (field.value && field.value < currentMinute) {
+            field.setCustomValidity("A data/hora não pode ser anterior à hora atual.");
+            field.reportValidity();
+            return false;
+          }
+        }
+        return true;
+      };
+      syncFutureDatetimeMinimums();
+      document.querySelectorAll("form").forEach((form) => {
+        if (!form.querySelector("[data-future-datetime]")) return;
+        form.addEventListener("submit", (event) => {
+          if (!validateFutureDatetimeForm(form)) {
+            event.preventDefault();
+          }
+        });
+        form.querySelectorAll("[data-future-datetime]").forEach((field) => {
+          field.addEventListener("input", () => field.setCustomValidity(""));
+        });
+      });
       if (!loader) return;
       const pageJump = document.querySelector("[data-page-jump]");
       if (pageJump) {

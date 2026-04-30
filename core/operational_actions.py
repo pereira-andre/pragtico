@@ -1296,6 +1296,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         return result, f"Registo de entrada guardado para {result['vessel_name']}."
     if action == "schedule_departure":
         planned_departure_at = parse_local_datetime_input(field_text("planned_departure_at_local"), "Hora prevista de saída")
+        validate_not_past_datetime(planned_departure_at, "Hora prevista de saída")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
         result = services.store.schedule_departure_plan(
             port_call_id=port_call_id,
@@ -1354,6 +1355,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         return result, f"Registo de saída guardado para {result['vessel_name']}."
     if action == "schedule_shift":
         planned_shift_at = parse_local_datetime_input(field_text("planned_shift_at_local"), "Hora prevista da mudança")
+        validate_not_past_datetime(planned_shift_at, "Hora prevista da mudança")
         constraints = normalize_constraint_codes(fields.get("constraints", []))
         origin_berth = normalize_portal_berth(field_text("origin_berth", port_call.get("berth", "")), "Cais origem")
         destination_berth = normalize_portal_berth(field_text("destination_berth"), "Cais destino")

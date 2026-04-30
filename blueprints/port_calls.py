@@ -544,26 +544,33 @@ def _load_port_call_json_payload() -> dict:
     return payload
 
 
-@bp.route("/port-calls/register")
-@login_required
-@role_required("admin", "agente")
-def port_call_register():
-    """Página de registo de nova escala portuária."""
+def _build_port_call_register_context(register_form: dict | None = None) -> dict:
     from core.helpers import build_tracked_scales, filter_port_activity_for_session
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
     port_activity = filter_port_activity_for_session(port_activity)
     historical_activity = services.store.get_port_activity_snapshot(window_days=3650)
     historical_activity = filter_port_activity_for_session(historical_activity)
     vessel_catalog = _build_vessel_catalog_options(historical_activity)
+    return {
+        "port_activity": port_activity,
+        "tracked_scales": build_tracked_scales(port_activity),
+        "vessel_catalog": vessel_catalog,
+        "vessel_catalog_json": json.dumps(vessel_catalog, ensure_ascii=False),
+        "port_call_json_template": json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        "vessel_catalog_json_template": json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
+        "register_form": register_form or {},
+        "title": "Escalas",
+    }
+
+
+@bp.route("/port-calls/register")
+@login_required
+@role_required("admin", "agente")
+def port_call_register():
+    """Página de registo de nova escala portuária."""
     return render_template(
         "port_call_register.html",
-        port_activity=port_activity,
-        tracked_scales=build_tracked_scales(port_activity),
-        vessel_catalog=vessel_catalog,
-        vessel_catalog_json=json.dumps(vessel_catalog, ensure_ascii=False),
-        port_call_json_template=json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),
-        vessel_catalog_json_template=json.dumps(VESSEL_CATALOG_JSON_TEMPLATE, ensure_ascii=False, indent=2),
-        title="Escalas",
+        **_build_port_call_register_context(),
     )
 
 
@@ -688,7 +695,10 @@ def create_port_call():
         _upsert_vessel_catalog_record(catalog_record, updated_by=session["username"], validate=False)
     except ValueError as exc:
         flash(flash_error_message(str(exc)), "error")
-        return redirect(url_for("dashboard_bp.dashboard"))
+        return render_template(
+            "port_call_register.html",
+            **_build_port_call_register_context(register_form=form_data),
+        ), 400
     except Exception:
         logger.exception("Falha inesperada ao criar escala para %s.", session.get("username"))
         flash("Falha inesperada ao guardar a escala.", "error")
@@ -701,6 +711,8 @@ def create_port_call():
         event_type="created",
         actor_username=session["username"],
     )
+    if request.form.get("redirect_to") == "register":
+        return redirect(url_for("port_calls.port_call_register"))
     return redirect(url_for("dashboard_bp.dashboard"))
 
 
@@ -909,6 +921,7 @@ def schedule_entry_plan(port_call_id: str):
     """Planear uma nova entrada para uma escala que continuou prevista após aborto."""
     try:
         planned_entry_at = parse_local_datetime_input(request.form.get("planned_entry_at_local", "").strip(), "Hora prevista de entrada")
+        validate_not_past_datetime(planned_entry_at, "Hora prevista de entrada")
         origin_port = require_form_text(request.form.get("origin_port", "").strip(), "Porto anterior")
         destination_berth = normalize_portal_berth(request.form.get("destination_berth", "").strip(), "Cais previsto")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
@@ -953,6 +966,7 @@ def schedule_departure_plan(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         planned_departure_at = parse_local_datetime_input(request.form.get("planned_departure_at_local", "").strip(), "Hora prevista de saída")
+        validate_not_past_datetime(planned_departure_at, "Hora prevista de saída")
         next_port = require_form_text(request.form.get("next_port", "").strip(), "Próximo destino")
         draft_m = validate_positive_number(request.form.get("draft_m", "").strip(), "Calado (m)", max_value=30.0)
         tug_count = validate_tug_count(request.form.get("tug_count", "").strip())
@@ -1008,6 +1022,7 @@ def schedule_shift_plan(port_call_id: str):
     try:
         current = services.store.get_port_call(port_call_id)
         planned_shift_at = parse_local_datetime_input(request.form.get("planned_shift_at_local", "").strip(), "Hora prevista da mudança")
+        validate_not_past_datetime(planned_shift_at, "Hora prevista da mudança")
         origin_berth = normalize_portal_berth(current.get("berth", ""), "Cais origem")
         destination_berth = normalize_portal_berth(request.form.get("destination_berth", "").strip(), "Cais destino")
         if destination_berth == origin_berth:

@@ -7,7 +7,7 @@
     <div class="mini-grid planned-mini-grid">
       <label>
         Hora prevista
-        <input type="datetime-local" name="planned_entry_at_local" required>
+        <input type="datetime-local" name="planned_entry_at_local" data-future-datetime required>
       </label>
       <label>
         Porto anterior
@@ -55,7 +55,7 @@
     <div class="mini-grid planned-mini-grid">
       <label>
         Hora prevista
-        <input type="datetime-local" name="planned_departure_at_local" required>
+        <input type="datetime-local" name="planned_departure_at_local" data-future-datetime required>
       </label>
       <label>
         Próximo destino
@@ -99,7 +99,7 @@
     <div class="mini-grid planned-mini-grid">
       <label>
         Hora prevista
-        <input type="datetime-local" name="planned_shift_at_local" required>
+        <input type="datetime-local" name="planned_shift_at_local" data-future-datetime required>
       </label>
       <label>
         Cais destino
@@ -403,7 +403,7 @@
               </label>
               <label>
                 ETA
-                <input type="datetime-local" name="eta_local" value="{{ scale_edit_defaults.eta_local }}" required>
+                <input type="datetime-local" name="eta_local" value="{{ scale_edit_defaults.eta_local }}" {% if port_call.status == "scheduled" %}data-future-datetime{% endif %} required>
               </label>
               <label>
                 Cais / fundeadouro

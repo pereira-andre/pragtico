@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+{% set register_form = register_form|default({}) %}
+{% set register_constraints = register_form.get("constraints", []) %}
+{% set register_bow_thruster = register_form.get("vessel_bow_thruster", "unknown") or "unknown" %}
+{% set register_stern_thruster = register_form.get("vessel_stern_thruster", "unknown") or "unknown" %}
 <main class="ops-shell">
   <section class="hero-card compact">
     <div class="hero-topline">
@@ -58,25 +62,25 @@
           <div class="planning-register-row planning-register-row-primary">
             <label>
               Navio
-              <input type="text" name="vessel_name" placeholder="Ex.: MSC Lyria" required>
+              <input type="text" name="vessel_name" value="{{ register_form.get('vessel_name', '') }}" placeholder="Ex.: MSC Lyria" required>
             </label>
             <label>
               ETA de chegada
-              <input type="datetime-local" name="eta_local" required>
+              <input type="datetime-local" name="eta_local" value="{{ register_form.get('eta_local', '') }}" data-future-datetime required>
             </label>
           </div>
           <div class="planning-register-row planning-register-row-main">
             <label>
               Cais previsto
-              <input type="text" name="berth" list="berth-options" placeholder="Ex.: Secil W" required>
+              <input type="text" name="berth" list="berth-options" value="{{ register_form.get('berth', '') }}" placeholder="Ex.: Secil W" required>
             </label>
             <label>
               Último porto
-              <input type="text" name="last_port" placeholder="Ex.: Sines" required>
+              <input type="text" name="last_port" value="{{ register_form.get('last_port', '') }}" placeholder="Ex.: Sines" required>
             </label>
             <label>
               Próximo destino
-              <input type="text" name="next_port" placeholder="Ex.: Vigo" required>
+              <input type="text" name="next_port" value="{{ register_form.get('next_port', '') }}" placeholder="Ex.: Vigo" required>
             </label>
           </div>
         </div>
@@ -86,85 +90,85 @@
             <div class="mini-grid planned-mini-grid">
               <label>
                 IMO
-                <input type="text" name="vessel_imo" placeholder="Ex.: 9723345" required>
+                <input type="text" name="vessel_imo" value="{{ register_form.get('vessel_imo', '') }}" placeholder="Ex.: 9723345" required>
               </label>
               <label>
                 Indicativo
-                <input type="text" name="vessel_call_sign" placeholder="Ex.: CQAN7" required>
+                <input type="text" name="vessel_call_sign" value="{{ register_form.get('vessel_call_sign', '') }}" placeholder="Ex.: CQAN7" required>
               </label>
             </div>
             <div class="mini-grid planned-mini-grid">
               <label>
                 Bandeira
-                <input type="text" name="vessel_flag" placeholder="Ex.: Madeira" required>
+                <input type="text" name="vessel_flag" value="{{ register_form.get('vessel_flag', '') }}" placeholder="Ex.: Madeira" required>
               </label>
               <label>
                 Tipo de navio
-                <input type="text" name="vessel_type" list="vessel-type-options" placeholder="Ex.: Graneis sólidos" required>
+                <input type="text" name="vessel_type" list="vessel-type-options" value="{{ register_form.get('vessel_type', '') }}" placeholder="Ex.: Graneis sólidos" required>
               </label>
               <label>
                 LOA (m)
-                <input type="text" name="vessel_loa_m" placeholder="Ex.: 189.9" required>
+                <input type="text" name="vessel_loa_m" value="{{ register_form.get('vessel_loa_m', '') }}" placeholder="Ex.: 189.9" required>
               </label>
             </div>
             <div class="mini-grid planned-mini-grid">
               <label>
                 Boca (m)
-                <input type="text" name="vessel_beam_m" placeholder="Ex.: 32.2" required>
+                <input type="text" name="vessel_beam_m" value="{{ register_form.get('vessel_beam_m', '') }}" placeholder="Ex.: 32.2" required>
               </label>
               <label>
                 GT (t)
-                <input type="text" name="vessel_gt_t" placeholder="Ex.: 32.540" required>
+                <input type="text" name="vessel_gt_t" value="{{ register_form.get('vessel_gt_t', '') }}" placeholder="Ex.: 32.540" required>
               </label>
               <label>
                 DWT (t)
-                <input type="text" name="vessel_dwt_t" placeholder="Ex.: 38.600" required>
+                <input type="text" name="vessel_dwt_t" value="{{ register_form.get('vessel_dwt_t', '') }}" placeholder="Ex.: 38.600" required>
               </label>
             </div>
             <div class="mini-grid planned-mini-grid">
               <label>
                 Calado
-                <input type="text" name="vessel_max_draft_m" placeholder="Ex.: 11.8" required>
+                <input type="text" name="vessel_max_draft_m" value="{{ register_form.get('vessel_max_draft_m', '') }}" placeholder="Ex.: 11.8" required>
               </label>
               <label>
                 Bow thruster
                 <select name="vessel_bow_thruster" required>
-                  <option value="unknown" selected>Desconhecido</option>
-                  <option value="no">Não</option>
-                  <option value="yes">Sim</option>
+                  <option value="unknown" {% if register_bow_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                  <option value="no" {% if register_bow_thruster == "no" %}selected{% endif %}>Não</option>
+                  <option value="yes" {% if register_bow_thruster == "yes" %}selected{% endif %}>Sim</option>
                 </select>
               </label>
               <label>
                 Stern thruster
                 <select name="vessel_stern_thruster" required>
-                  <option value="unknown" selected>Desconhecido</option>
-                  <option value="no">Não</option>
-                  <option value="yes">Sim</option>
+                  <option value="unknown" {% if register_stern_thruster == "unknown" %}selected{% endif %}>Desconhecido</option>
+                  <option value="no" {% if register_stern_thruster == "no" %}selected{% endif %}>Não</option>
+                  <option value="yes" {% if register_stern_thruster == "yes" %}selected{% endif %}>Sim</option>
                 </select>
               </label>
             </div>
             <div class="mini-grid planned-mini-grid">
               <label>
                 Perfil de serviços
-                <input type="text" name="service_rate_profile" placeholder="Ex.: Linha regular">
+                <input type="text" name="service_rate_profile" value="{{ register_form.get('service_rate_profile', '') }}" placeholder="Ex.: Linha regular">
               </label>
               <label>
                 Escalas linha regular (365 dias)
-                <input type="number" min="0" max="999" name="regular_line_calls_365d" placeholder="0">
+                <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ register_form.get('regular_line_calls_365d', '') }}" placeholder="0">
               </label>
               <label>
                 UP pilotagem
-                <input type="text" name="pilotage_up_rate" placeholder="Opcional">
+                <input type="text" name="pilotage_up_rate" value="{{ register_form.get('pilotage_up_rate', '') }}" placeholder="Opcional">
               </label>
             </div>
             <div class="mini-grid planned-mini-grid">
               <label>
                 Perfil redução TUP
-                <input type="text" name="tup_reduction_profile" placeholder="Ex.: linha regular">
+                <input type="text" name="tup_reduction_profile" value="{{ register_form.get('tup_reduction_profile', '') }}" placeholder="Ex.: linha regular">
               </label>
               <label>
                 Notas de serviços e taxas
-                <textarea name="service_notes" rows="2" placeholder="Notas reutilizáveis da ficha do navio..."></textarea>
+                <textarea name="service_notes" rows="2" placeholder="Notas reutilizáveis da ficha do navio...">{{ register_form.get('service_notes', '') }}</textarea>
               </label>
             </div>
           </div>
@@ -175,11 +179,11 @@
             <div class="mini-grid planned-mini-grid">
               <label>
                 Calado
-                <input type="text" name="draft_m" placeholder="Ex.: 4,65" required>
+                <input type="text" name="draft_m" value="{{ register_form.get('draft_m', '') }}" placeholder="Ex.: 4,65" required>
               </label>
               <label>
                 Rebocadores
-                <input type="number" min="0" name="tug_count" placeholder="0" required>
+                <input type="number" min="0" name="tug_count" value="{{ register_form.get('tug_count', '') }}" placeholder="0" required>
               </label>
             </div>
             <div class="constraint-picker">
@@ -187,7 +191,7 @@
               <div class="constraint-option-list">
                 {% for constraint in constraint_options %}
                   <label class="constraint-option">
-                    <input type="checkbox" name="constraints" value="{{ constraint.code }}">
+                    <input type="checkbox" name="constraints" value="{{ constraint.code }}" {% if constraint.code in register_constraints %}checked{% endif %}>
                     <img src="{{ url_for('dashboard_bp.image_asset', asset_path='constrains/' ~ constraint.icon) }}" alt="{{ constraint.label }}">
                     <span>{{ constraint.label }}</span>
                   </label>
@@ -198,7 +202,7 @@
         </details>
         <label>
           Nota operacional
-          <textarea name="notes" rows="3" placeholder="Restrições, rebocadores, janela de maré..."></textarea>
+          <textarea name="notes" rows="3" placeholder="Restrições, rebocadores, janela de maré...">{{ register_form.get('notes', '') }}</textarea>
         </label>
         <p class="muted small-note">Usa a nomenclatura real dos cais de Setúbal. Se faltar algum campo obrigatório, o formulário devolve erro.</p>
         <button type="submit">Guardar Escala</button>
