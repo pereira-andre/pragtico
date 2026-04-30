@@ -12,14 +12,31 @@ from core.form_helpers import (
     ensure_portal_berth_is_available,
     ensure_portal_berth_is_physically_available,
 )
+from core.maneuver_context import answer_slash_validation
 from core.operational_actions import answer_slash_query
 from core.operational_sources import answer_direct_operational_query
 from core.portal_notifications import latest_maneuver_by_type
+from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
 from domain.chat_actions import parse_slash_command
 
 
 TEST_VESSEL_PREFIX = "TESTE QA"
+QUERY_SLASH_COMMANDS = {
+    "local_warnings",
+    "wave",
+    "tides",
+    "weather",
+    "planning",
+    "planning_approved",
+    "planning_pending",
+    "consult_scale",
+    "consult_maneuver",
+    "consult_scale_cost",
+    "consult_maneuver_cost",
+    "consult_vessel",
+    "rule",
+}
 
 
 def _label_now() -> str:
@@ -947,154 +964,318 @@ class OperationalFlowSuite:
         )
         self._finish_scenario(scenario)
 
+    def _slash_datetime_label(self, *, days: int, hour: int, minute: int = 0) -> str:
+        return datetime.fromisoformat(self._future(days=days, hour=hour, minute=minute)).strftime("%d/%m/%Y, %H:%M")
+
+    def _slash_context(self) -> dict:
+        records = []
+        for port_call_id in self.created_ids:
+            try:
+                records.append(services.store.get_port_call(port_call_id))
+            except Exception:
+                continue
+        if not records:
+            return {
+                "ref": "PTSET26TEST0001",
+                "vessel_name": f"{TEST_VESSEL_PREFIX} SLASH",
+                "maneuver_id": "00000000",
+                "maneuver_id_short": "00000000",
+                "maneuver_type": "entry",
+                "maneuver_type_label": "entrada",
+                "imo": "9990001",
+            }
+
+        target = next(
+            (
+                record
+                for record in records
+                if record.get("status") in {"scheduled", "in_port"}
+                and record.get("maneuver_history")
+            ),
+            records[0],
+        )
+        maneuvers = list(target.get("maneuver_history") or [])
+        maneuver = next((item for item in maneuvers if item.get("state") == "pending"), None)
+        maneuver = maneuver or next((item for item in maneuvers if item.get("id")), {})
+        maneuver_type = (maneuver.get("type") or "entry").strip().lower()
+        type_labels = {"entry": "entrada", "departure": "saída", "shift": "mudança"}
+        return {
+            "ref": target.get("reference_code") or target.get("id") or "PTSET26TEST0001",
+            "vessel_name": target.get("vessel_name") or f"{TEST_VESSEL_PREFIX} SLASH",
+            "maneuver_id": maneuver.get("id") or "00000000",
+            "maneuver_id_short": str(maneuver.get("id") or "00000000")[:8],
+            "maneuver_type": maneuver_type,
+            "maneuver_type_label": type_labels.get(maneuver_type, "entrada"),
+            "imo": target.get("vessel_imo") or "9990001",
+        }
+
+    def _slash_expected_intents(self, command: str) -> set[str]:
+        if command == "help":
+            return {"help"}
+        if command in QUERY_SLASH_COMMANDS:
+            return {"query"}
+        if command == "validate_maneuver":
+            return {"validate", "template"}
+        if command == "event_report":
+            return {"event_report"}
+        return {"action", "template"}
+
+    def _slash_sample_for_alias(self, alias: str, command: str, ctx: dict, index: int) -> str:
+        head = f"/{alias}"
+        if command == "help":
+            return head
+        if command == "local_warnings":
+            return head
+        if command == "wave":
+            return head
+        if command == "tides":
+            return f"{head} hoje"
+        if command == "weather":
+            return f"{head} hoje"
+        if command in {"planning", "planning_approved", "planning_pending"}:
+            return head
+        if command == "rule":
+            return head
+        if command in {"consult_scale", "consult_scale_cost"}:
+            return f"{head} {ctx['ref']}"
+        if command in {"consult_maneuver", "consult_maneuver_cost"}:
+            return f"{head} {ctx['maneuver_id_short']}"
+        if command == "consult_vessel":
+            return f"{head} {ctx['vessel_name']}"
+        if command == "validate_maneuver":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+            )
+        if command == "event_report":
+            return f"{head} SEGURANCA. Cais 10. Teste operacional sem impacto."
+        if command == "register_scale":
+            return (
+                f"{head}\n"
+                f"Nome: {TEST_VESSEL_PREFIX} SLASH REGISTO {self.run_token} {index}\n"
+                f"ETA de chegada: {self._slash_datetime_label(days=12, hour=10)}\n"
+                "Cais previsto: ALSTOM\n"
+                "Último porto: Lisboa\n"
+                "Próximo destino: Faro\n"
+                f"IMO: {self._imo(70 + index)}\n"
+                f"Indicativo: TQASL{index:02d}\n"
+                "Bandeira: Portugal\n"
+                "Tipo de navio: Carga geral\n"
+                "LOA: 118.0\n"
+                "Boca: 19.2\n"
+                "GT: 7200\n"
+                "DWT: 9400\n"
+                "Calado máximo: 7.2\n"
+                "Bow thruster: yes\n"
+                "Stern thruster: unknown\n"
+                "Calado operacional: 6.4\n"
+                "Rebocadores: 1\n"
+                "Observações: teste de parser slash\n"
+            )
+        if command == "edit_scale":
+            return (
+                f"{head}\n"
+                f"Ref: {ctx['ref']}\n"
+                f"ETA: {self._slash_datetime_label(days=12, hour=11)}\n"
+                "Motivo da alteração: Teste de comando slash\n"
+            )
+        if command == "delete_scale":
+            return f"{head}\nRef: {ctx['ref']}\n"
+        if command == "create_maneuver":
+            return (
+                f"{head}\n"
+                f"Ref: {ctx['ref']}\n"
+                "Tipo de manobra: saída\n"
+                f"Hora prevista: {self._slash_datetime_label(days=12, hour=18)}\n"
+                "Destino: Sines\n"
+                "Calado: 6.5\n"
+                "Rebocadores: 2\n"
+                "Restrições: daylight\n"
+                "Observações: teste de criação de manobra\n"
+            )
+        if command == "edit_maneuver":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+                f"Hora prevista: {self._slash_datetime_label(days=12, hour=19)}\n"
+                "Motivo da alteração: Teste de edição slash\n"
+            )
+        if command == "delete_maneuver":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+            )
+        if command == "approve_maneuver":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+            )
+        if command == "create_report":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+                f"Início da manobra: {self._slash_datetime_label(days=12, hour=9)}\n"
+                f"Fim da manobra: {self._slash_datetime_label(days=12, hour=10)}\n"
+                "Calado: 6.4\n"
+                "Observações: teste de registo slash\n"
+            )
+        if command == "edit_report":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+                f"Início da manobra: {self._slash_datetime_label(days=12, hour=9)}\n"
+                f"Fim da manobra: {self._slash_datetime_label(days=12, hour=10)}\n"
+                "Calado: 6.4\n"
+                "Motivo da alteração: Teste de revisão de registo\n"
+            )
+        if command == "delete_report":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+            )
+        if command == "abort_maneuver":
+            return (
+                f"{head}\n"
+                f"ID da manobra: {ctx['maneuver_id_short']}\n"
+                f"Tipo de manobra: {ctx['maneuver_type_label']}\n"
+                "Motivo: Teste de aborto slash\n"
+            )
+        return head
+
+    def _slash_query_argument(self, parsed: dict) -> str:
+        return " ".join(str((parsed or {}).get("argument") or "").split())
+
     def _scenario_slash_commands(self) -> None:
         scenario = self._new_scenario(
             "Comandos /",
-            "Consultas e comandos slash",
-            "Valida parsing, ajuda atualizada, planeamento completo e comandos filtrados por estado.",
+            "Cobertura completa dos comandos slash",
+            "Valida todos os aliases definidos no sistema, executa consultas seguras e captura erros por comando.",
         )
-        parsed = self._step(
-            scenario,
-            "Interpretar /planeamento",
-            "Parser de comandos",
-            "O comando é reconhecido como consulta de planeamento.",
-            lambda: parse_slash_command("/planeamento", "piloto"),
-        )
-        self._check(
-            scenario,
-            "Resultado do parser",
-            "Alias /planeamento",
-            "Intent query e command planning.",
-            isinstance(parsed, dict) and parsed.get("intent") == "query" and parsed.get("command") == "planning",
-            f"{(parsed or {}).get('intent')} · {(parsed or {}).get('command')}",
-        )
-
-        help_text = self._step(
-            scenario,
-            "Gerar /help admin",
-            "Ajuda de comandos",
-            "A ajuda inclui os comandos operacionais atuais.",
-            lambda: build_slash_help("admin"),
-        )
-        self._check(
-            scenario,
-            "Comandos listados",
-            "/help",
-            "Inclui planeamento, edição/cancelamento e relatórios.",
-            isinstance(help_text, str)
-            and "/planeamento" in help_text
-            and "/editar-manobra" in help_text
-            and "/cancelar-manobra" in help_text
-            and "/registar-manobra" in help_text,
-            "Encontrados: "
-            + ", ".join(
-                command
-                for command in ("/planeamento", "/editar-manobra", "/cancelar-manobra", "/registar-manobra")
-                if isinstance(help_text, str) and command in help_text
-            ),
-        )
-
-        planning_payload = self._step(
-            scenario,
-            "Executar /planeamento",
-            "Resposta de planeamento",
-            "Lista todas as manobras no planeamento com estado, rota, ID e agência.",
-            lambda: answer_slash_query("planning", "", "piloto"),
-        )
-        planning_answer = (planning_payload or {}).get("answer", "") if isinstance(planning_payload, dict) else ""
-        self._check(
-            scenario,
-            "Conteúdo /planeamento",
-            "Formato da resposta",
-            "Contém estado, manobra e agente/agência.",
-            "Planeamento" in planning_answer
-            and "Estado:" in planning_answer
-            and "Manobra:" in planning_answer
-            and "Agente/agência:" in planning_answer,
-            planning_answer[:240] or "--",
-        )
-
-        approved_payload = self._step(
-            scenario,
-            "Executar /manobras-planeadas",
-            "Filtro de aprovadas",
-            "Mostra só manobras aprovadas/planeadas.",
-            lambda: answer_slash_query("planning_approved", "", "piloto"),
-        )
-        approved_answer = (approved_payload or {}).get("answer", "") if isinstance(approved_payload, dict) else ""
-        self._check(
-            scenario,
-            "Filtro aprovadas",
-            "Aliases de planeamento",
-            "A resposta usa cabeçalho de aprovadas.",
-            "Manobras planeadas/aprovadas" in approved_answer or "Não há manobras planeadas/aprovadas" in approved_answer,
-            approved_answer[:180] or "--",
-        )
-
-        pending_payload = self._step(
-            scenario,
-            "Executar /manobras-previstas",
-            "Filtro de pendentes",
-            "Mostra só manobras pendentes/previstas.",
-            lambda: answer_slash_query("planning_pending", "", "piloto"),
-        )
-        pending_answer = (pending_payload or {}).get("answer", "") if isinstance(pending_payload, dict) else ""
-        self._check(
-            scenario,
-            "Filtro pendentes",
-            "Aliases de planeamento",
-            "A resposta usa cabeçalho de pendentes.",
-            "Manobras previstas/pendentes" in pending_answer or "Não há manobras previstas/pendentes" in pending_answer,
-            pending_answer[:180] or "--",
-        )
-
-        snapshot = services.store.get_port_activity_snapshot(window_days=3650)
-        pending_row = next(
-            (
-                row
-                for row in snapshot.get("planned_maneuvers", []) or []
-                if row.get("situation_class") == "pending"
-                and str(row.get("vessel_name") or "").startswith(TEST_VESSEL_PREFIX)
-                and row.get("maneuver_id")
-            ),
-            None,
-        )
-        if pending_row:
-            command = (
-                "/editar-manobra\n"
-                f"ID da manobra: {str(pending_row.get('maneuver_id'))[:8]}\n"
-                f"Tipo de manobra: {str(pending_row.get('maneuver_type') or 'entrada')}\n"
-                "Hora prevista: 12/05/2026, 19:00\n"
-                "Motivo da alteração: Teste operacional\n"
-            )
-            parsed_edit = self._step(
+        ctx = self._slash_context()
+        tested_aliases: list[str] = []
+        for index, (alias, command) in enumerate(sorted(SLASH_COMMAND_ALIASES.items()), start=1):
+            sample = self._slash_sample_for_alias(alias, command, ctx, index)
+            parsed = self._step(
                 scenario,
-                "Interpretar /editar-manobra",
-                "Comando de alteração por ID curto",
-                "O comando gera proposta de edição sem exigir ref da escala quando há ID da manobra.",
-                lambda: parse_slash_command(command, "admin"),
+                f"Parser /{alias}",
+                f"Alias de {command}",
+                "O comando é reconhecido e encaminhado para a intenção correta.",
+                lambda sample=sample: parse_slash_command(sample, "admin"),
             )
-            proposal = (parsed_edit or {}).get("proposal") if isinstance(parsed_edit, dict) else {}
+            tested_aliases.append(alias)
+            expected_intents = self._slash_expected_intents(command)
+            observed_intent = (parsed or {}).get("intent") if isinstance(parsed, dict) else ""
+            observed_target = (
+                (parsed or {}).get("command")
+                or (parsed or {}).get("proposal", {}).get("action")
+                or observed_intent
+                if isinstance(parsed, dict)
+                else ""
+            )
             self._check(
                 scenario,
-                "Campos reconhecidos",
-                "/editar-manobra",
-                "Tem action edit_maneuver_plan, ID da manobra e motivo.",
-                isinstance(proposal, dict)
-                and proposal.get("action") == "edit_maneuver_plan"
-                and (proposal.get("target") or {}).get("maneuver_id")
-                and (proposal.get("fields") or {}).get("change_reason"),
-                str(proposal)[:260] if proposal else "--",
+                f"Cobertura /{alias}",
+                "Resultado do parser",
+                f"Intenção esperada: {', '.join(sorted(expected_intents))}.",
+                isinstance(parsed, dict) and observed_intent in expected_intents,
+                f"intent={observed_intent or '--'} · destino={observed_target or '--'}",
             )
-        else:
-            self._record_step(
-                scenario,
-                label="Interpretar /editar-manobra",
-                element="Comando de alteração por ID curto",
-                expected="Existir pelo menos uma manobra pendente de teste para validar o parser.",
-                observed="Não foi encontrada manobra pendente de teste no snapshot.",
-                state="warning",
+
+            if isinstance(parsed, dict) and parsed.get("intent") == "query":
+                payload = self._step(
+                    scenario,
+                    f"Executar /{alias}",
+                    "Consulta slash",
+                    "A consulta devolve uma resposta controlada, mesmo que a fonte externa esteja indisponível.",
+                    lambda parsed=parsed: answer_slash_query(
+                        parsed.get("command", ""),
+                        self._slash_query_argument(parsed),
+                        "admin",
+                    ),
+                )
+                answer = (payload or {}).get("answer", "") if isinstance(payload, dict) else ""
+                self._check(
+                    scenario,
+                    f"Resposta /{alias}",
+                    "Resultado visível",
+                    "A resposta contém texto e answer_origin.",
+                    isinstance(payload, dict) and bool(answer.strip()) and bool(payload.get("answer_origin")),
+                    f"{(payload or {}).get('answer_origin', '--') if isinstance(payload, dict) else '--'} · {answer[:180] or '--'}",
+                )
+
+            if isinstance(parsed, dict) and parsed.get("intent") == "validate":
+                payload = self._step(
+                    scenario,
+                    f"Executar /{alias}",
+                    "Validação determinística de manobra",
+                    "A validação devolve resposta própria e não falha a página.",
+                    lambda parsed=parsed: answer_slash_validation(parsed.get("target") or {}, "admin"),
+                )
+                answer = (payload or {}).get("answer", "") if isinstance(payload, dict) else ""
+                self._check(
+                    scenario,
+                    f"Resposta /{alias}",
+                    "Checklist de manobra",
+                    "A resposta contém texto e origem slash_validation.",
+                    isinstance(payload, dict)
+                    and bool(answer.strip())
+                    and payload.get("answer_origin") == "slash_validation",
+                    answer[:220] or "--",
+                )
+
+        self._check(
+            scenario,
+            "Cobertura total de aliases",
+            "Inventário dos comandos /",
+            f"Todos os {len(SLASH_COMMAND_ALIASES)} aliases definidos são testados.",
+            len(set(tested_aliases)) == len(SLASH_COMMAND_ALIASES),
+            f"{len(set(tested_aliases))}/{len(SLASH_COMMAND_ALIASES)} aliases testados.",
+        )
+
+        help_text = build_slash_help("admin")
+        missing_help = [
+            alias
+            for alias in (
+                "help",
+                "avisos-locais",
+                "ondulacao",
+                "mares",
+                "meteorologia",
+                "planeamento",
+                "consultar-escala",
+                "consultar-manobra",
+                "consultar-navio",
+                "validar-manobra",
+                "registar-escala",
+                "editar-escala",
+                "apagar-escala",
+                "criar-manobra",
+                "editar-manobra",
+                "apagar-manobra",
+                "aprovar",
+                "registar-manobra",
+                "editar-registo-manobra",
+                "apagar-registo-manobra",
+                "abortar",
+                "reportar-evento",
             )
+            if f"/{alias}" not in help_text
+        ]
+        self._check(
+            scenario,
+            "Ajuda cobre comandos principais",
+            "/help",
+            "A ajuda admin lista os comandos slash principais.",
+            not missing_help,
+            "Em falta: " + ", ".join(missing_help) if missing_help else "Comandos principais presentes.",
+        )
 
         unknown = self._step(
             scenario,
