@@ -1,0 +1,218 @@
+[
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é o comprimento máximo para manobrar na LISNAVE à noite?",
+    "expected_substrings": ["280 metros", "dia", "noite", "período diurno"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Um navio com 300 metros de LOA pode entrar no LISNAVE de noite?",
+    "expected_substrings": ["Não", "superior a 280 metros", "dia"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Um navio com 250 metros de LOA pode entrar no LISNAVE de noite?",
+    "expected_substrings": ["Sim", "LOA até 280 metros", "dia", "noite"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Porque é que as manobras no LISNAVE têm de ser no reponto?",
+    "expected_substrings": ["perpendicularmente", "corrente de maré", "corrente nula"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Podem dois navios grandes manobrar ao mesmo tempo no LISNAVE?",
+    "expected_substrings": ["marés vivas", "uma manobra por reponto", "LOA superior a 200 metros"]
+  },
+  {
+    "document": "IT-014_Lisnave.txt",
+    "question": "Qual é a profundidade disponível na entrada da Doca 21 com a comporta aberta?",
+    "expected_substrings": ["6,10 metros", "20 pés", "5,49 metros"]
+  },
+  {
+    "document": "IT-005_TMS1.txt",
+    "question": "Qual o tipo de defensas que o TMS 1 dispõe?",
+    "expected_substrings": ["defensas", "borracha", "Yokohama"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "A que distância está a posição de embarque dos pilotos da entrada da barra?",
+    "expected_substrings": ["posição de embarque", "pilotos", "1 milha náutica", "entrada da barra"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo um navio leva desde a entrada da barra até ao estaleiro da Lisnave?",
+    "expected_substrings": ["Canal Sul", "1 hora e 30 minutos", "2 horas", "10,5"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo um navio leva desde a entrada da barra até ao Tanquisado ou Eco-Oil?",
+    "expected_substrings": ["Canal Sul", "Tanquisado", "Eco-Oil", "1 hora e 30 minutos", "2 horas"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo demora da barra ao TMS2 e à Autoeuropa?",
+    "expected_substrings": ["Canal Norte", "TMS 2", "Autoeuropa", "1 hora"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva até à Secil, Praias do Sado, SAPEC e fundeadouros?",
+    "expected_substrings": ["SECIL", "30 minutos", "Praias do Sado", "SAPEC", "1 hora e 20 minutos", "Fundeadouro Norte", "45 minutos", "Fundeadouro Sul"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
+    "expected_substrings": ["Fundeadouro Norte", "cais a norte", "15 a 25 minutos", "SAPEC Líquidos", "SECIL", "20 minutos", "cais a sul", "1 hora"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
+    "expected_substrings": ["Canal Sul", "cais do sul", "30 minutos", "1 hora", "cais a norte", "1 hora e 20 minutos", "SECIL", "40 minutos"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva do Fundeadouro Sul / Tróia até à Autoeuropa?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "Autoeuropa", "mudança interna direta", "1 hora e 50 minutos", "2 horas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "Quanto tempo leva da entrada da Barra até aos estaleiros da LISNAVE?",
+    "expected_substrings": ["entrada da Barra", "LISNAVE", "1 hora e 30 minutos", "2 horas", "10,5 milhas náuticas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "Qual a distância do pilar 2 até à LISNAVE?",
+    "expected_substrings": ["Pilar 2", "10,5 milhas náuticas", "10,0 milhas náuticas"]
+  },
+  {
+    "document": "route_transit",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_route_transit",
+    "question": "E quanto tempo levo do fundeadouro sul até ao cais da Autoeuropa?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "Autoeuropa", "mudança interna direta", "não como Fundeadouro Sul -> Barra -> Canal Norte", "1 hora e 50 minutos", "2 horas"]
+  },
+  {
+    "document": "Notas_Pilotagem.txt",
+    "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?",
+    "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "fundeadouros"]
+  },
+  {
+    "document": "regras_operacionais_lisnave",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_rule",
+    "question": "Vou entrar com um navio de 150 m de comprimento e 40 m de boca para o hidrolift da LISNAVE. Marquei manobra agora às 13:54, 2 horas antes da maré para o piloto que embarca lá fora chegar a tempo do reponto de maré. Alguma observação que me esteja a faltar?",
+    "expected_substrings": ["Não", "boca máxima de 32 m", "40 m de boca", "não deve seguir", "5,5 m ao ZH", "4 rebocadores"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Quantos rebocadores são necessários para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster?",
+    "expected_substrings": ["2 rebocadores grandes", "1 pequeno", "GGp"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Qual é a diferença entre rebocador grande e rebocador pequeno?",
+    "expected_substrings": ["25 toneladas", "inferior a 25 toneladas"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "Qual é a velocidade máxima do navio durante o estabelecimento do cabo de reboque?",
+    "expected_substrings": ["5 nós", "água"]
+  },
+  {
+    "document": "IT-016_Rebocadores.txt",
+    "question": "O Mestre do rebocador pode recusar estabelecer o cabo?",
+    "expected_substrings": ["recusar", "velocidade", "má visibilidade", "seguras"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Quantos reboques para RORO de 180m a entrar com vento norte?",
+    "expected_substrings": ["3 rebocadores grandes", "Ro-Ro com vento Norte a entrar", "não deve reduzir esta recomendação"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Um Graneleiro de 190m a sair com vento sul forte, quantos rebocadores leva?",
+    "expected_substrings": ["2 rebocadores grandes", "vento Sul a sair", "DWT", "thrusters"]
+  },
+  {
+    "document": "operational_safety_limits.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_safety_limit",
+    "question": "Um roro vai sair agora da Autoeuropa. Tem 200 m e já pus 2 reboques. Pode sair? Ah, mas ficou nevoeiro!",
+    "expected_substrings": ["Não", "nevoeiro em porto", "manobras ficam suspensas", "visibilidade operacional"]
+  },
+  {
+    "document": "operational_safety_limits.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_safety_limit",
+    "question": "Se não fosse nevoeiro e estivesse 31 kts de vento, já podia sair desde que tivesse 4 reboques?",
+    "expected_substrings": ["Não", "31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"]
+  },
+  {
+    "document": "IT-015_Fundeadouros.txt",
+    "question": "Que fundeadouro recomendas para um navio de grande calado superior a 9 metros?",
+    "expected_substrings": ["Fundeadouro Sul / Tróia", "mais profundo", "mais amplo", "Fundeadouro Norte", "emergência"]
+  },
+  {
+    "document": "IT-029_SAPEC.txt",
+    "question": "Posso atracar um navio com 12 m no cais da SAPEC Líquidos?",
+    "expected_substrings": ["Não", "9,5 metros", "10,0 metros", "12 m", "ultrapassa ambos os limites"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Com que antecedência se marca uma entrada para a Secil vinda de fora da Barra?",
+    "expected_substrings": ["30 a 45 minutos", "reponto de maré", "preia-mar", "baixa-mar", "Piloto Coordenador"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Com que antecedência se marca uma saída da Secil?",
+    "expected_substrings": ["15 minutos", "reponto de maré", "preia-mar", "baixa-mar", "10 a 15 minutos"]
+  },
+  {
+    "document": "IT-009_Secil.txt",
+    "question": "Se um navio sai da Secil no reponto das 13:51 e outro vem do Fundeadouro Norte para o mesmo cais, como se marcam as manobras?",
+    "expected_substrings": ["13:36", "45 minutos", "1 hora", "12:51", "13:06", "10 a 15 minutos"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Qual é a diferença entre marcar para o reponto e marcar para a preia-mar?",
+    "expected_substrings": ["corrente nula", "profundidade suficiente", "Lisnave/Teporset/Termitrena", "TMS e SAPEC"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Com quanto tempo de antecedência se marca uma entrada de fora da barra para a LISNAVE?",
+    "expected_substrings": ["2 horas antes do reponto de maré pretendido"]
+  },
+  {
+    "document": "Marcar_manobra_repontos_mare.txt",
+    "question": "Um navio quer sair da Doca 22 do Lisnave. Quando se marca?",
+    "expected_substrings": ["2 horas antes da preia-mar"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "A partir de que velocidade de vento as manobras ficam condicionadas?",
+    "expected_substrings": ["20 nós", "25 nós"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "Quando se considera maré viva no Porto de Setúbal?",
+    "expected_substrings": ["baixa-mar", "inferior a 1,0 m", "preia-mar", "superior a 3,0 m"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "O que fazer quando há nevoeiro?",
+    "expected_substrings": ["pilotagem é suspensa", "fila de prioridade", "requisições continuam"]
+  },
+  {
+    "document": "Condicoes_Meteorologicas_Prioridades.txt",
+    "question": "Qual é o critério de prioridade entre manobras?",
+    "expected_substrings": ["reponto de maré", "passageiros", "RoRo", "contentores", "saídas sobre entradas"]
+  }
+]

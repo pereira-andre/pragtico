@@ -97,15 +97,15 @@
       <div class="section-head">
         <div>
           <p class="eyebrow">Persistência</p>
-          <h2>Base aplicacional e migração</h2>
+          <h2>Base aplicacional</h2>
         </div>
       </div>
       <div class="admin-status-split">
         <article class="admin-status-surface">
           <div class="admin-status-surface-head">
             <strong>Runtime de dados</strong>
-            <span class="admin-status-badge is-{{ 'online' if admin.db_runtime else 'degraded' if admin.storage_backend == 'local' else 'offline' }}">
-              {% if admin.db_runtime %}Ligado{% elif admin.storage_backend == 'local' %}Local{% else %}Sem runtime{% endif %}
+            <span class="admin-status-badge is-{{ 'online' if admin.db_runtime else 'offline' }}">
+              {{ 'Ligado' if admin.db_runtime else 'Sem runtime' }}
             </span>
           </div>
           <div class="admin-status-compact-grid">
@@ -121,26 +121,8 @@
           {% elif admin.db_runtime %}
             <p class="admin-status-note">Ligação PostgreSQL confirmada com contagens aplicacionais e verificação de `pgvector`.</p>
           {% else %}
-            <p class="admin-status-note">A plataforma está em modo local JSON neste ambiente, sem runtime PostgreSQL associado.</p>
+            <p class="admin-status-note">Runtime PostgreSQL obrigatório neste ambiente.</p>
           {% endif %}
-        </article>
-
-        <article class="admin-status-surface">
-          <div class="admin-status-surface-head">
-            <strong>Migração de arranque</strong>
-            <span class="admin-status-badge is-{{ admin.startup_migration_status.state }}">{{ admin.startup_migration_status.label }}</span>
-          </div>
-          <p class="admin-status-migration-copy">{{ admin.startup_migration_status.detail }}</p>
-          {% if admin.db_runtime and admin.db_runtime.migration %}
-            <div class="admin-status-fact">
-              <span>Último registo</span>
-              <strong>{{ admin.db_runtime.migration.updated_at }}</strong>
-            </div>
-          {% endif %}
-          <div class="admin-status-fact">
-            <span>Arranque automático</span>
-            <strong>{{ 'Ativo' if admin.config.migrate_on_start == '1' else 'Desativado' }}</strong>
-          </div>
         </article>
       </div>
     </section>

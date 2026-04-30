@@ -10,26 +10,35 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, List
 
+from domain.knowledge_chunking import chunk_text_by_structure, structured_chunk_document
 from domain.document_processing import extract_text_from_path
+from domain.port_entities import detect_port_entities, entity_names_from_matches, specific_entities
 from integrations.llm_provider import BaseLLMProvider, create_llm_provider
 from core.reindex_scheduler import PACIFIC_TZ, next_provider_quota_reset_utc
 from integrations.vector_store import BaseIndexStore
 
 
+INDEX_FORMAT_VERSION = "structured_chunks_v1"
+
+
 def chunk_text(text: str, chunk_size: int = 700, overlap: int = 120) -> List[str]:
+    chunks = chunk_text_by_structure(text, chunk_size=chunk_size, overlap=overlap)
+    if chunks:
+        return chunks
+
     clean = re.sub(r"\s+", " ", text).strip()
     if not clean:
         return []
 
-    chunks = []
+    fallback_chunks = []
     start = 0
     while start < len(clean):
         end = min(len(clean), start + chunk_size)
-        chunks.append(clean[start:end])
+        fallback_chunks.append(clean[start:end])
         if end == len(clean):
             break
         start = max(end - overlap, 0)
-    return chunks
+    return fallback_chunks
 
 
 def lexical_score(query: str, text: str) -> float:
@@ -39,6 +48,11 @@ def lexical_score(query: str, text: str) -> float:
         return 0.0
     overlap = query_tokens & text_tokens
     return len(overlap) / len(query_tokens)
+
+
+def _looks_like_tug_query(question: str) -> bool:
+    clean = _normalize_whitespace(question).lower()
+    return any(token in clean for token in ("rebocador", "rebocadores", "reboque", "reboques"))
 
 
 def _normalize_whitespace(value: str) -> str:
@@ -112,7 +126,6 @@ class SimpleRAGEngine:
         llm_provider: BaseLLMProvider | None = None,
         generation_fallback_provider: BaseLLMProvider | None = None,
         embedding_api_provider: BaseLLMProvider | None = None,
-        embedding_provider=None,
     ) -> None:
         self.api_key = api_key
         self.knowledge_dir = knowledge_dir
@@ -128,12 +141,9 @@ class SimpleRAGEngine:
             self.provider = create_llm_provider(api_key=api_key if api_key else None)
         self.generation_fallback_provider = generation_fallback_provider
 
-        # Embedding provider: local (sentence-transformers) or API-based
-        self.embedding_provider = embedding_provider
+        # Embeddings are generated through the configured API provider.
         self.embedding_api_provider = embedding_api_provider or self.provider
-        self._use_local_embeddings = (
-            embedding_provider is not None and embedding_provider.is_available
-        )
+        self._use_local_embeddings = False
 
         self._generation_candidates = self._build_provider_candidates(
             (self.provider, self.generation_model),
@@ -249,7 +259,7 @@ class SimpleRAGEngine:
         ]
         if reasons:
             return " | ".join(dict.fromkeys(reasons))
-        return "LLM provider unavailable."
+        return "Provider de geração indisponível."
 
     def _has_embedding_payload(self, embedding) -> bool:
         if embedding is None:
@@ -400,6 +410,7 @@ class SimpleRAGEngine:
                 "mtime_ns": int(stat.st_mtime_ns),
                 "size": stat.st_size,
                 "sha256": digest.hexdigest(),
+                "index_format": INDEX_FORMAT_VERSION,
             }
         return manifest
 
@@ -431,8 +442,7 @@ class SimpleRAGEngine:
     def _api_embedding_vectors(self, batch: List[str]) -> List[List[float]]:
         if not self._embedding_api_candidates and not self.client:
             raise RuntimeError(
-                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                f"ou configura {self.embedding_api_key_hint}."
+                f"Embeddings não disponíveis: configura {self.embedding_api_key_hint}."
             )
 
         errors: List[str] = []
@@ -632,12 +642,6 @@ class SimpleRAGEngine:
         return min(delay, self.embedding_max_retry_delay_seconds)
 
     def _embed_batch(self, batch: List[str], retry_callback=None, throttle_callback=None) -> List[List[float]]:
-        # LOCAL EMBEDDINGS: use sentence-transformers directly, no API, no quota
-        if self._use_local_embeddings:
-            embed_result = self.embedding_provider.embed(texts=batch)
-            return embed_result.vectors
-
-        # API EMBEDDINGS: use LLM provider with retry/throttle logic
         last_exc: Exception | None = None
         started_at = time.monotonic()
         for attempt in range(1, self.embedding_max_retries + 1):
@@ -678,8 +682,7 @@ class SimpleRAGEngine:
     ) -> List[List[float]]:
         if not self._use_local_embeddings and not self.client:
             raise RuntimeError(
-                "Embeddings não disponíveis: instala sentence-transformers para embeddings locais, "
-                f"ou configura {self.embedding_api_key_hint}."
+                f"Embeddings não disponíveis: configura {self.embedding_api_key_hint}."
             )
         vectors = []
         batch_size = self.embedding_batch_size
@@ -916,12 +919,13 @@ class SimpleRAGEngine:
                         progress_pct=(20.0 * index / max(total_documents, 1)) if total_documents else 20.0,
                     )
                     continue
-                for chunk_id, chunk in enumerate(chunk_text(text), start=1):
+                structured_chunks = structured_chunk_document(text, document_name=name)
+                for chunk_id, chunk in enumerate(structured_chunks, start=1):
                     item = {
                         "id": f"{name}:{chunk_id}",
                         "document": name,
                         "chunk_id": chunk_id,
-                        "text": chunk,
+                        **chunk,
                     }
                     chunks.append(item)
                     chunks_missing_embedding.append(item)
@@ -1052,6 +1056,130 @@ class SimpleRAGEngine:
             self._reindex_started_monotonic = None
             self._reindex_lock.release()
 
+    @staticmethod
+    def _query_entities(question: str) -> List[Dict]:
+        matches = detect_port_entities(question)
+        return specific_entities(matches) or matches
+
+    @staticmethod
+    def _item_entity_names(item: Dict) -> List[str]:
+        names = item.get("entity_names") or []
+        if isinstance(names, str):
+            names = [names]
+        names = [str(name).strip() for name in names if str(name).strip()]
+        if names:
+            return names
+        inferred = detect_port_entities(
+            " ".join(
+                str(item.get(key) or "")
+                for key in ("document", "document_title", "section", "primary_entity", "snippet", "text")
+            )
+        )
+        return entity_names_from_matches(inferred)
+
+    def _entity_match_score(self, item: Dict, query_entities: List[Dict]) -> float:
+        if not query_entities:
+            return 0.0
+        item_names = set(self._item_entity_names(item))
+        if not item_names:
+            return 0.0
+        query_names = {entity["name"] for entity in query_entities}
+        if item_names & query_names:
+            return 1.0
+        query_channels = {str(entity.get("channel") or "") for entity in query_entities if entity.get("channel")}
+        item_channel = str(item.get("channel") or "")
+        if item_channel and item_channel in query_channels:
+            return 0.25
+        return 0.0
+
+    def _has_entity_conflict(self, item: Dict, query_entities: List[Dict]) -> bool:
+        if not query_entities:
+            return False
+        item_names = set(self._item_entity_names(item))
+        if not item_names:
+            return False
+        for entity in query_entities:
+            if entity.get("generic"):
+                continue
+            if item_names & set(entity.get("must_not_mix_with") or []):
+                return True
+        return False
+
+    @staticmethod
+    def _candidate_key(item: Dict) -> str:
+        return str(item.get("id") or f"{item.get('document')}:{item.get('chunk_id')}")
+
+    def _merge_retrieval_candidates(self, *candidate_groups: List[Dict]) -> List[Dict]:
+        merged: Dict[str, Dict] = {}
+        for group in candidate_groups:
+            for item in group:
+                key = self._candidate_key(item)
+                existing = merged.get(key)
+                if not existing:
+                    mode = str(item.get("retrieval_mode") or "unknown")
+                    merged[key] = {
+                        **item,
+                        "_retrieval_modes": [mode],
+                        "_base_score": float(item.get("score") or 0.0),
+                    }
+                    continue
+                existing["_base_score"] = max(
+                    float(existing.get("_base_score") or 0.0),
+                    float(item.get("score") or 0.0),
+                )
+                mode = str(item.get("retrieval_mode") or "unknown")
+                if mode not in existing["_retrieval_modes"]:
+                    existing["_retrieval_modes"].append(mode)
+                for key_name, value in item.items():
+                    if key_name not in existing or existing.get(key_name) in (None, "", []):
+                        existing[key_name] = value
+        return list(merged.values())
+
+    def _rerank_candidates(self, question: str, candidates: List[Dict], query_entities: List[Dict], top_k: int) -> List[Dict]:
+        if not candidates:
+            return []
+
+        strict_entities = [entity for entity in query_entities if not entity.get("generic")]
+        entity_matched = [
+            item for item in candidates if self._entity_match_score(item, strict_entities) >= 1.0
+        ]
+        pure_entity_matched = [
+            item for item in entity_matched if not self._has_entity_conflict(item, strict_entities)
+        ]
+        ranking_pool = pure_entity_matched or (entity_matched if strict_entities and entity_matched else candidates)
+
+        ranked = []
+        for item in ranking_pool:
+            lexical = lexical_score(question, " ".join([
+                str(item.get("document") or ""),
+                str(item.get("document_title") or ""),
+                str(item.get("section") or ""),
+                " ".join(self._item_entity_names(item)),
+                str(item.get("text") or ""),
+            ]))
+            entity_score = self._entity_match_score(item, query_entities)
+            conflict_penalty = 0.35 if self._has_entity_conflict(item, query_entities) else 0.0
+            final_score = max(float(item.get("_base_score") or item.get("score") or 0.0), lexical)
+            final_score = final_score + (0.45 * entity_score) + (0.20 * lexical) - conflict_penalty
+            retrieval_modes = item.get("_retrieval_modes") or [item.get("retrieval_mode", "semantic")]
+            ranked.append(
+                {
+                    **item,
+                    "score": max(final_score, 0.0),
+                    "retrieval_mode": "+".join(sorted(set(retrieval_modes))),
+                    "entity_match": entity_score >= 1.0 if query_entities else None,
+                    "query_entities": entity_names_from_matches(query_entities),
+                    "rerank_reason": {
+                        "lexical_score": round(lexical, 3),
+                        "entity_score": round(entity_score, 3),
+                        "entity_conflict": conflict_penalty > 0,
+                    },
+                }
+            )
+
+        ranked.sort(key=lambda item: item.get("score", 0), reverse=True)
+        return ranked[:top_k]
+
     def retrieve(self, question: str, top_k: int = 4) -> List[Dict]:
         self.rebuild_index()
         index = self.index_store.load_index()
@@ -1059,8 +1187,11 @@ class SimpleRAGEngine:
         if not chunks:
             return []
 
+        query_entities = self._query_entities(question)
+        lexical_results = self._lexical_search(question, chunks, max(top_k * 4, top_k), query_entities=query_entities)
+
         if not self._use_local_embeddings and not self.client:
-            return self._lexical_search(question, chunks, top_k)
+            return self._rerank_candidates(question, lexical_results, query_entities, top_k)
         if not self._use_local_embeddings and self.is_embedding_quota_exhausted():
             raise RuntimeError(
                 "Pesquisa semântica "
@@ -1069,9 +1200,13 @@ class SimpleRAGEngine:
 
         try:
             query_vector = self._embed_many([question])[0]
-            results = self.index_store.semantic_search(query_vector, top_k)
-            if results:
-                return [item for item in results if item.get("score", 0) > 0]
+            semantic_results = self.index_store.semantic_search(query_vector, max(top_k * 4, top_k))
+            candidates = self._merge_retrieval_candidates(
+                [item for item in semantic_results if item.get("score", 0) > 0],
+                lexical_results,
+            )
+            if candidates:
+                return self._rerank_candidates(question, candidates, query_entities, top_k)
         except Exception as exc:
             self.last_index_error = self._format_embedding_error(exc)
             if self.is_embedding_quota_exhausted(self.last_index_error):
@@ -1079,14 +1214,44 @@ class SimpleRAGEngine:
                     "Pesquisa semântica "
                     f"{self.embedding_provider_label} indisponível enquanto a quota de embeddings não renovar."
                 ) from exc
-            return self._lexical_search(question, chunks, top_k)
+            return self._rerank_candidates(question, lexical_results, query_entities, top_k)
 
         return []
 
-    def _lexical_search(self, question: str, chunks: List[Dict], top_k: int) -> List[Dict]:
+    def _lexical_search(
+        self,
+        question: str,
+        chunks: List[Dict],
+        top_k: int,
+        query_entities: List[Dict] | None = None,
+    ) -> List[Dict]:
+        query_entities = query_entities or []
         scored = []
+        tug_query = _looks_like_tug_query(question)
         for item in chunks:
-            score = lexical_score(question, item.get("text", ""))
+            search_text = " ".join(
+                [
+                    str(item.get("document") or ""),
+                    str(item.get("document_title") or ""),
+                    str(item.get("section") or ""),
+                    " ".join(self._item_entity_names(item)),
+                    str(item.get("content_type") or ""),
+                    str(item.get("text") or ""),
+                ]
+            )
+            score = lexical_score(question, search_text)
+            entity_score = self._entity_match_score(item, query_entities)
+            if entity_score:
+                score += 0.35 * entity_score
+            if tug_query:
+                document_name = str(item.get("document") or "").lower()
+                section = str(item.get("section") or "").lower()
+                if "it-016" in document_name:
+                    score += 1.1
+                elif "rebocador" in section or "rebocadores" in section:
+                    score += 0.45
+            if self._has_entity_conflict(item, query_entities):
+                score -= 0.25
             if score <= 0:
                 continue
             scored.append({**item, "score": score, "retrieval_mode": "lexical"})
@@ -1110,6 +1275,9 @@ class SimpleRAGEngine:
     def _build_source_payload(self, contexts: List[Dict]) -> List[Dict]:
         sources = []
         for index, item in enumerate(contexts, start=1):
+            entity_names = item.get("entity_names") or []
+            if isinstance(entity_names, str):
+                entity_names = [entity_names]
             sources.append(
                 {
                     "source_id": f"S{index}",
@@ -1118,6 +1286,17 @@ class SimpleRAGEngine:
                     "score": round(item["score"], 3),
                     "retrieval_mode": item.get("retrieval_mode", "semantic"),
                     "snippet": item["text"][:260],
+                    "section": item.get("section") or "",
+                    "page": item.get("page"),
+                    "entity_names": entity_names,
+                    "primary_entity": item.get("primary_entity") or "",
+                    "channel": item.get("channel") or "",
+                    "content_type": item.get("content_type") or "",
+                    "content_scope": item.get("content_scope") or "",
+                    "source": item.get("source") or "",
+                    "entity_match": item.get("entity_match"),
+                    "query_entities": item.get("query_entities") or [],
+                    "rerank_reason": item.get("rerank_reason") or {},
                 }
             )
         return sources
@@ -1175,10 +1354,56 @@ class SimpleRAGEngine:
             return f"{lead} {' '.join(snippets)}"
         return " ".join(snippets)
 
+    def _validate_retrieval_support(self, question: str, sources: List[Dict]) -> Dict:
+        detected = detect_port_entities(question)
+        strict_entities = specific_entities(detected)
+        if not strict_entities:
+            return {
+                "can_answer": True,
+                "reason": "Pergunta sem entidade portuária específica.",
+                "entity_match": None,
+                "source_quality": "media" if sources else "baixa",
+                "missing_information": [],
+            }
+
+        matched_sources = [
+            source for source in sources if self._entity_match_score(source, strict_entities) >= 1.0
+        ]
+        if matched_sources:
+            return {
+                "can_answer": True,
+                "reason": "Foram recuperadas fontes da entidade pedida.",
+                "entity_match": True,
+                "source_quality": "alta" if len(matched_sources) >= 2 else "media",
+                "missing_information": [],
+            }
+
+        entity_names = entity_names_from_matches(strict_entities)
+        return {
+            "can_answer": False,
+            "reason": "Nenhuma fonte final confirma a entidade específica pedida.",
+            "entity_match": False,
+            "source_quality": "baixa",
+            "missing_information": [
+                "fonte documental com entidade: " + ", ".join(entity_names),
+            ],
+        }
+
+    @staticmethod
+    def _build_insufficient_document_answer(validation: Dict, question: str) -> str:
+        missing = validation.get("missing_information") or []
+        requested = ", ".join(missing).replace("fonte documental com entidade: ", "") or "a entidade pedida"
+        return (
+            "A documentação recuperada não permite responder com segurança. "
+            "Foram encontrados excertos relacionados, mas nenhum confirma especificamente "
+            f"a informação pedida sobre {requested}. "
+            "Recomendo rever os documentos de origem ou refazer a pesquisa com termos mais específicos."
+        )
+
     def generate_text(self, prompt: str):
         if not self.can_generate():
             raise RuntimeError(
-                "Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot."
+                "Define a API key do provider antes de usar o chatbot."
             )
 
         errors: List[str] = []
@@ -1227,6 +1452,14 @@ class SimpleRAGEngine:
         if supplemental_sources:
             sources.extend(supplemental_sources)
 
+        retrieval_validation = self._validate_retrieval_support(question, sources)
+        if not retrieval_validation.get("can_answer"):
+            return {
+                "answer": self._build_insufficient_document_answer(retrieval_validation, question),
+                "sources": sources,
+                "retrieval_validation": retrieval_validation,
+            }
+
         trusted_answers = trusted_answers or []
         reviewed_answers = reviewed_answers or []
         trusted_block = "\n\n".join(
@@ -1259,7 +1492,16 @@ class SimpleRAGEngine:
             or "Sem estado conversacional estruturado."
         )
         context_block = "\n\n".join(
-            f"[{source['source_id']}] Documento: {source['document']} | chunk {source['chunk_id']} | score {source['score']} | modo {source['retrieval_mode']}\nExcerto: {source['snippet']}"
+            (
+                f"[{source['source_id']}] Documento: {source['document']} | "
+                f"secção {source.get('section') or '--'} | "
+                f"página {source.get('page') or '--'} | "
+                f"entidade {', '.join(source.get('entity_names') or []) or source.get('primary_entity') or '--'} | "
+                f"tipo {source.get('content_type') or '--'} | "
+                f"escopo {source.get('content_scope') or '--'} | "
+                f"score {source['score']} | modo {source['retrieval_mode']}\n"
+                f"Excerto: {source['snippet']}"
+            )
             for source in sources
         )
 
@@ -1270,11 +1512,17 @@ Perfil do utilizador atual: {role}
 Regras:
 - Responde em português europeu.
 - Usa primeiro o contexto recuperado.
+- Para perguntas documentais, a tua função é explicar o que está suportado nas fontes recuperadas, não tomar uma decisão operacional final sem confirmação humana.
+- Não inventes regras, limites, exceções, horários, valores, calados, comprimentos, rebocadores ou condições que não apareçam nas fontes disponíveis.
+- Não mistures informação de cais, terminais, fundeadouros ou documentos diferentes. Se a pergunta mencionar uma entidade específica, responde apenas com fontes dessa entidade.
+- Se os excertos forem insuficientes ou contraditórios, diz isso claramente em vez de preencher a lacuna.
+- Quando a fonte tiver documento, secção ou página, podes mencionar essa referência em linguagem natural; não mostres ids técnicos, chunks ou scores ao utilizador.
 - As fontes com prefixo operacional (por exemplo OPS1, OPS2, OPS3) representam dados vivos do portal: escalas, planeamento e arquivo de manobras.
 - Fontes com modo `document_companion` são factos curados pelo admin; usa-as como balizas fortes, mas não as copies como resposta pronta.
 - Fontes com modo `berth_profile` são perfis estruturados de cais/terminal; usa-as para normalizar dimensões, calados, janelas de manobra, restrições e orientação de rebocadores antes de sintetizar.
 - Fontes com modo `operational_safety_limits` são limites de suspensão de manobras; se indicarem suspensão por nevoeiro ou vento, começa pela conclusão de que as manobras ficam suspensas.
 - Fontes com modo `operational_tug_guidance` são regra prática operacional para rebocadores; usa-as como baseline da recomendação. A IT-016 confirma ou agrava mínimos legais/DWT/carga perigosa, mas não deve reduzir essa regra prática.
+- Fontes com modo `operational_feedback_memory` são memória operacional revista por operadores; usa-as como sinal forte, mas reconcilia com documentos, perfis de cais e dados live. Nunca copies literalmente essa memória.
 - Fontes com modo `message_analysis` separam mensagens compostas em contexto e perguntas; responde a cada pergunta explícita e usa os factos declarativos como premissas.
 - Se existir uma resposta anteriormente aprovada para a mesma pergunta ou para uma pergunta muito parecida, usa-a como referência forte de factos e decisão, mas reformula-a no contexto atual.
 - Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.
@@ -1291,12 +1539,13 @@ Regras:
 - Se o contexto for insuficiente, diz claramente o que falta.
 - Sê objetivo e útil.
 - Se a pergunta tiver várias frases ou várias perguntas, não respondas só à última: organiza a resposta pelos pontos pedidos, sem repetir a mensagem do utilizador.
-- Não mostres referências técnicas, ids de fontes, chunks, scores ou secções "Fontes usadas".
+- Não mostres ids de fontes, chunks, scores ou secções "Fontes usadas".
 - Integra a informação de forma natural, como resposta operacional fluida.
 - Quando falares de ocupação portuária, usa lógica de slots de cais.
 - Fundeadouro Norte e Fundeadouro Sul / Tróia são quadros/fundeadouros: podem ter vários navios e não contam como slots de cais ocupados.
 - Não digas que um navio "não cabe" num cais só porque a extensão nominal do cais é menor do que o LOA do navio.
 - Se a pergunta for sobre dimensões do cais ou do navio, limita-te aos factos documentais disponíveis e evita conclusões automáticas de incompatibilidade.
+- Exceção: quando a fonte indicar um limite dimensional rígido de acesso, como boca máxima, largura máxima, calado máximo, LOA máximo absoluto ou limite do Hidrolift/eclusa, compara o valor dado pelo utilizador com esse limite. Se exceder, começa pela conclusão prática de que a manobra não deve seguir assim.
 - Quando o plano interno indicar `live_reasoning`, usa os dados live como evidência para responder a uma decisão operacional.
 - Em perguntas de avaliação ou suficiência, começa pela conclusão prática e só depois justifica.
 - Não respondas a uma pergunta de avaliação com um dump de meteorologia, marés, ondulação ou avisos sem concluir algo operacional.
@@ -1328,7 +1577,7 @@ Pergunta:
 """.strip()
 
         if not self.can_generate():
-            raise RuntimeError("Define a API key do LLM (GEMINI_API_KEY, OPENROUTER_API_KEY, etc.) antes de usar o chatbot.")
+            raise RuntimeError("Define a API key do provider antes de usar o chatbot.")
 
         try:
             gen_result = self.generate_text(prompt)
@@ -1379,6 +1628,7 @@ Regras:
         return {
             "answer": answer_text,
             "sources": sources,
+            "retrieval_validation": retrieval_validation,
         }
 
     @staticmethod

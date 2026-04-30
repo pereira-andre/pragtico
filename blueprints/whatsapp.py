@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import secrets
+import unicodedata
 from datetime import datetime, timezone
 
 from flask import Blueprint, Response, current_app, jsonify, request
@@ -44,6 +46,8 @@ from domain.sos_alerts import (
 
 bp = Blueprint("whatsapp", __name__)
 
+WHATSAPP_TEXT_CHUNK_LIMIT = 3600
+
 
 def _normalize_whatsapp_role(value: str | None) -> str:
     role = (value or "").strip().lower()
@@ -64,6 +68,10 @@ def _welcome_sent_key(from_number: str) -> str:
 
 def _pending_feedback_correction_key(from_number: str) -> str:
     return f"whatsapp:feedback-correction:{from_number}"
+
+
+def _outbound_message_alias_key(external_message_id: str) -> str:
+    return f"whatsapp:outbound:{external_message_id}"
 
 
 def _sos_user_label(profile: dict | None, fallback_name: str = "") -> str:
@@ -155,19 +163,28 @@ def _send_sos_alerts(
                     event_type=event_type,
                 )
             else:
-                send_response = service.send_text_message(number, alert_text, reply_to_message_id="")
-                outbound_id = _extract_outbound_message_id(send_response)
-                services.store.record_channel_event(
-                    channel="whatsapp",
-                    event_type=event_type,
-                    payload=send_response,
-                    username=requester_username,
-                    conversation_id=requester_conversation_id,
-                    local_message_id="",
-                    channel_user_id=number,
-                    external_event_id=outbound_id,
-                    external_message_id=outbound_id,
-                )
+                text_parts = _split_whatsapp_text(alert_text)
+                for index, text_part in enumerate(text_parts, start=1):
+                    send_response = service.send_text_message(number, text_part, reply_to_message_id="")
+                    outbound_id = _extract_outbound_message_id(send_response)
+                    event_payload = send_response
+                    if len(text_parts) > 1:
+                        event_payload = {
+                            **send_response,
+                            "part_index": index,
+                            "part_total": len(text_parts),
+                        }
+                    services.store.record_channel_event(
+                        channel="whatsapp",
+                        event_type=event_type,
+                        payload=event_payload,
+                        username=requester_username,
+                        conversation_id=requester_conversation_id,
+                        local_message_id="",
+                        channel_user_id=number,
+                        external_event_id=outbound_id,
+                        external_message_id=outbound_id,
+                    )
             sent += 1
         except Exception as exc:
             current_app.logger.exception("Falha ao enviar alerta SOS para %s.", number)
@@ -308,6 +325,223 @@ def _feedback_correction_skip_requested(text: str) -> bool:
     }
 
 
+_NON_REVISABLE_ASSISTANT_MESSAGE_KINDS = {
+    "error",
+    "feedback_correction_ack",
+    "feedback_correction_prompt",
+    "answer_retry_without_context",
+    "sos_cancelled",
+    "sos_cancel_without_pending",
+    "sos_disabled",
+    "sos_dispatched_cancelled",
+    "sos_location_invalid",
+    "sos_location_prompt",
+    "welcome",
+}
+
+
+def _normalize_command_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text or "")
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = normalized.lower()
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _whatsapp_answer_retry_requested(text: str) -> bool:
+    clean = _normalize_command_text(text)
+    if not clean:
+        return False
+    exact_commands = {
+        "reve",
+        "rever",
+        "revisa",
+        "revisao",
+        "reformula",
+        "reformular",
+        "nova tentativa",
+        "tenta outra vez",
+        "tenta de novo",
+        "responde outra vez",
+        "pensa melhor",
+        "nao era isso",
+    }
+    if clean in exact_commands:
+        return True
+    command_prefixes = (
+        "reve ",
+        "rever ",
+        "revisa ",
+        "reformula ",
+        "tenta outra vez",
+        "tenta de novo",
+        "responde outra vez",
+        "confirma melhor",
+        "verifica melhor",
+        "corrige a resposta",
+    )
+    if any(clean.startswith(prefix) for prefix in command_prefixes):
+        return True
+    return any(
+        phrase in clean
+        for phrase in (
+            "podes rever",
+            "podes revisar",
+            "podes reformular",
+            "nova tentativa",
+            "nao era isso",
+            "pensa melhor",
+            "responde de novo",
+        )
+    )
+
+
+def _assistant_message_is_revisable(message: dict) -> bool:
+    if message.get("role") != "assistant":
+        return False
+    metadata = message.get("channel_metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    message_kind = str(metadata.get("message_kind") or "").strip()
+    return message_kind not in _NON_REVISABLE_ASSISTANT_MESSAGE_KINDS
+
+
+def _assistant_revision_context_from_messages(
+    messages: list[dict],
+    target_index: int,
+) -> dict:
+    previous_user = next(
+        (
+            item
+            for item in reversed(messages[:target_index])
+            if item.get("role") == "user"
+        ),
+        None,
+    )
+    if not previous_user:
+        raise ValueError("Não encontrei a pergunta original dessa resposta.")
+    target_message = messages[target_index]
+    return {
+        "original_question": str(previous_user.get("content") or "").strip(),
+        "previous_answer": str(target_message.get("content") or "").strip(),
+        "target_message_id": str(target_message.get("id") or ""),
+    }
+
+
+def _assistant_message_revision_context(
+    username: str,
+    conversation_id: str,
+    message_id: str,
+) -> dict:
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        raise ValueError("Conversa não encontrada.")
+    messages = services.store.list_messages(username, conversation_id)
+    target_index = next(
+        (
+            index
+            for index, item in enumerate(messages)
+            if str(item.get("id") or "") == str(message_id)
+            and _assistant_message_is_revisable(item)
+        ),
+        None,
+    )
+    if target_index is None:
+        raise ValueError("Resposta não encontrada.")
+    return _assistant_revision_context_from_messages(messages, target_index)
+
+
+def _latest_assistant_revision_context(username: str, conversation_id: str) -> dict:
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        raise ValueError("Conversa não encontrada.")
+    messages = services.store.list_messages(username, conversation_id)
+    for target_index in range(len(messages) - 1, -1, -1):
+        if _assistant_message_is_revisable(messages[target_index]):
+            return _assistant_revision_context_from_messages(messages, target_index)
+    raise ValueError("Não encontrei uma resposta anterior nesta conversa para rever.")
+
+
+def _build_answer_retry_prompt(user_note: str) -> str:
+    retry_prompt = "Revê a tua resposta anterior e tenta responder de novo sem repetir a mesma síntese."
+    clean_note = (user_note or "").strip()
+    if clean_note:
+        retry_prompt += f" Observação: {clean_note}"
+    return retry_prompt
+
+
+def _find_whatsapp_message_by_external_id(external_message_id: str) -> dict | None:
+    clean_external_id = (external_message_id or "").strip()
+    if not clean_external_id:
+        return None
+    matched_message = services.store.find_message_by_channel_message_id("whatsapp", clean_external_id)
+    if matched_message:
+        return matched_message
+
+    alias = services.store.get_runtime_state(_outbound_message_alias_key(clean_external_id)) or {}
+    username = str(alias.get("username") or "").strip()
+    conversation_id = str(alias.get("conversation_id") or "").strip()
+    local_message_id = str(alias.get("local_message_id") or "").strip()
+    if not username or not conversation_id or not local_message_id:
+        return None
+    try:
+        messages = services.store.list_messages(username, conversation_id)
+    except Exception:
+        current_app.logger.exception(
+            "Falha ao resolver alias de outbound WhatsApp (wamid=%s).",
+            clean_external_id,
+        )
+        return None
+    for message in messages:
+        if message.get("id") == local_message_id:
+            resolved = dict(message)
+            resolved.setdefault("username", username)
+            resolved.setdefault("conversation_id", conversation_id)
+            return resolved
+    return None
+
+
+def _take_text_chunk(text: str, limit: int) -> tuple[str, str]:
+    if len(text) <= limit:
+        return text.strip(), ""
+
+    split_at = max(
+        text.rfind(delimiter, 0, limit + 1) + len(delimiter)
+        for delimiter in ("\n\n", "\n", ". ", "; ", ", ", " ")
+    )
+    if split_at < max(1, int(limit * 0.45)):
+        split_at = limit
+
+    chunk = text[:split_at].strip()
+    remainder = text[split_at:].strip()
+    return chunk, remainder
+
+
+def _split_whatsapp_text(text: str, *, limit: int = WHATSAPP_TEXT_CHUNK_LIMIT) -> list[str]:
+    clean = str(text or "").strip()
+    if not clean:
+        return [""]
+    if limit < 32:
+        raise ValueError("Limite WhatsApp demasiado baixo para dividir mensagens.")
+    if len(clean) <= limit:
+        return [clean]
+
+    part_limit = limit - 12
+    chunks: list[str] = []
+    remaining = clean
+    while remaining:
+        chunk, remaining = _take_text_chunk(remaining, part_limit)
+        if not chunk and remaining:
+            chunk = remaining[:part_limit].strip()
+            remaining = remaining[part_limit:].strip()
+        if chunk:
+            chunks.append(chunk)
+
+    if len(chunks) <= 1:
+        return chunks or [clean[:limit]]
+    total = len(chunks)
+    return [f"({index}/{total}) {chunk}" for index, chunk in enumerate(chunks, start=1)]
+
+
 def _ensure_whatsapp_user(from_number: str, profile_name: str, default_role: str) -> dict:
     username = _whatsapp_username(from_number)
     profile = services.store.get_user_profile(username)
@@ -346,13 +580,38 @@ def _send_and_record_outbound_message(
             language_code=template_language.strip() or "pt_PT",
             reply_to_message_id=reply_to_message_id,
         )
+        send_responses = [send_response]
     else:
-        send_response = service.send_text_message(
-            to_number,
-            content,
-            reply_to_message_id=reply_to_message_id,
+        text_parts = _split_whatsapp_text(content)
+        send_responses = []
+        for index, text_part in enumerate(text_parts):
+            send_responses.append(
+                service.send_text_message(
+                    to_number,
+                    text_part,
+                    reply_to_message_id=reply_to_message_id if index == 0 else "",
+                )
+            )
+        send_response = (
+            send_responses[0]
+            if len(send_responses) == 1
+            else {
+                "messages": [
+                    message
+                    for response in send_responses
+                    for message in list(response.get("messages") or [])
+                ],
+                "message_count": len(send_responses),
+                "responses": send_responses,
+            }
         )
-    outbound_message_id = _extract_outbound_message_id(send_response)
+    outbound_message_ids = [
+        message_id
+        for response in send_responses
+        for message_id in [_extract_outbound_message_id(response)]
+        if message_id
+    ]
+    outbound_message_id = outbound_message_ids[0] if outbound_message_ids else ""
     try:
         services.store.update_message_channel_metadata(
             username,
@@ -361,20 +620,42 @@ def _send_and_record_outbound_message(
             external_message_id=outbound_message_id or None,
             channel_metadata={
                 "send_response": send_response,
+                "external_message_ids": outbound_message_ids,
                 "last_status": "accepted",
+                "message_count": len(send_responses),
             },
         )
-        services.store.record_channel_event(
-            channel="whatsapp",
-            event_type=event_type,
-            payload=send_response,
-            username=username,
-            conversation_id=conversation_id,
-            local_message_id=local_message_id,
-            channel_user_id=to_number,
-            external_event_id=outbound_message_id,
-            external_message_id=outbound_message_id,
-        )
+        for message_id in outbound_message_ids[1:]:
+            services.store.set_runtime_state(
+                _outbound_message_alias_key(message_id),
+                {
+                    "username": username,
+                    "conversation_id": conversation_id,
+                    "local_message_id": local_message_id,
+                    "external_message_id": message_id,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+        for index, response in enumerate(send_responses, start=1):
+            part_message_id = _extract_outbound_message_id(response)
+            event_payload = response
+            if len(send_responses) > 1:
+                event_payload = {
+                    **response,
+                    "part_index": index,
+                    "part_total": len(send_responses),
+                }
+            services.store.record_channel_event(
+                channel="whatsapp",
+                event_type=event_type,
+                payload=event_payload,
+                username=username,
+                conversation_id=conversation_id,
+                local_message_id=local_message_id,
+                channel_user_id=to_number,
+                external_event_id=part_message_id,
+                external_message_id=part_message_id,
+            )
     except Exception:
         current_app.logger.exception(
             "Resposta WhatsApp enviada, mas falhou o registo local do outbound (msg=%s, wamid=%s).",
@@ -423,6 +704,75 @@ def _append_send_and_mark_reply(
     )
 
 
+def _process_whatsapp_answer_retry(
+    service,
+    *,
+    username: str,
+    role: str,
+    conversation_id: str,
+    from_number: str,
+    inbound_message_id: str,
+    event: dict,
+    request_text: str,
+    revision_context: dict,
+    incoming_event_type: str,
+    requested_from_feedback: bool = False,
+) -> dict:
+    retry_context = dict(revision_context or {})
+    retry_context["user_note"] = request_text
+    retry_prompt = _build_answer_retry_prompt(request_text)
+    inbound_metadata = {
+        "profile_name": event.get("profile_name", ""),
+        "timestamp": event.get("timestamp", ""),
+        "message_type": "text",
+        "message_kind": "answer_retry_request",
+        "original_request": request_text,
+    }
+    if requested_from_feedback:
+        inbound_metadata["requested_from_feedback"] = True
+
+    result = handle_chat_turn(
+        username=username,
+        role=role,
+        question=retry_prompt,
+        conversation_id=conversation_id,
+        channel="whatsapp",
+        allow_mutations=True,
+        channel_user_id=from_number,
+        inbound_message_id=inbound_message_id,
+        inbound_message_metadata=inbound_metadata,
+        revision_context=retry_context,
+    )
+    services.store.record_channel_event(
+        channel="whatsapp",
+        event_type=incoming_event_type,
+        payload=event.get("raw") or {},
+        username=username,
+        conversation_id=result["conversation_id"],
+        local_message_id=result.get("user_message_id", ""),
+        channel_user_id=from_number,
+        external_event_id=inbound_message_id,
+        external_message_id=inbound_message_id,
+    )
+    _send_and_record_outbound_message(
+        service,
+        username=username,
+        conversation_id=result["conversation_id"],
+        local_message_id=result["message_id"],
+        content=result["answer"],
+        to_number=from_number,
+        reply_to_message_id=inbound_message_id,
+        event_type="outgoing_answer_retry",
+    )
+    _mark_inbound_processed(
+        inbound_message_id,
+        from_number=from_number,
+        conversation_id=result["conversation_id"],
+        answer=result["answer"],
+    )
+    return result
+
+
 @bp.route("/webhooks/whatsapp", methods=["GET"])
 def whatsapp_webhook_verify():
     service = getattr(services, "whatsapp_service", None)
@@ -455,7 +805,7 @@ def whatsapp_webhook_receive():
         event_type = (event.get("event_type") or "").strip().lower()
         if event_type == "message_status":
             message_id = (event.get("message_id") or "").strip()
-            matched_message = services.store.find_message_by_channel_message_id("whatsapp", message_id)
+            matched_message = _find_whatsapp_message_by_external_id(message_id)
             services.store.record_channel_event(
                 channel="whatsapp",
                 event_type="message_status",
@@ -504,10 +854,7 @@ def whatsapp_webhook_receive():
             )
 
             if event_type == "message_reaction":
-                target_message = services.store.find_message_by_channel_message_id(
-                    "whatsapp",
-                    event.get("target_message_id", ""),
-                )
+                target_message = _find_whatsapp_message_by_external_id(event.get("target_message_id", ""))
                 services.store.record_channel_event(
                     channel="whatsapp",
                     event_type="incoming_reaction",
@@ -1043,6 +1390,28 @@ def whatsapp_webhook_receive():
                 correction_message_id = str(
                     pending_feedback_correction.get("message_id") or ""
                 ).strip()
+                if _whatsapp_answer_retry_requested(text):
+                    services.store.delete_runtime_state(_pending_feedback_correction_key(from_number))
+                    revision_context = _assistant_message_revision_context(
+                        correction_username,
+                        correction_conversation_id,
+                        correction_message_id,
+                    )
+                    _process_whatsapp_answer_retry(
+                        service,
+                        username=correction_username,
+                        role=profile.get("role", getattr(service, "default_role", "piloto")),
+                        conversation_id=correction_conversation_id,
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        event=event,
+                        request_text=text,
+                        revision_context=revision_context,
+                        incoming_event_type="incoming_feedback_retry_request",
+                        requested_from_feedback=True,
+                    )
+                    delivered += 1
+                    continue
                 user_correction_message = services.store.append_chat_message(
                     username=correction_username,
                     conversation_id=correction_conversation_id,
@@ -1077,7 +1446,7 @@ def whatsapp_webhook_receive():
                         correction_username,
                         correction_conversation_id,
                         correction_message_id,
-                        "review",
+                        "corrected",
                         str(pending_feedback_correction.get("feedback_note") or "").strip(),
                         feedback_correction=text,
                         feedback_updated_by=profile["username"],
@@ -1137,6 +1506,71 @@ def whatsapp_webhook_receive():
                         message_id,
                     )
                     continue
+
+            if _whatsapp_answer_retry_requested(text):
+                conversation = services.store.ensure_conversation(username=profile["username"])
+                try:
+                    revision_context = _latest_assistant_revision_context(
+                        profile["username"],
+                        conversation["id"],
+                    )
+                except ValueError:
+                    user_message = services.store.append_chat_message(
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        role="user",
+                        content=text,
+                        channel="whatsapp",
+                        channel_user_id=from_number,
+                        external_message_id=message_id,
+                        channel_metadata={
+                            "message_kind": "answer_retry_request_without_context",
+                            "profile_name": event.get("profile_name", ""),
+                            "timestamp": event.get("timestamp", ""),
+                        },
+                    )
+                    services.store.record_channel_event(
+                        channel="whatsapp",
+                        event_type="incoming_answer_retry_without_context",
+                        payload=event.get("raw") or {},
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        local_message_id=user_message["id"],
+                        channel_user_id=from_number,
+                        external_event_id=message_id,
+                        external_message_id=message_id,
+                    )
+                    reply_text = (
+                        "Não encontrei uma resposta anterior nesta conversa para rever. "
+                        "Faz a pergunta de novo com os dados relevantes e eu reanaliso."
+                    )
+                    _append_send_and_mark_reply(
+                        service,
+                        username=profile["username"],
+                        conversation_id=conversation["id"],
+                        from_number=from_number,
+                        inbound_message_id=message_id,
+                        content=reply_text,
+                        event_type="outgoing_answer_retry_without_context",
+                        metadata={"message_kind": "answer_retry_without_context"},
+                    )
+                    delivered += 1
+                    continue
+
+                _process_whatsapp_answer_retry(
+                    service,
+                    username=profile["username"],
+                    role=profile.get("role", getattr(service, "default_role", "piloto")),
+                    conversation_id=conversation["id"],
+                    from_number=from_number,
+                    inbound_message_id=message_id,
+                    event=event,
+                    request_text=text,
+                    revision_context=revision_context,
+                    incoming_event_type="incoming_answer_retry_request",
+                )
+                delivered += 1
+                continue
 
             pre_response_messages = []
             if getattr(service, "welcome_enabled", False) and not _welcome_already_sent(from_number):

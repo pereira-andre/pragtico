@@ -58,7 +58,7 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
     auto_promote = bool(settings.get("auto_promote_corrections", True))
     should_register = (
         auto_promote
-        and (target_message.get("feedback_status") or "").strip().lower() == "review"
+        and (target_message.get("feedback_status") or "").strip().lower() == "corrected"
         and bool(corrected_answer)
         and bool(document_name)
         and bool(question)

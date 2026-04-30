@@ -103,6 +103,11 @@ LENGTH_TIME_TERMS = {
     "noturna",
     "noturno",
 }
+BEAM_ACCESS_TERMS = {
+    "boca",
+    "hidrolift",
+    "largura",
+}
 RULE_OR_RESTRICTION_TERMS = {
     "condicao",
     "condicoes",
@@ -137,9 +142,9 @@ OVERVIEW_TERMS = {
 SCALAR_FACT_TERMS = (
     DEPTH_TERMS
     | LENGTH_TIME_TERMS
+    | BEAM_ACCESS_TERMS
     | {
         "altura",
-        "boca",
         "calado",
         "maximo",
         "maxima",
@@ -155,6 +160,12 @@ DISTANCE_TERMS = {
     "distancias",
     "milha",
     "milhas",
+}
+PILOT_BOARDING_TERMS = {
+    "embarque",
+    "piloto",
+    "pilotos",
+    "posicao",
 }
 TIME_PLANNING_TERMS = {
     "antecedencia",
@@ -246,6 +257,41 @@ def _tokenize(value: str) -> set[str]:
         for token in _normalize_text(value).split()
         if len(token) > 2 and token not in PORTUGUESE_STOPWORDS and not token.isdigit()
     }
+
+
+def _measurement_mentions(value: object) -> dict[str, set[str]]:
+    mentions: dict[str, set[str]] = {}
+    text = str(value or "")
+    pattern = re.compile(
+        r"\b(\d+(?:[.,]\d+)*)\s*(m|metros?|dwt|loa|nos?|n[oó]s|horas?|h)\b"
+        r"|\b(loa)\s*(?:de|=|igual a|superior a|inferior a)?\s*(\d+(?:[.,]\d+)*)\b",
+        flags=re.IGNORECASE,
+    )
+    for match in pattern.finditer(text):
+        raw_number = match.group(1) or match.group(4)
+        raw_unit = match.group(2) or match.group(3) or ""
+        unit = _normalize_text(raw_unit)
+        if unit in {"m", "metro", "metros"}:
+            unit = "m"
+        elif unit in {"no", "nos", "nós"}:
+            unit = "nos"
+        elif unit in {"hora", "horas", "h"}:
+            unit = "h"
+        else:
+            unit = unit or "numero"
+        number = raw_number.replace(",", ".")
+        mentions.setdefault(unit, set()).add(number)
+    return mentions
+
+
+def _has_conflicting_measurements(question: str, candidate_question: object) -> bool:
+    asked = _measurement_mentions(question)
+    candidate = _measurement_mentions(candidate_question)
+    for unit, asked_values in asked.items():
+        candidate_values = candidate.get(unit)
+        if candidate_values and not (asked_values & candidate_values):
+            return True
+    return False
 
 
 def _clean_text(value: object) -> str:
@@ -606,6 +652,57 @@ def _faq_candidate_text(item: dict) -> str:
     return " ".join(str(part or "") for part in parts)
 
 
+def _mentions_fundeadouro_norte(clean_text: str) -> bool:
+    return bool(re.search(r"\bfundeadouro\s+norte\b|\bfund\s+norte\b", clean_text))
+
+
+def _mentions_fundeadouro_sul(clean_text: str) -> bool:
+    return bool(
+        re.search(
+            r"\bfundeadouro\s+sul\b|\bfundeadouro\s+(?:de\s+)?troia\b|\bfund\s+troia\b|\bf\s*s\b",
+            clean_text,
+        )
+    )
+
+
+def _mentions_origin_canal_norte(clean_text: str) -> bool:
+    return bool(re.search(r"\b(?:do|da|desde|de)\s+canal\s+norte\b", clean_text))
+
+
+def _mentions_origin_canal_sul(clean_text: str) -> bool:
+    return bool(re.search(r"\b(?:do|da|desde|de)\s+canal\s+sul\b", clean_text))
+
+
+def _route_anchor_conflicts(question: str, candidate_text: str) -> bool:
+    clean_question = _normalize_text(question)
+    clean_candidate = _normalize_text(candidate_text)
+    if (
+        _mentions_fundeadouro_sul(clean_question)
+        and _mentions_fundeadouro_norte(clean_candidate)
+        and not _mentions_fundeadouro_sul(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_fundeadouro_norte(clean_question)
+        and _mentions_fundeadouro_sul(clean_candidate)
+        and not _mentions_fundeadouro_norte(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_origin_canal_sul(clean_question)
+        and _mentions_origin_canal_norte(clean_candidate)
+        and not _mentions_origin_canal_sul(clean_candidate)
+    ):
+        return True
+    if (
+        _mentions_origin_canal_norte(clean_question)
+        and _mentions_origin_canal_sul(clean_candidate)
+        and not _mentions_origin_canal_norte(clean_candidate)
+    ):
+        return True
+    return False
+
+
 def _is_berth_inventory_question(question: str, question_tokens: set[str]) -> bool:
     normalized_question = _normalize_text(question)
     if not BERTH_INVENTORY_RE.search(normalized_question):
@@ -769,14 +866,14 @@ def _humanize_companion_faq_answer(question: str, answer: str, *, context_label:
     if _starts_with_boolean_answer(clean_answer):
         return f"Neste caso, a resposta é: {answer_sentence}"
 
-    if question_tokens & CONTACT_REFERENCE_TERMS:
-        return f"Usa esta referência: {answer_sentence}"
-
     if question_tokens & TIME_PLANNING_TERMS:
         return (
             f"Para planeamento, conta com {answer_sentence} "
             "Depois valida os restantes condicionantes da manobra."
         )
+
+    if question_tokens & CONTACT_REFERENCE_TERMS:
+        return f"Usa esta referência: {answer_sentence}"
 
     if question_tokens & DISTANCE_TERMS:
         return (
@@ -829,6 +926,26 @@ def _faq_intent_conflicts(question: str, question_tokens: set[str], item: dict) 
     if asks_depth and candidate_is_length_time and not candidate_has_depth:
         return True
 
+    asks_beam_or_access = bool(question_tokens & BEAM_ACCESS_TERMS)
+    candidate_has_beam_or_access = bool(candidate_tokens & BEAM_ACCESS_TERMS)
+    if asks_beam_or_access and not candidate_has_beam_or_access:
+        return True
+
+    asks_pilot_boarding_position = (
+        "barra" in question_tokens
+        and bool(PILOT_BOARDING_TERMS & question_tokens)
+        and "embarque" in question_tokens
+        and bool({"piloto", "pilotos"} & question_tokens)
+    )
+    candidate_has_pilot_boarding_position = (
+        "barra" in candidate_tokens
+        and bool(PILOT_BOARDING_TERMS & candidate_tokens)
+        and "embarque" in candidate_tokens
+        and bool({"piloto", "pilotos"} & candidate_tokens)
+    )
+    if asks_pilot_boarding_position and not candidate_has_pilot_boarding_position:
+        return True
+
     if _is_berth_inventory_question(question, question_tokens):
         asked_facility_terms = FACILITY_TERMS & question_tokens
         asked_anchorage_terms = ANCHORAGE_TERMS & question_tokens
@@ -874,7 +991,12 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
         signal_tokens = _faq_match_signal_tokens(question_tokens, faq_tokens, keyword_tokens)
         if not signal_tokens:
             continue
+        candidate_text = _faq_candidate_text(item)
+        if _route_anchor_conflicts(question, candidate_text):
+            continue
         if _faq_intent_conflicts(question, question_tokens, item):
+            continue
+        if _has_conflicting_measurements(question, item.get("question", "")):
             continue
         overlap_score = len(question_tokens & faq_tokens) / max(len(question_tokens), 1)
         keyword_score = len(question_tokens & keyword_tokens) / max(len(question_tokens), 1) if keyword_tokens else 0.0
@@ -912,7 +1034,10 @@ def find_best_global_companion_match(question: str, knowledge_dir: str) -> dict 
     if best_match["score"] < 0.72:
         return None
     if second_best and (best_match["score"] - second_best["score"]) < 0.14:
-        return None
+        best_reference_question = _normalize_text(best_match["faq_match"].get("question", ""))
+        second_reference_question = _normalize_text(second_best["faq_match"].get("question", ""))
+        if not best_reference_question or best_reference_question != second_reference_question:
+            return None
     companion = best_match["companion"]
     return {
         "answer": _humanize_companion_faq_answer(question, best_match["faq_match"]["answer"]),

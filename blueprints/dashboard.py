@@ -711,7 +711,6 @@ def healthz():
         "auth_backend": getattr(services.auth_service, "backend_name", "unknown"),
         "storage_backend": getattr(services.store, "backend_name", "unknown"),
         "rag_backend": getattr(services.index_store, "backend_name", "unknown"),
-        "startup_migration": services.startup_migration_status,
     })
 
 

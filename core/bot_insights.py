@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import quote
 
 from core import services
 from core.bot_settings import load_bot_settings
@@ -256,6 +257,13 @@ def _topics_from_question(question: str) -> list[str]:
     return topics
 
 
+def _normalized_chat_feedback_status(message: dict) -> str:
+    status = (message.get("feedback_status") or "").strip().lower()
+    if status == "review" and (message.get("feedback_correction") or "").strip():
+        return "corrected"
+    return status
+
+
 def build_learning_signals(*, window_hours: int = 168) -> dict:
     store = getattr(services, "store", None)
     if not store:
@@ -283,7 +291,9 @@ def build_learning_signals(*, window_hours: int = 168) -> dict:
     topic_counter: Counter[str] = Counter()
 
     for msg in messages:
-        feedback_status = (msg.get("feedback_status") or "").strip().lower()
+        feedback_status = _normalized_chat_feedback_status(msg)
+        if feedback_status == "ignored":
+            continue
         feedback_updated_at = _iso_to_datetime(msg.get("feedback_updated_at"))
         created_at = _iso_to_datetime(msg.get("created_at"))
         question = msg.get("question") or ""
@@ -291,13 +301,13 @@ def build_learning_signals(*, window_hours: int = 168) -> dict:
             for topic in _topics_from_question(question)[:4]:
                 topic_counter[topic] += 1
 
-        if feedback_status == "approved":
+        if feedback_status in {"approved", "corrected"}:
             if feedback_updated_at and window_start <= feedback_updated_at <= window_end:
                 positives_current += 1
                 recent_events.append(
                     {
                         "type": "positive",
-                        "label": "Resposta aprovada",
+                        "label": "Correção guardada" if feedback_status == "corrected" else "Resposta aprovada",
                         "detail": question or (msg.get("content") or "")[:120],
                         "timestamp": feedback_updated_at.isoformat(),
                     }
@@ -414,14 +424,18 @@ def build_exceptions(*, limit: int = 10) -> dict:
         cases = []
 
     for msg in messages:
-        if (msg.get("feedback_status") or "").strip().lower() == "review":
+        if _normalized_chat_feedback_status(msg) == "review":
+            message_id = str(msg.get("id") or "").strip()
             items.append(
                 {
                     "type": "correction_review",
                     "severity": "high",
                     "label": "Correção bloqueada",
                     "detail": msg.get("question") or (msg.get("content") or "")[:120],
-                    "url": f"/admin/bot#chat-{msg.get('id', '')}",
+                    "url": (
+                        "/admin/casebooks?chat_feedback=review&case_feedback=all"
+                        f"#chat-{quote(message_id, safe='')}"
+                    ),
                 }
             )
 
@@ -645,8 +659,25 @@ def build_quality_snapshot() -> dict:
 
     static_cases = load_eval_cases_from_dir(os.path.join(knowledge_dir, "evals")) if knowledge_dir else []
     feedback_cases = load_eval_cases_from_store(store) if store else []
+    static_cases = [
+        {
+            **case,
+            "origin": "static_eval",
+            "origin_label": "Eval fixo",
+        }
+        for case in static_cases
+    ]
+    feedback_cases = [
+        {
+            **case,
+            "origin": "feedback_promoted",
+            "origin_label": "Feedback promovido",
+        }
+        for case in feedback_cases
+    ]
 
     seen: set[tuple[str, str]] = set()
+    by_key: dict[tuple[str, str], dict] = {}
     deduped: list[dict] = []
     for case in static_cases + feedback_cases:
         key = (
@@ -654,34 +685,127 @@ def build_quality_snapshot() -> dict:
             (case.get("question") or "").strip().lower(),
         )
         if key in seen:
+            existing = by_key.get(key)
+            if existing and existing.get("origin") != case.get("origin"):
+                existing["origin"] = "mixed"
+                existing["origin_label"] = "Eval fixo + feedback"
             continue
         seen.add(key)
+        by_key[key] = case
         deduped.append(case)
 
     results = evaluate_companion_cases(deduped, knowledge_dir) if (deduped and knowledge_dir) else []
     passed = sum(1 for item in results if item.get("passed"))
     failed = [item for item in results if not item.get("passed")]
     pass_rate = round((passed / len(results)) * 100) if results else 0
+    eval_type_labels = {
+        "companion": "Companions/RAG curado",
+        "direct_operational": "Decisão operacional direta",
+        "full_pipeline": "Pipeline completo",
+    }
+    type_summary: dict[str, dict] = {}
+    for item in results:
+        eval_type = str(item.get("eval_type") or "companion").strip() or "companion"
+        bucket = type_summary.setdefault(
+            eval_type,
+            {
+                "type": eval_type,
+                "label": eval_type_labels.get(eval_type, eval_type.replace("_", " ")),
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+            },
+        )
+        bucket["total"] += 1
+        if item.get("passed"):
+            bucket["passed"] += 1
+        else:
+            bucket["failed"] += 1
+    type_rows = []
+    for data in type_summary.values():
+        total = data["total"] or 1
+        state = "online" if data["failed"] == 0 and data["total"] else "degraded" if data["total"] else "offline"
+        type_rows.append({**data, "coverage_pct": round((data["passed"] / total) * 100), "state": state})
+    type_rows.sort(key=lambda item: (-item["failed"], item["label"]))
+
+    protected_candidates = [
+        item
+        for item in results
+        if str(item.get("eval_type") or "companion") != "companion"
+        or str(item.get("expected_answer_origin") or "").strip()
+    ]
+    protected_rows = []
+    for item in protected_candidates[:12]:
+        protected_rows.append(
+            {
+                "document": item.get("document", ""),
+                "question": item.get("question", ""),
+                "eval_type": item.get("eval_type") or "companion",
+                "answer_origin": item.get("answer_origin") or "",
+                "expected_answer_origin": item.get("expected_answer_origin") or "",
+                "passed": bool(item.get("passed")),
+                "state": "online" if item.get("passed") else "degraded",
+            }
+        )
+    protected_total = len(protected_candidates)
+    protected_passed = sum(1 for item in protected_candidates if item.get("passed"))
 
     document_summary: dict[str, dict] = {}
     for case in deduped:
         name = (case.get("document") or "").strip()
         if not name:
             continue
-        bucket = document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
+        bucket = document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            },
+        )
         bucket["total"] += 1
+        origin = case.get("origin")
+        if origin == "feedback_promoted":
+            bucket["feedback"] += 1
+        elif origin == "mixed":
+            bucket["feedback"] += 1
+            bucket["static"] += 1
+        else:
+            bucket["static"] += 1
     for case in feedback_cases:
         name = (case.get("document") or "").strip()
         if not name:
             continue
-        document_summary.setdefault(name, {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0})
-        document_summary[name]["feedback"] += 1
+        document_summary.setdefault(
+            name,
+            {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            },
+        )
     for result in results:
         name = (result.get("document") or "").strip()
         if not name:
             continue
         if name not in document_summary:
-            document_summary[name] = {"document": name, "total": 0, "passed": 0, "failed": 0, "feedback": 0}
+            document_summary[name] = {
+                "document": name,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "feedback": 0,
+                "static": 0,
+                "action_url": "/admin/documents",
+            }
         if result.get("passed"):
             document_summary[name]["passed"] += 1
         else:
@@ -698,11 +822,24 @@ def build_quality_snapshot() -> dict:
     failure_rows = []
     for item in failed[:10]:
         missing = list(item.get("missing_substrings") or []) or list(item.get("missing_terms") or [])[:4]
+        expected_answer = str(item.get("expected_answer") or "").strip()
+        current_answer = str(item.get("answer") or "").strip()
         failure_rows.append(
             {
                 "document": item.get("document", ""),
                 "question": item.get("question", ""),
                 "missing_summary": ", ".join(missing) or "Resposta vazia ou fora do esperado.",
+                "eval_type": item.get("eval_type") or "companion",
+                "answer_origin": item.get("answer_origin") or "",
+                "expected_answer_origin": item.get("expected_answer_origin") or "",
+                "expected_summary": expected_answer[:420],
+                "current_answer": current_answer[:420],
+                "origin": item.get("origin") or "static_eval",
+                "origin_label": item.get("origin_label") or "Eval fixo",
+                "term_coverage_pct": round(float(item.get("term_coverage") or 0) * 100),
+                "source_message_id": item.get("source_message_id", ""),
+                "updated_by": item.get("updated_by", ""),
+                "action_url": "/admin/documents",
             }
         )
 
@@ -737,6 +874,11 @@ def build_quality_snapshot() -> dict:
         "failed_total": len(failed),
         "static_cases_total": len(static_cases),
         "feedback_cases_total": len(feedback_cases),
+        "type_rows": type_rows,
+        "protected_total": protected_total,
+        "protected_passed": protected_passed,
+        "protected_failed": protected_total - protected_passed,
+        "protected_rows": protected_rows,
         "document_rows": document_rows[:12],
         "failure_rows": failure_rows,
         "feedback_source_rows": [
@@ -1355,4 +1497,300 @@ def compute_health_score(quality: dict, signals: dict, exceptions: dict, sources
         "coverage_pct": coverage_pct,
         "feedback_bias_pct": feedback_bias,
         "penalty": penalty,
+    }
+
+
+# ----------------------------------------------------------------------------
+# Runtime monitor — compact operational picture for the admin bot cockpit
+
+
+def _source_by_id(sources: list[dict], source_id: str) -> dict:
+    for source in sources or []:
+        if source.get("id") == source_id:
+            return source
+    return {}
+
+
+def _enabled_state(enabled: bool, *, degraded: bool = False) -> str:
+    if not enabled:
+        return "offline"
+    return "degraded" if degraded else "online"
+
+
+def _service_enabled(service: Any) -> bool:
+    if service is None:
+        return False
+    enabled = getattr(service, "enabled", True)
+    return bool(enabled() if callable(enabled) else enabled)
+
+
+def _service_status_detail(service: Any, fallback: str) -> str:
+    if service is None:
+        return "Serviço não inicializado."
+    status_method = getattr(service, "status", None)
+    if not callable(status_method):
+        return fallback
+    try:
+        status = status_method()
+    except Exception as exc:
+        return f"Estado indisponível: {exc}"
+    if status.get("error"):
+        return str(status.get("error"))
+    if status.get("count") is not None:
+        return f"{status.get('count')} aviso(s); cache {status.get('cache_updated_at_label') or 'sem cache'}."
+    if status.get("cache_updated_at_label"):
+        return f"Cache {status.get('cache_updated_at_label')}."
+    return fallback
+
+
+def _runtime_card(card_id: str, label: str, value: str, detail: str, state: str) -> dict:
+    return {
+        "id": card_id,
+        "label": label,
+        "value": value,
+        "detail": detail,
+        "state": state,
+    }
+
+
+def _context_mix(sources: list[dict]) -> list[dict]:
+    max_count = max([int(source.get("count") or 0) for source in sources or []] + [1])
+    rows: list[dict] = []
+    for source in sources or []:
+        count = int(source.get("count") or 0)
+        rows.append(
+            {
+                "id": source.get("id", ""),
+                "label": source.get("label", ""),
+                "count": count,
+                "state": source.get("state", "offline"),
+                "bar_pct": max(4, round((count / max_count) * 100)) if count else 2,
+                "meta": source.get("meta", ""),
+            }
+        )
+    return rows
+
+
+def build_bot_monitor_snapshot(
+    *,
+    settings: dict,
+    sources: list[dict],
+    quality: dict,
+    signals: dict,
+    exceptions: dict,
+    health: dict,
+) -> dict:
+    """Return real-time admin dashboard data for the bot operating loop."""
+    rag = getattr(services, "rag", None)
+    if rag:
+        try:
+            from core.knowledge_runtime import current_reindex_status_payload
+
+            reindex = current_reindex_status_payload()
+        except Exception as exc:
+            logger.exception("Falha a obter estado de reindexação para monitor do bot.")
+            reindex = {"state": "error", "message": str(exc), "semantic_chunk_coverage_pct": 0}
+    else:
+        reindex = {
+            "state": "offline",
+            "message": "Motor RAG não inicializado.",
+            "semantic_chunk_coverage_pct": 0,
+        }
+    can_generate = bool(rag and rag.can_generate())
+    generation_model = str(getattr(rag, "generation_model", "") or "sem modelo")
+    provider = str(getattr(rag, "provider_name", "") or getattr(rag, "generation_provider_label", "") or "").strip()
+    index_state = str(reindex.get("state") or "offline")
+    semantic_coverage = int(float(reindex.get("semantic_chunk_coverage_pct") or reindex.get("progress_pct") or 0))
+    rag_state = (
+        "online"
+        if index_state == "completed" and semantic_coverage >= 80
+        else "degraded"
+        if index_state in {"running", "pending", "completed"} and semantic_coverage > 0
+        else "offline"
+    )
+
+    portal_source = _source_by_id(sources, "operational_data")
+    live_items = [
+        ("portal", portal_source.get("state") == "online"),
+        ("marés", getattr(services, "tide_service", None) is not None),
+        ("meteo", _service_enabled(getattr(services, "weather_service", None))),
+        ("ondulação", _service_enabled(getattr(services, "wave_service", None))),
+        ("avisos", _service_enabled(getattr(services, "local_warning_service", None))),
+    ]
+    live_online = sum(1 for _, enabled in live_items if enabled)
+    live_state = "online" if live_online >= 4 else "degraded" if live_online else "offline"
+
+    feedback_cases = int(quality.get("feedback_cases_total") or 0)
+    feedback_enabled = bool(
+        settings.get("auto_promote_corrections")
+        or settings.get("auto_trust_positive_feedback")
+        or feedback_cases
+    )
+    feedback_state = _enabled_state(
+        feedback_enabled,
+        degraded=bool(exceptions.get("severity_counts", {}).get("high")),
+    )
+
+    runtime_cards = [
+        _runtime_card(
+            "llm",
+            "Motor de resposta",
+            generation_model,
+            provider or ("pronto para síntese" if can_generate else "provider sem chave ativa"),
+            "online" if can_generate else "offline",
+        ),
+        _runtime_card(
+            "rag",
+            "RAG",
+            f"{semantic_coverage}%",
+            str(reindex.get("message") or reindex.get("query_embedding_summary") or "Índice documental."),
+            rag_state,
+        ),
+        _runtime_card(
+            "live",
+            "Dados live",
+            f"{live_online}/{len(live_items)}",
+            " · ".join(name for name, enabled in live_items if enabled) or "sem fontes live ativas",
+            live_state,
+        ),
+        _runtime_card(
+            "feedback",
+            "Memória",
+            f"{feedback_cases}",
+            "correções promovidas + feedback aprovado/revisto",
+            feedback_state,
+        ),
+        _runtime_card(
+            "quality",
+            "Evals",
+            f"{quality.get('passed_total', 0)}/{quality.get('active_cases_total', 0)}",
+            f"{quality.get('failed_total', 0)} caso(s) a falhar",
+            "online" if quality.get("failed_total", 0) == 0 and quality.get("active_cases_total", 0) else "degraded",
+        ),
+    ]
+
+    pipeline_steps = [
+        {
+            "id": "input",
+            "label": "Entrada",
+            "detail": "Web ou WhatsApp; comandos operacionais seguem validação própria.",
+            "state": "online",
+        },
+        {
+            "id": "planner",
+            "label": "Planner",
+            "detail": "Classifica pergunta: live direto, RAG, síntese técnica ou ação.",
+            "state": "online",
+        },
+        {
+            "id": "context",
+            "label": "Contexto",
+            "detail": "Seleciona documentos, companions, berth profiles, live e casebooks relevantes.",
+            "state": rag_state,
+        },
+        {
+            "id": "synthesis",
+            "label": "Síntese",
+            "detail": "Cruza fontes; respostas simples de maré/meteo podem ser determinísticas.",
+            "state": "online" if can_generate else "offline",
+        },
+        {
+            "id": "guard",
+            "label": "Guardas",
+            "detail": "Feedback em revisão bloqueia repetições; critic reforça decisões operacionais.",
+            "state": feedback_state,
+        },
+        {
+            "id": "answer",
+            "label": "Resposta",
+            "detail": "Resposta final sem ids internos; fontes ficam disponíveis para auditoria.",
+            "state": health.get("state", "degraded"),
+        },
+    ]
+
+    health_breakdown = [
+        {
+            "id": "pass_rate_pct",
+            "label": "Evals",
+            "value": int(health.get("pass_rate_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("pass_rate_pct") or 0),
+            "state": "online" if int(health.get("pass_rate_pct") or 0) >= 85 else "degraded",
+        },
+        {
+            "id": "coverage_pct",
+            "label": "Fontes",
+            "value": int(health.get("coverage_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("coverage_pct") or 0),
+            "state": "online" if int(health.get("coverage_pct") or 0) >= 80 else "degraded",
+        },
+        {
+            "id": "feedback_bias_pct",
+            "label": "Feedback",
+            "value": int(health.get("feedback_bias_pct") or 0),
+            "suffix": "%",
+            "bar_pct": int(health.get("feedback_bias_pct") or 0),
+            "state": "online" if int(health.get("feedback_bias_pct") or 0) >= 70 else "degraded",
+        },
+        {
+            "id": "penalty",
+            "label": "Penalização",
+            "value": int(health.get("penalty") or 0),
+            "suffix": "",
+            "bar_pct": min(100, int(health.get("penalty") or 0) * 2),
+            "state": "offline" if int(health.get("penalty") or 0) else "online",
+        },
+    ]
+
+    config_profile = [
+        {
+            "label": "Aprendizagem",
+            "value": "Automática" if settings.get("auto_promote_corrections") else "Manual",
+            "state": "online" if settings.get("auto_promote_corrections") else "degraded",
+        },
+        {
+            "label": "Feedback positivo",
+            "value": "Ativo" if settings.get("auto_trust_positive_feedback") else "Conservador",
+            "state": "online" if settings.get("auto_trust_positive_feedback") else "degraded",
+        },
+        {
+            "label": "Validação admin",
+            "value": "Obrigatória" if settings.get("require_admin_validation") else "Por exceção",
+            "state": "degraded" if settings.get("require_admin_validation") else "online",
+        },
+    ]
+
+    weather_enabled = _service_enabled(getattr(services, "weather_service", None))
+    wave_enabled = _service_enabled(getattr(services, "wave_service", None))
+    warning_enabled = _service_enabled(getattr(services, "local_warning_service", None))
+    wave_detail = _service_status_detail(getattr(services, "wave_service", None), "Ondulação configurada.")
+    warning_detail = _service_status_detail(
+        getattr(services, "local_warning_service", None),
+        "Avisos locais configurados.",
+    )
+    live_details = [
+        {"label": "Portal", "state": portal_source.get("state", "offline"), "detail": portal_source.get("meta", "")},
+        {"label": "Marés", "state": "online" if getattr(services, "tide_service", None) else "offline", "detail": "CSV local ativo."},
+        {
+            "label": "Meteorologia",
+            "state": _enabled_state(weather_enabled),
+            "detail": "WeatherAPI configurada." if weather_enabled else "Sem chave/localização ativa.",
+        },
+        {"label": "Ondulação", "state": _enabled_state(wave_enabled), "detail": wave_detail},
+        {"label": "Avisos", "state": _enabled_state(warning_enabled), "detail": warning_detail},
+        {"label": "AIS", "state": "degraded", "detail": "Disponível como mapa/embed; não é fonte textual do chat."},
+    ]
+
+    checked_at = _now_utc()
+    return {
+        "checked_at": checked_at.isoformat(),
+        "checked_at_label": checked_at.strftime("%d/%m/%Y %H:%M UTC"),
+        "runtime_cards": runtime_cards,
+        "pipeline_steps": pipeline_steps,
+        "health_breakdown": health_breakdown,
+        "context_mix": _context_mix(sources),
+        "config_profile": config_profile,
+        "live_details": live_details,
+        "reindex": reindex,
     }

@@ -788,10 +788,6 @@ body {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.traffic-column-departed {
-  background: rgba(179, 66, 42, 0.04);
-}
-
 .traffic-head {
   display: flex;
   align-items: center;

@@ -13,8 +13,8 @@ das manobras nos Terminais da LISNAVE, designados Estaleiros Mitrena, no Porto
 de Setúbal.
 
 O estaleiro LISNAVE / Estaleiros Mitrena é uma instalação de reparação e
-construção naval. É composto por múltiplos cais de reparação (Pontes-Cais I, II
-e III), docas secas (Docas 20, 21 e 22), cais auxiliares (Cais 0, Cais de
+construção naval. É composto por múltiplos cais de reparação (Pontes-Cais 1, 2
+e 3), docas secas (Docas 20, 21 e 22), cais auxiliares (Cais 0, Cais de
 Descarga de Aço) e um Hidrolift que dá acesso às Docas secas 31, 32 e 33.
 
 ================================================================================
@@ -53,7 +53,7 @@ Altura dos cais acima do Zero Hidrográfico (ZH): 4,80 metros.
   das cartas náuticas. É relevante para avaliar a altura de bordo livre e o
   acesso entre o navio e o cais em diferentes estados de maré.
 
-Distância do Duque d'Alba da Ponte-Cais I até à boia número 14: 1000 metros.
+Distância do Duque d'Alba da Ponte-Cais 1 até à boia número 14: 1000 metros.
   A boia número 14 é uma referência de navegação no canal de acesso ao estaleiro.
   Esta distância é útil para planear a aproximação e calcular os tempos de manobra.
 
@@ -125,7 +125,7 @@ Face A (lado A do Cais 0):
 
 Referências de distância a partir do Cais 0:
   Distância do Cais 0 à boca da Doca 21: 134 metros.
-  Distância do Cais 0 à Ponte-Cais I: 388 metros.
+  Distância do Cais 0 à Ponte-Cais 1: 388 metros.
 
 ================================================================================
 DOCA 20 — PLATAFORMA DE CONSTRUÇÃO
@@ -170,83 +170,91 @@ Sonda ao ZH na soleira com comporta descida (fechada): 18 pés = 5,49 metros.
   integralmente à Doca 22.
 
 ================================================================================
-CAIS DE REPARAÇÃO NÚMERO I (PONTE-CAIS I + DUQUE D'ALBA I)
+CAIS DE REPARAÇÃO NÚMERO 1 (PONTE-CAIS 1 + DUQUE D'ALBA 1)
 ================================================================================
 
-O Cais de Reparação I é formado pela Ponte-Cais I (estrutura principal avançada
-sobre a água) e pelo Duque d'Alba I (estrutura de amarração isolada).
+O Cais de Reparação 1 é formado pela Ponte-Cais 1 (estrutura principal avançada
+sobre a água) e pelo Duque d'Alba 1 (estrutura de amarração isolada).
 
-CAIS I — SONDAS POR FACE:
-  Cais IA (face A): sonda ao ZH = 7,14 metros (equivalente a 23 pés e 5 pol.).
-  Cais IB (face B): sonda ao ZH = 7,40 metros (equivalente a 24 pés e 4 pol.).
+CAIS 1 — SONDAS POR FACE:
+  Nota local: a designação operacional é sempre Cais 1 A ou Cais 1 B. As
+  referências W/oeste e E/este servem apenas para identificar o lado físico:
+  A = W/oeste, referência local lado Setúbal; B = E/este, referência local lado
+  Alcácer do Sal.
+  Cais 1 A (face A): sonda ao ZH = 7,14 metros (equivalente a 23 pés e 5 pol.).
+  Cais 1 B (face B): sonda ao ZH = 7,40 metros (equivalente a 24 pés e 4 pol.).
 
-PONTE-CAIS I:
+PONTE-CAIS 1:
   Comprimento: 110 metros.
   Largura: 20 metros.
 
-DUQUE D'ALBA I:
+DUQUE D'ALBA 1:
   Comprimento: 10 metros.
   Largura: 20 metros.
-  Distância entre a Ponte-Cais I e o Duque d'Alba I: 140 metros.
-  Distância total da raiz da Ponte-Cais até à face sul do Duque d'Alba I
-  (comprimento operacional total do Cais I): 260 metros.
+  Distância entre a Ponte-Cais 1 e o Duque d'Alba 1: 140 metros.
+  Distância total da raiz da Ponte-Cais até à face sul do Duque d'Alba 1
+  (comprimento operacional total do Cais 1): 260 metros.
 
-REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA I:
+REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA 1:
   Distância à boca da Doca 22: 98 metros.
-  Distância ao Cais I: 398 metros.
-  Distância à Ponte-Cais de Reparação II (bacia de manobras): aproximadamente
+  Distância ao Cais 1: 398 metros.
+  Distância à Ponte-Cais de Reparação 2 (bacia de manobras): aproximadamente
   136 metros.
 
 ================================================================================
-CAIS DE REPARAÇÃO NÚMERO II (PONTE-CAIS II + DUQUE D'ALBA II)
+CAIS DE REPARAÇÃO NÚMERO 2 (PONTE-CAIS 2 + DUQUE D'ALBA 2)
 ================================================================================
 
-CAIS II — SONDAS POR FACE (medidas a 10 metros da face do cais):
-  Cais II-A: sonda ao ZH a 10 metros do cais = 7 metros.
-  Cais II-B: sonda ao ZH a 10 metros do cais = 7 metros.
+CAIS 2 — SONDAS POR FACE (medidas a 10 metros da face do cais):
+  Nota local: a designação operacional é sempre Cais 2 A ou Cais 2 B. As
+  referências W/oeste e E/este servem apenas para identificar o lado físico:
+  A = W/oeste, referência local lado Setúbal; B = E/este, referência local lado
+  Alcácer do Sal.
+  Cais 2 A: sonda ao ZH a 10 metros do cais = 7 metros.
+  Cais 2 B: sonda ao ZH a 10 metros do cais = 7 metros.
   NOTA: a sonda é medida a 10 metros da face do cais, não junto à face.
   Junto à face do cais a profundidade pode ser inferior.
 
-PONTE-CAIS II:
+PONTE-CAIS 2:
   Comprimento: 174,5 metros.
   Largura: 20 metros.
 
-DUQUE D'ALBA II:
+DUQUE D'ALBA 2:
   Comprimento: 10 metros.
   Largura: 20 metros.
-  Distância entre a Ponte-Cais II e o Duque d'Alba II: 90 metros.
-  Distância total da raiz da Ponte-Cais II à face sul do Duque d'Alba II
+  Distância entre a Ponte-Cais 2 e o Duque d'Alba 2: 90 metros.
+  Distância total da raiz da Ponte-Cais 2 à face sul do Duque d'Alba 2
   (comprimento operacional total): 276 metros.
 
-REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA II:
-  Distância à Ponte-Cais de Reparação I (bacia de manobra): 135 metros.
-  Distância à Ponte-Cais de Reparação III (bacia de manobra): 135 metros.
-  A Ponte-Cais II é equidistante das Pontes-Cais I e III, separadas por
+REFERÊNCIAS DE DISTÂNCIA A PARTIR DO DUQUE D'ALBA 2:
+  Distância à Ponte-Cais de Reparação 1 (bacia de manobra): 135 metros.
+  Distância à Ponte-Cais de Reparação 3 (bacia de manobra): 135 metros.
+  A Ponte-Cais 2 é equidistante das Pontes-Cais 1 e 3, separadas por
   135 metros de cada lado, que constituem as bacias de manobra.
 
 ================================================================================
-CAIS DE REPARAÇÃO NÚMERO III (PONTE-CAIS III + DUQUE D'ALBA III)
+CAIS DE REPARAÇÃO NÚMERO 3 (PONTE-CAIS 3 + DUQUE D'ALBA 3)
 ================================================================================
 
-DUQUE D'ALBA III:
+DUQUE D'ALBA 3:
   Comprimento: 10 metros.
   Largura: 20 metros.
 
-CAIS III-A:
+CAIS 3 A:
   Comprimento: 240 metros.
-  Distância entre a Ponte-Cais III e o Duque d'Alba: 115 metros.
+  Distância entre a Ponte-Cais 3 e o Duque d'Alba: 115 metros.
   Distância total da raiz do cais à face sul do Duque d'Alba
   (comprimento operacional): 366 metros.
   Sonda ao ZH a 10 metros do cais: 7 metros.
 
-CAIS III-B:
+CAIS 3 B:
   Comprimento: 134 metros.
-  Distância entre a Ponte-Cais III e o Duque d'Alba: 115 metros.
+  Distância entre a Ponte-Cais 3 e o Duque d'Alba: 115 metros.
   Distância total da raiz do cais à face sul do Duque d'Alba: 259 metros.
   Sonda ao ZH a 10 metros do cais: 8,60 metros.
-  Distância à Ponte-Cais de Reparação II (bacia de manobra): 135 metros.
+  Distância à Ponte-Cais de Reparação 2 (bacia de manobra): 135 metros.
 
-  NOTA: O Cais III-B tem sonda superior (8,60 m) à dos restantes cais de
+  NOTA: O Cais 3 B tem sonda superior (8,60 m) à dos restantes cais de
   reparação (7 m), o que o torna apto para navios com maior calado.
 
 ================================================================================
@@ -271,12 +279,12 @@ QUADRO RESUMO — SONDAS AO ZH POR LOCAL
 ================================================================================
 
 Cais 0 (Face A e Face B): 6,0 metros ao ZH.
-Cais IA: 7,14 metros ao ZH.
-Cais IB: 7,40 metros ao ZH.
-Cais II-A (a 10 m do cais): 7,0 metros ao ZH.
-Cais II-B (a 10 m do cais): 7,0 metros ao ZH.
-Cais III-A (a 10 m do cais): 7,0 metros ao ZH.
-Cais III-B (a 10 m do cais): 8,60 metros ao ZH.
+Cais 1 A: 7,14 metros ao ZH.
+Cais 1 B: 7,40 metros ao ZH.
+Cais 2 A (a 10 m do cais): 7,0 metros ao ZH.
+Cais 2 B (a 10 m do cais): 7,0 metros ao ZH.
+Cais 3 A (a 10 m do cais): 7,0 metros ao ZH.
+Cais 3 B (a 10 m do cais): 8,60 metros ao ZH.
 Doca 21 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
 Doca 21 — soleira com comporta fechada: 5,49 metros ao ZH (18 pés).
 Doca 22 — soleira com comporta aberta: 6,10 metros ao ZH (20 pés).
@@ -309,7 +317,7 @@ Resposta: 6,10 metros (20 pés ao ZH). Com a comporta fechada (descida), a
 profundidade na entrada reduz-se para 5,49 metros (18 pés).
 
 Pergunta: Qual o cais do LISNAVE com maior profundidade disponível?
-Resposta: O Cais III-B, com sonda ao ZH de 8,60 metros a 10 metros da face do
+Resposta: O Cais 3 B, com sonda ao ZH de 8,60 metros a 10 metros da face do
 cais.
 
 Pergunta: O vento condiciona as manobras no LISNAVE?

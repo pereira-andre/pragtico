@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% macro thruster_select(name, value) %}
+  {% set current = value or "unknown" %}
+  <select name="{{ name }}" required>
+    <option value="unknown" {% if current == "unknown" %}selected{% endif %}>Desconhecido</option>
+    <option value="no" {% if current == "no" %}selected{% endif %}>Não</option>
+    <option value="yes" {% if current == "yes" %}selected{% endif %}>Sim</option>
+  </select>
+{% endmacro %}
+{% macro vessel_form_fields(vessel) %}
+  <div class="mini-grid planned-mini-grid">
+    <label>Navio <input type="text" name="vessel_name" value="{{ vessel.get('vessel_name', '') }}" required></label>
+    <label>IMO <input type="text" name="vessel_imo" value="{{ vessel.get('vessel_imo', '') }}" required></label>
+    <label>Indicativo <input type="text" name="vessel_call_sign" value="{{ vessel.get('vessel_call_sign', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Bandeira <input type="text" name="vessel_flag" value="{{ vessel.get('vessel_flag', '') }}" required></label>
+    <label>Tipo <input type="text" name="vessel_type" list="vessel-type-options" value="{{ vessel.get('vessel_type_label') or vessel.get('vessel_type', '') }}" required></label>
+    <label>LOA (m) <input type="text" name="vessel_loa_m" value="{{ vessel.get('vessel_loa_m', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Boca (m) <input type="text" name="vessel_beam_m" value="{{ vessel.get('vessel_beam_m', '') }}" required></label>
+    <label>GT (t) <input type="text" name="vessel_gt_t" value="{{ vessel.get('vessel_gt_t', '') }}" required></label>
+    <label>DWT (t) <input type="text" name="vessel_dwt_t" value="{{ vessel.get('vessel_dwt_t', '') }}" required></label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Calado max. <input type="text" name="vessel_max_draft_m" value="{{ vessel.get('vessel_max_draft_m', '') }}" required></label>
+    <label>Bow thruster {{ thruster_select("vessel_bow_thruster", vessel.get("vessel_bow_thruster", "unknown")) }}</label>
+    <label>Stern thruster {{ thruster_select("vessel_stern_thruster", vessel.get("vessel_stern_thruster", "unknown")) }}</label>
+  </div>
+  <div class="mini-grid planned-mini-grid">
+    <label>Perfil de serviços <input type="text" name="service_rate_profile" value="{{ vessel.get('service_rate_profile', '') }}"></label>
+    <label>Base linha regular (365 dias) <input type="number" min="0" max="999" name="regular_line_calls_365d" value="{{ vessel.get('regular_line_calls_365d', '') }}" placeholder="0"></label>
+    <label>UP pilotagem <input type="text" name="pilotage_up_rate" value="{{ vessel.get('pilotage_up_rate', '') }}"></label>
+  </div>
+  <label>Perfil redução TUP <input type="text" name="tup_reduction_profile" value="{{ vessel.get('tup_reduction_profile', '') }}"></label>
+  <label>Notas de serviços e taxas <textarea name="service_notes" rows="2">{{ vessel.get('service_notes', '') }}</textarea></label>
+{% endmacro %}
+{% block content %}
+<main class="ops-shell vessel-admin-page">
+  <section class="hero-card compact">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Navios</p>
+        <h1>Navios</h1>
+        <p class="lead">Consulta e gestão das fichas de navios frequentes usadas para preencher escalas, faturação e contexto operacional.</p>
+      </div>
+    </div>
+    <div class="hero-meta-grid">
+      <article class="hero-stat">
+        <span>Navios registados</span>
+        <strong>{{ vessel_summary.total_count }}</strong>
+        <small>{{ vessel_summary.filtered_count }} visíveis no filtro atual</small>
+      </article>
+      <article class="hero-stat">
+        <span>Tipos de navio</span>
+        <strong>{{ vessel_summary.type_count }}</strong>
+        <small>com ícones operacionais</small>
+      </article>
+      <article class="hero-stat">
+        <span>Escalas associadas</span>
+        <strong>{{ vessel_summary.scale_count }}</strong>
+        <small>histórico usado no preenchimento automático</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel planned-panel">
+    <div class="section-head archive-head">
+      <div>
+        <p class="eyebrow">Gerir navios frequentes</p>
+        <h2>Pesquisa e catálogo</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }}/{{ vessel_summary.total_count }}</span>
+    </div>
+
+    <form method="get" action="{{ url_for('port_calls.vessel_catalog') }}" class="archive-filter-form">
+      <div class="archive-filter-grid">
+        <label class="archive-search-field">
+          <span class="mini-label">Pesquisa</span>
+          <input name="q" type="search" value="{{ vessel_filters.q }}" placeholder="Navio, IMO, indicativo, bandeira, escala...">
+        </label>
+        <label>
+          <span class="mini-label">Tipo de navio</span>
+          <select name="vessel_type">
+            <option value="" {% if not vessel_filters.vessel_type %}selected{% endif %}>Todos</option>
+            {% for vessel_type in vessel_type_options %}
+              <option value="{{ vessel_type.label }}" {% if vessel_filters.vessel_type == vessel_type.label %}selected{% endif %}>{{ vessel_type.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="archive-actions">
+        <button type="submit" class="mini-button">Aplicar filtros</button>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.vessel_catalog') }}">Limpar</a>
+        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json', q=vessel_filters.q, vessel_type=vessel_filters.vessel_type) }}">Exportar catálogo JSON</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel ops-form-card planning-block vessel-management-panel">
+    <div class="planning-block-heading">
+      <p class="eyebrow">Gestão</p>
+      <h3>Ações do catálogo</h3>
+      <p class="planning-block-lead">Escolhe uma ação para abrir o formulário respetivo nesta área.</p>
+    </div>
+
+    <div class="vessel-management-toolbar" role="toolbar" aria-label="Gestão de navios">
+      <button type="button" class="mini-button secondary-button" data-vessel-management-action="new">Novo navio</button>
+      <button type="button" class="mini-button secondary-button" data-vessel-management-action="import">Importar JSON</button>
+      <button type="button" class="mini-button danger-button" data-vessel-management-action="delete">Remover catálogo</button>
+    </div>
+
+    <div class="vessel-management-stage">
+      <article class="ops-empty vessel-management-empty" data-vessel-management-empty>
+        <p>Seleciona uma ação acima para criar, importar ou remover fichas frequentes.</p>
+      </article>
+
+      <article class="vessel-management-pane" data-vessel-management-pane="new">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow">Novo navio</p>
+            <h3>Criar ficha frequente</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-form planning-json-import-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {{ vessel_form_fields({}) }}
+          <button type="submit">Guardar navio</button>
+        </form>
+      </article>
+
+      <article class="vessel-management-pane" data-vessel-management-pane="import">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow">Importação</p>
+            <h3>Importar navios por JSON</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <div class="stack planning-json-import-body">
+          <p class="muted">Podes colar um objeto, uma lista, ou <code>{"vessels":[...]}</code>.</p>
+          <form
+            method="post"
+            action="{{ url_for('port_calls.import_vessel_catalog_json') }}"
+            enctype="multipart/form-data"
+            class="stack planning-form planning-json-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Ficheiro JSON
+              <input type="file" name="payload_file" accept=".json,application/json">
+            </label>
+            <label>
+              JSON dos navios
+              <textarea
+                name="payload_json"
+                rows="10"
+                class="planning-json-textarea"
+                placeholder='{"vessels":[{"vessel_name":"MSC Lyria", ...}]}'></textarea>
+            </label>
+            <button type="submit">Importar navios por JSON</button>
+          </form>
+          <div class="planning-json-template-block">
+            <span class="mini-label">Modelo</span>
+            <pre class="planning-json-template">{{ vessel_catalog_json_template }}</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="vessel-management-pane vessel-delete-all-pane" data-vessel-management-pane="delete">
+        <div class="vessel-management-pane-head">
+          <div>
+            <p class="eyebrow danger">Zona de risco</p>
+            <h3>Remover catálogo</h3>
+          </div>
+          <button type="button" class="mini-button secondary-button" data-vessel-management-close>Fechar</button>
+        </div>
+        <form
+          method="post"
+          action="{{ url_for('port_calls.delete_all_vessel_catalog_records') }}"
+          class="stack planning-form planning-json-import-form"
+          onsubmit="return confirm('Remover todos os navios frequentes? As escalas e manobras existentes não são apagadas.') && confirm('Confirma novamente: remover todo o catálogo de navios frequentes?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <p class="muted">Remove todos os navios frequentes da lista de preenchimento automático. Não apaga escalas nem manobras já registadas.</p>
+          <label>
+            Confirmação
+            <input type="text" name="confirm_text" placeholder="Escreve APAGAR NAVIOS" required>
+          </label>
+          <button type="submit" class="mini-button danger-button">Remover todos os navios</button>
+        </form>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel planned-panel vessel-table-panel">
+    <div class="section-head archive-head">
+      <div>
+        <p class="eyebrow">Catálogo</p>
+        <h2>Navios frequentes</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }} resultado{% if vessel_summary.filtered_count != 1 %}s{% endif %}</span>
+    </div>
+
+    <div class="planned-table-wrap vessel-table-wrap">
+      <table class="planned-table vessel-table">
+        <thead>
+          <tr>
+            <th>Navio</th>
+            <th>Tipo</th>
+            <th>IMO</th>
+            <th>Indicativo</th>
+            <th>Bandeira</th>
+            <th>LOA</th>
+            <th>GT / DWT</th>
+            <th>Escalas</th>
+            <th>Última escala</th>
+            <th class="vessel-actions-th">Opções</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vessel in vessels %}
+            <tr class="planned-row vessel-data-row">
+              <td>
+                <strong>{{ vessel.vessel_name }}</strong>
+                <small class="muted">Calado máx. {{ vessel.vessel_max_draft_m or "--" }} m</small>
+              </td>
+              <td>{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }}</td>
+              <td>{{ vessel.vessel_imo or "--" }}</td>
+              <td>{{ vessel.vessel_call_sign or "--" }}</td>
+              <td>{{ vessel.vessel_flag or "--" }}</td>
+              <td>{{ vessel.vessel_loa_m or "--" }} m</td>
+              <td>
+                <span>{{ vessel.vessel_gt_t or "--" }}</span>
+                <small class="muted">DWT {{ vessel.vessel_dwt_t or "--" }}</small>
+              </td>
+              <td>
+                <span>{{ vessel.scale_count or 0 }} registadas</span>
+                <small class="muted">Linha regular {{ vessel.regular_line_effective_calls_365d or 0 }} (base {{ vessel.regular_line_base_calls_365d or 0 }} + {{ vessel.regular_line_counted_scales_365d or 0 }})</small>
+              </td>
+              <td>
+                <span>{{ vessel.latest_scale_reference or "--" }}</span>
+                <small class="muted">{{ vessel.latest_eta_label or "" }}</small>
+              </td>
+              <td class="vessel-actions-cell">
+                <details class="chat-sidebar-menu document-row-menu vessel-row-menu">
+                  <summary class="chat-sidebar-menu-toggle" aria-label="Opções de {{ vessel.vessel_name }}">⋯</summary>
+                  <div class="chat-sidebar-menu-body">
+                    <a class="chat-sidebar-menu-link" href="#vessel-edit-{{ loop.index }}" data-vessel-edit-link>Editar ficha</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">Exportar JSON</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">Exportar TXT</a>
+                    <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">Imprimir / PDF</a>
+                    <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" onsubmit="return confirm('Remover este navio dos frequentes? As escalas e manobras existentes não são apagadas.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="chat-sidebar-menu-link danger-menu-link">Apagar navio</button>
+                    </form>
+                  </div>
+                </details>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="10" class="planned-empty">Sem navios correspondentes ao filtro atual.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <section class="vessel-edit-panel" id="vessel-edit-panel">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Edição</p>
+          <h3>Ficha do navio</h3>
+        </div>
+      </div>
+      <article class="ops-empty vessel-edit-empty" data-vessel-edit-empty>
+        <p>Escolhe “Editar ficha” no menu de opções de um navio para abrir a edição aqui.</p>
+      </article>
+      {% for vessel in vessels %}
+        <article class="vessel-edit-card" id="vessel-edit-{{ loop.index }}" data-vessel-edit-card>
+          <div class="vessel-edit-card-head">
+            <div>
+              <span class="planning-candidate-label">IMO {{ vessel.vessel_imo or "--" }}</span>
+              <h3>{{ vessel.vessel_name }}</h3>
+              <p class="muted">{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }} · {{ vessel.vessel_flag or "--" }}</p>
+            </div>
+            <a class="mini-button secondary-button" href="#vessel-edit-panel" data-vessel-edit-close>Fechar</a>
+          </div>
+          <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {{ vessel_form_fields(vessel) }}
+            <button type="submit">Guardar alterações</button>
+          </form>
+        </article>
+      {% endfor %}
+    </section>
+  </section>
+</main>
+<script>
+(() => {
+  const managementEmpty = document.querySelector("[data-vessel-management-empty]");
+  const managementPanes = Array.from(document.querySelectorAll("[data-vessel-management-pane]"));
+  const managementActions = Array.from(document.querySelectorAll("[data-vessel-management-action]"));
+  const showManagementPane = (name) => {
+    let selected = null;
+    managementPanes.forEach((pane) => {
+      const isSelected = pane.dataset.vesselManagementPane === name;
+      pane.classList.toggle("is-active", isSelected);
+      if (isSelected) selected = pane;
+    });
+    managementActions.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.vesselManagementAction === name);
+    });
+    if (managementEmpty) {
+      managementEmpty.classList.toggle("hidden", Boolean(selected));
+    }
+  };
+
+  managementActions.forEach((button) => {
+    button.addEventListener("click", () => {
+      showManagementPane(button.dataset.vesselManagementAction || "");
+    });
+  });
+  document.querySelectorAll("[data-vessel-management-close]").forEach((button) => {
+    button.addEventListener("click", () => showManagementPane(""));
+  });
+
+  const editPanel = document.getElementById("vessel-edit-panel");
+  const emptyState = document.querySelector("[data-vessel-edit-empty]");
+  const cards = Array.from(document.querySelectorAll("[data-vessel-edit-card]"));
+  const showCard = (id, shouldScroll = true) => {
+    let selected = null;
+    cards.forEach((card) => {
+      const isSelected = card.id === id;
+      card.classList.toggle("is-active", isSelected);
+      if (isSelected) selected = card;
+    });
+    if (emptyState) {
+      emptyState.classList.toggle("hidden", Boolean(selected));
+    }
+    if (selected && shouldScroll) {
+      editPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  document.querySelectorAll("[data-vessel-edit-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      showCard((link.getAttribute("href") || "").replace("#", ""));
+      link.closest("details")?.removeAttribute("open");
+    });
+  });
+  document.querySelectorAll("[data-vessel-edit-close]").forEach((link) => {
+    link.addEventListener("click", () => {
+      cards.forEach((card) => card.classList.remove("is-active"));
+      if (emptyState) emptyState.classList.remove("hidden");
+    });
+  });
+  if (window.location.hash) {
+    showCard(window.location.hash.replace("#", ""), false);
+  }
+})();
+</script>
+{% endblock %}

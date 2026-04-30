@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from datetime import datetime
 from typing import Dict, Iterable, List, Optional
 
 BERTH_OPTIONS = [
@@ -85,6 +86,46 @@ def _berth_compact_key(value: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", "", ascii_value)
 
 
+def _lisnave_quay_aliases() -> Dict[str, str]:
+    aliases: Dict[str, str] = {}
+    side_terms = {
+        "a": ("a", "w", "west", "oeste", "setubal", "ladosetubal", "ladow", "ladooeste"),
+        "b": ("b", "e", "east", "este", "leste", "alcacer", "alcacerdosal", "ladoalcacer", "ladoalcacerdosal", "ladoe", "ladoeste", "ladoleste"),
+    }
+    for number in range(0, 4):
+        for side, terms in side_terms.items():
+            label = f"Lisnave - Cais {number} {side.upper()}"
+            values = {
+                f"cais{number}{side}",
+                f"c{number}{side}",
+                f"pontecais{number}{side}",
+                f"lisnavecais{number}{side}",
+                f"lisnavec{number}{side}",
+                f"lisnavepontecais{number}{side}",
+                f"lisnave{number}{side}",
+                f"{number}{side}lisnave",
+                f"{side}{number}lisnave",
+                f"lisnave{side}{number}",
+            }
+            for term in terms:
+                values.update(
+                    {
+                        f"cais{number}{term}",
+                        f"c{number}{term}",
+                        f"pontecais{number}{term}",
+                        f"lisnavecais{number}{term}",
+                        f"lisnavec{number}{term}",
+                        f"lisnavepontecais{number}{term}",
+                        f"lisnave{number}{term}",
+                    }
+                )
+            aliases.update({value: label for value in values})
+    return aliases
+
+
+LISNAVE_QUAY_ALIASES = _lisnave_quay_aliases()
+
+
 def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = None) -> str:
     clean = " ".join(str(label or "").strip().split())
     if not clean:
@@ -136,46 +177,11 @@ def _alias_canonical_berth(label: str, berth_options: Iterable[str] | None = Non
         "lisnaved31": "Lisnave - Doca 31",
         "lisnaved32": "Lisnave - Doca 32",
         "lisnaved33": "Lisnave - Doca 33",
-        "cais0a": "Lisnave - Cais 0 A",
-        "cais0b": "Lisnave - Cais 0 B",
-        "cais1a": "Lisnave - Cais 1 A",
-        "cais1b": "Lisnave - Cais 1 B",
-        "cais2a": "Lisnave - Cais 2 A",
-        "cais2b": "Lisnave - Cais 2 B",
-        "cais3a": "Lisnave - Cais 3 A",
-        "cais3b": "Lisnave - Cais 3 B",
-        "c0a": "Lisnave - Cais 0 A",
-        "c0b": "Lisnave - Cais 0 B",
-        "c1a": "Lisnave - Cais 1 A",
-        "c1b": "Lisnave - Cais 1 B",
-        "c2a": "Lisnave - Cais 2 A",
-        "c2b": "Lisnave - Cais 2 B",
-        "c3a": "Lisnave - Cais 3 A",
-        "c3b": "Lisnave - Cais 3 B",
-        "lisnavecais0a": "Lisnave - Cais 0 A",
-        "lisnavecais0b": "Lisnave - Cais 0 B",
-        "lisnavecais1a": "Lisnave - Cais 1 A",
-        "lisnavecais1b": "Lisnave - Cais 1 B",
-        "lisnavecais2a": "Lisnave - Cais 2 A",
-        "lisnavecais2b": "Lisnave - Cais 2 B",
-        "lisnavecais3a": "Lisnave - Cais 3 A",
-        "lisnavecais3b": "Lisnave - Cais 3 B",
-        "lisnavec0a": "Lisnave - Cais 0 A",
-        "lisnavec0b": "Lisnave - Cais 0 B",
-        "lisnavec1a": "Lisnave - Cais 1 A",
-        "lisnavec1b": "Lisnave - Cais 1 B",
-        "lisnavec2a": "Lisnave - Cais 2 A",
-        "lisnavec2b": "Lisnave - Cais 2 B",
-        "lisnavec3a": "Lisnave - Cais 3 A",
-        "lisnavec3b": "Lisnave - Cais 3 B",
-        "lisnave3a": "Lisnave - Cais 3 A",
-        "lisnave3b": "Lisnave - Cais 3 B",
-        "a3lisnave": "Lisnave - Cais 3 A",
-        "lisnavea3": "Lisnave - Cais 3 A",
         "tms2": "TMS 2",
         "terminalmultiusos2": "TMS 2",
         "terminalmultiusosdois": "TMS 2",
     }
+    alias_map.update(LISNAVE_QUAY_ALIASES)
     if compact in alias_map and alias_map[compact] in options:
         return alias_map[compact]
 
@@ -217,7 +223,7 @@ def _tms2_slot_label(label: str | None, berth_options: Iterable[str] | None = No
     elif slot_match:
         slot = slot_match.group(1)
     if not slot:
-        return TMS2_BASE_LABEL
+        return TMS2_SLOT_LABELS[0]
     return TMS2_SLOT_LABELS[{"a": 0, "b": 1, "c": 2}[slot]]
 
 
@@ -325,7 +331,8 @@ def dropdown_berth_options(berth_options: Iterable[str] | None = None) -> List[s
 
 
 def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None) -> tuple[int, str]:
-    key = _berth_key(label)
+    canonical = canonicalize_berth_label(label, berth_options=berth_options)
+    key = _berth_key(canonical or label)
     options = list(berth_options or BERTH_OPTIONS)
     indexed = {_berth_key(item): index for index, item in enumerate(options)}
     if key in indexed:
@@ -334,6 +341,93 @@ def berth_sort_key(label: str | None, berth_options: Iterable[str] | None = None
         if option_key and (option_key in key or key in option_key):
             return (index, key)
     return (len(indexed) + 1, key)
+
+
+def _parse_iso_datetime(value: str | None) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _latest_berth_release_maneuver(
+    item: Dict,
+    item_canonical: str,
+    *,
+    release_base_capacity: bool,
+    release_states: Iterable[str] | None = None,
+    berth_options: Iterable[str] | None = None,
+) -> Optional[Dict]:
+    options = list(berth_options or BERTH_OPTIONS)
+    allowed_states = {
+        str(state or "").strip().lower()
+        for state in (release_states if release_states is not None else ("approved",))
+        if str(state or "").strip()
+    }
+    if not allowed_states:
+        return None
+    item_base = _berth_base_label(item_canonical, options)
+    candidates: List[Dict] = []
+    for maneuver in item.get("maneuver_history", []) or []:
+        maneuver_type = (maneuver.get("type") or "").strip().lower()
+        state = (maneuver.get("state") or "").strip().lower()
+        if state not in allowed_states:
+            continue
+        if maneuver_type == "departure":
+            candidates.append(maneuver)
+            continue
+        if maneuver_type != "shift":
+            continue
+        origin = canonicalize_berth_label(maneuver.get("origin"), options)
+        destination = canonicalize_berth_label(maneuver.get("destination"), options)
+        if origin != item_canonical or destination == item_canonical:
+            continue
+        if release_base_capacity and _berth_base_label(destination, options) == item_base:
+            continue
+        candidates.append(maneuver)
+    if not candidates:
+        return None
+    candidates.sort(
+        key=lambda maneuver: (
+            maneuver.get("planned_at")
+            or maneuver.get("completed_at")
+            or maneuver.get("decided_at")
+            or maneuver.get("created_at")
+            or ""
+        )
+    )
+    return candidates[-1]
+
+
+def _berth_is_released_by_validated_maneuver(
+    item: Dict,
+    item_canonical: str,
+    target_planned_at: str | None,
+    *,
+    release_base_capacity: bool,
+    release_states: Iterable[str] | None = None,
+    berth_options: Iterable[str] | None = None,
+) -> bool:
+    release_maneuver = _latest_berth_release_maneuver(
+        item,
+        item_canonical,
+        release_base_capacity=release_base_capacity,
+        release_states=release_states,
+        berth_options=berth_options,
+    )
+    if not release_maneuver:
+        return False
+    target_dt = _parse_iso_datetime(target_planned_at)
+    release_dt = (
+        _parse_iso_datetime(release_maneuver.get("planned_at"))
+        or _parse_iso_datetime(release_maneuver.get("completed_at"))
+        or _parse_iso_datetime(release_maneuver.get("decided_at"))
+    )
+    if not target_dt or not release_dt:
+        return True
+    return release_dt <= target_dt
 
 
 def _group_vessels_by_berth(
@@ -395,6 +489,8 @@ def find_occupied_berth_conflict(
     in_port_items: Iterable[Dict],
     *,
     current_port_call_id: str = "",
+    target_planned_at: str | None = None,
+    release_states: Iterable[str] | None = None,
     berth_options: Iterable[str] | None = None,
 ) -> Optional[Dict]:
     options = list(berth_options or BERTH_OPTIONS)
@@ -418,8 +514,26 @@ def find_occupied_berth_conflict(
         item_berth = item.get("berth_label") or item.get("berth") or ""
         item_canonical = canonicalize_berth_label(item_berth, options)
         if item_canonical == target_canonical:
+            if _berth_is_released_by_validated_maneuver(
+                item,
+                item_canonical,
+                target_planned_at,
+                release_base_capacity=False,
+                release_states=release_states,
+                berth_options=options,
+            ):
+                continue
             return item
         if _berth_base_label(item_canonical, options) == target_base:
+            if _berth_is_released_by_validated_maneuver(
+                item,
+                item_canonical,
+                target_planned_at,
+                release_base_capacity=True,
+                release_states=release_states,
+                berth_options=options,
+            ):
+                continue
             occupied_same_base.append(item)
     if target_capacity > 1 and len(occupied_same_base) >= target_capacity:
         return occupied_same_base[0]

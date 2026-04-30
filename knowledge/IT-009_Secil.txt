@@ -189,5 +189,29 @@ Pergunta: Quem valida as requisições de manobra no Terminal SECIL?
 Resposta: O Piloto Coordenador.
 
 ================================================================================
+NOTAS PRÁTICAS LOCAIS — MARCAÇÃO DE MANOBRAS SECIL
+================================================================================
+
+Estas notas complementam a IT-009 apenas no planeamento horário das requisições.
+Não substituem as restrições documentais de LOA, calado, luz do dia, maré e
+validação pelo Piloto Coordenador.
+
+Entradas para a Secil:
+  — De fora da Barra: normalmente marcar 30 a 45 minutos antes do reponto.
+  — Do Fundeadouro Norte: normalmente marcar 30 a 45 minutos antes do reponto.
+  — Do Fundeadouro de Tróia ou de outro cais: marcar 45 minutos a 1 hora antes
+    do reponto.
+
+Saídas da Secil:
+  — Marcar cerca de 15 minutos antes do reponto.
+  — Usam-se tanto repontos de preia-mar como de baixa-mar.
+  — A saída é normalmente rápida; o cais tende a ficar livre em 10 a 15 minutos.
+
+Exemplo prático:
+  Se houver uma saída da Secil no reponto das 13:51, marcar a saída por volta
+  das 13:36. Se houver também uma mudança do Fundeadouro Norte para o mesmo cais,
+  marcar essa mudança entre 12:51 e 13:06.
+
+================================================================================
 FIM DO DOCUMENTO IT-009 — TERMINAL SECIL
 ================================================================================

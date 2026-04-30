@@ -18,8 +18,8 @@ class BaseAuthService(ABC):
         raise NotImplementedError
 
 
-class LocalAuthService(BaseAuthService):
-    backend_name = "local"
+class PortalAuthService(BaseAuthService):
+    backend_name = "internal"
 
     def __init__(self, store: BaseStore) -> None:
         self.store = store
@@ -46,4 +46,4 @@ class LocalAuthService(BaseAuthService):
 
 
 def create_auth_service(store: BaseStore) -> BaseAuthService:
-    return LocalAuthService(store=store)
+    return PortalAuthService(store=store)

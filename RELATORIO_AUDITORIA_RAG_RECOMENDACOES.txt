@@ -1,0 +1,993 @@
+RELATORIO DE AUDITORIA RAG E RECOMENDACOES DE RESOLUCAO
+Projeto: PRAGtico
+Data: 2026-04-29
+Objetivo: guiar a evolucao do bot para respostas documentais mais rigorosas, inteligentes e confiaveis.
+
+===============================================================================
+1. RESUMO EXECUTIVO
+===============================================================================
+
+O problema principal observado ate agora nao parece estar no modelo LLM em si.
+O problema mais provavel esta no pipeline RAG e na forma como a informacao
+documental e transformada em chunks pesquisaveis.
+
+Os documentos na pasta knowledge estao, em geral, bem escritos e ricos em
+informacao operacional. O que se perde e a estrutura: pagina, seccao, cais,
+terminal, tipo de regra, excecoes, tabelas e relacao entre titulo e conteudo.
+
+O sistema atual indexa texto, mas os chunks nao sabem formalmente se falam de:
+- SAPEC solidos ou SAPEC liquidos;
+- Secil W/Oeste ou Secil E/Este;
+- Tanquisado ou Eco-Oil;
+- Lisnave geral, cais especifico, doca ou hidrolift;
+- restricao, regra de mare, calado, rebocador, procedimento ou nota operacional.
+
+Isto explica respostas em que o bot:
+- mistura entidades;
+- responde sobre um cais errado;
+- vai buscar um excerto genericamente parecido mas operacionalmente incorreto;
+- fica preso no contexto anterior da conversa;
+- recupera texto certo mas sintetiza mal;
+- nao consegue justificar a resposta com fonte, pagina e seccao.
+
+Conclusao principal:
+O bot ja tem uma boa base de conhecimento, mas precisa de um RAG mais documental:
+chunking por seccao, metadados ricos, normalizacao de entidades, pesquisa hibrida,
+guardrails contra mistura de cais e modo debug para perceber onde cada resposta
+falhou.
+
+===============================================================================
+2. ESCOPO DA INVESTIGACAO FEITA
+===============================================================================
+
+Foram concluidas:
+
+FASE 1 - Mapeamento da arquitetura atual.
+FASE 2 - Diagnostico da ingestao documental, extracao e qualidade dos chunks.
+
+Nao foram feitas alteracoes de codigo nesta fase.
+Nao foi apagado indice, base de dados ou documento.
+Nao foi feita migracao de schema.
+
+Esta investigacao deve servir de base para as implementacoes seguintes.
+
+===============================================================================
+3. ARQUITETURA ATUAL IDENTIFICADA
+===============================================================================
+
+Backend:
+- Flask.
+- Entrada principal: app.py.
+- Setup Flask e blueprints: core/flask_setup.py.
+
+Frontend:
+- Templates Jinja em templates/.
+- CSS/JS estatico em static/.
+- Nao existe SPA separada.
+
+Base de dados:
+- PostgreSQL via psycopg.
+- Storage principal em storage/.
+- Schema em sql/postgres_schema.sql.
+
+Vector store:
+- PostgreSQL + pgvector.
+- Implementacao: integrations/vector_store.py.
+- Schema: sql/pgvector_schema.sql.
+
+LLM e embeddings:
+- Abstracao em integrations/llm_provider.py.
+- Configuracao em core/runtime.py.
+- Providers suportados: Gemini, OpenAI, OpenRouter, DeepSeek/OpenAI-compatible.
+
+Autenticacao:
+- Sessao Flask.
+- blueprints/auth.py.
+- integrations/auth_service.py.
+- storage/postgres_users.py.
+
+Ingestao documental:
+- Upload/admin: blueprints/admin.py.
+- Persistencia documental: storage/postgres_documents.py.
+- Extracao de texto: domain/document_processing.py.
+
+RAG:
+- Chunking, embeddings, retrieval e prompt: integrations/rag_engine.py.
+- Estado/reindexacao: core/knowledge_runtime.py.
+- Vector store: integrations/vector_store.py.
+
+Chat:
+- Chat web: blueprints/chat.py.
+- WhatsApp: blueprints/whatsapp.py.
+- Runtime comum: core/chat_runtime.py.
+- Planeamento/estado conversacional: core/chat_planner.py e core/chat_reasoning.py.
+
+===============================================================================
+4. FICHEIROS CRITICOS DO PIPELINE RAG
+===============================================================================
+
+Upload/leitura de documentos:
+- blueprints/admin.py
+- storage/postgres_documents.py
+
+Extracao de texto:
+- domain/document_processing.py
+
+Chunking:
+- integrations/rag_engine.py
+- funcao: chunk_text(text, chunk_size=700, overlap=120)
+
+Criacao de embeddings:
+- integrations/rag_engine.py
+- integrations/llm_provider.py
+
+Armazenamento vetorial:
+- integrations/vector_store.py
+- sql/pgvector_schema.sql
+
+Pesquisa/retrieval:
+- integrations/rag_engine.py
+- metodo retrieve()
+
+Construcao do prompt final:
+- integrations/rag_engine.py
+- metodo answer()
+
+Gestao da conversa:
+- core/chat_runtime.py
+- core/chat_reasoning.py
+- storage/postgres_chat.py
+
+Resposta final:
+- core/chat_runtime.py
+- blueprints/chat.py
+- blueprints/whatsapp.py
+
+===============================================================================
+5. DIAGNOSTICO DA INGESTAO DOCUMENTAL
+===============================================================================
+
+5.1 Formatos suportados
+
+O codigo suporta:
+- .txt
+- .md
+- .pdf
+- .docx
+- .csv
+
+Codigo:
+- domain/document_processing.py
+
+5.2 Estado real da pasta knowledge
+
+Na copia inspecionada:
+- 29 ficheiros .txt diretamente indexaveis no topo da pasta knowledge.
+- 35 ficheiros .json noutras estruturas.
+- Nenhum .pdf, .docx, .csv ou .md diretamente indexavel na pasta knowledge.
+
+Nota importante:
+Os ficheiros .json em knowledge/companions, knowledge/evals, berth_profiles,
+practice_maneuver_experience, tug_operational_guidance e outros nao entram no
+indice vetorial principal por este caminho. Eles sao usados por outras camadas
+do runtime.
+
+Isto significa que ha duas fontes de comportamento:
+1. RAG vetorial sobre documentos .txt/.md/.pdf/.docx/.csv.
+2. Camadas auxiliares: companions, berth profiles, feedback, experiencia,
+   regras praticas, fontes live, etc.
+
+Ao diagnosticar uma resposta errada, e essencial perceber qual destas camadas
+gerou ou influenciou a resposta.
+
+5.3 PDFs
+
+O codigo de PDF usa pypdf:
+- PdfReader(path)
+- page.extract_text()
+- adiciona "[Pagina N]" ao texto
+
+Problema:
+A pagina fica apenas como texto dentro do corpo extraido. Nao vira metadata do
+chunk. Depois, o chunking colapsa whitespace e pode separar a marca de pagina
+do conteudo correspondente.
+
+Risco:
+Mesmo que um PDF tenha paginas importantes, o bot nao consegue citar pagina com
+seguranca se essa pagina nao estiver guardada como metadata formal.
+
+5.4 DOCX
+
+O codigo extrai:
+- paragrafos;
+- tabelas depois dos paragrafos, linha por linha, com celulas separadas por " | ".
+
+Problema:
+As tabelas podem perder a posicao original no documento. Uma tabela que pertencia
+a uma seccao pode ficar desligada do titulo/seccao que a contextualizava.
+
+5.5 CSV
+
+O codigo le:
+- cabecalho;
+- ate 120 linhas.
+
+Problema:
+Para dados extensos ou historicos, ha truncagem. Isto pode ser aceitavel para
+preview, mas nao para conhecimento operacional completo.
+
+===============================================================================
+6. DIAGNOSTICO DOS CHUNKS ATUAIS
+===============================================================================
+
+Funcao atual:
+- integrations/rag_engine.py
+- chunk_text(text, chunk_size=700, overlap=120)
+
+Comportamento:
+- colapsa todo o whitespace com re.sub(r"\s+", " ", text);
+- cria chunks por caracteres;
+- usa overlap fixo;
+- nao respeita seccoes, titulos, tabelas, paragrafos ou entidades.
+
+Numeros medidos:
+- Documentos indexaveis no topo de knowledge: 29.
+- Chunks gerados: 597.
+- Tamanho medio dos chunks: 685.6 caracteres.
+- Chunks que comecam com letra minuscula: 326.
+- Chunks que nao terminam com pontuacao forte: 595.
+
+Interpretacao:
+A maioria dos chunks comeca ou acaba em fronteiras artificiais. Isto e uma forte
+evidencia de cortes a meio de frase, palavra, tabela ou seccao.
+
+===============================================================================
+7. EXEMPLOS REAIS DE PROBLEMAS NOS CHUNKS
+===============================================================================
+
+7.1 Eco-Oil
+
+Documento:
+- knowledge/IT-008_EcoOil.txt
+
+Chunk observado:
+- IT-008_EcoOil.txt:4
+
+Problema:
+O chunk comeca com "bras sao executadas..." em vez de "manobras sao executadas".
+
+Impacto:
+O conteudo e relevante, mas o corte e artificial. Nao e grave isoladamente, mas
+mostra que o sistema nao respeita frases nem estrutura.
+
+7.2 Eco-Oil - calados
+
+Documento:
+- knowledge/IT-008_EcoOil.txt
+
+Chunk observado:
+- IT-008_EcoOil.txt:6
+
+Conteudo:
+- calado maximo preia-mar: 7,0 m;
+- calado maximo baixa-mar: 5,5 m;
+- calado absoluto estacionado: 7,5 m.
+
+Problema:
+O chunk termina a meio de "baixa-mar".
+
+Impacto:
+Os valores estao preservados, mas a fronteira do chunk nao e documental.
+
+7.3 SAPEC
+
+Documento:
+- knowledge/IT-029_SAPEC.txt
+
+Chunk observado:
+- IT-029_SAPEC.txt:4
+
+Problema:
+O chunk mistura definicao geral de carga IMO com o inicio da seccao TPS
+(SAPEC solidos).
+
+Impacto:
+Alto risco de o bot usar uma definicao geral ou regra de TPS quando a pergunta
+e sobre TGL/SAPEC liquidos, ou vice-versa.
+
+7.4 Secil
+
+Documento:
+- knowledge/IT-009_Secil.txt
+
+Chunk observado:
+- IT-009_Secil.txt:8
+
+Problema:
+O chunk junta o fim de uma condicao do Cais Oeste com o inicio da seccao
+"CAIS DE ESTE - TERMINAL SECIL".
+
+Impacto:
+Muito relevante. Secil W/Oeste e Secil E/Este devem ser entidades separadas.
+Um chunk que atravessa esta fronteira aumenta o risco de resposta errada.
+
+7.5 Rebocadores
+
+Documento:
+- knowledge/IT-016_Rebocadores.txt
+
+Chunk observado:
+- IT-016_Rebocadores.txt:10
+
+Problema:
+Uma tabela/lista operacional fica linearizada e cortada a meio.
+
+Impacto:
+Muito relevante. Regras de rebocadores dependem de DWT, carga, estado carregado/
+vazio, bow thruster, stern thruster, tipo de manobra e tamanho do rebocador. Se a
+tabela for cortada ou linearizada de forma pobre, o bot pode inventar ou trocar
+condicoes.
+
+===============================================================================
+8. METADATA ATUAL VS METADATA NECESSARIA
+===============================================================================
+
+Metadata atual dos chunks:
+- id
+- document
+- chunk_id
+- text
+- embedding
+- preview
+
+Metadata necessaria para RAG documental rigoroso:
+- chunk_id
+- document_title
+- document_name
+- document_version
+- page
+- section
+- subsection
+- terminal
+- berth
+- location_type
+- channel
+- entry_order
+- aliases
+- content_type
+- source
+- source_file
+- extraction_method
+- checksum/document version
+
+Falha critica:
+Os chunks nao sabem se pertencem a Eco-Oil, Tanquisado, SAPEC liquidos,
+SAPEC solidos, Secil W, Secil E, Lisnave, TMS, Autoeuropa, etc.
+
+Sem isto, a pesquisa vetorial pode encontrar texto semanticamente parecido mas
+operacionalmente errado.
+
+===============================================================================
+9. CAUSAS PROVAVEIS DOS ERROS OBSERVADOS PELO UTILIZADOR
+===============================================================================
+
+9.1 Mistura de entidades
+
+Causa provavel:
+- falta de metadados por entidade;
+- chunking que atravessa seccoes;
+- ausencia de filtros por cais/terminal.
+
+Exemplos provaveis:
+- SAPEC solidos vs SAPEC liquidos;
+- Secil W vs Secil E;
+- Tanquisado vs Eco-Oil;
+- fundeadouro sul/norte vs barra/canal norte/sul.
+
+9.2 Respostas copy/paste ou genericas
+
+Causa provavel:
+- prompt recebe chunks sem estrutura;
+- retrieval devolve contexto generico;
+- companions e respostas revistas podem sobrepor-se ao RAG;
+- o modelo tenta ser util quando o contexto e fraco.
+
+9.3 Bot fica preso no contexto errado
+
+Causa provavel:
+- historico recente e enviado ao LLM;
+- query rewriting e parcial;
+- estado conversacional nao distingue bem entidades;
+- pergunta de seguimento pode herdar entidade errada.
+
+9.4 Bot sabe responder depois de "reve a tua resposta"
+
+Causa provavel:
+- a revisao muda a query e/ou injeta contexto da resposta anterior;
+- a primeira pergunta nao recuperou o chunk certo;
+- a segunda tentativa acaba por ativar termos mais especificos.
+
+Isto mostra que o conhecimento existe, mas a primeira recuperacao nao e robusta.
+
+===============================================================================
+10. RECOMENDACAO DE ARQUITETURA ALVO
+===============================================================================
+
+10.1 Principio central
+
+Separar tres coisas:
+
+1. Memoria da conversa:
+   Serve para perceber a pergunta.
+
+2. Documentos/RAG:
+   Servem para responder.
+
+3. Dados live:
+   Servem para complementar estado atual: mare, meteo, navios, arquivo, escala,
+   eventos e condicoes em tempo real.
+
+Regra:
+A memoria nao deve substituir a documentacao. Dados live nao devem inventar regra
+tecnica. Documentos nao devem fingir que sabem estado atual.
+
+10.2 Pipeline alvo recomendado
+
+Pergunta do utilizador
+-> normalizacao e deteccao de entidades
+-> query rewriting para pergunta autonoma
+-> classificacao da intencao
+-> retrieval documental hibrido
+-> filtros/boost por entidade, canal e tipo de local
+-> reranking
+-> validacao de guardrails
+-> prompt documental rigoroso
+-> resposta citada
+-> logging/debug
+-> feedback/eval, se aplicavel
+
+===============================================================================
+11. ENTIDADES DE DOMINIO A CRIAR
+===============================================================================
+
+Criar um dicionario formal de entidades portuarias, por exemplo em:
+- knowledge/port_entities.json
+ou
+- domain/port_entities.py
+
+Cada entidade deve ter:
+- name
+- type
+- channel
+- entry_order
+- aliases
+- must_not_mix_with
+- retrieval_policy
+
+Entidades prioritarias:
+- Secil W
+- Secil E
+- TMS-1 / TERSADO
+- TMS-2 / SADOPORT
+- Cais 10 / Autoeuropa / Ro-Ro
+- Praias do Sado
+- SAPEC solidos / TPS
+- SAPEC liquidos / TGL
+- Alstom
+- Lisnave
+- Tanquisado
+- Eco-Oil
+- Termitrena / Eurominas / Mitrena
+- Teporset
+- fundeadouros comerciais, militares, servico portuario, recreio e reserva
+
+Regra critica:
+Se a pergunta mencionar uma entidade especifica, os chunks finais devem mencionar
+essa entidade ou uma alias equivalente. Caso contrario, resposta deve ser bloqueada
+ou marcada como baixa confianca.
+
+===============================================================================
+12. CHUNKING ALVO RECOMENDADO
+===============================================================================
+
+Substituir chunking cego por chunking estruturado.
+
+Formato ideal:
+
+{
+  "chunk_id": "...",
+  "document_title": "...",
+  "document_version": "...",
+  "page": "...",
+  "section": "...",
+  "subsection": "...",
+  "terminal": "...",
+  "berth": "...",
+  "location_type": "...",
+  "channel": "...",
+  "content_type": "restricao/procedimento/definicao/tabela/nota",
+  "text": "...",
+  "source": "..."
+}
+
+Regras de chunking:
+- nunca cortar no meio de titulo;
+- nunca atravessar fronteiras de entidade critica;
+- nunca juntar Secil W e Secil E no mesmo chunk;
+- nunca juntar SAPEC solidos e SAPEC liquidos no mesmo chunk sem metadata clara;
+- manter tabelas como blocos estruturados;
+- adicionar cabecalho contextual a cada chunk;
+- usar overlap apenas dentro da mesma seccao;
+- manter pagina quando origem for PDF.
+
+Exemplo de cabecalho contextual:
+
+Documento: IT-029 - SAPEC
+Revisao: 03, 2012-01-23
+Seccao: TGL - Terminal de Graneis Liquidos
+Entidade: SAPEC liquidos
+Tipo: restricao/calado
+
+Texto:
+...
+
+===============================================================================
+13. PESQUISA / RETRIEVAL ALVO
+===============================================================================
+
+O sistema atual usa pesquisa semantica e fallback lexical simples.
+Nao e ainda uma pesquisa hibrida forte.
+
+Recomendacao:
+Implementar retrieval hibrido:
+
+1. Keyword/BM25:
+   Para termos exatos:
+   - Eco-Oil
+   - Tanquisado
+   - SAPEC liquidos
+   - SAPEC solidos
+   - Secil W
+   - Secil E
+   - Lisnave
+   - rebocadores
+   - calado
+   - mare
+   - corrente
+   - carga perigosa
+
+2. Vector search:
+   Para linguagem aproximada e perguntas naturais.
+
+3. Filtros e boosts:
+   - entidade normalizada;
+   - aliases;
+   - canal;
+   - tipo de local;
+   - documento;
+   - seccao.
+
+4. Reranking:
+   Reordenar candidatos com base em:
+   - match de entidade;
+   - match de tipo de pergunta;
+   - proximidade lexical;
+   - score vetorial;
+   - qualidade da fonte.
+
+5. Guardrail:
+   Se pergunta e sobre entidade especifica e os chunks nao mencionam essa entidade,
+   o bot nao deve responder como se soubesse.
+
+===============================================================================
+14. QUERY REWRITING ALVO
+===============================================================================
+
+O bot deve reescrever perguntas de seguimento para perguntas autonomas.
+
+Exemplo:
+
+Pergunta anterior:
+"Que restricoes existem na SAPEC liquidos?"
+
+Nova pergunta:
+"E na SAPEC solidos?"
+
+Pergunta reescrita:
+"Quais sao as restricoes operacionais documentadas para SAPEC solidos / TPS?"
+
+Regras:
+- preservar entidades tecnicas;
+- nao inventar informacao;
+- resolver "e nesse?", "e na outra?", "e para saida?", "e com mau tempo?";
+- quando houver ambiguidade, pedir confirmacao ou responder com cautela;
+- logar pergunta original, historico usado, entidades detetadas e pergunta reescrita.
+
+===============================================================================
+15. PROMPT ALVO
+===============================================================================
+
+O prompt final deve impor disciplina documental.
+
+Regras obrigatorias:
+- usar apenas excertos fornecidos;
+- nao inventar limites, excecoes, valores, regras ou horarios;
+- nao misturar cais, terminais ou documentos;
+- se pergunta menciona uma entidade, responder com essa entidade;
+- se a documentacao recuperada for insuficiente, dizer isso;
+- citar documento, pagina e seccao quando disponiveis;
+- identificar conflitos entre excertos;
+- separar regra documental de confirmacao operacional atual;
+- nao repetir a pergunta como resposta;
+- nao dar resposta generica quando ha regra especifica nos excertos.
+
+Nota:
+O prompt atual inclui instrucao para nao mostrar referencias tecnicas, ids de
+fontes, chunks, scores ou seccoes. Para utilizador final isto pode fazer sentido,
+mas para rigor documental deve existir pelo menos uma citacao limpa:
+"Fonte: IT-029, SAPEC, seccao TGL, pagina X" quando disponivel.
+
+===============================================================================
+16. GUARDRAILS ALVO
+===============================================================================
+
+Criar uma validacao antes da resposta:
+
+{
+  "can_answer": true/false,
+  "reason": "...",
+  "entity_match": true/false,
+  "source_quality": "alta/media/baixa",
+  "missing_information": []
+}
+
+Bloquear ou baixar confianca se:
+- nenhum chunk tiver score suficiente;
+- nenhum chunk mencionar a entidade principal;
+- chunks forem de outro cais/terminal;
+- pergunta for sobre Secil W e chunks forem de Secil E;
+- pergunta for sobre SAPEC liquidos e chunks forem de SAPEC solidos;
+- resposta incluir valores que nao aparecem nos excertos;
+- fonte/pagina/seccao existiam mas nao foram citadas.
+
+Resposta padrao quando nao ha suporte:
+"A documentacao recuperada nao permite responder com seguranca. Foram encontrados
+excertos relacionados, mas nenhum confirma especificamente a informacao pedida
+sobre [entidade]. Recomendo rever os documentos de origem ou refazer a pesquisa
+com termos mais especificos."
+
+===============================================================================
+17. DEBUG RAG ALVO
+===============================================================================
+
+Criar modo debug apenas para admin/desenvolvimento.
+
+Para cada pergunta, mostrar:
+- pergunta original;
+- pergunta reescrita;
+- entidades detetadas;
+- filtros aplicados;
+- chunks candidatos;
+- scores;
+- chunks finais;
+- prompt enviado ao LLM;
+- resposta final;
+- motivo pelo qual cada chunk foi escolhido;
+- avisos de baixa confianca.
+
+Isto e essencial para distinguir:
+- erro de ingestao;
+- erro de chunking;
+- erro de retrieval;
+- erro de reranking;
+- erro do prompt;
+- erro do modelo;
+- contaminacao de memoria.
+
+===============================================================================
+18. FEEDBACK E APRENDIZAGEM
+===============================================================================
+
+O feedback dos utilizadores nao deve virar "verdade" automaticamente.
+
+Estados recomendados:
+- aprovado: pode ser usado como referencia;
+- corrigido: usar correcao como exemplo supervisionado;
+- em revisao: nao reutilizar automaticamente;
+- ignorado: nunca usar para treino/contexto;
+- sem contexto: manter para auditoria, nao para resposta;
+- rejeitado: nao usar.
+
+Regra:
+Feedback negativo ou mensagens enganadas/sem contexto nao devem contaminar o bot.
+
+Para "pedir revisao":
+- bot deve fazer nova tentativa;
+- deve reescrever a pergunta;
+- deve fazer novo retrieval;
+- nao deve repetir a mesma resposta;
+- deve poder ser usado via WhatsApp e web;
+- a tentativa revista nao deve ser aprovada automaticamente como conhecimento.
+
+===============================================================================
+19. PLANO DE IMPLEMENTACAO POR PRIORIDADE
+===============================================================================
+
+P0 - Critico
+
+1. Criar dicionario de entidades portuarias.
+2. Implementar deteccao/normalizacao de entidade antes do retrieval.
+3. Criar chunking estruturado por seccao.
+4. Guardar metadata rica nos chunks.
+5. Impedir resposta quando pergunta menciona uma entidade e chunks sao de outra.
+6. Separar Secil W/E e SAPEC solidos/liquidos.
+7. Criar modo debug RAG minimo para admin.
+
+P1 - Muito importante
+
+1. Implementar pesquisa hibrida lexical + vetorial.
+2. Implementar query rewriting conversacional.
+3. Adicionar reranking com peso de entidade.
+4. Atualizar prompt documental rigoroso.
+5. Criar testes/evals para perguntas criticas.
+6. Melhorar interface admin para ver chunks, scores, entidade e fontes.
+
+P2 - Boa melhoria
+
+1. Melhorar extracao de PDFs com paginas/tabelas preservadas.
+2. Adicionar migracao reversivel para metadata no pgvector.
+3. Criar script dry-run de reindexacao e auditoria de chunks.
+4. Criar metricas de qualidade: entity accuracy, source grounding, hallucination rate.
+5. Criar dashboard de qualidade e feedback.
+
+P3 - Futuro
+
+1. Avaliador LLM secundario para verificar resposta contra fontes.
+2. Comparacao automatica entre respostas novas e golden evals.
+3. Alertas quando novas perguntas falham.
+4. Analise estatistica de feedback por tema/documento.
+
+===============================================================================
+20. PLANO PRATICO PARA A PROXIMA SESSAO
+===============================================================================
+
+Passo 1:
+Criar dicionario de entidades:
+- SAPEC solidos/TPS;
+- SAPEC liquidos/TGL;
+- Secil W/Oeste;
+- Secil E/Este;
+- Eco-Oil;
+- Tanquisado;
+- Lisnave;
+- restantes terminais e fundeadouros.
+
+Passo 2:
+Criar modulo de chunking estruturado.
+Sugestao:
+- domain/knowledge_chunking.py
+
+Passo 3:
+Criar script dry-run:
+- scripts/audit_knowledge_chunks.py
+
+O script deve mostrar:
+- documentos;
+- seccoes detetadas;
+- entidades detetadas;
+- chunks gerados;
+- chunks suspeitos;
+- chunks que misturam entidades;
+- metadata por chunk.
+
+Passo 4:
+Alterar schema pgvector de forma segura.
+Nao apagar nada sem backup.
+Preferir adicionar metadata JSONB rica antes de mudar retrieval.
+
+Passo 5:
+Reindexar em dry-run.
+Comparar chunks antigos vs novos.
+
+Passo 6:
+Implementar retrieval com filtros por entidade.
+
+Passo 7:
+Criar modo debug no admin.
+
+Passo 8:
+Rodar evals iniciais:
+- Eco-Oil restricoes;
+- Tanquisado geral;
+- SAPEC liquidos;
+- SAPEC solidos como follow-up;
+- Secil W;
+- Secil E como follow-up;
+- calado;
+- rebocadores.
+
+===============================================================================
+21. TESTES CRITICOS A USAR
+===============================================================================
+
+Teste 1:
+Pergunta: "Que restricoes existem na Eco-Oil?"
+Esperado:
+- recuperar IT-008_EcoOil;
+- nao responder com Tanquisado isolado;
+- citar fonte;
+- indicar reponto, calado, dia/noite, atracacao/desatracacao.
+
+Teste 2:
+Pergunta: "Fala-me do cais da Tanquisado em termos gerais."
+Esperado:
+- recuperar IT-010_Tanquisado;
+- apresentar visao geral;
+- separar dimensoes, calado, mare, operacao e notas.
+
+Teste 3:
+Pergunta: "Que restricoes existem na SAPEC liquidos?"
+Esperado:
+- entidade normalizada: SAPEC liquidos/TGL;
+- nao misturar com TPS;
+- citar IT-029, seccao TGL.
+
+Teste 4:
+Pergunta: "E na SAPEC solidos?"
+Esperado:
+- reescrever pergunta como SAPEC solidos/TPS;
+- fazer nova pesquisa;
+- nao reutilizar TGL.
+
+Teste 5:
+Pergunta: "O que diz sobre a Secil W?"
+Esperado:
+- entidade normalizada: Secil W/Oeste;
+- nao misturar Secil E/Este.
+
+Teste 6:
+Pergunta: "E a Secil E?"
+Esperado:
+- usar contexto so para entender que e Secil;
+- nova pesquisa para Secil E/Este;
+- nao herdar regras de Oeste.
+
+Teste 7:
+Pergunta: "Ha alguma regra sobre calado?"
+Esperado:
+- indicar que depende do cais/documento;
+- nao generalizar uma regra local para todo o porto.
+
+Teste 8:
+Pergunta: "Preciso de rebocadores?"
+Esperado:
+- pedir dados se faltarem;
+- ou responder com base nas tabelas documentadas;
+- nao inventar numero de rebocadores.
+
+===============================================================================
+22. CHECKLIST FINAL DO BOT DOCUMENTAL
+===============================================================================
+
+[ ] Chunks tem fonte.
+[ ] Chunks tem pagina quando origem suporta pagina.
+[ ] Chunks tem seccao.
+[ ] Chunks tem entidade/cais/terminal.
+[ ] Chunks tem tipo de conteudo.
+[ ] SAPEC solidos e SAPEC liquidos estao separados.
+[ ] Secil W e Secil E estao separados.
+[ ] Pesquisa hibrida existe.
+[ ] Query rewriting existe.
+[ ] Reranking existe.
+[ ] Guardrails bloqueiam mistura de entidade.
+[ ] Prompt impede alucinacao.
+[ ] Debug mostra chunks e scores.
+[ ] Testes RAG existem.
+[ ] Perguntas de seguimento funcionam.
+[ ] Feedback ignorado nao contamina o bot.
+[ ] Bot sabe dizer "nao sei" quando nao ha suporte documental.
+
+===============================================================================
+23. DECISAO TECNICA RECOMENDADA
+===============================================================================
+
+Nao recomendo limpar a base de dados como primeira medida.
+
+Primeiro deve-se:
+1. criar auditoria/dry-run dos chunks;
+2. melhorar chunking e metadata;
+3. criar migracao segura;
+4. reindexar de forma controlada;
+5. comparar resultados antes/depois;
+6. so depois limpar dados obsoletos, se necessario.
+
+Limpar a BD antes de corrigir o pipeline pode dar uma falsa sensacao de melhoria,
+mas o problema volta assim que os documentos forem reindexados da mesma forma.
+
+===============================================================================
+24. CONCLUSAO
+===============================================================================
+
+O bot tem informacao suficiente para ser muito melhor do que esta a demonstrar em
+alguns casos. O problema e que a informacao ainda nao esta representada de forma
+suficientemente estruturada para um RAG tecnico-operacional.
+
+A prioridade e transformar o conhecimento de "texto pesquisavel" em "conhecimento
+documental estruturado":
+- entidade;
+- seccao;
+- fonte;
+- regra;
+- excecao;
+- pagina;
+- confianca.
+
+Com isso, o LLM deixa de tentar adivinhar a partir de excertos soltos e passa a
+responder como leitor tecnico dos documentos certos.
+
+===============================================================================
+25. IMPLEMENTACAO INICIAL REALIZADA EM 2026-04-29
+===============================================================================
+
+Foram implementadas as primeiras melhorias P0/P1:
+
+1. Dicionario de entidades portuarias:
+   - domain/port_entities.py
+   - inclui SAPEC solidos/liquidos, Secil W/E, Eco-Oil, Tanquisado, Lisnave,
+     TMS, Autoeuropa, fundeadouros e restantes locais principais.
+
+2. Chunking estruturado:
+   - domain/knowledge_chunking.py
+   - preserva seccao, subtitulo, entidade, canal, tipo de conteudo e escopo.
+
+3. Metadata rica no indice:
+   - integrations/vector_store.py
+   - usa o campo metadata JSONB ja existente, sem migracao destrutiva.
+
+4. Retrieval com consciencia de entidade:
+   - integrations/rag_engine.py
+   - combina lexical + semantico, faz reranking por entidade e penaliza conflitos.
+
+5. Guardrails documentais:
+   - se pergunta menciona entidade especifica e fontes finais nao confirmam essa
+     entidade, o bot responde com insuficiencia documental em vez de inventar.
+
+6. Query rewriting conversacional simples:
+   - core/chat_runtime.py
+   - exemplos cobertos:
+     "E na SAPEC solidos?" -> "Que restricoes operacionais documentadas existem para SAPEC solidos?"
+     "E a Secil E?" -> "O que diz a documentacao sobre Secil E?"
+
+7. Debug no playground admin:
+   - templates/admin_bot.html
+   - o trace passa a mostrar validacao RAG, entidade, qualidade e fonte.
+
+8. Scripts locais:
+   - scripts/audit_knowledge_chunks.py
+   - scripts/run_rag_evals.py
+
+9. Testes:
+   - tests/test_knowledge_chunking.py
+   - tests/test_chat_query_rewrite.py
+
+Comandos de validacao usados:
+
+python3 -m unittest discover -s tests
+python3 scripts/run_rag_evals.py --fail-on-fail
+python3 scripts/audit_knowledge_chunks.py --sample 0
+python3 -m py_compile core/chat_runtime.py integrations/rag_engine.py integrations/vector_store.py domain/port_entities.py domain/knowledge_chunking.py scripts/audit_knowledge_chunks.py scripts/run_rag_evals.py
+
+Resultado:
+- 7 testes unitarios passaram.
+- 8/8 evals RAG passaram em memoria.
+- A auditoria continua a assinalar chunks comparativos/mistos, mas estes ficam
+  agora classificados e penalizados no reranking quando a pergunta e especifica.
+
+Pendente antes de considerar fechado:
+- reindexacao no ambiente Railway;
+- teste manual no admin playground e no WhatsApp;
+- eventual afinacao fina das respostas reais apos reindexacao.
+
+===============================================================================
+FIM DO RELATORIO
+===============================================================================

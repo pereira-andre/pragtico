@@ -233,6 +233,59 @@
       "validation": "Piloto Coordenador"
     },
     {
+      "id": "lisnave",
+      "name": "LISNAVE / Estaleiros Mitrena",
+      "document": "IT-014_Lisnave.txt",
+      "aliases": [
+        "lisnave",
+        "mitrena",
+        "estaleiros mitrena",
+        "estaleiro lisnave",
+        "terminal lisnave",
+        "cais da lisnave",
+        "docas da lisnave"
+      ],
+      "category": "estaleiro naval com pontes-cais, docas secas e hidrolift",
+      "overview": "Instalacao de reparacao e construcao naval com regra absoluta de reponto de mare, limite noturno por LOA, condicionante de vento e calado dependente do destino dentro do estaleiro.",
+      "dimensions": [
+        "Altura dos cais acima do ZH: 4,80 m; distancia do Duque d'Alba da Ponte-Cais 1 a boia n. 14: 1000 m.",
+        "Inclui Pontes-Cais 1, 2 e 3, Cais 0, Cais de Descarga de Aco, Docas 20/21/22 e Hidrolift para Docas 31/32/33."
+      ],
+      "vessel_limits": [
+        "LOA ate 280 m: manobra permitida em qualquer reponto, de dia ou de noite.",
+        "LOA acima de 280 m: manobra apenas de dia.",
+        "Em mares vivas, se a mesma bacia tiver de servir mais de um navio, recomenda-se uma manobra por reponto, sobretudo para LOA superior a 200 m."
+      ],
+      "draft_rules": [
+        "Nao existe um calado maximo unico para toda a LISNAVE; depende do destino, da sonda ao ZH, da mare e das margens operacionais.",
+        "Referencias ao ZH: Cais 3 B 8,60 m a 10 m da face; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m. A designacao operacional mantem sempre A/B; W/E e Setubal/Alcacer sao apenas referencias laterais: faces A = W/oeste, faces B = E/este.",
+        "Docas 21/22: 6,10 m na soleira com comporta aberta e 5,49 m com comporta fechada; acesso as Docas 31/32/33 pelo Hidrolift: 5,5 m."
+      ],
+      "maneuver_rules": [
+        "Todas as manobras devem ser feitas proximo dos repontos de mare.",
+        "A regra de reponto e estrutural porque os cais estao perpendiculares a corrente."
+      ],
+      "night_rules": [
+        "Noite permitida apenas ate 280 m de LOA, sempre no reponto.",
+        "Acima de 280 m a manobra noturna fica proibida."
+      ],
+      "operational_limits": {
+        "night_loa_max_m": 280,
+        "night_requires_reponto": true,
+        "above_night_loa_day_only": true
+      },
+      "restrictions": [
+        "Navios com area velica consideravel devem manobrar com vento ate cerca de 20 km/h.",
+        "O Cais de Descarga de Aco tem calado ND no documento e nao deve ser inferido.",
+        "Calado e aceitacao variam por cais/doca; nao tratar a LISNAVE como se tivesse um unico valor global."
+      ],
+      "tug_guidance": [
+        "O IT-014 nao fixa uma tabela propria de rebocadores; cruzar com IT-016 e com as caracteristicas do navio.",
+        "A validacao da requisicao cabe ao Piloto Coordenador segundo as regras do estaleiro."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
       "id": "tms1",
       "name": "Terminal Multiusos 1 (TMS1 / Cais das Fontainhas)",
       "document": "IT-005_TMS1.txt",

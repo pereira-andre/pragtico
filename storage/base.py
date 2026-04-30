@@ -369,6 +369,11 @@ class BaseStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_port_calls(self) -> List[Dict]:
+        """Return all decorated port call records."""
+        raise NotImplementedError
+
+    @abstractmethod
     def edit_port_call(
         self,
         port_call_id: str,

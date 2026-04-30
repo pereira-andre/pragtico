@@ -30,3 +30,12 @@ knowledge/*
 !knowledge/evals/*.json
 contas.txt
 static/styles.css.bak
+bot_report*
+TODO*
+docs/
+tests/
+scripts/
+!tests/
+!tests/*.py
+!scripts/
+!scripts/*.py

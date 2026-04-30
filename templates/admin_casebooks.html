@@ -96,7 +96,17 @@
       <article class="hero-stat">
         <span>Mensagens aprovadas</span>
         <strong>{{ casebooks.chat_approved_total }}</strong>
-        <small>prontas para reutilização supervisionada</small>
+        <small>resposta original reutilizável</small>
+      </article>
+      <article class="hero-stat">
+        <span>Correções guardadas</span>
+        <strong>{{ casebooks.chat_corrected_total }}</strong>
+        <small>resposta corrigida reutilizável</small>
+      </article>
+      <article class="hero-stat">
+        <span>Mensagens ignoradas</span>
+        <strong>{{ casebooks.chat_ignored_total }}</strong>
+        <small>fora da aprendizagem e dos evals</small>
       </article>
       <article class="hero-stat">
         <span>Casos por validar</span>
@@ -132,7 +142,9 @@
           <select name="chat_feedback">
             <option value="pending" {% if casebooks.filters.chat_feedback == "pending" %}selected{% endif %}>Por rever</option>
             <option value="approved" {% if casebooks.filters.chat_feedback == "approved" %}selected{% endif %}>Aprovadas</option>
-            <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas / rever</option>
+            <option value="corrected" {% if casebooks.filters.chat_feedback == "corrected" %}selected{% endif %}>Corrigidas</option>
+            <option value="review" {% if casebooks.filters.chat_feedback == "review" %}selected{% endif %}>Bloqueadas para revisão</option>
+            <option value="ignored" {% if casebooks.filters.chat_feedback == "ignored" %}selected{% endif %}>Ignoradas</option>
             <option value="all" {% if casebooks.filters.chat_feedback == "all" %}selected{% endif %}>Todas</option>
           </select>
         </label>
@@ -173,7 +185,7 @@
     {% if casebooks.chat_rows %}
       <div class="admin-bot-case-grid">
         {% for item in casebooks.chat_rows %}
-          <article class="admin-bot-case admin-casebook-card">
+          <article class="admin-bot-case admin-casebook-card" id="chat-{{ item.id }}">
             <div class="admin-bot-case-head">
               <div>
                 <strong>{{ item.owner_username }}</strong>
@@ -214,8 +226,10 @@
               <label>
                 Decisão
                 <select name="feedback_status" required>
-                  <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar para reutilização</option>
-                  <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Cancelar reutilização / rever</option>
+                  <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar resposta original</option>
+                  <option value="corrected" {% if item.feedback_status == "corrected" %}selected{% endif %}>Guardar correção reutilizável</option>
+                  <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Manter bloqueada para revisão</option>
+                  <option value="ignored" {% if item.feedback_status == "ignored" %}selected{% endif %}>Ignorar: sem aprendizagem</option>
                 </select>
               </label>
               <label>

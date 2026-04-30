@@ -9,17 +9,14 @@
         <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
       </div>
       <div class="chat-sidebar-actions">
-        <form method="get" action="{{ url_for('chat.export_conversations_bundle') }}" id="chat-batch-export-form">
-          <details class="chat-toolbar-menu">
-            <summary class="mini-button secondary-button">Exportar ZIP</summary>
-            <div class="chat-toolbar-menu-body">
-              <p class="chat-toolbar-menu-note">Sem seleção manual, exporta todas as conversas em ficheiros individuais.</p>
-              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="json">JSON</button>
-              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="txt">TXT</button>
-              <button type="submit" class="chat-toolbar-menu-link chat-toolbar-menu-button" name="export_format" value="pdf">PDF</button>
-            </div>
-          </details>
-        </form>
+        <details class="chat-toolbar-menu">
+          <summary class="mini-button secondary-button">Exportar</summary>
+          <div class="chat-toolbar-menu-body">
+            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_json', conversation_id=current_conversation.id) }}">JSON</a>
+            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_txt', conversation_id=current_conversation.id) }}">TXT</a>
+            <a class="chat-toolbar-menu-link" href="{{ url_for('chat.export_conversation_pdf', conversation_id=current_conversation.id) }}">PDF</a>
+          </div>
+        </details>
         <form method="post" action="{{ url_for('chat.create_conversation') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="redirect_to" value="archive">
@@ -33,29 +30,10 @@
       <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
     </label>
 
-    <div class="chat-selection-bar">
-      <div>
-        <p class="eyebrow">Seleção para exportação</p>
-        <p id="chat-selection-summary" class="muted">Sem seleção manual. O ZIP inclui todas as conversas em ficheiros individuais.</p>
-      </div>
-      <div class="chat-selection-actions">
-        <button type="button" class="mini-button secondary-button" id="chat-select-visible">Selecionar visíveis</button>
-        <button type="button" class="mini-button secondary-button" id="chat-clear-selection">Nenhuma</button>
-      </div>
-    </div>
-
     <div class="chat-sidebar-list" id="chat-sidebar-list">
       {% for conv in conversations %}
         {% set search_text = (conv.title ~ ' ' ~ conv.updated_at_label)|lower %}
         <article class="chat-sidebar-card {{ 'is-active' if conv.id == current_conversation.id }}" data-chat-conversation data-search="{{ search_text }}">
-          <label class="chat-sidebar-select" aria-label="Selecionar conversa {{ conv.title }}">
-            <input
-              type="checkbox"
-              class="chat-conversation-select"
-              name="conversation_ids"
-              value="{{ conv.id }}"
-              form="chat-batch-export-form">
-          </label>
           <a class="chat-sidebar-link" href="{{ url_for('chat.chat_archive', conversation_id=conv.id) }}">
             <strong title="{{ conv.title }}">{{ conv.title }}</strong>
             <span>Atualizada {{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
@@ -94,123 +72,105 @@
       {% endfor %}
     </div>
     <p id="chat-sidebar-empty" class="muted hidden">Nenhuma conversa corresponde ao filtro.</p>
-    <form class="chat-sidebar-danger-zone" method="post" action="{{ url_for('chat.delete_all_conversations') }}" onsubmit="return confirm('Apagar permanentemente todas as conversas deste utilizador?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="redirect_to" value="archive">
-      <p class="muted">Ação irreversível sobre todo o arquivo privado deste utilizador.</p>
-      <button type="submit" class="mini-button danger-button">Apagar todas</button>
-    </form>
   </aside>
 
   <section class="panel chat-main-panel">
-    <section class="chat-privacy-banner">
-      <div class="chat-privacy-mark">Privado</div>
-      <div class="chat-privacy-copy">
-        <p class="eyebrow">Consentimento e tratamento</p>
-        <p>
-          Esta área é privada por membro. Ao utilizar as conversas, consentes que o conteúdo seja usado para melhorar o treino
-          e o conhecimento operacional do bot, sem divulgação de informação pessoal identificável.
-        </p>
+    <div class="chat-main-head">
+      <div>
+        <p class="eyebrow">Conversa ativa</p>
+        <h2 id="chat-page-title">{{ current_conversation.title }}</h2>
       </div>
-    </section>
-
-    <div class="chat-conversation-shell">
-      <div class="chat-main-head">
-        <div>
-          <p class="eyebrow">Conversa ativa</p>
-          <h2 id="chat-page-title">{{ current_conversation.title }}</h2>
-        </div>
-        <div class="chat-main-kpis">
-          <span class="ops-pill ops-pill-strong">{{ conversations|length }} conversas</span>
-          <span class="ops-pill">{{ messages|length }} mensagens</span>
-        </div>
+      <div class="chat-main-kpis">
+        <span class="ops-pill ops-pill-strong">{{ conversations|length }} conversas</span>
+        <span class="ops-pill">{{ messages|length }} mensagens</span>
       </div>
-
-      <div class="chat-page-log" id="chat-page-log">
-        {% if messages %}
-          {% for msg in messages %}
-            <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-correction="{{ msg.feedback_correction or '' }}" data-feedback-correction-document="{{ msg.feedback_correction_document or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
-              <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
-              <div class="chatbot-bubble-meta">
-                <span>{{ msg.created_at_label }}</span>
-              </div>
-              {% if msg.citations %}
-                <details class="chatbot-citations">
-                  <summary>Fontes</summary>
-                  {% for c in msg.citations %}
-                    <span class="chatbot-citation-tag">{{ c.document }}</span>
-                  {% endfor %}
-                </details>
-              {% endif %}
-              {% if msg.role == 'assistant' %}
-                <details class="feedback-box chatbot-feedback" data-feedback-box="1" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}">
-                  <summary class="chatbot-feedback-summary">
-                    <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
-                    <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
-                      {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'review' %}Rever{% else %}Sem feedback{% endif %}
-                    </span>
-                  </summary>
-                  <div class="chatbot-feedback-body">
-                    <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
-                    <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
-                    <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
-                    <div class="feedback-actions">
-                      <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
-                      <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Pedir revisão</button>
-                    </div>
-                    <p class="chatbot-feedback-meta" data-feedback-meta>
-                      {% if msg.feedback_status %}
-                        {{ 'Aprovada' if msg.feedback_status == 'approved' else 'Rever' }}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'review' and msg.feedback_correction %}. Correção guardada.{% else %}.{% endif %}
-                      {% else %}
-                        Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.
-                      {% endif %}
-                    </p>
-                  </div>
-                </details>
-              {% endif %}
-            </article>
-          {% endfor %}
-        {% else %}
-          <article class="chatbot-bubble chatbot-bubble-assistant">
-            <p>Abre uma conversa ou começa já a pedir estado operacional, marés, meteorologia ou registo de manobras.</p>
-          </article>
-        {% endif %}
-      </div>
-
-      <article class="chatbot-pending hidden" id="chat-page-pending">
-        <div class="chatbot-pending-head">
-          <strong id="chat-page-pending-title">Ação pendente</strong>
-          <span class="ops-pill" id="chat-page-pending-target"></span>
-        </div>
-        <p id="chat-page-pending-summary"></p>
-        <p class="chatbot-pending-missing hidden" id="chat-page-pending-missing"></p>
-        <div class="chatbot-pending-actions">
-          <button type="button" class="mini-button" id="chat-page-pending-confirm">Confirmar</button>
-          <button type="button" class="mini-button secondary-button" id="chat-page-pending-cancel">Cancelar</button>
-        </div>
-      </article>
-
-      <form class="chat-page-input" id="chat-page-form">
-        <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
-        <div class="chat-page-input-stack">
-          <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
-          <div class="chat-command-autocomplete hidden" id="chat-page-command-autocomplete"></div>
-        </div>
-        <div class="chat-page-toolbar">
-          <p class="chatbot-status" id="chat-page-status">Modelo: {{ chatbot_model or 'LLM' }}</p>
-          <button type="submit" class="mini-button">Enviar</button>
-        </div>
-      </form>
     </div>
+
+    <div class="chat-page-log" id="chat-page-log">
+      {% if messages %}
+        {% for msg in messages %}
+          <article class="chatbot-bubble chatbot-bubble-{{ msg.role }}" {% if msg.role == 'assistant' %}data-message-id="{{ msg.id }}" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-note="{{ msg.feedback_note or '' }}" data-feedback-correction="{{ msg.feedback_correction or '' }}" data-feedback-correction-document="{{ msg.feedback_correction_document or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}"{% endif %}>
+            <p>{% if msg.role == 'assistant' %}{{ msg.content | chat_markdown }}{% else %}{{ msg.content }}{% endif %}</p>
+            <div class="chatbot-bubble-meta">
+              <span>{{ msg.created_at_label }}</span>
+            </div>
+            {% if msg.citations %}
+              <details class="chatbot-citations">
+                <summary>Fontes</summary>
+                {% for c in msg.citations %}
+                  <span class="chatbot-citation-tag">{{ c.document }}</span>
+                {% endfor %}
+              </details>
+            {% endif %}
+            {% if msg.role == 'assistant' %}
+              <details class="feedback-box chatbot-feedback" data-feedback-box="1" data-feedback-status="{{ msg.feedback_status or '' }}" data-feedback-updated-at-label="{{ msg.feedback_updated_at_label or '' }}">
+                <summary class="chatbot-feedback-summary">
+                  <span class="chatbot-feedback-summary-label">Feedback da resposta</span>
+                  <span class="feedback-status {% if msg.feedback_status %}is-{{ msg.feedback_status }}{% endif %}" data-feedback-status-label>
+                    {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% else %}Sem feedback{% endif %}
+                  </span>
+                </summary>
+                <div class="chatbot-feedback-body">
+                  <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
+                  <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
+                  <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
+                  <div class="feedback-actions">
+                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
+                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'corrected' %}is-active{% endif %}" data-feedback-choice="corrected">Corrigir</button>
+                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'review' %}is-active{% endif %}" data-feedback-choice="review">Rever sem reutilizar</button>
+                    <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'ignored' %}is-active{% endif %}" data-feedback-choice="ignored">Ignorar</button>
+                    <button type="button" class="mini-button secondary-button" data-feedback-retry>Nova tentativa</button>
+                  </div>
+                  <p class="chatbot-feedback-meta" data-feedback-meta>
+                    {% if msg.feedback_status %}
+                      {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'corrected' and msg.feedback_correction %}. Correção reutilizável guardada.{% else %}.{% endif %}
+                    {% else %}
+                      Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.
+                    {% endif %}
+                  </p>
+                </div>
+              </details>
+            {% endif %}
+          </article>
+        {% endfor %}
+      {% else %}
+        <article class="chatbot-bubble chatbot-bubble-assistant">
+          <p>Abre uma conversa ou começa já a pedir estado operacional, marés, meteorologia ou registo de manobras.</p>
+        </article>
+      {% endif %}
+    </div>
+
+    <article class="chatbot-pending hidden" id="chat-page-pending">
+      <div class="chatbot-pending-head">
+        <strong id="chat-page-pending-title">Ação pendente</strong>
+        <span class="ops-pill" id="chat-page-pending-target"></span>
+      </div>
+      <p id="chat-page-pending-summary"></p>
+      <p class="chatbot-pending-missing hidden" id="chat-page-pending-missing"></p>
+      <div class="chatbot-pending-actions">
+        <button type="button" class="mini-button" id="chat-page-pending-confirm">Confirmar</button>
+        <button type="button" class="mini-button secondary-button" id="chat-page-pending-cancel">Cancelar</button>
+      </div>
+    </article>
+
+    <form class="chat-page-input" id="chat-page-form">
+      <input type="hidden" id="chat-page-conversation-id" value="{{ current_conversation.id }}">
+      <div class="chat-page-input-stack">
+        <textarea id="chat-page-question" rows="3" placeholder="Escreve aqui a tua pergunta ou pedido operacional..." required></textarea>
+        <div class="chat-command-autocomplete hidden" id="chat-page-command-autocomplete"></div>
+      </div>
+      <div class="chat-page-toolbar">
+        <p class="chatbot-status" id="chat-page-status">Serviço: {{ chatbot_model or 'operacional' }}</p>
+        <button type="submit" class="mini-button">Enviar</button>
+      </div>
+    </form>
   </section>
 </main>
 
 <script>
   const conversationSearch = document.getElementById("chat-conversation-search");
   const conversationCards = Array.from(document.querySelectorAll("[data-chat-conversation]"));
-  const conversationBoxes = Array.from(document.querySelectorAll(".chat-conversation-select"));
   const conversationEmpty = document.getElementById("chat-sidebar-empty");
-  const conversationSummary = document.getElementById("chat-selection-summary");
   const chatLog = document.getElementById("chat-page-log");
   const chatForm = document.getElementById("chat-page-form");
   const chatQuestion = document.getElementById("chat-page-question");
@@ -223,8 +183,6 @@
   const pendingMissing = document.getElementById("chat-page-pending-missing");
   const pendingConfirm = document.getElementById("chat-page-pending-confirm");
   const pendingCancel = document.getElementById("chat-page-pending-cancel");
-  const selectVisibleButton = document.getElementById("chat-select-visible");
-  const clearSelectionButton = document.getElementById("chat-clear-selection");
   const autocomplete = window.PRAGticoChatCommandAutocomplete
     ? window.PRAGticoChatCommandAutocomplete.attach({
         textarea: chatQuestion,
@@ -235,18 +193,26 @@
 
   function feedbackStatusLabel(status) {
     if (status === "approved") return "Aprovada";
+    if (status === "corrected") return "Corrigida";
     if (status === "review") return "Rever";
+    if (status === "ignored") return "Ignorada";
     return "Sem feedback";
   }
 
   function feedbackMetaLabel(status, updatedAtLabel, correction) {
-    if (!status) return "Podes aprovar a resposta. Ao marcar para revisão, indica o motivo ou guarda a resposta corrigida.";
-    const hasCorrection = String(correction || "").trim().length > 0;
-    if (status === "review" && hasCorrection && updatedAtLabel) {
-      return "Rever em " + updatedAtLabel + ". Correção guardada.";
+    if (!status) return "Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.";
+    if (status === "ignored") {
+      return updatedAtLabel ? "Ignorada em " + updatedAtLabel + ". Fora da aprendizagem." : "Ignorada. Fora da aprendizagem.";
     }
-    if (status === "review" && hasCorrection) {
-      return "Rever. Correção guardada.";
+    const hasCorrection = String(correction || "").trim().length > 0;
+    if (status === "corrected" && hasCorrection && updatedAtLabel) {
+      return "Corrigida em " + updatedAtLabel + ". Correção reutilizável guardada.";
+    }
+    if (status === "corrected" && hasCorrection) {
+      return "Corrigida. Correção reutilizável guardada.";
+    }
+    if (status === "review") {
+      return updatedAtLabel ? "Em revisão desde " + updatedAtLabel + ". Não reutiliza." : "Em revisão. Não reutiliza.";
     }
     if (updatedAtLabel) return feedbackStatusLabel(status) + " em " + updatedAtLabel + ".";
     return feedbackStatusLabel(status) + ".";
@@ -329,7 +295,9 @@
     actions.className = "feedback-actions";
     [
       ["approved", "Aprovar"],
-      ["review", "Pedir revisão"],
+      ["corrected", "Corrigir"],
+      ["review", "Rever sem reutilizar"],
+      ["ignored", "Ignorar"],
     ].forEach(([value, label]) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -338,6 +306,12 @@
       button.textContent = label;
       actions.appendChild(button);
     });
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.className = "mini-button secondary-button";
+    retryButton.dataset.feedbackRetry = "1";
+    retryButton.textContent = "Nova tentativa";
+    actions.appendChild(retryButton);
 
     const meta = document.createElement("p");
     meta.className = "chatbot-feedback-meta";
@@ -374,9 +348,13 @@
     const correctionField = box.querySelector("[data-feedback-correction]");
     const correctionDocumentField = box.querySelector("[data-feedback-correction-document]");
     if (!messageId || !conversationIdField.value || !status) return;
-    if (status === "review" && !(noteField?.value || "").trim() && !(correctionField?.value || "").trim()) {
-      chatStatus.textContent = "Ao pedir revisão indica o motivo ou a resposta corrigida.";
+    if (status === "corrected" && !(correctionField?.value || "").trim()) {
+      chatStatus.textContent = "Para corrigir, escreve a resposta corrigida reutilizável.";
       correctionField?.focus();
+      return;
+    }
+    if (status === "review" && !(noteField?.value || "").trim()) {
+      await submitMessageRetry(box);
       return;
     }
 
@@ -416,6 +394,42 @@
     }
   }
 
+  async function submitMessageRetry(box) {
+    const article = box.closest("[data-message-id]");
+    const messageId = article?.dataset.messageId || "";
+    const noteField = box.querySelector("[data-feedback-note]");
+    if (!messageId || !conversationIdField.value) return;
+
+    box.dataset.submitting = "1";
+    box.querySelectorAll("button, textarea, input").forEach((control) => {
+      control.disabled = true;
+    });
+    chatStatus.textContent = "A pedir nova tentativa...";
+    try {
+      const response = await fetch("/api/messages/" + encodeURIComponent(messageId) + "/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: conversationIdField.value,
+          note: noteField?.value || "",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Falha ao pedir nova tentativa.");
+      appendBubble("user", payload.retry_prompt || "Revê a tua resposta anterior.", [], "", new Date().toLocaleString("pt-PT"));
+      appendBubble("assistant", payload.answer, payload.sources || [], payload.message_id || "", payload.created_at_label || "");
+      renderPending(payload.pending_action || null);
+      chatStatus.textContent = "Nova tentativa recebida.";
+    } catch (error) {
+      chatStatus.textContent = "Erro ao pedir nova tentativa: " + error.message;
+    } finally {
+      delete box.dataset.submitting;
+      box.querySelectorAll("button, textarea, input").forEach((control) => {
+        control.disabled = false;
+      });
+    }
+  }
+
   function filterConversations() {
     const query = (conversationSearch?.value || "").trim().toLowerCase();
     let visible = 0;
@@ -425,25 +439,6 @@
       if (match) visible += 1;
     });
     conversationEmpty.classList.toggle("hidden", visible !== 0);
-  }
-
-  function updateConversationSelectionSummary() {
-    if (!conversationSummary) return;
-    const selected = conversationBoxes.filter((box) => box.checked).length;
-    if (selected > 0) {
-      conversationSummary.textContent = `${selected} conversa(s) selecionada(s). O ZIP inclui ficheiros individuais.`;
-      return;
-    }
-    conversationSummary.textContent = "Sem seleção manual. O ZIP inclui todas as conversas em ficheiros individuais.";
-  }
-
-  function setVisibleConversationSelection(checked) {
-    conversationCards.forEach((card) => {
-      if (card.classList.contains("hidden")) return;
-      const checkbox = card.querySelector(".chat-conversation-select");
-      if (checkbox) checkbox.checked = checked;
-    });
-    updateConversationSelectionSummary();
   }
 
   function appendBubble(role, content, citations, messageId, timestampLabel) {
@@ -548,12 +543,6 @@
   }
 
   if (conversationSearch) conversationSearch.addEventListener("input", filterConversations);
-  conversationBoxes.forEach((box) => box.addEventListener("change", updateConversationSelectionSummary));
-  selectVisibleButton?.addEventListener("click", () => setVisibleConversationSelection(true));
-  clearSelectionButton?.addEventListener("click", () => {
-    conversationBoxes.forEach((box) => { box.checked = false; });
-    updateConversationSelectionSummary();
-  });
 
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -594,12 +583,17 @@
     mountFeedbackBox(article);
   });
   chatLog.addEventListener("click", (event) => {
+    const retryButton = event.target.closest("[data-feedback-retry]");
+    if (retryButton) {
+      event.preventDefault();
+      submitMessageRetry(retryButton.closest("[data-feedback-box]"));
+      return;
+    }
     const button = event.target.closest("[data-feedback-choice]");
     if (!button) return;
     event.preventDefault();
     submitMessageFeedback(button.closest("[data-feedback-box]"), button.dataset.feedbackChoice || "");
   });
-  updateConversationSelectionSummary();
   chatLog.scrollTop = chatLog.scrollHeight;
   fetchPending();
 </script>

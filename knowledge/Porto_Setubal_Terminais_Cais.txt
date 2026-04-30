@@ -87,8 +87,11 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
 9. LISNAVE / Estaleiros Mitrena
    Fonte: IT-014.
    Instalacao de reparacao e construcao naval, composta por:
-     - Pontes-Cais I, II e III;
-     - faces IA, IB, II-A, II-B, III-A e III-B;
+     - Pontes-Cais 1, 2 e 3;
+     - faces 1 A, 1 B, 2 A, 2 B, 3 A e 3 B
+       (a designacao operacional mantem sempre A/B; W/E e apenas referencia
+       lateral: A = W/oeste, referencia local lado Setubal; B = E/este,
+       referencia local lado Alcacer do Sal);
      - Cais 0, Face A e Face B;
      - Cais de Descarga de Aco;
      - Docas 20, 21 e 22;

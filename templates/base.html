@@ -56,6 +56,9 @@
               {% if current_role in ["admin", "agente"] %}
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'port_calls.port_call_register' else '' }}" href="{{ url_for('port_calls.port_call_register') }}">Escalas</a>
               {% endif %}
+              {% if current_role == "admin" %}
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['port_calls.vessel_catalog', 'port_calls.print_vessel_catalog_record'] else '' }}" href="{{ url_for('port_calls.vessel_catalog') }}">Navios</a>
+              {% endif %}
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.maneuver_archive' else '' }}" href="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
@@ -77,6 +80,9 @@
                 <option value="{{ url_for('dashboard_bp.dashboard') }}">Quadro</option>
                 {% if current_role in ["admin", "agente"] %}
                   <option value="{{ url_for('port_calls.port_call_register') }}">Escalas</option>
+                {% endif %}
+                {% if current_role == "admin" %}
+                  <option value="{{ url_for('port_calls.vessel_catalog') }}">Navios</option>
                 {% endif %}
                 <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
                 <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>
@@ -143,6 +149,43 @@
       const liveFeedUrl = {{ (url_for('api.api_portal_live_feed') if current_user else '')|tojson }};
       const seenPortalEventIds = new Set();
       let lastPortalEventAt = new Date().toISOString();
+      const localMinuteValue = (date) => {
+        const pad = (value) => String(value).padStart(2, "0");
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      };
+      const syncFutureDatetimeMinimums = () => {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        const currentMinute = localMinuteValue(now);
+        document.querySelectorAll("[data-future-datetime]").forEach((field) => {
+          field.min = currentMinute;
+        });
+        return currentMinute;
+      };
+      const validateFutureDatetimeForm = (form) => {
+        const currentMinute = syncFutureDatetimeMinimums();
+        for (const field of form.querySelectorAll("[data-future-datetime]")) {
+          field.setCustomValidity("");
+          if (field.value && field.value < currentMinute) {
+            field.setCustomValidity("A data/hora não pode ser anterior à hora atual.");
+            field.reportValidity();
+            return false;
+          }
+        }
+        return true;
+      };
+      syncFutureDatetimeMinimums();
+      document.querySelectorAll("form").forEach((form) => {
+        if (!form.querySelector("[data-future-datetime]")) return;
+        form.addEventListener("submit", (event) => {
+          if (!validateFutureDatetimeForm(form)) {
+            event.preventDefault();
+          }
+        });
+        form.querySelectorAll("[data-future-datetime]").forEach((field) => {
+          field.addEventListener("input", () => field.setCustomValidity(""));
+        });
+      });
       if (!loader) return;
       const pageJump = document.querySelector("[data-page-jump]");
       if (pageJump) {

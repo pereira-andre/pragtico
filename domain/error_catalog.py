@@ -354,7 +354,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 3040,
         "category": "business_rule",
         "message": "Navio não está em porto.",
-        "user_message": "Só podes planear saída para navios que estão em porto.",
+        "user_message": "Só podes planear saída para escalas previstas ou navios em porto.",
     },
     "DEPARTURE_ALREADY_ACTIVE": {
         "code": 3041,
@@ -366,7 +366,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 3042,
         "category": "business_rule",
         "message": "Navio não está em porto.",
-        "user_message": "Só podes planear mudança para navios em porto.",
+        "user_message": "Só podes planear mudança para escalas previstas ou navios em porto.",
     },
     "SHIFT_ALREADY_ACTIVE": {
         "code": 3043,
@@ -379,6 +379,24 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "category": "business_rule",
         "message": "Entrada é automática.",
         "user_message": "A entrada inicial já fica criada quando registas a escala.",
+    },
+    "PILOT_HOUR_CAPACITY": {
+        "code": 3045,
+        "category": "business_rule",
+        "message": "Limite de pilotos atingido.",
+        "user_message": "Já existem 4 manobras aprovadas para esta hora. Ajusta a hora ou valida outra manobra.",
+    },
+    "DEPARTURE_APPROVAL_BEFORE_ENTRY": {
+        "code": 3046,
+        "category": "business_rule",
+        "message": "Saída antes de entrada concluída.",
+        "user_message": "A saída só pode ser aprovada depois da entrada estar concluída.",
+    },
+    "SHIFT_APPROVAL_BEFORE_ENTRY": {
+        "code": 3047,
+        "category": "business_rule",
+        "message": "Mudança antes de entrada concluída.",
+        "user_message": "A mudança só pode ser aprovada depois da entrada estar concluída.",
     },
     "ARRIVAL_NOT_APPROVED": {
         "code": 3050,
@@ -596,7 +614,7 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "code": 5033,
         "category": "chat",
         "message": "Revisão sem motivo.",
-        "user_message": "Ao pedir revisão indica o motivo ou a resposta corrigida.",
+        "user_message": "Para rever sem reutilizar indica o motivo. Para reutilizar uma correção, usa Corrigir.",
     },
     "CONVERSATION_ID_MISSING": {
         "code": 5060,
@@ -607,8 +625,8 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
     "LLM_NOT_CONFIGURED": {
         "code": 5050,
         "category": "chat",
-        "message": "LLM não configurado.",
-        "user_message": "Define a API key do LLM antes de usar o chatbot.",
+        "message": "Provider de geração não configurado.",
+        "user_message": "Define a API key do provider antes de usar o chatbot.",
     },
 
     # =====================================================================
@@ -663,8 +681,8 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
     "LLM_PROVIDER_UNAVAILABLE": {
         "code": 7001,
         "category": "integration",
-        "message": "Provider LLM indisponível.",
-        "user_message": "Serviço de IA temporariamente indisponível.",
+        "message": "Provider de geração indisponível.",
+        "user_message": "Serviço de resposta temporariamente indisponível.",
     },
     "TIDES_FETCH_FAILED": {
         "code": 7010,

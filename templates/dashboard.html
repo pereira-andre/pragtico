@@ -514,10 +514,15 @@
           {% for item in port_activity.arrivals[:2] %}
             <article class="ops-card">
               <div class="ops-card-head">
-                <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                <div class="planned-vessel-type">
+                  {% if item.ship_type_icon %}
+                    <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.ship_type_icon) }}" alt="{{ item.ship_type_label }}">
+                  {% endif %}
+                  <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                </div>
                 <span class="ops-tag">ETA {{ item.eta_label }}</span>
               </div>
-              <p>Cais <strong>{{ item.berth_label }}</strong></p>
+              <p>Origem <strong>{{ item.last_port or "--" }}</strong> → Cais destino <strong>{{ item.berth_label }}</strong></p>
             </article>
           {% else %}
             <article class="ops-empty"><p>Sem chegadas previstas.</p></article>
@@ -530,29 +535,39 @@
               {% for item in port_activity.arrivals[2:] %}
                 <article class="ops-card">
                   <div class="ops-card-head">
-                    <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    <div class="planned-vessel-type">
+                      {% if item.ship_type_icon %}
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.ship_type_icon) }}" alt="{{ item.ship_type_label }}">
+                      {% endif %}
+                      <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    </div>
                     <span class="ops-tag">ETA {{ item.eta_label }}</span>
                   </div>
-                  <p>Cais <strong>{{ item.berth_label }}</strong></p>
+                  <p>Origem <strong>{{ item.last_port or "--" }}</strong> → Cais destino <strong>{{ item.berth_label }}</strong></p>
                 </article>
               {% endfor %}
             </div>
           </details>
         {% endif %}
       </section>
-      <section class="traffic-column traffic-column-departed">
+      <section class="traffic-column">
         <div class="traffic-head">
           <h3>Saídas recentes</h3>
           <span class="ops-pill">{{ port_activity.stats.departed_count }}</span>
         </div>
         <div class="ops-list">
           {% for item in port_activity.departed[:2] %}
-            <article class="ops-card ops-card-departed">
+            <article class="ops-card">
               <div class="ops-card-head">
-                <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                <div class="planned-vessel-type">
+                  {% if item.ship_type_icon %}
+                    <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.ship_type_icon) }}" alt="{{ item.ship_type_label }}">
+                  {% endif %}
+                  <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                </div>
                 <span class="ops-tag">ATD {{ item.departure_label }}</span>
               </div>
-              <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
+              <p>Cais origem <strong>{{ item.berth_label }}</strong> → Destino <strong>{{ item.next_port or "--" }}</strong></p>
             </article>
           {% else %}
             <article class="ops-empty"><p>Sem saídas registadas.</p></article>
@@ -563,12 +578,17 @@
             <summary>Ver histórico recente</summary>
             <div class="ops-list ops-list-scroll">
               {% for item in port_activity.departed[2:] %}
-                <article class="ops-card ops-card-departed">
+                <article class="ops-card">
                   <div class="ops-card-head">
-                    <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    <div class="planned-vessel-type">
+                      {% if item.ship_type_icon %}
+                        <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ item.ship_type_icon) }}" alt="{{ item.ship_type_label }}">
+                      {% endif %}
+                      <h3><a class="inline-link" href="{{ url_for('port_calls.port_call_detail', port_call_id=item.id) }}">{{ item.vessel_name }}</a></h3>
+                    </div>
                     <span class="ops-tag">ATD {{ item.departure_label }}</span>
                   </div>
-                  <p>{{ item.berth_label }} → {{ item.next_port or "—" }}</p>
+                  <p>Cais origem <strong>{{ item.berth_label }}</strong> → Destino <strong>{{ item.next_port or "--" }}</strong></p>
                 </article>
               {% endfor %}
             </div>

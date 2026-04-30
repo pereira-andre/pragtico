@@ -17,7 +17,8 @@
     "O Fundeadouro Norte é a zona principal de espera de navios para acesso ao porto.",
     "As zonas de Tróia são contíguas e partilham o vértice K como fronteira comum.",
     "O fundeadouro de tráfego local destina-se apenas a embarcações auxiliares do porto, como lanchas, rebocadores, embarcações de pilotos e outras embarcações de apoio.",
-    "As coordenadas são fornecidas em WGS84 e Datum 73."
+    "As coordenadas são fornecidas em WGS84 e Datum 73.",
+    "Prática local: para navios de grande calado, especialmente acima de 9 m, o Fundeadouro Sul / Tróia é normalmente preferível por ter maior profundidade e mais espaço para girar; o Norte pode servir casos curtos, emergência ou navios destinados a cais próximos da cidade."
   ],
   "faq": [
     {
@@ -54,6 +55,11 @@
       "question": "Quem valida as requisições de manobra relacionadas com fundeadouros?",
       "answer": "Compete ao Piloto Coordenador validar as requisições de manobra relacionadas com fundeadouros, quando aplicável.",
       "keywords": ["piloto coordenador", "requisicoes", "manobra", "fundeadouros"]
+    },
+    {
+      "question": "Que fundeadouro recomendas para um navio de grande calado superior a 9 metros?",
+      "answer": "Para um navio de grande calado, especialmente superior a 9 metros, recomenda-se normalmente o Fundeadouro Sul / Tróia. É mais profundo e mais amplo, dando mais espaço para fundear e girar com segurança. O Fundeadouro Norte é possível em situações específicas, mas tem espaço útil mais limitado para navios grandes e tende a ser reservado para emergência, espera curta ou navios destinados a cais próximos da cidade.",
+      "keywords": ["grande calado", "superior a 9", "fundeadouro", "troia", "tróia", "norte", "profundidade"]
     }
   ]
 }

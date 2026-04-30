@@ -10,9 +10,10 @@ PASSWORD_HASH_METHOD = "scrypt"
 
 DEFAULT_CONVERSATION_TITLE = "Nova conversa"
 FEEDBACK_APPROVED = "approved"
+FEEDBACK_CORRECTED = "corrected"
 FEEDBACK_REVIEW = "review"
 FEEDBACK_IGNORED = "ignored"
-ALLOWED_FEEDBACK_STATUSES = {FEEDBACK_APPROVED, FEEDBACK_REVIEW, FEEDBACK_IGNORED}
+ALLOWED_FEEDBACK_STATUSES = {FEEDBACK_APPROVED, FEEDBACK_CORRECTED, FEEDBACK_REVIEW, FEEDBACK_IGNORED}
 PORT_CALL_STATUS_SCHEDULED = "scheduled"
 PORT_CALL_STATUS_IN_PORT = "in_port"
 PORT_CALL_STATUS_DEPARTED = "departed"
@@ -148,7 +149,20 @@ VESSEL_TYPE_META = (
     {
         "label": "Roll-on/Roll-off",
         "icon": "roll-on-roll-off.png",
-        "aliases": ("roll on roll off", "ro ro", "ro-ro", "ro ro pcc", "ro-ro / pcc", "pcc"),
+        "aliases": (
+            "roll on roll off",
+            "roll-on roll-off",
+            "ro ro",
+            "ro-ro",
+            "ro/ro",
+            "roro",
+            "roro pcc",
+            "ro ro pcc",
+            "ro-ro / pcc",
+            "pcc",
+            "pctc",
+            "car carrier",
+        ),
     },
     {
         "label": "Transporte especializado carga seca",

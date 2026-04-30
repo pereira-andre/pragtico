@@ -7,540 +7,50 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from domain.berth_layout import BERTH_OPTIONS, canonicalize_berth_label, is_anchorage_berth, is_known_berth_label
-
-
-ACTION_SPECS = {
-    # --- Escala (port_call) — Agente/Admin gerem ---
-    "create_port_call": {
-        "label": "Registar escala",
-        "roles": {"admin", "agente"},
-        "requires_target": False,
-    },
-    "edit_port_call": {
-        "label": "Editar escala",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-    "delete_port_call": {
-        "label": "Apagar escala",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-    # --- Entrada — Piloto/Admin operam ---
-    "approve_entry": {
-        "label": "Aprovar entrada",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "abort_entry": {
-        "label": "Abortar entrada",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "complete_entry": {
-        "label": "Confirmar entrada",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "entry_report": {
-        "label": "Registar manobra de entrada",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "edit_maneuver_report": {
-        "label": "Editar registo de manobra",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "delete_maneuver_report": {
-        "label": "Apagar registo de manobra",
-        "roles": {"admin"},
-        "requires_target": True,
-    },
-    # --- Saída — Agente planeia, Piloto/Admin operam ---
-    "schedule_departure": {
-        "label": "Planear saída",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-    "approve_departure": {
-        "label": "Aprovar saída",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "abort_departure": {
-        "label": "Abortar saída",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "complete_departure": {
-        "label": "Confirmar saída",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "departure_report": {
-        "label": "Registar manobra de saída",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    # --- Mudança de cais — Agente planeia, Piloto/Admin operam ---
-    "schedule_shift": {
-        "label": "Planear mudança",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-    "approve_shift": {
-        "label": "Aprovar mudança",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "abort_shift": {
-        "label": "Abortar mudança",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "complete_shift": {
-        "label": "Confirmar mudança",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    "shift_report": {
-        "label": "Registar manobra de mudança",
-        "roles": {"admin", "piloto"},
-        "requires_target": True,
-    },
-    # --- Edição de planeamento — Agente/Admin editam ---
-    "edit_maneuver_plan": {
-        "label": "Editar planeamento",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-    "delete_maneuver": {
-        "label": "Cancelar manobra",
-        "roles": {"admin", "agente"},
-        "requires_target": True,
-    },
-}
-
-GENERIC_ACTION_FAMILIES = (
-    ("approve", "approve"),
-    ("abort", "abort"),
-    ("cancel", "cancel"),
-    ("complete", "approve"),
-    ("confirm", "approve"),
-    ("report", "report"),
-    ("edit_plan", "edit_plan"),
-    ("edit_report", "edit_report"),
+from domain.chat_action_config import (
+    ABORT_FIELD_HINTS,
+    ACTION_SPECS,
+    DISPLAY_FIELD_LABELS,
+    FIELD_ALIASES,
+    GENERIC_ACTION_FAMILIES,
+    JSON_BLOCK_RE,
+    MANEUVER_ID_SENSITIVE_ACTIONS,
+    MANEUVER_REPORT_FIELD_HINTS,
+    MANEUVER_TYPES,
+    NESTED_FIELD_GROUPS,
+    OPERATIONAL_OBJECT_HINTS,
+    OPERATIONAL_QUERY_HINT_RE,
+    OPERATIONAL_STRONG_ACTION_HINT_RE,
+    OPERATIONAL_TIMING_QUERY_HINT_RE,
+    OPERATIONAL_WEAK_ACTION_HINT_RE,
+    PENDING_UPDATE_FIELD_ALIASES,
+    PORT_CALL_FIELD_HINTS,
+    QUERY_HINTS,
+    REQUIRED_FIELDS_BY_ACTION,
+    SLASH_COMMAND_ALIASES,
+    SLASH_COMMAND_FIELD_ALIASES,
+    TIME_ONLY_RE,
+    TIME_OR_STATUS_HINT_RE,
 )
-
-QUERY_HINTS = (
-    "qual",
-    "quais",
-    "como",
-    "quando",
-    "onde",
-    "porque",
-    "porquê",
-    "podes explicar",
-    "explica",
-    "consulta",
-    "mostra",
-    "ver",
+from domain.chat_action_templates import (
+    build_action_reply_template,
+    build_approval_reply_template,
+    build_command_abort_reply_template,
+    build_command_report_reply_template,
+    build_create_maneuver_reply_template,
+    build_delete_maneuver_reply_template,
+    build_delete_report_reply_template,
+    build_delete_scale_reply_template,
+    build_edit_maneuver_plan_reply_template,
+    build_edit_report_reply_template,
+    build_maneuver_report_reply_template,
+    build_port_call_reply_template,
+    build_scale_edit_reply_template,
+    build_slash_help,
+    build_validate_maneuver_reply_template,
+    display_missing_field_labels,
+    build_abort_reply_template,
 )
-OPERATIONAL_QUERY_HINT_RE = re.compile(
-    r"\b("
-    r"qual|quais|como|quando|onde|porque|"
-    r"a que horas|que horas|"
-    r"devo|devemos|posso|podemos|"
-    r"explica|consulta|sabendo que"
-    r")\b"
-)
-OPERATIONAL_STRONG_ACTION_HINT_RE = re.compile(
-    r"\b("
-    r"aprova|aprove|aprovar|"
-    r"aborta|abortar|cancela|cancelar|anula|anular|"
-    r"regista|registar|registra|"
-    r"cria|criar|"
-    r"apaga|apagar|remove|remover|"
-    r"altera|alterar|edita|editar|"
-    r"atualiza|actualiza|"
-    r"fecha|fechar|"
-    r"confirma|confirmar"
-    r")\b"
-)
-OPERATIONAL_WEAK_ACTION_HINT_RE = re.compile(
-    r"\b("
-    r"marca|marcar|agenda|agendar|"
-    r"planeia|planear|"
-    r"muda|mudar|mete|poe|põe|ajusta|"
-    r"prevista|previsto|planeada|planeado|pendente"
-    r")\b"
-)
-OPERATIONAL_TIMING_QUERY_HINT_RE = re.compile(
-    r"\b("
-    r"a que horas|que horas|quando|"
-    r"qual a antecedencia|qual a antecedencia de marcacao|"
-    r"pode atracar|podemos atracar|"
-    r"podemos marcar|marcar piloto|embarcar piloto|"
-    r"deve embarcar|deve marcar|"
-    r"reponto|preia mar|janela"
-    r")\b"
-)
-
-MANEUVER_TYPES = {"entry", "departure", "shift"}
-MANEUVER_ID_SENSITIVE_ACTIONS = {
-    "edit_maneuver_plan",
-    "delete_maneuver",
-    "entry_report",
-    "departure_report",
-    "shift_report",
-    "edit_maneuver_report",
-    "delete_maneuver_report",
-    "abort_entry",
-    "abort_departure",
-    "abort_shift",
-}
-JSON_BLOCK_RE = re.compile(r"\{.*\}", flags=re.DOTALL)
-TIME_OR_STATUS_HINT_RE = re.compile(
-    r"\b(\d{1,2}(?::|\s)\d{2}|hoje|amanha|amanhã|mesmo dia|previst\w*|pendente|aprovad\w*|abortad\w*)\b"
-)
-OPERATIONAL_OBJECT_HINTS = ("navio", "escala", "manobra", "entrada", "saida", "saída", "mudanca", "mudança")
-TIME_ONLY_RE = re.compile(r"^\d{1,2}:\d{2}$")
-PENDING_UPDATE_FIELD_ALIASES = {
-    "maneuver_id": [
-        "id",
-        "id da manobra",
-        "id manobra",
-        "manobra id",
-        "maneuver id",
-        "maneuver_id",
-    ],
-    "reference_code": [
-        "ref",
-        "referencia",
-        "referência",
-        "numero de escala",
-        "número de escala",
-        "codigo de escala",
-        "código de escala",
-        "reference_code",
-    ],
-    "vessel_name": ["nome do navio", "nome navio", "navio", "vessel_name"],
-    "maneuver_type": [
-        "tipo de manobra",
-        "tipo manobra",
-        "manobra",
-    ],
-    "change_reason": [
-        "motivo da alteracao",
-        "motivo da alteração",
-        "change_reason",
-        "motivo",
-    ],
-    "planned_at_local": [
-        "planned_at_local",
-        "hora prevista",
-        "nova hora prevista",
-    ],
-    "notes": ["notes", "nota", "observacoes", "observações", "obs"],
-    "constraints": ["restricoes", "restrições", "constraints"],
-    "berth": ["cais previsto", "cais", "planned_quay", "planned_berth", "quay", "berth", "pier"],
-    "destination_berth": ["cais destino", "destination_quay", "destination_berth", "destination_pier"],
-    "origin_berth": ["cais origem", "origin_quay", "origin_berth", "origin_pier"],
-    "origin": ["origem"],
-    "destination": ["destino"],
-    "next_port": ["proximo porto", "próximo porto", "próximo destino", "proximo destino", "next_port", "port_of_destination"],
-    "last_port": ["ultimo porto", "último porto", "last_port", "port_of_origin"],
-    "eta_local": ["eta de chegada", "eta chegada", "eta", "eta_local"],
-    "planned_departure_at_local": ["etd", "planned_departure_at_local"],
-    "maneuver_started_local": [
-        "inicio da manobra",
-        "início da manobra",
-        "inicio",
-        "início",
-        "hora de inicio",
-        "hora de início",
-        "start_time",
-        "maneuver_started_local",
-        "maneuver_started_at",
-    ],
-    "maneuver_finished_local": [
-        "fim da manobra",
-        "fim",
-        "hora de fim",
-        "end_time",
-        "maneuver_finished_local",
-        "maneuver_finished_at",
-    ],
-    "draft_m": [
-        "calado operacional",
-        "calado (operacional)",
-        "draft_operational",
-        "draft_operacional",
-        "calado_operacional",
-        "draft_m",
-        "draught",
-        "draft",
-        "calado",
-    ],
-    "tug_count": ["rebocadores", "reboques", "tug_count", "tugs", "numero de rebocadores"],
-    # Vessel data fields (for create_port_call)
-    "vessel_name": ["nome do navio", "nome navio", "nome", "vessel_name"],
-    "vessel_imo": ["imo", "vessel_imo"],
-    "vessel_call_sign": ["indicativo", "call_sign", "vessel_call_sign", "callsign", "indicative"],
-    "vessel_flag": ["bandeira", "flag", "vessel_flag"],
-    "vessel_type": ["tipo de navio", "tipo navio", "vessel_type", "tipo"],
-    "vessel_loa_m": ["loa", "loa (m)", "vessel_loa_m", "comprimento"],
-    "vessel_beam_m": ["boca", "boca (m)", "beam", "vessel_beam_m", "largura"],
-    "vessel_gt_t": ["gt", "gt (t)", "vessel_gt_t", "arqueacao bruta", "arqueação bruta"],
-    "vessel_dwt_t": ["dwt", "dwt (t)", "vessel_dwt_t", "deadweight"],
-    "vessel_bow_thruster": ["bow thruster", "thruster de proa", "propulsor de proa", "vessel_bow_thruster"],
-    "vessel_stern_thruster": ["stern thruster", "thruster de popa", "propulsor de popa", "vessel_stern_thruster"],
-    "vessel_max_draft_m": ["calado maximo", "calado máximo", "calado maximo (m)", "calado máximo (m)", "calado (m)", "max_draft", "vessel_max_draft_m"],
-}
-SLASH_COMMAND_ALIASES = {
-    "help": "help",
-    "avisos-locais": "local_warnings",
-    "ondulacao": "wave",
-    "ondulação": "wave",
-    "leitura-costeira": "wave",
-    "validar-manobra": "validate_maneuver",
-    "verificar-manobra": "validate_maneuver",
-    "verificar": "validate_maneuver",
-    "validar": "validate_maneuver",
-    "checklist-manobra": "validate_maneuver",
-    "consultar-escala": "consult_scale",
-    "consultar-manobra": "consult_maneuver",
-    "consultar-escala-custo": "consult_scale_cost",
-    "consultar-manobra-custo": "consult_maneuver_cost",
-    "consultar-navio": "consult_vessel",
-    "reportar_evento": "event_report",
-    "reportar-evento": "event_report",
-    "registar-escala": "register_scale",
-    "nova-escala": "register_scale",
-    "editar-escala": "edit_scale",
-    "apagar-escala": "delete_scale",
-    "criar-manobra": "create_maneuver",
-    "editar-manobra": "edit_maneuver",
-    "cancelar-manobra": "delete_maneuver",
-    "apagar-manobra": "delete_maneuver",
-    "aprovar": "approve_maneuver",
-    "registar-manobra": "create_report",
-    "editar-registo-manobra": "edit_report",
-    "apagar-registo-manobra": "delete_report",
-    "abortar": "abort_maneuver",
-    "abortar-manobra": "abort_maneuver",
-    "mares": "tides",
-    "meteorologia": "weather",
-    "regra": "rule",
-    "regras": "rule",
-}
-SLASH_COMMAND_FIELD_ALIASES = {
-    "maneuver_id": [
-        "id",
-        "id da manobra",
-        "id manobra",
-        "manobra id",
-        "maneuver id",
-        "maneuver_id",
-    ],
-    "reference_code": [
-        "ref",
-        "id da escala",
-        "id escala",
-        "scale id",
-        "port_call_id",
-        "referencia",
-        "referência",
-        "numero de escala",
-        "número de escala",
-        "codigo de escala",
-        "código de escala",
-        "reference_code",
-    ],
-    "maneuver_type": [
-        "tipo de manobra",
-        "tipo manobra",
-    ],
-}
-FIELD_ALIASES = {
-    "name": "vessel_name",
-    "nome": "vessel_name",
-    "nome_do_navio": "vessel_name",
-    "vessel": "vessel_name",
-    "ship": "vessel_name",
-    "ship_name": "vessel_name",
-    "nome_navio": "vessel_name",
-    "imo": "vessel_imo",
-    "call_sign": "vessel_call_sign",
-    "callsign": "vessel_call_sign",
-    "indicativo": "vessel_call_sign",
-    "indicative": "vessel_call_sign",
-    "flag": "vessel_flag",
-    "bandeira": "vessel_flag",
-    "tipo_de_navio": "vessel_type",
-    "loa": "vessel_loa_m",
-    "loa_m": "vessel_loa_m",
-    "vessel_loa": "vessel_loa_m",
-    "length_overall": "vessel_loa_m",
-    "length": "vessel_loa_m",
-    "breadth": "vessel_beam_m",
-    "beam": "vessel_beam_m",
-    "vessel_beam": "vessel_beam_m",
-    "boca": "vessel_beam_m",
-    "boca_m": "vessel_beam_m",
-    "gt": "vessel_gt_t",
-    "gt_t": "vessel_gt_t",
-    "vessel_gt": "vessel_gt_t",
-    "gross_tonnage": "vessel_gt_t",
-    "dwt": "vessel_dwt_t",
-    "dwt_t": "vessel_dwt_t",
-    "vessel_dwt": "vessel_dwt_t",
-    "deadweight": "vessel_dwt_t",
-    "bow_thruster": "vessel_bow_thruster",
-    "thruster_de_proa": "vessel_bow_thruster",
-    "propulsor_de_proa": "vessel_bow_thruster",
-    "stern_thruster": "vessel_stern_thruster",
-    "thruster_de_popa": "vessel_stern_thruster",
-    "propulsor_de_popa": "vessel_stern_thruster",
-    "draft": "draft_m",
-    "draught": "draft_m",
-    "vessel_draft": "draft_m",
-    "max_draft": "vessel_max_draft_m",
-    "eta": "eta_local",
-    "port": "berth",
-    "ship_type": "vessel_type",
-    "operational_draft": "draft_m",
-    "arrival_eta": "eta_local",
-    "arrival_time": "eta_local",
-    "estimated_arrival": "eta_local",
-    "estimated_time_of_arrival": "eta_local",
-    "eta_setubal": "eta_local",
-    "eta_de_chegada": "eta_local",
-    "berth": "berth",
-    "pier": "berth",
-    "quay": "berth",
-    "cais_previsto": "berth",
-    "planned_quay": "berth",
-    "planned_berth": "berth",
-    "quay_planned": "berth",
-    "berthing_quay": "berth",
-    "port_of_call": "berth",
-    "ata": "arrived_at_local",
-    "atd": "departed_at_local",
-    "etd": "planned_departure_at_local",
-    "planned_departure_at": "planned_departure_at_local",
-    "planned_shift_at": "planned_shift_at_local",
-    "planned_at": "planned_at_local",
-    "planned_datetime": "planned_at_local",
-    "start_time": "maneuver_started_local",
-    "end_time": "maneuver_finished_local",
-    "maneuver_started_at": "maneuver_started_local",
-    "maneuver_finished_at": "maneuver_finished_local",
-    "last_port_of_call": "last_port",
-    "ultimo_porto": "last_port",
-    "port_of_origin": "last_port",
-    "previous_port": "last_port",
-    "next_port_of_call": "next_port",
-    "proximo_porto": "next_port",
-    "proximo_destino": "next_port",
-    "port_of_destination": "next_port",
-    "destination_port": "next_port",
-    "next_destination": "next_port",
-    "origin_berth": "origin_berth",
-    "origin_pier": "origin_berth",
-    "origin_quay": "origin_berth",
-    "destination_berth": "destination_berth",
-    "destination_pier": "destination_berth",
-    "destination_quay": "destination_berth",
-    "number_of_tugs": "tug_count",
-    "tugs": "tug_count",
-    "rebocadores": "tug_count",
-    "operational_note": "notes",
-    "operational_notes": "notes",
-    "observation": "notes",
-    "observations": "notes",
-    "note": "notes",
-    "docking_depth": "draft_m",
-    "calado_operacional": "draft_m",
-    "draft_operational": "draft_m",
-    "draft_operacional": "draft_m",
-    "expected_berth": "berth",
-    "calado_maximo": "vessel_max_draft_m",
-    "calado_maximo_m": "vessel_max_draft_m",
-}
-NESTED_FIELD_GROUPS = {
-    "port_call_data",
-    "entry_data",
-    "departure_data",
-    "shift_data",
-    "report_data",
-    "plan_data",
-}
-REQUIRED_FIELDS_BY_ACTION = {
-    "create_port_call": {
-        "vessel_name",
-        "vessel_imo",
-        "vessel_call_sign",
-        "vessel_flag",
-        "vessel_type",
-        "vessel_loa_m",
-        "vessel_beam_m",
-        "vessel_gt_t",
-        "vessel_max_draft_m",
-        "vessel_dwt_t",
-        "eta_local",
-        "berth",
-        "last_port",
-        "next_port",
-    },
-    "abort_entry": {"aborted_reason"},
-    "abort_departure": {"aborted_reason"},
-    "abort_shift": {"aborted_reason"},
-    "entry_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
-    "departure_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
-    "shift_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
-    "edit_maneuver_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m", "change_reason"},
-    "schedule_departure": {"planned_departure_at_local", "next_port"},
-    "schedule_shift": {"planned_shift_at_local", "destination_berth"},
-    "edit_maneuver_plan": {"planned_at_local", "change_reason"},
-    "edit_port_call": {"change_reason"},
-}
-DISPLAY_FIELD_LABELS = {
-    "maneuver_id": "ID da manobra",
-    "target_port_call": "ref ou nome do navio",
-    "vessel_name": "nome do navio",
-    "vessel_imo": "IMO",
-    "vessel_call_sign": "indicativo",
-    "vessel_flag": "bandeira",
-    "vessel_type": "tipo de navio",
-    "vessel_loa_m": "LOA",
-    "vessel_beam_m": "boca",
-    "vessel_gt_t": "GT",
-    "vessel_max_draft_m": "calado máximo",
-    "vessel_dwt_t": "DWT",
-    "vessel_bow_thruster": "bow thruster",
-    "vessel_stern_thruster": "stern thruster",
-    "eta_local": "ETA",
-    "berth": "cais previsto",
-    "last_port": "último porto",
-    "next_port": "próximo porto",
-    "planned_at_local": "hora prevista",
-    "planned_departure_at_local": "hora prevista de saída",
-    "planned_shift_at_local": "hora prevista da mudança",
-    "destination_berth": "cais destino",
-    "origin": "origem",
-    "destination": "destino",
-    "origin_berth": "cais origem",
-    "constraints": "restrições",
-    "aborted_reason": "motivo",
-    "maneuver_started_local": "início da manobra",
-    "maneuver_finished_local": "fim da manobra",
-    "draft_m": "calado",
-    "tug_count": "rebocadores",
-    "notes": "observações",
-    "change_reason": "motivo da alteração",
-}
 
 
 def _lookup_key(value: Optional[str]) -> str:
@@ -629,40 +139,6 @@ def looks_like_operational_query(question: str) -> bool:
     if not clean:
         return False
     return bool(OPERATIONAL_QUERY_HINT_RE.search(clean) or "?" in question)
-
-
-PORT_CALL_FIELD_HINTS = {
-    "vessel_name",
-    "vessel_imo",
-    "vessel_call_sign",
-    "vessel_flag",
-    "vessel_type",
-    "vessel_loa_m",
-    "vessel_beam_m",
-    "vessel_gt_t",
-    "vessel_dwt_t",
-    "vessel_bow_thruster",
-    "vessel_stern_thruster",
-    "vessel_max_draft_m",
-    "eta_local",
-    "berth",
-    "last_port",
-    "next_port",
-    "draft_m",
-    "tug_count",
-    "notes",
-}
-
-MANEUVER_REPORT_FIELD_HINTS = {
-    "maneuver_started_local",
-    "maneuver_finished_local",
-    "draft_m",
-    "notes",
-}
-
-ABORT_FIELD_HINTS = {
-    "aborted_reason",
-}
 
 
 def looks_like_port_call_payload(question: str) -> bool:
@@ -874,10 +350,6 @@ def required_missing_fields(action: str, fields: Dict) -> List[str]:
     return sorted(missing)
 
 
-def display_missing_field_labels(fields: List[str]) -> List[str]:
-    return [DISPLAY_FIELD_LABELS.get(field, field) for field in fields]
-
-
 def required_target_missing_fields(action: str, target: Dict) -> List[str]:
     if action == "create_port_call":
         return []
@@ -912,11 +384,74 @@ def required_target_missing_fields(action: str, target: Dict) -> List[str]:
 
 def proposal_missing_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
     missing = required_missing_fields(action, fields) + required_target_missing_fields(action, target)
+    if _edit_action_needs_update_field(action, fields):
+        missing.append("update_field")
     deduped = []
     for item in missing:
         if item not in deduped:
             deduped.append(item)
     return display_missing_field_labels(deduped)
+
+
+def _edit_action_needs_update_field(action: str, fields: Dict) -> bool:
+    editable_fields_by_action = {
+        "edit_port_call": {
+            "vessel_name",
+            "eta_local",
+            "berth",
+            "last_port",
+            "next_port",
+            "notes",
+            "constraints",
+            "vessel_short_name",
+            "vessel_imo",
+            "vessel_call_sign",
+            "vessel_flag",
+            "vessel_type",
+            "vessel_loa_m",
+            "vessel_beam_m",
+            "vessel_gt_t",
+            "vessel_dwt_t",
+            "vessel_max_draft_m",
+            "vessel_bow_thruster",
+            "vessel_stern_thruster",
+        },
+        "edit_maneuver_plan": {
+            "planned_at_local",
+            "planned_departure_at_local",
+            "planned_shift_at_local",
+            "origin",
+            "destination",
+            "origin_berth",
+            "destination_berth",
+            "berth",
+            "next_port",
+            "draft_m",
+            "tug_count",
+            "constraints",
+            "notes",
+            "plan_observations",
+        },
+        "edit_maneuver_report": {
+            "maneuver_started_local",
+            "maneuver_finished_local",
+            "draft_m",
+            "notes",
+        },
+    }
+    editable_fields = editable_fields_by_action.get(action)
+    if not editable_fields:
+        return False
+    payload = fields or {}
+    for key in editable_fields:
+        value = payload.get(key)
+        if isinstance(value, list):
+            if value:
+                return False
+            continue
+        if " ".join(str(value or "").split()):
+            return False
+    return True
 
 
 def _invalid_berth_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
@@ -952,6 +487,9 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     clean = " ".join(str(raw_value or "").strip().split())
     if not clean:
         return ""
+    clean_key = _lookup_key(clean)
+    if _is_placeholder_field_value(canonical, clean, clean_key):
+        return ""
     clean = re.split(
         r"\bFicha do Navio\b|\bDados Operacionais\b|\bRestri[cç][õo]es?\b",
         clean,
@@ -973,14 +511,114 @@ def _clean_extracted_value(canonical: str, raw_value: str) -> str:
     return clean
 
 
+def _is_placeholder_field_value(canonical: str, value: str, lookup_value: str | None = None) -> bool:
+    clean_key = lookup_value if lookup_value is not None else _lookup_key(value)
+    if not clean_key:
+        return True
+    placeholder_keys = {
+        "dd mm aaaa hh mm",
+        "aaaa mm dd hh mm",
+        "sim nao desconhecido",
+        "yes no unknown",
+        "entrada saida mudanca",
+        "entry departure shift",
+        "saida mudanca",
+        "departure shift",
+    }
+    if clean_key in placeholder_keys:
+        return True
+    if canonical in {
+        "eta_local",
+        "planned_at_local",
+        "planned_departure_at_local",
+        "planned_shift_at_local",
+        "maneuver_started_local",
+        "maneuver_finished_local",
+    } and re.search(r"\b(dd|aaaa|yyyy|hh)\b", clean_key):
+        return True
+    if canonical == "maneuver_type":
+        type_hits = sum(
+            1
+            for token in ("entrada", "entry", "saida", "departure", "mudanca", "shift")
+            if re.search(rf"\b{token}\b", clean_key)
+        )
+        if type_hits > 1:
+            return True
+    if canonical == "constraints" and clean_key in {
+        "daylight gas estrategico",
+        "daylight gas estrategico opcoes",
+    }:
+        return True
+    if canonical in {"vessel_bow_thruster", "vessel_stern_thruster"} and clean_key in {
+        "sim nao",
+        "sim nao desconhecido",
+        "yes no",
+        "yes no unknown",
+    }:
+        return True
+    return False
+
+
+def _line_label_lookup(alias_map: Dict[str, List[str]]) -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    alias_items: List[tuple[str, str]] = []
+    for canonical, aliases in alias_map.items():
+        for alias in aliases:
+            clean_alias = _lookup_key(alias)
+            if clean_alias:
+                alias_items.append((clean_alias, canonical))
+    for clean_alias, canonical in sorted(alias_items, key=lambda item: len(item[0]), reverse=True):
+        lookup.setdefault(clean_alias, canonical)
+    return lookup
+
+
+def _extract_line_labelled_values(question: str, alias_map: Dict[str, List[str]]) -> Optional[Dict[str, object]]:
+    if "\n" not in (question or ""):
+        return None
+    alias_lookup = _line_label_lookup(alias_map)
+    extracted: Dict[str, object] = {}
+    saw_label = False
+    for raw_line in (question or "").splitlines():
+        line = raw_line.strip()
+        if not line or (":" not in line and "=" not in line):
+            continue
+        separator_indexes = [
+            index
+            for index in (line.find(":"), line.find("="))
+            if index >= 0
+        ]
+        if not separator_indexes:
+            continue
+        separator_index = min(separator_indexes)
+        raw_label = line[:separator_index].strip(" \t-*•")
+        canonical = alias_lookup.get(_lookup_key(raw_label))
+        if not canonical:
+            continue
+        saw_label = True
+        raw_value = line[separator_index + 1 :]
+        clean_value = _clean_extracted_value(canonical, raw_value)
+        if clean_value:
+            extracted[canonical] = clean_value
+    return extracted if saw_label else None
+
+
 def _extract_values_from_alias_map(question: str, alias_map: Dict[str, List[str]]) -> Dict[str, object]:
+    line_values = _extract_line_labelled_values(question, alias_map)
+    if line_values is not None:
+        return line_values
+
     text = " ".join((question or "").strip().split())
     if not text:
         return {}
     search_text, index_map = _normalized_ascii_text_with_index_map(text)
     raw_hits = []
     for canonical, aliases in alias_map.items():
-        for alias in aliases:
+        sorted_aliases = sorted(
+            aliases,
+            key=lambda item: len(_normalized_ascii_text(item)),
+            reverse=True,
+        )
+        for alias in sorted_aliases:
             needle = _normalized_ascii_text(alias).strip()
             pattern = re.compile(
                 rf"(^|[\s,;]){re.escape(needle)}\s*(?:=|:|\beh\b|\be\b|\bé\b)\s*",
@@ -1025,6 +663,8 @@ def _normalize_command_name(value: str) -> str:
 
 def _normalize_maneuver_type_label(value: str) -> str:
     clean = _lookup_key(value)
+    if _is_placeholder_field_value("maneuver_type", value, clean):
+        return ""
     mapping = {
         "entrada": "entry",
         "entry": "entry",
@@ -1079,8 +719,13 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
     if maneuver_type:
         positional_target["maneuver_type"] = maneuver_type
     if len(identifier_tokens) == 1:
-        positional_target["reference_code"] = identifier_tokens[0]
-        positional_target["maneuver_id"] = _normalize_maneuver_id(identifier_tokens[0])
+        identifier = identifier_tokens[0]
+        if _looks_like_scale_reference(identifier):
+            positional_target["reference_code"] = identifier
+        elif _looks_like_maneuver_id_token(identifier):
+            positional_target["maneuver_id"] = _normalize_maneuver_id(identifier)
+        else:
+            positional_target["reference_code"] = identifier
     elif len(identifier_tokens) > 1:
         reference_token = next((token for token in identifier_tokens if _looks_like_scale_reference(token)), identifier_tokens[-1])
         positional_target["reference_code"] = reference_token
@@ -1092,6 +737,29 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
 
 
 def _extract_slash_maneuver_type(value: str) -> str:
+    if "\n" in (value or ""):
+        alias_lookup = _line_label_lookup({"maneuver_type": SLASH_COMMAND_FIELD_ALIASES["maneuver_type"]})
+        for raw_line in (value or "").splitlines():
+            line = raw_line.strip()
+            if not line or (":" not in line and "=" not in line):
+                continue
+            separator_indexes = [
+                index
+                for index in (line.find(":"), line.find("="))
+                if index >= 0
+            ]
+            if not separator_indexes:
+                continue
+            separator_index = min(separator_indexes)
+            raw_label = line[:separator_index].strip(" \t-*•")
+            if alias_lookup.get(_lookup_key(raw_label)) == "maneuver_type":
+                return _normalize_maneuver_type_label(line[separator_index + 1 :])
+    labelled = _extract_values_from_alias_map(
+        value or "",
+        {"maneuver_type": SLASH_COMMAND_FIELD_ALIASES["maneuver_type"]},
+    )
+    if "maneuver_type" in labelled:
+        return _normalize_maneuver_type_label(str(labelled.get("maneuver_type") or ""))
     match = re.search(
         r"\btipo\s+de\s+manobra\s*(?:=|:|\beh\b|\be\b)\s*(entrada|saida|saída|mudanca|mudança|entry|departure|shift)\b",
         value or "",
@@ -1104,304 +772,6 @@ def _extract_slash_maneuver_type(value: str) -> str:
 
 def looks_like_slash_command(question: str) -> bool:
     return bool((question or "").strip().startswith("/"))
-
-
-def build_scale_edit_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para editar a escala (usa a Ref da escala):",
-            "Ref: ",
-            "Nome do navio: ",
-            "ETA de chegada: DD/MM/AAAA, HH:MM",
-            "Cais previsto: ",
-            "Último porto: ",
-            "Próximo destino: ",
-            "IMO: ",
-            "Indicativo: ",
-            "Bandeira: ",
-            "Tipo de navio: ",
-            "LOA (m): ",
-            "Boca (m): ",
-            "GT (t): ",
-            "DWT (t): ",
-            "Calado máximo (m): ",
-            "Bow thruster: sim | não | desconhecido",
-            "Stern thruster: sim | não | desconhecido",
-            "Observações: ",
-            "Motivo da alteração: ",
-        ]
-    )
-
-
-def build_delete_scale_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para apagar a escala (basta a Ref):",
-            "Ref: ",
-        ]
-    )
-
-
-def build_create_maneuver_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para criar a manobra (o ID é gerado automaticamente):",
-            "Ref: ",
-            "Tipo de manobra: saída | mudança",
-            "Hora prevista: DD/MM/AAAA, HH:MM",
-            "Destino: ",
-            "Calado: ",
-            "Rebocadores: ",
-            "Restrições: daylight, gas, estrategico",
-            "Observações: ",
-            "Nota: a origem segue automaticamente o último local conhecido do navio.",
-        ]
-    )
-
-
-def build_edit_maneuver_plan_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para editar o planeamento da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Hora prevista: DD/MM/AAAA, HH:MM",
-            "Origem: ",
-            "Destino: ",
-            "Calado: ",
-            "Rebocadores: ",
-            "Restrições: daylight, gas, estrategico",
-            "Observações: ",
-            "Motivo da alteração: ",
-        ]
-    )
-
-
-def build_delete_maneuver_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para cancelar a manobra pendente (basta o ID da manobra):",
-            "ID da manobra: ",
-        ]
-    )
-
-
-def build_approval_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para aprovar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Observações: ",
-        ]
-    )
-
-
-def build_command_report_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para registar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Início da manobra: DD/MM/AAAA, HH:MM",
-            "Fim da manobra: DD/MM/AAAA, HH:MM",
-            "Calado: ",
-            "Observações: ",
-        ]
-    )
-
-
-def build_edit_report_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para editar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Início da manobra: DD/MM/AAAA, HH:MM",
-            "Fim da manobra: DD/MM/AAAA, HH:MM",
-            "Calado: ",
-            "Observações: ",
-            "Motivo da alteração: ",
-        ]
-    )
-
-
-def build_command_abort_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para abortar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-            "Motivo: ",
-        ]
-    )
-
-
-def build_delete_report_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para apagar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-        ]
-    )
-
-
-def build_validate_maneuver_reply_template() -> str:
-    return "\n".join(
-        [
-            "Responde neste formato para validar a manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
-            "ID da manobra: ",
-            "Ref: ",
-            "Tipo de manobra: entrada | saída | mudança",
-        ]
-    )
-
-
-def build_action_reply_template(action: str, missing_fields: Optional[List[str]] = None) -> str:
-    if action == "create_port_call":
-        return build_port_call_reply_template()
-    if action == "edit_port_call":
-        return build_scale_edit_reply_template()
-    if action == "delete_port_call":
-        return build_delete_scale_reply_template()
-    if action in {"schedule_departure", "schedule_shift"}:
-        return build_create_maneuver_reply_template()
-    if action == "edit_maneuver_plan":
-        return build_edit_maneuver_plan_reply_template()
-    if action in {"approve_entry", "approve_departure", "approve_shift"}:
-        return build_approval_reply_template()
-    if action in {"entry_report", "departure_report", "shift_report"}:
-        return build_command_report_reply_template()
-    if action == "edit_maneuver_report":
-        return build_edit_report_reply_template()
-    if action in {"delete_maneuver_report"}:
-        return build_delete_report_reply_template()
-    if action in {"abort_entry", "abort_departure", "abort_shift"}:
-        return build_command_abort_reply_template()
-    if action in {"delete_maneuver"}:
-        return build_delete_maneuver_reply_template()
-    return ""
-
-
-def build_slash_help(role: str) -> str:
-    clean_role = (role or "").strip().lower()
-    lines = [
-        "Comandos disponíveis:",
-        "/help",
-        "  mostra esta ajuda",
-        "/avisos-locais [código]",
-        "  lista os avisos locais em vigor ou consulta um aviso específico pelo código",
-        "/ondulacao",
-        "  mostra a leitura costeira atual",
-        "/mares hoje",
-        "  mostra marés por dia ou data pedida",
-        "/meteorologia hoje",
-        "  mostra a previsão meteorológica",
-        "/regras",
-        "  lista os códigos de regras/instruções disponíveis",
-        "/regra 015",
-        "  consulta uma regra/instrução por código",
-        "/consultar-navio IMO ou nome",
-        "  mostra a ficha do navio conhecida no portal",
-        "/reportar_evento TAG. LOCAL. DESCRIPTION",
-        "  regista uma ocorrência operacional e pergunta por foto opcional",
-        "SOS",
-        "  inicia pedido de ajuda via WhatsApp com partilha de localização",
-        "CANCELAR SOS",
-        "  cancela pedido SOS pendente ou já enviado",
-        "",
-        "Escalas:",
-        "/consultar-escala REF",
-        "  mostra os dados básicos da escala",
-        "/consultar-escala-custo REF",
-        "  mostra a escala com estimativa de custos",
-    ]
-    if clean_role in {"admin", "agente"}:
-        lines.extend(
-            [
-                "/registar-escala",
-                "  cria uma nova escala; a entrada inicial fica associada à escala",
-            ]
-        )
-    if clean_role in {"admin", "agente"}:
-        lines.extend(
-            [
-                "/editar-escala",
-                "  atualiza os dados da escala; usa a Ref da escala",
-                "/apagar-escala",
-                "  remove a escala; basta a Ref da escala",
-            ]
-        )
-    lines.extend(["", "Manobras:"])
-    lines.extend(
-        [
-            "/validar-manobra",
-            "  valida uma manobra específica com checklist e histórico; usa ID da manobra ou Ref + Tipo",
-            "/verificar-manobra",
-            "  alias de /validar-manobra",
-            "/consultar-manobra ID",
-            "  mostra os dados básicos da manobra",
-            "/consultar-manobra-custo ID",
-            "  mostra a manobra com estimativa de custo",
-        ]
-    )
-    if clean_role in {"admin", "agente"}:
-        lines.extend(
-            [
-                "/criar-manobra",
-                "  cria uma saída ou mudança; o ID da manobra é automático",
-                "/apagar-manobra",
-                "  remove a manobra planeada; usa o ID da manobra (ou Ref + Tipo se não tiveres o ID)",
-            ]
-        )
-    if clean_role in {"admin", "agente"}:
-        lines.extend(
-            [
-                "/editar-manobra",
-                "  altera o planeamento; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
-            ]
-        )
-    if clean_role in {"admin", "piloto"}:
-        lines.extend(
-            [
-                "/aprovar",
-                "  aprova a manobra pendente; usa ID da manobra ou Ref + Tipo",
-                "/registar-manobra",
-                "  regista início, fim e calado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
-                "/editar-registo-manobra",
-                "  revê um registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
-                "/abortar",
-                "  cancela/aborta a manobra; alias: /abortar-manobra; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
-            ]
-        )
-    if clean_role == "admin":
-        lines.extend(
-            [
-                "/apagar-registo-manobra",
-                "  apaga o registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
-            ]
-        )
-    lines.extend(
-        [
-            "",
-            "Notas:",
-            "  Sem `/` o chat responde em modo Q&A técnico e não altera o portal.",
-            "  Ref identifica a escala. Se só tiveres o ID curto da escala, o bot também tenta resolvê-lo.",
-            "  Ao criar manobra não precisas de indicar ID; para manobra existente podes usar ID da manobra ou Ref + Tipo.",
-            "  Usa `/validar-manobra` quando quiseres a checklist determinística e a leitura histórica de uma manobra específica.",
-            "  Ao criar uma saída ou mudança, a origem segue automaticamente o último local conhecido do navio.",
-            "  Se houver mais do que uma manobra elegível do mesmo tipo, o bot exige o ID da manobra.",
-            "  Se o comando vier incompleto, o bot devolve o template certo para preencher.",
-        ]
-    )
-    return "\n".join(lines)
 
 
 def parse_slash_command(question: str, role: str) -> Optional[Dict]:
@@ -1429,6 +799,8 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         return {"intent": "query", "command": "tides", "argument": body}
     if command == "weather":
         return {"intent": "query", "command": "weather", "argument": body}
+    if command in {"planning", "planning_approved", "planning_pending"}:
+        return {"intent": "query", "command": command, "argument": body}
     if command == "rule":
         return {"intent": "query", "command": "rule", "argument": body or tail.strip()}
     if command in {
@@ -2318,21 +1690,28 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
     target = port_call or {}
     proposal_target = proposal.get("target", {}) or {}
     fields = proposal.get("fields") or {}
-    lines = [f"Proposta pronta para confirmar: {label}."]
-    if target or proposal_target.get("reference_code") or proposal_target.get("vessel_name"):
-        lines.append(
-            f"Escala: {(target.get('reference_code') if target else proposal_target.get('reference_code')) or '--'} · {(target.get('vessel_name') if target else proposal_target.get('vessel_name')) or '--'}."
-        )
-    if proposal_target.get("maneuver_id") or proposal.get("maneuver_id"):
-        lines.append(f"ID da manobra: {proposal_target.get('maneuver_id') or proposal.get('maneuver_id')}.")
-    if proposal.get("target", {}).get("maneuver_type"):
-        maneuver_type = proposal["target"]["maneuver_type"]
+    missing_fields = proposal.get("missing_fields") or []
+    if missing_fields:
+        lines = [f"Comando recebido: {label}. Ainda não está pronto para confirmar."]
+    else:
+        lines = [f"Proposta pronta para confirmar: {label}."]
+
+    recognized: List[str] = []
+    scale_reference = (target.get("reference_code") if target else proposal_target.get("reference_code")) or ""
+    vessel_name = (target.get("vessel_name") if target else proposal_target.get("vessel_name")) or ""
+    if scale_reference or vessel_name:
+        recognized.append(f"Escala: {scale_reference or '--'} · {vessel_name or '--'}")
+    maneuver_id = proposal_target.get("maneuver_id") or proposal.get("maneuver_id")
+    if maneuver_id:
+        recognized.append(f"ID da manobra: {maneuver_id}")
+    maneuver_type = proposal.get("target", {}).get("maneuver_type")
+    if maneuver_type:
         maneuver_label = {
             "entry": "entrada",
             "departure": "saída",
             "shift": "mudança",
         }.get(maneuver_type, maneuver_type)
-        lines.append(f"Manobra: {maneuver_label}.")
+        recognized.append(f"Tipo de manobra: {maneuver_label}")
     for key, value in fields.items():
         if value in ("", None, []):
             continue
@@ -2340,21 +1719,27 @@ def format_action_summary(proposal: Dict, port_call: Optional[Dict] = None) -> s
             clean_value = ", ".join(value)
         else:
             clean_value = str(value)
-        lines.append(f"{DISPLAY_FIELD_LABELS.get(key, key)}: {clean_value}.")
-    if proposal.get("reason"):
-        clean_reason = " ".join(str(proposal["reason"]).strip().split())
-        if clean_reason:
-            suffix = "" if clean_reason[-1:] in ".!?" else "."
-            lines.append(f"Nota: {clean_reason}{suffix}")
-    missing_fields = proposal.get("missing_fields") or []
+        recognized.append(f"{DISPLAY_FIELD_LABELS.get(key, key)}: {clean_value}")
+    if recognized:
+        lines.append("")
+        lines.append("Elementos reconhecidos:")
+        lines.extend(f"- {item}." if not item.endswith(".") else f"- {item}" for item in recognized)
+    else:
+        lines.append("")
+        lines.append("Elementos reconhecidos: nenhum dado operacional preenchido.")
+
     if missing_fields:
-        lines.append("Dados ainda em falta: " + ", ".join(missing_fields) + ".")
+        lines.append("")
+        lines.append("Em falta/corrigir:")
+        lines.extend(f"- {item}." for item in missing_fields)
         template = build_action_reply_template(action, missing_fields)
         if template:
             lines.append("")
             lines.append(template)
-        lines.append("Completa os dados em falta e responde de volta para eu atualizar a proposta.")
+        lines.append("")
+        lines.append("Completa só os campos em falta ou corrige os campos indicados.")
     else:
+        lines.append("")
         lines.append("Confirma para aplicar a alteração no portal.")
     return "\n".join(lines)
 
@@ -2370,37 +1755,3 @@ def looks_like_port_call_registration_request(question: str) -> bool:
     if re.search(r"\b(regist\w*\s+(esta\s+)?escala|nova escala|cria\w*\s+escala|register scale)\b", clean):
         return True
     return looks_like_port_call_payload(question)
-
-
-def build_port_call_reply_template(missing_fields: Optional[List[str]] = None) -> str:
-    lines = [
-        "Se preferires, responde já neste formato e eu trato do registo:",
-        "Nome: ",
-        "ETA de chegada: DD/MM/AAAA, HH:MM",
-        "Cais previsto: ",
-        "Último porto: ",
-        "Próximo destino: ",
-        "IMO: ",
-        "Indicativo: ",
-        "Bandeira: ",
-        "Tipo de navio: ",
-        "LOA (m): ",
-        "Boca (m): ",
-        "GT (t): ",
-        "DWT (t): ",
-        "Calado (m): ",
-        "Bow thruster: sim | não | desconhecido",
-        "Stern thruster: sim | não | desconhecido",
-        "Calado (operacional): ",
-        "Rebocadores: ",
-        "Observações: ",
-    ]
-    return "\n".join(lines)
-
-
-def build_maneuver_report_reply_template(missing_fields: Optional[List[str]] = None) -> str:
-    return build_command_report_reply_template()
-
-
-def build_abort_reply_template(missing_fields: Optional[List[str]] = None) -> str:
-    return build_command_abort_reply_template()

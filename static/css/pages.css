@@ -2712,6 +2712,11 @@
   align-content: start;
 }
 
+.admin-casebook-card:target {
+  border-color: rgba(179, 66, 42, 0.45);
+  box-shadow: 0 0 0 3px rgba(179, 66, 42, 0.12);
+}
+
 .admin-casebook-route {
   margin: 4px 0 0;
   color: var(--muted);
@@ -3802,9 +3807,19 @@ button:hover {
   color: #0a6c66;
 }
 
+.feedback-status.is-corrected {
+  background: rgba(10, 108, 102, 0.12);
+  color: #0a6c66;
+}
+
 .feedback-status.is-review {
   background: rgba(179, 66, 42, 0.14);
   color: #9f371f;
+}
+
+.feedback-status.is-ignored {
+  background: rgba(95, 105, 104, 0.14);
+  color: var(--muted);
 }
 
 .feedback-note,
@@ -4067,6 +4082,22 @@ button:hover {
 .admin-bot-v2 .admin-bot-health-hero {
   gap: 18px;
 }
+.admin-bot-live-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.admin-bot-live-clock strong {
+  color: var(--text);
+  font-weight: 800;
+}
 .admin-bot-health-grid {
   display: grid;
   grid-template-columns: minmax(160px, 1.1fr) repeat(4, minmax(0, 1fr));
@@ -4126,6 +4157,195 @@ button:hover {
   color: var(--muted);
 }
 
+/* Monitor */
+.admin-bot-monitor,
+.admin-bot-process {
+  display: grid;
+  gap: 16px;
+}
+.admin-bot-monitor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 14px;
+}
+.admin-bot-runtime-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.admin-bot-runtime-card,
+.admin-bot-live-detail,
+.admin-bot-process-step,
+.admin-bot-health-breakdown,
+.admin-bot-context-mix,
+.admin-bot-config-pill {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.admin-bot-runtime-card {
+  display: grid;
+  gap: 7px;
+  min-height: 118px;
+  padding: 14px;
+  align-content: start;
+}
+.admin-bot-runtime-label,
+.admin-bot-config-pill span,
+.admin-bot-context-row span,
+.admin-bot-breakdown-row span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.admin-bot-runtime-card strong {
+  font-size: 1.35rem;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.admin-bot-runtime-card small,
+.admin-bot-live-detail span,
+.admin-bot-process-step p {
+  color: var(--muted);
+  line-height: 1.35;
+}
+.admin-bot-state-online {
+  border-color: rgba(34, 128, 82, 0.28);
+}
+.admin-bot-state-degraded {
+  border-color: rgba(217, 151, 46, 0.34);
+}
+.admin-bot-state-offline {
+  border-color: rgba(179, 66, 42, 0.34);
+}
+.admin-bot-health-breakdown {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+}
+.admin-bot-score-ring {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(11, 20, 28, 0.96) 58%, transparent 60%),
+    conic-gradient(var(--accent) var(--score), rgba(255, 255, 255, 0.1) 0);
+}
+.admin-bot-score-ring span {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.admin-bot-breakdown-bars,
+.admin-bot-context-bars {
+  display: grid;
+  gap: 10px;
+}
+.admin-bot-breakdown-row,
+.admin-bot-context-row {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.8fr) minmax(110px, 1.5fr) minmax(42px, auto);
+  gap: 10px;
+  align-items: center;
+}
+.admin-bot-breakdown-row strong,
+.admin-bot-context-row strong {
+  text-align: right;
+}
+.admin-bot-bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.admin-bot-bar-fill {
+  display: block;
+  width: var(--bar);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.admin-bot-bar-fill.admin-bot-state-degraded {
+  background: #d9972e;
+}
+.admin-bot-bar-fill.admin-bot-state-offline {
+  background: #b3422a;
+}
+.admin-bot-live-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 10px;
+}
+.admin-bot-live-detail {
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  align-content: start;
+}
+.admin-bot-live-detail strong {
+  font-size: 0.92rem;
+}
+
+/* Process */
+.admin-bot-process-flow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.admin-bot-process-step {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-height: 155px;
+  padding: 14px;
+  align-content: start;
+}
+.admin-bot-process-index {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(10, 108, 102, 0.18);
+  color: var(--accent);
+  font-weight: 900;
+}
+.admin-bot-process-step strong {
+  font-size: 1rem;
+}
+.admin-bot-process-step p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.admin-bot-context-mix {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+}
+.admin-bot-context-mix h3 {
+  margin: 2px 0 0;
+}
+.admin-bot-config-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.admin-bot-config-pill {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+}
+.admin-bot-config-pill strong {
+  font-size: 1rem;
+}
+
 /* Playground */
 .admin-bot-playground {
   display: grid;
@@ -4147,7 +4367,8 @@ button:hover {
   line-height: 1.55;
   font-size: 0.96rem;
 }
-.admin-bot-playground-sources {
+.admin-bot-playground-sources,
+.admin-bot-playground-trace {
   margin-top: 10px;
 }
 .admin-bot-playground-trace {
@@ -4170,6 +4391,29 @@ button:hover {
   gap: 4px;
   color: var(--muted);
   font-size: 0.86rem;
+}
+.admin-bot-trace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.admin-bot-trace-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+.admin-bot-trace-card strong {
+  font-size: 0.88rem;
+}
+.admin-bot-trace-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 /* Sources grid */
@@ -4346,6 +4590,80 @@ button:hover {
 }
 
 /* Quality */
+.admin-bot-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.admin-bot-quality-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+.admin-bot-quality-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-status-facts.compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.admin-status-facts.compact .admin-status-fact {
+  padding: 8px 9px;
+  border-radius: 10px;
+}
+.admin-bot-protected-collapse {
+  margin-bottom: 12px;
+}
+.admin-bot-protected-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.admin-bot-protected-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+.admin-bot-protected-list strong {
+  display: block;
+  font-size: 0.9rem;
+}
+.admin-bot-protected-list p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.admin-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  background: var(--muted);
+}
+.admin-status-dot.is-online {
+  background: #22c55e;
+}
+.admin-status-dot.is-degraded {
+  background: #f59e0b;
+}
+.admin-status-dot.is-offline {
+  background: #ef4444;
+}
 .admin-bot-failure-list {
   list-style: none;
   padding: 0;
@@ -4359,11 +4677,43 @@ button:hover {
   background: rgba(179, 66, 42, 0.06);
   border: 1px solid rgba(179, 66, 42, 0.2);
   display: grid;
-  gap: 4px;
+  gap: 8px;
+}
+.admin-bot-failure-head,
+.admin-bot-failure-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .admin-bot-failure-list .admin-bot-failure-question {
   margin: 0;
   font-weight: 600;
+}
+.admin-bot-failure-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.admin-bot-failure-compare div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 9px 10px;
+}
+.admin-bot-failure-compare span,
+.admin-bot-failure-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.admin-bot-failure-compare p {
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+.admin-bot-failure-meta a {
+  color: var(--accent);
+  text-decoration: none;
 }
 
 /* Toolbox */
@@ -4401,6 +4751,14 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
+}
+.admin-bot-setting-grid label {
+  align-content: start;
+}
+.admin-bot-setting-grid small {
+  display: block;
+  margin-top: 5px;
+  line-height: 1.35;
 }
 .admin-bot-toolbox-actions {
   display: flex;
@@ -4446,6 +4804,13 @@ button:hover {
 
 @media (max-width: 960px) {
   .admin-bot-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-bot-monitor-grid,
+  .admin-bot-context-mix {
+    grid-template-columns: 1fr;
+  }
+  .admin-bot-process-flow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .admin-bot-event {
@@ -4746,5 +5111,21 @@ button:hover {
   }
   .admin-bot-map-group-side {
     justify-items: start;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-bot-health-breakdown,
+  .admin-bot-config-strip,
+  .admin-bot-process-flow {
+    grid-template-columns: 1fr;
+  }
+  .admin-bot-breakdown-row,
+  .admin-bot-context-row {
+    grid-template-columns: 1fr;
+  }
+  .admin-bot-breakdown-row strong,
+  .admin-bot-context-row strong {
+    text-align: left;
   }
 }

@@ -130,6 +130,8 @@ def load_eval_cases(path: str | Path) -> list[dict]:
                     "source": str(item.get("source") or "").strip(),
                     "updated_by": str(item.get("updated_by") or "").strip(),
                     "source_message_id": str(item.get("source_message_id") or "").strip(),
+                    "eval_type": str(item.get("eval_type") or "companion").strip() or "companion",
+                    "expected_answer_origin": str(item.get("expected_answer_origin") or "").strip(),
                 }
             )
     return cases
@@ -168,6 +170,8 @@ def load_eval_cases_from_store(store, *, source: str = "") -> list[dict]:
                     "source": str(item.get("source") or "").strip(),
                     "updated_by": str(item.get("updated_by") or "").strip(),
                     "source_message_id": str(item.get("source_message_id") or "").strip(),
+                    "eval_type": str(item.get("eval_type") or "companion").strip() or "companion",
+                    "expected_answer_origin": str(item.get("expected_answer_origin") or "").strip(),
                 }
             )
     return cases
@@ -276,26 +280,47 @@ def remove_feedback_correction_eval(
 
 def evaluate_companion_case(case: dict, knowledge_dir: str | Path) -> dict:
     knowledge_dir = str(knowledge_dir)
-    companion = load_document_companion(case["document"], knowledge_dir)
-    answer = build_companion_answer(case["question"], companion) if companion else ""
+    eval_type = str(case.get("eval_type") or "companion").strip() or "companion"
+    answer_origin = "document_companion"
+    if eval_type == "direct_operational":
+        from core.operational_sources import answer_direct_operational_query
+
+        result = answer_direct_operational_query(case["question"]) or {}
+        answer = str(result.get("answer") or "")
+        answer_origin = str(result.get("answer_origin") or "")
+    else:
+        companion = load_document_companion(case["document"], knowledge_dir)
+        answer = build_companion_answer(case["question"], companion) if companion else ""
     answer_lower = answer.casefold()
     missing = [item for item in case["expected_substrings"] if item.casefold() not in answer_lower]
     coverage, missing_terms = _term_coverage(answer, case.get("expected_answer", ""))
     expected_answer = str(case.get("expected_answer") or "").strip()
+    expected_answer_origin = str(case.get("expected_answer_origin") or "").strip()
     if expected_answer and case["expected_substrings"]:
         semantic_pass = coverage >= 0.35
     elif expected_answer:
         semantic_pass = coverage >= 0.55
     else:
         semantic_pass = True
+    origin_pass = not expected_answer_origin or answer_origin == expected_answer_origin
     return {
         "document": case["document"],
         "question": case["question"],
         "answer": answer,
+        "eval_type": eval_type,
+        "answer_origin": answer_origin,
+        "expected_answer_origin": expected_answer_origin,
+        "expected_answer": expected_answer,
+        "expected_substrings": list(case.get("expected_substrings") or []),
+        "source": str(case.get("source") or "").strip(),
+        "updated_by": str(case.get("updated_by") or "").strip(),
+        "source_message_id": str(case.get("source_message_id") or "").strip(),
+        "origin": str(case.get("origin") or "").strip(),
+        "origin_label": str(case.get("origin_label") or "").strip(),
         "missing_substrings": missing,
         "missing_terms": missing_terms,
         "term_coverage": round(coverage, 3),
-        "passed": not missing and semantic_pass and bool(answer.strip()),
+        "passed": not missing and semantic_pass and origin_pass and bool(answer.strip()),
     }
 
 

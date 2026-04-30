@@ -17,7 +17,8 @@
     "10,0 metros (zona dos cabeços 20 a 38).",
     "10,0 metros, praticável em qualquer maré.",
     "10,0 metros, praticável em qualquer maré.",
-    "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1."
+    "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1.",
+    "No TMS 1 são utilizadas defensas de borracha do tipo Yokohama."
   ],
   "faq": [
     {
@@ -133,6 +134,17 @@
         "rampa",
         "separacao",
         "tms1"
+      ]
+    },
+    {
+      "question": "Qual o tipo de defensas que o TMS 1 dispõe?",
+      "answer": "No TMS 1 são utilizadas defensas de borracha do tipo Yokohama.",
+      "keywords": [
+        "defensas",
+        "borracha",
+        "yokohama",
+        "tms1",
+        "tipo de defensas"
       ]
     },
     {

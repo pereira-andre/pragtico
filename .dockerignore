@@ -8,6 +8,14 @@ __pycache__/
 .DS_Store
 data/
 .env
+.env.*
 pgdata/
 docs/
 tests/
+scripts/
+TODO*
+bot_report*
+readme_*.txt
+README.md
+Makefile
+docker-compose.yml

@@ -105,7 +105,12 @@ def _conversation_export_text(conversation: dict, messages: list[dict]) -> str:
             lines.append("Fontes: " + ", ".join(citations))
         feedback_status = (message.get("feedback_status") or "").strip()
         if feedback_status:
-            feedback_label = "Aprovada" if feedback_status == "approved" else "Rever"
+            feedback_label = {
+                "approved": "Aprovada",
+                "corrected": "Corrigida",
+                "review": "Rever sem reutilizar",
+                "ignored": "Ignorada",
+            }.get(feedback_status, feedback_status)
             feedback_note = (message.get("feedback_note") or "").strip()
             feedback_correction = (message.get("feedback_correction") or "").strip()
             parts = []
@@ -527,7 +532,7 @@ def delete_all_conversations():
 @bp.route("/api/messages/<message_id>/feedback", methods=["POST"])
 @login_required
 def api_message_feedback(message_id: str):
-    """API para submeter feedback de aprovação ou revisão numa mensagem do assistente."""
+    """API para submeter feedback governado numa mensagem do assistente."""
     payload = request.get_json(silent=True) or {}
     conversation_id = (payload.get("conversation_id") or "").strip()
     feedback_status = (payload.get("feedback_status") or "").strip().lower()
@@ -536,10 +541,16 @@ def api_message_feedback(message_id: str):
     feedback_correction_document = (payload.get("feedback_correction_document") or "").strip()
     if not conversation_id:
         return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
-    if feedback_status not in {"approved", "review"}:
+    if feedback_status not in {"approved", "corrected", "review", "ignored"}:
         return jsonify({"error": flash_error_message("Estado de feedback inválido.")}), 400
-    if feedback_status == "review" and not feedback_note and not feedback_correction:
-        return jsonify({"error": flash_error_message("Ao pedir revisão indica o motivo ou a resposta corrigida.")}), 400
+    if feedback_status == "corrected" and not feedback_correction:
+        return jsonify({"error": flash_error_message("Para corrigir, escreve a resposta corrigida reutilizável.")}), 400
+    if feedback_status == "review" and not feedback_note:
+        return jsonify({
+            "error": flash_error_message(
+                "Para manter em revisão, indica o motivo. Para gerar outra resposta, usa Nova tentativa."
+            )
+        }), 400
     try:
         message = services.store.update_message_feedback(
             username=session["username"], conversation_id=conversation_id,
@@ -565,6 +576,89 @@ def api_message_feedback(message_id: str):
         _utc_iso_to_label(feedback_updated_at) if feedback_updated_at else ""
     )
     return jsonify(payload)
+
+
+def _assistant_message_revision_context(username: str, conversation_id: str, message_id: str) -> dict:
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        raise ValueError("Conversa não encontrada.")
+    messages = services.store.list_messages(username, conversation_id)
+    target_index = next(
+        (
+            index
+            for index, item in enumerate(messages)
+            if str(item.get("id") or "") == str(message_id) and item.get("role") == "assistant"
+        ),
+        None,
+    )
+    if target_index is None:
+        raise ValueError("Resposta não encontrada.")
+    previous_user = next(
+        (
+            item
+            for item in reversed(messages[:target_index])
+            if item.get("role") == "user"
+        ),
+        None,
+    )
+    if not previous_user:
+        raise ValueError("Não encontrei a pergunta original dessa resposta.")
+    target_message = messages[target_index]
+    return {
+        "original_question": str(previous_user.get("content") or "").strip(),
+        "previous_answer": str(target_message.get("content") or "").strip(),
+        "target_message_id": str(target_message.get("id") or ""),
+    }
+
+
+@bp.route("/api/messages/<message_id>/retry", methods=["POST"])
+@login_required
+@rate_limit(api_limiter)
+def api_retry_message_answer(message_id: str):
+    """Pedir ao bot uma nova tentativa antes de gravar feedback definitivo."""
+    payload = request.get_json(silent=True) or {}
+    conversation_id = (payload.get("conversation_id") or "").strip()
+    user_note = (payload.get("note") or "").strip()
+    if not conversation_id:
+        return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
+    try:
+        revision_context = _assistant_message_revision_context(
+            session["username"],
+            conversation_id,
+            message_id,
+        )
+        revision_context["user_note"] = user_note
+        retry_prompt = "Revê a tua resposta anterior e tenta responder de novo sem repetir a mesma síntese."
+        if user_note:
+            retry_prompt += f" Observação: {user_note}"
+        result = handle_chat_turn(
+            username=session["username"],
+            role=session.get("role", "piloto"),
+            question=retry_prompt,
+            conversation_id=conversation_id,
+            channel="web",
+            allow_mutations=True,
+            revision_context=revision_context,
+        )
+    except RuntimeError as exc:
+        log_error_event(
+            logger,
+            "CHAT_RETRY_FAILED",
+            detail=str(exc),
+            channel="web",
+            username=session["username"],
+            endpoint="/api/messages/<message_id>/retry",
+        )
+        return jsonify(error_payload("CHAT_RUNTIME_FAILED", detail=str(exc), expose_detail=True)), 500
+    except ValueError as exc:
+        return jsonify({"error": flash_error_message(str(exc))}), 400
+
+    shell = _conversation_shell(session["username"], result["conversation_id"])
+    return jsonify({
+        **result,
+        "retry_prompt": retry_prompt,
+        **shell,
+    })
 
 
 @bp.route("/api/chat/pending-action")
@@ -692,7 +786,19 @@ def api_chat():
             channel="web",
             allow_mutations=True,
         )
+    except (PermissionError, ValueError) as exc:
+        return jsonify({"error": flash_error_message(str(exc))}), 400
     except RuntimeError as exc:
+        log_error_event(
+            logger,
+            "CHAT_RUNTIME_FAILED",
+            detail=str(exc),
+            channel="web",
+            username=username,
+            endpoint="/api/chat",
+        )
+        return jsonify(error_payload("CHAT_RUNTIME_FAILED", detail=str(exc), expose_detail=True)), 500
+    except Exception as exc:
         log_error_event(
             logger,
             "CHAT_RUNTIME_FAILED",

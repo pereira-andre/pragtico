@@ -229,5 +229,17 @@ Pergunta: Quem valida as requisições de manobra relacionadas com fundeadouros?
 Resposta: O Piloto Coordenador, quando aplicável.
 
 ================================================================================
+NOTA PRÁTICA LOCAL — NAVIOS DE GRANDE CALADO
+================================================================================
+
+Para navios de grande calado, especialmente acima de 9 metros, o Fundeadouro
+Sul / Tróia é normalmente a recomendação operacional preferível porque oferece
+maior profundidade e área mais ampla para fundear e girar com segurança.
+
+O Fundeadouro Norte continua possível em situações específicas, mas o espaço útil
+mais profundo é limitado para navios grandes. Em prática local tende a ser usado
+para emergência, espera curta, ou navios destinados a cais próximos da cidade.
+
+================================================================================
 FIM DO DOCUMENTO IT-015 — FUNDEADOUROS DO PORTO DE SETÚBAL
 ================================================================================

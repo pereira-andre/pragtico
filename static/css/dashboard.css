@@ -11,10 +11,6 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.ops-card-departed {
-  background: rgba(255, 255, 255, 0.03);
-}
-
 .ops-card-event {
   background: rgba(255, 255, 255, 0.04);
 }
@@ -967,10 +963,17 @@
 .constraint-option img,
 .constraint-badge img,
 .planned-vessel-type img,
-.scale-inline-meta img {
+.scale-inline-meta img,
+.scale-type-chip img {
   width: 20px;
   height: 20px;
   object-fit: contain;
+}
+
+.scale-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .planning-optional-box {
@@ -1019,6 +1022,318 @@
   background: rgba(9, 24, 44, 0.08);
   overflow-x: auto;
   white-space: pre-wrap;
+}
+
+.vessel-catalog-list {
+  gap: 12px;
+}
+
+.vessel-catalog-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.vessel-catalog-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.vessel-catalog-summary-row::-webkit-details-marker {
+  display: none;
+}
+
+.vessel-catalog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.vessel-catalog-title img,
+.vessel-print-heading img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.vessel-catalog-title strong {
+  display: block;
+}
+
+.vessel-catalog-title small {
+  display: block;
+  color: var(--muted);
+}
+
+.vessel-catalog-card-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.vessel-management-panel {
+  margin-top: 18px;
+}
+
+.vessel-management-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 16, 29, 0.24);
+}
+
+.vessel-management-toolbar .mini-button {
+  width: auto !important;
+}
+
+.vessel-management-toolbar .mini-button.is-active {
+  background: rgba(10, 108, 102, 0.2) !important;
+  border-color: rgba(10, 108, 102, 0.36) !important;
+  color: var(--accent-strong) !important;
+}
+
+.vessel-management-toolbar .danger-button.is-active {
+  background: rgba(179, 66, 42, 0.24) !important;
+  border-color: rgba(179, 66, 42, 0.42) !important;
+  color: #fff !important;
+}
+
+.vessel-management-stage {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vessel-management-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed rgba(130, 160, 195, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.vessel-management-pane {
+  display: none;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.vessel-management-pane.is-active {
+  display: grid;
+}
+
+.vessel-management-pane-head,
+.vessel-edit-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vessel-management-pane-head h3,
+.vessel-edit-card-head h3 {
+  margin: 2px 0 0;
+}
+
+.vessel-management-pane-head .mini-button,
+.vessel-edit-card-head .mini-button,
+.vessel-delete-all-pane .danger-button {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.vessel-delete-all-pane {
+  border-color: rgba(179, 66, 42, 0.28);
+  background: rgba(179, 66, 42, 0.08);
+}
+
+.vessel-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vessel-table-panel {
+  margin-top: 18px;
+}
+
+.planned-table.vessel-table {
+  min-width: 1120px;
+}
+
+.planned-table.vessel-table th,
+.planned-table.vessel-table td {
+  padding: 9px 12px;
+}
+
+.planned-table.vessel-table td {
+  vertical-align: top;
+}
+
+.vessel-table td strong,
+.vessel-table td span,
+.vessel-table td small {
+  display: block;
+}
+
+.vessel-table .vessel-data-row:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.vessel-table .vessel-data-row:hover td {
+  background: rgba(10, 108, 102, 0.08);
+}
+
+.vessel-actions-th,
+.vessel-actions-cell {
+  width: 74px;
+  text-align: right;
+}
+
+.vessel-actions-cell {
+  position: relative;
+}
+
+.vessel-row-menu {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.vessel-row-menu .chat-sidebar-menu-body {
+  min-width: 190px;
+  text-align: left;
+}
+
+.vessel-row-menu form {
+  margin: 0;
+}
+
+.vessel-row-menu .danger-menu-link {
+  width: 100%;
+  border: 0;
+  color: #fecaca;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(179, 66, 42, 0.18);
+}
+
+.vessel-row-menu .danger-menu-link:hover {
+  background: rgba(179, 66, 42, 0.28);
+}
+
+.vessel-edit-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(130, 160, 195, 0.14);
+}
+
+.vessel-edit-empty {
+  margin: 0;
+}
+
+.vessel-edit-card {
+  display: none;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 16, 29, 0.26);
+}
+
+.vessel-edit-card.is-active {
+  display: grid;
+}
+
+.vessel-fact-mini {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vessel-print-sheet {
+  display: grid;
+  gap: 18px;
+}
+
+.vessel-print-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vessel-print-heading h1 {
+  margin: 0;
+}
+
+.vessel-print-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vessel-print-section {
+  margin: 0;
+}
+
+.vessel-print-note {
+  margin: 12px 0 0;
+}
+
+@media print {
+  .portal-nav,
+  .site-footer,
+  .flash-stack,
+  .portal-toast-stack,
+  .chatbot-fab,
+  .chatbot-drawer,
+  .print-actions {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  .page-shell,
+  .ops-shell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .panel,
+  .inset-panel,
+  .vessel-print-sheet {
+    box-shadow: none !important;
+    border-color: #d7dde7 !important;
+    background: #fff !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .vessel-management-pane-head,
+  .vessel-edit-card-head {
+    flex-direction: column;
+  }
+
+  .vessel-management-pane-head .mini-button,
+  .vessel-edit-card-head .mini-button,
+  .vessel-delete-all-pane .danger-button {
+    width: 100% !important;
+  }
 }
 
 .planned-table-wrap {

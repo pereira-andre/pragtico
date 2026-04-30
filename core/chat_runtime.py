@@ -47,11 +47,13 @@ from core.helpers import (
 )
 from domain.chat_actions import (
     build_action_reply_template,
+    format_action_summary,
     looks_like_operational_command,
     looks_like_slash_command,
     parse_slash_command,
 )
 from domain.chat_response_formatting import add_contextual_response_emojis
+from domain.berth_layout import canonicalize_berth_label
 from domain.berth_profiles import (
     build_berth_profile_answer,
     build_berth_profile_sources,
@@ -62,9 +64,13 @@ from domain.knowledge_companions import (
     build_companion_sources,
     companion_lookup_terms,
     find_best_global_companion_match,
-    humanize_reused_factual_answer,
     load_document_companion,
 )
+from domain.operational_memory import (
+    build_feedback_memory_sources,
+    filter_feedback_for_synthesis,
+)
+from domain.port_entities import detect_port_entities, entity_names_from_matches, specific_entities
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
 from core.bot_settings import load_bot_settings
@@ -109,6 +115,25 @@ DOCUMENT_FOLLOW_UP_RE = re.compile(
     r"(?:documento|doc|ficheiro|regra|instrucao|instrução)?\b",
     flags=re.IGNORECASE,
 )
+
+ROUTE_DURATION_TOPIC_RE = re.compile(
+    r"\b(quanto tempo|tempo|demora|leva|transito|trânsito|percurso|viagem|"
+    r"marcar|marcacao|marcação|antecedencia|antecedência)\b"
+)
+ROUTE_FOLLOW_UP_RE = re.compile(
+    r"^(?:e\s+)?(?:se\s+(?:fosse|for|fossemos|fôssemos|era)|para|ate|até|ao|a|à)\b"
+    r"|^(?:e\s+)?(?:do|da|dos|das|desde)\b"
+    r"|\be\s+se\s+(?:fosse|for|era)\b"
+    r"|\be\s+para\b"
+)
+ROUTE_DESTINATION_RE = re.compile(
+    r"\b(canal norte|canal sul|lisnave|mitrena|tanquisado|eco\s*oil|ecooil|ecoil|"
+    r"teporset|tepor\s*set|termitrena|tms\s*1|tms1|tms\s*2|tms2|"
+    r"autoeuropa|auto\s*europa|ro\s*ro|roro|cais\s+a\s+norte|cais\s+do\s+norte|"
+    r"cais\s+norte|cais\s+a\s+sul|cais\s+do\s+sul|cais\s+sul|cais\s*10|cais\s*11|"
+    r"praias|sapec|secil|fundeadouro|fundeadouros)\b"
+)
+ROUTE_ORIGIN_BARRA_RE = re.compile(r"\b(barra|entrada da barra|fora da barra|pilar\s*2|boia\s*2|bóia\s*2)\b")
 
 
 DOCUMENT_MATCH_STOPWORDS = {
@@ -196,6 +221,12 @@ def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: li
     return best_review
 
 
+def _is_corrected_feedback_match(item: dict) -> bool:
+    status = (item.get("feedback_status") or "").strip().lower()
+    has_correction = bool((item.get("feedback_correction") or "").strip())
+    return status == "corrected" or (status == "review" and has_correction)
+
+
 def _select_review_correction_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:
     correction_threshold = _review_correction_threshold()
     best_review = next(
@@ -204,6 +235,7 @@ def _select_review_correction_match(reviewed_answers: list[dict], trusted_answer
             for item in reviewed_answers
             if item.get("similarity", 0) >= correction_threshold
             and (item.get("feedback_correction") or "").strip()
+            and _is_corrected_feedback_match(item)
         ),
         None,
     )
@@ -222,15 +254,10 @@ def _select_review_correction_match(reviewed_answers: list[dict], trusted_answer
     return best_review
 
 
-def _build_review_correction_answer(review_match: dict, berth_profile_match: dict | None = None) -> dict:
+def _build_review_correction_answer(review_match: dict) -> dict:
     correction = normalize_feedback_correction(
         review_match.get("question"),
         (review_match.get("feedback_correction") or "").strip(),
-    )
-    correction = humanize_reused_factual_answer(
-        review_match.get("question") or "",
-        correction,
-        context_label=str(((berth_profile_match or {}).get("profile") or {}).get("name") or "").strip(),
     )
     if not correction:
         raise ValueError("Correção vazia.")
@@ -306,13 +333,166 @@ def _build_supplemental_sources(
     question: str,
     plan: ChatExecutionPlan | None = None,
     conversation_state: dict | None = None,
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
 ) -> list[dict]:
-    supplemental_sources = build_operational_chat_sources(question)
+    supplemental_sources = build_operational_chat_sources(question, plan=plan)
     supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
     if conversation_state and conversation_state.get("source"):
         supplemental_sources.append(conversation_state["source"])
     supplemental_sources.extend(_build_approved_casebook_sources(question))
+    supplemental_sources.extend(
+        build_feedback_memory_sources(question, trusted_answers, reviewed_answers)
+    )
     return supplemental_sources
+
+
+def _clean_revision_text(value: object, *, max_chars: int = 1800) -> str:
+    clean = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(clean) <= max_chars:
+        return clean
+    return clean[: max_chars - 1].rstrip() + "..."
+
+
+def _build_answer_revision_source(revision_context: dict | None) -> dict | None:
+    if not revision_context:
+        return None
+    original_question = _clean_revision_text(revision_context.get("original_question"), max_chars=800)
+    previous_answer = _clean_revision_text(revision_context.get("previous_answer"), max_chars=1800)
+    user_note = _clean_revision_text(revision_context.get("user_note"), max_chars=600)
+    if not original_question and not previous_answer:
+        return None
+    lines = [
+        "Pedido de reanálise da resposta anterior.",
+        "Objetivo: voltar a consultar o conhecimento disponível, procurar omissões ou confusões e produzir nova resposta.",
+        "Não repetir literalmente a resposta anterior. Se a conclusão factual se mantiver, explicar que foi revalidada e reformular a síntese.",
+    ]
+    if original_question:
+        lines.append(f"Pergunta original: {original_question}")
+    if previous_answer:
+        lines.append(f"Resposta anterior a rever: {previous_answer}")
+    if user_note:
+        lines.append(f"Observação do utilizador: {user_note}")
+    snippet = "\n".join(lines)
+    return {
+        "source_id": "REV1",
+        "document": "pedido_reanalise_resposta",
+        "chunk_id": 1,
+        "score": 1.0,
+        "retrieval_mode": "answer_revision_context",
+        "snippet": snippet,
+        "text": snippet,
+    }
+
+
+def _answers_are_effectively_same(first: object, second: object) -> bool:
+    first_norm = re.sub(r"\W+", "", unicodedata.normalize("NFKD", str(first or "")).lower())
+    second_norm = re.sub(r"\W+", "", unicodedata.normalize("NFKD", str(second or "")).lower())
+    return bool(first_norm and second_norm and first_norm == second_norm)
+
+
+def _source_mode_counts(sources: list[dict] | None) -> list[dict]:
+    counts: dict[str, int] = {}
+    for source in sources or []:
+        mode = (
+            str(source.get("retrieval_mode") or source.get("type") or "sem_modo").strip()
+            or "sem_modo"
+        )
+        counts[mode] = counts.get(mode, 0) + 1
+    return [
+        {"mode": mode, "count": count}
+        for mode, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def _compact_feedback_trace(items: list[dict] | None) -> list[dict]:
+    compacted: list[dict] = []
+    for item in (items or [])[:3]:
+        compacted.append(
+            {
+                "similarity": round(float(item.get("similarity") or 0), 3),
+                "question": str(item.get("question") or "")[:180],
+                "message_id": str(item.get("message_id") or ""),
+                "feedback_note": str(item.get("feedback_note") or "")[:180],
+                "feedback_correction_document": str(item.get("feedback_correction_document") or ""),
+            }
+        )
+    return compacted
+
+
+def _compact_review_match(match: dict | None) -> dict | None:
+    if not match:
+        return None
+    return {
+        "similarity": round(float(match.get("similarity") or 0), 3),
+        "question": str(match.get("question") or "")[:180],
+        "message_id": str(match.get("message_id") or ""),
+        "feedback_note": str(match.get("feedback_note") or "")[:180],
+        "feedback_correction_document": str(match.get("feedback_correction_document") or ""),
+    }
+
+
+def _build_playground_trace(
+    *,
+    execution_plan: ChatExecutionPlan | None,
+    answer_origin: str,
+    sources: list[dict] | None,
+    targeted_document_context: dict | None = None,
+    berth_profile_match: dict | None = None,
+    global_companion_match: dict | None = None,
+    conversation_state: dict | None = None,
+    trusted_answers: list[dict] | None = None,
+    reviewed_answers: list[dict] | None = None,
+    review_guard_match: dict | None = None,
+    review_correction_match: dict | None = None,
+    retrieval_validation: dict | None = None,
+    direct_answer_used: bool = False,
+) -> dict:
+    target_record = (targeted_document_context or {}).get("record") or {}
+    document_sources = (targeted_document_context or {}).get("document_sources") or []
+    companion_sources = (targeted_document_context or {}).get("companion_sources") or []
+    global_companion = (global_companion_match or {}).get("companion") or {}
+    global_companion_sources = (global_companion_match or {}).get("sources") or []
+    global_companion_document = (
+        global_companion.get("document")
+        or (global_companion_sources[0].get("document") if global_companion_sources else "")
+        or ""
+    )
+    berth_label = (
+        (berth_profile_match or {}).get("canonical_label")
+        or (berth_profile_match or {}).get("label")
+        or (berth_profile_match or {}).get("name")
+        or ""
+    )
+    return {
+        "execution_plan": execution_plan.to_dict() if execution_plan else {},
+        "answer_origin": answer_origin,
+        "source_count": len(sources or []),
+        "source_mode_counts": _source_mode_counts(sources),
+        "target_document": str(target_record.get("name") or ""),
+        "target_document_hit": bool(target_record),
+        "document_target_chunks": len(document_sources),
+        "document_companion_hit": bool((targeted_document_context or {}).get("companion_answer") or companion_sources),
+        "global_companion_hit": bool(global_companion_match),
+        "global_companion_document": str(global_companion_document),
+        "berth_profile_hit": bool(berth_profile_match),
+        "berth_profile_label": str(berth_label),
+        "conversation_state_hit": bool(conversation_state and conversation_state.get("source")),
+        "trusted_matches": _compact_feedback_trace(trusted_answers),
+        "review_matches": _compact_feedback_trace(reviewed_answers),
+        "review_guard": _compact_review_match(review_guard_match),
+        "review_correction": _compact_review_match(review_correction_match),
+        "retrieval_validation": retrieval_validation or {},
+        "used_llm": answer_origin == "llm",
+        "used_direct_answer": direct_answer_used,
+        "used_shortcut": answer_origin in {
+            "berth_profile",
+            "document_companion",
+            "document_companion_global",
+            "review_correction_memory",
+            "review_guard",
+        },
+    }
 
 
 _CASEBOOK_LOOKUP_TOKENS = {
@@ -337,6 +517,7 @@ def _build_approved_casebook_sources(question: str) -> list[dict]:
     clean_question = _normalize_lookup_text(question)
     if not clean_question:
         return []
+    target_berths = _casebook_query_berth_labels(question)
 
     target_type = None
     for maneuver_type, tokens in _CASEBOOK_LOOKUP_TOKENS.items():
@@ -349,6 +530,13 @@ def _build_approved_casebook_sources(question: str) -> list[dict]:
             return False
         if target_type and (case.get("maneuver_type") or "").strip().lower() != target_type:
             return False
+        if target_berths:
+            case_berths = {
+                canonicalize_berth_label(case.get("origin_label")) or str(case.get("origin_label") or "").strip(),
+                canonicalize_berth_label(case.get("destination_label")) or str(case.get("destination_label") or "").strip(),
+            }
+            if not target_berths & case_berths:
+                return False
         searchable = " ".join(
             [
                 str(case.get("vessel_name") or ""),
@@ -388,6 +576,164 @@ def _normalize_lookup_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", str(value or ""))
     without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
     return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
+
+
+def _looks_like_route_duration_topic(text: str) -> bool:
+    clean = _normalize_lookup_text(text)
+    if not clean:
+        return False
+    return bool(ROUTE_DURATION_TOPIC_RE.search(clean) and ROUTE_DESTINATION_RE.search(clean))
+
+
+def _looks_like_route_duration_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean:
+        return False
+    return bool(ROUTE_DESTINATION_RE.search(clean) and ROUTE_FOLLOW_UP_RE.search(clean))
+
+
+def _last_user_route_duration_question(history: list[dict]) -> str:
+    for entry in reversed(history):
+        if (entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if _looks_like_route_duration_topic(content):
+            return content
+    return ""
+
+
+def _strip_follow_up_lead_in(question: str) -> str:
+    cleaned = re.sub(
+        r"^\s*e\s+se\s+(?:fosse|for|fossemos|fôssemos|era)\s+",
+        "",
+        str(question or "").strip(),
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"^\s*e\s+para\s+", "para ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^\s*e\s+", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip() or str(question or "").strip()
+
+
+def _looks_like_entity_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean:
+        return False
+    if _starts_like_follow_up(clean):
+        return True
+    return len(clean.split()) <= 6 and bool(detect_port_entities(question))
+
+
+def _starts_like_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    return bool(re.match(r"^(?:e|entao|então|mas|agora)\b", clean))
+
+
+def _last_user_question_with_reusable_intent(history: list[dict]) -> str:
+    for entry in reversed(history):
+        if (entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if content and not _starts_like_follow_up(content):
+            return content
+    return ""
+
+
+def _intent_template_from_question(question: str) -> str:
+    clean = _normalize_lookup_text(question)
+    if any(token in clean for token in ("restricao", "restricoes", "restrições", "limite", "limites")):
+        return "Que restrições operacionais documentadas existem para {entity}?"
+    if any(token in clean for token in ("calado", "calados", "profundidade", "sonda")):
+        return "Que regras documentadas de calado existem para {entity}?"
+    if any(token in clean for token in ("rebocador", "rebocadores", "reboque", "reboques")):
+        return "O que dizem os documentos sobre rebocadores para {entity}?"
+    if any(token in clean for token in ("geral", "gerais", "fala", "resumo", "informacao", "informação")):
+        return "Fala-me de {entity} em termos gerais, com base na documentação."
+    return "O que diz a documentação sobre {entity}?"
+
+
+def _contextual_entity_lookup_question(question: str, history: list[dict]) -> str:
+    if not _looks_like_entity_follow_up(question):
+        return question
+    entities = specific_entities(detect_port_entities(question))
+    if not entities:
+        return question
+    previous_question = _last_user_question_with_reusable_intent(history)
+    if not previous_question:
+        return question
+    entity_name = entity_names_from_matches(entities)[0]
+    return _intent_template_from_question(previous_question).format(entity=entity_name)
+
+
+def _contextual_lookup_question(question: str, history: list[dict]) -> str:
+    entity_question = _contextual_entity_lookup_question(question, history)
+    if entity_question != question:
+        return entity_question
+    if not _looks_like_route_duration_follow_up(question):
+        return question
+    stripped_question = _strip_follow_up_lead_in(question)
+    normalized_stripped = _normalize_lookup_text(stripped_question)
+    if re.match(r"^(?:do|da|dos|das|desde|de)\s+(?:fundeadouro|fundeadouros|canal|barra|entrada|pilar)\b", normalized_stripped):
+        return f"Quanto tempo leva {stripped_question}"
+    previous_route_question = _last_user_route_duration_question(history)
+    if not previous_route_question:
+        return question
+    origin = (
+        "desde a entrada da Barra"
+        if ROUTE_ORIGIN_BARRA_RE.search(_normalize_lookup_text(previous_route_question))
+        else "desde o mesmo ponto de origem"
+    )
+    return f"Quanto tempo leva {origin} {stripped_question}"
+
+
+def _casebook_query_berth_labels(question: str) -> set[str]:
+    clean = _normalize_lookup_text(question)
+    compact = re.sub(r"[^a-z0-9]+", "", clean)
+    candidates = set()
+
+    for match in re.finditer(r"\b(?:lisnave\s+)?(?:ponte\s+cais|cais|c)\s*([0-3])\s*([ab])\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\blisnave\s+([0-3])\s*([ab])\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\b([0-3])\s*([ab])\s+lisnave\b", clean):
+        candidates.add(f"Lisnave {match.group(1)}{match.group(2)}")
+    for match in re.finditer(r"\b([ab])\s*([0-3])\s+lisnave\b", clean):
+        candidates.add(f"Lisnave {match.group(2)}{match.group(1)}")
+    for match in re.finditer(r"\blisnave\s+([ab])\s*([0-3])\b", clean):
+        candidates.add(f"Lisnave {match.group(2)}{match.group(1)}")
+
+    for number in range(0, 4):
+        has_numbered_lisnave_quay = bool(
+            re.search(rf"\b(?:lisnave\s+)?(?:ponte\s+cais|cais|c)\s*{number}\b", clean)
+            or f"lisnave{number}" in compact
+        )
+        if has_numbered_lisnave_quay and "setubal" in clean:
+            candidates.add(f"Cais {number} lado Setubal")
+        if has_numbered_lisnave_quay and "alcacer" in clean:
+            candidates.add(f"Cais {number} lado Alcacer")
+        if has_numbered_lisnave_quay and re.search(r"\b(?:w|west|oeste|lado w)\b", clean):
+            candidates.add(f"Cais {number} W")
+        if has_numbered_lisnave_quay and re.search(r"\b(?:east|leste|lado este|lado leste|lado e)\b", clean):
+            candidates.add(f"Cais {number} E")
+        if any(marker in compact for marker in (f"c{number}w", f"cais{number}w", f"lisnave{number}w")):
+            candidates.add(f"Cais {number} W")
+        if any(marker in compact for marker in (f"c{number}e", f"cais{number}e", f"lisnave{number}e")):
+            candidates.add(f"Cais {number} E")
+        for side in ("a", "b"):
+            markers = (
+                f"c{number}{side}",
+                f"cais{number}{side}",
+                f"pontecais{number}{side}",
+                f"lisnavec{number}{side}",
+                f"lisnavecais{number}{side}",
+                f"lisnave{number}{side}",
+                f"{number}{side}lisnave",
+                f"{side}{number}lisnave",
+                f"lisnave{side}{number}",
+            )
+            if any(marker in compact for marker in markers):
+                candidates.add(f"Lisnave {number}{side}")
+
+    return {label for candidate in candidates if (label := canonicalize_berth_label(candidate))}
 
 
 def _extract_rule_codes(text: str) -> list[str]:
@@ -579,7 +925,6 @@ def _build_targeted_document_context(
     history: list[dict],
     trusted_answers: list[dict] | None = None,
     reviewed_answers: list[dict] | None = None,
-    berth_profile_match: dict | None = None,
 ) -> dict:
     record = _resolve_target_knowledge_document(question, history, trusted_answers, reviewed_answers)
     if not record:
@@ -593,15 +938,7 @@ def _build_targeted_document_context(
 
     companion = load_document_companion(record["name"], _active_knowledge_dir())
     companion_sources = build_companion_sources(companion, question) if companion else []
-    companion_answer = (
-        build_companion_answer(
-            question,
-            companion,
-            context_label=str(((berth_profile_match or {}).get("profile") or {}).get("name") or "").strip(),
-        )
-        if companion
-        else ""
-    )
+    companion_answer = build_companion_answer(question, companion) if companion else ""
 
     try:
         document_text = services.store.get_document_text(record["name"])
@@ -678,208 +1015,26 @@ def _blocked_mutation_answer(channel: str) -> dict:
     }
 
 
-def _should_prefer_berth_profile_answer(question: str, companion_answer: str, berth_profile_answer: str = "") -> bool:
+def _should_prefer_berth_profile_answer(question: str, companion_answer: str) -> bool:
+    clean_question = _normalize_lookup_text(question)
+    asks_route_metric = bool(
+        re.search(r"\b(quanto tempo|tempo|demora|leva|levo|distancia|distancias|milhas|percurso|viagem)\b", clean_question)
+        and re.search(r"\b(barra|pilar|boia|canal|fundeadouro|fundeadouros|ate|para)\b", clean_question)
+    )
+    if asks_route_metric:
+        return False
+
     clean_answer = re.sub(r"\s+", " ", str(companion_answer or "")).strip()
-    clean_profile_answer = re.sub(r"\s+", " ", str(berth_profile_answer or "")).strip()
-    if clean_profile_answer and (
-        clean_profile_answer.startswith(("Sim.", "Nao.", "O comprimento maximo"))
-        or "limite noturno de LOA" in clean_profile_answer
-    ):
-        return True
     if not clean_answer:
         return True
     if clean_answer.startswith(("A resposta direta:", "O valor a reter é")):
         return True
-    clean_question = _normalize_lookup_text(question)
     asks_general_profile = bool(
         re.search(r"\b(fala|sabes|conheces|termos gerais|geral|restricoes|restrições|regras|limites)\b", clean_question)
     )
     if asks_general_profile and clean_answer.startswith("Segundo o ") and "Pontos principais:" in clean_answer:
         return True
     return False
-
-
-_PLAYGROUND_ROUTE_META = {
-    "berth_profile": (
-        "Perfil de cais",
-        "Resposta curta a partir do perfil de cais mais relevante, sem chamar o LLM.",
-    ),
-    "document_companion": (
-        "Companion do documento",
-        "O documento alvo tinha um companion com resposta direta suficiente para esta pergunta.",
-    ),
-    "document_companion_global": (
-        "Companion global",
-        "O bot encontrou uma FAQ validada noutro companion e respondeu sem síntese adicional.",
-    ),
-    "review_correction_memory": (
-        "Correção em review reutilizada",
-        "Foi reutilizada uma correção humana suficientemente próxima e orientada para este contexto.",
-    ),
-    "review_guard": (
-        "Guard de review",
-        "O bot encontrou uma resposta muito semelhante ainda em revisão e evitou reutilizá-la como validada.",
-    ),
-    "llm": (
-        "Síntese LLM",
-        "O bot precisou de combinar contexto live e conhecimento documental antes de responder.",
-    ),
-    "error": (
-        "Erro",
-        "O playground não conseguiu completar o pedido com o runtime atual.",
-    ),
-    "empty": (
-        "Sem resposta",
-        "O pipeline terminou sem resposta final útil.",
-    ),
-}
-_PLAYGROUND_FACET_LABELS = {
-    "tides": "Maré",
-    "weather": "Meteorologia",
-    "waves": "Ondulação",
-    "warnings": "Avisos",
-}
-
-
-def _playground_route_meta(answer_origin: str) -> tuple[str, str]:
-    origin = str(answer_origin or "").strip()
-    if origin in _PLAYGROUND_ROUTE_META:
-        return _PLAYGROUND_ROUTE_META[origin]
-    if origin.startswith("operational_"):
-        return (
-            "Consulta operacional direta",
-            "A pergunta foi resolvida diretamente a partir dos dados operacionais/live sem síntese documental.",
-        )
-    if origin.startswith("slash_"):
-        return (
-            "Comando estruturado",
-            "O runtime reconheceu um fluxo estruturado e devolveu a respetiva resposta pronta.",
-        )
-    humanized = origin.replace("_", " ").strip() or "Pipeline interno"
-    return (humanized[:1].upper() + humanized[1:], "Rota interna do runtime.")
-
-
-def _playground_match_summary(matches: list[dict]) -> str:
-    if not matches:
-        return "0 match(es)"
-    top_similarity = float((matches[0] or {}).get("similarity") or 0.0)
-    if top_similarity > 0:
-        return f"{len(matches)} match(es) · topo {top_similarity:.2f}"
-    return f"{len(matches)} match(es)"
-
-
-def _playground_source_summary(sources: list[dict]) -> str:
-    labels: list[str] = []
-    for source in sources or []:
-        if not isinstance(source, dict):
-            continue
-        label = str(source.get("document") or source.get("source_id") or "").strip()
-        if not label or label in labels:
-            continue
-        labels.append(label)
-        if len(labels) >= 4:
-            break
-    if not labels:
-        return "Sem citações estruturadas."
-    return ", ".join(labels)
-
-
-def _playground_trace_row(label: str, detail: str) -> dict | None:
-    clean_label = str(label or "").strip()
-    clean_detail = str(detail or "").strip()
-    if not clean_label or not clean_detail:
-        return None
-    return {
-        "label": clean_label,
-        "detail": clean_detail,
-    }
-
-
-def _build_playground_trace(
-    *,
-    execution_plan: ChatExecutionPlan,
-    answer: dict,
-    trusted_answers: list[dict],
-    reviewed_answers: list[dict],
-    review_guard_match: dict | None,
-    review_correction_match: dict | None,
-    targeted_document_context: dict | None = None,
-    berth_profile_match: dict | None = None,
-    global_companion_match: dict | None = None,
-) -> dict:
-    route_label, route_detail = _playground_route_meta(answer.get("answer_origin", ""))
-    rows: list[dict] = []
-
-    rows.append(_playground_trace_row("Intenção", execution_plan.primary_intent.replace("_", " ")))
-    if execution_plan.live_facets:
-        live_label = ", ".join(_PLAYGROUND_FACET_LABELS.get(item, item) for item in execution_plan.live_facets)
-        rows.append(_playground_trace_row("Facetas live", live_label))
-    if execution_plan.explicit_rule_codes:
-        rows.append(_playground_trace_row("Regras pedidas", ", ".join(f"IT-{code}" for code in execution_plan.explicit_rule_codes)))
-
-    target_record = (targeted_document_context or {}).get("record") or {}
-    target_document_name = str(target_record.get("name") or "").strip()
-    if target_document_name:
-        rows.append(_playground_trace_row("Documento alvo", target_document_name))
-
-    companion_answer = str((targeted_document_context or {}).get("companion_answer") or "").strip()
-    if companion_answer and target_document_name:
-        rows.append(_playground_trace_row("Companion do documento", "Disponível para resposta curta sem síntese."))
-
-    berth_profile = (berth_profile_match or {}).get("profile") or {}
-    berth_name = str(berth_profile.get("name") or "").strip()
-    if berth_name:
-        profile_score = float((berth_profile_match or {}).get("score") or 0.0)
-        rows.append(_playground_trace_row("Perfil de cais", f"{berth_name} · score {profile_score:.2f}"))
-
-    global_companion = (global_companion_match or {}).get("companion") or {}
-    global_document = str(global_companion.get("document") or "").strip()
-    if global_document:
-        rows.append(_playground_trace_row("Companion global", global_document))
-
-    rows.append(_playground_trace_row("Memória aprovada", _playground_match_summary(trusted_answers)))
-    rows.append(_playground_trace_row("Memória em review", _playground_match_summary(reviewed_answers)))
-
-    if review_correction_match:
-        correction_document = str(review_correction_match.get("feedback_correction_document") or "").strip()
-        correction_detail = f"Disponível · similaridade {float(review_correction_match.get('similarity') or 0.0):.2f}"
-        if correction_document:
-            correction_detail = f"{correction_detail} · {correction_document}"
-        rows.append(_playground_trace_row("Correção em review", correction_detail))
-    elif review_guard_match:
-        rows.append(
-            _playground_trace_row(
-                "Guard de review",
-                f"Ativo · similaridade {float(review_guard_match.get('similarity') or 0.0):.2f}",
-            )
-        )
-
-    rows.append(_playground_trace_row("Fontes citadas", _playground_source_summary(answer.get("sources") or [])))
-    rows.append(
-        _playground_trace_row(
-            "LLM",
-            "Chamado para síntese final." if str(answer.get("answer_origin") or "") == "llm" else "Não foi preciso chamar o LLM.",
-        )
-    )
-
-    flags = [
-        {"label": "Síntese", "value": "Sim" if execution_plan.requires_llm_synthesis else "Não"},
-        {"label": "Live reasoning", "value": "Sim" if execution_plan.requires_live_reasoning else "Não"},
-        {"label": "Documentos", "value": "Sim" if execution_plan.wants_documents else "Não"},
-        {"label": "Histórico", "value": "Sim" if execution_plan.needs_history_state else "Não"},
-    ]
-
-    trace = {
-        "route_label": route_label,
-        "route_detail": route_detail,
-        "rows": [item for item in rows if item],
-        "flags": flags,
-        "plan": execution_plan.to_dict(),
-    }
-    review_match = answer.get("review_match")
-    if isinstance(review_match, dict) and review_match:
-        trace["review_match"] = review_match
-    return trace
 
 
 def playground_answer(
@@ -911,22 +1066,28 @@ def playground_answer(
             username,
             clean_question,
             limit=3,
-            feedback_statuses={"review"},
+            feedback_statuses={"corrected", "review"},
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
+        synthesis_trusted_answers, synthesis_reviewed_answers = filter_feedback_for_synthesis(
+            trusted_answers,
+            reviewed_answers,
+        )
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
             direct_answer["trace"] = _build_playground_trace(
                 execution_plan=execution_plan,
-                answer=direct_answer,
-                trusted_answers=trusted_answers,
-                reviewed_answers=reviewed_answers,
+                answer_origin=direct_answer.get("answer_origin", "direct_operational"),
+                sources=direct_answer.get("sources", []),
+                trusted_answers=synthesis_trusted_answers,
+                reviewed_answers=synthesis_reviewed_answers,
                 review_guard_match=review_guard_match,
                 review_correction_match=review_correction_match,
+                direct_answer_used=True,
             )
-            return add_contextual_response_emojis(direct_answer, clean_question)
+            return direct_answer
 
         runtime_history: list[dict] = []
         conversation_state = build_conversation_reasoning_state(
@@ -934,19 +1095,20 @@ def playground_answer(
             runtime_history,
             execution_plan,
         )
-        berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
         targeted_document_context = _build_targeted_document_context(
             clean_question,
             runtime_history,
             trusted_answers,
             reviewed_answers,
-            berth_profile_match,
         )
+        berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
         berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
         supplemental_sources = _build_supplemental_sources(
             clean_question,
             plan=execution_plan,
             conversation_state=conversation_state,
+            trusted_answers=synthesis_trusted_answers,
+            reviewed_answers=synthesis_reviewed_answers,
         )
         compound_message_source = build_compound_message_analysis_source(clean_question)
         if compound_message_source:
@@ -958,17 +1120,10 @@ def playground_answer(
         allow_companion_shortcut = not execution_plan.requires_llm_synthesis
         answer: dict | None = None
         global_companion_match: dict | None = None
-        prefer_berth_profile = (
-            bool(berth_profile_answer)
-            and allow_companion_shortcut
-            and not _review_correction_targets_document(review_correction_match, targeted_document_context, None)
-            and _should_prefer_berth_profile_answer(
-                clean_question,
-                targeted_document_context["companion_answer"],
-                berth_profile_answer,
-            )
-        )
-        if prefer_berth_profile:
+        if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+            clean_question,
+            targeted_document_context["companion_answer"],
+        ):
             answer = {
                 "answer": berth_profile_answer,
                 "sources": supplemental_sources,
@@ -976,7 +1131,7 @@ def playground_answer(
             }
         elif targeted_document_context["companion_answer"] and allow_companion_shortcut:
             if _review_correction_targets_document(review_correction_match, targeted_document_context, None):
-                answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                answer = _build_review_correction_answer(review_correction_match)
                 if supplemental_sources:
                     answer["sources"] = supplemental_sources
             else:
@@ -996,7 +1151,7 @@ def playground_answer(
                     targeted_document_context,
                     global_companion_match,
                 ):
-                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                    answer = _build_review_correction_answer(review_correction_match)
                     if global_companion_match.get("sources"):
                         answer["sources"] = global_companion_match["sources"]
                 else:
@@ -1006,7 +1161,7 @@ def playground_answer(
                         "answer_origin": "document_companion_global",
                     }
             elif review_correction_match and not execution_plan.requires_llm_synthesis:
-                answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                answer = _build_review_correction_answer(review_correction_match)
             else:
                 if (
                     review_guard_match
@@ -1016,48 +1171,57 @@ def playground_answer(
                     answer = _build_review_guard_answer(review_guard_match)
                 else:
                     if not services.rag.can_generate():
-                        error_answer = {
-                            "answer": "Define a API key do LLM antes de usar o playground.",
+                        answer = {
+                            "answer": "Define a API key do provider antes de usar o playground.",
                             "sources": [],
                             "answer_origin": "error",
                         }
-                        error_answer["trace"] = _build_playground_trace(
+                        answer["trace"] = _build_playground_trace(
                             execution_plan=execution_plan,
-                            answer=error_answer,
-                            trusted_answers=trusted_answers,
-                            reviewed_answers=reviewed_answers,
-                            review_guard_match=review_guard_match,
-                            review_correction_match=review_correction_match,
+                            answer_origin=answer["answer_origin"],
+                            sources=answer["sources"],
                             targeted_document_context=targeted_document_context,
                             berth_profile_match=berth_profile_match,
                             global_companion_match=global_companion_match,
+                            conversation_state=conversation_state,
+                            trusted_answers=synthesis_trusted_answers,
+                            reviewed_answers=synthesis_reviewed_answers,
+                            review_guard_match=review_guard_match,
+                            review_correction_match=review_correction_match,
                         )
-                        return error_answer
+                        return answer
                     answer = services.rag.answer(
                         question=clean_question,
                         retrieval_question=targeted_document_context["retrieval_question"],
                         role=role,
                         history=[],
                         supplemental_sources=supplemental_sources,
-                        trusted_answers=trusted_answers,
-                        reviewed_answers=reviewed_answers,
+                        trusted_answers=synthesis_trusted_answers,
+                        reviewed_answers=synthesis_reviewed_answers,
                         execution_plan=execution_plan.to_dict(),
                         conversation_state=conversation_state,
                     )
                     answer["answer_origin"] = "llm"
-        final_answer = answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"}
-        final_answer["trace"] = _build_playground_trace(
+
+        answer = add_contextual_response_emojis(
+            answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"},
+            clean_question,
+        )
+        answer["trace"] = _build_playground_trace(
             execution_plan=execution_plan,
-            answer=final_answer,
-            trusted_answers=trusted_answers,
-            reviewed_answers=reviewed_answers,
-            review_guard_match=review_guard_match,
-            review_correction_match=review_correction_match,
+            answer_origin=answer.get("answer_origin", ""),
+            sources=answer.get("sources", []),
             targeted_document_context=targeted_document_context,
             berth_profile_match=berth_profile_match,
             global_companion_match=global_companion_match,
+            conversation_state=conversation_state,
+            trusted_answers=synthesis_trusted_answers,
+            reviewed_answers=synthesis_reviewed_answers,
+            review_guard_match=review_guard_match,
+            review_correction_match=review_correction_match,
+            retrieval_validation=answer.get("retrieval_validation"),
         )
-        return add_contextual_response_emojis(final_answer, clean_question)
+        return answer
 
 
 def handle_chat_turn(
@@ -1072,6 +1236,7 @@ def handle_chat_turn(
     inbound_message_id: str = "",
     inbound_message_metadata: dict | None = None,
     pre_response_messages: list[dict] | None = None,
+    revision_context: dict | None = None,
 ) -> dict:
     """Process a single chat turn and persist the resulting messages."""
     clean_question = (question or "").strip()
@@ -1080,9 +1245,16 @@ def handle_chat_turn(
 
     with chat_actor_context(username=username, role=role):
         refresh_knowledge_state(force_reindex=False)
+        revision_context = revision_context or {}
+        is_revision_attempt = bool(revision_context)
         conversation = services.store.ensure_conversation(username=username, conversation_id=conversation_id)
         history = services.store.list_messages(username, conversation["id"])
-        execution_plan = build_chat_execution_plan(clean_question)
+        lookup_question = (
+            str(revision_context.get("original_question") or "").strip()
+            if is_revision_attempt
+            else ""
+        ) or _contextual_lookup_question(clean_question, history)
+        execution_plan = build_chat_execution_plan(lookup_question)
         existing_pending = load_pending_chat_action(username, conversation["id"])
         if existing_pending and not allow_mutations:
             clear_pending_chat_action(username, conversation["id"])
@@ -1091,7 +1263,7 @@ def handle_chat_turn(
         if load_bot_settings().get("auto_trust_positive_feedback", True):
             trusted_answers = services.store.find_feedback_matches(
                 username,
-                clean_question,
+                lookup_question,
                 limit=3,
                 feedback_statuses={"approved"},
             )
@@ -1099,12 +1271,16 @@ def handle_chat_turn(
             trusted_answers = []
         reviewed_answers = services.store.find_feedback_matches(
             username,
-            clean_question,
+            lookup_question,
             limit=3,
-            feedback_statuses={"review"},
+            feedback_statuses={"corrected", "review"},
         )
         review_correction_match = _select_review_correction_match(reviewed_answers, trusted_answers)
         review_guard_match = _select_review_guard_match(reviewed_answers, trusted_answers)
+        synthesis_trusted_answers, synthesis_reviewed_answers = filter_feedback_for_synthesis(
+            trusted_answers,
+            reviewed_answers,
+        )
         user_message = services.store.append_chat_message(
             username=username,
             conversation_id=conversation["id"],
@@ -1154,11 +1330,26 @@ def handle_chat_turn(
                     "answer_origin": "event_report_pending",
                 }
 
-        slash_command = (
-            parse_slash_command(clean_question, role)
-            if answer is None and looks_like_slash_command(clean_question)
-            else None
-        )
+        slash_command = None
+        if answer is None and looks_like_slash_command(clean_question):
+            try:
+                slash_command = parse_slash_command(clean_question, role)
+            except (PermissionError, ValueError) as exc:
+                answer = {
+                    "answer": f"Não consegui interpretar o comando. Motivo: {exc}",
+                    "sources": [],
+                    "answer_origin": "slash_error",
+                }
+            except Exception:
+                logger.exception("Falha inesperada ao interpretar comando slash.")
+                answer = {
+                    "answer": (
+                        "Falha inesperada ao interpretar o comando. "
+                        "Confirma os campos obrigatórios com `/help` e volta a tentar."
+                    ),
+                    "sources": [],
+                    "answer_origin": "slash_error",
+                }
         if slash_command and slash_command.get("intent") == "help":
             answer = {
                 "answer": slash_command["answer"],
@@ -1203,16 +1394,30 @@ def handle_chat_turn(
                 if not allow_mutations:
                     answer = _blocked_mutation_answer(channel)
                 else:
-                    pending_action = save_pending_chat_action(
-                        username=username,
-                        conversation_id=conversation["id"],
-                        proposal=proposal,
-                        question=clean_question,
-                    )
+                    try:
+                        pending_action = save_pending_chat_action(
+                            username=username,
+                            conversation_id=conversation["id"],
+                            proposal=proposal,
+                            question=clean_question,
+                        )
+                    except Exception:
+                        logger.exception("Falha ao guardar proposta de comando slash.")
+                        pending_action = {
+                            "summary": (
+                                "Não consegui guardar a proposta pendente, mas estes são os dados lidos:\n\n"
+                                + format_action_summary(proposal)
+                            )
+                        }
+                    try:
+                        pending_payload = load_pending_chat_action(username, conversation["id"])
+                    except Exception:
+                        logger.exception("Falha ao carregar proposta pendente após comando slash.")
+                        pending_payload = None
                     answer = {
                         "answer": pending_action["summary"],
                         "sources": [],
-                        "pending_action": load_pending_chat_action(username, conversation["id"]),
+                        "pending_action": pending_payload,
                         "answer_origin": "slash_template",
                     }
             else:
@@ -1231,24 +1436,65 @@ def handle_chat_turn(
             if not allow_mutations:
                 answer = _blocked_mutation_answer(channel)
             else:
-                action_proposal = finalize_operational_proposal(
-                    slash_command.get("proposal"),
-                    current_resolvable_port_calls(),
-                )
-                if action_proposal and action_proposal.get("intent") == "action":
-                    pending_action = save_pending_chat_action(
-                        username=username,
-                        conversation_id=conversation["id"],
-                        proposal=action_proposal,
-                        question=clean_question,
+                try:
+                    action_proposal = finalize_operational_proposal(
+                        slash_command.get("proposal"),
+                        current_resolvable_port_calls(),
                     )
+                except (PermissionError, ValueError) as exc:
+                    proposal = slash_command.get("proposal") or {}
+                    template = build_action_reply_template(
+                        proposal.get("action", ""),
+                        proposal.get("missing_fields", []),
+                    )
+                    message = f"Não consegui preparar o comando. Motivo: {exc}"
+                    if template:
+                        message = f"{message}\n\n{template}"
+                    answer = {
+                        "answer": message,
+                        "sources": [],
+                        "answer_origin": "slash_error",
+                    }
+                    action_proposal = None
+                except Exception:
+                    logger.exception("Falha inesperada ao preparar comando slash operacional.")
+                    answer = {
+                        "answer": (
+                            "Falha inesperada ao preparar o comando operacional. "
+                            "Confirma a Ref da escala, o ID da manobra e os campos alterados."
+                        ),
+                        "sources": [],
+                        "answer_origin": "slash_error",
+                    }
+                    action_proposal = None
+                if answer is None and action_proposal and action_proposal.get("intent") == "action":
+                    try:
+                        pending_action = save_pending_chat_action(
+                            username=username,
+                            conversation_id=conversation["id"],
+                            proposal=action_proposal,
+                            question=clean_question,
+                        )
+                    except Exception:
+                        logger.exception("Falha ao guardar proposta operacional do comando slash.")
+                        pending_action = {
+                            "summary": (
+                                "Não consegui guardar a proposta pendente, mas estes são os dados lidos:\n\n"
+                                + format_action_summary(action_proposal)
+                            )
+                        }
+                    try:
+                        pending_payload = load_pending_chat_action(username, conversation["id"])
+                    except Exception:
+                        logger.exception("Falha ao carregar proposta operacional pendente.")
+                        pending_payload = None
                     answer = {
                         "answer": pending_action["summary"],
                         "sources": [],
-                        "pending_action": load_pending_chat_action(username, conversation["id"]),
+                        "pending_action": pending_payload,
                         "answer_origin": "slash_proposal",
                     }
-                else:
+                elif answer is None:
                     proposal = slash_command.get("proposal") or {}
                     template = build_action_reply_template(
                         proposal.get("action", ""),
@@ -1260,13 +1506,19 @@ def handle_chat_turn(
                     )
                     if template:
                         reason = f"{reason}\n\n{template}"
+                    diagnostic = format_action_summary(proposal) if proposal.get("action") else ""
+                    if diagnostic:
+                        reason = f"{reason}\n\n{diagnostic}"
                     answer = {
                         "answer": reason,
                         "sources": [],
                         "answer_origin": "slash_rejected",
                     }
         elif answer is None:
-            answer = answer_direct_operational_query(clean_question, plan=execution_plan)
+            answer = answer_direct_operational_query(
+                lookup_question if is_revision_attempt else clean_question,
+                plan=execution_plan,
+            )
 
         if answer is None:
             if existing_pending:
@@ -1327,11 +1579,26 @@ def handle_chat_turn(
                                 "answer_origin": "pending_action_confirmed",
                             }
                 else:
-                    pending_update = refine_pending_operational_action(
-                        clean_question,
-                        existing_pending.get("proposal", {}),
-                        role,
-                    )
+                    try:
+                        pending_update = refine_pending_operational_action(
+                            clean_question,
+                            existing_pending.get("proposal", {}),
+                            role,
+                        )
+                    except (PermissionError, ValueError) as exc:
+                        pending_update = {
+                            "intent": "unsupported",
+                            "reason": f"Não consegui atualizar a ação pendente. Motivo: {exc}",
+                        }
+                    except Exception:
+                        logger.exception("Falha inesperada ao atualizar ação operacional pendente.")
+                        pending_update = {
+                            "intent": "unsupported",
+                            "reason": (
+                                "Falha inesperada ao atualizar a ação pendente. "
+                                "Confirma os campos obrigatórios e volta a tentar."
+                            ),
+                        }
                     if (
                         pending_update
                         and pending_update.get("intent") == "update"
@@ -1431,43 +1698,40 @@ def handle_chat_turn(
         if answer is None:
             runtime_history = history + [user_message]
             conversation_state = build_conversation_reasoning_state(
-                clean_question,
+                lookup_question,
                 runtime_history,
                 execution_plan,
             )
-            berth_profile_match = find_best_berth_profile(clean_question, _active_knowledge_dir())
             targeted_document_context = _build_targeted_document_context(
-                clean_question,
+                lookup_question,
                 history,
                 trusted_answers,
                 reviewed_answers,
-                berth_profile_match,
             )
-            berth_profile_answer = build_berth_profile_answer(clean_question, berth_profile_match)
+            berth_profile_match = find_best_berth_profile(lookup_question, _active_knowledge_dir())
+            berth_profile_answer = build_berth_profile_answer(lookup_question, berth_profile_match)
             supplemental_sources = _build_supplemental_sources(
-                clean_question,
+                lookup_question,
                 plan=execution_plan,
                 conversation_state=conversation_state,
+                trusted_answers=synthesis_trusted_answers,
+                reviewed_answers=synthesis_reviewed_answers,
             )
-            compound_message_source = build_compound_message_analysis_source(clean_question)
+            revision_source = _build_answer_revision_source(revision_context)
+            if revision_source:
+                supplemental_sources.insert(0, revision_source)
+            compound_message_source = build_compound_message_analysis_source(lookup_question)
             if compound_message_source:
                 supplemental_sources.append(compound_message_source)
             supplemental_sources.extend(build_berth_profile_sources(berth_profile_match))
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
-            allow_companion_shortcut = not execution_plan.requires_llm_synthesis
-            prefer_berth_profile = (
-                bool(berth_profile_answer)
-                and allow_companion_shortcut
-                and not _review_correction_targets_document(review_correction_match, targeted_document_context, None)
-                and _should_prefer_berth_profile_answer(
-                    clean_question,
-                    targeted_document_context["companion_answer"],
-                    berth_profile_answer,
-                )
-            )
-            if prefer_berth_profile:
+            allow_companion_shortcut = not execution_plan.requires_llm_synthesis and not is_revision_attempt
+            if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+                lookup_question,
+                targeted_document_context["companion_answer"],
+            ):
                 answer = {
                     "answer": berth_profile_answer,
                     "sources": supplemental_sources,
@@ -1479,7 +1743,7 @@ def handle_chat_turn(
                     targeted_document_context,
                     None,
                 ):
-                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                    answer = _build_review_correction_answer(review_correction_match)
                     if supplemental_sources:
                         answer["sources"] = supplemental_sources
                 else:
@@ -1490,7 +1754,7 @@ def handle_chat_turn(
                     }
             else:
                 global_companion_match = find_best_global_companion_match(
-                    clean_question,
+                    lookup_question,
                     _active_knowledge_dir(),
                 )
                 if global_companion_match and not allow_companion_shortcut:
@@ -1501,7 +1765,7 @@ def handle_chat_turn(
                         targeted_document_context,
                         global_companion_match,
                     ):
-                        answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                        answer = _build_review_correction_answer(review_correction_match)
                         if global_companion_match.get("sources"):
                             answer["sources"] = global_companion_match["sources"]
                     else:
@@ -1510,8 +1774,8 @@ def handle_chat_turn(
                             "sources": global_companion_match["sources"],
                             "answer_origin": "document_companion_global",
                         }
-                elif review_correction_match and not execution_plan.requires_llm_synthesis:
-                    answer = _build_review_correction_answer(review_correction_match, berth_profile_match)
+                elif review_correction_match and not execution_plan.requires_llm_synthesis and not is_revision_attempt:
+                    answer = _build_review_correction_answer(review_correction_match)
                 else:
                     if (
                         review_guard_match
@@ -1521,28 +1785,38 @@ def handle_chat_turn(
                         answer = _build_review_guard_answer(review_guard_match)
                     else:
                         if not services.rag.can_generate():
-                            raise RuntimeError("Define a API key do LLM antes de usar o chatbot.")
+                            raise RuntimeError("Define a API key do provider antes de usar o chatbot.")
                         answer = services.rag.answer(
                             question=clean_question,
-                            retrieval_question=targeted_document_context["retrieval_question"],
+                            retrieval_question=targeted_document_context["retrieval_question"] or lookup_question,
                             role=role,
                             history=runtime_history[-10:],
                             supplemental_sources=supplemental_sources,
-                            trusted_answers=trusted_answers,
-                            reviewed_answers=reviewed_answers,
+                            trusted_answers=synthesis_trusted_answers,
+                            reviewed_answers=synthesis_reviewed_answers,
                             execution_plan=execution_plan.to_dict(),
                             conversation_state=conversation_state,
                         )
                         answer["answer_origin"] = "llm"
-                        if trusted_answers:
+                        if synthesis_trusted_answers:
                             answer["feedback_match"] = {
-                                "similarity": trusted_answers[0]["similarity"],
-                                "message_id": trusted_answers[0]["message_id"],
-                                "question": trusted_answers[0]["question"],
-                                "feedback_note": trusted_answers[0].get("feedback_note", ""),
-                                "feedback_correction": trusted_answers[0].get("feedback_correction", ""),
-                                "feedback_correction_document": trusted_answers[0].get("feedback_correction_document", ""),
+                                "similarity": synthesis_trusted_answers[0]["similarity"],
+                                "message_id": synthesis_trusted_answers[0]["message_id"],
+                                "question": synthesis_trusted_answers[0]["question"],
+                                "feedback_note": synthesis_trusted_answers[0].get("feedback_note", ""),
+                                "feedback_correction": synthesis_trusted_answers[0].get("feedback_correction", ""),
+                                "feedback_correction_document": synthesis_trusted_answers[0].get("feedback_correction_document", ""),
                             }
+
+        if is_revision_attempt and _answers_are_effectively_same(
+            (answer or {}).get("answer", ""),
+            revision_context.get("previous_answer", ""),
+        ):
+            answer["answer"] = (
+                "Reanalisei a pergunta e não encontrei base documental para alterar a conclusão. "
+                "Reformulando de forma explícita: "
+                + str(answer.get("answer") or "").strip()
+            )
 
         answer = add_contextual_response_emojis(answer, clean_question)
 

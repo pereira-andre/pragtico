@@ -1,4 +1,4 @@
-"""Storage package — backward-compatible re-exports."""
+"""Storage package exports."""
 
 from .base import BaseStore
 from .constants import (
@@ -9,6 +9,7 @@ from .constants import (
     CONSTRAINT_META,
     DEFAULT_CONVERSATION_TITLE,
     FEEDBACK_APPROVED,
+    FEEDBACK_CORRECTED,
     FEEDBACK_IGNORED,
     FEEDBACK_REVIEW,
     PASSWORD_HASH_METHOD,
@@ -40,7 +41,7 @@ from .constants import (
     get_constraint_options,
     get_vessel_type_options,
 )
-from .local import LocalStore
+from .port_call_helpers import can_plan_followup_maneuver_status
 from .postgres import PostgresStore, create_store
 from .utils import (
     format_constraint_labels,
@@ -50,12 +51,12 @@ from .utils import (
 
 __all__ = [
     "BaseStore",
-    "LocalStore",
     "PostgresStore",
     "create_store",
     "PASSWORD_HASH_METHOD",
     "DEFAULT_CONVERSATION_TITLE",
     "FEEDBACK_APPROVED",
+    "FEEDBACK_CORRECTED",
     "FEEDBACK_IGNORED",
     "FEEDBACK_REVIEW",
     "ALLOWED_FEEDBACK_STATUSES",
@@ -93,4 +94,5 @@ __all__ = [
     "is_user_profile_complete",
     "normalize_constraint_codes",
     "format_constraint_labels",
+    "can_plan_followup_maneuver_status",
 ]

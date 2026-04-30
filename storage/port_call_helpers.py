@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
-from domain.berth_layout import build_slot_occupancy
+from domain.berth_layout import build_slot_occupancy, canonicalize_berth_label, is_known_berth_label
 from domain.cost_engine import (
     ManoeuvreInput,
     ManoeuvreType,
@@ -58,6 +58,15 @@ def _normalize_maneuver_record(record: Dict, fallback_created_by: str = "system"
     reported_by = _normalize_username(record.get("reported_by"))
     created_at = record.get("created_at") or iso_now()
     updated_at = record.get("updated_at") or created_at
+    origin = " ".join((record.get("origin") or "").strip().split())
+    destination = " ".join((record.get("destination") or "").strip().split())
+    if maneuver_type == "entry":
+        destination = _canonical_berth_or_original(destination)
+    elif maneuver_type == "departure":
+        origin = _canonical_berth_or_original(origin)
+    elif maneuver_type == "shift":
+        origin = _canonical_berth_or_original(origin)
+        destination = _canonical_berth_or_original(destination)
     return {
         "id": record.get("id") or str(uuid.uuid4()),
         "type": maneuver_type,
@@ -70,8 +79,8 @@ def _normalize_maneuver_record(record: Dict, fallback_created_by: str = "system"
         "tug_count": record.get("tug_count", "") or _extract_compact_note_value(record.get("plan_note", ""), "Rebocadores"),
         "plan_observations": record.get("plan_observations", "") or _extract_compact_note_value(record.get("plan_note", ""), "Observações"),
         "reported_draft_m": record.get("reported_draft_m", "") or "",
-        "origin": " ".join((record.get("origin") or "").strip().split()),
-        "destination": " ".join((record.get("destination") or "").strip().split()),
+        "origin": origin,
+        "destination": destination,
         "plan_note": record.get("plan_note", "") or "",
         "approval_note": record.get("approval_note", "") or "",
         "aborted_reason": record.get("aborted_reason", "") or "",
@@ -89,6 +98,16 @@ def _normalize_maneuver_record(record: Dict, fallback_created_by: str = "system"
         "created_at": created_at,
         "updated_at": updated_at,
     }
+
+
+def _canonical_berth_or_original(value: str | None) -> str:
+    clean = " ".join((value or "").strip().split())
+    if not clean:
+        return ""
+    canonical = canonicalize_berth_label(clean)
+    if is_known_berth_label(canonical):
+        return canonical
+    return clean
 
 
 def _maneuver_sort_key(record: Dict) -> tuple[float, str]:
@@ -216,6 +235,12 @@ def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
     if clean_role == "agente":
         return maneuver.get("state") == PORT_CALL_APPROVAL_PENDING
     return False
+
+
+def can_plan_followup_maneuver_status(status: Optional[str]) -> bool:
+    """Return whether a port call can receive departure/shift planning."""
+    clean_status = " ".join(str(status or "").strip().split()).lower()
+    return clean_status in {PORT_CALL_STATUS_SCHEDULED, PORT_CALL_STATUS_IN_PORT}
 
 
 def _extract_labeled_report(note: str, label: str) -> str:
@@ -521,8 +546,8 @@ def _normalize_port_call_record(record: Dict) -> Dict:
         "planned_shift_at": record.get("planned_shift_at"),
         "shift_plan_note": record.get("shift_plan_note", "") or "",
         "shift_at": record.get("shift_at"),
-        "shift_origin_berth": record.get("shift_origin_berth", "") or "",
-        "shift_destination_berth": record.get("shift_destination_berth", "") or "",
+        "shift_origin_berth": _canonical_berth_or_original(record.get("shift_origin_berth", "")),
+        "shift_destination_berth": _canonical_berth_or_original(record.get("shift_destination_berth", "")),
         "shift_approval_status": shift_approval_status,
         "shift_approval_note": record.get("shift_approval_note", "") or "",
         "shift_aborted_reason": record.get("shift_aborted_reason", "") or "",
@@ -532,7 +557,7 @@ def _normalize_port_call_record(record: Dict) -> Dict:
             username=record.get("shift_decided_by"),
         ),
         "shift_decided_at": record.get("shift_decided_at"),
-        "berth": record.get("berth", "") or "",
+        "berth": _canonical_berth_or_original(record.get("berth", "")),
         "last_port": record.get("last_port", "") or "",
         "next_port": record.get("next_port", "") or "",
         "created_by": _normalize_username(record.get("created_by", "system") or "system"),
@@ -1087,8 +1112,7 @@ def _build_port_activity_snapshot(records: List[Dict], window_days: int = 5) -> 
         if (
             status == PORT_CALL_STATUS_SCHEDULED
             and approval_status != PORT_CALL_APPROVAL_ABORTED
-            and eta_dt
-            and now <= eta_dt <= future_limit
+            and (not eta_dt or past_limit <= eta_dt <= future_limit)
         ):
             arrivals.append(item)
         elif status == PORT_CALL_STATUS_IN_PORT:

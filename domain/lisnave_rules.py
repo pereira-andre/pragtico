@@ -181,6 +181,8 @@ def lisnave_rule_snippet() -> str:
             "Regra operacional estruturada Lisnave:",
             "- Docas Lisnave (D20, D21, D22, D31, D32, D33): mínimo 4 rebocadores.",
             "- D31, D32 e D33 são docas secas com acesso por um único Hidrolift/mini eclusa: o navio entra no Hidrolift e depois é transferido para uma das três docas.",
+            "- Limite dimensional crítico do Hidrolift: boca máxima admissível 32 m; um navio com boca superior a 32 m não cabe no Hidrolift e não deve seguir para D31/D32/D33.",
+            "- Sonda de acesso ao Hidrolift: 5,5 m ao ZH; avaliar calado com a altura de água disponível e margem de segurança.",
             "- Entrada em doca é atravessada à corrente: dois rebocadores empurram, um de cada lado, e os restantes controlam popa/proa.",
             "- Navios que entram nas docas ficam com proa a norte.",
             "- Cais Lisnave (C0A/C0B/C1A/C1B/C2A/C2B/C3A/C3B): navios ficam com proa a sul.",
