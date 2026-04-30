@@ -91,10 +91,10 @@ VESSEL_CATALOG_JSON_TEMPLATE = {
             "vessel_bow_thruster": "yes",
             "vessel_stern_thruster": "unknown",
             "service_rate_profile": "Linha regular",
-            "regular_line_calls_365d": "0",
+            "regular_line_calls_365d": "7",
             "pilotage_up_rate": "",
             "tup_reduction_profile": "regular_line",
-            "service_notes": "Deixar o ajuste manual a 0 para contar apenas o histórico registado no PRAGtico.",
+            "service_notes": "Perfil comercial de demonstração.",
         }
     ]
 }
@@ -315,12 +315,12 @@ def _integer_payload_value(payload: dict, *keys: str, default: str = "") -> str:
     try:
         numeric_value = float(value.replace(",", "."))
     except ValueError as exc:
-        raise ValueError("Ajuste manual para faturação/linha regular deve ser um número inteiro.") from exc
+        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.") from exc
     if not numeric_value.is_integer():
-        raise ValueError("Ajuste manual para faturação/linha regular deve ser um número inteiro.")
+        raise ValueError("Escalas últimos 365 dias deve ser um número inteiro.")
     number = int(numeric_value)
     if number < 0 or number > 999:
-        raise ValueError("Ajuste manual para faturação/linha regular deve estar entre 0 e 999.")
+        raise ValueError("Escalas últimos 365 dias deve estar entre 0 e 999.")
     return str(number)
 
 
@@ -1152,7 +1152,7 @@ def _vessel_catalog_txt(record: dict) -> str:
         "",
         "Serviços e taxas",
         f"Perfil de serviços: {record.get('service_rate_profile') or '--'}",
-        f"Ajuste manual faturação/linha regular 365 dias: {record.get('regular_line_calls_365d') or '--'}",
+        f"Escalas linha regular 365 dias: {record.get('regular_line_calls_365d') or '--'}",
         f"UP pilotagem: {record.get('pilotage_up_rate') or '--'}",
         f"Perfil redução TUP: {record.get('tup_reduction_profile') or '--'}",
         f"Notas: {record.get('service_notes') or '--'}",
