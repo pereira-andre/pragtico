@@ -12,7 +12,7 @@ def display_missing_field_labels(fields: List[str]) -> List[str]:
 def build_scale_edit_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para editar a escala (usa a Ref da escala):",
+            "Responde neste formato para editar a escala. Usa a Ref e preenche só os campos a alterar:",
             "Ref: ",
             "Nome do navio: ",
             "ETA de chegada: DD/MM/AAAA, HH:MM",
@@ -65,7 +65,7 @@ def build_create_maneuver_reply_template() -> str:
 def build_edit_maneuver_plan_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para editar o planeamento da manobra (usa o ID da manobra; com várias do mesmo tipo, o ID é obrigatório):",
+            "Responde neste formato para editar o planeamento. Com ID da manobra não precisas de repetir Ref/Tipo; preenche só os campos a alterar:",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",
@@ -120,7 +120,7 @@ def build_command_report_reply_template() -> str:
 def build_edit_report_reply_template() -> str:
     return "\n".join(
         [
-            "Responde neste formato para editar o registo da manobra (se usares o ID da manobra, basta o ID; sem ID usa Ref + Tipo):",
+            "Responde neste formato para editar o registo da manobra. Com ID da manobra não precisas de repetir Ref/Tipo; preenche só os campos a alterar:",
             "ID da manobra: ",
             "Ref: ",
             "Tipo de manobra: entrada | saída | mudança",

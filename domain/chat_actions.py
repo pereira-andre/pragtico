@@ -384,11 +384,74 @@ def required_target_missing_fields(action: str, target: Dict) -> List[str]:
 
 def proposal_missing_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
     missing = required_missing_fields(action, fields) + required_target_missing_fields(action, target)
+    if _edit_action_needs_update_field(action, fields):
+        missing.append("update_field")
     deduped = []
     for item in missing:
         if item not in deduped:
             deduped.append(item)
     return display_missing_field_labels(deduped)
+
+
+def _edit_action_needs_update_field(action: str, fields: Dict) -> bool:
+    editable_fields_by_action = {
+        "edit_port_call": {
+            "vessel_name",
+            "eta_local",
+            "berth",
+            "last_port",
+            "next_port",
+            "notes",
+            "constraints",
+            "vessel_short_name",
+            "vessel_imo",
+            "vessel_call_sign",
+            "vessel_flag",
+            "vessel_type",
+            "vessel_loa_m",
+            "vessel_beam_m",
+            "vessel_gt_t",
+            "vessel_dwt_t",
+            "vessel_max_draft_m",
+            "vessel_bow_thruster",
+            "vessel_stern_thruster",
+        },
+        "edit_maneuver_plan": {
+            "planned_at_local",
+            "planned_departure_at_local",
+            "planned_shift_at_local",
+            "origin",
+            "destination",
+            "origin_berth",
+            "destination_berth",
+            "berth",
+            "next_port",
+            "draft_m",
+            "tug_count",
+            "constraints",
+            "notes",
+            "plan_observations",
+        },
+        "edit_maneuver_report": {
+            "maneuver_started_local",
+            "maneuver_finished_local",
+            "draft_m",
+            "notes",
+        },
+    }
+    editable_fields = editable_fields_by_action.get(action)
+    if not editable_fields:
+        return False
+    payload = fields or {}
+    for key in editable_fields:
+        value = payload.get(key)
+        if isinstance(value, list):
+            if value:
+                return False
+            continue
+        if " ".join(str(value or "").split()):
+            return False
+    return True
 
 
 def _invalid_berth_field_labels(action: str, fields: Dict, target: Dict) -> List[str]:
@@ -551,8 +614,13 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
     if maneuver_type:
         positional_target["maneuver_type"] = maneuver_type
     if len(identifier_tokens) == 1:
-        positional_target["reference_code"] = identifier_tokens[0]
-        positional_target["maneuver_id"] = _normalize_maneuver_id(identifier_tokens[0])
+        identifier = identifier_tokens[0]
+        if _looks_like_scale_reference(identifier):
+            positional_target["reference_code"] = identifier
+        elif _looks_like_maneuver_id_token(identifier):
+            positional_target["maneuver_id"] = _normalize_maneuver_id(identifier)
+        else:
+            positional_target["reference_code"] = identifier
     elif len(identifier_tokens) > 1:
         reference_token = next((token for token in identifier_tokens if _looks_like_scale_reference(token)), identifier_tokens[-1])
         positional_target["reference_code"] = reference_token

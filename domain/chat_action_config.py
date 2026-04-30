@@ -497,10 +497,10 @@ REQUIRED_FIELDS_BY_ACTION = {
     "entry_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
     "departure_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
     "shift_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m"},
-    "edit_maneuver_report": {"maneuver_started_local", "maneuver_finished_local", "draft_m", "change_reason"},
+    "edit_maneuver_report": {"change_reason"},
     "schedule_departure": {"planned_departure_at_local", "next_port"},
     "schedule_shift": {"planned_shift_at_local", "destination_berth"},
-    "edit_maneuver_plan": {"planned_at_local", "change_reason"},
+    "edit_maneuver_plan": {"change_reason"},
     "edit_port_call": {"change_reason"},
 }
 DISPLAY_FIELD_LABELS = {
@@ -537,6 +537,7 @@ DISPLAY_FIELD_LABELS = {
     "tug_count": "rebocadores",
     "notes": "observações",
     "change_reason": "motivo da alteração",
+    "update_field": "campo a alterar",
 }
 
 

@@ -9,7 +9,6 @@ from core import services
 from core.access_control import ensure_port_call_scope_access, filter_port_activity_for_session
 from core.form_helpers import (
     _build_created_port_call_message,
-    _iso_to_datetime_local_value,
     build_departure_plan_note,
     build_entry_request_note,
     build_pilot_report_note,
@@ -1062,13 +1061,6 @@ def finalize_operational_proposal(proposal: dict | None, port_calls: list[dict] 
         proposal["target"]["maneuver_id"] = maneuver.get("id", "")
         if proposal.get("action") == "edit_maneuver_plan":
             fields = proposal.setdefault("fields", {})
-            planned_value = " ".join(str(fields.get("planned_at_local") or "").split())
-            if not planned_value:
-                fields["planned_at_local"] = (
-                    maneuver.get("planned_input_value")
-                    or _iso_to_datetime_local_value(maneuver.get("planned_at"))
-                    or ""
-                )
             mt = proposal["target"].get("maneuver_type", "")
             if mt == "entry" and fields.get("berth") and not fields.get("destination"):
                 fields["destination"] = fields["berth"]
