@@ -1081,10 +1081,83 @@
   padding: 0 16px 16px;
 }
 
+.vessel-management-panel {
+  margin-top: 18px;
+}
+
+.vessel-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .vessel-export-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.vessel-table-panel {
+  margin-top: 18px;
+}
+
+.vessel-table {
+  min-width: 1120px;
+}
+
+.vessel-table td {
+  vertical-align: top;
+}
+
+.vessel-table td strong,
+.vessel-table td span,
+.vessel-table td small {
+  display: block;
+}
+
+.vessel-data-row td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.vessel-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vessel-row-actions .mini-button {
+  padding: 7px 9px;
+}
+
+.vessel-edit-row td {
+  padding: 0 12px 10px;
+  border-top: 0;
+}
+
+.vessel-row-editor {
+  border: 1px solid rgba(8, 67, 63, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.vessel-row-editor summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 9px 12px;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.vessel-row-editor summary::-webkit-details-marker {
+  display: none;
+}
+
+.vessel-row-editor-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 12px;
 }
 
 .vessel-fact-mini {
@@ -1147,6 +1220,12 @@
     box-shadow: none !important;
     border-color: #d7dde7 !important;
     background: #fff !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .vessel-management-grid {
+    grid-template-columns: 1fr;
   }
 }
 

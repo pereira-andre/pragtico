@@ -98,18 +98,21 @@
     </form>
   </section>
 
-  <div class="planning-register-grid">
-    <section class="panel ops-form-card planning-block planning-register-card">
-      <div class="planning-block-heading">
-        <p class="eyebrow">Novo navio</p>
-        <h3>Criar ficha</h3>
-        <p class="planning-block-lead">A ficha fica disponível como navio frequente na criação de novas escalas.</p>
-      </div>
-      <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-form planning-json-import-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {{ vessel_form_fields({}) }}
-        <button type="submit">Guardar navio</button>
-      </form>
+  <section class="panel ops-form-card planning-block vessel-management-panel">
+    <div class="planning-block-heading">
+      <p class="eyebrow">Gestão</p>
+      <h3>Criar e importar</h3>
+      <p class="planning-block-lead">Usa estes blocos quando precisares de adicionar fichas novas ou carregar várias fichas por JSON.</p>
+    </div>
+    <div class="vessel-management-grid">
+      <details class="planning-optional-box planning-json-import-box">
+        <summary>Novo navio</summary>
+        <form method="post" action="{{ url_for('port_calls.create_vessel_catalog_record') }}" class="stack planning-optional-body planning-form planning-json-import-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {{ vessel_form_fields({}) }}
+          <button type="submit">Guardar navio</button>
+        </form>
+      </details>
 
       <details class="planning-optional-box planning-json-import-box">
         <summary>Importar navios por JSON</summary>
@@ -129,7 +132,7 @@
               JSON dos navios
               <textarea
                 name="payload_json"
-                rows="14"
+                rows="10"
                 class="planning-json-textarea"
                 placeholder='{"vessels":[{"vessel_name":"MSC Lyria", ...}]}'></textarea>
             </label>
@@ -141,65 +144,89 @@
           </div>
         </div>
       </details>
-    </section>
+    </div>
+  </section>
 
-    <section class="panel ops-form-card planning-block planning-block-secondary planning-register-card">
-      <div class="planning-block-heading">
+  <section class="panel planned-panel vessel-table-panel">
+    <div class="section-head archive-head">
+      <div>
         <p class="eyebrow">Catálogo</p>
-        <h3>Navios frequentes</h3>
-        <p class="planning-block-lead">Editar sincroniza escalas ativas do mesmo navio. Apagar remove apenas a ficha frequente.</p>
+        <h2>Navios frequentes</h2>
       </div>
+      <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }} resultado{% if vessel_summary.filtered_count != 1 %}s{% endif %}</span>
+    </div>
 
-      <div class="ops-list planning-register-list vessel-catalog-list">
-        {% for vessel in vessels %}
-          <details class="ops-card planning-candidate-card vessel-catalog-card">
-            <summary class="vessel-catalog-summary-row">
-              <span class="vessel-catalog-title">
-                {% if vessel.vessel_type_icon %}
-                  <img src="{{ url_for('dashboard_bp.image_asset', asset_path='vessel_type/' ~ vessel.vessel_type_icon) }}" alt="{{ vessel.vessel_type_label }}">
-                {% endif %}
-                <span>
-                  <span class="planning-candidate-label">IMO {{ vessel.vessel_imo or "--" }}</span>
-                  <strong>{{ vessel.vessel_name }}</strong>
-                  <small>{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }} · {{ vessel.vessel_flag or "--" }}</small>
-                </span>
-              </span>
-              <span class="planned-status planned-status-pending">{{ vessel.scale_count or 0 }} escala{% if (vessel.scale_count or 0) != 1 %}s{% endif %}</span>
-            </summary>
-            <div class="vessel-catalog-card-body">
-              <div class="vessel-export-actions">
-                <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">JSON</a>
-                <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">TXT</a>
-                <a class="mini-button secondary-button" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">Imprimir / PDF</a>
-              </div>
-              <div class="scale-fact-sheet vessel-fact-mini">
-                <article class="scale-fact-row"><span>Indicativo</span><strong>{{ vessel.vessel_call_sign or "--" }}</strong></article>
-                <article class="scale-fact-row"><span>LOA</span><strong>{{ vessel.vessel_loa_m or "--" }} m</strong></article>
-                <article class="scale-fact-row"><span>Boca</span><strong>{{ vessel.vessel_beam_m or "--" }} m</strong></article>
-                <article class="scale-fact-row"><span>GT</span><strong>{{ vessel.vessel_gt_t or "--" }}</strong></article>
-                <article class="scale-fact-row"><span>DWT</span><strong>{{ vessel.vessel_dwt_t or "--" }}</strong></article>
-                <article class="scale-fact-row"><span>Última escala</span><strong>{{ vessel.latest_scale_reference or "--" }}</strong></article>
-              </div>
-              <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                {{ vessel_form_fields(vessel) }}
-                <button type="submit">Guardar alterações</button>
-              </form>
-              <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" class="ops-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="mini-button danger-button">Apagar navio</button>
-              </form>
-            </div>
-          </details>
-        {% endfor %}
-
-        {% if not vessels %}
-          <article class="ops-empty planning-register-empty">
-            <p>Sem navios correspondentes ao filtro atual.</p>
-          </article>
-        {% endif %}
-      </div>
-    </section>
-  </div>
+    <div class="planned-table-wrap vessel-table-wrap">
+      <table class="planned-table vessel-table">
+        <thead>
+          <tr>
+            <th>Navio</th>
+            <th>Tipo</th>
+            <th>IMO</th>
+            <th>Indicativo</th>
+            <th>Bandeira</th>
+            <th>LOA</th>
+            <th>GT / DWT</th>
+            <th>Escalas</th>
+            <th>Última escala</th>
+            <th>Exportar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vessel in vessels %}
+            <tr class="planned-row vessel-data-row">
+              <td>
+                <strong>{{ vessel.vessel_name }}</strong>
+                <small class="muted">Calado máx. {{ vessel.vessel_max_draft_m or "--" }} m</small>
+              </td>
+              <td>{{ vessel.vessel_type_label or vessel.vessel_type or "Restantes" }}</td>
+              <td>{{ vessel.vessel_imo or "--" }}</td>
+              <td>{{ vessel.vessel_call_sign or "--" }}</td>
+              <td>{{ vessel.vessel_flag or "--" }}</td>
+              <td>{{ vessel.vessel_loa_m or "--" }} m</td>
+              <td>
+                <span>{{ vessel.vessel_gt_t or "--" }}</span>
+                <small class="muted">DWT {{ vessel.vessel_dwt_t or "--" }}</small>
+              </td>
+              <td>{{ vessel.scale_count or 0 }}</td>
+              <td>
+                <span>{{ vessel.latest_scale_reference or "--" }}</span>
+                <small class="muted">{{ vessel.latest_eta_label or "" }}</small>
+              </td>
+              <td>
+                <div class="vessel-row-actions">
+                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_json', vessel_key=vessel.key) }}">JSON</a>
+                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_record_txt', vessel_key=vessel.key) }}">TXT</a>
+                  <a class="mini-button secondary-button" href="{{ url_for('port_calls.print_vessel_catalog_record', vessel_key=vessel.key) }}" target="_blank" rel="noopener noreferrer">PDF</a>
+                </div>
+              </td>
+            </tr>
+            <tr class="vessel-edit-row">
+              <td colspan="10">
+                <details class="vessel-row-editor">
+                  <summary>Editar / apagar {{ vessel.vessel_name }}</summary>
+                  <div class="vessel-row-editor-body">
+                    <form method="post" action="{{ url_for('port_calls.edit_vessel_catalog_record', vessel_key=vessel.key) }}" class="stack planning-form planning-json-import-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      {{ vessel_form_fields(vessel) }}
+                      <button type="submit">Guardar alterações</button>
+                    </form>
+                    <form method="post" action="{{ url_for('port_calls.delete_vessel_catalog_record', vessel_key=vessel.key) }}" class="ops-inline-form" onsubmit="return confirm('Remover este navio dos frequentes? As escalas e manobras existentes não são apagadas.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="mini-button danger-button">Apagar navio frequente</button>
+                    </form>
+                  </div>
+                </details>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="10" class="planned-empty">Sem navios correspondentes ao filtro atual.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main>
 {% endblock %}
