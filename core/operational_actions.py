@@ -594,6 +594,18 @@ def build_tracked_scales(port_activity: dict) -> list[dict]:
                 f"às {item.get('planned_label', '--')} · agente {item.get('agent_label', '--')}"
             ),
         })
+    for item in port_activity.get("arrivals", []) or []:
+        item_id = (item.get("id") or "").strip()
+        if not item_id or item_id in seen_ids:
+            continue
+        seen_ids.add(item_id)
+        tracked.append({
+            "id": item_id, "reference_code": item.get("reference_code", ""),
+            "vessel_name": item.get("vessel_name", ""),
+            "location_label": item.get("berth_label", ""),
+            "status_label": "Pendente", "status_class": "pending",
+            "meta": f"ETA {item.get('eta_label', '--')} · agente {item.get('agent_label', '--')}",
+        })
     return tracked
 
 

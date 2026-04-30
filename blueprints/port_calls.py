@@ -553,7 +553,7 @@ def _build_port_call_register_context(register_form: dict | None = None) -> dict
     vessel_catalog = _build_vessel_catalog_options(historical_activity)
     return {
         "port_activity": port_activity,
-        "tracked_scales": build_tracked_scales(port_activity),
+        "tracked_scales": build_tracked_scales(historical_activity),
         "vessel_catalog": vessel_catalog,
         "vessel_catalog_json": json.dumps(vessel_catalog, ensure_ascii=False),
         "port_call_json_template": json.dumps(PORT_CALL_JSON_TEMPLATE, ensure_ascii=False, indent=2),

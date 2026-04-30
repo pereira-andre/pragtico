@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from core.operational_actions import build_tracked_scales
 from storage.postgres_port_calls import _find_active_duplicate_port_call
 
 
@@ -84,6 +85,28 @@ class PortCallDuplicateValidationTests(unittest.TestCase):
         self.assertIsNotNone(duplicate)
         self.assertEqual(duplicate[0], "imo")
         self.assertEqual(duplicate[1]["id"], "active")
+
+    def test_tracking_list_includes_pending_arrivals_without_planned_row(self) -> None:
+        tracked = build_tracked_scales(
+            {
+                "in_port": [],
+                "planned_maneuvers": [],
+                "arrivals": [
+                    {
+                        "id": "arklow-hidden",
+                        "reference_code": "PTSET26ARKL0001",
+                        "vessel_name": "ARKLOW GLOBE",
+                        "berth_label": "Secil W",
+                        "eta_label": "12 Abril 2026 às 20:00",
+                        "agent_label": "Administrador",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(len(tracked), 1)
+        self.assertEqual(tracked[0]["id"], "arklow-hidden")
+        self.assertIn("ARKLOW GLOBE", tracked[0]["vessel_name"])
 
 
 if __name__ == "__main__":
