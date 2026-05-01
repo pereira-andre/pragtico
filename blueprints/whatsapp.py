@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import secrets
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
@@ -47,6 +47,7 @@ from domain.sos_alerts import (
 bp = Blueprint("whatsapp", __name__)
 
 WHATSAPP_TEXT_CHUNK_LIMIT = 3600
+WHATSAPP_INBOUND_PROCESSING_TTL = timedelta(minutes=15)
 
 
 def _normalize_whatsapp_role(value: str | None) -> str:
@@ -262,7 +263,49 @@ def _send_whatsapp_error_reply(
 def _is_duplicate_inbound(message_id: str) -> bool:
     if not message_id:
         return False
-    return bool(services.store.get_runtime_state(_processed_inbound_key(message_id)))
+    state = services.store.get_runtime_state(_processed_inbound_key(message_id))
+    return _inbound_state_is_active(state)
+
+
+def _inbound_state_is_active(state: dict | None) -> bool:
+    if not isinstance(state, dict) or not state:
+        return False
+    status = str(state.get("status") or "").strip().lower()
+    if status == "processing":
+        started_raw = str(state.get("processing_started_at") or "").strip()
+        try:
+            started_at = datetime.fromisoformat(started_raw)
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return True
+        return datetime.now(timezone.utc) - started_at <= WHATSAPP_INBOUND_PROCESSING_TTL
+    return True
+
+
+def _claim_inbound_processing(message_id: str, *, from_number: str) -> bool:
+    if not message_id:
+        return True
+    key = _processed_inbound_key(message_id)
+    try:
+        if _inbound_state_is_active(services.store.get_runtime_state(key)):
+            return False
+        services.store.set_runtime_state(
+            key,
+            {
+                "status": "processing",
+                "message_id": message_id,
+                "from_number": from_number,
+                "processing_started_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return True
+    except Exception:
+        current_app.logger.exception(
+            "Falha não bloqueante ao marcar inbound WhatsApp como em processamento (msg=%s).",
+            message_id,
+        )
+        return True
 
 
 def _mark_inbound_processed(message_id: str, *, from_number: str, conversation_id: str, answer: str) -> None:
@@ -272,6 +315,7 @@ def _mark_inbound_processed(message_id: str, *, from_number: str, conversation_i
         services.store.set_runtime_state(
             _processed_inbound_key(message_id),
             {
+                "status": "processed",
                 "message_id": message_id,
                 "from_number": from_number,
                 "conversation_id": conversation_id,
@@ -837,9 +881,9 @@ def whatsapp_webhook_receive():
             ignored += 1
             current_app.logger.info("WhatsApp webhook ignorado para número não autorizado: %s", from_number)
             continue
-        if _is_duplicate_inbound(message_id):
+        if not _claim_inbound_processing(message_id, from_number=from_number):
             duplicates += 1
-            current_app.logger.info("WhatsApp webhook duplicado ignorado: %s", message_id)
+            current_app.logger.info("WhatsApp webhook duplicado/em processamento ignorado: %s", message_id)
             continue
 
         try:

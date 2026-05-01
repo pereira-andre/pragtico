@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask
 
 from core import services
-from blueprints.whatsapp import _send_and_record_outbound_message, _split_whatsapp_text
+from blueprints.whatsapp import (
+    _claim_inbound_processing,
+    _is_duplicate_inbound,
+    _mark_inbound_processed,
+    _processed_inbound_key,
+    _send_and_record_outbound_message,
+    _split_whatsapp_text,
+)
 
 
 class WhatsappMessageSplitTests(unittest.TestCase):
@@ -89,6 +97,90 @@ class WhatsappMessageSplitTests(unittest.TestCase):
         self.assertEqual(fake_store.metadata["channel_metadata"]["message_count"], len(fake_store.events))
         self.assertEqual(fake_store.events[0]["payload"]["part_index"], 1)
         self.assertIn("whatsapp:outbound:wamid-2", fake_store.runtime_state)
+
+    def test_inbound_processing_claim_blocks_parallel_duplicate(self) -> None:
+        class FakeStore:
+            def __init__(self) -> None:
+                self.runtime_state: dict = {}
+
+            def get_runtime_state(self, key):
+                return self.runtime_state.get(key)
+
+            def set_runtime_state(self, key, value):
+                self.runtime_state[key] = value
+
+        previous_store = services.store
+        services.store = FakeStore()
+        app = Flask(__name__)
+        try:
+            with app.app_context():
+                self.assertTrue(_claim_inbound_processing("wamid-in-1", from_number="351900000000"))
+                self.assertFalse(_claim_inbound_processing("wamid-in-1", from_number="351900000000"))
+                self.assertTrue(_is_duplicate_inbound("wamid-in-1"))
+                self.assertEqual(
+                    services.store.runtime_state[_processed_inbound_key("wamid-in-1")]["status"],
+                    "processing",
+                )
+        finally:
+            services.store = previous_store
+
+    def test_stale_inbound_processing_claim_can_be_retried(self) -> None:
+        class FakeStore:
+            def __init__(self) -> None:
+                self.runtime_state: dict = {
+                    _processed_inbound_key("wamid-in-2"): {
+                        "status": "processing",
+                        "processing_started_at": (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat(),
+                    }
+                }
+
+            def get_runtime_state(self, key):
+                return self.runtime_state.get(key)
+
+            def set_runtime_state(self, key, value):
+                self.runtime_state[key] = value
+
+        previous_store = services.store
+        services.store = FakeStore()
+        app = Flask(__name__)
+        try:
+            with app.app_context():
+                self.assertFalse(_is_duplicate_inbound("wamid-in-2"))
+                self.assertTrue(_claim_inbound_processing("wamid-in-2", from_number="351900000000"))
+                self.assertTrue(_is_duplicate_inbound("wamid-in-2"))
+        finally:
+            services.store = previous_store
+
+    def test_processed_inbound_remains_duplicate_after_answer(self) -> None:
+        class FakeStore:
+            def __init__(self) -> None:
+                self.runtime_state: dict = {}
+
+            def get_runtime_state(self, key):
+                return self.runtime_state.get(key)
+
+            def set_runtime_state(self, key, value):
+                self.runtime_state[key] = value
+
+        previous_store = services.store
+        services.store = FakeStore()
+        app = Flask(__name__)
+        try:
+            with app.app_context():
+                _mark_inbound_processed(
+                    "wamid-in-3",
+                    from_number="351900000000",
+                    conversation_id="conv-1",
+                    answer="Resposta final",
+                )
+                self.assertTrue(_is_duplicate_inbound("wamid-in-3"))
+                self.assertFalse(_claim_inbound_processing("wamid-in-3", from_number="351900000000"))
+                self.assertEqual(
+                    services.store.runtime_state[_processed_inbound_key("wamid-in-3")]["status"],
+                    "processed",
+                )
+        finally:
+            services.store = previous_store
 
 
 if __name__ == "__main__":
