@@ -13,6 +13,7 @@ from core.operational_test_suite import (
     _missing_expected_tokens,
     critical_bot_test_matrix,
     critical_maneuver_checklist_text,
+    critical_slash_validation_text,
     operational_test_inventory,
 )
 
@@ -75,6 +76,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
 
     assert "Matriz crítica" in html
     assert "Eco-Oil na checklist" in html
+    assert "/validar-manobra Tanquisado sem histórico" in html
 
 
 def test_direct_operational_matrix_cases_pass(monkeypatch) -> None:
@@ -106,6 +108,8 @@ def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
                 text = _critical_berth_profile_text(item["profile_query"])
             elif runner == "maneuver_checklist":
                 text = critical_maneuver_checklist_text(item["fixture"])
+            elif runner == "slash_validation":
+                text = critical_slash_validation_text(item["fixture"])
             else:
                 continue
             missing = _missing_expected_tokens(text, item.get("expected_tokens") or ())

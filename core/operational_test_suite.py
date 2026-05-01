@@ -264,6 +264,25 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": ("IT-010_Tanquisado.txt", "calado maximo absoluto", "Saida fora de reponto", "preia-mar precedente"),
     },
     {
+        "id": "validar-manobra-tanquisado-entry",
+        "group": "Comandos slash",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "slash_validation",
+        "label": "/validar-manobra Tanquisado sem histórico",
+        "question": "/validar-manobra para entrada GALBOT em Tanquisado com janela passada",
+        "expected_summary": "A resposta deve priorizar IT-010/checklist, avisar janela passada e não depender do histórico.",
+        "source": "Comando /validar-manobra + knowledge/berth_profiles.json",
+        "fixture": "tanquisado_entry_validation",
+        "expected_tokens": (
+            "Base documental acionada: IT-010_Tanquisado.txt",
+            "Recomendação operacional",
+            "Usar a base documental como critério principal",
+            "histórico não usado como regra principal",
+            "Janela planeada",
+        ),
+    },
+    {
         "id": "route-order-north-south",
         "group": "Conversas a testar manualmente",
         "risk": "Alto",
@@ -519,6 +538,108 @@ def _critical_checklist_fixture_data(fixture: str) -> dict:
     if fixture not in fixtures:
         raise ValueError(f"Fixture de checklist desconhecida: {fixture}")
     return fixtures[fixture]
+
+
+class _CriticalSlashValidationStore:
+    knowledge_dir = "knowledge"
+    backend_name = "critical_matrix"
+
+    def __init__(self, port_call: dict) -> None:
+        self.port_call = port_call
+
+    def get_user_profile(self, username: str) -> dict:
+        return {}
+
+    def get_port_call(self, port_call_id: str) -> dict:
+        if port_call_id != self.port_call.get("id"):
+            raise KeyError(port_call_id)
+        return self.port_call
+
+    def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
+        maneuver = (self.port_call.get("maneuver_history") or [{}])[0]
+        planned_row = {
+            "id": f"planned-{maneuver.get('id', '')}",
+            "port_call_id": self.port_call.get("id"),
+            "reference_code": self.port_call.get("reference_code"),
+            "vessel_name": self.port_call.get("vessel_name"),
+            "maneuver_id": maneuver.get("id"),
+            "maneuver_label": maneuver.get("action_label") or maneuver.get("type_label") or "Manobra",
+            "situation_class": maneuver.get("state") or "pending",
+            "situation_label": maneuver.get("state_label") or maneuver.get("state") or "Pendente",
+            "date_value": maneuver.get("planned_at"),
+            "planned_value": maneuver.get("planned_at"),
+        }
+        return {
+            "arrivals": [self.port_call],
+            "in_port": [],
+            "departed": [],
+            "aborted": [],
+            "departure_candidates": [],
+            "planned_maneuvers": [planned_row],
+            "archived_maneuvers": [],
+        }
+
+
+def critical_slash_validation_text(fixture: str) -> str:
+    if fixture != "tanquisado_entry_validation":
+        raise ValueError(f"Fixture de /validar-manobra desconhecida: {fixture}")
+    maneuver = {
+        "id": "matrix-tanquisado-entry-validation",
+        "type": "entry",
+        "state": "pending",
+        "planned_at": "2026-04-30T19:12:00+01:00",
+        "origin": "Sines",
+        "destination": "Tanquisado (lado jusante)",
+        "tug_count": "1",
+        "created_by": "admin",
+        "created_at": "2026-04-30T10:00:00+01:00",
+        "updated_at": "2026-04-30T10:00:00+01:00",
+        "constraints": [],
+        "plan_note": "Cenario de validacao do comando.",
+    }
+    port_call = _decorate_port_call(
+        {
+            "id": "matrix-validar-manobra-tanquisado",
+            "vessel_name": "GALBOT",
+            "vessel_type": "Graneis liquidos",
+            "vessel_loa_m": "110",
+            "vessel_beam_m": "18",
+            "vessel_gt_t": "7000",
+            "vessel_dwt_t": "9000",
+            "vessel_max_draft_m": "6.8",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+            "status": "scheduled",
+            "approval_status": "pending",
+            "berth": "Tanquisado (lado jusante)",
+            "last_port": "Sines",
+            "next_port": "Tanquisado",
+            "created_by": "admin",
+            "created_at": "2026-04-30T09:00:00+01:00",
+            "updated_at": "2026-04-30T09:00:00+01:00",
+            "maneuver_history": [maneuver],
+        }
+    )
+    previous_store = services.store
+    previous_knowledge_dir = getattr(services, "KNOWLEDGE_DIR", "")
+    should_restore_knowledge_dir = not _active_knowledge_dir()
+    if should_restore_knowledge_dir:
+        services.KNOWLEDGE_DIR = _critical_knowledge_dir()
+    services.store = _CriticalSlashValidationStore(port_call)
+    try:
+        payload = answer_slash_validation(
+            {
+                "maneuver_id": maneuver["id"][:8],
+                "maneuver_type": "entry",
+                "reference_code": port_call.get("reference_code"),
+            },
+            "admin",
+        )
+    finally:
+        services.store = previous_store
+        if should_restore_knowledge_dir:
+            services.KNOWLEDGE_DIR = previous_knowledge_dir
+    return str((payload or {}).get("answer") or "")
 
 
 def critical_maneuver_checklist_text(fixture: str) -> str:
@@ -2556,6 +2677,9 @@ class OperationalFlowSuite:
                     origin_ok = True
                 elif runner == "maneuver_checklist":
                     text = critical_maneuver_checklist_text(str(item.get("fixture") or ""))
+                    origin_ok = True
+                elif runner == "slash_validation":
+                    text = critical_slash_validation_text(str(item.get("fixture") or ""))
                     origin_ok = True
                 else:
                     text = ""

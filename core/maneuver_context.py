@@ -194,6 +194,74 @@ def _build_checklist_item(status: str, title: str, detail: str) -> dict:
     }
 
 
+def _document_refs_from_checklist(checklist: list[dict]) -> list[str]:
+    refs: list[str] = []
+    for item in checklist:
+        detail = str(item.get("detail") or "")
+        for match in re.findall(r"\b(?:IT|RG|P)-\d{2,3}[\w.-]*\.txt\b|\b(?:IT|RG|P)-\d{2,3}\b", detail):
+            if match not in refs:
+                refs.append(match)
+    return refs
+
+
+def _has_documental_checklist_signal(checklist: list[dict]) -> bool:
+    if _document_refs_from_checklist(checklist):
+        return True
+    return any(
+        any(marker in f"{item.get('title', '')} {item.get('detail', '')}" for marker in ("Regras do cais", "Lisnave"))
+        for item in checklist
+    )
+
+
+def _fallback_validation_recommendation(*, alerts: list[dict], doc_refs: list[str]) -> str:
+    if alerts and doc_refs:
+        return (
+            "Sem recomendação histórica forte. Usar a base documental como critério principal: "
+            "confirmar e resolver os alertas antes de validar a manobra."
+        )
+    if alerts:
+        return (
+            "Sem recomendação histórica forte. A checklist levantou alertas operacionais; "
+            "não validar como rotina sem confirmação dos pontos assinalados."
+        )
+    return (
+        "Sem padrão histórico forte. A checklist determinística não levantou alertas críticos; "
+        "confirmar condições reais do momento antes de decidir."
+    )
+
+
+def _parse_planned_datetime(value: str | None) -> datetime | None:
+    clean_value = str(value or "").strip()
+    if not clean_value:
+        return None
+    try:
+        planned_at = datetime.fromisoformat(clean_value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if planned_at.tzinfo is None:
+        planned_at = planned_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
+    return planned_at
+
+
+def _build_planned_window_checklist_item(maneuver: dict) -> dict | None:
+    state = (maneuver.get("state") or maneuver.get("status") or "").strip().lower()
+    if state not in {"pending", "approved", "pendente", "aprovada", "aprovado"}:
+        return None
+    planned_value = (maneuver.get("planned_at") or "").strip()
+    planned_at = _parse_planned_datetime(planned_value)
+    if not planned_at:
+        return None
+    now = datetime.now().astimezone()
+    if planned_at.astimezone(now.tzinfo) >= now:
+        return None
+    planned_label = _local_iso_to_label(planned_value) or planned_value
+    return _build_checklist_item(
+        "caution",
+        "Janela planeada",
+        f"A janela planeada ({planned_label}) já passou; atualizar a marcação antes de validar ou executar.",
+    )
+
+
 def _format_operational_opinion_answer(
     *,
     port_call: dict,
@@ -206,19 +274,37 @@ def _format_operational_opinion_answer(
     alerts = [item for item in checklist if item.get("status") == "caution"]
     infos = [item for item in checklist if item.get("status") == "info"]
     top_case = similar_cases[0] if similar_cases else {}
+    doc_refs = _document_refs_from_checklist(checklist)
+    has_documental_signal = _has_documental_checklist_signal(checklist)
+    quick_status = recommendation.get("title", "")
+    if not quick_status:
+        if alerts and has_documental_signal:
+            quick_status = f"validação condicionada por {len(alerts)} alerta(s) documental/operacional(is)"
+        elif alerts:
+            quick_status = f"validação condicionada por {len(alerts)} alerta(s) operacional(is)"
+        else:
+            quick_status = "checklist determinística sem alertas críticos; histórico sem padrão forte"
 
     lines = [
         "Leitura rápida",
         (
             f"- {maneuver.get('title', 'Manobra')} de {port_call.get('vessel_name', 'navio')}: "
-            f"{recommendation.get('title', 'sem leitura histórica forte')}."
+            f"{quick_status}."
         ),
     ]
     if recommendation.get("basis_label"):
-        lines.append(f"- {recommendation['basis_label']}.")
+        lines.append(f"- Histórico: {recommendation['basis_label']}.")
+    elif similar_cases:
+        lines.append(f"- Histórico: {len(similar_cases)} caso(s) semelhante(s), sem padrão decisivo único.")
+    else:
+        lines.append("- Histórico: sem casos suficientes para decidir esta validação.")
+    if doc_refs:
+        lines.append(f"- Base documental acionada: {', '.join(doc_refs)}.")
+    elif has_documental_signal:
+        lines.append("- Base documental/estruturada acionada pela checklist.")
 
     lines.append("")
-    lines.append("Alertas")
+    lines.append("Alertas documentais e operacionais")
     if alerts:
         for item in alerts[:3]:
             lines.append(f"- {item.get('title', '')}: {item.get('detail', '')}")
@@ -228,16 +314,22 @@ def _format_operational_opinion_answer(
         lines.append(f"- Nota: {infos[0].get('detail', '')}")
 
     lines.append("")
-    lines.append("Recomendação")
-    lines.append(f"- {recommendation.get('summary', 'Sem recomendação automática disponível.')}")
+    lines.append("Recomendação operacional")
+    lines.append(f"- {recommendation.get('summary') or _fallback_validation_recommendation(alerts=alerts, doc_refs=doc_refs)}")
     if recommendation.get("signals_label"):
         lines.append(f"- Sinais: {recommendation['signals_label']}.")
+    elif doc_refs and alerts:
+        lines.append("- Sinais: regras documentais/checklist com alerta ativo; histórico não usado como regra principal.")
 
     lines.append("")
     lines.append("Base usada")
-    lines.append("- Checklist operacional determinística do portal.")
+    if doc_refs:
+        lines.append(f"- Base documental: {', '.join(doc_refs)}.")
     if any("Lisnave" in (item.get("title") or "") for item in checklist):
         lines.append("- Regra estruturada Lisnave: docas com mínimo de 4 rebocadores e orientação proa a norte; cais com proa a sul.")
+    if not doc_refs and not any("Lisnave" in (item.get("title") or "") for item in checklist):
+        lines.append("- Base documental: sem perfil documental específico acionado nesta leitura.")
+    lines.append("- Checklist operacional determinística do portal.")
     if similar_cases:
         base_line = (
             f"- Histórico semelhante: {len(similar_cases)} caso(s); mais próximo {top_case.get('reference_code', '--')} "
@@ -248,10 +340,6 @@ def _format_operational_opinion_answer(
             lines.append(f"- Estado do caso mais próximo: {top_case['feedback_status_label']}.")
     else:
         lines.append("- Histórico semelhante: sem casos suficientes para comparação.")
-    if any("Lisnave" in (item.get("title") or "") for item in checklist):
-        lines.append("- Base operacional: regra estruturada Lisnave aplicada nesta leitura.")
-    else:
-        lines.append("- Base documental: não foi invocada regra específica nesta leitura; pede regra/norma se precisares de enquadramento normativo.")
     lines.append("")
     lines.append("Isto apoia a decisão, mas não substitui a validação operacional do momento.")
     return "\n".join(lines).strip()
@@ -274,6 +362,10 @@ def _build_maneuver_analysis_checklist(
     bow_thruster = (port_call.get("vessel_bow_thruster") or "").strip().lower()
     stern_thruster = (port_call.get("vessel_stern_thruster") or "").strip().lower()
     operational_berth = destination if maneuver_type in {"entry", "shift"} else origin
+
+    planned_window_item = _build_planned_window_checklist_item(maneuver)
+    if planned_window_item:
+        items.append(planned_window_item)
 
     required_profile = [
         ("tipo", port_call.get("vessel_type")),
