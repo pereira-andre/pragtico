@@ -5110,6 +5110,23 @@ button:hover {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(7, 16, 29, 0.34);
 }
+.admin-bot-run-table td small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.admin-bot-delta {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  font-weight: 700;
+}
+.admin-bot-delta.is-good {
+  color: var(--success);
+}
+.admin-bot-delta.is-bad {
+  color: var(--alert);
+}
 .admin-bot-chip-list,
 .admin-bot-feedback-list {
   list-style: none;

@@ -516,6 +516,58 @@
           {% endfor %}
         </div>
       {% endif %}
+      {% if eval_run_history.runs %}
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-run-history" open>
+          <summary class="documents-collapse-summary">
+            <div>
+              <h3>Histórico de runs</h3>
+              <span class="muted">{{ eval_run_history.runs|length }} execução(ões) guardadas</span>
+            </div>
+          </summary>
+          <div class="documents-collapse-body">
+            <div class="admin-casebook-sheet-wrap">
+              <table class="admin-casebook-sheet admin-bot-run-table">
+                <thead>
+                  <tr>
+                    <th>Run</th>
+                    <th>Resultado</th>
+                    <th>Críticos</th>
+                    <th>Feedback</th>
+                    <th>Delta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for run in eval_run_history.runs[:8] %}
+                    <tr>
+                      <td>
+                        <strong>{{ run.run_id }}</strong>
+                        <small>{{ run.ran_at }}</small>
+                      </td>
+                      <td>{{ run.passed_total }}/{{ run.active_cases_total }} · {{ run.pass_rate_pct }}%</td>
+                      <td>{{ run.protected_failed }} falha(s) / {{ run.protected_total }}</td>
+                      <td>{{ run.feedback_cases_total }} promovido(s)</td>
+                      <td>
+                        {% if loop.first and eval_run_history.previous %}
+                          <span class="admin-bot-delta {{ 'is-good' if run.delta.pass_rate > 0 else 'is-bad' if run.delta.pass_rate < 0 else '' }}">
+                            {{ '+' if run.delta.pass_rate > 0 else '' }}{{ run.delta.pass_rate }} pp
+                          </span>
+                          <span class="muted">falhas {{ '+' if run.delta.failed > 0 else '' }}{{ run.delta.failed }}</span>
+                        {% elif not loop.first %}
+                          <span class="muted">comparado no run acima</span>
+                        {% else %}
+                          <span class="muted">primeiro run</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      {% else %}
+        <p class="admin-status-note">Ainda não há histórico guardado. Usa “Reexecutar agora” para gravar o primeiro run de calibração.</p>
+      {% endif %}
       {% if quality.scenario_pack_rows %}
         <details class="documents-collapse-card admin-bot-collapse admin-bot-scenario-collapse" open>
           <summary class="documents-collapse-summary">

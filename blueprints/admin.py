@@ -77,6 +77,7 @@ from core.bot_insights import (
     compute_health_score,
 )
 from core.bot_settings import DEFAULTS as BOT_SETTINGS_DEFAULTS, load_bot_settings, reset_bot_settings, save_bot_settings
+from core.bot_eval_runs import load_bot_eval_run_history, record_bot_eval_run
 from storage.maneuver_case_helpers import build_case_environment_signature, rank_similar_maneuver_cases
 from storage.utils import _local_iso_to_label
 
@@ -1627,6 +1628,7 @@ def admin_bot():
         tuning=tuning,
         settings=settings,
         settings_defaults=BOT_SETTINGS_DEFAULTS,
+        eval_run_history=load_bot_eval_run_history(),
         casebooks=_build_admin_casebooks_payload(),
         title="Bot e evals",
     )
@@ -1704,10 +1706,16 @@ def admin_bot_rerun_evals():
     try:
         refresh_knowledge_state(force_reindex=False)
         snapshot = build_quality_snapshot()
+        run = record_bot_eval_run(
+            snapshot,
+            triggered_by=session.get("username") or "admin",
+            trigger="manual",
+        )
         passed = snapshot.get("passed_total", 0)
         total = snapshot.get("active_cases_total", 0)
         failed = snapshot.get("failed_total", 0)
-        flash(f"Evals executados: {passed}/{total} passam ({failed} a falhar).", "success")
+        suffix = f" Run {run.get('run_id')} guardado." if run else ""
+        flash(f"Evals executados: {passed}/{total} passam ({failed} a falhar).{suffix}", "success")
     except Exception as exc:
         logger.exception("Falha a correr evals.")
         flash(f"Falha a correr evals: {exc}", "error")
