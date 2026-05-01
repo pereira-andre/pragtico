@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+from flask import Flask, session
+
+from core import services
+from core.operational_sources import answer_direct_operational_query
+from core.operational_test_suite import (
+    _critical_berth_profile_text,
+    _critical_json_source_text,
+    _missing_expected_tokens,
+    critical_bot_test_matrix,
+    critical_maneuver_checklist_text,
+    operational_test_inventory,
+)
+
+
+class FakeStore:
+    knowledge_dir = "knowledge"
+
+    def list_port_calls(self) -> list[dict]:
+        return []
+
+    def get_user_profile(self, username: str) -> dict:
+        return {}
+
+    def get_port_activity_snapshot(self, window_days: int = 5) -> dict:
+        return {
+            "arrivals": [],
+            "in_port": [],
+            "departed": [],
+            "aborted": [],
+            "departure_candidates": [],
+            "planned_maneuvers": [],
+            "archived_maneuvers": [],
+        }
+
+
+def _install_fake_store(monkeypatch) -> None:
+    monkeypatch.setattr(services, "store", FakeStore())
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+
+def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+
+    inventory = operational_test_inventory()
+
+    assert inventory["bot_matrix_count"] >= 10
+    assert inventory["bot_matrix_automatic_count"] > inventory["bot_matrix_manual_count"]
+    assert any(item["id"] == "ecooil-checklist" for item in inventory["bot_matrix"])
+    assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
+
+
+def test_direct_operational_matrix_cases_pass(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+
+    for item in critical_bot_test_matrix():
+        if item.get("runner") != "direct_operational":
+            continue
+        payload = answer_direct_operational_query(item["question"]) or {}
+        answer = payload.get("answer", "")
+        missing = _missing_expected_tokens(answer, item.get("expected_tokens") or ())
+
+        assert payload.get("answer_origin") == item.get("expected_origin")
+        assert not missing, item["id"]
+
+
+def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+    app = Flask(__name__)
+    app.secret_key = "test"
+
+    with app.test_request_context("/"):
+        session["role"] = "admin"
+        for item in critical_bot_test_matrix():
+            runner = item.get("runner")
+            if runner == "knowledge_json":
+                text = _critical_json_source_text(item["source_path"])
+            elif runner == "berth_profile":
+                text = _critical_berth_profile_text(item["profile_query"])
+            elif runner == "maneuver_checklist":
+                text = critical_maneuver_checklist_text(item["fixture"])
+            else:
+                continue
+            missing = _missing_expected_tokens(text, item.get("expected_tokens") or ())
+
+            assert text.strip(), item["id"]
+            assert not missing, item["id"]

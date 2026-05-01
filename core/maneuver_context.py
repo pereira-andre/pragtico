@@ -423,7 +423,7 @@ def _build_maneuver_analysis_checklist(
             berth_options=services.BERTH_OPTIONS,
         )
     )
-    berth_profile_item = _build_berth_profile_checklist_item(operational_berth)
+    berth_profile_item = _build_berth_profile_checklist_item(operational_berth, maneuver_type=maneuver_type)
     if berth_profile_item:
         items.append(berth_profile_item)
 
@@ -514,7 +514,7 @@ def _build_maneuver_analysis_checklist(
     return items, summary
 
 
-def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
+def _build_berth_profile_checklist_item(berth_label: str | None, *, maneuver_type: str | None = None) -> dict | None:
     clean_label = " ".join(str(berth_label or "").strip().split())
     if not clean_label:
         return None
@@ -525,9 +525,27 @@ def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
     profile_name = profile.get("name") or clean_label
     document = profile.get("document") or ""
     rules: list[str] = []
+    buckets: list[list[str]] = []
     length_markers = ("loa", "comprimento")
     meta_markers = ("nao confundir", "nao isola", "validar pelas restantes", "usar tms", "nao utilizar")
+    clean_maneuver_type = (maneuver_type or "").strip().lower()
+
+    def _rule_priority(rule: str) -> tuple[int, str]:
+        normalized_rule = _operational_lookup_key(rule)
+        if clean_maneuver_type == "departure":
+            if any(marker in normalized_rule for marker in ("saida", "desatracacao")):
+                return (0, normalized_rule)
+            if any(marker in normalized_rule for marker in ("entrada", "atracacao")):
+                return (2, normalized_rule)
+        elif clean_maneuver_type == "entry":
+            if any(marker in normalized_rule for marker in ("entrada", "atracacao")):
+                return (0, normalized_rule)
+            if any(marker in normalized_rule for marker in ("saida", "desatracacao")):
+                return (2, normalized_rule)
+        return (1, normalized_rule)
+
     for key in ("draft_rules", "maneuver_rules", "night_rules", "restrictions"):
+        bucket: list[str] = []
         for raw_rule in profile.get(key, []) or []:
             rule = " ".join(str(raw_rule or "").strip().rstrip(".").split())
             if not rule:
@@ -537,12 +555,25 @@ def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
                 continue
             if any(marker in normalized for marker in meta_markers):
                 continue
-            if rule not in rules:
-                rules.append(rule)
-            if len(rules) >= 4:
-                break
+            if rule not in bucket:
+                bucket.append(rule)
+        if bucket:
+            bucket.sort(key=_rule_priority)
+            buckets.append(bucket)
+    for bucket in buckets:
+        if bucket[0] not in rules:
+            rules.append(bucket[0])
         if len(rules) >= 4:
             break
+    if len(rules) < 4:
+        for bucket in buckets:
+            for rule in bucket[1:]:
+                if rule not in rules:
+                    rules.append(rule)
+                if len(rules) >= 4:
+                    break
+            if len(rules) >= 4:
+                break
     if clean_label.startswith("TMS 2") and not any("posicoes" in _operational_lookup_key(rule) for rule in rules):
         rules.append("TMS 2 tem tres posicoes operacionais: A, B e C")
     if not rules:
@@ -556,7 +587,7 @@ def _build_berth_profile_checklist_item(berth_label: str | None) -> dict | None:
     doc_label = f" ({document})" if document else ""
     detail = (
         f"{profile_name}{doc_label}: {'; '.join(rules[:4])}. "
-        "Comprimento fica informativo nesta demo; calado continua a contar."
+        "Confirmar estes limites em conjunto com maré, calado real, luz, vento e estado local."
     )
     return _build_checklist_item(status, "Regras do cais", detail)
 

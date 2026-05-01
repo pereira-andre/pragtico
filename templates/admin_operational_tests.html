@@ -22,7 +22,7 @@
     <div class="hero-meta-grid admin-status-hero-grid">
       <article class="hero-stat">
         <span>Módulos</span>
-        <strong>{{ result.modules|length if result and result.kind == "run" else 8 }}</strong>
+        <strong>{{ result.modules|length if result and result.kind == "run" else inventory.expected_module_count }}</strong>
         <small>fluxos, regras, catálogo, comandos, bot operacional, consultas, live feed e limpeza</small>
       </article>
       <article class="hero-stat">
@@ -40,6 +40,57 @@
         <strong>{{ result.duration_ms if result else "--" }}{% if result %}ms{% endif %}</strong>
         <small>{{ result.finished_at_label if result else "sem execução nesta vista" }}</small>
       </article>
+    </div>
+  </section>
+
+  <section class="panel section-panel operational-tests-matrix">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Matriz crítica</p>
+        <h2>Casos de conversa e checklist</h2>
+      </div>
+      <span class="admin-status-badge is-degraded">
+        {{ inventory.bot_matrix_automatic_count }} auto · {{ inventory.bot_matrix_manual_count }} manual
+      </span>
+    </div>
+    <p class="admin-status-note">Esta matriz fixa os casos que têm de continuar coerentes nas respostas do bot e na checklist das manobras dos cais críticos.</p>
+    <div class="operational-tests-scenario-list">
+      {% for group in inventory.bot_matrix_groups %}
+        <details class="planning-optional-box operational-tests-scenario operational-tests-matrix-group" {% if loop.first %}open{% endif %}>
+          <summary>
+            <span>{{ group.name }}</span>
+            <span class="admin-status-badge is-{{ 'online' if group.manual_count == 0 else 'degraded' }}">
+              {{ group.automatic_count }} auto · {{ group.manual_count }} manual
+            </span>
+          </summary>
+          <div class="document-window-table">
+            <table class="planned-table operational-tests-table operational-tests-matrix-table">
+              <thead>
+                <tr>
+                  <th>Risco</th>
+                  <th>Caso</th>
+                  <th>Pergunta de ensaio</th>
+                  <th>Critério</th>
+                  <th>Fonte</th>
+                  <th>Modo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in group.items %}
+                  <tr>
+                    <td><span class="admin-status-badge is-{{ 'offline' if item.risk == 'Critico' else 'degraded' }}">{{ item.risk }}</span></td>
+                    <td>{{ item.label }}</td>
+                    <td>{{ item.question }}</td>
+                    <td>{{ item.expected_summary }}</td>
+                    <td><code>{{ item.source }}</code></td>
+                    <td>{{ item.mode }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      {% endfor %}
     </div>
   </section>
 

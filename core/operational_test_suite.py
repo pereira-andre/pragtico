@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import time
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -24,13 +26,16 @@ from core.form_helpers import (
     ensure_portal_berth_is_available,
     ensure_portal_berth_is_physically_available,
 )
-from core.maneuver_context import answer_slash_validation
+from core.maneuver_context import answer_slash_validation, build_scale_context
 from core.operational_actions import answer_slash_query, finalize_operational_proposal
 from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 from core.portal_notifications import latest_maneuver_by_type
+from core.rule_catalog import _active_knowledge_dir
+from domain.berth_profiles import find_best_berth_profile
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
 from domain.chat_actions import parse_slash_command
+from storage.port_call_helpers import _decorate_port_call
 
 
 TEST_VESSEL_PREFIX = "TESTE QA"
@@ -49,6 +54,259 @@ QUERY_SLASH_COMMANDS = {
     "consult_vessel",
     "rule",
 }
+BOT_CRITICAL_TEST_MATRIX: list[dict] = [
+    {
+        "id": "roro-north-strong",
+        "group": "Rebocadores e vento",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Ro-Ro acima de 220 m com Norte forte",
+        "question": "Quantos reboques para RORO de 230m a entrar com vento norte forte?",
+        "expected_summary": "Recomenda 4 rebocadores grandes e preserva a excecao pratica acima de 220 m.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Recomendo 4 rebocadores grandes", "mais de 220 m", "vento Norte forte"),
+    },
+    {
+        "id": "bulk-tms2-north-strong",
+        "group": "Rebocadores e vento",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Graneleiro/contentores grande a sair com Norte forte",
+        "question": "Um Graneleiro de 190m a sair do TMS2 com vento norte forte, quantos rebocadores leva?",
+        "expected_summary": "Recomenda 4 grandes, mantendo a excecao Tanquisado/Eco-Oil/Lisnave caso a caso.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Recomendo 4 rebocadores grandes", "vento Norte forte", "Tanquisado", "Eco-Oil"),
+    },
+    {
+        "id": "lisnave-100-150",
+        "group": "Rebocadores e vento",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Lacuna Lisnave 100-150 m",
+        "question": "Um navio de 130m para a Lisnave precisa de quantos rebocadores?",
+        "expected_summary": "Fecha a lacuna documental com regra pratica de 3 rebocadores.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Recomendo 3 rebocadores", "acima de 100 m ate 150 m", "Quatro rebocadores sao excessivos"),
+    },
+    {
+        "id": "tanquisado-east-side-push",
+        "group": "Rebocadores e vento",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Tanquisado a sair com E forte",
+        "question": "A sair de Tanquisado com vento E forte, onde meto o reboque?",
+        "expected_summary": "Aponta rebocador a empurrar ao costado na largada dos cabos.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Tanquisado a sair com vento E forte", "1 rebocador a empurrar ao costado", "largada dos cabos"),
+    },
+    {
+        "id": "ecooil-west-side-push",
+        "group": "Rebocadores e vento",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Eco-Oil a sair com W forte",
+        "question": "A sair da Eco-Oil com vento W forte, onde meto o reboque?",
+        "expected_summary": "Aponta rebocador a empurrar ao costado, como efeito oposto da Tanquisado.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Eco-Oil a sair com vento W forte", "1 rebocador a empurrar ao costado", "oposto da Tanquisado"),
+    },
+    {
+        "id": "small-deep-no-bowthruster",
+        "group": "Rebocadores e vento",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Navio pequeno, fundo e sem bowthruster",
+        "question": "Navio sem bowthruster de 110m e calado 8m precisa de quantos rebocadores?",
+        "expected_summary": "Usa 1 rebocador grande de 35 t, nao rebocador pequeno.",
+        "source": "knowledge/tug_operational_guidance.json",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": ("Recomendo 1 rebocador grande", "35 t", "nao rebocador pequeno"),
+    },
+    {
+        "id": "fog-suspends-maneuver",
+        "group": "Limites de seguranca",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Nevoeiro suspende a manobra",
+        "question": "Um roro vai sair agora da Autoeuropa. Tem 200 m e ja pus 2 reboques. Pode sair? Ah, mas ficou nevoeiro!",
+        "expected_summary": "Bloqueia a decisao: rebocadores nao compensam nevoeiro.",
+        "source": "knowledge/operational_safety_limits.json",
+        "expected_origin": "operational_safety_limit",
+        "expected_tokens": ("Não.", "nevoeiro em porto", "manobras ficam suspensas", "rebocadores não elimina"),
+    },
+    {
+        "id": "wind-31-suspends-maneuver",
+        "group": "Limites de seguranca",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "31 kt suspende mesmo com mais rebocadores",
+        "question": "Se estiver 31 kts de vento, posso sair com 4 rebocadores?",
+        "expected_summary": "Suspende acima de 30 kt e so admite retoma abaixo de 25 kt.",
+        "source": "knowledge/operational_safety_limits.json",
+        "expected_origin": "operational_safety_limit",
+        "expected_tokens": ("31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"),
+    },
+    {
+        "id": "visibility-one-km-threshold",
+        "group": "Limites de seguranca",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_json",
+        "label": "Limiar live de visibilidade",
+        "question": "Se o live feed indicar 1,0 km de visibilidade, o bot trata como visibilidade reduzida?",
+        "expected_summary": "O limiar tecnico fica fixado em 1,0 km para interpretar dados live.",
+        "source": "knowledge/operational_safety_limits.json",
+        "source_path": "operational_safety_limits.json",
+        "expected_tokens": ("fog_visibility_km_reference", "1.0", "visibilidade operacional"),
+    },
+    {
+        "id": "ecooil-profile",
+        "group": "Cais criticos",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "berth_profile",
+        "label": "Perfil Eco-Oil",
+        "question": "Que regras tenho para a Eco-Oil?",
+        "expected_summary": "Calado, reponto, noite e defensas aparecem a partir do IT-008.",
+        "source": "knowledge/berth_profiles.json",
+        "profile_query": "Eco-Oil",
+        "expected_tokens": ("IT-008_EcoOil.txt", "Calado maximo", "repontos de mare", "Atracacao noturna proibida"),
+    },
+    {
+        "id": "tanquisado-profile",
+        "group": "Cais criticos",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "berth_profile",
+        "label": "Perfil Tanquisado",
+        "question": "Quais os limites da Tanquisado?",
+        "expected_summary": "Calado, reponto, noite e regra de saida fora de reponto aparecem a partir do IT-010.",
+        "source": "knowledge/berth_profiles.json",
+        "profile_query": "Tanquisado",
+        "expected_tokens": ("IT-010_Tanquisado.txt", "Calado diurno praticavel", "repontos de mare", "Saida fora de reponto"),
+    },
+    {
+        "id": "lisnave-profile",
+        "group": "Cais criticos",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "berth_profile",
+        "label": "Perfil Lisnave",
+        "question": "Que regras ha na Lisnave para docas e cais?",
+        "expected_summary": "Reponto, LOA noturna, calado variavel e orientacao operacional saem do IT-014.",
+        "source": "knowledge/berth_profiles.json",
+        "profile_query": "Lisnave",
+        "expected_tokens": ("IT-014_Lisnave.txt", "repontos de mare", "280 m", "Calado"),
+    },
+    {
+        "id": "lisnave-dock-checklist",
+        "group": "Checklist de manobras",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "maneuver_checklist",
+        "label": "Doca Lisnave com 3 rebocadores",
+        "question": "A checklist da manobra avisa se uma doca Lisnave estiver com 3 rebocadores?",
+        "expected_summary": "A checklist marca cautela, minimo de 4 rebocadores e proa a norte.",
+        "source": "Pagina da manobra + domain/lisnave_rules.py",
+        "fixture": "lisnave_dock_three_tugs",
+        "expected_tokens": ("Lisnave - doca", "pelo menos 4 rebocadores", "proa a norte"),
+    },
+    {
+        "id": "lisnave-quay-checklist",
+        "group": "Checklist de manobras",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "maneuver_checklist",
+        "label": "Cais Lisnave com orientacao certa",
+        "question": "A checklist distingue cais Lisnave de doca seca?",
+        "expected_summary": "A checklist mostra proa a sul e nao aplica minimo de doca seca ao cais.",
+        "source": "Pagina da manobra + domain/lisnave_rules.py",
+        "fixture": "lisnave_quay_three_tugs",
+        "expected_tokens": ("Orientação Lisnave", "proa a sul", "não se aplica às docas"),
+    },
+    {
+        "id": "ecooil-checklist",
+        "group": "Checklist de manobras",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "maneuver_checklist",
+        "label": "Eco-Oil na checklist",
+        "question": "A checklist puxa regras Eco-Oil para uma entrada?",
+        "expected_summary": "A checklist inclui IT-008, calados, reponto e proibicao noturna de atracacao.",
+        "source": "Pagina da manobra + knowledge/berth_profiles.json",
+        "fixture": "ecooil_entry",
+        "expected_tokens": ("IT-008_EcoOil.txt", "Calado maximo", "repontos de mare", "Atracacao noturna proibida"),
+    },
+    {
+        "id": "tanquisado-checklist",
+        "group": "Checklist de manobras",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "maneuver_checklist",
+        "label": "Tanquisado na checklist",
+        "question": "A checklist puxa regras Tanquisado para uma saida?",
+        "expected_summary": "A checklist inclui IT-010, calado maximo e regra de saida fora de reponto.",
+        "source": "Pagina da manobra + knowledge/berth_profiles.json",
+        "fixture": "tanquisado_departure",
+        "expected_tokens": ("IT-010_Tanquisado.txt", "calado maximo absoluto", "Saida fora de reponto", "preia-mar precedente"),
+    },
+    {
+        "id": "route-order-north-south",
+        "group": "Conversas a testar manualmente",
+        "risk": "Alto",
+        "mode": "Manual guiado",
+        "runner": "manual",
+        "label": "Ordem dos cais por canal",
+        "question": "Qual a ordem dos cais de entrada pelo Canal Norte e pelo Canal Sul?",
+        "expected_summary": "Tem de responder pela fonte de ordem dos cais, separando entrada/saida e Norte/Sul.",
+        "source": "knowledge/Ordem_Cais_*.txt",
+        "expected_tokens": (),
+    },
+    {
+        "id": "reponto-matrix",
+        "group": "Conversas a testar manualmente",
+        "risk": "Alto",
+        "mode": "Manual guiado",
+        "runner": "manual",
+        "label": "Marcacoes a reponto",
+        "question": "Quando marco uma saida da Doca 22 da Lisnave e uma entrada para Tanquisado?",
+        "expected_summary": "Deve combinar a matriz de marcacoes com as regras de cais, sem inventar mares.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (),
+    },
+]
+
+
+def critical_bot_test_matrix() -> list[dict]:
+    """Return the curated critical conversation matrix shown in the admin test page."""
+    return [dict(item) for item in BOT_CRITICAL_TEST_MATRIX]
+
+
+def _critical_bot_test_matrix_groups(matrix: list[dict]) -> list[dict]:
+    groups: list[dict] = []
+    by_group: dict[str, dict] = {}
+    for item in matrix:
+        group_name = item.get("group") or "Geral"
+        group = by_group.setdefault(group_name, {"name": group_name, "items": [], "automatic_count": 0, "manual_count": 0})
+        group["items"].append(item)
+        if item.get("runner") == "manual":
+            group["manual_count"] += 1
+        else:
+            group["automatic_count"] += 1
+    return list(by_group.values())
 
 
 def _label_now() -> str:
@@ -127,10 +385,21 @@ def cleanup_operational_test_records() -> dict:
 
 def operational_test_inventory() -> dict:
     """Return current retained test records so the admin page can show cleanup state."""
+    matrix = critical_bot_test_matrix()
+    automatic_count = sum(1 for item in matrix if item.get("runner") != "manual")
+    manual_count = len(matrix) - automatic_count
+    matrix_payload = {
+        "bot_matrix": matrix,
+        "bot_matrix_groups": _critical_bot_test_matrix_groups(matrix),
+        "bot_matrix_count": len(matrix),
+        "bot_matrix_automatic_count": automatic_count,
+        "bot_matrix_manual_count": manual_count,
+        "expected_module_count": 9,
+    }
     try:
         records = services.store.list_port_calls()
     except Exception as exc:
-        return {"count": 0, "items": [], "error": str(exc)}
+        return {"count": 0, "items": [], "error": str(exc), **matrix_payload}
     items = [
         {
             "id": record.get("id"),
@@ -141,7 +410,174 @@ def operational_test_inventory() -> dict:
         for record in records
         if str(record.get("vessel_name") or "").strip().upper().startswith(TEST_VESSEL_PREFIX)
     ]
-    return {"count": len(items), "items": items, "error": ""}
+    return {"count": len(items), "items": items, "error": "", **matrix_payload}
+
+
+def _missing_expected_tokens(text: str, expected_tokens: tuple[str, ...] | list[str]) -> list[str]:
+    folded = str(text or "").casefold()
+    return [str(token) for token in expected_tokens if str(token or "").strip() and str(token).casefold() not in folded]
+
+
+def _critical_knowledge_dir() -> str:
+    return _active_knowledge_dir() or os.path.join(os.getcwd(), "knowledge")
+
+
+def _critical_json_source_text(source_path: str) -> str:
+    path = os.path.join(_critical_knowledge_dir(), source_path)
+    with open(path, "r", encoding="utf-8") as handle:
+        return json.dumps(json.load(handle), ensure_ascii=False, sort_keys=True)
+
+
+def _critical_berth_profile_text(profile_query: str) -> str:
+    match = find_best_berth_profile(profile_query, _critical_knowledge_dir())
+    profile = (match or {}).get("profile") or {}
+    values = [
+        profile.get("name", ""),
+        profile.get("document", ""),
+        profile.get("overview", ""),
+    ]
+    for key in ("dimensions", "vessel_limits", "draft_rules", "maneuver_rules", "night_rules", "restrictions"):
+        values.extend(profile.get(key, []) or [])
+    return "\n".join(str(value or "") for value in values)
+
+
+def _critical_checklist_fixture_data(fixture: str) -> dict:
+    fixtures = {
+        "lisnave_dock_three_tugs": {
+            "vessel_name": "TESTE QA MATRIX LISNAVE DOCA",
+            "vessel_type": "Carga geral",
+            "loa": "132",
+            "beam": "20",
+            "gt": "8100",
+            "draft": "5.4",
+            "bow_thruster": "yes",
+            "status": "scheduled",
+            "maneuver": {
+                "id": "matrix-lisnave-dock-entry",
+                "type": "entry",
+                "state": "pending",
+                "origin": "Sines",
+                "destination": "Lisnave - Doca 20",
+                "tug_count": "3",
+            },
+        },
+        "lisnave_quay_three_tugs": {
+            "vessel_name": "TESTE QA MATRIX LISNAVE CAIS",
+            "vessel_type": "Carga geral",
+            "loa": "132",
+            "beam": "20",
+            "gt": "8100",
+            "draft": "6.0",
+            "bow_thruster": "yes",
+            "status": "scheduled",
+            "maneuver": {
+                "id": "matrix-lisnave-quay-entry",
+                "type": "entry",
+                "state": "pending",
+                "origin": "Sines",
+                "destination": "Lisnave - Cais 1 A",
+                "tug_count": "3",
+            },
+        },
+        "ecooil_entry": {
+            "vessel_name": "TESTE QA MATRIX ECO OIL",
+            "vessel_type": "Graneis liquidos",
+            "loa": "145",
+            "beam": "24",
+            "gt": "9500",
+            "draft": "7.2",
+            "bow_thruster": "yes",
+            "status": "scheduled",
+            "maneuver": {
+                "id": "matrix-ecooil-entry",
+                "type": "entry",
+                "state": "pending",
+                "origin": "Sines",
+                "destination": "Eco-Oil",
+                "tug_count": "2",
+            },
+        },
+        "tanquisado_departure": {
+            "vessel_name": "TESTE QA MATRIX TANQUISADO",
+            "vessel_type": "Graneis liquidos",
+            "loa": "150",
+            "beam": "25",
+            "gt": "10200",
+            "draft": "8.1",
+            "bow_thruster": "yes",
+            "status": "in_port",
+            "maneuver": {
+                "id": "matrix-tanquisado-departure",
+                "type": "departure",
+                "state": "pending",
+                "origin": "Tanquisado",
+                "destination": "Sines",
+                "tug_count": "2",
+            },
+        },
+    }
+    if fixture not in fixtures:
+        raise ValueError(f"Fixture de checklist desconhecida: {fixture}")
+    return fixtures[fixture]
+
+
+def critical_maneuver_checklist_text(fixture: str) -> str:
+    data = _critical_checklist_fixture_data(fixture)
+    maneuver = {
+        **data["maneuver"],
+        "planned_at": "2026-05-02T10:00:00+01:00",
+        "created_by": "admin",
+        "created_at": "2026-05-01T10:00:00+01:00",
+        "updated_at": "2026-05-01T10:00:00+01:00",
+        "constraints": [],
+        "plan_note": "Cenario de validacao da checklist.",
+    }
+    port_call = _decorate_port_call(
+        {
+            "id": f"matrix-{fixture}",
+            "vessel_name": data["vessel_name"],
+            "vessel_type": data["vessel_type"],
+            "vessel_loa_m": data["loa"],
+            "vessel_beam_m": data["beam"],
+            "vessel_gt_t": data["gt"],
+            "vessel_dwt_t": "12000",
+            "vessel_max_draft_m": data["draft"],
+            "vessel_bow_thruster": data["bow_thruster"],
+            "vessel_stern_thruster": "unknown",
+            "status": data["status"],
+            "approval_status": "approved" if data["status"] == "in_port" else "pending",
+            "berth": maneuver["origin"] if maneuver["type"] == "departure" else maneuver["destination"],
+            "last_port": maneuver["origin"],
+            "next_port": maneuver["destination"],
+            "created_by": "admin",
+            "created_at": "2026-05-01T10:00:00+01:00",
+            "updated_at": "2026-05-01T10:00:00+01:00",
+            "maneuver_history": [maneuver],
+        }
+    )
+    previous_knowledge_dir = getattr(services, "KNOWLEDGE_DIR", "")
+    should_restore_knowledge_dir = not _active_knowledge_dir()
+    if should_restore_knowledge_dir:
+        services.KNOWLEDGE_DIR = _critical_knowledge_dir()
+    try:
+        context = build_scale_context(port_call)
+    finally:
+        if should_restore_knowledge_dir:
+            services.KNOWLEDGE_DIR = previous_knowledge_dir
+    target = next(
+        (
+            item
+            for item in context.get("maneuvers", [])
+            if item.get("id") == maneuver["id"] or item.get("type") == maneuver["type"]
+        ),
+        None,
+    )
+    if not target:
+        return ""
+    lines = []
+    for item in target.get("analysis_checklist") or []:
+        lines.append(f"{item.get('status', '')} | {item.get('title', '')}: {item.get('detail', '')}")
+    return "\n".join(lines)
 
 
 class OperationalFlowSuite:
@@ -2093,6 +2529,65 @@ class OperationalFlowSuite:
             )
         self._finish_scenario(scenario)
 
+    def _scenario_bot_critical_matrix(self) -> None:
+        scenario = self._new_scenario(
+            "Matriz critica do bot",
+            "Matriz critica de conversas e checklist",
+            "Executa os casos automaticos da matriz visivel na pagina de testes: respostas diretas, fontes estruturadas e checklist de cais criticos.",
+        )
+        for item in critical_bot_test_matrix():
+            runner = item.get("runner")
+            if runner == "manual":
+                continue
+            expected_tokens = item.get("expected_tokens") or ()
+            label = str(item.get("label") or item.get("id") or "Caso").strip()
+            try:
+                origin = ""
+                if runner == "direct_operational":
+                    payload = answer_direct_operational_query(item.get("question", "")) or {}
+                    text = str(payload.get("answer") or "")
+                    origin = str(payload.get("answer_origin") or "")
+                    origin_ok = not item.get("expected_origin") or origin == item.get("expected_origin")
+                elif runner == "knowledge_json":
+                    text = _critical_json_source_text(str(item.get("source_path") or ""))
+                    origin_ok = True
+                elif runner == "berth_profile":
+                    text = _critical_berth_profile_text(str(item.get("profile_query") or item.get("question") or ""))
+                    origin_ok = True
+                elif runner == "maneuver_checklist":
+                    text = critical_maneuver_checklist_text(str(item.get("fixture") or ""))
+                    origin_ok = True
+                else:
+                    text = ""
+                    origin_ok = False
+            except Exception as exc:
+                self._record_step(
+                    scenario,
+                    label=label,
+                    element=str(item.get("source") or runner or "--"),
+                    expected=str(item.get("expected_summary") or "Caso automatico sem excecao."),
+                    observed=str(exc),
+                    state="failed",
+                )
+                continue
+
+            missing = _missing_expected_tokens(text, expected_tokens)
+            expected_parts = [str(item.get("expected_summary") or "Termos criticos presentes.")]
+            if item.get("expected_origin"):
+                expected_parts.append(f"origem {item['expected_origin']}")
+            self._check(
+                scenario,
+                label,
+                str(item.get("source") or runner or "--"),
+                " ".join(expected_parts),
+                origin_ok and bool(text.strip()) and not missing,
+                (
+                    f"origem={origin or '--'} · falta={', '.join(missing) if missing else 'nada'} · "
+                    f"{text[:260] or '--'}"
+                ),
+            )
+        self._finish_scenario(scenario)
+
     def _scenario_tug_guidance_queries(self) -> None:
         scenario = self._new_scenario(
             "Bot operacional",
@@ -2234,6 +2729,7 @@ class OperationalFlowSuite:
             self._scenario_slash_commands()
             self._scenario_site_queries_and_archive()
             self._scenario_tug_guidance_queries()
+            self._scenario_bot_critical_matrix()
             self._scenario_live_feed_snapshot()
             self._scenario_live_environment_queries()
         finally:

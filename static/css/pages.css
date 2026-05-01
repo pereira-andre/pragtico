@@ -2472,8 +2472,23 @@
   min-width: 980px;
 }
 
+.operational-tests-matrix-table {
+  min-width: 1180px;
+}
+
 .operational-tests-table td {
   font-size: 0.86rem;
+}
+
+.operational-tests-matrix-table th:nth-child(3),
+.operational-tests-matrix-table td:nth-child(3),
+.operational-tests-matrix-table th:nth-child(4),
+.operational-tests-matrix-table td:nth-child(4) {
+  width: 26%;
+}
+
+.operational-tests-matrix-table td {
+  vertical-align: top;
 }
 
 .operational-tests-table code {
