@@ -2767,6 +2767,12 @@
   margin-top: 4px;
 }
 
+.admin-casebook-grid-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .admin-casebook-learning {
   margin: 0;
   color: var(--muted);
@@ -5091,6 +5097,19 @@ button:hover {
 .admin-bot-feedback-card header strong {
   font-size: 1.2rem;
 }
+.admin-bot-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.admin-bot-scenario-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 16, 29, 0.34);
+}
 .admin-bot-chip-list,
 .admin-bot-feedback-list {
   list-style: none;
@@ -5141,6 +5160,13 @@ button:hover {
   color: var(--muted);
   line-height: 1.5;
 }
+.admin-bot-governance-list {
+  margin-top: 12px;
+}
+.admin-bot-governance-list .outline-link {
+  justify-self: start;
+  margin-top: 4px;
+}
 
 @media (max-width: 960px) {
   .admin-bot-pipeline-diagram,
@@ -5156,6 +5182,7 @@ button:hover {
 }
 
 @media (max-width: 720px) {
+  .admin-casebook-grid-fields,
   .admin-bot-health-breakdown,
   .admin-bot-config-strip,
   .admin-bot-process-flow {

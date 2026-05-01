@@ -6,6 +6,8 @@ import json
 import uuid
 from typing import Dict, List, Optional
 
+from core.feedback_governance import normalize_feedback_governance
+
 from .constants import ALLOWED_FEEDBACK_STATUSES, DEFAULT_CONVERSATION_TITLE, FEEDBACK_APPROVED
 from .utils import (
     _clean_text,
@@ -48,6 +50,10 @@ class PostgresFeedbackMixin:
         feedback_note: str = "",
         feedback_correction: str = "",
         feedback_correction_document: str = "",
+        feedback_error_type: str = "",
+        feedback_scope: str = "",
+        feedback_destination: str = "",
+        feedback_criticality: str = "",
         feedback_updated_by: str = "",
     ) -> Dict:
         if feedback_status not in ALLOWED_FEEDBACK_STATUSES:
@@ -94,6 +100,14 @@ class PostgresFeedbackMixin:
                     if correction_text
                     else ""
                 )
+                governance = normalize_feedback_governance(
+                    feedback_status=feedback_status,
+                    feedback_error_type=feedback_error_type,
+                    feedback_scope=feedback_scope,
+                    feedback_destination=feedback_destination,
+                    feedback_criticality=feedback_criticality,
+                    feedback_correction_document=correction_document,
+                )
                 cur.execute(
                     """
                     UPDATE messages
@@ -102,6 +116,10 @@ class PostgresFeedbackMixin:
                         feedback_note = %s,
                         feedback_correction = %s,
                         feedback_correction_document = %s,
+                        feedback_error_type = %s,
+                        feedback_scope = %s,
+                        feedback_destination = %s,
+                        feedback_criticality = %s,
                         feedback_updated_by = %s,
                         feedback_updated_at = NOW()
                     WHERE id = %s AND conversation_id = %s AND role = 'assistant'
@@ -116,6 +134,10 @@ class PostgresFeedbackMixin:
                         feedback_note,
                         feedback_correction,
                         feedback_correction_document,
+                        feedback_error_type,
+                        feedback_scope,
+                        feedback_destination,
+                        feedback_criticality,
                         feedback_updated_by,
                         feedback_updated_at,
                         channel,
@@ -129,6 +151,10 @@ class PostgresFeedbackMixin:
                         feedback_note.strip(),
                         correction_text,
                         correction_document,
+                        governance["feedback_error_type"],
+                        governance["feedback_scope"],
+                        governance["feedback_destination"],
+                        governance["feedback_criticality"],
                         updated_by,
                         message_id,
                         conversation_id,
@@ -174,6 +200,10 @@ class PostgresFeedbackMixin:
                         assistant.feedback_note,
                         assistant.feedback_correction,
                         assistant.feedback_correction_document,
+                        assistant.feedback_error_type,
+                        assistant.feedback_scope,
+                        assistant.feedback_destination,
+                        assistant.feedback_criticality,
                         assistant.feedback_updated_by,
                         assistant.feedback_updated_at,
                         user_msg.content AS question,
@@ -253,6 +283,10 @@ class PostgresFeedbackMixin:
                         m.feedback_note,
                         m.feedback_correction,
                         m.feedback_correction_document,
+                        m.feedback_error_type,
+                        m.feedback_scope,
+                        m.feedback_destination,
+                        m.feedback_criticality,
                         m.feedback_updated_by,
                         m.feedback_updated_at,
                         m.channel,

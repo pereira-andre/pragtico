@@ -313,6 +313,10 @@ CREATE TABLE IF NOT EXISTS messages (
     feedback_note TEXT NOT NULL DEFAULT '',
     feedback_correction TEXT NOT NULL DEFAULT '',
     feedback_correction_document TEXT NOT NULL DEFAULT '',
+    feedback_error_type TEXT NOT NULL DEFAULT '',
+    feedback_scope TEXT NOT NULL DEFAULT '',
+    feedback_destination TEXT NOT NULL DEFAULT '',
+    feedback_criticality TEXT NOT NULL DEFAULT '',
     feedback_updated_by TEXT NOT NULL DEFAULT '',
     feedback_updated_at TIMESTAMPTZ,
     channel TEXT NOT NULL DEFAULT 'web',
@@ -334,6 +338,18 @@ ALTER TABLE messages
 
 ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS feedback_correction_document TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_error_type TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_scope TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_destination TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS feedback_criticality TEXT NOT NULL DEFAULT '';
 
 ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS feedback_updated_by TEXT NOT NULL DEFAULT '';

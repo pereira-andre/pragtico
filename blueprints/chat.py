@@ -539,6 +539,10 @@ def api_message_feedback(message_id: str):
     feedback_note = (payload.get("feedback_note") or "").strip()
     feedback_correction = (payload.get("feedback_correction") or "").strip()
     feedback_correction_document = (payload.get("feedback_correction_document") or "").strip()
+    feedback_error_type = (payload.get("feedback_error_type") or "").strip()
+    feedback_scope = (payload.get("feedback_scope") or "").strip()
+    feedback_destination = (payload.get("feedback_destination") or "").strip()
+    feedback_criticality = (payload.get("feedback_criticality") or "").strip()
     if not conversation_id:
         return jsonify({"error": flash_error_message("conversation_id em falta.")}), 400
     if feedback_status not in {"approved", "corrected", "review", "ignored"}:
@@ -559,6 +563,10 @@ def api_message_feedback(message_id: str):
             feedback_note=feedback_note,
             feedback_correction=feedback_correction,
             feedback_correction_document=feedback_correction_document,
+            feedback_error_type=feedback_error_type,
+            feedback_scope=feedback_scope,
+            feedback_destination=feedback_destination,
+            feedback_criticality=feedback_criticality,
             feedback_updated_by=session["username"],
         )
         sync_feedback_correction_eval_case(

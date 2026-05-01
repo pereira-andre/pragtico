@@ -64,9 +64,11 @@ from core.operational_test_suite import (
     run_operational_flow_suite,
 )
 from core.chat_feedback import sync_feedback_correction_eval_case
+from core.feedback_governance import feedback_governance_state, governance_options
 from core.bot_insights import (
     build_bot_monitor_snapshot,
     build_exceptions,
+    build_feedback_governance_snapshot,
     build_learning_signals,
     build_pipeline_snapshot,
     build_quality_snapshot,
@@ -190,6 +192,10 @@ POSTGRES_EXPORT_TABLES = {
             "feedback_note",
             "feedback_correction",
             "feedback_correction_document",
+            "feedback_error_type",
+            "feedback_scope",
+            "feedback_destination",
+            "feedback_criticality",
             "feedback_updated_by",
             "feedback_updated_at",
             "channel",
@@ -617,6 +623,10 @@ def _import_bot_database_payload(payload: dict) -> dict:
                 feedback_note=str(item.get("feedback_note") or "").strip(),
                 feedback_correction=str(item.get("feedback_correction") or "").strip(),
                 feedback_correction_document=str(item.get("feedback_correction_document") or "").strip(),
+                feedback_error_type=str(item.get("feedback_error_type") or "").strip(),
+                feedback_scope=str(item.get("feedback_scope") or "").strip(),
+                feedback_destination=str(item.get("feedback_destination") or "").strip(),
+                feedback_criticality=str(item.get("feedback_criticality") or "").strip(),
                 feedback_updated_by=session.get("username", "admin"),
             )
             stats["chat_feedback"] += 1
@@ -1301,6 +1311,10 @@ def _build_admin_casebooks_payload() -> dict:
                 "feedback_note",
                 "feedback_correction",
                 "feedback_correction_document",
+                "feedback_error_type",
+                "feedback_scope",
+                "feedback_destination",
+                "feedback_criticality",
                 "channel",
                 "citation_documents",
             ),
@@ -1378,6 +1392,7 @@ def _build_admin_casebooks_payload() -> dict:
     for item in visible_chat_messages[:display_limit]:
         status_clean = _normalized_chat_feedback_status(item)
         status_label, badge = _chat_feedback_state_meta(status_clean)
+        governance_state = feedback_governance_state(item)
         answer = str(item.get("content") or "")
         question = str(item.get("question") or "")
         chat_rows.append(
@@ -1396,6 +1411,11 @@ def _build_admin_casebooks_payload() -> dict:
                 "feedback_note": item.get("feedback_note", ""),
                 "feedback_correction": item.get("feedback_correction", ""),
                 "feedback_correction_document": item.get("feedback_correction_document", ""),
+                "feedback_error_type": item.get("feedback_error_type", ""),
+                "feedback_scope": item.get("feedback_scope", ""),
+                "feedback_destination": item.get("feedback_destination", ""),
+                "feedback_criticality": item.get("feedback_criticality", ""),
+                "feedback_governance": governance_state,
                 "feedback_updated_by": item.get("feedback_updated_by", ""),
                 "feedback_updated_at_label": item.get("feedback_updated_at_label", ""),
                 "created_at_label": item.get("created_at_label", ""),
@@ -1525,6 +1545,7 @@ def _build_admin_casebooks_payload() -> dict:
         "practice_rows": practice_rows,
         "observation_case_rows": observation_case_rows,
         "governed_case_rows": governed_case_rows,
+        "feedback_governance_options": governance_options(),
     }
 
 
@@ -1580,6 +1601,7 @@ def admin_bot():
     signals = build_learning_signals(window_hours=int(settings.get("signals_window_hours", 168)))
     sources = build_sources_snapshot()
     quality = build_quality_snapshot()
+    feedback_governance = build_feedback_governance_snapshot()
     exceptions = build_exceptions(limit=12)
     tuning = build_tuning_map_snapshot(settings=settings, quality=quality)
     pipeline = build_pipeline_snapshot(tuning=tuning, quality=quality, sources=sources, exceptions=exceptions)
@@ -1598,6 +1620,7 @@ def admin_bot():
         signals=signals,
         sources=sources,
         quality=quality,
+        feedback_governance=feedback_governance,
         exceptions=exceptions,
         monitor=monitor,
         pipeline=pipeline,
@@ -2126,6 +2149,10 @@ def admin_casebooks_message_feedback(message_id: str):
             feedback_note=feedback_note,
             feedback_correction=feedback_correction,
             feedback_correction_document=(request.form.get("feedback_correction_document") or "").strip(),
+            feedback_error_type=(request.form.get("feedback_error_type") or "").strip(),
+            feedback_scope=(request.form.get("feedback_scope") or "").strip(),
+            feedback_destination=(request.form.get("feedback_destination") or "").strip(),
+            feedback_criticality=(request.form.get("feedback_criticality") or "").strip(),
             feedback_updated_by=session["username"],
         )
         sync_feedback_correction_eval_case(

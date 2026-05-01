@@ -74,6 +74,7 @@ from domain.port_entities import detect_port_entities, entity_names_from_matches
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
 from core.bot_settings import load_bot_settings
+from core.feedback_governance import feedback_allows_memory_reuse
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +225,7 @@ def _select_review_guard_match(reviewed_answers: list[dict], trusted_answers: li
 def _is_corrected_feedback_match(item: dict) -> bool:
     status = (item.get("feedback_status") or "").strip().lower()
     has_correction = bool((item.get("feedback_correction") or "").strip())
-    return status == "corrected" or (status == "review" and has_correction)
+    return status in {"corrected", "review"} and has_correction and feedback_allows_memory_reuse(item)
 
 
 def _select_review_correction_match(reviewed_answers: list[dict], trusted_answers: list[dict]) -> dict | None:

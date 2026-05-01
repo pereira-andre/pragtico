@@ -112,7 +112,7 @@
                 </summary>
                 <div class="chatbot-feedback-body">
                   <textarea class="feedback-note" rows="2" placeholder="Motivo da revisão ou nuance a corrigir..." data-feedback-note>{{ msg.feedback_note or '' }}</textarea>
-                  <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida que o bot deve usar como referência..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
+                  <textarea class="feedback-correction" rows="3" placeholder="Resposta corrigida para revisão e calibração..." data-feedback-correction>{{ msg.feedback_correction or '' }}</textarea>
                   <input class="feedback-correction-document" type="text" placeholder="Documento base opcional, ex.: IT-036" value="{{ msg.feedback_correction_document or '' }}" data-feedback-correction-document>
                   <div class="feedback-actions">
                     <button type="button" class="mini-button secondary-button {% if msg.feedback_status == 'approved' %}is-active{% endif %}" data-feedback-choice="approved">Aprovar</button>
@@ -123,7 +123,7 @@
                   </div>
                   <p class="chatbot-feedback-meta" data-feedback-meta>
                     {% if msg.feedback_status %}
-                      {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'corrected' and msg.feedback_correction %}. Correção reutilizável guardada.{% else %}.{% endif %}
+                      {% if msg.feedback_status == 'approved' %}Aprovada{% elif msg.feedback_status == 'corrected' %}Corrigida{% elif msg.feedback_status == 'review' %}Rever{% elif msg.feedback_status == 'ignored' %}Ignorada{% endif %}{% if msg.feedback_updated_at_label %} em {{ msg.feedback_updated_at_label }}{% endif %}{% if msg.feedback_status == 'corrected' and msg.feedback_correction %}. Correção guardada para calibração.{% else %}.{% endif %}
                     {% else %}
                       Podes aprovar, pedir revisão ou ignorar a resposta se não tiver contexto útil.
                     {% endif %}
@@ -206,10 +206,10 @@
     }
     const hasCorrection = String(correction || "").trim().length > 0;
     if (status === "corrected" && hasCorrection && updatedAtLabel) {
-      return "Corrigida em " + updatedAtLabel + ". Correção reutilizável guardada.";
+      return "Corrigida em " + updatedAtLabel + ". Correção guardada para calibração.";
     }
     if (status === "corrected" && hasCorrection) {
-      return "Corrigida. Correção reutilizável guardada.";
+      return "Corrigida. Correção guardada para calibração.";
     }
     if (status === "review") {
       return updatedAtLabel ? "Em revisão desde " + updatedAtLabel + ". Não reutiliza." : "Em revisão. Não reutiliza.";
@@ -282,7 +282,7 @@
     const correction = document.createElement("textarea");
     correction.className = "feedback-correction";
     correction.rows = 3;
-    correction.placeholder = "Resposta corrigida que o bot deve usar como referência...";
+    correction.placeholder = "Resposta corrigida para revisão e calibração...";
     correction.dataset.feedbackCorrection = "1";
 
     const correctionDocument = document.createElement("input");
@@ -349,7 +349,7 @@
     const correctionDocumentField = box.querySelector("[data-feedback-correction-document]");
     if (!messageId || !conversationIdField.value || !status) return;
     if (status === "corrected" && !(correctionField?.value || "").trim()) {
-      chatStatus.textContent = "Para corrigir, escreve a resposta corrigida reutilizável.";
+      chatStatus.textContent = "Para corrigir, escreve a resposta corrigida.";
       correctionField?.focus();
       return;
     }

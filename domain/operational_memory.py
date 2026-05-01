@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
+from core.feedback_governance import feedback_allows_memory_reuse
+
 
 APPROVED_MEMORY_MIN_SIMILARITY = 0.5
 REVIEW_MEMORY_MIN_SIMILARITY = 0.45
@@ -52,10 +54,14 @@ def _review_memory_lines(items: Iterable[dict]) -> list[str]:
         status = _clean_text(item.get("feedback_status"), max_chars=40).lower()
         correction = _clean_text(item.get("feedback_correction"))
         note = _clean_text(item.get("feedback_note"), max_chars=320)
+        reusable = feedback_allows_memory_reuse(item)
         if similarity < REVIEW_MEMORY_MIN_SIMILARITY and not correction and not note:
             continue
-        if status == "corrected" or (status == "review" and correction):
+        if (status == "corrected" or (status == "review" and correction)) and reusable:
             lines.append(f"Correção validada {index} (semelhança {similarity:.3f}):")
+        elif status == "corrected" or (status == "review" and correction):
+            lines.append(f"Correção em triagem {index} (semelhança {similarity:.3f}):")
+            lines.append("- Nao aplicar como regra final; usar apenas como aviso de risco ate validação.")
         else:
             lines.append(f"Revisão pendente {index} (semelhança {similarity:.3f}):")
         lines.append(f"- Pergunta original: {_clean_text(item.get('question'), max_chars=260)}")
@@ -141,6 +147,7 @@ def filter_feedback_for_synthesis(
         item
         for item in (trusted_answers or [])
         if float(item.get("similarity") or 0) >= APPROVED_MEMORY_MIN_SIMILARITY
+        and feedback_allows_memory_reuse(item)
     ]
     reviewed = [
         item

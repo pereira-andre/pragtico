@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 from core import services
 from core.bot_settings import load_bot_settings
+from core.feedback_governance import feedback_governance_state
 from domain.berth_profiles import PROFILE_FILENAME, load_berth_profiles
 from domain.knowledge_companions import companion_directory, load_document_companion
 from domain.knowledge_evals import (
@@ -728,6 +729,57 @@ def build_quality_snapshot() -> dict:
         type_rows.append({**data, "coverage_pct": round((data["passed"] / total) * 100), "state": state})
     type_rows.sort(key=lambda item: (-item["failed"], item["label"]))
 
+    def _scenario_pack_label(item: dict) -> str:
+        text = _normalize_text(f"{item.get('document', '')} {item.get('question', '')}")
+        eval_type = str(item.get("eval_type") or "companion")
+        if eval_type == "direct_operational":
+            if any(token in text for token in ("rebocador", "rebocadores", "bowthruster", "roro")):
+                return "Rebocadores e vento"
+            if any(token in text for token in ("visibilidade", "nevoeiro", "vento", "mare", "maré")):
+                return "Limites ambientais"
+            return "Decisões operacionais diretas"
+        if any(token in text for token in ("rebocador", "rebocadores", "it-016")):
+            return "Regras de rebocadores"
+        if any(token in text for token in ("calado", "barra", "fundeadouro")):
+            return "Calados, barra e fundeadouros"
+        if any(token in text for token in ("lisnave", "agulhas", "noite")):
+            return "Lisnave e restrições especiais"
+        if any(token in text for token in ("eco", "tanquisado", "secil", "sapec", "teporset", "termitrena")):
+            return "Cais e terminais sensíveis"
+        return "RAG documental geral"
+
+    scenario_summary: dict[str, dict] = {}
+    for item in results:
+        label = _scenario_pack_label(item)
+        bucket = scenario_summary.setdefault(
+            label,
+            {
+                "label": label,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "samples": [],
+            },
+        )
+        bucket["total"] += 1
+        if item.get("passed"):
+            bucket["passed"] += 1
+        else:
+            bucket["failed"] += 1
+        if len(bucket["samples"]) < 3:
+            bucket["samples"].append(str(item.get("question") or ""))
+    scenario_pack_rows = []
+    for data in scenario_summary.values():
+        total = data["total"] or 1
+        scenario_pack_rows.append(
+            {
+                **data,
+                "coverage_pct": round((data["passed"] / total) * 100),
+                "state": "online" if data["failed"] == 0 and data["total"] else "degraded",
+            }
+        )
+    scenario_pack_rows.sort(key=lambda item: (-item["failed"], item["label"]))
+
     protected_candidates = [
         item
         for item in results
@@ -875,6 +927,7 @@ def build_quality_snapshot() -> dict:
         "static_cases_total": len(static_cases),
         "feedback_cases_total": len(feedback_cases),
         "type_rows": type_rows,
+        "scenario_pack_rows": scenario_pack_rows,
         "protected_total": protected_total,
         "protected_passed": protected_passed,
         "protected_failed": protected_total - protected_passed,
@@ -886,6 +939,74 @@ def build_quality_snapshot() -> dict:
             for label, count in feedback_source_counter.most_common()
         ],
         "feedback_recent_rows": feedback_recent_rows[:8],
+    }
+
+
+def build_feedback_governance_snapshot(*, limit: int = 8) -> dict:
+    """Return calibration queues for chat feedback governance."""
+    messages = _safe_reviewable_messages(limit=500)
+    state_labels = {
+        "pending": "Sem feedback",
+        "needs_triage": "Precisa classificar",
+        "source_action": "Atualizar fonte/regra",
+        "blocked": "Bloqueado",
+        "ready_eval": "Pronto para eval",
+        "trusted_memory": "Memoria reutilizavel",
+        "ignored": "Ignorado",
+        "triage": "Triagem",
+    }
+    state_counts: Counter[str] = Counter()
+    destination_counts: Counter[str] = Counter()
+    critical_open = 0
+    rows = []
+
+    for item in messages:
+        status = str(item.get("feedback_status") or "").strip().lower()
+        state = feedback_governance_state(item)
+        state_name = str(state.get("state") or "pending")
+        state_counts[state_name] += 1
+        destination_label = str(state.get("destination_label") or "Sem destino")
+        destination_counts[destination_label] += 1
+        if state.get("is_critical") and state_name not in {"trusted_memory", "ignored"}:
+            critical_open += 1
+        if state_name in {"needs_triage", "source_action", "blocked", "ready_eval"} and len(rows) < limit:
+            rows.append(
+                {
+                    "id": item.get("id") or item.get("message_id") or "",
+                    "conversation_id": item.get("conversation_id", ""),
+                    "owner_username": item.get("username", ""),
+                    "status": status,
+                    "state": state_name,
+                    "state_label": state_labels.get(state_name, state_name),
+                    "question": str(item.get("question") or "")[:220],
+                    "answer": str(item.get("content") or item.get("answer") or "")[:260],
+                    "missing": ", ".join(state.get("missing") or []),
+                    "error_type_label": state.get("error_type_label", ""),
+                    "scope_label": state.get("scope_label", ""),
+                    "destination_label": destination_label,
+                    "criticality_label": state.get("criticality_label", ""),
+                    "updated_at_label": item.get("feedback_updated_at_label") or item.get("created_at_label") or "",
+                    "action_url": (
+                        "/admin/casebooks?source_type=chat&chat_feedback=all"
+                        f"#chat-{item.get('id') or item.get('message_id') or ''}"
+                    ),
+                }
+            )
+
+    actionable_total = sum(state_counts[name] for name in ("needs_triage", "source_action", "blocked", "ready_eval"))
+    return {
+        "total": len(messages),
+        "actionable_total": actionable_total,
+        "critical_open": critical_open,
+        "state_rows": [
+            {"state": key, "label": state_labels.get(key, key), "count": count}
+            for key, count in state_counts.most_common()
+        ],
+        "destination_rows": [
+            {"label": label, "count": count}
+            for label, count in destination_counts.most_common()
+        ],
+        "rows": rows,
     }
 
 

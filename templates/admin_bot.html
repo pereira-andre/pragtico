@@ -390,6 +390,59 @@
       {% endif %}
     </section>
 
+    <section class="panel section-panel" id="feedback-governance">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Calibração</p>
+          <h2>Feedback que precisa de decisão</h2>
+        </div>
+        <span class="admin-status-badge is-{{ 'degraded' if feedback_governance.actionable_total else 'online' }}">
+          {{ feedback_governance.actionable_total }} ação(ões)
+        </span>
+      </div>
+      <div class="admin-bot-quality-grid">
+        <article class="admin-bot-quality-card">
+          <div class="admin-bot-quality-card-head">
+            <strong>Fila ativa</strong>
+            <span class="admin-status-badge is-{{ 'degraded' if feedback_governance.actionable_total else 'online' }}">{{ feedback_governance.actionable_total }}</span>
+          </div>
+          <p class="muted">Correções que ainda precisam de classificação, fonte/regra ou confirmação.</p>
+        </article>
+        <article class="admin-bot-quality-card">
+          <div class="admin-bot-quality-card-head">
+            <strong>Críticos abertos</strong>
+            <span class="admin-status-badge is-{{ 'degraded' if feedback_governance.critical_open else 'online' }}">{{ feedback_governance.critical_open }}</span>
+          </div>
+          <p class="muted">Itens de alta criticidade ainda não fechados como memória validada ou ignorados.</p>
+        </article>
+      </div>
+      {% if feedback_governance.state_rows %}
+        <ul class="admin-bot-chip-list">
+          {% for row in feedback_governance.state_rows %}
+            <li>{{ row.label }} <strong>× {{ row.count }}</strong></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if feedback_governance.rows %}
+        <ul class="admin-bot-feedback-list admin-bot-governance-list">
+          {% for row in feedback_governance.rows %}
+            <li>
+              <span class="admin-bot-feedback-source">{{ row.state_label }}</span>
+              <strong>{{ row.question or 'Sem pergunta identificada' }}</strong>
+              <p>{{ row.answer }}</p>
+              <small>
+                {{ row.destination_label }} · {{ row.scope_label }} · {{ row.criticality_label }}
+                {% if row.missing %} · falta {{ row.missing }}{% endif %}
+              </small>
+              <a class="outline-link" href="{{ row.action_url }}">Classificar</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="admin-status-note">Sem feedback pendente para calibração.</p>
+      {% endif %}
+    </section>
+
     {# ── Zona 7 · Exceções ────────────────────────────────────────── #}
     <section class="panel section-panel" id="exceptions">
       <div class="section-head compact-head">
@@ -462,6 +515,36 @@
             </article>
           {% endfor %}
         </div>
+      {% endif %}
+      {% if quality.scenario_pack_rows %}
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-scenario-collapse" open>
+          <summary class="documents-collapse-summary">
+            <div>
+              <h3>Packs de cenários</h3>
+              <span class="muted">Agrupamento dos evals por risco operacional</span>
+            </div>
+          </summary>
+          <div class="documents-collapse-body">
+            <div class="admin-bot-scenario-grid">
+              {% for row in quality.scenario_pack_rows %}
+                <article class="admin-bot-scenario-card admin-bot-state-{{ row.state }}">
+                  <div class="admin-bot-quality-card-head">
+                    <strong>{{ row.label }}</strong>
+                    <span class="admin-status-badge is-{{ row.state }}">{{ row.passed }}/{{ row.total }}</span>
+                  </div>
+                  <div class="admin-bot-meter" aria-hidden="true">
+                    <span style="width: {{ row.coverage_pct }}%;"></span>
+                  </div>
+                  <ul class="admin-bot-mini-list">
+                    {% for sample in row.samples %}
+                      <li>{{ sample }}</li>
+                    {% endfor %}
+                  </ul>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
       {% endif %}
       {% if quality.protected_total %}
         <details class="documents-collapse-card admin-bot-collapse admin-bot-protected-collapse" open>

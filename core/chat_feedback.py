@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from core.bot_settings import load_bot_settings
+from core.feedback_governance import feedback_governance_state
 from domain.knowledge_evals import _extract_expected_substrings
 from storage.utils import _question_for_assistant_message, normalize_feedback_correction
 
@@ -48,6 +49,7 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
         return None
 
     correction_state = feedback_correction_state(target_message)
+    governance_state = feedback_governance_state(target_message)
     document_name = correction_state["document"]
     question = _question_for_assistant_message(messages, message_id)
     corrected_answer = normalize_feedback_correction(
@@ -59,6 +61,7 @@ def sync_feedback_correction_eval_case(store, username: str, conversation_id: st
     should_register = (
         auto_promote
         and (target_message.get("feedback_status") or "").strip().lower() == "corrected"
+        and governance_state["can_promote_eval"]
         and bool(corrected_answer)
         and bool(document_name)
         and bool(question)

@@ -247,6 +247,10 @@ class BaseStore(ABC):
         feedback_note: str = "",
         feedback_correction: str = "",
         feedback_correction_document: str = "",
+        feedback_error_type: str = "",
+        feedback_scope: str = "",
+        feedback_destination: str = "",
+        feedback_criticality: str = "",
         feedback_updated_by: str = "",
     ) -> Dict:
         """Update feedback metadata for a chat message and return the updated record."""
