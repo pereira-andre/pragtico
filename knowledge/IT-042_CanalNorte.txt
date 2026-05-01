@@ -70,9 +70,9 @@ RECOMENDAÇÃO 3 — DISTÂNCIA À LINHA NORTE DA COSTA NA ZONA DE CURVA
 ================================================================================
 
 Na zona de curva do Canal Norte, deve procurar-se cumprir uma distância de 0,15
-minutos de milha náutica (0,15') em relação à linha Norte da costa.
+milhas náuticas (0,15') em relação à linha Norte da costa.
 
-CONVERSÃO: 0,15 minutos de milha náutica equivalem a 0,15 × 1852 metros =
+CONVERSÃO: 0,15 milhas náuticas equivalem a 0,15 × 1852 metros =
 aproximadamente 278 metros de distância à margem norte do canal na zona de curva.
 
 "Linha Norte da costa" é a linha de costa ou de margem do estuário no lado norte
@@ -97,7 +97,7 @@ navio, evitando a guinada ao passo — um efeito indesejado do hélice que pode
 fazer o navio guinar de forma não controlada numa zona de canal estreito.
 
 Pergunta: Qual a distância recomendada à margem norte na curva do Canal Norte?
-Resposta: 0,15 minutos de milha, equivalente a aproximadamente 278 metros.
+Resposta: 0,15 milhas náuticas, equivalente a aproximadamente 278 metros.
 
 Pergunta: Porque se deve evitar máquina a ré na curva do Canal Norte?
 Resposta: Porque a marcha-atrás de um hélice convencional gera uma força lateral

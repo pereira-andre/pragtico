@@ -120,7 +120,7 @@
   {
     "document": "IT-016_Rebocadores.txt",
     "question": "Qual é a velocidade máxima do navio durante o estabelecimento do cabo de reboque?",
-    "expected_substrings": ["5 nós", "água"]
+    "expected_substrings": ["6 nós", "água"]
   },
   {
     "document": "IT-016_Rebocadores.txt",
@@ -140,6 +140,48 @@
     "expected_answer_origin": "operational_tug_guidance",
     "question": "Um Graneleiro de 190m a sair com vento sul forte, quantos rebocadores leva?",
     "expected_substrings": ["2 rebocadores grandes", "vento Sul a sair", "DWT", "thrusters"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Quantos reboques para RORO de 230m a entrar com vento norte forte?",
+    "expected_substrings": ["4 rebocadores grandes", "mais de 220 m", "vento Norte forte"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Um Graneleiro de 190m a sair do TMS2 com vento norte forte, quantos rebocadores leva?",
+    "expected_substrings": ["4 rebocadores grandes", "vento Norte forte", "Tanquisado", "Eco-Oil"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Um navio de 130m para a Lisnave precisa de quantos rebocadores?",
+    "expected_substrings": ["3 rebocadores", "acima de 100 m ate 150 m", "Quatro rebocadores sao excessivos"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "A sair de Tanquisado com vento E forte, onde meto o reboque?",
+    "expected_substrings": ["Tanquisado", "vento E forte", "1 rebocador a empurrar ao costado", "largada dos cabos"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "A sair da Eco-Oil com vento W forte, onde meto o reboque?",
+    "expected_substrings": ["Eco-Oil", "vento W forte", "1 rebocador a empurrar ao costado", "oposto da Tanquisado"]
+  },
+  {
+    "document": "tug_operational_guidance.json",
+    "eval_type": "direct_operational",
+    "expected_answer_origin": "operational_tug_guidance",
+    "question": "Onde meto os reboques num navio grande com bowthruster operacional?",
+    "expected_substrings": ["rebocador a popa", "controlar a popa", "bowthruster operacional"]
   },
   {
     "document": "operational_safety_limits.json",
@@ -183,7 +225,7 @@
   {
     "document": "Marcar_manobra_repontos_mare.txt",
     "question": "Qual é a diferença entre marcar para o reponto e marcar para a preia-mar?",
-    "expected_substrings": ["corrente nula", "profundidade suficiente", "Lisnave/Teporset/Termitrena", "TMS e SAPEC"]
+    "expected_substrings": ["corrente nula", "profundidade suficiente", "Lisnave", "Tanquisado", "Teporset", "preia-mar", "TMS e SAPEC"]
   },
   {
     "document": "Marcar_manobra_repontos_mare.txt",

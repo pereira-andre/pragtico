@@ -116,6 +116,18 @@ RESUMO DA DIFERENÇA ENTRE OS DOIS CASOS:
   pesado recém-chegado).
 
 ================================================================================
+NOTA OPERACIONAL COMPLEMENTAR — BAIXO ENTRE TERMITRENA E TEPORSET
+================================================================================
+
+Esta nota é prática operacional e não substitui a fórmula documental do IT-011.
+Para navios de maior calado, privilegiar a preia-mar / janela de maior água na
+aproximação à Termitrena. Entre a Termitrena e a Teporset existe um baixo de
+cerca de 7 metros que pode puxar a proa dos navios de maior calado para o baixo,
+com risco de encalhe momentâneo. Por isso, apesar de o calado documental da
+Termitrena ser calculado por baixa-mar de referência, a aproximação de navios
+mais carregados deve ser tratada com margem conservadora de água.
+
+================================================================================
 CONDICIONANTE DE AMARRAÇÃO — ALTURA DE ÁGUA RECOMENDADA PARA ATRACAÇÃO
 ================================================================================
 
@@ -164,6 +176,13 @@ Pergunta: O que é a baixa-mar de referência para um navio que está a carregar
 Resposta: É a baixa-mar que antecede a preia-mar para a qual existe a certeza
 de largada do cais. É o ponto mais crítico: navio pesado + maré mais baixa
 antes de partir.
+
+Pergunta: Há alguma recomendação prática adicional para navios de maior calado
+na aproximação à Termitrena?
+Resposta: Sim. Apesar de a regra documental usar baixa-mar de referência, em
+navios de maior calado deve-se privilegiar a preia-mar / janela de maior água na
+aproximação, devido ao baixo de cerca de 7 metros entre a Termitrena e a Teporset
+que pode puxar a proa para o baixo.
 
 Pergunta: A que altura de água se deve tentar atracar na TERMITRENA?
 Resposta: Cerca de 2 metros acima do Zero Hidrográfico, para facilitar a

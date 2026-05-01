@@ -6,11 +6,11 @@
     "00_abortar",
     "Abortar Manobras depois de Marcadas a Previsto:"
   ],
-  "summary": "O procedimento na JUL a ter quando uma manobra pedida pelo agente e marcada pelo piloto coordenador não se realizou conforme prevista, tendo o piloto ido a bordo, obrigando consequentemente a registo de pilotagem passa a ser o seguinte: 1. As funções \"CANCELAR\" e \"ANULAR\" deixam de ser utilizadas. Apenas se utiliza a função \"ABORTAR\" para",
+  "summary": "Procedimento JUL para manobras pedidas pelo agente e marcadas pelo Piloto Coordenador que não se realizaram conforme previsto depois de o Piloto ter ido a bordo, exigindo registo de pilotagem. Nestas situações usam-se as funções de aborto da manobra, não cancelar/anular.",
   "key_points": [
-    "As funções \"CANCELAR\" e \"ANULAR\" deixam de ser utilizadas. Apenas se utiliza a função \"ABORTAR\" para",
-    "Manobra inicialmente marcada como de saída do estaleiro e que tem de fundear ou atracar no",
-    "Manobra inicialmente marcada, mas já com piloto a bordo não se inicia por motivos meteorológicos,"
+    "As funções \"CANCELAR\" e \"ANULAR\" deixam de ser utilizadas nestas situações; usa-se \"ABORTAR\".",
+    "A função \"ABORTAR\" permite registo de pilotagem pelo Piloto, pontos de relato pelo VTS e novo pedido pelo agente.",
+    "Aplica-se quando a manobra marcada não se realiza conforme previsto, por exemplo por meteorologia, avaria ou necessidade de fundear/atracar noutro local."
   ],
   "faq": []
 }

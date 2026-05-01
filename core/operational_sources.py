@@ -844,7 +844,7 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
 def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
-    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente)\b", clean_question):
+    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado)\b", clean_question):
         return None
 
     source = build_tug_operational_guidance_source(question, _active_knowledge_dir() or "knowledge")
@@ -852,28 +852,64 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         return None
     snippet = str(source.get("snippet") or "")
     applicable = []
+    positioning = []
     in_rules = False
+    in_positioning = False
     for raw_line in snippet.splitlines():
         line = raw_line.strip()
         if line == "Regras diretamente aplicaveis:":
             in_rules = True
+            in_positioning = False
+            continue
+        if line == "Posicionamento pratico dos rebocadores:":
+            in_positioning = True
+            in_rules = False
             continue
         if in_rules and not line.startswith("- "):
             break
         if in_rules and line.startswith("- "):
             applicable.append(line[2:].strip())
+        if in_positioning and not line.startswith("- "):
+            in_positioning = False
+        if in_positioning and line.startswith("- "):
+            positioning.append(line[2:].strip())
+
+    if not applicable and positioning:
+        relevant_positioning = positioning
+        if re.search(r"\b(roro|ro\s*ro|ro-ro|ro/ro)\b", clean_question):
+            relevant_positioning = (
+                [item for item in positioning if "Ro-Ro" in item]
+                + [item for item in positioning if "convencionais" in item]
+                + [item for item in positioning if "Normalmente" in item]
+            )
+        elif re.search(r"\bsem\b.*\b(bow|bowthruster|h[eé]lice de proa|hpr)\b", clean_question):
+            relevant_positioning = [item for item in positioning if "Normalmente" in item or "1 a proa e 1 a popa" in item or "convencionais" in item]
+        elif re.search(r"\b(com|tem)\b.*\b(bow|bowthruster|h[eé]lice de proa|hpr)\b", clean_question):
+            relevant_positioning = [item for item in positioning if "Com bowthruster operacional" in item or "convencionais" in item]
+        answer_lines = ["Regra prática de posicionamento dos rebocadores:"]
+        for item in relevant_positioning[:3]:
+            answer_lines.append(f"- {item}")
+        return {
+            "answer": "\n".join(answer_lines),
+            "sources": [source],
+            "answer_origin": "operational_tug_guidance",
+        }
+
     if not applicable:
         return None
-
     first_rule = applicable[0]
-    count_match = re.search(r"\b(\d+)\s+rebocadores?\b", first_rule, flags=re.IGNORECASE)
+    count_match = re.search(r"\b(\d+)\s+rebocador(?:es)?\b", first_rule, flags=re.IGNORECASE)
     if not count_match:
         return None
     count = int(count_match.group(1))
-    size_label = "grandes" if re.search(r"\bgrandes?\b|LOA inferido: (?:1[2-9]\d|[2-9]\d\d)", snippet, flags=re.IGNORECASE) else ""
+    size_label = ""
+    if re.search(r"\bgrandes?\b|grande\s+de\s+cerca\s+de\s+35\s*t", first_rule, flags=re.IGNORECASE):
+        size_label = "grandes"
+    elif re.search(r"LOA inferido: (?:1[2-9]\d|[2-9]\d\d)", snippet, flags=re.IGNORECASE):
+        size_label = "grandes"
     tug_label = f"{count} rebocador" + ("" if count == 1 else "es")
     if size_label:
-        tug_label += f" {size_label}"
+        tug_label += " grande" if count == 1 else f" {size_label}"
 
     answer_lines = [
         f"Recomendo {tug_label}.",

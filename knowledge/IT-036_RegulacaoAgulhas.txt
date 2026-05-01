@@ -65,20 +65,23 @@ A RA pode ser efetuada nas seguintes combinações de condições:
 
 CONDIÇÃO 1 — EM REPONTOS DE MARÉ:
   Podem realizar-se RAs nos repontos de maré para navios com LOA inferior a
-  250 metros. Navios com LOA igual ou superior a 250 metros não podem realizar
-  RA nos repontos de maré.
+  250 metros. O documento só inclui no conjunto permitido os navios com LOA
+  < 250 m; um navio exatamente com 250 m fica fora da autorização automática e
+  deve ser tratado como caso a validar pelo Piloto Coordenador.
 
 CONDIÇÃO 2 — COM CORRENTES DE ÁGUA EM MARÉS MORTAS (PM < 3,0 m):
   Com corrente ativa em período de marés mortas (preia-mar inferior a 3,0 metros),
-  podem realizar-se RAs para navios com LOA inferior a 225 metros. Navios com
-  LOA igual ou superior a 225 metros não podem realizar RA com corrente em
-  marés mortas.
+  podem realizar-se RAs para navios com LOA inferior a 225 metros. O documento
+  só inclui no conjunto permitido os navios com LOA < 225 m; um navio exatamente
+  com 225 m fica fora da autorização automática e deve ser tratado como caso a
+  validar pelo Piloto Coordenador.
 
 CONDIÇÃO 3 — COM CORRENTES DE ÁGUA EM MARÉS VIVAS (PM ≥ 3,0 m):
   Com corrente ativa em período de marés vivas (preia-mar igual ou superior a
   3,0 metros), podem realizar-se RAs apenas para navios com LOA inferior a
-  120 metros. Navios com LOA igual ou superior a 120 metros não podem realizar
-  RA com corrente em marés vivas.
+  120 metros. O documento só inclui no conjunto permitido os navios com LOA
+  < 120 m; um navio exatamente com 120 m fica fora da autorização automática e
+  deve ser tratado como caso a validar pelo Piloto Coordenador.
 
 ================================================================================
 CONDIÇÕES EM QUE NÃO SE EFETUAM REGULAÇÕES DE AGULHAS
@@ -96,8 +99,9 @@ PROIBIÇÃO 2.1 — NAVIOS FUNDEADOS NAS PROXIMIDADES:
 PROIBIÇÃO 2.2 — DE NOITE COM NAVIOS DE LOA SUPERIOR A 225 METROS:
   Não se efetua RA de noite com navios de LOA superior a 225 metros. Durante a
   noite a visibilidade é reduzida, tornando mais difícil a vigilância do espaço
-  ao redor do navio durante a rotação. Este limite não se aplica a navios com
-  LOA igual ou inferior a 225 metros, que podem realizar RA de noite.
+  ao redor do navio durante a rotação. Para LOA igual ou inferior a 225 metros,
+  a regra noturna não é impeditiva por si só, mas continuam a aplicar-se a
+  distância livre de 0,7 milhas e os limites de maré/corrente acima.
 
 PROIBIÇÃO 2.3 — NOS REPONTOS DE MARÉ COM LOA SUPERIOR A 250 METROS:
   Não se efetua RA nos repontos de maré com navios de LOA superior a 250 metros.
@@ -120,19 +124,22 @@ QUADRO RESUMO — LIMITES DE LOA POR CONDIÇÃO
 
 Reponto de maré:
   RA permitida: LOA < 250 m.
-  RA proibida: LOA ≥ 250 m.
+  LOA = 250 m: fora da autorização automática documentada; validar caso a caso.
+  RA proibida expressamente: LOA > 250 m.
 
 Corrente em marés mortas (PM < 3,0 m):
   RA permitida: LOA < 225 m.
-  RA proibida: LOA ≥ 225 m.
+  LOA = 225 m: fora da autorização automática documentada; validar caso a caso.
+  RA proibida expressamente: LOA > 225 m.
 
 Corrente em marés vivas (PM ≥ 3,0 m):
   RA permitida: LOA < 120 m.
-  RA proibida: LOA ≥ 120 m.
+  LOA = 120 m: fora da autorização automática documentada; validar caso a caso.
+  RA proibida expressamente: LOA > 120 m.
 
 Período noturno:
-  RA permitida: LOA < 225 m (em qualquer condição de maré aplicável).
-  RA proibida: LOA ≥ 225 m.
+  Regra noturna: não se efetua RA de noite com LOA > 225 m.
+  Para LOA ≤ 225 m: aplicar também as regras de maré/corrente e espaço livre.
 
 Navios fundeados a menos de 0,7 milhas:
   RA proibida independentemente do LOA e do estado de maré.
@@ -152,7 +159,8 @@ Resposta: Na área dos fundeadouros do Porto de Setúbal (definidos no IT-015).
 Pergunta: Um navio com LOA de 200 metros pode fazer RA de noite?
 Resposta: Sim, desde que não haja navios fundeados a menos de 0,7 milhas e se
 escolha a condição de maré adequada ao seu LOA (reponto ou corrente em marés
-mortas, ambas permitidas para LOA < 225 m).
+mortas, ambas permitidas para LOA < 225 m). A proibição noturna documental só
+se aplica a LOA superior a 225 m.
 
 Pergunta: Um navio com LOA de 240 metros pode fazer RA com corrente em marés
 mortas?

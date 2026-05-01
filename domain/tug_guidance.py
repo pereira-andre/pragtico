@@ -7,18 +7,22 @@ import unicodedata
 from functools import lru_cache
 from typing import Any
 
+from domain.port_entities import detect_port_entities
+
 
 TUG_GUIDANCE_FILENAME = "tug_operational_guidance.json"
 TUG_QUERY_RE = re.compile(r"\b(reboque|reboques|rebocador|rebocadores)\b", flags=re.IGNORECASE)
 TUG_DECISION_RE = re.compile(
-    r"\b(quantos|quantas|numero|n[uú]mero|precis\w*|necess[aá]ri\w*|"
-    r"recomend\w*|aconselh\w*|suger\w*|suficient\w*|bast\w*|cheg\w*)\b",
+    r"\b(quantos|quantas|numero|n[uú]mero|onde|posicion\w*|meter|colocar|"
+    r"precis\w*|necess[aá]ri\w*|recomend\w*|aconselh\w*|suger\w*|"
+    r"suficient\w*|bast\w*|cheg\w*)\b",
     flags=re.IGNORECASE,
 )
 TUG_CONTEXT_RE = re.compile(
     r"\b(entrada|entrar|atracar|atracacao|saida|sair|desatracar|desatracacao|"
     r"vento|corrente|mare|roro|ro\s*ro|graneleiro|reefer|estilha|contentores?|"
-    r"lisnave|mitrena|bow\s*thruster|bowthruster|h[eé]lice de proa)\b",
+    r"lisnave|mitrena|bow\s*thruster|bowthruster|h[eé]lice de proa|"
+    r"proa|popa|costado|convencionais?|azipodes?|push|pull)\b",
     flags=re.IGNORECASE,
 )
 LOA_RE = re.compile(
@@ -30,6 +34,11 @@ BEAM_RE = re.compile(
     r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:boca|beam)\b",
     flags=re.IGNORECASE,
 )
+DRAFT_RE = re.compile(
+    r"\b(?:calado|draft)\b[^\n.;,]{0,40}?\b(\d+(?:[.,]\d+)?)\s*m\b"
+    r"|\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:calado|draft)\b",
+    flags=re.IGNORECASE,
+)
 NO_BOW_RE = re.compile(
     r"\b(?:sem|s/?|nao tem|não tem|avariado|inoperacional)\s+"
     r"(?:bow\s*thruster|bowthruster|h[eé]lice de proa|hpr)\b",
@@ -39,7 +48,9 @@ HAS_BOW_RE = re.compile(
     r"\b(?:com|tem)\s+(?:bow\s*thruster|bowthruster|h[eé]lice de proa|hpr)\b",
     flags=re.IGNORECASE,
 )
-LISNAVE_RE = re.compile(r"\b(lisnave|mitrena|doca\s*\d{2}|d\d{2}|hidrolift|eclusa)\b", flags=re.IGNORECASE)
+LISNAVE_RE = re.compile(r"\b(lisnave|mitrena|estaleiro|estaleiros|doca\s*\d{2}|d\d{2}|hidrolift|eclusa)\b", flags=re.IGNORECASE)
+WEST_EAST_EQUIVALENCE_SCOPE = {"TMS-2", "Autoeuropa"}
+WEST_EAST_EQUIVALENCE_EXCLUSIONS = {"Lisnave", "Tanquisado", "Eco-Oil", "Termitrena", "Teporset"}
 
 
 def _normalize_text(value: str | None) -> str:
@@ -102,6 +113,51 @@ def _extract_beam(question: str) -> float | None:
     return _safe_float(match.group(1))
 
 
+def _extract_draft(question: str) -> float | None:
+    match = DRAFT_RE.search(question or "")
+    if not match:
+        return None
+    return _safe_float(match.group(1) or match.group(2))
+
+
+def _matched_entity_names(question: str) -> set[str]:
+    names = {item.get("name", "") for item in detect_port_entities(question or "") if item.get("name")}
+    if re.search(r"\b(estaleiro|estaleiros)\b", _normalize_text(question)):
+        names.add("Lisnave")
+    return names
+
+
+def _west_east_equivalence_allowed(entity_names: set[str]) -> bool:
+    if entity_names & WEST_EAST_EQUIVALENCE_EXCLUSIONS:
+        return False
+    return bool(entity_names & WEST_EAST_EQUIVALENCE_SCOPE)
+
+
+def _is_strong_wind(question: str) -> bool:
+    clean = _normalize_text(question)
+    if re.search(r"\b(vento|rajada|rajadas)\b.{0,25}\b(forte|fortes|muito|rijo|rijos)\b", clean):
+        return True
+    if re.search(r"\b(forte|fortes|muito|rijo|rijos)\b.{0,25}\b(vento|rajada|rajadas)\b", clean):
+        return True
+    return bool(re.search(r"\b(sustentado|rajada|rajadas)\b", clean))
+
+
+def _infer_wind_direction(question: str) -> str:
+    clean = _normalize_text(question)
+    raw_question = str(question or "")
+    if re.search(r"\b(sudoeste|sw)\b", clean):
+        return "SW"
+    if re.search(r"\b(oeste|west|vento w)\b", clean):
+        return "W"
+    if re.search(r"\bvento\s+E\b", raw_question) or re.search(r"\b(leste|east|vento este|vento leste)\b", clean):
+        return "E"
+    if re.search(r"\b(norte|vento n)\b", clean):
+        return "N"
+    if re.search(r"\b(sul|vento s)\b", clean):
+        return "S"
+    return ""
+
+
 def _infer_operation(question: str, aliases: dict[str, list[str]]) -> str:
     clean = _normalize_text(question)
     for operation, tokens in (aliases or {}).items():
@@ -121,7 +177,7 @@ def _infer_vessel_group(question: str, guidance: dict[str, Any]) -> str:
     return ""
 
 
-def _infer_wind_component(question: str) -> tuple[str, str]:
+def _infer_wind_component(question: str, entity_names: set[str]) -> tuple[str, str]:
     clean = _normalize_text(question)
     raw_question = str(question or "")
     if re.search(r"\b(sudoeste|sw)\b", clean):
@@ -129,21 +185,29 @@ def _infer_wind_component(question: str) -> tuple[str, str]:
     if re.search(r"\b(sul|vento s)\b", clean):
         return "south", "S"
     if re.search(r"\b(oeste|west|vento w)\b", clean):
-        return "south", "W tratado como S fraco"
+        if _west_east_equivalence_allowed(entity_names):
+            return "south", "W tratado como S fraco nos terminais TMS2/Autoeuropa"
+        return "", "W mencionado: equivalencia W=S fraco nao aplicada sem contexto TMS2/Autoeuropa"
     if re.search(r"\b(norte|vento n)\b", clean):
         return "north", "N"
     if re.search(r"\bvento\s+E\b", raw_question) or re.search(r"\b(leste|east|vento este|vento leste)\b", clean):
-        return "north", "E tratado como N fraco"
+        if _west_east_equivalence_allowed(entity_names):
+            return "north", "E tratado como N fraco nos terminais TMS2/Autoeuropa"
+        return "", "E mencionado: equivalencia E=N fraco nao aplicada sem contexto TMS2/Autoeuropa"
     if re.search(r"\b(nevoeiro|nevoa|nevoa)\b", clean):
-        return "south", "nevoeiro: risco de SW forte"
+        return "", "nevoeiro: suspensao por visibilidade; SW posterior e conhecimento local, nao dimensiona rebocadores"
     return "", ""
 
 
-def _minimum_no_bow_rule(question: str, loa: float | None, guidance: dict[str, Any]) -> str:
+def _minimum_no_bow_rule(question: str, loa: float | None, draft: float | None, guidance: dict[str, Any]) -> str:
     if loa is None or not NO_BOW_RE.search(question or ""):
         return ""
     for item in guidance.get("no_bowthruster_minimums") or []:
         condition = str(item.get("condition") or "")
+        if "LOA < 120" in condition and "calado >= 8" in condition and loa < 120 and draft is not None and draft >= 8:
+            return str(item.get("note") or "")
+        if "calado >= 8" in condition:
+            continue
         if "LOA < 120" in condition and loa < 120:
             return str(item.get("note") or "")
         if "120 m <= LOA <= 150" in condition and 120 <= loa <= 150:
@@ -166,6 +230,8 @@ def _lisnave_rule(question: str, loa: float | None, guidance: dict[str, Any]) ->
             candidates.append(note)
         if "LOA <= 100" in condition and loa <= 100 and to_hidrolift and "Hidrolift" in condition:
             candidates.append(note)
+        if "100 m < LOA <= 150" in condition and 100 < loa <= 150:
+            candidates.append(note)
         if "150 m < LOA <= 199" in condition and 150 < loa <= 199:
             candidates.append(note)
         if "200 m <= LOA <= 250" in condition and 200 <= loa <= 250:
@@ -175,36 +241,85 @@ def _lisnave_rule(question: str, loa: float | None, guidance: dict[str, Any]) ->
     return " ".join(dict.fromkeys(item for item in candidates if item))
 
 
-def _base_matrix_rule(
+def _rule_matches_context(item: dict[str, Any], context: dict[str, Any]) -> bool:
+    vessel_group = str(item.get("vessel_group") or "")
+    wind_component = str(item.get("wind_component") or "")
+    operation = str(item.get("operation") or "")
+    if vessel_group and vessel_group != context.get("vessel_group"):
+        return False
+    if wind_component and wind_component != context.get("wind_component"):
+        return False
+    if operation and operation != "any" and operation != context.get("operation"):
+        return False
+    wind_direction = str(item.get("wind_direction") or "")
+    if wind_direction and wind_direction != context.get("wind_direction"):
+        return False
+    min_loa_exclusive = item.get("min_loa_exclusive")
+    if min_loa_exclusive is not None:
+        loa = context.get("loa")
+        if loa is None or not loa > float(min_loa_exclusive):
+            return False
+    if item.get("wind_strength") == "strong" and not context.get("strong_wind"):
+        return False
+    excluded_entities = set(item.get("excluded_entities") or [])
+    if excluded_entities and excluded_entities & set(context.get("entity_names") or []):
+        return False
+    required_entities = set(item.get("required_entities") or [])
+    if required_entities and not (required_entities & set(context.get("entity_names") or [])):
+        return False
+    return True
+
+
+def _matrix_rules(
     guidance: dict[str, Any],
-    vessel_group: str,
-    wind_component: str,
-    operation: str,
-) -> str:
-    if not vessel_group or not wind_component or not operation:
-        return ""
+    context: dict[str, Any],
+) -> list[str]:
+    if not context.get("vessel_group") or not context.get("wind_component") or not context.get("operation"):
+        return []
+    rules = []
+    for item in guidance.get("conditional_overrides") or []:
+        if _rule_matches_context(item, context):
+            note = str(item.get("note") or "")
+            if note:
+                rules.append(note)
     for item in guidance.get("base_matrix") or []:
-        if (
-            item.get("vessel_group") == vessel_group
-            and item.get("wind_component") == wind_component
-            and item.get("operation") == operation
-        ):
-            return str(item.get("note") or "")
-    return ""
+        if _rule_matches_context(item, context):
+            note = str(item.get("note") or "")
+            if note:
+                rules.append(note)
+            break
+    return list(dict.fromkeys(rules))
+
+
+def _specific_positioning_rules(guidance: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    rules = []
+    for item in guidance.get("berth_lateral_wind_positioning_rules") or []:
+        if _rule_matches_context(item, context):
+            note = str(item.get("note") or "")
+            if note:
+                rules.append(note)
+    return list(dict.fromkeys(rules))
 
 
 def _extract_context(question: str, guidance: dict[str, Any]) -> dict[str, Any]:
     loa = _extract_loa(question)
-    wind_component, wind_label = _infer_wind_component(question)
+    entity_names = _matched_entity_names(question)
+    wind_component, wind_label = _infer_wind_component(question, entity_names)
+    wind_direction = _infer_wind_direction(question)
     operation = _infer_operation(question, guidance.get("operation_aliases") or {})
     vessel_group = _infer_vessel_group(question, guidance)
+    draft = _extract_draft(question)
     return {
         "loa": loa,
         "beam": _extract_beam(question),
+        "draft": draft,
         "operation": operation,
         "vessel_group": vessel_group,
         "wind_component": wind_component,
+        "wind_direction": wind_direction,
         "wind_label": wind_label,
+        "strong_wind": _is_strong_wind(question),
+        "entity_names": sorted(entity_names),
         "has_no_bowthruster": bool(NO_BOW_RE.search(question or "")),
         "has_bowthruster": bool(HAS_BOW_RE.search(question or "")),
         "mentions_lisnave": bool(LISNAVE_RE.search(question or "")),
@@ -220,15 +335,8 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
 
     context = _extract_context(question, guidance)
     applicable_rules = []
-    matrix_rule = _base_matrix_rule(
-        guidance,
-        context["vessel_group"],
-        context["wind_component"],
-        context["operation"],
-    )
-    if matrix_rule:
-        applicable_rules.append(matrix_rule)
-    no_bow_rule = _minimum_no_bow_rule(question, context["loa"], guidance)
+    applicable_rules.extend(_matrix_rules(guidance, context))
+    no_bow_rule = _minimum_no_bow_rule(question, context["loa"], context["draft"], guidance)
     if no_bow_rule:
         applicable_rules.append(no_bow_rule)
     lisnave_rule = _lisnave_rule(question, context["loa"], guidance)
@@ -247,10 +355,18 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
         context_bits.append(f"operacao inferida: {context['operation']}")
     if context["wind_label"]:
         context_bits.append(f"vento inferido: {context['wind_label']}")
+    if context["wind_direction"]:
+        context_bits.append(f"direcao de vento inferida: {context['wind_direction']}")
     if context["loa"] is not None:
         context_bits.append(f"LOA inferido: {context['loa']:g} m")
     if context["beam"] is not None:
         context_bits.append(f"boca inferida: {context['beam']:g} m")
+    if context["draft"] is not None:
+        context_bits.append(f"calado inferido: {context['draft']:g} m")
+    if context["entity_names"]:
+        context_bits.append("terminal/cais inferido: " + ", ".join(context["entity_names"]))
+    if context["strong_wind"]:
+        context_bits.append("vento forte inferido")
     if context["has_no_bowthruster"]:
         context_bits.append("sem bowthruster")
     elif context["has_bowthruster"]:
@@ -261,6 +377,12 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
     if applicable_rules:
         lines.append("Regras diretamente aplicaveis:")
         for item in dict.fromkeys(applicable_rules):
+            lines.append(f"- {item}")
+
+    positioning_rules = _specific_positioning_rules(guidance, context) + (guidance.get("positioning_rules") or [])
+    if positioning_rules:
+        lines.append("Posicionamento pratico dos rebocadores:")
+        for item in positioning_rules:
             lines.append(f"- {item}")
 
     lines.append("Regras meteorologicas criticas:")

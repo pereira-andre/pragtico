@@ -103,27 +103,36 @@ CRITÉRIO ESPECIAL — VENTO FORTE + VAZANTE + ONDULAÇÃO:
 REBOCADORES EM CONDIÇÕES DE VENTO FORTE
 ================================================================================
 
+Esta secção é prática e não substitui o IT-016 nem o
+tug_operational_guidance.json. A posição dos rebocadores depende sempre de
+bowthruster, bordo de atracação, tipo de rebocador, vento, corrente e dimensão
+do navio.
+
 NAVIOS RO-RO E NAVIOS DE GRANDE CALADO (SUPERIOR A 9 METROS):
-  Quando o vento é forte (superior a 20 nós), é preferível posicionar um
-  rebocador a EMPURRAR o navio contra o cais durante a atracação. O vento
-  pode afastar o navio do cais, e um rebocador a empurrar (ao costado,
-  perpendicular ao cais) contraria este efeito de forma controlada.
+  Quando o vento é forte (superior a 20 nós), deve garantir-se força útil para
+  controlar a popa e/ou empurrar o navio contra o cais durante a atracação. O
+  vento pode afastar o navio do cais, e um rebocador a empurrar ao costado pode
+  contrariar este efeito de forma controlada.
 
 CONFIGURAÇÕES TÍPICAS DE REBOCADORES COM VENTO FORTE:
 
-  Configuração base (1 rebocador adicional ao habitual):
-    — 1 rebocador a puxar à proa (estabelecido em cabo).
-    — 1 rebocador a empurrar ao costado.
+  Configuração base:
+    — Com bowthruster operacional em navios grandes, privilegiar rebocador à
+      popa para controlar a popa e evitar que fuja ou bata no cais.
+    — Sem bowthruster, ou quando a manobra precisa de equilíbrio longitudinal,
+      usar normalmente 1 rebocador à proa e 1 à popa.
+    — Em Ro-Ro com 2 rebocadores, pode usar-se 1 à popa e 1 ao costado a
+      empurrar, criando efeito prático tipo push-pull.
 
   Configuração para graneleiros grandes ou situações de maior risco:
-    — 2 rebocadores estabelecidos (um à proa, outro à proa também, ou
-      proa e popa).
+    — Rebocadores estabelecidos distribuídos entre proa e popa conforme
+      bowthruster, vento e corrente.
     — 1 ou 2 rebocadores a empurrar.
 
-  O critério é ter sempre pelo menos um rebocador dedicado a empurrar
-  o navio contra o cais em condições de vento forte, especialmente para
-  navios RO-RO (que têm grande área lateral exposta ao vento) e navios
-  de calado superior a 9 metros.
+  O critério é garantir força para contrariar o vento e proteger a popa/costado,
+  mantendo pelo menos um rebocador com função clara de empurrar ou controlar a
+  aproximação em condições de vento forte, especialmente em navios Ro-Ro e
+  navios de calado superior a 9 metros.
 
 ================================================================================
 DEFINIÇÃO DE NAVIO GRANDE
@@ -169,11 +178,13 @@ Quando há múltiplas manobras a aguardar execução (por exemplo após nevoeiro
 ou em períodos de grande tráfego), as prioridades são estabelecidas pela
 seguinte ordem, da mais prioritária para a menos prioritária:
 
-1.ª PRIORIDADE — NAVIOS QUE PRECISAM DO REPONTO DE MARÉ:
-  Navios cujas manobras dependem de um reponto específico (Lisnave, Teporset,
-  Termitrena, Tanquisado, Eco-Oil, etc.). Se perderem o reponto, terão de
-  aguardar o reponto seguinte (mínimo 6 horas), o que causa atrasos
-  desproporcionados. Por isso têm sempre prioridade absoluta sobre os restantes.
+1.ª PRIORIDADE — NAVIOS QUE PRECISAM DE REPONTO OU JANELA CRÍTICA DE MARÉ:
+  Navios cujas manobras dependem de corrente nula ou de uma janela de maior
+  água/profundidade. Exemplos: Lisnave, Tanquisado e Eco-Oil quando a regra
+  aplicável exige reponto; Teporset e Termitrena com calado condicionante,
+  onde se deve privilegiar preia-mar / janela de maior água; TMS e SAPEC com
+  calados elevados dependentes da preia-mar. Se perderem a janela, podem ter
+  de aguardar várias horas, causando atrasos desproporcionados.
 
 2.ª PRIORIDADE — NAVIOS COM CARGA DE PASSAGEIROS, ANIMAIS VIVOS OU CARGA VIVA
   E CARGA PERECÍVEL:
@@ -229,9 +240,9 @@ As requisições continuam a ser registadas no sistema mas as manobras não se
 executam até as condições serem repostas e a pilotagem declarar o levantamento.
 
 Pergunta: Qual o critério de prioridade entre manobras?
-Resposta: 1.º navios com reponto de maré; 2.º navios com passageiros/animais/
-carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade
-de saídas sobre entradas.
+Resposta: 1.º navios com reponto de maré ou janela crítica de maré/profundidade;
+2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores;
+5.º outros. Sempre com prioridade de saídas sobre entradas.
 
 Pergunta: Um graneleiro e um ferry estão à espera de manobra. Qual sai primeiro?
 Resposta: O ferry (RoRo de passageiros), que é 2.ª prioridade face ao graneleiro

@@ -10,13 +10,14 @@
     "062",
     "CAIS DA TEPORSET"
   ],
-  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal TEPORSET, no Porto de Setúbal. As referências operacionais principais são comprimento físico de cais, comprimento máximo de referência de navio, fórmula de calado por altura da preia-mar e validação das requisições pelo Piloto Coordenador.",
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal TEPORSET, no Porto de Setúbal. As referências operacionais principais são comprimento físico de cais, comprimento máximo de referência de navio, fórmula de calado por altura da preia-mar e validação das requisições pelo Piloto Coordenador. Inclui também nota operacional forte para navios de maior calado: privilegiar preia-mar / janela de maior água devido ao baixo entre Termitrena e Teporset.",
   "key_points": [
     "Aplica-se ao estacionamento e à execução das manobras no Terminal TEPORSET.",
     "O cais físico tem 164 metros, mas o comprimento máximo de referência do navio é 200 metros.",
     "O calado máximo calcula-se somando 7,4 metros à altura da preia-mar prevista para o dia.",
     "O calado máximo absoluto é 11,0 metros.",
     "O calado mínimo praticável é 7,4 metros, correspondente a preia-mar ao nível do Zero Hidrográfico.",
+    "Para navios de maior calado, privilegiar a preia-mar / janela de maior água na aproximação à Teporset devido ao baixo de cerca de 7 metros entre a Termitrena e a Teporset.",
     "O Piloto Coordenador valida as requisições de manobra."
   ],
   "faq": [
@@ -112,6 +113,18 @@
         "operar",
         "pode",
         "teporset"
+      ]
+    },
+    {
+      "question": "Há alguma recomendação prática adicional para navios de maior calado na aproximação à Teporset?",
+      "answer": "Sim. Para navios de maior calado, privilegiar a preia-mar / janela de maior água na aproximação, devido ao baixo de cerca de 7 metros entre a Termitrena e a Teporset que pode puxar a proa para o baixo.",
+      "keywords": [
+        "baixo",
+        "calado",
+        "maior agua",
+        "preia-mar",
+        "teporset",
+        "termitrena"
       ]
     },
     {

@@ -1,9 +1,9 @@
 DOCUMENTO: REGRAS DE MARCAÇÃO DE MANOBRAS COM REPONTO DE MARÉ E PREIA-MAR
 FONTE: Conhecimento operacional da Pilotagem do Porto de Setúbal
 NATUREZA: Regras práticas de planeamento temporal para marcação de manobras
-que dependem de condições de maré. Complementa as regras dos terminais (IT-010,
-IT-011, IT-014, IT-062) com os tempos de antecedência específicos necessários
-para cada tipo de operação.
+que dependem de condições de maré. Complementa as regras dos terminais (IT-005,
+IT-006, IT-008, IT-009, IT-010, IT-011, IT-014, IT-029 e IT-062) com os tempos
+de antecedência específicos necessários para cada tipo de operação.
 
 ================================================================================
 CONTEXTO — PORQUÊ MARCAR COM ANTECEDÊNCIA FACE À MARÉ
@@ -48,41 +48,64 @@ Tempos práticos de embarque da lancha de pilotos desde a estação:
   — Fundeadouros: cerca de 15 minutos.
 
 ================================================================================
-SECÇÃO 1 — MANOBRAS COM REPONTO DE MARÉ PARA LISNAVE, TEPORSET E TERMITRENA
+SECÇÃO 1 — MARCAÇÕES PARA CAIS DO CANAL SUL
 ================================================================================
 
-Os terminais Lisnave (Estaleiros Mitrena), Teporset e Termitrena (ex-Eurominas)
-exigem manobras nos repontos de maré. A antecedência de marcação varia consoante
-o ponto de partida do navio:
+Lisnave (Estaleiros Mitrena), Tanquisado e Eco-Oil executam manobras próximo
+dos repontos de maré quando a regra aplicável exige corrente nula.
+
+Teporset e Termitrena devem seguir as respetivas instruções de trabalho:
+  — Teporset: o calado é calculado por 7,4 m + altura da preia-mar do dia,
+    com teto de 11,0 m; a aproximação deve ser planeada junto da preia-mar
+    quando a profundidade for condicionante.
+  — Termitrena: o calado é calculado por 8,8 m + baixa-mar de referência,
+    com teto de 10,0 m; deve-se procurar atracar com cerca de 2 m de água
+    acima do ZH para facilitar os lançantes exteriores.
+
+Recomendação operacional forte: entre a Termitrena e a Teporset existe um baixo
+de cerca de 7 m que pode "sugar" a proa dos navios de maior calado para o baixo,
+com risco de encalhe momentâneo. Por isso, para navios de maior calado nestes
+dois cais, privilegiar a preia-mar / janela de maior água, sem apresentar isto
+como uma regra formal de reponto.
+
+A antecedência de marcação varia consoante o ponto de partida do navio:
 
 ENTRADAS DE FORA DA BARRA:
-  Antecedência de marcação: 2 horas antes do reponto de maré pretendido.
-  Ou seja, quando se pretende que o navio execute a manobra num determinado
-  reponto, a requisição deve ser colocada na JUL e o piloto convocado com
-  2 horas de antecedência em relação a esse reponto.
+  Antecedência de marcação: 2 horas antes da janela de maré pretendida.
+  Para Lisnave / Tanquisado / Eco-Oil, essa janela é normalmente o reponto.
+  Para Teporset / Termitrena com calado condicionante, usar a preia-mar ou
+  janela de maior água como referência.
   Isto porque o navio tem de ser pilotado desde fora da barra, percorrer o
   canal de entrada, o Canal Sul, e chegar ao terminal — percurso que demora
   aproximadamente esse tempo.
 
 MUDANÇAS DO FUNDEADOURO DE TRÓIA:
-  Antecedência de marcação: 1 hora antes do reponto de maré pretendido.
-  O Fundeadouro de Tróia está localizado mais próximo dos terminais Lisnave,
-  Teporset e Termitrena do que a barra de entrada, pelo que o tempo de trânsito
-  é menor. A marcação deve ser feita com 1 hora de antecedência em relação ao
-  reponto.
+  Antecedência de marcação: 1 hora antes da janela de maré pretendida.
+  O Fundeadouro de Tróia está localizado mais próximo dos cais do Canal Sul do
+  que a barra de entrada, pelo que o tempo de trânsito é menor. A marcação deve
+  ser feita com 1 hora de antecedência em relação à janela alvo.
 
 MUDANÇAS DO FUNDEADOURO NORTE:
-  Antecedência de marcação: 1 hora e 30 minutos antes do reponto de maré pretendido.
+  Antecedência de marcação: 1 hora e 30 minutos antes da janela de maré pretendida.
   O Fundeadouro Norte está situado na zona de entrada do porto, a norte do
-  estuário. O percurso desde o Fundeadouro Norte até aos terminais Lisnave,
-  Teporset ou Termitrena é mais longo do que desde o Fundeadouro de Tróia,
-  exigindo 1h30 de antecedência.
+  estuário. O percurso desde o Fundeadouro Norte até aos cais do Canal Sul é
+  mais longo do que desde o Fundeadouro de Tróia, exigindo 1h30 de antecedência.
 
-RESUMO COMPARATIVO — ENTRADAS/MUDANÇAS PARA LISNAVE / TEPORSET / TERMITRENA:
+RESUMO COMPARATIVO — ENTRADAS/MUDANÇAS PARA CAIS DO CANAL SUL:
 
-  De fora da Barra:        marcar 2h00 antes do reponto.
-  Do Fundeadouro Norte:    marcar 1h30 antes do reponto.
-  Do Fundeadouro de Tróia: marcar 1h00 antes do reponto.
+  De fora da Barra para Lisnave / Tanquisado / Eco-Oil:
+    marcar 2h00 antes do reponto.
+  Do Fundeadouro Norte para Lisnave / Tanquisado / Eco-Oil:
+    marcar 1h30 antes do reponto.
+  Do Fundeadouro de Tróia para Lisnave / Tanquisado / Eco-Oil:
+    marcar 1h00 antes do reponto.
+
+  De fora da Barra para Teporset / Termitrena com calado condicionante:
+    marcar 2h00 antes da preia-mar / janela de maior água.
+  Do Fundeadouro Norte para Teporset / Termitrena:
+    marcar 1h30 antes da preia-mar / janela de maior água.
+  Do Fundeadouro de Tróia para Teporset / Termitrena:
+    marcar 1h00 antes da preia-mar / janela de maior água.
 
 ================================================================================
 SECÇÃO 2 — SAÍDAS DAS DOCAS 21 E 22 (LISNAVE)
@@ -160,23 +183,68 @@ IT-014). A marcação com 1 hora de antecedência é suficiente porque o percurs
 de saída destes terminais até à zona de manobra ou barra é relativamente curto
 e bem definido.
 
+Nota específica da Tanquisado: o IT-010 também permite saída fora de reponto
+em maré de vazante, desde que a preia-mar precedente tenha sido igual ou
+inferior a 3 m. Esta exceção documental não elimina a regra prática de marcar
+1 hora antes quando a saída for planeada para o reponto.
+
+================================================================================
+SECÇÃO 7 — MARCAÇÃO DE MANOBRAS PARA SECIL
+================================================================================
+
+Estas notas complementam a IT-009 apenas no planeamento horário das requisições.
+Não substituem as restrições documentais de LOA, calado, luz do dia, maré e
+validação pelo Piloto Coordenador.
+
+ENTRADAS PARA A SECIL:
+  — De fora da Barra: normalmente marcar 30 a 45 minutos antes do reponto.
+  — Do Fundeadouro Norte: normalmente marcar 30 a 45 minutos antes do reponto.
+  — Do Fundeadouro de Tróia ou de outro cais: marcar 45 minutos a 1 hora antes
+    do reponto.
+
+SAÍDAS DA SECIL:
+  — Marcar cerca de 15 minutos antes do reponto.
+  — Usam-se tanto repontos de preia-mar como de baixa-mar.
+  — A saída é normalmente rápida; o cais tende a ficar livre em 10 a 15 minutos.
+
+Exemplo prático:
+  Se houver uma saída da Secil no reponto das 13:51, marcar a saída por volta
+  das 13:36. Se houver também uma mudança do Fundeadouro Norte para o mesmo cais,
+  marcar essa mudança entre 12:51 e 13:06.
+
 ================================================================================
 QUADRO RESUMO — ANTECEDÊNCIAS DE MARCAÇÃO POR TIPO DE OPERAÇÃO
 ================================================================================
 
 OPERAÇÕES QUE DEPENDEM DO REPONTO DE MARÉ:
 
-  Entrada de fora da Barra → Lisnave / Teporset / Termitrena:
+  Entrada de fora da Barra → Lisnave:
     Marcar 2h00 antes do reponto.
 
-  Mudança do Fundeadouro Norte → Lisnave / Teporset / Termitrena:
+  Mudança do Fundeadouro Norte → Lisnave:
     Marcar 1h30 antes do reponto.
 
-  Mudança do Fundeadouro de Tróia → Lisnave / Teporset / Termitrena:
+  Mudança do Fundeadouro de Tróia → Lisnave:
+    Marcar 1h00 antes do reponto.
+
+  Entrada de fora da Barra → Tanquisado / Eco-Oil:
+    Marcar 2h00 antes do reponto.
+
+  Mudança do Fundeadouro Norte → Tanquisado / Eco-Oil:
+    Marcar 1h30 antes do reponto.
+
+  Mudança do Fundeadouro de Tróia → Tanquisado / Eco-Oil:
     Marcar 1h00 antes do reponto.
 
   Saída do Lisnave (excl. Docas 21/22) / Tanquisado / Eco-Oil:
     Marcar 1h00 antes do reponto.
+
+  Entrada para a Secil:
+    De fora da Barra ou Fundeadouro Norte, marcar 30 a 45 minutos antes do reponto.
+    De Tróia ou outro cais, marcar 45 minutos a 1h00 antes do reponto.
+
+  Saída da Secil:
+    Marcar cerca de 15 minutos antes do reponto.
 
 OPERAÇÕES QUE DEPENDEM DA PREIA-MAR:
 
@@ -192,21 +260,33 @@ OPERAÇÕES QUE DEPENDEM DA PREIA-MAR:
   Navio com calado ≈ 10 m → SAPEC Granéis Sólidos (TPS):
     Marcar 1h30 antes da preia-mar.
 
+  Teporset / Termitrena com calado condicionante:
+    Forte recomendação operacional para usar a preia-mar / janela de maior água.
+    Antecedência prática: 2h00 de fora da Barra, 1h30 do Fundeadouro Norte,
+    1h00 do Fundeadouro de Tróia.
+
 ================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
 ================================================================================
 
 Pergunta: Com quanto tempo de antecedência se marca uma entrada de fora da barra
-para o Lisnave/Teporset/Termitrena?
+para o Lisnave/Tanquisado/Eco-Oil?
 Resposta: 2 horas antes do reponto de maré pretendido.
+
+Pergunta: E para Teporset ou Termitrena com calado condicionante?
+Resposta: Como recomendação operacional forte, marcar para chegar junto da
+preia-mar ou janela de maior água. De fora da Barra, usar 2 horas de antecedência;
+do Fundeadouro Norte, 1h30; de Tróia, 1h. A razão é a profundidade na aproximação
+e o baixo de cerca de 7 m entre a Termitrena e a Teporset, que pode puxar a proa
+dos navios de maior calado.
 
 Pergunta: Um navio fundeado em Tróia quer ir para o Lisnave. Com que antecedência
 se marca?
 Resposta: 1 hora antes do reponto de maré.
 
-Pergunta: Um navio fundeado no Fundeadouro Norte quer ir para a Termitrena. Com
-que antecedência se marca?
-Resposta: 1 hora e 30 minutos antes do reponto de maré.
+Pergunta: Um navio fundeado no Fundeadouro Norte quer ir para a Termitrena com
+calado condicionante. Com que antecedência se marca?
+Resposta: 1 hora e 30 minutos antes da preia-mar / janela de maior água.
 
 Pergunta: Um navio quer sair da Doca 22 do Lisnave. Quando se marca?
 Resposta: 2 horas antes da preia-mar.
@@ -226,13 +306,27 @@ Com que antecedência se marca?
 Resposta: 1 hora antes do reponto de maré. (Os cais de reparação do Lisnave,
 excepto as Docas 21 e 22, saem no reponto com 1 hora de antecedência.)
 
+Pergunta: Quando se pode sair da Tanquisado sem ser no reponto?
+Resposta: O IT-010 permite saída em maré de vazante desde que a preia-mar
+precedente tenha sido igual ou inferior a 3 metros. Quando a saída for planeada
+para o reponto, a regra prática de marcação continua a ser 1 hora antes.
+
+Pergunta: Com quanto tempo de antecedência se marca uma manobra para a Secil?
+Resposta: Para entradas na Secil, se o navio vier de fora da Barra ou do
+Fundeadouro Norte, normalmente basta 30 a 45 minutos antes do reponto; se vier
+do Fundeadouro de Tróia ou de outro cais, usar cerca de 45 minutos a 1 hora.
+A saída da Secil marca-se cerca de 15 minutos antes do reponto, quer seja
+reponto de preia-mar quer seja de baixa-mar.
+
 Pergunta: Qual a diferença entre marcar para o reponto e marcar para a preia-mar?
 Resposta: Marcar para o reponto significa que a manobra se executa no momento
 de corrente nula (mudança de sentido da maré). Marcar para a preia-mar significa
 que a manobra precisa do nível máximo de água para ter profundidade suficiente.
-Os terminais Lisnave/Teporset/Termitrena usam o reponto (corrente nula). As
-saídas das docas secas e os navios de grande calado nos TMS e SAPEC usam a
-preia-mar (profundidade máxima).
+Lisnave, Tanquisado, Eco-Oil e Secil usam o reponto quando a regra aplicável
+exige corrente nula. Teporset e Termitrena devem seguir os ITs; para navios de
+maior calado, há recomendação operacional forte para usar a preia-mar / maior
+água por causa da profundidade na aproximação. As saídas das docas secas e os
+navios de grande calado nos TMS e SAPEC usam a preia-mar (profundidade máxima).
 
 ================================================================================
 FIM DO DOCUMENTO — REGRAS DE MARCAÇÃO DE MANOBRAS COM MARÉ

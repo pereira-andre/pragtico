@@ -60,7 +60,7 @@
       ]
     },
     {
-      "question": "Um navio de 200 metros pode atracar no TMS2 se já houver um navio de",
+      "question": "Um navio de 200 metros pode atracar no TMS2 se já houver um navio de 150 metros atracado?",
       "answer": "É necessário calcular o espaço total ocupado. O navio de 150 metros ocupa 180 metros (15 + 150 + 15). O navio de 200 metros ocupa 240 metros (20 + 200 + 20). No entanto, as margens de separação entre os dois navios podem ser partilhadas: a margem de ré de um e a margem de vante do outro devem satisfazer individualmente os 10% de cada navio. O espaço total necessário para os dois navios juntos seria de pelo menos 15 + 150 + 20 + 200 + 20 = 405 metros, o que é inferior a 723 metros, sendo portanto possível em termos de comprimento disponível, desde que se respeitem os intervalos individuais de cada navio.",
       "keywords": [
         "atracar",
@@ -68,6 +68,8 @@
         "metros",
         "navio",
         "pode",
+        "150",
+        "200",
         "tms2"
       ]
     },

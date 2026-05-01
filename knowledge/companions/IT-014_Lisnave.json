@@ -15,7 +15,7 @@
     "docas LISNAVE",
     "REGRAS APLICÁVEIS A MANOBRAS — ESTALEIRO LISNAVE (ESTALEIROS MITRENA)"
   ],
-  "summary": "Este documento descreve as regras de estacionamento e execução de manobras na LISNAVE / Estaleiros Mitrena, uma instalação com Pontes-Cais 1, 2 e 3, Docas 20, 21 e 22, Cais 0, Cais de Descarga de Aço e Hidrolift com acesso às Docas secas 31, 32 e 33.",
+  "summary": "Este documento descreve as regras de estacionamento e execução de manobras na LISNAVE / Estaleiros Mitrena, uma instalação com Pontes-Cais 1, 2 e 3, Doca 20 como Plataforma de Construção, Docas 21 e 22, Cais 0, Cais de Descarga de Aço e Plataformas 31, 32 e 33 com acesso pelo Hidrolift.",
   "key_points": [
     "Todas as manobras na LISNAVE fazem-se próximo dos repontos de maré porque os cais estão perpendiculares à corrente.",
     "Navios com LOA até 280 metros podem manobrar em qualquer reponto, de dia ou de noite; acima de 280 metros só podem manobrar de dia.",
@@ -23,12 +23,12 @@
     "Sondas ao ZH: Cais 3 B 8,60 m; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m.",
     "Nomenclatura dos cais: a designação operacional mantém sempre a numeração + A/B. W/E e Setúbal/Alcácer são apenas referências laterais: A = W/oeste, referência local lado Setúbal; B = E/este, referência local lado Alcácer do Sal.",
     "Docas 21 e 22 têm 6,10 m ao ZH na soleira com a comporta aberta e 5,49 m com a comporta fechada.",
-    "As Docas secas 31, 32 e 33 têm acesso por um único Hidrolift, com boca máxima admissível de 32 m e sonda de acesso de 5,5 m."
+    "As Plataformas 31, 32 e 33 têm acesso por um único Hidrolift, com boca máxima admissível de 32 m e sonda de acesso de 5,5 m."
   ],
   "faq": [
     {
       "question": "Qual é o calado máximo para um navio que vai para a LISNAVE?",
-      "answer": "Não há um calado máximo único para toda a LISNAVE. O limite depende do destino exato, da sonda ao ZH, da altura de maré e das margens operacionais. Referências ao ZH no IT-014: Cais 3 B 8,60 m a 10 m da face; Cais 1 B 7,40 m; Cais 1 A 7,14 m; Cais 2 A, 2 B e 3 A 7,0 m a 10 m da face; Cais 0 6,0 m; Docas 21 e 22 6,10 m na soleira com a comporta aberta e 5,49 m com a comporta fechada; Docas secas 31/32/33 5,5 m no acesso pelo Hidrolift. O Cais de Descarga de Aço está como ND no documento. A designação operacional mantém sempre A/B; W/E e Setúbal/Alcácer são só referências laterais: A = W/oeste, B = E/este.",
+      "answer": "Não há um calado máximo único para toda a LISNAVE. O limite depende do destino exato, da sonda ao ZH, da altura de maré e das margens operacionais. Referências ao ZH no IT-014: Cais 3 B 8,60 m a 10 m da face; Cais 1 B 7,40 m; Cais 1 A 7,14 m; Cais 2 A, 2 B e 3 A 7,0 m a 10 m da face; Cais 0 6,0 m; Docas 21 e 22 6,10 m na soleira com a comporta aberta e 5,49 m com a comporta fechada; Plataformas 31/32/33 5,5 m no acesso pelo Hidrolift. O Cais de Descarga de Aço está como ND no documento. A designação operacional mantém sempre A/B; W/E e Setúbal/Alcácer são só referências laterais: A = W/oeste, B = E/este.",
       "keywords": [
         "calado máximo",
         "profundidade",
@@ -39,12 +39,12 @@
         "cais 1 a",
         "cais 3 b",
         "hidrolift",
-        "docas secas 31 32 33"
+        "plataformas 31 32 33"
       ]
     },
     {
       "question": "Quais são os cais e as docas da LISNAVE?",
-      "answer": "A LISNAVE / Estaleiros Mitrena inclui as Pontes-Cais de reparação 1, 2 e 3, com faces 1 A, 1 B, 2 A, 2 B, 3 A e 3 B; os cais auxiliares Cais 0 (Face A e Face B) e Cais de Descarga de Aço; as Docas secas 20, 21 e 22; e o Hidrolift com acesso às Docas secas 31, 32 e 33. A designação operacional mantém sempre A/B; W/E e Setúbal/Alcácer são só referências laterais: A = W/oeste, B = E/este.",
+      "answer": "A LISNAVE / Estaleiros Mitrena inclui as Pontes-Cais de reparação 1, 2 e 3, com faces 1 A, 1 B, 2 A, 2 B, 3 A e 3 B; os cais auxiliares Cais 0 (Face A e Face B) e Cais de Descarga de Aço; a Doca 20 como Plataforma de Construção; as Docas 21 e 22; e as Plataformas 31, 32 e 33 com acesso pelo Hidrolift. A designação operacional mantém sempre A/B; W/E e Setúbal/Alcácer são só referências laterais: A = W/oeste, B = E/este.",
       "keywords": [
         "cais",
         "docas",
@@ -54,7 +54,7 @@
         "cais descarga aço",
         "doca 20",
         "hidrolift",
-        "docas secas 31 32 33"
+        "plataformas 31 32 33"
       ]
     },
     {
@@ -92,22 +92,22 @@
     },
     {
       "question": "Existem quantos cais e quantas docas na LISNAVE?",
-      "answer": "Depende da forma de contar. O IT-014 identifica 3 grupos principais de Pontes-Cais de reparação (1, 2 e 3), com 6 faces operacionais: 1 A, 1 B, 2 A, 2 B, 3 A e 3 B. Além disso há o Cais 0, com Face A e Face B, e o Cais de Descarga de Aço. As docas secas principais são as Docas 20, 21 e 22; além destas, existem as Docas secas 31, 32 e 33, acessíveis por um único Hidrolift.",
+      "answer": "Depende da forma de contar. O IT-014 identifica 3 grupos principais de Pontes-Cais de reparação (1, 2 e 3), com 6 faces operacionais: 1 A, 1 B, 2 A, 2 B, 3 A e 3 B. Além disso há o Cais 0, com Face A e Face B, e o Cais de Descarga de Aço. A Doca 20 é Plataforma de Construção; as Docas 21 e 22 têm soleira documentada; e as Plataformas 31, 32 e 33 são acessíveis por um único Hidrolift.",
       "keywords": [
         "quantos cais",
         "quantas docas",
         "lisnave",
         "faces operacionais",
-        "docas 20 21 22",
+        "doca 20",
         "ponte-cais",
         "cais 0",
         "hidrolift",
-        "docas secas 31 32 33"
+        "plataformas 31 32 33"
       ]
     },
     {
-      "question": "Dá-me mais detalhes sobre a LISNAVE",
-      "answer": "A LISNAVE / Estaleiros Mitrena é uma zona de reparação e construção naval em Setúbal. As manobras fazem-se próximo dos repontos de maré porque os cais estão perpendiculares à corrente. A instalação inclui Pontes-Cais 1, 2 e 3, Docas secas 20, 21 e 22, Cais 0, Cais de Descarga de Aço e Hidrolift com acesso às Docas secas 31, 32 e 33. Há regras específicas de LOA: até 280 m pode manobrar em qualquer reponto, dia ou noite; acima de 280 m só de dia. Para calado, deve-se usar a sonda ao ZH do destino concreto e acrescentar maré e margens operacionais.",
+      "question": "Dá-me mais detalhes sobre a LISNAVE?",
+      "answer": "A LISNAVE / Estaleiros Mitrena é uma zona de reparação e construção naval em Setúbal. As manobras fazem-se próximo dos repontos de maré porque os cais estão perpendiculares à corrente. A instalação inclui Pontes-Cais 1, 2 e 3, Doca 20 como Plataforma de Construção, Docas 21 e 22, Cais 0, Cais de Descarga de Aço e Plataformas 31, 32 e 33 com acesso pelo Hidrolift. Há regras específicas de LOA: até 280 m pode manobrar em qualquer reponto, dia ou noite; acima de 280 m só de dia. Para calado, deve-se usar a sonda ao ZH do destino concreto e acrescentar maré e margens operacionais.",
       "keywords": [
         "detalhes",
         "lisnave",
@@ -175,7 +175,7 @@
       ]
     },
     {
-      "question": "Qual a profundidade disponível na entrada da Doca 21 com a comporta",
+      "question": "Qual a profundidade disponível na entrada da Doca 21 com a comporta aberta na baixa-mar?",
       "answer": "6,10 metros (20 pés ao ZH). Com a comporta fechada (descida), a profundidade na entrada reduz-se para 5,49 metros (18 pés).",
       "keywords": [
         "comporta",
@@ -221,8 +221,8 @@
       ]
     },
     {
-      "question": "Qual a boca máxima para as Docas secas 31, 32 e 33 do LISNAVE?",
-      "answer": "32 metros no Hidrolift que dá acesso às Docas secas 31, 32 e 33.",
+      "question": "Qual a boca máxima para as Plataformas 31, 32 e 33 do LISNAVE?",
+      "answer": "32 metros no Hidrolift que dá acesso às Plataformas 31, 32 e 33.",
       "keywords": [
         "boca",
         "lisnave",

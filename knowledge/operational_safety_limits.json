@@ -4,6 +4,18 @@
   "status": "operational_safety_rule",
   "rules": [
     {
+      "id": "wind_assessment",
+      "condition": "vento superior a 20 kt",
+      "decision": "pilot_and_master_case_by_case_assessment",
+      "note": "Acima de 20 kt, o IT-018 exige avaliacao de viabilidade pelo Piloto nomeado em articulacao com o Comandante, especialmente em navios de grande superficie velica."
+    },
+    {
+      "id": "wind_practical_limit",
+      "condition": "vento superior a 25 kt",
+      "decision": "generally_impracticable_case_by_case",
+      "note": "Acima de 25 kt, a pratica operacional considera as manobras geralmente impraticaveis; avaliar caso a caso e nao tratar como autorizacao automatica."
+    },
+    {
       "id": "fog_suspension",
       "condition": "nevoeiro em porto ou visibilidade operacional nao restaurada",
       "decision": "suspend_all_maneuvers",
@@ -23,10 +35,17 @@
     }
   ],
   "thresholds": {
+    "wind_assess_above_kts": 20,
+    "wind_generally_impracticable_above_kts": 25,
     "wind_suspend_above_kts": 30,
     "wind_resume_below_kts": 25,
     "fog_visibility_km_reference": 1.0
   },
+  "source_notes": [
+    "20 kt vem do IT-018 como limiar formal de avaliacao obrigatoria de viabilidade.",
+    "25 kt e 30 kt sao limites praticos usados para decisao operacional e suspensao.",
+    "fog_visibility_km_reference=1.0 esta confirmado como limiar tecnico para interpretar dados live de visibilidade; a regra operacional continua a ser nevoeiro/visibilidade operacional nao restaurada."
+  ],
   "fog_terms": [
     "nevoeiro",
     "nevoa",

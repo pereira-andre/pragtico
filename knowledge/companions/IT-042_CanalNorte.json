@@ -14,7 +14,7 @@
   "key_points": [
     "Existem três recomendações: (1) quando possível, usar dois rebocadores à popa para criar binário de forças e controlar a guinada, evitando guinada ao passo; (2) evitar dar máquina a ré na zona de canal e curva; (3) manter uma distância de 0,15' (cerca de 278 metros) da linha norte da costa na zona de curva.",
     "Para criar um binário de forças que aumenta o controlo de guinada do navio, evitando a guinada ao passo — um efeito indesejado do hélice que pode fazer o navio guinar de forma não controlada numa zona de canal estreito.",
-    "0,15 minutos de milha, equivalente a aproximadamente 278 metros.",
+    "0,15 milhas náuticas, equivalente a aproximadamente 278 metros.",
     "Porque a marcha-atrás de um hélice convencional gera uma força lateral brusca (efeito de pá) que pode lançar a popa do navio lateralmente de forma imprevisível, colocando o navio fora do canal numa zona em que a margem de erro é reduzida."
   ],
   "faq": [
@@ -46,7 +46,7 @@
     },
     {
       "question": "Qual a distância recomendada à margem norte na curva do Canal Norte?",
-      "answer": "0,15 minutos de milha, equivalente a aproximadamente 278 metros.",
+      "answer": "0,15 milhas náuticas, equivalente a aproximadamente 278 metros.",
       "keywords": [
         "canal",
         "curva",

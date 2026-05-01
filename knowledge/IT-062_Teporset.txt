@@ -75,6 +75,18 @@ CALADO MÍNIMO GARANTIDO:
   de 7,4 metros. Este é o calado mínimo base do terminal.
 
 ================================================================================
+NOTA OPERACIONAL COMPLEMENTAR — BAIXO ENTRE TERMITRENA E TEPORSET
+================================================================================
+
+Esta nota é prática operacional e não substitui a fórmula documental do IT-062.
+Para navios de maior calado, privilegiar a preia-mar / janela de maior água na
+aproximação à Teporset. Entre a Termitrena e a Teporset existe um baixo de cerca
+de 7 metros que pode puxar a proa dos navios de maior calado para o baixo, com
+risco de encalhe momentâneo. A regra documental já usa a altura da preia-mar,
+mas a recomendação operacional reforça que a aproximação deve ser conservadora
+quando a profundidade for condicionante.
+
+================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
 ================================================================================
 
@@ -121,6 +133,12 @@ teto de 11,0 metros. Por exemplo, com preia-mar de 2,5 m: calado máximo =
 Pergunta: Um navio com 10,0 m de calado pode operar na TEPORSET?
 Resposta: Sim, desde que a preia-mar do dia seja igual ou superior a 2,6 m
 (7,4 + 2,6 = 10,0 m).
+
+Pergunta: Há alguma recomendação prática adicional para navios de maior calado
+na aproximação à Teporset?
+Resposta: Sim. Para navios de maior calado, privilegiar a preia-mar / janela de
+maior água na aproximação, devido ao baixo de cerca de 7 metros entre a Termitrena
+e a Teporset que pode puxar a proa para o baixo.
 
 Pergunta: Qual o calado mínimo praticável na TEPORSET independentemente da maré?
 Resposta: 7,4 metros (correspondente a preia-mar ao nível do Zero Hidrográfico).

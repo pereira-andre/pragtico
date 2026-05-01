@@ -78,6 +78,10 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
    Fonte: IT-011.
    Antigo terminal EUROMINAS. Tem um cais fisico de referencia e regras
    especificas de calado por baixa-mar de referencia.
+   Para navios de maior calado, manter a recomendacao operacional forte de
+   privilegiar preia-mar / janela de maior agua na aproximacao, devido ao baixo
+   de cerca de 7 m entre a Termitrena e a Teporset. Esta e pratica operacional,
+   nao regra formal de reponto.
 
 8. Terminal PRAIAS DO SADO
    Fonte: IT-012.
@@ -94,10 +98,11 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
        referencia local lado Alcacer do Sal);
      - Cais 0, Face A e Face B;
      - Cais de Descarga de Aco;
-     - Docas 20, 21 e 22;
-     - Docas secas 31, 32 e 33, cujo acesso e feito por um unico Hidrolift
+     - Doca 20, Plataforma de Construcao;
+     - Docas 21 e 22;
+     - Plataformas 31, 32 e 33, cujo acesso e feito por um unico Hidrolift
        (mini eclusa/elevador), onde o navio entra e depois e transferido para
-       uma das tres docas.
+       uma das tres plataformas.
 
 10. SAPEC
     Fonte: IT-029.
@@ -115,6 +120,10 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
     Fonte: IT-062.
     Cais da TEPORSET / Terminal Portuario de Setubal, com regras de calado
     baseadas na altura da preia-mar.
+    Para navios de maior calado, manter a recomendacao operacional forte de
+    privilegiar preia-mar / janela de maior agua na aproximacao, devido ao baixo
+    de cerca de 7 m entre a Termitrena e a Teporset. Esta e pratica operacional,
+    nao regra formal de reponto.
 
 ================================================================================
 FACTOS PARA SINTESE EM PERGUNTAS AMPLAS
@@ -136,8 +145,9 @@ Factos de inventario: os grupos operacionais a considerar sao:
       - Cais 1 A e 1 B;
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
-      - Docas secas 20, 21 e 22;
-      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
+      - Doca 20, Plataforma de Construcao;
+      - Docas 21 e 22;
+      - Plataformas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Estes grupos ja incluem os aliases operacionais e nao devem ser desdobrados
@@ -162,8 +172,9 @@ os seguintes grupos:
       - Cais 1 A e 1 B;
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
-      - Docas secas 20, 21 e 22;
-      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
+      - Doca 20, Plataforma de Construcao;
+      - Docas 21 e 22;
+      - Plataformas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Fundeadouros nao contam como cais; sao zonas de espera/fundeio.
@@ -186,8 +197,9 @@ principais grupos a usar sao:
       - Cais 1 A e 1 B;
       - Cais 2 A e 2 B;
       - Cais 3 A e 3 B;
-      - Docas secas 20, 21 e 22;
-      - Docas secas 31, 32 e 33 (acesso por Hidrolift);
+      - Doca 20, Plataforma de Construcao;
+      - Docas 21 e 22;
+      - Plataformas 31, 32 e 33 (acesso por Hidrolift);
   - Terminal TERMITRENA;
   - TEPORSET (cais dedicado).
 Fundeadouros nao contam como cais. Nao acrescentar aliases como linhas

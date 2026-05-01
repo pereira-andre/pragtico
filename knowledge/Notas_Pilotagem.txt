@@ -508,14 +508,36 @@ grande calado que possam necessitar de entrar ou sair.
 REBOCADORES — DICAS OPERACIONAIS
 ================================================================================
 
-A velocidade máxima para estabelecer cabo de rebocador é de 8 nós, em posição
-de popa. Rebocadores convencionais só travam eficazmente a 3 nós. Rebocadores
-com sistemas azipode (por exemplo os rebocadores "Lisboa", "Danado" e "Cabo da
-Roca") conseguem travar o navio até 6 nós.
+O protocolo original de assistência em manobra lista velocidades por posição
+para estabelecer cabo: 5 nós à proa, 6 nós ao costado e 8 nós à popa, sempre
+sobre a água. Para resposta operacional geral do bot, por validação prática,
+usar 6 nós sobre a água como referência conservadora. Na prática, tratar este
+valor como limite superior: rebocadores convencionais só travam eficazmente a
+cerca de 3 nós. Rebocadores com sistemas azipode (por exemplo os rebocadores
+"Lisboa", "Danado" e "Cabo da Roca") conseguem travar o navio até 6 nós, em
+condições adequadas.
 
 O rebocador "Lisboa" não opera eficazmente à proa a 6 nós, pois fica
 desgovernado. É mais eficaz à popa, tendo azipodes e força significativa.
 É um rebocador tractor com dois propulsores tipo azipode.
+
+POSICIONAMENTO PRÁTICO DOS REBOCADORES:
+Normalmente só se coloca rebocador à proa quando o navio não tem bowthruster,
+ou quando a manobra precisa claramente desse equilíbrio. Se estiverem pedidos
+dois rebocadores para um navio sem bowthruster, estabelecer normalmente um à
+proa e um à popa para equilibrar as forças: quando o rebocador da proa tenta
+abrir a proa do cais, a popa pode fechar para o cais se não houver controlo à
+popa.
+
+Com bowthruster operacional em navios grandes, colocar por norma o rebocador
+à popa, para vigiar e segurar a popa quando o navio vai para o cais e evitar
+que fuja e bata. Em Ro-Ro com dois rebocadores, uma configuração prática
+frequente é um rebocador à popa e outro ao costado a empurrar, criando um
+efeito tipo push-pull com dois rebocadores.
+
+Estas regras referem-se sobretudo a rebocadores convencionais. Com rebocadores
+azipode há mais capacidade, mas a recomendação deve continuar conservadora em
+caso de dúvida.
 
 Com múltiplos rebocadores em operação simultânea, é recomendado fazer um
 esquema do navio com os nomes dos rebocadores e dos respetivos mestres. Ser
@@ -634,9 +656,12 @@ de maré do que em Sesimbra, Outão ou no cais comercial de Setúbal. Esta difer
 deve ser incorporada no cálculo de calados para manobras no estaleiro.
 
 Pergunta: Qual a velocidade máxima a que se pode estabelecer um cabo de rebocador?
-Resposta: 8 nós (posição de popa). Os rebocadores convencionais só travam
-eficazmente a 3 nós. Os rebocadores com azipodes (como o "Lisboa", "Danado" e
-"Cabo da Roca") conseguem travar até 6 nós.
+Resposta: Como resposta operacional geral do bot, 6 nós sobre a água. Nota
+documental: o protocolo original lista 5 nós à proa, 6 nós ao costado e 8 nós
+à popa. Na prática, usar 6 nós como referência conservadora e limite superior:
+rebocadores convencionais só travam eficazmente a cerca de 3 nós, e rebocadores
+com azipodes, como o "Lisboa", "Danado" e "Cabo da Roca", conseguem travar até
+6 nós em condições adequadas.
 
 Pergunta: Qual a distância do Pilar 2 ao LISNAVE pelo percurso normal?
 Resposta: 10,5 milhas náuticas pelo Canal Sul. Com o atalho (corta-mato), são

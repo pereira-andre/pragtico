@@ -5,19 +5,19 @@
   "principles": [
     "Usar esta regra pratica em conjunto com a IT-016 e com o historico de manobras. Quando houver conflito, nao recomendar menos do que a regra mais conservadora.",
     "A experiencia historica em knowledge/practice_maneuver_experience.json mostra padroes por tipo de navio, LOA, boca, GT e cais. A IT-016 continua a ser a referencia para DWT, cargas perigosas, estado carregado/vazio e thrusters.",
-    "Se faltarem DWT, carga perigosa, estado carregado/vazio, bow/stern thruster, vento ou bordo de atracacao, responder por cenarios e dizer exatamente o que falta confirmar.",
-    "Navios pequenos ate 120 m usam normalmente rebocadores pequenos. Acima disso, assumir rebocadores grandes salvo indicacao operacional em contrario."
+    "Se faltarem DWT, carga perigosa, estado carregado/vazio, bow/stern thruster, vento, calado ou bordo de atracacao, responder por cenarios e dizer exatamente o que falta confirmar.",
+    "Navios pequenos ate 120 m usam normalmente rebocadores pequenos. Acima disso, assumir rebocadores grandes salvo indicacao operacional em contrario. Excecao pratica: navio ate 120 m com calado >= 8 m deve usar rebocador grande de cerca de 35 t, nao rebocador pequeno de 25 t."
   ],
   "weather_rules": [
-    "Quando ha nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada. Alem disso, assumir risco de vir vento SW forte.",
+    "Quando ha nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada. Em Setubal e comum dizer-se localmente que depois do nevoeiro vem vento SW forte, mas isto e conhecimento contextual e nao deve ser usado sozinho para dimensionar rebocadores.",
     "Com vento sustentado ou rajada superior a 30 kt, todas as manobras ficam suspensas por seguranca; depois de suspensao por vento, retomar apenas quando estiver abaixo de 25 kt.",
     "Vento SW forte e o vento mais perigoso: empurra os navios para o cais com forca, pode impedir a saida mesmo com rebocadores e pode gerar cerca de 1 m de ondulacao dentro do porto.",
     "Outra situacao perigosa: vento Norte forte ao atracar com mares vivas pela popa, sobretudo se o bordo de atracacao nao condiz com o passo do helice do navio. Exemplo: navio de passo direito a atracar por estibordo, ou o inverso.",
-    "Vento W atua como vento S fraco. Vento E atua como vento N fraco. Se o vento rondar para N ou S, tratar como aumento de risco nessa componente."
+    "Vento W atua como vento S fraco e vento E atua como vento N fraco apenas no contexto TMS2/Autoeuropa, onde a orientacao aproximada 120/300 graus torna esses ventos quase paralelos mas ligeiramente atracantes ou desatracantes. Nao aplicar automaticamente esta equivalencia aos cais do Canal Sul, de Tanquisado ate Teporset."
   ],
   "wind_equivalences": {
-    "W": "S fraco",
-    "E": "N fraco",
+    "W": "S fraco apenas em TMS2/Autoeuropa; nao aplicar automaticamente ao Canal Sul",
+    "E": "N fraco apenas em TMS2/Autoeuropa; nao aplicar automaticamente ao Canal Sul",
     "SW": "S forte / caso critico",
     "N": "N",
     "S": "S"
@@ -103,6 +103,44 @@
       "note": "Graneleiros, reefers, estilha e contentores grandes com vento Norte a sair: 3 rebocadores."
     }
   ],
+  "conditional_overrides": [
+    {
+      "vessel_group": "roro",
+      "wind_component": "north",
+      "operation": "any",
+      "wind_strength": "strong",
+      "min_loa_exclusive": 220,
+      "tugs": 4,
+      "tug_size": "grandes",
+      "note": "Ro-Ro com mais de 220 m e vento Norte forte: considerar 4 rebocadores grandes em casos extremos, porque 1 rebocador a empurrar pode ser insuficiente."
+    },
+    {
+      "vessel_group": "bulk_like",
+      "wind_component": "north",
+      "operation": "departure",
+      "wind_strength": "strong",
+      "excluded_entities": ["Lisnave", "Tanquisado", "Eco-Oil"],
+      "tugs": 4,
+      "tug_size": "grandes",
+      "note": "Graneleiros, reefers, estilha e contentores grandes a sair com vento Norte forte: considerar 4 rebocadores grandes. Excecao: estaleiro/Lisnave, Tanquisado e Eco-Oil devem ser avaliados caso a caso porque a mare e atravessada e muitos navios estao mais leves."
+    }
+  ],
+  "berth_lateral_wind_positioning_rules": [
+    {
+      "required_entities": ["Tanquisado"],
+      "operation": "departure",
+      "wind_direction": "E",
+      "wind_strength": "strong",
+      "note": "Tanquisado a sair com vento E forte: considerar 1 rebocador a empurrar ao costado durante a largada dos cabos, para impedir que o navio fuja do cais no momento em que fica solto."
+    },
+    {
+      "required_entities": ["Eco-Oil"],
+      "operation": "departure",
+      "wind_direction": "W",
+      "wind_strength": "strong",
+      "note": "Eco-Oil a sair com vento W forte: considerar 1 rebocador a empurrar ao costado durante a largada dos cabos, porque o efeito lateral e o oposto da Tanquisado e o navio tambem pode fugir do cais."
+    }
+  ],
   "lisnave_rules": [
     {
       "condition": "LOA <= 100 m",
@@ -113,6 +151,11 @@
       "condition": "LOA <= 100 m e destino eclusa ou Hidrolift",
       "tugs": 4,
       "note": "Lisnave ate 100 m para dentro da eclusa/Hidrolift: 4 rebocadores."
+    },
+    {
+      "condition": "100 m < LOA <= 150 m",
+      "tugs": 3,
+      "note": "Lisnave acima de 100 m ate 150 m: 3 rebocadores. Quatro rebocadores sao excessivos para estes navios leves e podem tornar a manobra dificil."
     },
     {
       "condition": "150 m < LOA <= 199 m",
@@ -132,6 +175,12 @@
   ],
   "no_bowthruster_minimums": [
     {
+      "condition": "sem bowthruster e LOA < 120 m e calado >= 8 m",
+      "tugs": 1,
+      "tug_size": "grande / cerca de 35 t",
+      "note": "Navio sem bowthruster com menos de 120 m e calado >= 8 m: pelo menos 1 rebocador grande de cerca de 35 t, nao rebocador pequeno de 25 t."
+    },
+    {
       "condition": "sem bowthruster e LOA < 120 m",
       "tugs": 1,
       "tug_size": "normalmente pequeno",
@@ -149,6 +198,13 @@
       "tug_size": "grandes",
       "note": "Navio sem bowthruster acima de 150 m: pelo menos 3 rebocadores, porque o calado/peso tornam a manobra pesada apenas com maquina e leme."
     }
+  ],
+  "positioning_rules": [
+    "Normalmente so se mete rebocador a proa quando o navio nao tem bowthruster, ou quando a manobra precisa claramente desse equilibrio.",
+    "Se forem pedidos 2 rebocadores num navio sem bowthruster, estabelecer normalmente 1 a proa e 1 a popa para equilibrar as forcas. Isto evita que, quando o rebocador da proa tenta abrir a proa do cais, a popa feche demais para o cais.",
+    "Com bowthruster operacional em navios grandes, colocar por norma o rebocador a popa. A prioridade e controlar a popa para nao fugir para o cais nem bater.",
+    "Ro-Ro com 2 rebocadores podem usar 1 a popa e 1 ao costado a empurrar, criando um efeito tipo push-pull com dois rebocadores.",
+    "Estas regras referem-se sobretudo a rebocadores convencionais. Rebocadores com azipodes tem mais capacidade, mas a recomendacao deve continuar conservadora se houver duvida."
   ],
   "current_and_berthing_rules": [
     "Navios pequenos com bowthruster podem normalmente atracar com mare na popa, embora com dificuldade acrescida.",

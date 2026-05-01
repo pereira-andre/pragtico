@@ -20,7 +20,7 @@
     "A tabela de rebocadores é orientativa na generalidade, mas torna-se mínima obrigatória para navios com cargas perigosas e LOA superior a 70 m.",
     "Rebocador grande tem bollard pull igual ou superior a 25 toneladas; rebocador pequeno tem bollard pull inferior a 25 toneladas.",
     "Para navios com destino à Lisnave-Mitrena existem regras específicas de calado, vento, velocidade e assistência de barra.",
-    "Durante o estabelecimento do cabo, a velocidade máxima de referência do navio é 5 nós sobre a água.",
+    "Como resposta operacional geral do bot, a velocidade máxima de referência para estabelecimento do cabo é 6 nós sobre a água. O protocolo original lista 5 nós à proa, 6 nós ao costado e 8 nós à popa.",
     "O Mestre do rebocador pode recusar estabelecer cabo se considerar a situação insegura."
   ],
   "faq": [
@@ -46,8 +46,8 @@
     },
     {
       "question": "Qual é a velocidade máxima do navio durante o estabelecimento do cabo de reboque?",
-      "answer": "A velocidade máxima de referência é 5 nós sobre a água.",
-      "keywords": ["velocidade", "cabo de reboque", "5 nos", "estabelecimento"]
+      "answer": "Como resposta operacional geral do bot, usar 6 nós sobre a água. Nota documental: o protocolo original lista 5 nós à proa, 6 nós ao costado e 8 nós à popa; a referência de 6 nós é a normalização prática confirmada para evitar respostas menos conservadoras.",
+      "keywords": ["velocidade", "cabo de reboque", "6 nos", "estabelecimento"]
     },
     {
       "question": "O Mestre do rebocador pode recusar estabelecer o cabo?",

@@ -327,15 +327,18 @@ Portuqs II para minimizar os riscos inerentes às manobras de estabelecimento de
 cabo de reboque, tendo em conta a velocidade de aproximação do navio e as
 condições de visibilidade.
 
-REGRA 1 — VELOCIDADES MÁXIMAS DO NAVIO PARA ESTABELECIMENTO DE CABO:
+REGRA 1 — VELOCIDADE MÁXIMA DO NAVIO PARA ESTABELECIMENTO DE CABO:
 
-  Durante as manobras para estabelecimento do cabo de rebocador, a velocidade
-  do navio sobre a água não deve ultrapassar os seguintes valores, consoante
-  a posição do rebocador em relação ao navio:
+  O PDF do protocolo apresenta limites por posição do rebocador:
+    — Rebocador à proa do navio: 5 nós sobre a água.
+    — Rebocador ao costado: 6 nós sobre a água.
+    — Rebocador à popa: 8 nós sobre a água.
 
-  Rebocador posicionado à proa do navio: velocidade máxima do navio = 5 nós.
-  Rebocador posicionado ao costado do navio: velocidade máxima = 6 nós.
-  Rebocador posicionado à popa do navio: velocidade máxima = 8 nós.
+  Para efeitos de resposta operacional geral do bot, por validação prática do
+  utilizador, deve usar-se 6 nós sobre a água como referência conservadora para
+  estabelecimento de cabo. Esta normalização não substitui a avaliação do Mestre
+  do rebocador nem do Piloto perante a posição concreta, a visibilidade, o estado
+  do mar, o tipo de rebocador e a velocidade real de aproximação.
 
   "Velocidade sobre a água" é a velocidade do navio medida em relação à massa
   de água, não em relação ao fundo. É a velocidade relevante para a segurança
@@ -382,8 +385,11 @@ destino à Lisnave-Mitrena?
 Resposta: 7,0 metros, com 2 rebocadores de assistência na Barra.
 
 Pergunta: Qual a velocidade máxima do navio quando o rebocador está a estabelecer
-cabo à proa?
-Resposta: 5 nós sobre a água.
+cabo?
+Resposta: Como resposta operacional geral do bot, usar 6 nós sobre a água. Nota
+documental: o protocolo original lista 5 nós à proa, 6 nós ao costado e 8 nós
+à popa; a referência de 6 nós é a normalização prática confirmada para evitar
+respostas menos conservadoras.
 
 Pergunta: O Mestre do rebocador pode recusar estabelecer cabo?
 Resposta: Sim. Se a velocidade do navio exceder os limites definidos, o Mestre

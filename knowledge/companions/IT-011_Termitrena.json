@@ -10,14 +10,15 @@
     "011",
     "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL TERMITRENA (EX-EUROMINAS)"
   ],
-  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da TERMITRENA, no Porto de Setúbal.",
+  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da TERMITRENA, no Porto de Setúbal. Inclui também uma nota operacional forte para navios de maior calado: privilegiar preia-mar / janela de maior água na aproximação devido ao baixo entre Termitrena e Teporset.",
   "key_points": [
     "154 metros.",
     "200 metros de LOA.",
     "10,0 metros. Nunca pode ser excedido.",
     "Somar 8,8 metros à altura da baixa-mar de referência, com teto de 10,0 metros.",
     "É a baixa-mar imediatamente após a preia-mar de atracação, ou as seguintes se o navio não iniciar a descarga em tempo.",
-    "É a baixa-mar que antecede a preia-mar para a qual existe a certeza de largada do cais."
+    "É a baixa-mar que antecede a preia-mar para a qual existe a certeza de largada do cais.",
+    "Para navios de maior calado, privilegiar a preia-mar / janela de maior água na aproximação à Termitrena devido ao baixo de cerca de 7 metros entre a Termitrena e a Teporset."
   ],
   "faq": [
     {
@@ -82,6 +83,18 @@
         "mar",
         "navio",
         "referencia"
+      ]
+    },
+    {
+      "question": "Há alguma recomendação prática adicional para navios de maior calado na aproximação à Termitrena?",
+      "answer": "Sim. Apesar de a regra documental usar baixa-mar de referência, em navios de maior calado deve-se privilegiar a preia-mar / janela de maior água na aproximação, devido ao baixo de cerca de 7 metros entre a Termitrena e a Teporset que pode puxar a proa para o baixo.",
+      "keywords": [
+        "baixo",
+        "calado",
+        "maior agua",
+        "preia-mar",
+        "teporset",
+        "termitrena"
       ]
     },
     {

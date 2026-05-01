@@ -58,7 +58,7 @@
       ]
     },
     {
-      "question": "Qual o comprimento máximo de referência para um navio operar na rampa",
+      "question": "Qual o comprimento máximo de referência para um navio operar na rampa do Terminal AUTO-EUROPA?",
       "answer": "172 metros (comprimento de referência para o módulo navio-rampa).",
       "keywords": [
         "comprimento",
@@ -66,11 +66,13 @@
         "navio",
         "operar",
         "rampa",
-        "referencia"
+        "referencia",
+        "auto",
+        "europa"
       ]
     },
     {
-      "question": "Em que condições de maré se pode manobrar na rampa do Terminal",
+      "question": "Em que condições de maré se pode manobrar na rampa do Terminal AUTO-EUROPA?",
       "answer": "A manobra pode ser feita com enchente ou com vazante. Deve evitar-se manobrar nas meias-marés vivas, pois a corrente é mais intensa e torna a atracação à rampa mais difícil.",
       "keywords": [
         "condicoes",
@@ -78,7 +80,9 @@
         "mare",
         "pode",
         "rampa",
-        "terminal"
+        "terminal",
+        "auto",
+        "europa"
       ]
     },
     {

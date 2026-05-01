@@ -50,7 +50,7 @@
       ]
     },
     {
-      "question": "Um navio com LOA de 180 metros pode atracar no Cais de Oeste do Terminal",
+      "question": "Um navio com LOA de 180 metros pode atracar no Cais de Oeste do Terminal SECIL de noite?",
       "answer": "Não. Navios com LOA superior a 170 metros só podem ser movimentados no Cais de Oeste com luz do dia e junto da preia-mar. A manobra noturna está proibida para navios com LOA > 170 m.",
       "keywords": [
         "atracar",
@@ -60,7 +60,9 @@
         "navio",
         "oeste",
         "pode",
-        "terminal"
+        "terminal",
+        "secil",
+        "noite"
       ]
     },
     {

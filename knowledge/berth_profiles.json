@@ -60,7 +60,8 @@
       ],
       "draft_rules": [
         "Calado diurno praticavel: 6,3 m + altura da mare no momento, limitado a 9,5 m.",
-        "Saida noturna: 4,8 m + altura de agua, com teto de 8,0 m."
+        "Atracacao noturna de navios com LOA > 110 m, nos dias em que as duas preia-mares sao noturnas: 4,8 m + altura de agua, com teto de 8,0 m.",
+        "Saida noturna: 4,8 m + altura de agua, sem teto adicional explicito alem do calado maximo absoluto de 9,5 m."
       ],
       "maneuver_rules": [
         "Regra geral de atracacao: repontos de mare e periodo diurno.",
@@ -249,7 +250,7 @@
       "overview": "Instalacao de reparacao e construcao naval com regra absoluta de reponto de mare, limite noturno por LOA, condicionante de vento e calado dependente do destino dentro do estaleiro.",
       "dimensions": [
         "Altura dos cais acima do ZH: 4,80 m; distancia do Duque d'Alba da Ponte-Cais 1 a boia n. 14: 1000 m.",
-        "Inclui Pontes-Cais 1, 2 e 3, Cais 0, Cais de Descarga de Aco, Docas 20/21/22 e Hidrolift para Docas 31/32/33."
+        "Inclui Pontes-Cais 1, 2 e 3, Cais 0, Cais de Descarga de Aco, Doca 20 como Plataforma de Construcao, Docas 21/22 e Plataformas 31/32/33 com acesso pelo Hidrolift."
       ],
       "vessel_limits": [
         "LOA ate 280 m: manobra permitida em qualquer reponto, de dia ou de noite.",
@@ -259,7 +260,7 @@
       "draft_rules": [
         "Nao existe um calado maximo unico para toda a LISNAVE; depende do destino, da sonda ao ZH, da mare e das margens operacionais.",
         "Referencias ao ZH: Cais 3 B 8,60 m a 10 m da face; Cais 1 A 7,14 m; Cais 1 B 7,40 m; Cais 2 A, 2 B e 3 A 7,0 m; Cais 0 6,0 m. A designacao operacional mantem sempre A/B; W/E e Setubal/Alcacer sao apenas referencias laterais: faces A = W/oeste, faces B = E/este.",
-        "Docas 21/22: 6,10 m na soleira com comporta aberta e 5,49 m com comporta fechada; acesso as Docas 31/32/33 pelo Hidrolift: 5,5 m."
+        "Docas 21/22: 6,10 m na soleira com comporta aberta e 5,49 m com comporta fechada; acesso as Plataformas 31/32/33 pelo Hidrolift: 5,5 m."
       ],
       "maneuver_rules": [
         "Todas as manobras devem ser feitas proximo dos repontos de mare.",
@@ -357,6 +358,86 @@
       "validation": "Piloto Coordenador"
     },
     {
+      "id": "auto_europa",
+      "name": "Terminal AUTO-EUROPA",
+      "document": "IT-007_AutoEuropa.txt",
+      "aliases": ["autoeuropa", "auto-europa", "auto europa", "terminal autoeuropa", "terminal auto-europa", "cais 10", "cais 11", "cais 10 / autoeuropa", "cais 11 / autoeuropa", "rampa autoeuropa", "rampa auto-europa", "terminal ro-ro", "rampa ro-ro", "coelho da mota"],
+      "category": "terminal ro-ro com cais principal e rampa",
+      "overview": "Terminal composto por dois espacos operacionais: Cais 10, terminal principal, e Cais 11, rampa ro-ro. As regras da rampa dependem da mare, da capacidade do navio e do uso ou nao de rebocadores.",
+      "dimensions": [
+        "Cais 10: comprimento total 363 m.",
+        "Cais 11 / rampa: comprimento de referencia para o modulo navio-rampa 172 m."
+      ],
+      "vessel_limits": [
+        "Cais 10: o IT-007 nao fixa LOA maximo de navio; fixa comprimento do cais e calado permitido.",
+        "Cais 11 / rampa: comprimento de referencia 172 m para o modulo navio-rampa.",
+        "Na rampa, a dimensao aceitavel depende da capacidade do navio para se manter atracado em seguranca com um so cabo de lancante a boia de amarracao."
+      ],
+      "draft_rules": [
+        "Cais 10: calado permitido 10,0 m.",
+        "Cais 11 / rampa: calado permitido 10,0 m."
+      ],
+      "maneuver_rules": [
+        "Rampa / Cais 11: as manobras de atracacao podem ser feitas com enchente e vazante.",
+        "Rampa / Cais 11: devem evitar-se as meias-mares vivas.",
+        "A viabilidade na rampa depende tambem da capacidade do navio e do uso ou nao de rebocadores."
+      ],
+      "night_rules": [
+        "O IT-007 nao destaca uma proibicao noturna autonoma; validar pelas restantes condicionantes, sobretudo rampa, mare, capacidade do navio e rebocadores."
+      ],
+      "restrictions": [
+        "Distinguir sempre Cais 10 e Cais 11 / rampa.",
+        "Evitar meias-mares vivas na rampa.",
+        "Na rampa, confirmar capacidade de permanecer seguro com um so cabo de lancante a boia de amarracao."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016 e tug_operational_guidance.json; a rampa depende explicitamente do uso ou nao de rebocadores.",
+        "Para Ro-Ro com 2 rebocadores, a pratica admite 1 a popa e 1 ao costado a empurrar, tipo push-pull, quando adequado."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "termitrena",
+      "name": "Terminal TERMITRENA",
+      "document": "IT-011_Termitrena.txt",
+      "aliases": ["termitrena", "terminal termitrena", "terminal da termitrena", "cais termitrena", "cais da termitrena", "eurominas", "ex-eurominas", "terminal eurominas", "terminal ex-eurominas", "terminal de graneis solidos da mitrena"],
+      "category": "terminal de graneis solidos com cais e defensas",
+      "overview": "Terminal anteriormente designado Eurominas. A regra critica e calcular o calado pelo baixa-mar de referencia, com teto absoluto de 10,0 m, e procurar atracar com cerca de 2 m de agua acima do ZH para facilitar os lancantes exteriores.",
+      "dimensions": [
+        "Comprimento fisico do cais: 154 m.",
+        "Comprimento maximo de navio permitido: 200 m de LOA."
+      ],
+      "vessel_limits": [
+        "LOA maximo permitido: 200 m.",
+        "A analise de referencia foi feita para navio de LOA 200 m acostado as defensas a cerca de 1 m da linha de cais."
+      ],
+      "draft_rules": [
+        "Calado maximo = 8,8 m + altura da baixa-mar de referencia.",
+        "Teto absoluto: 10,0 m.",
+        "Navio a carregar: baixa-mar de referencia e a que antecede a preia-mar para a qual ha certeza de largada.",
+        "Navio de chegada com carga: baixa-mar de referencia e a imediatamente apos a preia-mar de atracacao, ou as seguintes se nao iniciar descarga em tempo."
+      ],
+      "maneuver_rules": [
+        "Deve-se procurar atracar com elevacao de agua de cerca de 2 m acima do ZH.",
+        "A elevacao de cerca de 2 m facilita a amarracao dos lancantes exteriores pela lancha e pessoal de cabos.",
+        "Recomendacao operacional: em navios de maior calado, privilegiar preia-mar / janela de maior agua na aproximacao, devido ao baixo de cerca de 7 m entre a Termitrena e a Teporset que pode puxar a proa para o baixo."
+      ],
+      "night_rules": [
+        "O IT-011 nao destaca uma proibicao noturna autonoma; validar pelo calado, baixa-mar de referencia, altura de agua para lancantes e restantes condicionantes."
+      ],
+      "restrictions": [
+        "Nao confundir Termitrena com Lisnave/Mitrena.",
+        "Eurominas e Termitrena referem a mesma instalacao.",
+        "Nao usar altura de preia-mar nem altura atual para a formula principal; usar baixa-mar de referencia.",
+        "A recomendacao de preia-mar / maior agua para navios de maior calado e pratica operacional; nao substituir a formula documental do calado."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016 e historico operacional; confirmar DWT, carga, estado carregado/vazio e thrusters.",
+        "Por ser terminal com lancantes exteriores e condicionante de mare, ajustar meios a corrente, vento e capacidade do navio."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
       "id": "teporset",
       "name": "TEPORSET",
       "document": "IT-062_Teporset.txt",
@@ -376,70 +457,19 @@
         "Calado minimo praticavel: 7,4 m."
       ],
       "maneuver_rules": [
-        "Quando o calado depende da altura de agua, planear proximo da preia-mar aplicavel."
+        "Quando o calado depende da altura de agua, planear proximo da preia-mar aplicavel.",
+        "Recomendacao operacional: em navios de maior calado, privilegiar preia-mar / janela de maior agua na aproximacao, devido ao baixo de cerca de 7 m entre a Termitrena e a Teporset que pode puxar a proa para o baixo."
       ],
       "night_rules": [
         "O resumo do IT-062 nao destaca proibicao noturna autonoma; validar pelas restantes condicionantes."
       ],
       "restrictions": [
         "LOA de referencia 200 m.",
-        "Calado condicionado pela preia-mar e teto de 11,0 m."
+        "Calado condicionado pela preia-mar e teto de 11,0 m.",
+        "A recomendacao de preia-mar / maior agua reforca a margem operacional para navios de maior calado; deve ser apresentada como pratica operacional, nao como regra formal de reponto."
       ],
       "tug_guidance": [
         "Aplicar IT-016; confirmar DWT, carga, estado carregado/vazio e thrusters."
-      ],
-      "validation": "Piloto Coordenador"
-    },
-    {
-      "id": "lisnave",
-      "name": "LISNAVE / Estaleiros Mitrena",
-      "document": "IT-014_Lisnave.txt",
-      "aliases": [
-        "lisnave",
-        "mitrena",
-        "estaleiros mitrena",
-        "estaleiro lisnave",
-        "terminal lisnave",
-        "cais da lisnave",
-        "docas da lisnave"
-      ],
-      "category": "estaleiro naval com pontes-cais, docas secas e hidrolift",
-      "overview": "Instalacao de reparacao e construcao naval com regra absoluta de reponto de mare, limite noturno por LOA, condicionante de vento e calado dependente do destino dentro do estaleiro.",
-      "dimensions": [
-        "Altura dos cais acima do ZH: 4,80 m; distancia do Duque d'Alba da Ponte-Cais I a boia n. 14: 1000 m.",
-        "Inclui Pontes-Cais I, II e III, Cais 0, Cais de Descarga de Aco, Docas 20/21/22 e Hidrolift para Docas 31/32/33."
-      ],
-      "vessel_limits": [
-        "LOA ate 280 m: manobra permitida em qualquer reponto, de dia ou de noite.",
-        "LOA acima de 280 m: manobra apenas de dia.",
-        "Em mares vivas, se a mesma bacia tiver de servir mais de um navio, recomenda-se uma manobra por reponto, sobretudo para LOA superior a 200 m."
-      ],
-      "draft_rules": [
-        "Nao existe um calado maximo unico para toda a LISNAVE; depende do destino, da sonda ao ZH, da mare e das margens operacionais.",
-        "Referencias ao ZH: Cais III-B 8,60 m a 10 m da face; Cais IA 7,14 m; Cais IB 7,40 m; Cais II-A, II-B e III-A 7,0 m; Cais 0 6,0 m.",
-        "Docas 21/22: 6,10 m na soleira com comporta aberta e 5,49 m com comporta fechada; acesso as Docas 31/32/33 pelo Hidrolift: 5,5 m."
-      ],
-      "maneuver_rules": [
-        "Todas as manobras devem ser feitas proximo dos repontos de mare.",
-        "A regra de reponto e estrutural porque os cais estao perpendiculares a corrente."
-      ],
-      "night_rules": [
-        "Noite permitida apenas ate 280 m de LOA, sempre no reponto.",
-        "Acima de 280 m a manobra noturna fica proibida."
-      ],
-      "operational_limits": {
-        "night_loa_max_m": 280,
-        "night_requires_reponto": true,
-        "above_night_loa_day_only": true
-      },
-      "restrictions": [
-        "Navios com area velica consideravel devem manobrar com vento ate cerca de 20 km/h.",
-        "O Cais de Descarga de Aco tem calado ND no documento e nao deve ser inferido.",
-        "Calado e aceitacao variam por cais/doca; nao tratar a LISNAVE como se tivesse um unico valor global."
-      ],
-      "tug_guidance": [
-        "O IT-014 nao fixa uma tabela propria de rebocadores; cruzar com IT-016 e com as caracteristicas do navio.",
-        "A validacao da requisicao cabe ao Piloto Coordenador segundo as regras do estaleiro."
       ],
       "validation": "Piloto Coordenador"
     }

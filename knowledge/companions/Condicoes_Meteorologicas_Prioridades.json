@@ -6,14 +6,15 @@
     "Condicoes_Meteorologicas_Prioridades",
     "NOTAS OPERACIONAIS — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA"
   ],
-  "summary": "trabalho, gestão de embarques e prioridades de manobra. Complementa o IT-018 (Normas Especiais) e o P-19 (Pilotagem) com critérios operacionais concretos. Os seguintes intervalos de velocidade de vento definem as categorias usadas operacionalmente pela pilotagem do Porto de Setúbal para avaliar a viabilidade",
+  "summary": "Notas operacionais sobre condições meteorológicas, maré, embarque de piloto, rebocadores em vento forte, nevoeiro e prioridades de manobra. Complementa o IT-018 e o P-19 com critérios práticos usados na pilotagem de Setúbal.",
   "key_points": [
     "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica.",
     "Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.",
     "Sempre que possível. Se as condições não permitirem, embarca no Outão. Se nem no Outão for possível, o navio aguarda ao largo até as condições melhorarem.",
     "Com a maré de enchente, a corrente actua a favor da aproximação da lancha, reduzindo o efeito combinado adverso de vento forte + corrente de vazante + ondulação.",
+    "Com vento forte, a posição dos rebocadores deve seguir IT-016 e tug_operational_guidance.json: com bowthruster operacional em navios grandes, privilegiar popa; sem bowthruster, equilibrar proa e popa; em Ro-Ro com 2 rebocadores pode usar-se 1 à popa e 1 ao costado a empurrar.",
     "A pilotagem é suspensa.",
-    "1.º navios com reponto de maré; 2.º navios com passageiros/animais/ carga perecível; 3.º RoRo; 4.º contentores; 5.º outros."
+    "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros."
   ],
   "faq": [
     {
@@ -64,6 +65,19 @@
       ]
     },
     {
+      "question": "Com vento forte, onde se devem posicionar os rebocadores?",
+      "answer": "Esta nota prática não substitui o IT-016 nem o tug_operational_guidance.json. Em navios grandes com bowthruster operacional, privilegiar rebocador à popa para controlar a popa. Sem bowthruster, ou quando for preciso equilibrar forças, usar normalmente 1 rebocador à proa e 1 à popa. Em Ro-Ro com 2 rebocadores, pode usar-se 1 à popa e 1 ao costado a empurrar, tipo push-pull.",
+      "keywords": [
+        "vento",
+        "forte",
+        "rebocadores",
+        "popa",
+        "proa",
+        "bowthruster",
+        "roro"
+      ]
+    },
+    {
       "question": "O que fazer quando há nevoeiro?",
       "answer": "A pilotagem é suspensa. Os navios aguardam em fila de prioridade. As requisições continuam a ser registadas no sistema mas as manobras não se executam até as condições serem repostas e a pilotagem declarar o levantamento.",
       "keywords": [
@@ -74,7 +88,7 @@
     },
     {
       "question": "Qual o critério de prioridade entre manobras?",
-      "answer": "1.º navios com reponto de maré; 2.º navios com passageiros/animais/ carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade de saídas sobre entradas.",
+      "answer": "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade de saídas sobre entradas.",
       "keywords": [
         "criterio",
         "entre",
@@ -96,7 +110,7 @@
       ]
     },
     {
-      "question": "Dois navios estão à espera: um porta-contentores a entrar e um",
+      "question": "Dois navios estão à espera: um porta-contentores a entrar e um graneleiro a sair. Qual manobra primeiro?",
       "answer": "O graneleiro a sair, porque as saídas têm prioridade sobre as entradas independentemente do tipo de navio.",
       "keywords": [
         "contentores",

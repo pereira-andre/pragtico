@@ -34,7 +34,7 @@
       ]
     },
     {
-      "question": "Qual o calado máximo para um navio de granéis sólidos (sem carga IMO)",
+      "question": "Qual o calado máximo para um navio de granéis sólidos (sem carga IMO) no TPS?",
       "answer": "10,0 metros de referência (calculado para PM mínimo de 2,4 m). Calados ligeiramente superiores podem ser admitidos caso a caso.",
       "keywords": [
         "calado",
@@ -43,31 +43,36 @@
         "imo",
         "maximo",
         "navio",
-        "solidos"
+        "solidos",
+        "tps"
       ]
     },
     {
-      "question": "Qual o calado praticável no TPS com altura de água de 1,8 m para carga",
+      "question": "Qual o calado praticável no TPS com altura de água de 1,8 m para carga não IMO?",
       "answer": "7,6 + 1,8 = 9,4 metros.",
       "keywords": [
         "agua",
         "altura",
         "calado",
         "carga",
+        "nao",
+        "imo",
         "praticavel",
         "tps"
       ]
     },
     {
-      "question": "Com baixa-mar de 0,3 m, a partir de que calado é obrigatório usar",
+      "question": "Com baixa-mar de 0,3 m, a partir de que calado é obrigatório usar carochas no TPS?",
       "answer": "8,8 + 0,3 = 9,1 metros. Navios com calado superior a 9,1 m devem atracar às defensas afastadoras (carochas).",
       "keywords": [
         "baixa",
         "calado",
+        "carochas",
         "mar",
         "obrigatorio",
         "partir",
-        "usar"
+        "usar",
+        "tps"
       ]
     },
     {

@@ -2093,6 +2093,68 @@ class OperationalFlowSuite:
             )
         self._finish_scenario(scenario)
 
+    def _scenario_tug_guidance_queries(self) -> None:
+        scenario = self._new_scenario(
+            "Bot operacional",
+            "Regras práticas de rebocadores",
+            "Valida as respostas diretas do bot para a matriz prática de rebocadores, incluindo exceções de vento/cais e posicionamento.",
+        )
+        checks = [
+            (
+                "Ro-Ro grande com Norte forte",
+                "Quantos reboques para RORO de 230m a entrar com vento norte forte?",
+                ("Recomendo 4 rebocadores grandes", "mais de 220 m", "vento Norte forte"),
+            ),
+            (
+                "Graneleiro TMS2 com Norte forte",
+                "Um Graneleiro de 190m a sair do TMS2 com vento norte forte, quantos rebocadores leva?",
+                ("Recomendo 4 rebocadores grandes", "vento Norte forte", "Tanquisado", "Eco-Oil"),
+            ),
+            (
+                "Lisnave 100-150 m",
+                "Um navio de 130m para a Lisnave precisa de quantos rebocadores?",
+                ("Recomendo 3 rebocadores", "acima de 100 m ate 150 m", "Quatro rebocadores sao excessivos"),
+            ),
+            (
+                "Tanquisado vento E forte",
+                "A sair de Tanquisado com vento E forte, onde meto o reboque?",
+                ("Tanquisado a sair com vento E forte", "1 rebocador a empurrar ao costado", "largada dos cabos"),
+            ),
+            (
+                "Eco-Oil vento W forte",
+                "A sair da Eco-Oil com vento W forte, onde meto o reboque?",
+                ("Eco-Oil a sair com vento W forte", "1 rebocador a empurrar ao costado", "oposto da Tanquisado"),
+            ),
+            (
+                "Sem bowthruster pequeno mas fundo",
+                "Navio sem bowthruster de 110m e calado 8m precisa de quantos rebocadores?",
+                ("Recomendo 1 rebocador grande", "35 t", "nao rebocador pequeno"),
+            ),
+        ]
+        for label, question, expected_tokens in checks:
+            payload = self._step(
+                scenario,
+                label,
+                "Resposta operacional direta",
+                "A resposta usa tug_operational_guidance.json e mantém a recomendação prática esperada.",
+                lambda question=question: answer_direct_operational_query(question),
+            )
+            answer = (payload or {}).get("answer", "") if isinstance(payload, dict) else ""
+            origin = (payload or {}).get("answer_origin", "") if isinstance(payload, dict) else ""
+            missing = [token for token in expected_tokens if token not in answer]
+            self._check(
+                scenario,
+                f"{label} validado",
+                "Conteúdo da resposta",
+                "Origem operational_tug_guidance e termos críticos presentes.",
+                origin == "operational_tug_guidance" and not missing,
+                (
+                    f"origem={origin or '--'} · falta={', '.join(missing) if missing else 'nada'} · "
+                    f"{answer[:240] or '--'}"
+                ),
+            )
+        self._finish_scenario(scenario)
+
     def _build_module_summaries(self) -> list[dict]:
         modules: dict[str, dict] = {}
         for scenario in self.scenarios:
@@ -2171,6 +2233,7 @@ class OperationalFlowSuite:
             self._scenario_vessel_catalog_management()
             self._scenario_slash_commands()
             self._scenario_site_queries_and_archive()
+            self._scenario_tug_guidance_queries()
             self._scenario_live_feed_snapshot()
             self._scenario_live_environment_queries()
         finally:

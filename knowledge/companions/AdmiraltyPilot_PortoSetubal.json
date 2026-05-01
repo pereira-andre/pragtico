@@ -6,7 +6,7 @@
     "AdmiraltyPilot_PortoSetubal",
     "PORTO DE SETÚBAL — INFORMAÇÃO GERAL E NÁUTICA (ADMIRALTY PILOT)"
   ],
-  "summary": "e secções gerais sobre Portugal. Crown Copyright 2005. traduzida e adaptada para indexação vetorial RAG. Inclui posição geográfica, condições de acesso, pilotagem, rebocadores, fundeadouros, cais, canais, serviços portuários e condições naturais. AVISO DE DESATUALIZAÇÃO: Os dados operacionais (calados, comprimentos, tráfego,",
+  "summary": "Tradução/adaptação para RAG da secção do Admiralty Pilot NP 67 sobre o Porto de Setúbal, com dados históricos de 2004/2005 sobre acesso, pilotagem, canais, fundeadouros, cais, correntes, ventos e serviços portuários. Deve ser usado como contexto náutico histórico e não substituir as IT/APSS atuais.",
   "key_points": [
     "O Porto de Setúbal é um grande porto industrial e comercial capaz de movimentar todo o tipo de cargas.",
     "De acordo com os dados do Admiralty Pilot (2005), o calado máximo permitido para entrada era de 12,0 metros.",
@@ -95,7 +95,7 @@
       ]
     },
     {
-      "question": "Com que antecedência deve ser dado pré-aviso para mudança de cais",
+      "question": "Com que antecedência deve ser dado pré-aviso para mudança de cais ou saída?",
       "answer": "Os navios em porto que pretendam mudar de cais ou sair devem dar 2 horas de pré-aviso ao posto de pilotagem.",
       "keywords": [
         "antecedencia",

@@ -69,7 +69,7 @@
       ]
     },
     {
-      "question": "Um navio com 9,0 metros de calado pode entrar com altura de água de",
+      "question": "Um navio com 9,0 metros de calado pode entrar com altura de água de 1,0 metro e baixa-mar seguinte de 0,5 m?",
       "answer": "Não. Fórmula de percurso: 7,40 + 1,0 = 8,40 m. Fórmula de estacionamento: 8,7 + 0,5 = 9,2 m. Calado possível = MIN(8,40 ; 9,20) = 8,40 m. O navio tem 9,0 m de calado, que excede 8,40 m. A manobra não é permitida nestas condições.",
       "keywords": [
         "agua",
@@ -78,7 +78,9 @@
         "entrar",
         "metros",
         "navio",
-        "pode"
+        "pode",
+        "1,0",
+        "0,5"
       ]
     },
     {

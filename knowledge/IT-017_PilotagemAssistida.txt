@@ -110,9 +110,9 @@ PASSO 3 — Piloto de terra:
   O navio toma o enfiamento da Barra a 2 milhas de distância. O Piloto de terra
   pede passagem ao canal 10 (informa o navio e os demais intervenientes que vai
   usar o canal 10 para comunicações). Informa o navio que o rumo de entrada é
-  040 graus e que a velocidade deve ser adequada, não inferior a 10 nós. O rumo
-  040 é o rumo magnético ou verdadeiro de alinhamento com o canal de entrada da
-  Barra do Porto de Setúbal.
+  040 graus e que a velocidade deve ser adequada, não inferior a 10 nós. O
+  documento identifica este valor apenas como "rumo 040"; para uso operacional
+  ou RAG não se deve acrescentar qualificação que não conste da IT.
   O VTS vigia outra navegação.
 
 PASSO 4 — Piloto de terra:

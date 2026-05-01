@@ -130,7 +130,7 @@ POSIÇÃO E ACESSO
 
 O Porto de Setúbal está situado no interior do estuário do Rio Sado. A entrada
 no estuário é feita entre o Forte do Outão, nas coordenadas 38°29' Norte e
-8°56' Oeste, e a Ponta do Adoxe, situada a cerca de uma milha e meia a este.
+8°56' Oeste, e a Ponta do Adoxe, situada a cerca de uma milha e um quarto a este.
 O Rio Sado nasce nas colinas da Serra do Caldeirão, na província do Alentejo,
 e percorre 108 milhas antes de entrar no mar em Setúbal.
 
@@ -404,12 +404,12 @@ superior a 001°.
 
 Existe um naufrágio perigoso (embarcação de pesca, posição aproximada) fora
 da isobatimétrica (linha de igual profundidade) de 20 metros, a cinco milhas
-e um quarto a ESE (Este-Sudeste) do Marco Luminoso Número 2.
+e meia a ESE (Este-Sudeste) do Marco Luminoso Número 2.
 
 DERROTA RECUSANTE (CLEARING BEARING)
 
 A marcação do Farol do Forte do Cavalo (38°26' Norte e 9°07' Oeste), mantida
-apenas visível a sul do Cabo de Ares (a duas milhas e um quarto a leste), passa
+apenas visível a sul do Cabo de Ares (a duas milhas e meia a leste), passa
 a sul da entrada da barra — ou seja, um navio que mantenha esta marcação na
 posição indicada assegura que está ao sul da zona de perigos da barra.
 
@@ -430,15 +430,15 @@ sudoeste) e a Boia Luminosa Número 1 (a três cabos a sudeste do marco luminoso
 luminoso; depois passa a sudeste do Marco Luminoso Número 4; depois passa a
 noroeste da Boia Luminosa Número 3; depois passa a sudeste do Forte do Outão
 (forte conspícuo na entrada ocidental do rio); depois passa a noroeste do Marco
-Luminoso Número 5 (triângulo verde em coluna preta, a cinco cabos e um quarto
+Luminoso Número 5 (triângulo verde em coluna preta, a cinco cabos e meio
 a este do Outão), situado no lado noroeste do Cambalhão (banco que seca e se
 estende para sudoeste a partir da entrada oriental do rio).
 
 A derrota prossegue depois para nordeste em direção às zonas de fundeamento e
 aos cais comerciais junto à cidade, passando a noroeste da Boia Luminosa João
-Farto (boia cardeal Oeste, a uma milha e um quarto a nordeste), que marca o
+Farto (boia cardeal Oeste, a uma milha e meia a nordeste), que marca o
 extremo ocidental do banco central, e a sudeste de Albarquel (a uma milha e
-um quarto a nordeste), um edifício proeminente com luz de lanterna vermelha.
+meia a nordeste), um edifício proeminente com luz de lanterna vermelha.
 
 AVISO: À noite, a Luz Doca Pesca é frequentemente difícil de identificar contra
 as luzes de fundo, em especial um grupo de luzes alaranjadas na área portuária.
@@ -482,7 +482,7 @@ CANAL NORTE — SECÇÃO INTERIOR
 
 O Canal Norte prossegue como canal estreito, adequado para navios com calado
 até 4,5 metros dependendo da maré, e prolonga-se para sudeste por cerca de
-duas milhas e meia até se juntar ao Canal Sul. A entrada neste troço interior
+duas milhas e um quarto até se juntar ao Canal Sul. A entrada neste troço interior
 do canal é limitada por um banco de areia que se estende cerca de 200 metros
 a partir da margem, e é delimitada no seu lado sul pelo baixio Cabeça da Santa,
 que seca completamente.
@@ -564,7 +564,7 @@ para movimentação de cargas sólidas e líquidas a granel. Os principais cais,
 listados de mar para terra, são os seguintes:
 
 Cais Novo da SECIL: comprimento de 105 metros, profundidade de 9,3 metros junto
-ao cais, para cargas de carvão e cimento. Situa-se a uma milha e meia a oeste
+ao cais, para cargas de carvão e cimento. Situa-se a uma milha e um quarto a oeste
 da Ponta do Adoxe.
 
 Cais das Fontainhas: comprimento total de 525 metros, dividido em três berços,
@@ -591,7 +591,7 @@ Cais da Socel: comprimento de 60 metros, profundidade de 4 metros junto ao cais,
 para pasta de papel e matérias-primas. Situa-se em 38°29' Norte e 8°49' Oeste.
 
 Cais da Boliden: comprimento de 260 metros, profundidade de 10 metros junto ao
-cais, para gaseificação e ocasionalmente descarga de melaços. Situa-se em
+cais, para desgaseificação e ocasionalmente descarga de melaços. Situa-se em
 38°28,5' Norte e 8°48,4' Oeste.
 
 Cais da Eurominas (denominação atual: Terminal Termitrena — ex-Eurominas,
@@ -615,7 +615,7 @@ REPARAÇÃO NAVAL
 Todas as reparações podem ser efetuadas. O Estaleiro Mitrena (atualmente
 LISNAVE/Mitrena, em 38°28' Norte e 8°48' Oeste) dispõe de seis diques secos
 e seis berços de reparação e acabamento. São igualmente realizadas operações
-de limpeza e gaseificação de tanques.
+de limpeza e desgaseificação de tanques.
 
 O maior dique seco (para reparações) tem 450 metros de comprimento, 75 metros
 de largura e capacidade para navios até 700 000 toneladas de porte bruto.
