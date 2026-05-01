@@ -76,7 +76,7 @@
                 </tr>
               </thead>
               <tbody>
-                {% for item in group.items %}
+                {% for item in group["items"] %}
                   <tr>
                     <td><span class="admin-status-badge is-{{ 'offline' if item.risk == 'Critico' else 'degraded' }}">{{ item.risk }}</span></td>
                     <td>{{ item.label }}</td>

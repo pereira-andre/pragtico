@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from flask import Flask, session
+from jinja2 import DictLoader, Environment
 
 from core import services
 from core.operational_sources import answer_direct_operational_query
@@ -49,6 +52,29 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert inventory["bot_matrix_automatic_count"] > inventory["bot_matrix_manual_count"]
     assert any(item["id"] == "ecooil-checklist" for item in inventory["bot_matrix"])
     assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
+
+
+def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+    source = Path("templates/admin_operational_tests.html").read_text(encoding="utf-8")
+    environment = Environment(
+        loader=DictLoader(
+            {
+                "admin_operational_tests.html": source,
+                "base.html": "{% block content %}{% endblock %}",
+            }
+        )
+    )
+    environment.globals["url_for"] = lambda endpoint, **values: f"/{endpoint}"
+    environment.globals["csrf_token"] = lambda: "csrf"
+
+    html = environment.get_template("admin_operational_tests.html").render(
+        result=None,
+        inventory=operational_test_inventory(),
+    )
+
+    assert "Matriz crítica" in html
+    assert "Eco-Oil na checklist" in html
 
 
 def test_direct_operational_matrix_cases_pass(monkeypatch) -> None:
