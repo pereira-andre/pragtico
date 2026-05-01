@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core import maneuver_context
+from core import maneuver_context, services
 from core.maneuver_context import _build_maneuver_analysis_checklist, _format_operational_opinion_answer
 
 
@@ -27,10 +27,12 @@ def test_validation_answer_prioritizes_documental_alerts_without_history() -> No
         ],
     )
 
+    assert "Parecer operacional" in answer
+    assert "Pontos críticos verificados" in answer
     assert "Base documental acionada: IT-010_Tanquisado.txt" in answer
     assert "Recomendação operacional" in answer
-    assert "Usar a base documental como critério principal" in answer
     assert "histórico não usado como regra principal" in answer
+    assert "Sem hora planeada" in answer
     assert "Sem recomendação automática disponível" not in answer
     assert "não foi invocada regra específica" not in answer
 
@@ -67,3 +69,39 @@ def test_pending_past_planned_window_is_a_validation_alert(monkeypatch) -> None:
     assert planned_window["status"] == "caution"
     assert "já passou" in planned_window["detail"]
     assert summary["caution_count"] >= 1
+
+
+def test_shift_checklist_uses_origin_and_destination_profiles(monkeypatch) -> None:
+    monkeypatch.setattr(maneuver_context, "current_resolvable_port_calls", lambda: [])
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    checklist, _summary = _build_maneuver_analysis_checklist(
+        {
+            "id": "pc-shift",
+            "vessel_type": "Abastecedor",
+            "vessel_loa_m": "95",
+            "vessel_beam_m": "18",
+            "vessel_gt_t": "5000",
+            "vessel_max_draft_m": "5.0",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "shift-1",
+            "type": "shift",
+            "state": "pending",
+            "planned_at": "2099-01-01T10:00:00+00:00",
+            "origin": "Lisnave - Cais 1 A",
+            "destination": "TMS 1",
+            "tug_count": "1",
+            "constraint_codes": [],
+        },
+        similar_cases=[],
+        casebook_recommendation={},
+    )
+
+    rendered = "\n".join(f"{item['title']}: {item['detail']}" for item in checklist)
+    assert "Regras do cais de origem" in rendered
+    assert "IT-014_Lisnave.txt" in rendered
+    assert "Regras do cais de destino" in rendered
+    assert "IT-005_TMS1.txt" in rendered

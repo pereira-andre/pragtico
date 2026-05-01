@@ -35,6 +35,7 @@ from domain.berth_profiles import find_best_berth_profile
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
 from domain.chat_actions import parse_slash_command
+from integrations.tide_service import TideService
 from storage.port_call_helpers import _decorate_port_call
 
 
@@ -276,8 +277,10 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "fixture": "tanquisado_entry_validation",
         "expected_tokens": (
             "Base documental acionada: IT-010_Tanquisado.txt",
+            "Parecer operacional",
+            "Não validar como está",
+            "A marcação acerta a janela de reponto",
             "Recomendação operacional",
-            "Usar a base documental como critério principal",
             "histórico não usado como regra principal",
             "Janela planeada",
         ),
@@ -621,10 +624,15 @@ def critical_slash_validation_text(fixture: str) -> str:
         }
     )
     previous_store = services.store
+    previous_tide_service = getattr(services, "tide_service", None)
     previous_knowledge_dir = getattr(services, "KNOWLEDGE_DIR", "")
     should_restore_knowledge_dir = not _active_knowledge_dir()
     if should_restore_knowledge_dir:
         services.KNOWLEDGE_DIR = _critical_knowledge_dir()
+    if not getattr(services, "tide_service", None):
+        services.tide_service = TideService(
+            os.path.join(os.getcwd(), "resources", "tides", "mares.2026.201.9_setubal_troia.csv")
+        )
     services.store = _CriticalSlashValidationStore(port_call)
     try:
         payload = answer_slash_validation(
@@ -637,6 +645,7 @@ def critical_slash_validation_text(fixture: str) -> str:
         )
     finally:
         services.store = previous_store
+        services.tide_service = previous_tide_service
         if should_restore_knowledge_dir:
             services.KNOWLEDGE_DIR = previous_knowledge_dir
     return str((payload or {}).get("answer") or "")

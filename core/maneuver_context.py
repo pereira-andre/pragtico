@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import session
 
@@ -10,6 +10,7 @@ from core import services
 from core.form_helpers import _local_iso_to_label
 from core.operational_common import _operational_lookup_key, current_resolvable_port_calls
 from core.rule_catalog import _active_knowledge_dir
+from domain.operational_safety import evaluate_weather_safety, load_operational_safety_limits
 from domain.berth_layout import canonicalize_berth_label, find_occupied_berth_conflict, is_known_berth_label
 from domain.berth_profiles import find_best_berth_profile
 from domain.chat_actions import (
@@ -262,6 +263,578 @@ def _build_planned_window_checklist_item(maneuver: dict) -> dict | None:
     )
 
 
+def _safe_float(value) -> float | None:
+    if value in (None, "", "--"):
+        return None
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_meters(value: float | None) -> str:
+    if value is None:
+        return "--"
+    return f"{value:.1f}".replace(".", ",")
+
+
+def _format_kts(value: float | None) -> str:
+    if value is None:
+        return "--"
+    return f"{value:g}".replace(".", ",")
+
+
+def _format_local_datetime(value: datetime | None) -> str:
+    if not value:
+        return "--"
+    return value.strftime("%d/%m/%Y %H:%M")
+
+
+def _daylight_bounds(target_dt: datetime) -> tuple[datetime | None, datetime | None]:
+    tide_service = getattr(services, "tide_service", None)
+    if not tide_service:
+        return None, None
+    try:
+        luminosity = tide_service.luminosity_for_date(target_dt.date())
+    except Exception:
+        logger.exception("Falha ao calcular luz natural para %s.", target_dt.date())
+        return None, None
+    sunrise = str(luminosity.get("sunrise") or "")
+    sunset = str(luminosity.get("sunset") or "")
+    try:
+        sunrise_hour, sunrise_minute = [int(part) for part in sunrise.split(":", 1)]
+        sunset_hour, sunset_minute = [int(part) for part in sunset.split(":", 1)]
+    except (TypeError, ValueError):
+        return None, None
+    return (
+        target_dt.replace(hour=sunrise_hour, minute=sunrise_minute, second=0, microsecond=0),
+        target_dt.replace(hour=sunset_hour, minute=sunset_minute, second=0, microsecond=0),
+    )
+
+
+def _is_daylight(target_dt: datetime) -> bool | None:
+    sunrise, sunset = _daylight_bounds(target_dt)
+    if not sunrise or not sunset:
+        return None
+    return sunrise <= target_dt <= sunset
+
+
+def _tide_events_around(target_dt: datetime) -> list:
+    tide_service = getattr(services, "tide_service", None)
+    if not tide_service:
+        return []
+    events = []
+    try:
+        for offset in (-1, 0, 1):
+            events.extend(tide_service.events_for_date((target_dt + timedelta(days=offset)).date()))
+    except Exception:
+        logger.exception("Falha ao obter marés para validação da manobra.")
+        return []
+    return sorted(events, key=lambda item: item.timestamp)
+
+
+def _nearest_tide_event(target_dt: datetime):
+    events = _tide_events_around(target_dt)
+    if not events:
+        return None
+    return min(events, key=lambda item: abs((item.timestamp - target_dt).total_seconds()))
+
+
+def _tide_height_at(target_dt: datetime) -> tuple[float | None, str]:
+    tide_service = getattr(services, "tide_service", None)
+    if not tide_service or not hasattr(tide_service, "_height_at_datetime"):
+        return None, ""
+    try:
+        return tide_service._height_at_datetime(target_dt)
+    except Exception:
+        logger.exception("Falha ao interpolar altura de maré para %s.", target_dt)
+        return None, ""
+
+
+def _has_daylight_high_tide(target_dt: datetime) -> bool | None:
+    events = _tide_events_around(target_dt)
+    if not events:
+        return None
+    target_date = target_dt.date()
+    high_tides = [item for item in events if item.date_value == target_date and item.tide_type == "preia-mar"]
+    if not high_tides:
+        return None
+    daylight_values = [_is_daylight(item.timestamp) for item in high_tides]
+    if any(value is None for value in daylight_values):
+        return None
+    return any(daylight_values)
+
+
+def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    origin_key = _operational_lookup_key(maneuver.get("origin"))
+    destination_key = _operational_lookup_key(maneuver.get("destination"))
+    if maneuver_type == "entry":
+        if any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
+            return {
+                "minutes": (90, 120),
+                "label": "1h30 a 2h desde fora da Barra até aos cais do Canal Sul",
+                "source": "Notas_Pilotagem.txt / Marcar_manobra_repontos_mare.txt",
+            }
+        if any(marker in destination_key for marker in ("tms 1", "tms1", "tms 2", "tms2", "auto europa", "autoeuropa", "roro", "ro ro")):
+            return {"minutes": (60, 60), "label": "cerca de 1h desde a Barra pelo Canal Norte", "source": "Notas_Pilotagem.txt"}
+        if any(marker in destination_key for marker in ("praias", "sapec")):
+            return {"minutes": (80, 80), "label": "cerca de 1h20 desde a Barra", "source": "Notas_Pilotagem.txt"}
+        if "secil" in destination_key:
+            return {"minutes": (30, 45), "label": "30 a 45 min desde a Barra", "source": "Marcar_manobra_repontos_mare.txt"}
+        if "fundeadouro norte" in destination_key:
+            return {"minutes": (45, 45), "label": "cerca de 45 min desde a Barra", "source": "Notas_Pilotagem.txt"}
+        if "fundeadouro sul" in destination_key or "troia" in destination_key:
+            return {"minutes": (45, 60), "label": "45 min a 1h desde a Barra", "source": "Notas_Pilotagem.txt"}
+    if maneuver_type == "shift":
+        if "fundeadouro norte" in origin_key and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
+            return {"minutes": (90, 90), "label": "1h30 desde o Fundeadouro Norte para cais do Canal Sul", "source": "Marcar_manobra_repontos_mare.txt"}
+        if ("troia" in origin_key or "fundeadouro sul" in origin_key) and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
+            return {"minutes": (60, 60), "label": "1h desde Tróia/Fundeadouro Sul para cais do Canal Sul", "source": "Marcar_manobra_repontos_mare.txt"}
+        if "fundeadouro norte" in origin_key and any(marker in destination_key for marker in ("tms", "auto europa", "autoeuropa", "sapec", "praias")):
+            return {"minutes": (15, 25), "label": "15 a 25 min desde o Fundeadouro Norte para cais a norte", "source": "Marcar_manobra_repontos_mare.txt"}
+        if "canal sul" in origin_key and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
+            return {"minutes": (30, 60), "label": "30 min a 1h desde o Canal Sul para cais do sul", "source": "Marcar_manobra_repontos_mare.txt"}
+    return None
+
+
+def _berth_profile_for_validation(maneuver: dict) -> dict:
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    berth_label = maneuver.get("destination") if maneuver_type in {"entry", "shift"} else maneuver.get("origin")
+    match = find_best_berth_profile(berth_label, _active_knowledge_dir()) if berth_label else None
+    return (match or {}).get("profile") or {}
+
+
+def _validation_berth_phases(maneuver: dict) -> list[dict]:
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+
+    def phase(label: str, berth_label: str, phase_type: str) -> dict:
+        match = find_best_berth_profile(berth_label, _active_knowledge_dir()) if berth_label else None
+        return {
+            "label": label,
+            "berth": berth_label,
+            "type": phase_type,
+            "profile": (match or {}).get("profile") or {},
+        }
+
+    if maneuver_type == "shift":
+        return [
+            phase("largada da origem", maneuver.get("origin") or "", "departure"),
+            phase("atracação no destino", maneuver.get("destination") or "", "entry"),
+        ]
+    if maneuver_type == "departure":
+        return [phase("saída", maneuver.get("origin") or "", "departure")]
+    return [phase("atracação", maneuver.get("destination") or "", "entry")]
+
+
+def _combined_phase_profile(phases: list[dict]) -> dict:
+    combined: dict = {"name": " / ".join(item.get("label", "") for item in phases if item.get("label"))}
+    for key in ("maneuver_rules", "night_rules", "restrictions", "draft_rules"):
+        values: list[str] = []
+        for phase in phases:
+            for value in (phase.get("profile") or {}).get(key, []) or []:
+                if value not in values:
+                    values.append(value)
+        combined[key] = values
+    return combined
+
+
+def _profile_requires_reponto(profile: dict, maneuver_type: str) -> bool:
+    text = " ".join(
+        str(value or "")
+        for key in ("maneuver_rules", "night_rules", "restrictions", "draft_rules")
+        for value in (profile.get(key) or [])
+    )
+    clean = _operational_lookup_key(text)
+    if "reponto" not in clean:
+        return False
+    if maneuver_type == "departure" and "saida" in clean:
+        return True
+    if maneuver_type == "entry" and any(marker in clean for marker in ("atracacao", "entrada", "regra geral")):
+        return True
+    return maneuver_type in {"entry", "departure", "shift"}
+
+
+def _weather_hour_for_datetime(target_dt: datetime) -> tuple[dict | None, str]:
+    weather_service = getattr(services, "weather_service", None)
+    if not weather_service or not getattr(weather_service, "enabled", False):
+        return None, "Meteo: serviço de previsão não configurado nesta instalação."
+    try:
+        forecast = weather_service.get_forecast(days=3)
+    except Exception:
+        logger.exception("Falha ao obter meteorologia para validação da manobra.")
+        return None, "Meteo: não foi possível obter previsão no momento."
+    if not forecast:
+        return None, "Meteo: previsão indisponível."
+    candidates = []
+    for group in forecast.get("hourly_groups", []) or []:
+        for hour in group.get("hours", []) or []:
+            timestamp = str(hour.get("timestamp") or "").replace(" ", "T")
+            if not timestamp:
+                continue
+            try:
+                hour_dt = datetime.fromisoformat(timestamp)
+            except ValueError:
+                continue
+            if hour_dt.tzinfo is None:
+                hour_dt = hour_dt.replace(tzinfo=target_dt.tzinfo)
+            candidates.append((abs((hour_dt.astimezone(target_dt.tzinfo) - target_dt).total_seconds()), hour))
+    if not candidates:
+        return None, "Meteo: previsão horária indisponível."
+    delta_seconds, hour = min(candidates, key=lambda item: item[0])
+    if delta_seconds > 90 * 60:
+        return None, f"Meteo: sem previsão horária para {_format_local_datetime(target_dt)} no horizonte live atual."
+    return hour, ""
+
+
+def _weather_check_line(target_dt: datetime) -> dict:
+    hour, error = _weather_hour_for_datetime(target_dt)
+    if not hour:
+        return {"status": "info", "title": "Meteorologia", "detail": error}
+    forecast = {"current": hour}
+    guidance = load_operational_safety_limits(_active_knowledge_dir())
+    safety = evaluate_weather_safety(forecast, guidance) if guidance else {}
+    wind_kts = _safe_float(hour.get("wind_kts"))
+    gust_kts = _safe_float(hour.get("gust_kts"))
+    strongest = max([value for value in (wind_kts, gust_kts) if value is not None], default=None)
+    detail = (
+        f"{hour.get('time', '--')} · {hour.get('condition', '--')}; "
+        f"vento {_format_kts(wind_kts)} kt {hour.get('wind_dir') or '--'}; "
+        f"rajada {_format_kts(gust_kts)} kt; visibilidade {hour.get('vis_km', '--')} km."
+    )
+    if safety.get("suspended"):
+        return {"status": "block", "title": "Meteorologia", "detail": f"{detail} Suspender: {'; '.join(safety.get('reasons') or [])}."}
+    if strongest is not None and strongest >= 20:
+        return {"status": "caution", "title": "Meteorologia", "detail": f"{detail} Vento relevante; confirmar direção contra o cais e rebocadores."}
+    return {"status": "ok", "title": "Meteorologia", "detail": f"{detail} Sem limiar automático de suspensão."}
+
+
+def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dict) -> tuple[list[dict], datetime | None]:
+    if not planned_at:
+        return ([{"status": "caution", "title": "Maré/tempo", "detail": "Sem hora planeada não dá para cruzar reponto, trânsito e calado."}], None)
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    transit = _transit_window_for_maneuver(maneuver)
+    requires_reponto = _profile_requires_reponto(profile, maneuver_type)
+    target_dt = planned_at
+    checks: list[dict] = []
+    if transit and maneuver_type in {"entry", "shift"}:
+        min_minutes, max_minutes = transit["minutes"]
+        arrival_start = planned_at + timedelta(minutes=min_minutes)
+        arrival_end = planned_at + timedelta(minutes=max_minutes)
+        target_dt = arrival_start + ((arrival_end - arrival_start) / 2)
+        tide_event = _nearest_tide_event(target_dt)
+        if tide_event:
+            in_window = arrival_start <= tide_event.timestamp <= arrival_end
+            delta_minutes = abs((tide_event.timestamp - target_dt).total_seconds()) / 60
+            status = "ok" if in_window or delta_minutes <= 30 else "caution"
+            reference_label = "hora de embarque/entrada da barra" if maneuver_type == "entry" else "hora de largada da origem"
+            timing = (
+                f"Se {_format_local_datetime(planned_at)} for {reference_label}, "
+                f"a chegada estimada ao destino é {_format_local_datetime(arrival_start)}-"
+                f"{arrival_end.strftime('%H:%M')} ({transit['label']}). "
+                f"Reponto mais próximo: {tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
+                f"({tide_event.height:.1f} m)."
+            )
+            if requires_reponto and status == "ok":
+                timing += " A marcação acerta a janela de reponto."
+            elif requires_reponto:
+                timing += " A marcação não cai suficientemente em cima do reponto."
+            checks.append({"status": status, "title": "Maré/tempo", "detail": timing})
+        else:
+            checks.append({"status": "info", "title": "Maré/tempo", "detail": f"Trânsito estimado: {transit['label']}; sem tabela de maré disponível para confirmar reponto."})
+    else:
+        tide_event = _nearest_tide_event(planned_at)
+        if tide_event and requires_reponto:
+            delta_minutes = abs((tide_event.timestamp - planned_at).total_seconds()) / 60
+            status = "ok" if delta_minutes <= 45 else "caution"
+            checks.append(
+                {
+                    "status": status,
+                    "title": "Maré/tempo",
+                    "detail": (
+                        f"Hora planeada {_format_local_datetime(planned_at)}; reponto mais próximo "
+                        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
+                        f"({tide_event.height:.1f} m), diferença {delta_minutes:.0f} min."
+                    ),
+                }
+            )
+        elif tide_event:
+            checks.append(
+                {
+                    "status": "info",
+                    "title": "Maré/tempo",
+                    "detail": (
+                        f"Hora planeada {_format_local_datetime(planned_at)}; maré mais próxima "
+                        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} ({tide_event.height:.1f} m)."
+                    ),
+                }
+            )
+        else:
+            checks.append({"status": "info", "title": "Maré/tempo", "detail": "Sem tabela de maré disponível para esta janela."})
+    return checks, target_dt
+
+
+def _tanquisado_dimension_draft_check(
+    *,
+    maneuver_type: str,
+    assessment_dt: datetime,
+    loa: float | None,
+    draft: float | None,
+) -> list[dict]:
+    checks: list[dict] = []
+    tide_height, trend = _tide_height_at(assessment_dt)
+    daylight = _is_daylight(assessment_dt)
+    if loa is None:
+        checks.append({"status": "caution", "title": "LOA", "detail": "LOA em falta; não dá para validar a regra noturna dos 110 m na Tanquisado."})
+    elif loa <= 463:
+        checks.append({"status": "ok", "title": "LOA", "detail": f"LOA {_format_meters(loa)} m dentro do comprimento operacional total da Tanquisado (463 m, com duques d'alba)."})
+    else:
+        checks.append({"status": "block", "title": "LOA", "detail": f"LOA {_format_meters(loa)} m excede o comprimento operacional total da Tanquisado (463 m)."})
+
+    if tide_height is None:
+        checks.append({"status": "caution", "title": "Calado", "detail": "Sem altura de maré interpolada; não dá para calcular calado praticável no momento."})
+        return checks
+    if draft is None:
+        checks.append({"status": "caution", "title": "Calado", "detail": f"Calado da manobra/navio em falta; altura de maré estimada {_format_meters(tide_height)} m ({trend})."})
+        return checks
+
+    if maneuver_type == "entry" and daylight is False:
+        if loa is not None and loa < 110:
+            limit = 9.5
+            status = "ok" if draft <= limit else "block"
+            checks.append(
+                {
+                    "status": status,
+                    "title": "Calado",
+                    "detail": (
+                        f"Atracação noturna com LOA < 110 m: manter reponto e calado absoluto 9,5 m. "
+                        f"Calado {_format_meters(draft)} m; altura {_format_meters(tide_height)} m."
+                    ),
+                }
+            )
+            return checks
+        if loa is not None and abs(loa - 110) < 0.05:
+            limit = min(4.8 + tide_height, 8.0)
+            checks.append(
+                {
+                    "status": "caution",
+                    "title": "Calado",
+                    "detail": (
+                        f"Atracação noturna Tanquisado com LOA exatamente 110 m fica na fronteira documental "
+                        f"entre '< 110 m' e '> 110 m'. Se for tratado como caso conservador, o limite seria "
+                        f"{_format_meters(limit)} m; calado {_format_meters(draft)} m. Confirmar critério antes de validar."
+                    ),
+                }
+            )
+            return checks
+        daylight_pm = _has_daylight_high_tide(assessment_dt)
+        limit = min(4.8 + tide_height, 8.0)
+        status = "ok" if draft <= limit and daylight_pm is False else "block"
+        reason = (
+            "não há preia-mar diurna nesse dia"
+            if daylight_pm is False
+            else "há preia-mar diurna nesse dia; a exceção noturna para LOA > 110 m não fica automaticamente cumprida"
+            if daylight_pm is True
+            else "não foi possível confirmar se as preia-mares são exclusivamente noturnas"
+        )
+        checks.append(
+            {
+                "status": status,
+                "title": "Calado",
+                "detail": (
+                    f"Atracação noturna Tanquisado para LOA > 110 m: limite "
+                    f"min(4,8 + altura, 8,0) = {_format_meters(limit)} m; "
+                    f"calado {_format_meters(draft)} m; {reason}."
+                ),
+            }
+        )
+        return checks
+
+    if maneuver_type == "departure" and daylight is False:
+        limit = min(4.8 + tide_height, 9.5)
+        label = "saída noturna"
+    else:
+        limit = min(6.3 + tide_height, 9.5)
+        label = "calado diurno/canal"
+    status = "ok" if draft <= limit else "block"
+    checks.append(
+        {
+            "status": status,
+            "title": "Calado",
+            "detail": (
+                f"Tanquisado {label}: limite {_format_meters(limit)} m "
+                f"(altura {_format_meters(tide_height)} m, {trend}); calado {_format_meters(draft)} m."
+            ),
+        }
+    )
+    return checks
+
+
+def _general_dimension_draft_check(profile: dict, port_call: dict, maneuver: dict, assessment_dt: datetime | None) -> list[dict]:
+    profile_name = profile.get("name") or maneuver.get("destination") or maneuver.get("origin") or "cais"
+    loa = _safe_float(port_call.get("vessel_loa_m"))
+    draft = _safe_float(maneuver.get("draft")) or _safe_float(port_call.get("vessel_max_draft_m"))
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    if "tanquisado" in _operational_lookup_key(profile_name) and assessment_dt:
+        return _tanquisado_dimension_draft_check(
+            maneuver_type=maneuver_type,
+            assessment_dt=assessment_dt,
+            loa=loa,
+            draft=draft,
+        )
+    checks: list[dict] = []
+    if loa is None:
+        checks.append({"status": "caution", "title": "LOA", "detail": "LOA em falta; validar limites do cais manualmente."})
+    else:
+        checks.append({"status": "info", "title": "LOA", "detail": f"LOA do navio: {_format_meters(loa)} m; cruzar com perfil {profile_name}."})
+    if draft is None:
+        checks.append({"status": "caution", "title": "Calado", "detail": "Calado em falta; não dá para fechar validação de profundidade."})
+    else:
+        checks.append({"status": "info", "title": "Calado", "detail": f"Calado usado na leitura: {_format_meters(draft)} m; confirmar regra específica de {profile_name}."})
+    return checks
+
+
+def _phase_dimension_draft_checks(
+    phases: list[dict],
+    port_call: dict,
+    maneuver: dict,
+    assessment_dt: datetime | None,
+) -> list[dict]:
+    if not phases:
+        return _general_dimension_draft_check({}, port_call, maneuver, assessment_dt)
+    checks: list[dict] = []
+    for phase in phases:
+        profile = phase.get("profile") or {}
+        berth = phase.get("berth") or "--"
+        if not profile:
+            checks.append(
+                {
+                    "status": "info",
+                    "title": f"Regras do cais ({phase.get('label')})",
+                    "detail": f"Sem perfil específico encontrado para {berth}; validar por regras gerais e informação local.",
+                }
+            )
+            continue
+        phase_maneuver = {**maneuver, "type": phase.get("type") or maneuver.get("type")}
+        for item in _general_dimension_draft_check(profile, port_call, phase_maneuver, assessment_dt):
+            checks.append({**item, "title": f"{item.get('title', '')} ({phase.get('label')})"})
+    return checks
+
+
+def _tug_check(port_call: dict, maneuver: dict, weather_check: dict | None = None) -> dict:
+    tug_count_raw = str(maneuver.get("tug_count") or "").strip()
+    tug_count = int(tug_count_raw) if tug_count_raw.isdigit() else 0
+    loa = _safe_float(port_call.get("vessel_loa_m"))
+    draft = _safe_float(maneuver.get("draft")) or _safe_float(port_call.get("vessel_max_draft_m"))
+    bow_thruster = (port_call.get("vessel_bow_thruster") or "").strip().lower()
+    required = 0
+    sizing = ""
+    reason = ""
+    if bow_thruster == "no":
+        if loa is not None and loa > 150:
+            required, sizing = 3, "grandes"
+            reason = "sem bowthruster acima de 150 m"
+        elif loa is not None and loa >= 120:
+            required, sizing = 2, "grandes"
+            reason = "sem bowthruster entre 120 e 150 m"
+        elif draft is not None and draft >= 8:
+            required, sizing = 1, "grande de cerca de 35 t"
+            reason = "sem bowthruster, LOA < 120 m e calado >= 8 m"
+        else:
+            required, sizing = 1, "adequado ao porte"
+            reason = "sem bowthruster"
+    elif bow_thruster == "yes":
+        if loa is not None and (loa > 120 or (draft is not None and draft >= 8)):
+            required, sizing = 1, "grande"
+            reason = "bowthruster declarado, mas navio/cais pedem controlo da popa"
+        else:
+            required, sizing = 0, "a confirmar"
+            reason = "bowthruster declarado e navio pequeno"
+    else:
+        required, sizing = 1, "adequado ao porte"
+        reason = "thruster por confirmar"
+
+    if weather_check and weather_check.get("status") == "caution" and required < 1:
+        required = 1
+        reason = "vento relevante e cais/corrente exigem margem"
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    shift_note = (
+        " Mudança: validar o mesmo plano como largada da origem e atracação no destino."
+        if maneuver_type == "shift"
+        else ""
+    )
+    if tug_count < required:
+        return {
+            "status": "block" if required > 0 else "caution",
+            "title": "Rebocadores",
+            "detail": f"Previstos {tug_count}; recomendação mínima nesta leitura: {required} rebocador(es) {sizing} ({reason}).{shift_note}",
+        }
+    if tug_count == 0:
+        return {
+            "status": "caution",
+            "title": "Rebocadores",
+            "detail": "Sem rebocadores previstos; só aceitar se o Piloto Coordenador confirmar navio pequeno, bowthruster operacional, vento fraco e corrente controlada." + shift_note,
+        }
+    if required == 0:
+        return {
+            "status": "ok",
+            "title": "Rebocadores",
+            "detail": f"Previstos {tug_count}; para navio pequeno com bowthruster isto dá margem prática. Manter o rebocador atento à popa se houver risco de fugir para o cais.{shift_note}",
+        }
+    return {
+        "status": "ok",
+        "title": "Rebocadores",
+        "detail": f"Previstos {tug_count}; cumpre a recomendação mínima desta leitura ({required}). Para navio com bowthruster, manter rebocador preferencialmente à popa se for preciso controlar a popa no cais.{shift_note}",
+    }
+
+
+def _build_validation_operational_assessment(port_call: dict, maneuver: dict, checklist: list[dict]) -> dict:
+    planned_at = _parse_planned_datetime(maneuver.get("planned_at") or maneuver.get("sort_at"))
+    phases = _validation_berth_phases(maneuver)
+    profile = _combined_phase_profile(phases) or _berth_profile_for_validation(maneuver)
+    checks: list[dict] = []
+    past_window = False
+    if planned_at:
+        now = datetime.now().astimezone()
+        past_window = planned_at.astimezone(now.tzinfo) < now
+
+    tide_checks, assessment_dt = _tide_timing_check(maneuver, planned_at, profile)
+    checks.extend(tide_checks)
+    reference_dt = assessment_dt or planned_at
+    weather_check = None
+    if reference_dt:
+        weather_check = _weather_check_line(reference_dt)
+        checks.append(weather_check)
+        checks.extend(_phase_dimension_draft_checks(phases, port_call, maneuver, reference_dt))
+    else:
+        checks.extend(_phase_dimension_draft_checks(phases, port_call, maneuver, reference_dt))
+    checks.append(_tug_check(port_call, maneuver, weather_check))
+
+    block_count = sum(1 for item in checks if item.get("status") == "block")
+    caution_count = sum(1 for item in checks if item.get("status") == "caution")
+    if past_window:
+        verdict = "Não validar como está"
+        recommendation = "Atualizar a hora antes de validar. A leitura abaixo serve para perceber se a marcação original fazia sentido."
+    elif block_count:
+        verdict = "Não validar sem corrigir"
+        recommendation = "Há pelo menos um bloqueio operacional/documental; corrigir hora, calado, meteo ou meios antes de aprovar."
+    elif caution_count:
+        verdict = "Validável só com confirmação"
+        recommendation = "A manobra pode ser possível, mas depende dos pontos assinalados; confirmar antes de aprovar."
+    else:
+        verdict = "Parecer favorável"
+        recommendation = "A marcação está coerente com maré, perfil do cais, meios previstos e condições consultadas."
+
+    return {
+        "verdict": verdict,
+        "recommendation": recommendation,
+        "checks": checks,
+        "past_window": past_window,
+        "block_count": block_count,
+        "caution_count": caution_count,
+    }
+
+
 def _format_operational_opinion_answer(
     *,
     port_call: dict,
@@ -276,6 +849,7 @@ def _format_operational_opinion_answer(
     top_case = similar_cases[0] if similar_cases else {}
     doc_refs = _document_refs_from_checklist(checklist)
     has_documental_signal = _has_documental_checklist_signal(checklist)
+    assessment = _build_validation_operational_assessment(port_call, maneuver, checklist)
     quick_status = recommendation.get("title", "")
     if not quick_status:
         if alerts and has_documental_signal:
@@ -286,12 +860,29 @@ def _format_operational_opinion_answer(
             quick_status = "checklist determinística sem alertas críticos; histórico sem padrão forte"
 
     lines = [
+        "Parecer operacional",
+        f"- {assessment['verdict']}: {assessment['recommendation']}",
+        "",
+        "Pontos críticos verificados",
+    ]
+    status_labels = {
+        "ok": "OK",
+        "info": "Info",
+        "caution": "Atenção",
+        "block": "Bloqueio",
+    }
+    for item in assessment.get("checks") or []:
+        status_label = status_labels.get(item.get("status"), "Info")
+        lines.append(f"- {status_label} · {item.get('title', '')}: {item.get('detail', '')}")
+
+    lines.extend([
+        "",
         "Leitura rápida",
         (
             f"- {maneuver.get('title', 'Manobra')} de {port_call.get('vessel_name', 'navio')}: "
             f"{quick_status}."
         ),
-    ]
+    ])
     if recommendation.get("basis_label"):
         lines.append(f"- Histórico: {recommendation['basis_label']}.")
     elif similar_cases:
@@ -315,7 +906,9 @@ def _format_operational_opinion_answer(
 
     lines.append("")
     lines.append("Recomendação operacional")
-    lines.append(f"- {recommendation.get('summary') or _fallback_validation_recommendation(alerts=alerts, doc_refs=doc_refs)}")
+    lines.append(f"- {assessment['recommendation']}")
+    if recommendation.get("summary"):
+        lines.append(f"- Histórico: {recommendation['summary']}")
     if recommendation.get("signals_label"):
         lines.append(f"- Sinais: {recommendation['signals_label']}.")
     elif doc_refs and alerts:
@@ -515,9 +1108,17 @@ def _build_maneuver_analysis_checklist(
             berth_options=services.BERTH_OPTIONS,
         )
     )
-    berth_profile_item = _build_berth_profile_checklist_item(operational_berth, maneuver_type=maneuver_type)
-    if berth_profile_item:
-        items.append(berth_profile_item)
+    if maneuver_type == "shift":
+        origin_profile_item = _build_berth_profile_checklist_item(origin, maneuver_type="departure")
+        if origin_profile_item:
+            items.append({**origin_profile_item, "title": "Regras do cais de origem"})
+        destination_profile_item = _build_berth_profile_checklist_item(destination, maneuver_type="entry")
+        if destination_profile_item:
+            items.append({**destination_profile_item, "title": "Regras do cais de destino"})
+    else:
+        berth_profile_item = _build_berth_profile_checklist_item(operational_berth, maneuver_type=maneuver_type)
+        if berth_profile_item:
+            items.append(berth_profile_item)
 
     constraint_labels = format_constraint_labels(maneuver.get("constraint_codes") or [])
     if constraint_labels:
@@ -1131,6 +1732,7 @@ def build_scale_context(port_call: dict) -> dict:
                 else "pending"
             ),
             "when_label": item.get("effective_time_label") if item.get("state") == "completed" else item.get("planned_label"),
+            "planned_at": item.get("planned_at"),
             "planned_label": item.get("planned_label"),
             "planned_input_value": item.get("planned_input_value", ""),
             "execution_started_label": item.get("execution_started_label"),
