@@ -203,8 +203,9 @@ def test_validation_answer_does_not_call_applied_berth_rules_alerts(monkeypatch)
         checklist=checklist,
     )
 
-    assert "marcação original operacionalmente coerente" in answer
-    assert "Decisão: NÃO AVANÇAR" in answer
+    assert "checklist original coerente" in answer
+    assert "Decisão: CHECKLIST ORIGINAL OK (JANELA PASSADA)" in answer
+    assert "voltar a validar maré, meteorologia e dados live" in answer
     assert "validação condicionada por 2 alerta" not in answer
     assert "Alertas operacionais pendentes" in answer
     assert "Janela planeada:" in answer

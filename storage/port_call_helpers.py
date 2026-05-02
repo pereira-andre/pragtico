@@ -72,6 +72,8 @@ def _normalize_maneuver_record(record: Dict, fallback_created_by: str = "system"
         "type": maneuver_type,
         "state": state,
         "planned_at": record.get("planned_at"),
+        "planned_label": record.get("planned_label") or "",
+        "planned_input_value": record.get("planned_input_value") or "",
         "completed_at": record.get("completed_at"),
         "execution_started_at": record.get("execution_started_at"),
         "execution_finished_at": record.get("execution_finished_at"),
@@ -235,6 +237,17 @@ def _can_edit_maneuver_plan(maneuver: Dict, actor_role: str) -> bool:
     if clean_role == "agente":
         return maneuver.get("state") == PORT_CALL_APPROVAL_PENDING
     return False
+
+
+def _datetime_local_input_label(value: Optional[str]) -> str:
+    clean = " ".join((value or "").strip().split())
+    if not clean:
+        return ""
+    try:
+        dt = datetime.fromisoformat(clean)
+    except ValueError:
+        return ""
+    return dt.strftime("%d %b %H:%M")
 
 
 def can_plan_followup_maneuver_status(status: Optional[str]) -> bool:
@@ -909,6 +922,12 @@ def _decorate_port_call(record: Dict) -> Dict:
         agent_profile = _actor_meta(maneuver.get("created_by"), maneuver.get("created_by_profile"))
         pilot_profile = _actor_meta(maneuver.get("decided_by"), maneuver.get("decided_by_profile"))
         reported_by_profile = _actor_meta(maneuver.get("reported_by"), maneuver.get("reported_by_profile"))
+        planned_input_value = maneuver.get("planned_input_value") or _iso_to_datetime_local_value(maneuver.get("planned_at"))
+        planned_label = (
+            maneuver.get("planned_label")
+            or _datetime_local_input_label(planned_input_value)
+            or _local_iso_to_label(maneuver.get("planned_at"))
+        )
         decorated_history.append(
             {
                 **maneuver,
@@ -916,8 +935,8 @@ def _decorate_port_call(record: Dict) -> Dict:
                 "action_label": _maneuver_action_label(maneuver.get("type")),
                 "state_label": state_label,
                 "state_class": state_class,
-                "planned_label": _local_iso_to_label(maneuver.get("planned_at")),
-                "planned_input_value": _iso_to_datetime_local_value(maneuver.get("planned_at")),
+                "planned_label": planned_label,
+                "planned_input_value": planned_input_value,
                 "completed_label": _local_iso_to_label(maneuver.get("completed_at")),
                 "execution_started_label": _local_iso_to_label(maneuver.get("execution_started_at")),
                 "execution_started_input_value": _iso_to_datetime_local_value(maneuver.get("execution_started_at")),

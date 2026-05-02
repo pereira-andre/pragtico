@@ -838,15 +838,24 @@ def _build_validation_operational_assessment(port_call: dict, maneuver: dict, ch
         checks.extend(_phase_dimension_draft_checks(phases, port_call, maneuver, reference_dt))
     checks.append(_tug_check(port_call, maneuver, weather_check))
 
+    checklist_cautions = [
+        item
+        for item in checklist
+        if item.get("status") == "caution"
+        and "regras do cais" not in _operational_lookup_key(item.get("title"))
+        and "janela planeada" not in _operational_lookup_key(item.get("title"))
+    ]
     block_count = sum(1 for item in checks if item.get("status") == "block")
-    caution_count = sum(1 for item in checks if item.get("status") == "caution")
+    caution_count = sum(1 for item in checks if item.get("status") == "caution") + len(checklist_cautions)
     if past_window:
-        decision = "NÃO AVANÇAR"
-        verdict = "Não avançar como está"
         if block_count or caution_count:
+            decision = "NÃO AVANÇAR"
+            verdict = "Janela vencida com pontos pendentes"
             recommendation = "Atualizar a hora e resolver/confirmar os pontos assinalados antes de validar."
         else:
-            recommendation = "Atualizar a hora antes de validar; a marcação original era operacionalmente coerente nos pontos críticos."
+            decision = "CHECKLIST ORIGINAL OK (JANELA PASSADA)"
+            verdict = "Marcação original coerente"
+            recommendation = "A checklist da marcação original estava cumprida; para executar agora, atualizar a hora e voltar a validar maré, meteorologia e dados live."
     elif block_count:
         decision = "NÃO AVANÇAR"
         verdict = "Não avançar sem corrigir"
@@ -868,6 +877,7 @@ def _build_validation_operational_assessment(port_call: dict, maneuver: dict, ch
         "past_window": past_window,
         "block_count": block_count,
         "caution_count": caution_count,
+        "checklist_caution_count": len(checklist_cautions),
     }
 
 
@@ -899,7 +909,7 @@ def _format_operational_opinion_answer(
     quick_status = recommendation.get("title", "")
     if not quick_status:
         if assessment.get("past_window") and not assessment.get("block_count") and not assessment.get("caution_count"):
-            quick_status = "marcação original operacionalmente coerente nos pontos críticos; janela já passou"
+            quick_status = "checklist original coerente; janela já passou e precisa de nova hora"
         elif assessment.get("block_count"):
             quick_status = f"não validar sem corrigir {assessment['block_count']} bloqueio(s) operacional(is)"
         elif assessment.get("caution_count"):
