@@ -872,7 +872,17 @@ def _format_operational_opinion_answer(
     checklist: list[dict],
 ) -> str:
     """Format a professional, structured opinion answer for a maneuver."""
-    alerts = [item for item in checklist if item.get("status") == "caution"]
+    documental_rule_items = [
+        item
+        for item in checklist
+        if "regras do cais" in _operational_lookup_key(item.get("title"))
+    ]
+    alerts = [
+        item
+        for item in checklist
+        if item.get("status") == "caution"
+        and item not in documental_rule_items
+    ]
     infos = [item for item in checklist if item.get("status") == "info"]
     top_case = similar_cases[0] if similar_cases else {}
     doc_refs = _document_refs_from_checklist(checklist)
@@ -880,12 +890,16 @@ def _format_operational_opinion_answer(
     assessment = _build_validation_operational_assessment(port_call, maneuver, checklist)
     quick_status = recommendation.get("title", "")
     if not quick_status:
-        if alerts and has_documental_signal:
-            quick_status = f"validação condicionada por {len(alerts)} alerta(s) documental/operacional(is)"
+        if assessment.get("past_window") and not assessment.get("block_count") and not assessment.get("caution_count"):
+            quick_status = "marcação original operacionalmente coerente nos pontos críticos; janela já passou"
+        elif assessment.get("block_count"):
+            quick_status = f"não validar sem corrigir {assessment['block_count']} bloqueio(s) operacional(is)"
+        elif assessment.get("caution_count"):
+            quick_status = f"validável só com confirmação de {assessment['caution_count']} ponto(s) de atenção"
         elif alerts:
             quick_status = f"validação condicionada por {len(alerts)} alerta(s) operacional(is)"
         else:
-            quick_status = "checklist determinística sem alertas críticos; histórico sem padrão forte"
+            quick_status = "pontos críticos coerentes; histórico sem padrão forte"
 
     lines = [
         "Parecer operacional",
@@ -923,14 +937,20 @@ def _format_operational_opinion_answer(
         lines.append("- Base documental/estruturada acionada pela checklist.")
 
     lines.append("")
-    lines.append("Alertas documentais e operacionais")
+    lines.append("Alertas operacionais pendentes")
     if alerts:
         for item in alerts[:3]:
             lines.append(f"- {item.get('title', '')}: {item.get('detail', '')}")
     else:
-        lines.append("- Sem alertas críticos nesta leitura determinística.")
+        lines.append("- Sem alertas operacionais adicionais nesta leitura.")
     if not alerts and infos:
         lines.append(f"- Nota: {infos[0].get('detail', '')}")
+
+    if documental_rule_items:
+        lines.append("")
+        lines.append("Regras documentais aplicadas")
+        for item in documental_rule_items[:3]:
+            lines.append(f"- {item.get('title', '')}: {item.get('detail', '')}")
 
     lines.append("")
     lines.append("Recomendação operacional")
@@ -939,8 +959,8 @@ def _format_operational_opinion_answer(
         lines.append(f"- Histórico: {recommendation['summary']}")
     if recommendation.get("signals_label"):
         lines.append(f"- Sinais: {recommendation['signals_label']}.")
-    elif doc_refs and alerts:
-        lines.append("- Sinais: regras documentais/checklist com alerta ativo; histórico não usado como regra principal.")
+    elif doc_refs:
+        lines.append("- Sinais: regras documentais usadas como base; histórico não usado como regra principal.")
 
     lines.append("")
     lines.append("Base usada")

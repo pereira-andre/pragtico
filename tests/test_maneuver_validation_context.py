@@ -151,3 +151,60 @@ def test_tanquisado_entry_two_hours_before_reponto_is_valid_tide_window(monkeypa
     assert tide_check["status"] == "ok"
     assert "A marcação acerta a janela de reponto" in tide_check["detail"]
     assert "não cai suficientemente" not in tide_check["detail"]
+
+
+def test_validation_answer_does_not_call_applied_berth_rules_alerts(monkeypatch) -> None:
+    monkeypatch.setattr(maneuver_context, "current_resolvable_port_calls", lambda: [])
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+    port_call = {
+        "id": "pc-tanquisado",
+        "vessel_name": "GALBOT",
+        "vessel_type": "Graneis liquidos",
+        "vessel_loa_m": "101.4",
+        "vessel_beam_m": "16.6",
+        "vessel_gt_t": "4500",
+        "vessel_max_draft_m": "7.5",
+        "vessel_bow_thruster": "yes",
+        "vessel_stern_thruster": "no",
+    }
+    maneuver = {
+        "id": "entry-tanquisado",
+        "title": "Entrada",
+        "type": "entry",
+        "status": "Pendente",
+        "state": "pending",
+        "planned_at": "2026-04-30T19:12:00+00:00",
+        "planned_input_value": "2026-04-30T19:12",
+        "origin": "Sines",
+        "destination": "Tanquisado (lado jusante)",
+        "tug_count": "2",
+        "constraint_codes": [],
+    }
+    checklist, _summary = _build_maneuver_analysis_checklist(
+        port_call,
+        maneuver,
+        similar_cases=[],
+        casebook_recommendation={},
+    )
+
+    answer = _format_operational_opinion_answer(
+        port_call=port_call,
+        maneuver=maneuver,
+        recommendation={},
+        similar_cases=[],
+        checklist=checklist,
+    )
+
+    assert "marcação original operacionalmente coerente" in answer
+    assert "validação condicionada por 2 alerta" not in answer
+    assert "Alertas operacionais pendentes" in answer
+    assert "Janela planeada:" in answer
+    assert "Regras documentais aplicadas" in answer
+    assert "Regras do cais:" in answer
