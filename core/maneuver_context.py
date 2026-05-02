@@ -1003,7 +1003,7 @@ def _format_operational_opinion_answer(
     if doc_refs:
         lines.append(f"- Base documental: {', '.join(doc_refs)}.")
     if any("Lisnave" in (item.get("title") or "") for item in checklist):
-        lines.append("- Regra estruturada Lisnave: docas com mínimo de 4 rebocadores e orientação proa a norte; cais com proa a sul.")
+        lines.append("- Regra estruturada Lisnave: docas com mínimo de 4 rebocadores; D20/D21/D22 proa a norte; cais e D31/D32/D33 proa a sul.")
     if not doc_refs and not any("Lisnave" in (item.get("title") or "") for item in checklist):
         lines.append("- Base documental: sem perfil documental específico acionado nesta leitura.")
     lines.append("- Checklist operacional determinística do portal.")

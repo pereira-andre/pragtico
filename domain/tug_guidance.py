@@ -7,6 +7,7 @@ import unicodedata
 from functools import lru_cache
 from typing import Any
 
+from domain.operational_safety import looks_like_emergency_response_question
 from domain.port_entities import detect_port_entities
 
 
@@ -37,6 +38,15 @@ BEAM_RE = re.compile(
 DRAFT_RE = re.compile(
     r"\b(?:calado|draft)\b[^\n.;,]{0,40}?\b(\d+(?:[.,]\d+)?)\s*m\b"
     r"|\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?(?:calado|draft)\b",
+    flags=re.IGNORECASE,
+)
+REQUESTED_TUG_COUNT_RE = re.compile(
+    r"\b(?:(?:com|tenho|temos|tem|pedid\w*|solicitad\w*|usar|usamos|leva|levam|levar|meter|meto|colocar)\s+)?"
+    r"(\d{1,2})(?:\s*[ºoaª])?\s+(?:reboques?|rebocadores?)\b",
+    flags=re.IGNORECASE,
+)
+REQUESTED_TUG_ORDINAL_RE = re.compile(
+    r"\b(quarto|quarta|quinto|quinta|sexto|sexta)\s+(?:reboque|rebocador)\b",
     flags=re.IGNORECASE,
 )
 NO_BOW_RE = re.compile(
@@ -85,6 +95,8 @@ def load_tug_guidance(knowledge_dir: str) -> dict[str, Any]:
 
 
 def looks_like_tug_decision_question(question: str) -> bool:
+    if looks_like_emergency_response_question(question or ""):
+        return False
     if not TUG_QUERY_RE.search(question or ""):
         return False
     return bool(TUG_DECISION_RE.search(question or "") or TUG_CONTEXT_RE.search(question or ""))
@@ -118,6 +130,26 @@ def _extract_draft(question: str) -> float | None:
     if not match:
         return None
     return _safe_float(match.group(1) or match.group(2))
+
+
+def _extract_requested_tug_count(question: str) -> int | None:
+    match = REQUESTED_TUG_COUNT_RE.search(question or "")
+    if match:
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            pass
+    ordinal = REQUESTED_TUG_ORDINAL_RE.search(question or "")
+    if not ordinal:
+        return None
+    return {
+        "quarto": 4,
+        "quarta": 4,
+        "quinto": 5,
+        "quinta": 5,
+        "sexto": 6,
+        "sexta": 6,
+    }.get(_normalize_text(ordinal.group(1)))
 
 
 def _matched_entity_names(question: str) -> set[str]:
@@ -197,6 +229,26 @@ def _infer_wind_component(question: str, entity_names: set[str]) -> tuple[str, s
     if re.search(r"\b(nevoeiro|nevoa|nevoa)\b", clean):
         return "", "nevoeiro: suspensao por visibilidade; SW posterior e conhecimento local, nao dimensiona rebocadores"
     return "", ""
+
+
+def _infer_bow_orientation(question: str, entity_names: set[str]) -> str:
+    clean = _normalize_text(question)
+    if re.search(r"\bproa a sul\b|\bproa sul\b", clean):
+        return "bow_south"
+    if re.search(r"\bpopa a sul\b|\bpopa sul\b|\bproa a norte\b|\bproa norte\b", clean):
+        return "stern_south"
+    if {"Tanquisado", "Eco-Oil"} & entity_names:
+        return "bow_south"
+    if "Lisnave" in entity_names:
+        if re.search(r"\b(?:d20|d21|d22|doca 20|doca 21|doca 22)\b", clean):
+            return "stern_south"
+        if re.search(
+            r"\b(?:d31|d32|d33|doca 31|doca 32|doca 33|"
+            r"c0a|c0b|c1a|c1b|c2a|c2b|c3a|c3b|cais 0|cais 1|cais 2|cais 3)\b",
+            clean,
+        ):
+            return "bow_south"
+    return ""
 
 
 def _minimum_no_bow_rule(question: str, loa: float | None, draft: float | None, guidance: dict[str, Any]) -> str:
@@ -314,6 +366,29 @@ def _specific_positioning_rules(guidance: dict[str, Any], context: dict[str, Any
     return list(dict.fromkeys(rules))
 
 
+def _multi_tug_positioning_rules(guidance: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    requested_count = context.get("requested_tug_count")
+    if not requested_count:
+        return []
+    rules = []
+    entity_names = set(context.get("entity_names") or [])
+    bow_orientation = str(context.get("bow_orientation") or "")
+    for item in guidance.get("multi_tug_positioning_rules") or []:
+        item_count = item.get("tug_count")
+        if item_count is not None and int(item_count) != int(requested_count):
+            continue
+        required_entities = set(item.get("required_entities") or [])
+        if required_entities and not (required_entities & entity_names):
+            continue
+        orientation = str(item.get("orientation") or "")
+        if orientation and (not bow_orientation or orientation != bow_orientation):
+            continue
+        note = str(item.get("note") or "")
+        if note:
+            rules.append(note)
+    return list(dict.fromkeys(rules))
+
+
 def _extract_context(question: str, guidance: dict[str, Any]) -> dict[str, Any]:
     loa = _extract_loa(question)
     entity_names = _matched_entity_names(question)
@@ -333,6 +408,8 @@ def _extract_context(question: str, guidance: dict[str, Any]) -> dict[str, Any]:
         "wind_label": wind_label,
         "strong_wind": _is_strong_wind(question),
         "entity_names": sorted(entity_names),
+        "requested_tug_count": _extract_requested_tug_count(question),
+        "bow_orientation": _infer_bow_orientation(question, entity_names),
         "has_no_bowthruster": bool(NO_BOW_RE.search(question or "")),
         "has_bowthruster": bool(HAS_BOW_RE.search(question or "")),
         "mentions_lisnave": bool(LISNAVE_RE.search(question or "")),
@@ -379,6 +456,14 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
         context_bits.append(f"calado inferido: {context['draft']:g} m")
     if context["entity_names"]:
         context_bits.append("terminal/cais inferido: " + ", ".join(context["entity_names"]))
+    if context["requested_tug_count"]:
+        context_bits.append(f"rebocadores pedidos/informados: {context['requested_tug_count']}")
+    if context["bow_orientation"]:
+        orientation_label = {
+            "bow_south": "proa a sul",
+            "stern_south": "popa a sul / proa a norte",
+        }.get(context["bow_orientation"], context["bow_orientation"])
+        context_bits.append(f"orientacao inferida: {orientation_label}")
     if context["strong_wind"]:
         context_bits.append("vento forte inferido")
     if context["has_no_bowthruster"]:
@@ -393,7 +478,11 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
         for item in dict.fromkeys(applicable_rules):
             lines.append(f"- {item}")
 
-    positioning_rules = _specific_positioning_rules(guidance, context) + (guidance.get("positioning_rules") or [])
+    positioning_rules = (
+        _specific_positioning_rules(guidance, context)
+        + _multi_tug_positioning_rules(guidance, context)
+        + (guidance.get("positioning_rules") or [])
+    )
     if positioning_rules:
         lines.append("Posicionamento pratico dos rebocadores:")
         for item in positioning_rules:

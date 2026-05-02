@@ -201,6 +201,35 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertIn("Não consegui guardar a proposta pendente", result["answer"])
         self.assertIn("Elementos reconhecidos:", result["answer"])
 
+    def test_blackout_emergency_uses_direct_emergency_answer_not_tug_positioning(self) -> None:
+        services.store = FakeStore()
+        question = (
+            "Um navio teve um problema. Blackout, não tem o rebocadores pedidos "
+            "nem há nenhum por perto para o ajudar. O que aconselhas de imediato?"
+        )
+
+        with self.app.test_request_context("/api/chat"):
+            result = handle_chat_turn(username="admin@porto.pt", role="admin", question=question)
+
+        self.assertEqual(result["answer_origin"], "operational_emergency_response")
+        self.assertIn("Blackout/sem maquina", result["answer"])
+        self.assertIn("largar ferro", result["answer"])
+        self.assertIn("VHF 73", result["answer"])
+        self.assertNotIn("Regra prática de posicionamento", result["answer"])
+        self.assertNotIn("Normalmente so se mete rebocador a proa", result["answer"])
+
+    def test_terse_operational_fragment_asks_for_reformulation(self) -> None:
+        services.store = FakeStore()
+
+        with self.app.test_request_context("/api/chat"):
+            result = handle_chat_turn(username="admin@porto.pt", role="admin", question="Navio reboques fundear")
+
+        self.assertEqual(result["answer_origin"], "operational_clarification")
+        self.assertIn("Reformula", result["answer"])
+        self.assertIn("fundear", result["answer"])
+        self.assertNotIn("A resposta direta", result["answer"])
+        self.assertNotIn("GGp", result["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

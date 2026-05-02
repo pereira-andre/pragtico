@@ -17,7 +17,23 @@ SAFETY_QUERY_RE = re.compile(
 )
 MANEUVER_QUERY_RE = re.compile(
     r"\b(manobra|manobras|navio|entrada|saida|saída|atracar|desatracar|"
-    r"pilotagem|piloto|cais|doca|barra|reboque|rebocador)\b",
+    r"pilotagem|piloto|cais|doca|barra|reboque|rebocador|cabos?|amarra[cç][aã]o|"
+    r"bow\s*thruster|bowthruster|h[eé]lice\s+de\s+proa)\b",
+    flags=re.IGNORECASE,
+)
+EMERGENCY_RESPONSE_RE = re.compile(
+    r"\b(emerg[eê]ncia|urg[eê]ncia|socorro|perigo|avaria|problema|blackout|apag[aã]o|"
+    r"sem\s+m[aá]quina|perda\s+de\s+m[aá]quina|m[aá]quina\s+avariad\w*|"
+    r"sem\s+governo|perda\s+de\s+governo|leme\s+avariad\w*|desgovernad\w*|"
+    r"perd\w*\s+bow|bow\s*thruster\s+avariad\w*|h[eé]lice\s+de\s+proa\s+avariad\w*|"
+    r"part\w*\s+cabos?|cabos?\s+partid\w*|part\w*\s+o\s+cabo|cabo\s+do\s+reboque|"
+    r"encalh\w*|colid\w*|colis[aã]o|abalro\w*|"
+    r"deriva|a\s+derivar|largar\s+ferro|fundear\s+de\s+emerg[eê]ncia)\b",
+    flags=re.IGNORECASE,
+)
+EMERGENCY_STANDALONE_RE = re.compile(
+    r"\b(blackout|apag[aã]o|sem\s+m[aá]quina|perd\w*\s+bow|part\w*\s+cabos?|cabos?\s+partid\w*|"
+    r"cabo\s+do\s+reboque|encalh\w*|colid\w*|colis[aã]o|abalro\w*)\b",
     flags=re.IGNORECASE,
 )
 
@@ -55,9 +71,23 @@ def load_operational_safety_limits(knowledge_dir: str) -> dict[str, Any]:
 
 def looks_like_operational_safety_question(question: str) -> bool:
     text = question or ""
+    if looks_like_emergency_response_question(text):
+        return True
     if not SAFETY_QUERY_RE.search(text):
         return False
     return bool(MANEUVER_QUERY_RE.search(text) or re.search(r"\b(porto|setubal|setúbal)\b", text, re.IGNORECASE))
+
+
+def looks_like_emergency_response_question(question: str) -> bool:
+    text = question or ""
+    if not EMERGENCY_RESPONSE_RE.search(text):
+        return False
+    if EMERGENCY_STANDALONE_RE.search(text):
+        return True
+    return bool(
+        MANEUVER_QUERY_RE.search(text)
+        or re.search(r"\b(porto|setubal|setúbal|vts|vhf|canal|rebocador|rebocadores)\b", text, re.IGNORECASE)
+    )
 
 
 def _safe_float(value) -> float | None:
@@ -190,6 +220,56 @@ def build_operational_safety_source(
         "chunk_id": 0,
         "score": 1.0,
         "retrieval_mode": "operational_safety_limits",
+        "snippet": snippet,
+        "text": snippet,
+    }
+
+
+def build_emergency_response_source(question: str, knowledge_dir: str) -> dict[str, Any] | None:
+    guidance = load_operational_safety_limits(knowledge_dir)
+    emergency = guidance.get("emergency_response") or {}
+    if not emergency or not looks_like_emergency_response_question(question):
+        return None
+
+    clean_question = _normalize_text(question)
+    scenario_rules = []
+    for item in emergency.get("scenarios") or []:
+        terms = [_normalize_text(term) for term in item.get("trigger_terms") or [] if _normalize_text(term)]
+        if terms and not any(term in clean_question for term in terms):
+            continue
+        scenario_rules.append(item)
+
+    lines = [
+        emergency.get("title") or "Resposta imediata a emergencia operacional",
+        "Prioridade: emergencia tem precedencia sobre regras normais de rebocadores.",
+    ]
+    if scenario_rules:
+        lines.append("Cenario identificado:")
+        for item in sorted(scenario_rules, key=lambda value: value.get("priority") or 999):
+            note = str(item.get("note") or "").strip()
+            if note:
+                lines.append(f"- {note}")
+
+    rules = sorted(emergency.get("rules") or [], key=lambda item: item.get("priority") or 999)
+    if rules:
+        lines.append("Acoes comuns sempre:")
+        for item in rules:
+            note = str(item.get("note") or "").strip()
+            if note:
+                lines.append(f"- {note}")
+    guidance_items = emergency.get("response_guidance") or []
+    if guidance_items:
+        lines.append("Orientacao de resposta:")
+        for item in guidance_items:
+            lines.append(f"- {item}")
+
+    snippet = "\n".join(lines)
+    return {
+        "source_id": "SAFE_EMERGENCY",
+        "document": SAFETY_LIMITS_FILENAME,
+        "chunk_id": 2,
+        "score": 1.0,
+        "retrieval_mode": "operational_emergency_response",
         "snippet": snippet,
         "text": snippet,
     }

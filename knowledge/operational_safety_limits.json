@@ -58,5 +58,87 @@
     "Se vento ou rajada for superior a 30 kt, comecar pela conclusao: manobras suspensas.",
     "Se a suspensao por vento ja tiver sido acionada, nao considerar retoma operacional ate vento abaixo de 25 kt.",
     "Estas regras aplicam-se a todas as manobras, independentemente do cais, tipo de navio ou numero de rebocadores."
-  ]
+  ],
+  "emergency_response": {
+    "title": "Resposta imediata a emergencias de manobra",
+    "trigger_terms": [
+      "emergencia",
+      "sem maquina",
+      "perda de maquina",
+      "blackout",
+      "sem governo",
+      "perda de bow",
+      "cabos partidos",
+      "cabo do reboque",
+      "encalhou",
+      "colidiu",
+      "navio desgovernado"
+    ],
+    "scenarios": [
+      {
+        "id": "loss_bow_thruster",
+        "priority": 1,
+        "trigger_terms": ["perder bow", "perdeu bow", "perda de bow", "bow thruster avariado", "helice de proa avariada"],
+        "note": "Perda de bow thruster: largar ferro com 1 manilha na agua para ganhar controlo/tempo, se houver agua, fundo e espaco."
+      },
+      {
+        "id": "parted_mooring_lines",
+        "priority": 2,
+        "trigger_terms": ["parte cabos", "partiu cabos", "partirem cabos", "cabos partidos", "partiram cabos"],
+        "note": "Cabos partidos: normalmente o vento puxa para fora; largar ferro, preparar novos cabos, manter rebocadores de atencao e pedir assistencia se necessario. Se houver lancha de cabos, pedir para passar mais cabos a terra o mais rapido possivel."
+      },
+      {
+        "id": "parted_tug_line",
+        "priority": 3,
+        "trigger_terms": ["cabo do reboque", "reboque parte cabo", "rebocador parte cabo", "partiu o cabo do reboque"],
+        "note": "Cabo do reboque partido: preparar para mandar cabo de amarracao do navio ao rebocador, solto e sem estar no guincho, para fazer firme ao reboque."
+      },
+      {
+        "id": "blackout_or_loss_engine",
+        "priority": 4,
+        "trigger_terms": ["blackout", "apagao", "sem maquina", "perda de maquina", "maquina avariada"],
+        "note": "Blackout/sem maquina: preparar para largar ferro e largar quando possivel; chamar ou aproximar rebocadores antes que a deriva chegue a ponto de nao retorno."
+      },
+      {
+        "id": "grounding",
+        "priority": 5,
+        "trigger_terms": ["encalhou", "encalhar", "encalhado", "encalhe"],
+        "note": "Encalhe: verificar profundidades, avaliar a situacao com a mare e chamar rebocadores. Largar ferro pode ser necessario em alguns casos para segurar posicao e para efeitos de registo/seguro, conforme decisao operacional."
+      },
+      {
+        "id": "collision",
+        "priority": 6,
+        "trigger_terms": ["colidiu", "colidir", "colisao", "abalroou", "abalroamento"],
+        "note": "Colisao: largar ferro imediatamente se aplicavel, chamar rebocadores e tentar esquivar-se/afastar-se o melhor possivel pelos meios disponiveis."
+      }
+    ],
+    "rules": [
+      {
+        "id": "assess_and_act_before_no_return",
+        "priority": 1,
+        "note": "Avaliar rapidamente posicao, deriva, fundo, trafego, vento/corrente e meios ainda disponiveis. Nao deixar chegar a ponto de nao retorno: se ha deriva/perigo imediato, largar ferro imediatamente quando houver agua, fundo e espaco."
+      },
+      {
+        "id": "report_vts_and_pilots",
+        "priority": 2,
+        "note": "Reportar sempre no VHF 73 a Setubal Port Control / VTS local e no canal 14 dos pilotos; usar tambem o canal 71 em manobras Lisnave."
+      },
+      {
+        "id": "use_own_means",
+        "priority": 3,
+        "note": "Tentar governar pelos proprios meios enquanto for possivel: maquina, leme, bow/stern thruster, ferro, cabos e/ou rebocadores, conforme o que ainda estiver disponivel."
+      },
+      {
+        "id": "call_tugs_and_protect_traffic",
+        "priority": 4,
+        "note": "Chamar rebocadores de emergencia/mais proximos quando necessario, manter rebocadores de atencao e segurar trafego/manobras conflitantes."
+      }
+    ],
+    "response_guidance": [
+      "Em emergencia, a primeira linha da resposta deve conter a acao critica do cenario: ferro, cabos, rebocadores, VTS/Pilotos.",
+      "Nao responder com regras gerais de posicionamento de rebocadores quando a pergunta descreve emergencia.",
+      "Indicar VHF canal 73 para Setubal Port Control / VTS local; canal 14 e dos pilotos e canal 71 e usado em manobras Lisnave.",
+      "Assinalar que a decisao final operacional cabe ao Piloto/Comandante conforme posicao, fundo, trafego e risco imediato."
+    ]
+  }
 }

@@ -151,6 +151,14 @@
   "berth_lateral_wind_positioning_rules": [
     {
       "required_entities": ["Tanquisado"],
+      "note": "Tanquisado com 3 rebocadores: estabelecer sempre pelo menos 1 a proa e 1 a popa. Estes dois rebocadores dao controlo para afastar o navio do cais, baixos e duques de alba; o terceiro fica disponivel para empurrar ao costado e contrariar a corrente, trazendo o navio ao cais quando necessario."
+    },
+    {
+      "required_entities": ["Eco-Oil"],
+      "note": "Eco-Oil com 3 rebocadores: estabelecer sempre pelo menos 1 a proa e 1 a popa. Estes dois rebocadores dao controlo para afastar o navio do cais, baixos e duques de alba; o terceiro fica disponivel para empurrar ao costado e contrariar a corrente, trazendo o navio ao cais quando necessario."
+    },
+    {
+      "required_entities": ["Tanquisado"],
       "operation": "departure",
       "wind_direction": "E",
       "wind_strength": "strong",
@@ -162,6 +170,33 @@
       "wind_direction": "W",
       "wind_strength": "strong",
       "note": "Eco-Oil a sair com vento W forte: considerar 1 rebocador a empurrar ao costado durante a largada dos cabos, porque o efeito lateral e o oposto da Tanquisado e o navio tambem pode fugir do cais."
+    }
+  ],
+  "multi_tug_positioning_rules": [
+    {
+      "tug_count": 4,
+      "note": "Com 4 rebocadores: manter os rebocadores estabelecidos que dao controlo estrutural da manobra; o 4.º rebocador pode empurrar ao costado se houver espaco para o fazer sem criar ma vizinhanca. Se nao houver espaco ou seguranca, fica em standby."
+    },
+    {
+      "tug_count": 5,
+      "required_entities": ["Lisnave"],
+      "orientation": "bow_south",
+      "note": "Com 5 rebocadores na Lisnave e navio com proa a sul: estabelecer 2 rebocadores a proa e 1 rebocador a popa. Os restantes ficam para empurrar ao costado e contrariar a corrente se houver espaco, ou standby."
+    },
+    {
+      "tug_count": 5,
+      "required_entities": ["Lisnave"],
+      "orientation": "stern_south",
+      "note": "Com 5 rebocadores na Lisnave e navio com popa a sul/proa a norte: estabelecer 2 rebocadores a popa e 1 rebocador a proa. Os restantes ficam para empurrar ao costado e contrariar a corrente se houver espaco, ou standby."
+    },
+    {
+      "tug_count": 5,
+      "required_entities": ["Lisnave"],
+      "note": "Com 5 rebocadores na Lisnave: confirmar a orientacao do navio. Proa a sul pede 2 a proa + 1 a popa estabelecidos; popa a sul/proa a norte pede 2 a popa + 1 a proa estabelecidos."
+    },
+    {
+      "tug_count": 6,
+      "note": "Com 6 rebocadores, que e o maximo operacional: estabelecer 2 rebocadores a proa e 2 rebocadores a popa; os outros 2 empurram ao costado, um de cada lado, quando o espaco permite."
     }
   ],
   "lisnave_rules": [
@@ -223,6 +258,7 @@
     }
   ],
   "positioning_rules": [
+    "Orientacao local: Tanquisado e Eco-Oil ficam com proa a sul. Na Lisnave, so D20/D21/D22 ficam com proa a norte; cais Lisnave e D31/D32/D33 ficam com proa a sul. O objetivo operacional e o navio poder fugir do cais em caso de emergencia.",
     "Normalmente so se mete rebocador a proa quando o navio nao tem bowthruster, ou quando a manobra precisa claramente desse equilibrio.",
     "Se forem pedidos 2 rebocadores num navio sem bowthruster, estabelecer normalmente 1 a proa e 1 a popa para equilibrar as forcas. Isto evita que, quando o rebocador da proa tenta abrir a proa do cais, a popa feche demais para o cais.",
     "Com bowthruster operacional em navios grandes, colocar por norma o rebocador a popa. A prioridade e controlar a popa para nao fugir para o cais nem bater.",

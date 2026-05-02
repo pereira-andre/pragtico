@@ -23,7 +23,11 @@ from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
-from domain.operational_safety import build_operational_safety_source, build_weather_safety_status_lines
+from domain.operational_safety import (
+    build_emergency_response_source,
+    build_operational_safety_source,
+    build_weather_safety_status_lines,
+)
 from domain.route_transit import route_transit_answer
 from domain.tug_guidance import build_tug_operational_guidance_source
 
@@ -82,6 +86,17 @@ VESSEL_DETAIL_QUERY_RE = re.compile(
     r"|"
     r"\b(navio|embarcacao|embarcação|imo|indicativo|call sign)\b"
     r".*\b(dados|detalhes|informacao|informação|caracteristicas|características|ficha|perfil)\b"
+)
+OPERATIONAL_FRAGMENT_TERMS_RE = re.compile(
+    r"\b(navio|embarcacao|embarcação|reboques?|rebocadores?|fundear|fundeadouro|ferro|"
+    r"entrada|saida|saída|atracar|desatracar|manobra)\b",
+    re.IGNORECASE,
+)
+OPERATIONAL_DECISION_TERMS_RE = re.compile(
+    r"\b(quantos|quantas|onde|como|quando|qual|quais|pode|posso|devo|deve|"
+    r"aconselha|aconselhas|recomenda|recomendas|observa|observacao|observação|"
+    r"precisa|necess[aá]rio|suficiente|meter|colocar|posicionar|o que)\b",
+    re.IGNORECASE,
 )
 MANEUVER_APPROVER_QUERY_RE = re.compile(
     r"\b(quem|qual)\b.*\b(aprovou|aprovado|aprovada|validou|validado|validada|validador)\b.*\b(manobra|entrada|saida|saída|mudanca|mudança)\b"
@@ -874,7 +889,9 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         if in_positioning and line.startswith("- "):
             positioning.append(line[2:].strip())
 
-    if not applicable and positioning:
+    positioning_question = bool(re.search(r"\b(onde|posicion|meter|colocar|proa|popa|costado|standby)\b", clean_question))
+    requested_count_match = re.search(r"rebocadores pedidos/informados:\s*(\d+)", snippet, flags=re.IGNORECASE)
+    if not applicable and positioning and not (positioning_question and requested_count_match):
         relevant_positioning = positioning
         if re.search(r"\b(roro|ro\s*ro|ro-ro|ro/ro)\b", clean_question):
             relevant_positioning = (
@@ -889,6 +906,32 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         answer_lines = ["Regra prática de posicionamento dos rebocadores:"]
         for item in relevant_positioning[:3]:
             answer_lines.append(f"- {item}")
+        return {
+            "answer": "\n".join(answer_lines),
+            "sources": [source],
+            "answer_origin": "operational_tug_guidance",
+        }
+
+    if positioning and positioning_question and requested_count_match:
+        requested_count = requested_count_match.group(1)
+        count_specific = [
+            item
+            for item in positioning
+            if f"Com {requested_count} rebocadores" in item
+            or f"{requested_count}.º rebocador" in item
+            or f"{requested_count} rebocadores" in item
+        ]
+        location_specific = [
+            item
+            for item in positioning
+            if "Tanquisado" in item or "Eco-Oil" in item or "Lisnave" in item
+        ]
+        relevant_positioning = list(dict.fromkeys(count_specific + location_specific)) or positioning
+        answer_lines = ["Posicionamento prático dos rebocadores:"]
+        for item in relevant_positioning[:4]:
+            answer_lines.append(f"- {item}")
+        if applicable:
+            answer_lines.append(f"Base/minimo a respeitar: {applicable[0]}")
         return {
             "answer": "\n".join(answer_lines),
             "sources": [source],
@@ -917,11 +960,11 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
     ]
     if len(applicable) > 1:
         answer_lines.append("Outras regras relevantes: " + " ".join(applicable[1:3]))
-    if positioning and re.search(r"\b(onde|posicion|meter|colocar|proa|popa|costado)\b", clean_question):
+    if positioning and positioning_question:
         specific_positioning = [
             item
             for item in positioning
-            if "Tanquisado a sair" in item or "Eco-Oil a sair" in item
+            if "Tanquisado" in item or "Eco-Oil" in item
         ]
         answer_lines.append("Posicionamento: " + " ".join((specific_positioning or positioning)[:2]))
     if "Prioridade:" in snippet:
@@ -932,6 +975,56 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         "answer": "\n".join(answer_lines),
         "sources": [source],
         "answer_origin": "operational_tug_guidance",
+    }
+
+
+def _answer_emergency_response_direct(question: str, clean_question: str) -> dict | None:
+    source = build_emergency_response_source(question, _active_knowledge_dir() or "knowledge")
+    if not source:
+        return None
+
+    bullets = []
+    capture_bullets = False
+    for raw_line in str(source.get("snippet") or "").splitlines():
+        line = raw_line.strip()
+        if line in {"Cenario identificado:", "Acoes comuns sempre:"}:
+            capture_bullets = True
+            continue
+        if line == "Orientacao de resposta:":
+            capture_bullets = False
+            continue
+        if capture_bullets and line.startswith("- "):
+            bullets.append(line[2:].strip())
+    answer_lines = ["Emergencia operacional:"]
+    for item in bullets[:8]:
+        answer_lines.append(f"- {item}")
+    return {
+        "answer": "\n".join(answer_lines),
+        "sources": [source],
+        "answer_origin": "operational_emergency_response",
+    }
+
+
+def _answer_unclear_operational_fragment(question: str, clean_question: str) -> dict | None:
+    tokens = re.findall(r"[a-z0-9À-ÿ]+", clean_question or "")
+    if len(tokens) > 5:
+        return None
+    if len(OPERATIONAL_FRAGMENT_TERMS_RE.findall(question or "")) < 2:
+        return None
+    if OPERATIONAL_DECISION_TERMS_RE.search(question or ""):
+        return None
+
+    answer = (
+        "Não tenho informação suficiente para responder com segurança. Reformula com a decisão que queres tomar e o contexto mínimo.\n"
+        "Exemplos:\n"
+        "- `Navio de 100 m vai fundear no Fundeadouro Norte: precisa de rebocadores?`\n"
+        "- `Navio em blackout/sem máquina, posição X, sem rebocadores perto: o que fazer de imediato?`\n"
+        "- `Navio para Tanquisado, LOA/calado, com/sem bowthruster: quantos rebocadores e onde posicionar?`"
+    )
+    return {
+        "answer": answer,
+        "sources": [],
+        "answer_origin": "operational_clarification",
     }
 
 
@@ -960,6 +1053,11 @@ def build_operational_chat_sources(
     plan: ChatExecutionPlan | None = None,
 ) -> list[dict]:
     """Assemble supplemental operational context sources for the chat RAG pipeline."""
+    knowledge_dir = _active_knowledge_dir() or "knowledge"
+    emergency_source = build_emergency_response_source(question, knowledge_dir)
+    if emergency_source:
+        return [emergency_source]
+
     recent_port_activity: dict | None = None
     sources: list[dict] = []
     needs_portal_activity = _needs_portal_activity_context(question, plan=plan)
@@ -988,7 +1086,6 @@ def build_operational_chat_sources(
     lisnave_rule_source = build_lisnave_operational_rule_source(question)
     if lisnave_rule_source:
         sources.append(lisnave_rule_source)
-    knowledge_dir = _active_knowledge_dir()
     safety_source = build_operational_safety_source(question, knowledge_dir)
     if safety_source:
         sources.append(safety_source)
@@ -1017,6 +1114,12 @@ def answer_direct_operational_query(
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     plan = plan or build_chat_execution_plan(question)
     clean_question = plan.normalized_question or _operational_lookup_key(question)
+    emergency_answer = _answer_emergency_response_direct(question, clean_question)
+    if emergency_answer:
+        return emergency_answer
+    unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
+    if unclear_answer:
+        return unclear_answer
     safety_answer = _answer_safety_hard_limit(question, clean_question)
     if safety_answer:
         return safety_answer

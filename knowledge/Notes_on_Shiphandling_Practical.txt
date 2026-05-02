@@ -1,0 +1,45 @@
+Fonte consultada: review/Notes-on-shiphandling.pdf (NOTES ON SHIPHANDLING, Pluzhnikov).
+Tipo de uso no PRAGtico: notas praticas de apoio a manobra. Esta sintese nao substitui IT locais, VTS, Piloto ou Comandante.
+
+1. Pivot point e rebocadores
+- O posicionamento dos rebocadores deve ser pensado em funcao do movimento pretendido, se o navio esta parado, com seguimento avante ou com seguimento a re, e onde fica o pivot point nesse momento.
+- Navio parado: um rebocador a proa e outro a popa, com forcas equivalentes e bons bracos, tende a produzir movimento lateral mais equilibrado.
+- Com seguimento avante: o pivot point desloca-se para vante; o rebocador de popa ganha muito braco e o da proa perde eficacia para rodar. Se ambos trabalharem forte, a popa pode sair mais depressa que a proa e criar guinada indesejada.
+- Com seguimento a re: o pivot point desloca-se para re; o rebocador da proa ganha braco e o da popa perde eficacia para rodar. A potencia tem de ser equilibrada para evitar guinada.
+- A regra pratica para Setubal/Tanquisado/Eco-Oil deve por isso manter proa e popa estabelecidos quando ha 3 rebocadores: esses dois dao controlo estrutural do navio; o terceiro trabalha ao costado para empurrar/travar corrente conforme a fase da manobra.
+
+2. Rebocadores ao costado
+- Rebocador ao costado junto do pivot point e bom para movimento lateral, mas pode ser fraco para criar guinada.
+- Rebocador afastado do pivot point tem melhor braco para controlar a guinada.
+- Em manobras com corrente e cais proximos, separar funcoes ajuda: proa e popa controlam extremidades/guinada; terceiro rebocador gera empurrar lateral e ajuda a vencer corrente.
+
+3. Seguranca de rebocadores
+- Rebocadores convencionais ficam vulneraveis a interacao, girting e excesso de velocidade do navio.
+- A eficacia e seguranca do reboque caem rapidamente se o navio deixa crescer velocidade. Velocidade baixa e comunicacao clara sobre maquina/propulsor sao essenciais.
+- Rebocador a trabalhar perto da popa deve ser informado do estado da maquina/propulsor. O risco de propulsor e interacao e parte da avaliacao.
+- ASD/tractor tugs tem maior capacidade de reposicionamento e podem mudar a analise, mas a recomendacao do bot deve ser conservadora se o tipo de rebocador nao estiver confirmado.
+
+4. Bow thruster
+- Bow thruster nao substitui automaticamente um rebocador em todos os contextos. A eficacia cai com seguimento avante e pode ser pequena face a vento/rajadas.
+- Bow thruster e mais util quando o navio esta parado ou com seguimento a re, porque ganha braco relativamente ao pivot point.
+- Em vento ou corrente, confirmar potencia e funcionamento real do bow thruster antes de reduzir meios externos.
+
+5. Vento
+- Ao reduzir velocidade perto do cais, o efeito do vento pode crescer muito e a resposta do navio pode degradar rapidamente.
+- Com seguimento avante, muitos navios tendem a meter a proa ao vento; com seguimento a re, a proa tende a cair do vento e a popa procura o vento. Trim, carga e superestrutura alteram este comportamento.
+- A forca do vento cresce de forma nao linear com a intensidade; rajadas podem ultrapassar margem aparente de bollard pull.
+
+6. Ferro / ancoras
+- A ancora e essencialmente equipamento de fundear em bom fundo e aguas abrigadas/semi-abrigadas; nao deve ser tratada como garantia absoluta para parar navio grande em movimento.
+- Em emergencia por perda de maquina/governo, largar ferro pode ser a acao critica se houver agua, fundo e espaco, mas deve ser feito com consciencia de velocidade, fundo, cabos, trafego e risco para o aparelho de fundear.
+- Para navios grandes, velocidade sobre o fundo muito baixa e controlo da quantidade de amarra sao criticos. Excesso de velocidade ou demasiada amarra em carga pode provocar esforcos perigosos no aparelho de fundear.
+- Dredging anchors pode ajudar a controlar rumo e velocidade em contextos especificos, mas exige conhecimento local de fundo, obstrucoes, resguardo e folga sob a quilha. Nao deve ser recomendado genericamente sem confirmacao local.
+
+7. Aplicacao local no PRAGtico
+- Em Tanquisado/Eco-Oil, com 3 rebocadores, considerar baseline operacional: 1 a proa + 1 a popa estabelecidos; terceiro ao costado para empurrar e contrariar corrente conforme vento, mare e bordo.
+- Com 4 rebocadores, o quarto pode empurrar ao costado se houver espaco sem criar ma vizinhanca; se nao houver, fica standby.
+- Com 5 rebocadores na Lisnave: proa a sul = 2 a proa + 1 a popa estabelecidos; popa a sul/proa a norte = 2 a popa + 1 a proa estabelecidos. Os restantes empurram/ficam standby conforme espaco e corrente.
+- Com 6 rebocadores: 2 estabelecidos a proa + 2 estabelecidos a popa, com 2 a empurrar ao costado, um de cada lado, quando o espaco permite.
+- Orientacao local: Tanquisado/Eco-Oil ficam proa a sul. Na Lisnave so D20/D21/D22 ficam proa a norte; cais Lisnave e D31/D32/D33 ficam proa a sul.
+- Em emergencia, a resposta do bot deve avaliar o cenario e comecar pela acao critica: perda de bow = ferro com 1 manilha na agua; cabos partidos = largar ferro/preparar novos cabos/lancha de cabos/rebocadores de atencao; cabo do reboque partido = cabo de amarracao do navio solto para o rebocador; blackout/sem maquina = preparar e largar ferro quando possivel; encalhe = sondar/avaliar mare/chamar rebocadores; colisao = largar ferro imediatamente, chamar rebocadores e esquivar-se se possivel.
+- Em qualquer emergencia: informar Setubal Port Control/VTS no VHF 73 e pilotos no canal 14; usar canal 71 em manobras Lisnave; governar pelos proprios meios sempre que possivel e nao deixar chegar a ponto de nao retorno.

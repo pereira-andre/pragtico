@@ -9,14 +9,17 @@ from typing import Any, Iterable
 from domain.berth_layout import BERTH_OPTIONS, canonicalize_berth_label
 
 
-LISNAVE_DOCK_BERTHS = {
+LISNAVE_NORTH_BOW_DOCK_BERTHS = {
     "Lisnave - Doca 20",
     "Lisnave - Doca 21",
     "Lisnave - Doca 22",
+}
+LISNAVE_SOUTH_BOW_DOCK_BERTHS = {
     "Lisnave - Doca 31",
     "Lisnave - Doca 32",
     "Lisnave - Doca 33",
 }
+LISNAVE_DOCK_BERTHS = LISNAVE_NORTH_BOW_DOCK_BERTHS | LISNAVE_SOUTH_BOW_DOCK_BERTHS
 LISNAVE_QUAY_BERTHS = {
     "Lisnave - Cais 0 A",
     "Lisnave - Cais 0 B",
@@ -79,11 +82,28 @@ def lisnave_berth_kind(label: str | None, berth_options: Iterable[str] | None = 
     return ""
 
 
+def lisnave_bow_orientation(label: str | None, berth_options: Iterable[str] | None = None) -> str:
+    """Return north/south bow orientation for known Lisnave berths."""
+    canonical = canonical_lisnave_label(label, berth_options=berth_options)
+    if canonical in LISNAVE_NORTH_BOW_DOCK_BERTHS:
+        return "north"
+    if canonical in LISNAVE_SOUTH_BOW_DOCK_BERTHS or canonical in LISNAVE_QUAY_BERTHS:
+        return "south"
+
+    compact = _compact_key(label)
+    if any(token in compact for token in ("d20", "d21", "d22")):
+        return "north"
+    if any(token in compact for token in ("d31", "d32", "d33", "c0a", "c0b", "c1a", "c1b", "c2a", "c2b", "c3a", "c3b")):
+        return "south"
+    return ""
+
+
 def route_lisnave_profile(origin: str | None, destination: str | None, berth_options: Iterable[str] | None = None) -> dict:
     origin_kind = lisnave_berth_kind(origin, berth_options=berth_options)
     destination_kind = lisnave_berth_kind(destination, berth_options=berth_options)
     canonical_origin = canonical_lisnave_label(origin, berth_options=berth_options)
     canonical_destination = canonical_lisnave_label(destination, berth_options=berth_options)
+    target_label = canonical_destination or canonical_origin or str(destination or origin or "").strip()
     return {
         "origin_kind": origin_kind,
         "destination_kind": destination_kind,
@@ -92,7 +112,8 @@ def route_lisnave_profile(origin: str | None, destination: str | None, berth_opt
         "involves_dock": origin_kind == "dock" or destination_kind == "dock",
         "involves_quay": origin_kind == "quay" or destination_kind == "quay",
         "target_kind": destination_kind or origin_kind,
-        "target_label": canonical_destination or canonical_origin or str(destination or origin or "").strip(),
+        "target_label": target_label,
+        "bow_orientation": lisnave_bow_orientation(target_label, berth_options=berth_options),
     }
 
 
@@ -138,11 +159,18 @@ def build_lisnave_rule_items(
                     ),
                 }
             )
+        orientation = profile.get("bow_orientation")
+        if orientation == "north":
+            orientation_detail = "D20, D21 e D22 ficam com proa a norte."
+        elif orientation == "south":
+            orientation_detail = "D31, D32 e D33, via Hidrolift, ficam com proa a sul."
+        else:
+            orientation_detail = "Só D20, D21 e D22 ficam com proa a norte; D31, D32 e D33 ficam com proa a sul."
         items.append(
             {
                 "status": "info",
                 "title": "Orientação Lisnave",
-                "detail": "Navios que entram nas docas Lisnave ficam com proa a norte.",
+                "detail": orientation_detail,
             }
         )
     elif profile["involves_quay"]:
@@ -184,7 +212,8 @@ def lisnave_rule_snippet() -> str:
             "- Limite dimensional crítico do Hidrolift: boca máxima admissível 32 m; um navio com boca superior a 32 m não cabe no Hidrolift e não deve seguir para D31/D32/D33.",
             "- Sonda de acesso ao Hidrolift: 5,5 m ao ZH; avaliar calado com a altura de água disponível e margem de segurança.",
             "- Entrada em doca é atravessada à corrente: dois rebocadores empurram, um de cada lado, e os restantes controlam popa/proa.",
-            "- Navios que entram nas docas ficam com proa a norte.",
+            "- Orientação: só D20, D21 e D22 ficam com proa a norte.",
+            "- D31, D32 e D33 ficam com proa a sul, tal como os cais Lisnave.",
             "- Cais Lisnave (C0A/C0B/C1A/C1B/C2A/C2B/C3A/C3B): navios ficam com proa a sul.",
             "- Navio pequeno para cais pode manobrar com 3 rebocadores; esta exceção não se aplica às docas.",
         ]

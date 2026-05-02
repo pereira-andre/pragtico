@@ -10,6 +10,7 @@ from core.operational_sources import answer_direct_operational_query
 from core.operational_test_suite import (
     _critical_berth_profile_text,
     _critical_json_source_text,
+    _critical_text_source_text,
     _missing_expected_tokens,
     critical_bot_test_matrix,
     critical_maneuver_checklist_text,
@@ -76,6 +77,11 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
 
     assert "Matriz crítica" in html
     assert "Eco-Oil na checklist" in html
+    assert "Perda de maquina: ferro e VTS" in html
+    assert "Emergencia: perda de bow" in html
+    assert "4.º rebocador: costado ou standby" in html
+    assert "D31/D32/D33 Lisnave com proa a sul" in html
+    assert "Notes on Shiphandling incorporado" in html
     assert "/validar-manobra Tanquisado com 2 rebocadores" in html
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html
@@ -107,6 +113,8 @@ def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
             runner = item.get("runner")
             if runner == "knowledge_json":
                 text = _critical_json_source_text(item["source_path"])
+            elif runner == "knowledge_text":
+                text = _critical_text_source_text(item["source_path"])
             elif runner == "berth_profile":
                 text = _critical_berth_profile_text(item["profile_query"])
             elif runner == "maneuver_checklist":

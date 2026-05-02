@@ -1521,6 +1521,7 @@ Regras:
 - Fontes com modo `document_companion` são factos curados pelo admin; usa-as como balizas fortes, mas não as copies como resposta pronta.
 - Fontes com modo `berth_profile` são perfis estruturados de cais/terminal; usa-as para normalizar dimensões, calados, janelas de manobra, restrições e orientação de rebocadores antes de sintetizar.
 - Fontes com modo `operational_safety_limits` são limites de suspensão de manobras; se indicarem suspensão por nevoeiro ou vento, começa pela conclusão de que as manobras ficam suspensas.
+- Fontes com modo `operational_emergency_response` são resposta prioritária de emergência. Se existirem, começa pela ação crítica do cenário, como largar ferro/preparar ferro, comunicar no VHF 73 e canal 14, e não respondas com regras normais de posicionamento de rebocadores.
 - Fontes com modo `operational_tug_guidance` são regra prática operacional para rebocadores; usa-as como baseline da recomendação. A IT-016 confirma ou agrava mínimos legais/DWT/carga perigosa, mas não deve reduzir essa regra prática.
 - Fontes com modo `operational_feedback_memory` são memória operacional revista por operadores; usa-as como sinal forte, mas reconcilia com documentos, perfis de cais e dados live. Nunca copies literalmente essa memória.
 - Fontes com modo `message_analysis` separam mensagens compostas em contexto e perguntas; responde a cada pergunta explícita e usa os factos declarativos como premissas.

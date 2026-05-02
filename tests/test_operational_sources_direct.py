@@ -5,7 +5,7 @@ import unittest
 from flask import Flask
 
 from core import services
-from core.operational_sources import answer_direct_operational_query
+from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 
 
 class FakeStore:
@@ -220,6 +220,64 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("TMS 2 - Posição A", answer)
         self.assertIn("dep-12345678", answer)
         self.assertIn("Navex Setúbal", answer)
+
+    def test_loss_of_engine_emergency_prioritizes_anchor_and_vts_channel(self) -> None:
+        answer = self._answer(
+            "O navio ficou sem máquina e ainda não tem rebocadores perto. O que aconselhas de imediato?"
+        )
+
+        self.assertIn("largar ferro imediatamente", answer)
+        self.assertIn("VHF 73", answer)
+        self.assertIn("canal 14", answer)
+        self.assertIn("canal 71", answer)
+        self.assertNotIn("Regra prática de posicionamento", answer)
+
+    def test_loss_of_bow_thruster_emergency_sets_one_shackle_anchor(self) -> None:
+        answer = self._answer("Se o navio perder bow na manobra, o que faz?")
+
+        self.assertIn("1 manilha na agua", answer)
+        self.assertIn("VHF 73", answer)
+        self.assertIn("canal 14", answer)
+
+    def test_parted_mooring_lines_emergency_prepares_lines_and_tugs(self) -> None:
+        answer = self._answer("Se partirem cabos na manobra, qual e a resposta imediata?")
+
+        self.assertIn("preparar novos cabos", answer)
+        self.assertIn("lancha de cabos", answer)
+        self.assertIn("rebocadores de atencao", answer)
+
+    def test_tug_line_parted_uses_ship_mooring_line_free_of_winch(self) -> None:
+        answer = self._answer("Se o cabo do reboque partir, o que fazemos?")
+
+        self.assertIn("cabo de amarracao do navio", answer)
+        self.assertIn("sem estar no guincho", answer)
+        self.assertIn("fazer firme ao reboque", answer)
+
+    def test_blackout_with_tug_reference_does_not_load_tug_guidance_source(self) -> None:
+        question = (
+            "Um navio teve um problema. Blackout, não tem o rebocadores pedidos "
+            "nem há nenhum por perto para o ajudar. O que aconselhas de imediato?"
+        )
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(question)
+            sources = build_operational_chat_sources(question)
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_emergency_response", payload["answer_origin"])
+        self.assertIn("Blackout/sem maquina", payload["answer"])
+        self.assertIn("VHF 73", payload["answer"])
+        retrieval_modes = [source.get("retrieval_mode") for source in sources]
+        self.assertIn("operational_emergency_response", retrieval_modes)
+        self.assertNotIn("operational_tug_guidance", retrieval_modes)
+
+    def test_terse_tug_anchor_fragment_asks_for_reformulation(self) -> None:
+        payload = answer_direct_operational_query("Navio reboques fundear")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_clarification", payload["answer_origin"])
+        self.assertIn("Reformula", payload["answer"])
+        self.assertIn("fundear", payload["answer"])
+        self.assertNotIn("GGp", payload["answer"])
 
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {

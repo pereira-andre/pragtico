@@ -264,7 +264,8 @@
       ],
       "maneuver_rules": [
         "Todas as manobras devem ser feitas proximo dos repontos de mare.",
-        "A regra de reponto e estrutural porque os cais estao perpendiculares a corrente."
+        "A regra de reponto e estrutural porque os cais estao perpendiculares a corrente.",
+        "Orientacao operacional: D20/D21/D22 ficam com proa a norte; cais Lisnave e D31/D32/D33 via Hidrolift ficam com proa a sul."
       ],
       "night_rules": [
         "Noite permitida apenas ate 280 m de LOA, sempre no reponto.",
@@ -278,7 +279,8 @@
       "restrictions": [
         "Navios com area velica consideravel devem manobrar com vento ate cerca de 20 km/h.",
         "O Cais de Descarga de Aco tem calado ND no documento e nao deve ser inferido.",
-        "Calado e aceitacao variam por cais/doca; nao tratar a LISNAVE como se tivesse um unico valor global."
+        "Calado e aceitacao variam por cais/doca; nao tratar a LISNAVE como se tivesse um unico valor global.",
+        "Nao aplicar proa a norte a todas as docas: D31/D32/D33 ficam proa a sul."
       ],
       "tug_guidance": [
         "O IT-014 nao fixa uma tabela propria de rebocadores; cruzar com IT-016 e com as caracteristicas do navio.",

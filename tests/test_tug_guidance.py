@@ -67,6 +67,8 @@ class TugOperationalGuidanceTests(unittest.TestCase):
     def test_tanquisado_departure_strong_east_wind_adds_side_push_guidance(self) -> None:
         snippet = self._snippet("A sair de Tanquisado com vento E forte, onde meto o reboque?")
 
+        self.assertIn("Tanquisado com 3 rebocadores", snippet)
+        self.assertIn("1 a proa e 1 a popa", snippet)
         self.assertIn("Tanquisado a sair com vento E forte", snippet)
         self.assertIn("1 rebocador a empurrar ao costado", snippet)
         self.assertIn("direcao de vento inferida: E", snippet)
@@ -79,6 +81,8 @@ class TugOperationalGuidanceTests(unittest.TestCase):
     def test_ecooil_departure_strong_west_wind_adds_side_push_guidance(self) -> None:
         snippet = self._snippet("A sair da Eco-Oil com vento W forte, onde meto o reboque?")
 
+        self.assertIn("Eco-Oil com 3 rebocadores", snippet)
+        self.assertIn("1 a proa e 1 a popa", snippet)
         self.assertIn("Eco-Oil a sair com vento W forte", snippet)
         self.assertIn("1 rebocador a empurrar ao costado", snippet)
 
@@ -100,6 +104,63 @@ class TugOperationalGuidanceTests(unittest.TestCase):
 
         self.assertIsNotNone(payload)
         self.assertIn("Recomendo 1 rebocador grande", payload["answer"])
+
+    def test_emergency_with_tug_reference_does_not_return_positioning_rules(self) -> None:
+        source = build_tug_operational_guidance_source(
+            "O navio ficou sem máquina e ainda não tem rebocadores perto. O que aconselhas de imediato?",
+            "knowledge",
+        )
+
+        self.assertIsNone(source)
+
+    def test_direct_tanquisado_positioning_keeps_bow_and_stern_established(self) -> None:
+        payload = answer_direct_operational_query(
+            "A sair de Tanquisado com vento E forte, onde meto o reboque?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("1 a proa e 1 a popa", payload["answer"])
+        self.assertIn("terceiro", payload["answer"])
+        self.assertIn("empurrar ao costado", payload["answer"])
+
+    def test_fourth_tug_pushes_alongside_or_standby_when_no_room(self) -> None:
+        payload = answer_direct_operational_query(
+            "Tenho 4 rebocadores na Tanquisado, onde meto o quarto reboque?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("4.º rebocador", payload["answer"])
+        self.assertIn("empurrar ao costado", payload["answer"])
+        self.assertIn("ma vizinhanca", payload["answer"])
+        self.assertIn("standby", payload["answer"])
+
+    def test_five_tugs_lisnave_bow_south_sets_two_forward_one_aft(self) -> None:
+        payload = answer_direct_operational_query(
+            "Na Lisnave com 5 rebocadores e navio com proa a sul, onde meto os rebocadores?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("2 rebocadores a proa", payload["answer"])
+        self.assertIn("1 rebocador a popa", payload["answer"])
+
+    def test_five_tugs_lisnave_stern_south_sets_two_aft_one_forward(self) -> None:
+        payload = answer_direct_operational_query(
+            "Na Lisnave com 5 rebocadores e navio com popa a sul, onde meto os rebocadores?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("2 rebocadores a popa", payload["answer"])
+        self.assertIn("1 rebocador a proa", payload["answer"])
+
+    def test_six_tugs_sets_two_forward_two_aft_and_two_pushing(self) -> None:
+        payload = answer_direct_operational_query(
+            "Com 6 rebocadores, onde meto os rebocadores?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("2 rebocadores a proa", payload["answer"])
+        self.assertIn("2 rebocadores a popa", payload["answer"])
+        self.assertIn("os outros 2 empurram ao costado", payload["answer"])
 
 
 if __name__ == "__main__":

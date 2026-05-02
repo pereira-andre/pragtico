@@ -494,10 +494,11 @@ os cabos de aço não fiquem quebradiços pela variação cíclica de tensões.
 REBOCADORES E ORIENTAÇÃO — CAIS E DOCAS LISNAVE:
 Navios que manobram para docas Lisnave têm sempre pelo menos 4 rebocadores.
 A entrada em doca é atravessada à corrente: ficam dois rebocadores a empurrar,
-um de cada lado, e os restantes a controlar a popa ou a proa. Navios que entram
-nas docas ficam com proa a norte. Navios que ficam nos cais Lisnave ficam com
-proa a sul. Se o navio for pequeno e a manobra for para um cais, pode haver
-3 rebocadores; esta exceção não se aplica às docas.
+um de cada lado, e os restantes a controlar a popa ou a proa. Só os navios que
+entram nas docas 20, 21 e 22 ficam com proa a norte. Nas docas 31, 32 e 33
+via Hidrolift, e nos cais Lisnave, os navios ficam com proa a sul. Se o navio
+for pequeno e a manobra for para um cais, pode haver 3 rebocadores; esta
+exceção não se aplica às docas.
 
 FUNDEADOURO NORTE:
 Ao fundear no Fundeadouro Norte, dar resguardo de 0,2 NM e evitar fundear na
