@@ -246,18 +246,42 @@ def _parse_planned_datetime(value: str | None) -> datetime | None:
     return planned_at
 
 
+def _parse_operational_wall_datetime(value: str | None) -> datetime | None:
+    clean_value = str(value or "").strip()
+    if not clean_value:
+        return None
+    clean_value = re.sub(r"(?:Z|[+-]\d{2}:?\d{2})$", "", clean_value)
+    try:
+        planned_at = datetime.fromisoformat(clean_value)
+    except ValueError:
+        return _parse_planned_datetime(value)
+    return planned_at.replace(tzinfo=LISBON_TZ)
+
+
+def _planned_datetime_for_validation(maneuver: dict) -> datetime | None:
+    planned_input_value = maneuver.get("planned_input_value")
+    if str(planned_input_value or "").strip():
+        return _parse_operational_wall_datetime(planned_input_value)
+    return _parse_planned_datetime(maneuver.get("planned_at") or maneuver.get("sort_at"))
+
+
 def _build_planned_window_checklist_item(maneuver: dict) -> dict | None:
     state = (maneuver.get("state") or maneuver.get("status") or "").strip().lower()
     if state not in {"pending", "approved", "pendente", "aprovada", "aprovado"}:
         return None
-    planned_value = (maneuver.get("planned_at") or "").strip()
-    planned_at = _parse_planned_datetime(planned_value)
+    planned_input_value = (maneuver.get("planned_input_value") or "").strip()
+    planned_value = planned_input_value or (maneuver.get("planned_at") or "").strip()
+    planned_at = (
+        _parse_operational_wall_datetime(planned_input_value)
+        if planned_input_value
+        else _parse_planned_datetime(planned_value)
+    )
     if not planned_at:
         return None
     now = datetime.now().astimezone()
     if planned_at.astimezone(now.tzinfo) >= now:
         return None
-    planned_label = _local_iso_to_label(planned_value) or planned_value
+    planned_label = _format_local_datetime(planned_at) or _local_iso_to_label(planned_value) or planned_value
     return _build_checklist_item(
         "caution",
         "Janela planeada",
@@ -793,7 +817,7 @@ def _tug_check(port_call: dict, maneuver: dict, weather_check: dict | None = Non
 
 
 def _build_validation_operational_assessment(port_call: dict, maneuver: dict, checklist: list[dict]) -> dict:
-    planned_at = _parse_planned_datetime(maneuver.get("planned_at") or maneuver.get("sort_at"))
+    planned_at = _planned_datetime_for_validation(maneuver)
     phases = _validation_berth_phases(maneuver)
     profile = _combined_phase_profile(phases) or _berth_profile_for_validation(maneuver)
     checks: list[dict] = []
