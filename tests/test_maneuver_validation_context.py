@@ -33,6 +33,7 @@ def test_validation_answer_prioritizes_documental_alerts_without_history() -> No
     )
 
     assert "Parecer operacional" in answer
+    assert "Decisão: NÃO AVANÇAR" in answer
     assert "Pontos críticos verificados" in answer
     assert "Base documental acionada: IT-010_Tanquisado.txt" in answer
     assert "Recomendação operacional" in answer
@@ -203,6 +204,7 @@ def test_validation_answer_does_not_call_applied_berth_rules_alerts(monkeypatch)
     )
 
     assert "marcação original operacionalmente coerente" in answer
+    assert "Decisão: NÃO AVANÇAR" in answer
     assert "validação condicionada por 2 alerta" not in answer
     assert "Alertas operacionais pendentes" in answer
     assert "Janela planeada:" in answer

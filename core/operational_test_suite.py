@@ -278,7 +278,7 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": (
             "Base documental acionada: IT-010_Tanquisado.txt",
             "Parecer operacional",
-            "Não validar como está",
+            "Decisão: NÃO AVANÇAR",
             "A marcação acerta a janela de reponto",
             "Recomendação operacional",
             "histórico não usado como regra principal",

@@ -841,19 +841,27 @@ def _build_validation_operational_assessment(port_call: dict, maneuver: dict, ch
     block_count = sum(1 for item in checks if item.get("status") == "block")
     caution_count = sum(1 for item in checks if item.get("status") == "caution")
     if past_window:
-        verdict = "Não validar como está"
-        recommendation = "Atualizar a hora antes de validar. A leitura abaixo serve para perceber se a marcação original fazia sentido."
+        decision = "NÃO AVANÇAR"
+        verdict = "Não avançar como está"
+        if block_count or caution_count:
+            recommendation = "Atualizar a hora e resolver/confirmar os pontos assinalados antes de validar."
+        else:
+            recommendation = "Atualizar a hora antes de validar; a marcação original era operacionalmente coerente nos pontos críticos."
     elif block_count:
-        verdict = "Não validar sem corrigir"
+        decision = "NÃO AVANÇAR"
+        verdict = "Não avançar sem corrigir"
         recommendation = "Há pelo menos um bloqueio operacional/documental; corrigir hora, calado, meteo ou meios antes de aprovar."
     elif caution_count:
+        decision = "AVANÇAR SÓ COM CONFIRMAÇÃO"
         verdict = "Validável só com confirmação"
         recommendation = "A manobra pode ser possível, mas depende dos pontos assinalados; confirmar antes de aprovar."
     else:
+        decision = "OK PARA AVANÇAR"
         verdict = "Parecer favorável"
-        recommendation = "A marcação está coerente com maré, perfil do cais, meios previstos e condições consultadas."
+        recommendation = "A checklist operacional está coerente com maré, perfil do cais, meios previstos e condições consultadas."
 
     return {
+        "decision": decision,
         "verdict": verdict,
         "recommendation": recommendation,
         "checks": checks,
@@ -903,6 +911,7 @@ def _format_operational_opinion_answer(
 
     lines = [
         "Parecer operacional",
+        f"- Decisão: {assessment['decision']}.",
         f"- {assessment['verdict']}: {assessment['recommendation']}",
         "",
         "Pontos críticos verificados",
