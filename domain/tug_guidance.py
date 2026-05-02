@@ -291,6 +291,19 @@ def _matrix_rules(
     return list(dict.fromkeys(rules))
 
 
+def _berth_minimum_rules(guidance: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    rules = []
+    entity_names = set(context.get("entity_names") or [])
+    for item in guidance.get("berth_minimums") or []:
+        required_entities = set(item.get("required_entities") or [])
+        if required_entities and not (required_entities & entity_names):
+            continue
+        note = str(item.get("note") or "")
+        if note:
+            rules.append(note)
+    return list(dict.fromkeys(rules))
+
+
 def _specific_positioning_rules(guidance: dict[str, Any], context: dict[str, Any]) -> list[str]:
     rules = []
     for item in guidance.get("berth_lateral_wind_positioning_rules") or []:
@@ -335,6 +348,7 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
 
     context = _extract_context(question, guidance)
     applicable_rules = []
+    applicable_rules.extend(_berth_minimum_rules(guidance, context))
     applicable_rules.extend(_matrix_rules(guidance, context))
     no_bow_rule = _minimum_no_bow_rule(question, context["loa"], context["draft"], guidance)
     if no_bow_rule:

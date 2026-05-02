@@ -749,6 +749,18 @@ def _phase_dimension_draft_checks(
     return checks
 
 
+def _critical_berth_tug_minimum(maneuver: dict) -> tuple[int, str]:
+    labels = " ".join(str(maneuver.get(key) or "") for key in ("origin", "destination"))
+    clean = _operational_lookup_key(labels)
+    if "tanquisado" in clean:
+        return 3, "mínimo prático para Tanquisado"
+    if "eco oil" in clean or "ecooil" in clean:
+        return 3, "mínimo prático para Eco-Oil"
+    if "lisnave" in clean or "mitrena" in clean:
+        return 3, "mínimo prático para Lisnave"
+    return 0, ""
+
+
 def _tug_check(port_call: dict, maneuver: dict, weather_check: dict | None = None) -> dict:
     tug_count_raw = str(maneuver.get("tug_count") or "").strip()
     tug_count = int(tug_count_raw) if tug_count_raw.isdigit() else 0
@@ -785,6 +797,11 @@ def _tug_check(port_call: dict, maneuver: dict, weather_check: dict | None = Non
     if weather_check and weather_check.get("status") == "caution" and required < 1:
         required = 1
         reason = "vento relevante e cais/corrente exigem margem"
+    berth_minimum, berth_reason = _critical_berth_tug_minimum(maneuver)
+    if berth_minimum and required < berth_minimum:
+        required = berth_minimum
+        sizing = "adequados ao porte"
+        reason = berth_reason
     maneuver_type = (maneuver.get("type") or "").strip().lower()
     shift_note = (
         " Mudança: validar o mesmo plano como largada da origem e atracação no destino."

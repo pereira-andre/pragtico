@@ -76,7 +76,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
 
     assert "Matriz crítica" in html
     assert "Eco-Oil na checklist" in html
-    assert "/validar-manobra Tanquisado sem histórico" in html
+    assert "/validar-manobra Tanquisado com 2 rebocadores" in html
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html
     assert "/validar-manobra mudança" in html

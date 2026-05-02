@@ -17,6 +17,23 @@ class TugOperationalGuidanceTests(unittest.TestCase):
 
         self.assertIn("Lisnave acima de 100 m ate 150 m: 3 rebocadores", snippet)
 
+    def test_critical_south_channel_berths_use_three_tugs_minimum(self) -> None:
+        snippet = self._snippet("Navio de 101 m com bowthruster para Tanquisado precisa de quantos rebocadores?")
+
+        self.assertIn("Tanquisado: usar sempre no minimo 3 rebocadores", snippet)
+
+        ecooil_snippet = self._snippet("Navio pequeno com bowthruster para Eco-Oil leva quantos rebocadores?")
+        self.assertIn("Eco-Oil: usar sempre no minimo 3 rebocadores", ecooil_snippet)
+
+    def test_direct_answer_uses_tanquisado_three_tugs_minimum(self) -> None:
+        payload = answer_direct_operational_query(
+            "Navio de 101 m com bowthruster para Tanquisado precisa de quantos rebocadores?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("Recomendo 3 rebocadores", payload["answer"])
+        self.assertIn("Tanquisado: usar sempre no minimo 3 rebocadores", payload["answer"])
+
     def test_roro_over_220_with_strong_north_wind_uses_four_tugs(self) -> None:
         snippet = self._snippet("Quantos reboques para RORO de 230 m a entrar com vento norte forte?")
 

@@ -142,7 +142,7 @@ def test_tanquisado_entry_two_hours_before_reponto_is_valid_tide_window(monkeypa
             "planned_input_value": "2026-04-30T19:12",
             "origin": "Sines",
             "destination": "Tanquisado (lado jusante)",
-            "tug_count": "2",
+            "tug_count": "3",
             "constraint_codes": [],
         },
         [],
@@ -152,6 +152,47 @@ def test_tanquisado_entry_two_hours_before_reponto_is_valid_tide_window(monkeypa
     assert tide_check["status"] == "ok"
     assert "A marcação acerta a janela de reponto" in tide_check["detail"]
     assert "não cai suficientemente" not in tide_check["detail"]
+
+
+def test_tanquisado_entry_with_two_tugs_blocks_on_minimum(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-tanquisado",
+            "vessel_type": "Graneis liquidos",
+            "vessel_loa_m": "101.4",
+            "vessel_beam_m": "16.6",
+            "vessel_gt_t": "4500",
+            "vessel_max_draft_m": "7.5",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "entry-tanquisado",
+            "type": "entry",
+            "state": "pending",
+            "planned_at": "2026-05-02T14:15:00+01:00",
+            "planned_input_value": "2026-05-02T14:15",
+            "origin": "Sines",
+            "destination": "Tanquisado (lado jusante)",
+            "tug_count": "2",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tug_check = next(item for item in assessment["checks"] if item["title"] == "Rebocadores")
+    assert assessment["decision"] == "NÃO AVANÇAR"
+    assert tug_check["status"] == "block"
+    assert "mínimo prático para Tanquisado" in tug_check["detail"]
 
 
 def test_validation_answer_does_not_call_applied_berth_rules_alerts(monkeypatch) -> None:
@@ -185,7 +226,7 @@ def test_validation_answer_does_not_call_applied_berth_rules_alerts(monkeypatch)
         "planned_input_value": "2026-04-30T19:12",
         "origin": "Sines",
         "destination": "Tanquisado (lado jusante)",
-        "tug_count": "2",
+        "tug_count": "3",
         "constraint_codes": [],
     }
     checklist, _summary = _build_maneuver_analysis_checklist(

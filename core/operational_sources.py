@@ -917,6 +917,13 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
     ]
     if len(applicable) > 1:
         answer_lines.append("Outras regras relevantes: " + " ".join(applicable[1:3]))
+    if positioning and re.search(r"\b(onde|posicion|meter|colocar|proa|popa|costado)\b", clean_question):
+        specific_positioning = [
+            item
+            for item in positioning
+            if "Tanquisado a sair" in item or "Eco-Oil a sair" in item
+        ]
+        answer_lines.append("Posicionamento: " + " ".join((specific_positioning or positioning)[:2]))
     if "Prioridade:" in snippet:
         answer_lines.append(
             "Confirma DWT, carga perigosa, estado carregado/vazio e thrusters; a IT-016 pode agravar mínimos, mas não deve reduzir esta recomendação prática."

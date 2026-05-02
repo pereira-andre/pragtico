@@ -8,6 +8,29 @@
     "Se faltarem DWT, carga perigosa, estado carregado/vazio, bow/stern thruster, vento, calado ou bordo de atracacao, responder por cenarios e dizer exatamente o que falta confirmar.",
     "Navios pequenos ate 120 m usam normalmente rebocadores pequenos. Acima disso, assumir rebocadores grandes salvo indicacao operacional em contrario. Excecao pratica: navio ate 120 m com calado >= 8 m deve usar rebocador grande de cerca de 35 t, nao rebocador pequeno de 25 t."
   ],
+  "berth_minimums": [
+    {
+      "required_entities": [
+        "Tanquisado"
+      ],
+      "tugs": 3,
+      "note": "Tanquisado: usar sempre no minimo 3 rebocadores em entrada, saida ou mudanca, independentemente de bowthruster, navio pequeno ou condicoes aparentemente favoraveis. E uma margem operacional de seguranca para cais/corrente atravessados."
+    },
+    {
+      "required_entities": [
+        "Eco-Oil"
+      ],
+      "tugs": 3,
+      "note": "Eco-Oil: usar sempre no minimo 3 rebocadores em entrada, saida ou mudanca, independentemente de bowthruster, navio pequeno ou condicoes aparentemente favoraveis. E uma margem operacional de seguranca para cais/corrente atravessados."
+    },
+    {
+      "required_entities": [
+        "Lisnave"
+      ],
+      "tugs": 3,
+      "note": "Lisnave: usar sempre no minimo 3 rebocadores em entrada, saida ou mudanca; docas Lisnave continuam a exigir pelo menos 4 rebocadores quando aplicavel."
+    }
+  ],
   "weather_rules": [
     "Quando ha nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada. Em Setubal e comum dizer-se localmente que depois do nevoeiro vem vento SW forte, mas isto e conhecimento contextual e nao deve ser usado sozinho para dimensionar rebocadores.",
     "Com vento sustentado ou rajada superior a 30 kt, todas as manobras ficam suspensas por seguranca; depois de suspensao por vento, retomar apenas quando estiver abaixo de 25 kt.",
