@@ -3,6 +3,7 @@
 import logging
 import re
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import session
 
@@ -24,6 +25,7 @@ from storage import can_plan_followup_maneuver_status, format_constraint_labels
 from storage.maneuver_case_helpers import build_case_environment_signature
 
 logger = logging.getLogger(__name__)
+LISBON_TZ = ZoneInfo("Europe/Lisbon")
 
 
 def _select_validation_maneuver(scale_context: dict, port_call: dict, target: dict) -> tuple[dict | None, list[dict]]:
@@ -240,7 +242,7 @@ def _parse_planned_datetime(value: str | None) -> datetime | None:
     except ValueError:
         return None
     if planned_at.tzinfo is None:
-        planned_at = planned_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
+        planned_at = planned_at.replace(tzinfo=LISBON_TZ)
     return planned_at
 
 
@@ -287,6 +289,8 @@ def _format_kts(value: float | None) -> str:
 def _format_local_datetime(value: datetime | None) -> str:
     if not value:
         return "--"
+    if value.tzinfo is not None:
+        value = value.astimezone(LISBON_TZ)
     return value.strftime("%d/%m/%Y %H:%M")
 
 
