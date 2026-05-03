@@ -12,7 +12,7 @@ Estado:
 
 Notas de leitura:
 - `knowledge/companions/*.json` são companions associados aos TXT homónimos. Nesta fase ficam ligados ao mesmo original do TXT.
-- `berth_profiles.json`, `tug_operational_guidance.json`, `operational_safety_limits.json` e `practice_maneuver_experience.json` são conhecimento estruturado usado fora do RAG textual principal.
+- `berth_profiles.json`, `tug_operational_guidance.json`, `operational_safety_limits.json` e `practice_maneuver_experience.json` são conhecimento estruturado usado fora do conhecimento textual principal.
 - Esta matriz ainda não confirma que os valores estão corretos. Serve para saber que fonte comparar com que output.
 - Marés: não foi adicionado ficheiro original de marés nesta matriz; ficam tratadas como corretas por confirmação do utilizador.
 
@@ -21,13 +21,13 @@ Notas de leitura:
 | Original em `review` | Processado em `knowledge` | Estado | Observações |
 |---|---|---|---|
 | `Manobras Pratica.xlsx` | `practice_maneuver_experience.json` | Direto | Bloco auditado em `AUDITORIA_PRACTICE_MANEUVER_EXPERIENCE.md`; JSON regenerado com canceladas/abortadas excluídas e caso especial `3 x 29/18` tratado como 3 barcaças amarradas. |
-| `chat_bot.txt` | `whatsapp_chats/chat_bot.txt` | Direto | Ficheiros idênticos por comparação binária (`cmp`). Histórico/conversa de validação operacional, não documento normativo. |
+| `chat_sistema.txt` | `whatsapp_chats/chat_sistema.txt` | Direto | Ficheiros idênticos por comparação binária (`cmp`). Histórico/conversa de validação operacional, não documento normativo. |
 | `Notas Pilotagem.docx` | `Notas_Pilotagem.txt`; `companions/Notas_Pilotagem.json` | Combinado | O TXT declara fonte combinada: notas pessoais sobre carta + notas de pilotagem. |
 | `Notas Pessoais Carta Setubal.docx` | `Notas_Pilotagem.txt`; `companions/Notas_Pilotagem.json` | Combinado | Contém proas, distâncias, resguardos, canais e bacias de manobra. |
 | `np67-west-coast-of-spain-and-portugal-9-edition-2005-pr_0cd321a0a1aa2a98e387b5cbabab9ff4.pdf` | `AdmiraltyPilot_PortoSetubal.txt`; `companions/AdmiraltyPilot_PortoSetubal.json` | Direto parcial / extraído | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; fonte histórica 2004/2005, várias distâncias corrigidas. |
 | `Projeto de Regulamento de Tarifas da APSS.pdf` | `Tarifas_APSS_2024.txt`; `companions/Tarifas_APSS_2024.json` | Direto parcial / extraído | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; tarifas principais conferidas e cabeçalho ajustado para indicar que o original é projeto. |
 | `Regras Especiais.doc` | `IT-018_NormasEspeciais.txt`; `companions/IT-018_NormasEspeciais.json`; `operational_safety_limits.json` | Fonte paralela / legado | Bloco auditado em `AUDITORIA_IT018_CONDICOES_LIMITES.md`. O DOC confirma a base do IT-018, mas também contém dados antigos de terminais, fundeadouros e notas práticas que não substituem ITs atuais. |
-| `PILOTOS INSTRUÇÕES DE TRABALHO/CURSO PRATICAGEM SETÚBAL.pdf` | Sem processado direto localizado | Sem par direto | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; PDF imagem, OCR parcial possível, sem TXT/JSON diretamente ligado ao RAG atual. |
+| `PILOTOS INSTRUÇÕES DE TRABALHO/CURSO PRATICAGEM SETÚBAL.pdf` | Sem processado direto localizado | Sem par direto | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; PDF imagem, OCR parcial possível, sem TXT/JSON diretamente ligado ao conhecimento indexavel atual. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/IT-005_RAM_T_Multiusos_Z1.pdf` | `IT-005_TMS1.txt`; `companions/IT-005_TMS1.json`; `berth_profiles.json`; `Porto_Setubal_Terminais_Cais.txt` | Direto + derivado | Bloco auditado em `AUDITORIA_TERMINAIS_INVENTARIO_TXT.md`; perfil `tms1` conferido. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/IT-006_RAM_T_Multiusos_Z2.pdf` | `IT-006_TMS2.txt`; `companions/IT-006_TMS2.json`; `berth_profiles.json`; `Porto_Setubal_Terminais_Cais.txt` | Direto + derivado | Bloco auditado em `AUDITORIA_TERMINAIS_INVENTARIO_TXT.md`; perfil `tms2` conferido. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/IT-007_RAM_T_Autoeuropa.pdf` | `IT-007_AutoEuropa.txt`; `companions/IT-007_AutoEuropa.json`; `berth_profiles.json`; `Porto_Setubal_Terminais_Cais.txt` | Direto + derivado | Bloco auditado em `AUDITORIA_TERMINAIS_INVENTARIO_TXT.md`; perfil `auto_europa` adicionado/conferido. |
@@ -49,7 +49,7 @@ Notas de leitura:
 | `PILOTOS INSTRUÇÕES DE TRABALHO/IT-062 - Cais da Teporset.pdf` | `IT-062_Teporset.txt`; `companions/IT-062_Teporset.json`; `berth_profiles.json`; `Porto_Setubal_Terminais_Cais.txt`; `Marcar_manobra_repontos_mare.txt` | Direto + derivado | Bloco auditado em `AUDITORIA_TERMINAIS_INVENTARIO_TXT.md`; perfil `teporset` conferido e nota prática do baixo Termitrena/Teporset acrescentada. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/P-13_Planeamento e Gestao Portuaria.pdf` | `P-13_PlaneamentoGestao.txt`; `companions/P-13_PlaneamentoGestao.json` | Direto | Bloco auditado em `AUDITORIA_DOCUMENTOS_OPERACIONAIS_GERAIS.md`; prioridades pelo arco de 8 NM conferidas. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/P-19_Pilotagem.pdf` | `P-19_Pilotagem.txt`; `companions/P-19_Pilotagem.json`; possivelmente `Condicoes_Meteorologicas_Prioridades.txt` | Direto + derivado possível | Bloco auditado em `AUDITORIA_DOCUMENTOS_OPERACIONAIS_GERAIS.md`; aceitação/nomeação/comunicações conferidas. |
-| `PILOTOS INSTRUÇÕES DE TRABALHO/Protocolo operacional.pdf` | `IT-016_Rebocadores.txt`; `companions/IT-016_Rebocadores.json`; possivelmente `tug_operational_guidance.json` | Combinado | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; OCR/visual confirma tabela documental `5/6/8 nós`, mantendo resposta geral do bot normalizada em `6 nós` por validação prática. |
+| `PILOTOS INSTRUÇÕES DE TRABALHO/Protocolo operacional.pdf` | `IT-016_Rebocadores.txt`; `companions/IT-016_Rebocadores.json`; possivelmente `tug_operational_guidance.json` | Combinado | Bloco auditado em `AUDITORIA_FONTES_PARCIAIS_SEM_PAR_DIRETO.md`; OCR/visual confirma tabela documental `5/6/8 nós`, mantendo resposta geral do sistema normalizada em `6 nós` por validação prática. |
 | `PILOTOS INSTRUÇÕES DE TRABALHO/RG_14_Regulamento Interno Pilotagem.pdf` | `RG-14_RegulamentoInterno.txt`; `companions/RG-14_RegulamentoInterno.json` | Direto | Bloco auditado em `AUDITORIA_DOCUMENTOS_OPERACIONAIS_GERAIS.md`; regras operacionais conferidas. |
 
 ## 2. Ficheiros em `knowledge` sem original direto localizado em `review`
@@ -73,7 +73,7 @@ Notas de leitura:
 3. `CURSO PRATICAGEM SETÚBAL.pdf` parece digitalizado ou imagem: `pdftotext` não extraiu texto útil. Para comparação de conteúdo será preciso OCR ou validação visual/manual. O `Protocolo operacional.pdf` também é imagem, mas a regra de 6 kts já foi validada operacionalmente.
 4. Resolvido parcialmente: `Regras Especiais.doc` foi auditado contra `IT-018_NormasEspeciais.txt`. É fonte paralela/legada; confirma a base IT-018, mas não deve sobrepor ITs atuais quando contém valores antigos.
 5. `Condicoes_Meteorologicas_Prioridades.txt`, `Marcar_manobra_repontos_mare.txt`, `tug_operational_guidance.json` e `operational_safety_limits.json` devem ser tratados como conhecimento prático/sintético: quando não houver fonte documental única, a validação correta passa por confirmação tua.
-6. Resolvido: perguntas truncadas nos companions foram corrigidas em `AUDITORIA_HIGIENE_COMPANIONS_RAG.md`, sem alteração de respostas factuais.
+6. Resolvido: perguntas truncadas nos companions foram corrigidas em `AUDITORIA_HIGIENE_COMPANIONS_conhecimento indexavel.md`, sem alteração de respostas factuais.
 
 ## 4. Ordem recomendada para a validação seguinte
 

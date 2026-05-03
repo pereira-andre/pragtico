@@ -84,5 +84,5 @@ Data da auditoria: 2026-05-01
 - `jq empty` nos companions/JSON alterados.
 - Pesquisa por valores legados: não ficaram referências problemáticas a
   Termitrena antiga (`10,50`, `10,60`, `8,2 m`) nem a rebocadores `5/6 nós`.
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`

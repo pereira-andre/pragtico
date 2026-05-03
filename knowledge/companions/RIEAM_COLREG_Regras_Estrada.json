@@ -1,0 +1,78 @@
+{
+  "document": "RIEAM_COLREG_Regras_Estrada.txt",
+  "title": "RIEAM / COLREG - REGRAS DA ESTRADA NO MAR",
+  "aliases": [
+    "RIEAM_COLREG_Regras_Estrada.txt",
+    "RIEAM",
+    "COLREG",
+    "regras da estrada no mar",
+    "Regulamento Internacional para Evitar Abalroamentos no Mar",
+    "anti colisao",
+    "abalroamento"
+  ],
+  "summary": "Síntese prática do RIEAM/COLREG 1972, 9. edição anotada 2025, com as regras centrais de vigia, velocidade segura, risco de abalroamento, manobras, canais estreitos, esquemas de separação, navios a vista, visibilidade reduzida, luzes/marcas e sinais.",
+  "key_points": [
+    "Regra 5: manter vigia visual e auditiva permanente, usando todos os meios adequados às circunstâncias.",
+    "Regra 6: manter velocidade de segurança que permita agir eficazmente e parar em distância adequada.",
+    "Regra 7: na dúvida sobre risco de abalroamento, assumir que o risco existe.",
+    "Regra 8: manobras para evitar abalroamento devem ser claras, amplas, cedo e controladas até o outro navio estar passado e safo.",
+    "Regra 13: o navio que alcança deve sempre afastar-se do caminho do navio alcançado.",
+    "Regra 14: em roda a roda, ambos os navios de propulsão mecânica guinam para estibordo.",
+    "Regra 15: em rumos cruzados, o navio que vê o outro por estibordo afasta-se e evita cortar a proa.",
+    "Regra 19: em visibilidade reduzida, velocidade segura, máquinas prontas, radar bem usado e extrema precaução."
+  ],
+  "faq": [
+    {
+      "question": "Qual é a regra básica se houver dúvida sobre risco de abalroamento?",
+      "answer": "Pela Regra 7, se houver dúvida deve considerar-se que existe risco de abalroamento. A partir daí, a manobra deve seguir os princípios da Regra 8: clara, ampla, com antecedência e controlada até o outro navio estar passado e safo.",
+      "keywords": [
+        "risco",
+        "abalroamento",
+        "duvida",
+        "regra 7",
+        "regra 8"
+      ]
+    },
+    {
+      "question": "Dois navios de máquina estão roda a roda. O que manda o RIEAM?",
+      "answer": "Pela Regra 14, se houver risco de abalroamento, ambos devem guinar para estibordo para passar bombordo com bombordo. Se houver dúvida se a situação é roda a roda, deve-se assumir que sim e manobrar de acordo.",
+      "keywords": [
+        "roda a roda",
+        "estibordo",
+        "bombordo",
+        "regra 14"
+      ]
+    },
+    {
+      "question": "Estou em rumos cruzados e vejo o outro navio por estibordo. Quem manobra?",
+      "answer": "Pela Regra 15, o navio que vê o outro por estibordo deve afastar-se do caminho dele e, se as circunstâncias permitirem, evitar cortar-lhe a proa. A manobra deve ser cedo, clara e franca, conforme Regras 8 e 16.",
+      "keywords": [
+        "rumos cruzados",
+        "estibordo",
+        "cortar proa",
+        "regra 15"
+      ]
+    },
+    {
+      "question": "Sou o navio com prioridade. Posso manobrar?",
+      "answer": "Pela Regra 17, deve manter rumo e velocidade no início. Pode manobrar se ficar evidente que o navio sem prioridade não está a fazer a manobra adequada; deve manobrar se o abalroamento já não puder ser evitado apenas pela manobra do outro navio.",
+      "keywords": [
+        "prioridade",
+        "manobra",
+        "rumo",
+        "velocidade",
+        "regra 17"
+      ]
+    },
+    {
+      "question": "Em nevoeiro, que devo fazer se oiço sinal de outro navio para vante?",
+      "answer": "Pela Regra 19, reduzir a velocidade ao mínimo necessário para governar, anular seguimento se necessário e navegar com extrema precaução até o risco passar. Máquinas devem estar prontas a manobrar imediatamente.",
+      "keywords": [
+        "nevoeiro",
+        "visibilidade reduzida",
+        "sinal sonoro",
+        "regra 19"
+      ]
+    }
+  ]
+}

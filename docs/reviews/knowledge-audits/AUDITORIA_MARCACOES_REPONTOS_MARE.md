@@ -79,11 +79,11 @@ Data da auditoria: 2026-05-01
 ## Validações executadas
 
 - `jq empty knowledge/companions/Marcar_manobra_repontos_mare.json knowledge/berth_profiles.json knowledge/evals/golden_operational_companion_evals.json`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`
 
 Resultados:
-- evals RAG locais: `8/8` passaram;
+- validacoes locais de recuperacao documental: `8/8` passaram;
 - suíte completa: `85 passed, 6 subtests passed`.
 
 ## Confirmações do André

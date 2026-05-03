@@ -66,12 +66,12 @@ Data da auditoria: 2026-05-01
 ## Confirmação do utilizador
 
 - Confirmado pelo utilizador: manter `1,0 km` como limiar técnico de
-  visibilidade live para o bot tratar como "visibilidade reduzida/nevoeiro",
+  visibilidade live para o sistema tratar como "visibilidade reduzida/nevoeiro",
   mesmo quando a meteorologia não diga literalmente "nevoeiro".
 
 ## Validações
 
 - `jq empty` nos JSON alterados.
 - `python3 -m py_compile domain/operational_safety.py core/operational_sources.py`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`

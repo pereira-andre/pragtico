@@ -86,6 +86,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Caracteristica da Boia 1CN" in html
     assert "Setubal usa IALA A" in html
     assert "Historia e cultura de Setubal" in html
+    assert "RIEAM/COLREG regras da estrada" in html
     assert "/validar-manobra Tanquisado com 2 rebocadores" in html
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html

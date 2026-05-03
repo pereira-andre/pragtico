@@ -34,6 +34,9 @@ static/styles.css.bak
 bot_report*
 TODO*
 docs/
+!docs/
+!docs/reviews/
+!docs/reviews/**/*.md
 tests/
 scripts/
 !tests/

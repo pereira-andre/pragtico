@@ -1,11 +1,11 @@
-# Auditoria - higiene dos companions RAG
+# Auditoria - higiene dos companions conhecimento indexavel
 
 Data da auditoria: 2026-05-01
 
 ## Objetivo
 
 Validar perguntas truncadas nos ficheiros `knowledge/companions/*.json`, porque
-estas perguntas são usadas como contexto de recuperação e podem degradar o RAG
+estas perguntas são usadas como contexto de recuperação e podem degradar o conhecimento indexavel
 mesmo quando a resposta factual está correta.
 
 ## Correções aplicadas
@@ -40,5 +40,5 @@ pergunta completa mas não no companion truncado, por exemplo `auto/europa`,
 - Varredura global: nenhuma pergunta FAQ em `knowledge/companions/*.json`
   ficou sem ponto de interrogação final.
 - `git diff --check`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`

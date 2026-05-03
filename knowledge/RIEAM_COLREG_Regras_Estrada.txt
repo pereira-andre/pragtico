@@ -1,0 +1,80 @@
+DOCUMENTO: RIEAM / COLREG - REGRAS DA ESTRADA NO MAR
+FONTE: Regulamento Internacional para Evitar Abalroamentos no Mar - 1972 (RIEAM), 9. edicao anotada, Instituto Hidrografico, 2025.
+AMBITO: Resumo pratico das regras centrais de manobra, navegacao, luzes, marcas e sinais.
+
+NOTA DE USO
+Este documento e uma sintese operacional. O texto oficial do RIEAM/COLREG e as regras publicadas pela autoridade competente fazem fe. Em aguas portuarias, fundeadouros, barras, canais, terminais e manobras locais, aplicar tambem regulamentos do porto, Capitania, VTS e instrucoes de pilotagem.
+
+IDEIA CENTRAL
+O RIEAM/COLREG e o conjunto de regras internacionais para evitar abalroamentos no mar. Funciona como as "regras da estrada" da navegacao: define vigia, velocidade segura, avaliacao de risco, manobras, responsabilidades entre navios, conduta em canais e esquemas de separacao, luzes/marcas e sinais sonoros/luminosos.
+
+REGRAS FUNDAMENTAIS
+- Regra 1 - Campo de aplicacao: aplica-se a todos os navios no alto mar e em aguas ligadas ao mar praticaveis pela navegacao maritima. Regras especiais locais de portos, rios, radas ou vias interiores podem complementar o regulamento.
+- Regra 2 - Responsabilidade: nenhuma regra desculpa negligencia. Deve-se atender aos perigos da navegacao, risco de abalroamento e circunstancias especiais que possam exigir afastamento das regras para evitar perigo imediato.
+- Regra 3 - Definicoes: inclui conceitos como navio de propulsao mecanica, navio a vela, navio em faina de pesca, navio desgovernado, navio com capacidade de manobra reduzida, navio condicionado pelo seu calado, navio em marcha, navios a vista e visibilidade reduzida.
+
+VIGIA, VELOCIDADE E RISCO
+- Regra 5 - Vigia: todo o navio deve manter permanentemente vigilancia visual e auditiva apropriada, usando todos os meios disponiveis adequados as circunstancias. A vigia visual continua essencial; radar, AIS e VHF complementam, nao substituem.
+- Regra 6 - Velocidade de seguranca: todo o navio deve manter velocidade que permita agir eficazmente para evitar abalroamento e parar em distancia adequada. Considerar visibilidade, densidade de trafego, manobrabilidade, luzes de fundo, vento, mar, corrente, perigos proximos, calado/profundidade e limites do radar.
+- Regra 7 - Risco de abalroamento: usar todos os meios disponiveis. Na duvida, considerar que existe risco. Azimute constante com distancia a diminuir indica risco; com navios grandes, reboques ou distancias curtas pode haver risco mesmo com alguma variacao de azimute.
+- Regra 8 - Manobra para evitar abalroamento: a manobra deve ser clara, ampla, com antecedencia e conforme os usos marinheiros. Evitar sucessao de pequenas alteracoes de rumo/velocidade. Se houver espaco, uma alteracao de rumo ampla pode ser mais eficaz; se necessario, reduzir velocidade, parar ou inverter maquina. Controlar a eficacia ate o outro navio estar passado e safo.
+
+CANAIS, VIAS DE ACESSO E ESQUEMAS DE SEPARACAO
+- Regra 9 - Canais estreitos: navegar tao perto quanto possivel do limite exterior do canal que fique por estibordo, sem criar perigo. Navios com menos de 20 m e navios a vela nao devem dificultar navios que so possam navegar com seguranca no canal. Navios em faina de pesca nao devem dificultar a passagem. Evitar atravessar se isso dificultar navio que so possa navegar ali. Evitar fundear em canal estreito se as circunstancias permitirem.
+- Regra 9 - Ultrapassagem em canal estreito: se a ultrapassagem exigir manobra do navio alcancado, o navio que quer ultrapassar deve sinalizar a intencao; o alcancado deve concordar por sinal apropriado antes de se iniciar a ultrapassagem. Com duvidas, usar pelo menos cinco sons curtos.
+- Regra 10 - Esquemas de separacao de trafego: seguir no corredor correto e na direcao geral do trafego; manter-se afastado da linha/zona de separacao; entrar/sair preferencialmente pelos extremos; se cruzar, fazer com proa tao perpendicular quanto possivel a direcao geral do trafego. Evitar fundear dentro do esquema ou junto aos extremos. Navios de pesca, a vela e menores de 20 m nao devem dificultar navios no corredor.
+
+NAVIOS A VISTA UNS DOS OUTROS
+- Regra 13 - Navio que alcanca: qualquer navio que alcance outro deve afastar-se do caminho do navio alcancado. Se houver duvida se esta a alcancar, deve assumir que sim. Alteracao posterior de marcacao nao transforma o navio alcancante em navio em rumos cruzados ate estar definitivamente passado e safo.
+- Regra 14 - Roda a roda: dois navios de propulsao mecanica que se aproximam de roda a roda, ou quase, com risco de abalroamento, devem ambos guinar para estibordo para passar bombordo com bombordo. Se houver duvida, assumir roda a roda e manobrar de acordo.
+- Regra 15 - Rumos cruzados: entre dois navios de propulsao mecanica, com risco de abalroamento, o navio que ve o outro por estibordo deve afastar-se e, se possivel, evitar cortar-lhe a proa.
+- Regra 16 - Navio sem prioridade: deve manobrar cedo e francamente para se manter suficientemente afastado.
+- Regra 17 - Navio com prioridade: deve manter rumo e velocidade. Pode manobrar quando se torne evidente que o navio sem prioridade nao atua corretamente; deve manobrar quando o abalroamento ja nao possa ser evitado apenas pela manobra do navio sem prioridade. Em rumos cruzados entre navios de propulsao mecanica, deve evitar guinar para bombordo enquanto o outro navio lhe estiver por bombordo, se as circunstancias permitirem.
+- Regra 18 - Responsabilidades reciprocas: salvo regras 9, 10 e 13, um navio de propulsao mecanica deve afastar-se de navio desgovernado, navio com capacidade de manobra reduzida, navio em faina de pesca e navio a vela. Um navio a vela afasta-se de navio desgovernado, com capacidade de manobra reduzida e em faina de pesca. Um navio em faina de pesca afasta-se, na medida do possivel, de navio desgovernado e com capacidade de manobra reduzida. Qualquer navio, exceto desgovernado ou com capacidade de manobra reduzida, deve evitar dificultar a passagem segura de navio condicionado pelo seu calado.
+
+VISIBILIDADE REDUZIDA
+- Regra 19 - Aplica-se quando os navios nao estao a vista uns dos outros e navegam perto ou dentro de zona de visibilidade reduzida.
+- Regra 19 - Conduta: navegar a velocidade de seguranca adaptada; navios de propulsao mecanica devem ter maquinas prontas a manobrar imediatamente; usar radar e todos os meios para avaliar aproximacao excessiva/risco.
+- Regra 19 - Manobra por radar: se a manobra for alteracao de rumo, evitar guinar para bombordo para navio para vante do traves, exceto se esse navio estiver a ser alcancado; evitar guinar na direcao de navio pelo traves ou para re do traves.
+- Regra 19 - Sinal de nevoeiro para vante: se ouvir sinal de nevoeiro para vante do traves, ou nao puder evitar aproximacao excessiva de navio para vante, reduzir a velocidade ao minimo necessario para governar, anular seguimento se necessario e navegar com extrema precaucao ate o risco passar.
+
+LUZES E MARCAS
+- Regras 20 a 31: definem quando e como mostrar farois/luzes e baloes/marcas.
+- Regra 23 - Navio de propulsao mecanica a navegar: farol de mastro a vante, segundo farol de mastro se aplicavel, farois de borda e farol de popa. Navios menores tem simplificacoes.
+- Regra 24 - Reboque/empurrar: reboque a popa mostra farois de mastro verticais adicionais; se o comprimento de reboque exceder 200 m, usa tres farois de mastro verticais e balao biconico de dia. Reboque de braco dado/empurrar segue combinacoes proprias.
+- Regra 27 - Navio desgovernado ou com capacidade de manobra reduzida: usa combinacoes de luzes/marcas que indicam a sua condicao especial.
+- Regra 28 - Navio condicionado pelo calado: pode mostrar sinais proprios e deve navegar com especial prudencia.
+- Regra 29 - Barcos de pilotos: sinais proprios de servico de pilotagem.
+- Regra 30 - Fundeados/encalhados: luzes, baloes e sinais proprios, conforme comprimento e situacao.
+
+SINAIS SONOROS E LUMINOSOS
+- Regra 34 - Navios a vista: um som curto significa "estou guinando para estibordo"; dois sons curtos, "estou guinando para bombordo"; tres sons curtos, "maquinas a trabalhar a re". Pode complementar com sinais luminosos equivalentes.
+- Regra 34 - Duvida/perigo de intencao: se nao compreende as intencoes ou manobra do outro navio, emitir pelo menos cinco sons curtos; pode complementar com pelo menos cinco relampagos curtos.
+- Regra 34 - Canal/curva: perto de curva ou zona com obstaculo que encubra navios, emitir um som prolongado; quem ouvir do outro lado responde com um som prolongado.
+- Regra 35 - Visibilidade reduzida: navio de propulsao mecanica com seguimento emite um som prolongado a intervalos maximos de 2 min; pairando, dois sons prolongados; rebocador, navio a vela, pesca, desgovernado, capacidade de manobra reduzida ou condicionado pelo calado, um som prolongado seguido de dois curtos; rebocado, um prolongado seguido de tres curtos; fundeado/encalhado usa sino/tanta conforme comprimento.
+- Regra 37 - Sinais de perigo: usar sinais reconhecidos quando ha perigo ou necessidade de auxilio.
+
+RESUMO PRATICO PARA RESPOSTAS
+- Antes de decidir manobra: vigia, velocidade segura e avaliacao de risco.
+- Na duvida sobre risco de abalroamento: assumir que existe risco.
+- Manobra boa: cedo, clara, ampla e controlada ate estar safo.
+- Roda a roda: ambos para estibordo, passar bombordo com bombordo.
+- Cruzado: quem ve o outro por estibordo afasta-se e evita cortar a proa.
+- Alcancante: sempre se afasta; se ha duvida, assume que esta a alcancar.
+- Navio com prioridade: mantem rumo e velocidade, mas nao espera ate ao ponto sem retorno.
+- Visibilidade reduzida: velocidade segura, maquinas prontas, radar bem usado, evitar guinadas proibidas e reduzir/para se necessario.
+- Canal estreito: manter o lado de estibordo e nao dificultar quem so pode navegar com seguranca no canal.
+- Esquema de separacao: corredor certo, direcao geral, cruzar perpendicularmente se inevitavel.
+
+PERGUNTAS EXEMPLO
+Pergunta: Dois navios de maquina estao roda a roda. O que manda o RIEAM?
+Resposta: Pela Regra 14, se houver risco de abalroamento, ambos devem guinar para estibordo para passar bombordo com bombordo. Se houver duvida se a situacao e roda a roda, deve-se assumir que sim e manobrar de acordo.
+
+Pergunta: Estou em rumos cruzados e vejo o outro navio por estibordo. Quem manobra?
+Resposta: Pela Regra 15, o navio que ve o outro por estibordo deve afastar-se do caminho dele e, se as circunstancias permitirem, evitar cortar-lhe a proa. A manobra deve ser cedo, clara e franca, conforme Regras 8 e 16.
+
+Pergunta: Sou o navio com prioridade. Posso manobrar?
+Resposta: Pela Regra 17, deve manter rumo e velocidade no inicio. Pode manobrar se ficar evidente que o navio sem prioridade nao esta a fazer a manobra adequada; deve manobrar se o abalroamento ja nao puder ser evitado apenas pela manobra do outro navio.
+
+Pergunta: Em nevoeiro, que devo fazer se oiço sinal de outro navio para vante?
+Resposta: Pela Regra 19, reduzir a velocidade ao minimo necessario para governar, anular seguimento se necessario e navegar com extrema precaucao ate o risco passar. Maquinas prontas a manobrar imediatamente.

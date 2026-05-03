@@ -121,7 +121,7 @@ Exemplos:
 | 948 | `Teporset/ F. N` | `origin=""`, `destination="Teporset"` |
 | 1033 | `C1A/D32` | `origin=""`, `destination="C1A/D32"` |
 
-Impacto: o bot pode aprender que a manobra é apenas para um cais, quando a experiência original registava uma mudança entre dois pontos.
+Impacto: o sistema pode aprender que a manobra é apenas para um cais, quando a experiência original registava uma mudança entre dois pontos.
 
 ## Problema em `vessel_snapshot.gt_t`
 

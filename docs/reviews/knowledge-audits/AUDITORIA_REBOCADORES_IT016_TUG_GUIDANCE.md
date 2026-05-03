@@ -29,10 +29,10 @@ Data da auditoria: 2026-05-01
    - a revisão visual/OCR do `Protocolo operacional.pdf` confirma que o original
      tem tabela por posição: `5 nós` à proa, `6 nós` ao costado e `8 nós` à popa;
    - a validação operacional fornecida pelo André é manter a resposta geral do
-     bot em `6 kts` / `6 nós sobre a água`, por ser a referência prática mais
+     sistema em `6 kts` / `6 nós sobre a água`, por ser a referência prática mais
      útil e conservadora;
    - o TXT, companion, eval e notas práticas foram ajustados para distinguir a
-     tabela documental da normalização operacional usada pelo bot.
+     tabela documental da normalização operacional usada pelo sistema.
 
 3. `knowledge/tug_operational_guidance.json` foi validado como camada prática,
    não como transcrição literal da IT-016. Deve continuar a ter prioridade como
@@ -42,7 +42,7 @@ Data da auditoria: 2026-05-01
 
 4. As notas práticas mantêm o critério conservador:
    - protocolo original: tabela por posição `5/6/8 nós` sobre a água;
-   - prática do bot: tratar `6 nós` como referência geral e limite conservador;
+   - prática do sistema: tratar `6 nós` como referência geral e limite conservador;
    - rebocadores convencionais só travam eficazmente a cerca de 3 nós;
    - rebocadores com azipode podem travar até 6 nós em condições adequadas;
    - o `Lisboa` continua assinalado como pouco eficaz à proa a 6 nós.
@@ -99,12 +99,12 @@ Data da auditoria: 2026-05-01
 - carregamento direto de `knowledge/tug_operational_guidance.json` pelo runtime
 - teste de geração de fonte prática para uma pergunta Ro-Ro / vento Norte
 - `python3 -m pytest tests/test_tug_guidance.py -q`
-- validação isolada do módulo `Bot operacional` da página `/admin/tests`
+- validação isolada do módulo `Sistema operacional` da página `/admin/tests`
 - avaliação de `knowledge/evals/golden_operational_companion_evals.json`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`
 
-Resultado das evals RAG locais: `8/8` passaram.
+Resultado das validacoes locais de recuperacao documental: `8/8` passaram.
 Resultado das evals golden operacionais: `46/46` passaram.
 Resultado dos testes Python: `97 passed, 6 subtests passed`.
 

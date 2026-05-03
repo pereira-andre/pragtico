@@ -48,7 +48,7 @@ Data da auditoria: 2026-05-01
 
    Correção feita: o TXT passou a distinguir entre o conjunto permitido por
    `LOA < ...` e as proibições expressas por `LOA > ...`. Para valores exatamente
-   no limite (`250 m`, `225 m`, `120 m`), o bot deve tratar como fora da
+   no limite (`250 m`, `225 m`, `120 m`), o sistema deve tratar como fora da
    autorização automática documentada e encaminhar para validação do Piloto
    Coordenador, em vez de apresentar uma proibição literal que o PDF não escreve.
 
@@ -101,5 +101,5 @@ Data da auditoria: 2026-05-01
 - `jq empty` nos companions alterados.
 - Comparação direta por `pdftotext` dos oito PDFs originais.
 - `git diff --check`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`

@@ -106,12 +106,12 @@ Data da auditoria: 2026-05-01
 - `python3 -m py_compile domain/berth_profiles.py`
 - testes diretos de matching para AutoEuropa, Cais 11, Termitrena, Eurominas e
   Lisnave noturna
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest tests/test_knowledge_chunking.py tests/test_route_transit.py tests/test_operational_sources_direct.py -q`
 - `python3 -m pytest tests/test_berth_layout.py tests/test_slash_planning.py -q`
 - `python3 -m pytest -q`
 
-Resultado das evals RAG locais: `8/8` passaram.
+Resultado das validacoes locais de recuperacao documental: `8/8` passaram.
 
 Resultado da suíte completa: `85 passed, 6 subtests passed`.
 

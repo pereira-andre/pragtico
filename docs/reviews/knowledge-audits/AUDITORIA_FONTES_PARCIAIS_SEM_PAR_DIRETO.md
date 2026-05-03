@@ -54,17 +54,17 @@ Data da auditoria: 2026-05-01
    - rebocador ao costado: `6 nós` sobre a água;
    - rebocador à popa: `8 nós` sobre a água.
 
-   Como o utilizador confirmou que quer a resposta geral do bot normalizada em
+   Como o utilizador confirmou que quer a resposta geral do sistema normalizada em
    `6 kts` / `6 nós sobre a água`, o conhecimento foi ajustado para distinguir:
    - tabela documental do protocolo;
-   - normalização prática conservadora usada pelo bot.
+   - normalização prática conservadora usada pelo sistema.
 
 5. `CURSO PRATICAGEM SETÚBAL.pdf` é um PDF digitalizado de 75 páginas. O
    `pdftotext` não extrai texto útil; OCR parcial das primeiras páginas mostra
    conteúdo geral de curso/descrição portuária, mas não há TXT/JSON em
    `knowledge` com correspondência direta identificada. Fica como fonte de
    contexto não indexada diretamente, pendente de OCR completo se for para
-   integrar no RAG.
+   integrar no conhecimento indexavel.
 
 ## Validações
 
@@ -74,5 +74,5 @@ Data da auditoria: 2026-05-01
 - `jq empty` nos JSON/companions.
 - `python3 -m py_compile domain/berth_profiles.py domain/tug_guidance.py domain/operational_safety.py core/operational_sources.py scripts/generate_practice_maneuver_experience.py`
 - `git diff --check`
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`
 - `python3 -m pytest -q`

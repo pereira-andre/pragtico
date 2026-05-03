@@ -29,12 +29,12 @@ Conteudo operacional atualmente em `00_abortar`:
 
 Decisao recomendada:
 
-- Manter o ficheiro no RAG, mas sinalizado mentalmente como regra operacional local sem original presente.
+- Manter o ficheiro no conhecimento indexavel, mas sinalizado mentalmente como regra operacional local sem original presente.
 - Se aparecer a fonte original, substituir esta classificacao por validacao documental e comparar linha a linha.
 
 ## 2. Como o tug_operational_guidance.json e usado
 
-`knowledge/tug_operational_guidance.json` nao e apenas texto para RAG. O bot tem um caminho deterministico:
+`knowledge/tug_operational_guidance.json` nao e apenas texto para conhecimento indexavel. O sistema tem um caminho deterministico:
 
 - `domain/tug_guidance.py` carrega o JSON.
 - O codigo identifica perguntas sobre rebocadores.
@@ -42,7 +42,7 @@ Decisao recomendada:
 - Se encontrar regra aplicavel, cria uma fonte operacional chamada `operational_tug_guidance`.
 - `core/operational_sources.py` usa essa fonte para responder diretamente, por exemplo "Recomendo 3 rebocadores grandes".
 
-Isto significa que alteracoes neste JSON mudam diretamente respostas do bot, nao apenas a pesquisa documental.
+Isto significa que alteracoes neste JSON mudam diretamente respostas do sistema, nao apenas a pesquisa documental.
 
 ## 3. Pontos que ficam alinhados com a tua orientacao
 
@@ -51,12 +51,12 @@ Estes pontos ja refletem o que confirmaste durante a revisao:
 - A pratica de rebocadores deve ser mantida mesmo quando for mais conservadora do que as regras formais.
 - A IT-016 continua a servir para minimos formais, DWT, cargas perigosas, estado carregado/vazio e thrusters, mas nao deve reduzir uma recomendacao pratica mais conservadora.
 - A resposta geral sobre estabelecimento do cabo pode usar `6 nos sobre a agua`, embora o protocolo documental tenha a tabela `5/6/8 nos` para proa/costado/popa.
-- Se faltarem dados importantes, o bot deve responder por cenarios e dizer exatamente o que falta confirmar.
+- Se faltarem dados importantes, o sistema deve responder por cenarios e dizer exatamente o que falta confirmar.
 - Com bowthruster operacional em navios grandes, a regra pratica e favorecer rebocador a popa para controlar a popa.
 - Sem bowthruster, se houver dois rebocadores, a regra pratica normal e `1 a proa + 1 a popa`.
 - Ro-Ro com dois rebocadores podem operar com um a popa e outro ao costado, em efeito tipo push-pull.
 - A orientacao deve assumir rebocadores convencionais e ser conservadora quando houver duvida.
-- Visibilidade live igual ou inferior ao limiar tecnico de `1,0 km` deve ser tratada pelo bot como visibilidade reduzida/nevoeiro operacional.
+- Visibilidade live igual ou inferior ao limiar tecnico de `1,0 km` deve ser tratada pelo sistema como visibilidade reduzida/nevoeiro operacional.
 
 ## 4. Matriz pratica atual no JSON
 
@@ -122,8 +122,8 @@ Regra lateral confirmada para cais atravessados a corrente: na Tanquisado, saida
 - Leitura do `tug_operational_guidance.json`.
 - Revisao do caminho runtime em `domain/tug_guidance.py` e `core/operational_sources.py`.
 - Atualizacao posterior de `knowledge/tug_operational_guidance.json`, `domain/tug_guidance.py` e evals/testes para refletir as decisoes confirmadas.
-- Inclusao dos cenarios criticos de rebocadores na pagina admin `Testes operacionais` (`/admin/tests`), modulo `Bot operacional`.
+- Inclusao dos cenarios criticos de rebocadores na pagina admin `Testes operacionais` (`/admin/tests`), modulo `Sistema operacional`.
 - `python3 -m pytest tests/test_tug_guidance.py -q`: `12 passed`.
 - Evals golden operacionais: `46/46 passed`.
-- `python3 scripts/run_rag_evals.py --knowledge-dir knowledge --fail-on-fail`: `8/8` evals passaram.
+- `python3 scripts/run_conhecimento indexavel_evals.py --knowledge-dir knowledge --fail-on-fail`: `8/8` evals passaram.
 - `python3 -m pytest -q`: `97 passed, 6 subtests passed`.
