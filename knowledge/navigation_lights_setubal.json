@@ -1,0 +1,2375 @@
+{
+  "document": "Lista_Luzes_Setubal.pdf",
+  "title": "Setúbal - Balizagem e Lista de Luzes",
+  "source": "Instituto Hidrográfico, PN35 - Ajudas à Navegação - Lista de Luzes, março 2026.",
+  "scope": "Porto de Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz conforme excerto fornecido.",
+  "datum": "WGS84",
+  "iala_region": "A",
+  "iala_note": "Em Setúbal usa-se o sistema IALA A: no sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.",
+  "warning": "Fonte de apoio operacional/RAG. Para navegação oficial confirmar sempre a publicação PN35, avisos aos navegantes e cartas em vigor.",
+  "entry_count": 102,
+  "entries": [
+    {
+      "area": "SETÚBAL",
+      "national_number": "375",
+      "international_number": "D-2150.22",
+      "name": "Baliza N.º 2",
+      "position": {
+        "latitude": "38º27,22'N",
+        "longitude": "8º58,46'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 10s",
+      "altitude_m": "14",
+      "nominal_range_m": "9",
+      "details": "Coluna com Lt 1s; Ec 1s; faixas brancas Lt 1s; Ec 7s; e vermelhas Racon “B”; Alvo cilíndrico (retangulo, ponto,; vermelho ponto, ponto)",
+      "aliases": [
+        "Baliza N.º 2",
+        "375",
+        "D-2150.22",
+        "BALIZA N.º 2",
+        "baliza n o 2",
+        "d 2150 22"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "375.1",
+      "international_number": "",
+      "name": "Boia N.º 1",
+      "position": {
+        "latitude": "38º26,91'N",
+        "longitude": "8º58,25'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 3s",
+      "altitude_m": "",
+      "nominal_range_m": "5",
+      "details": "Verde Lt 0,5s; Ec 2,5s; AIS (MMSI; Alvo cónico; 992631101); Altura da estrutura/alvo: 4 m",
+      "aliases": [
+        "Boia N.º 1",
+        "375.1",
+        "375 1",
+        "boia n o 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "376",
+      "international_number": "D-2150.26",
+      "name": "Baliza N.º 4",
+      "position": {
+        "latitude": "38º27,93'N",
+        "longitude": "8º57,71'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 4s",
+      "altitude_m": "14",
+      "nominal_range_m": "4",
+      "details": "Coluna em Lt 0,5s; Ec 3,5s; xadrez branca e Refletor radar; vermelha; Alvo cilíndrico; vermelho",
+      "aliases": [
+        "Baliza N.º 4",
+        "376",
+        "D-2150.26",
+        "BALIZA N.º 4",
+        "d 2150 26",
+        "baliza n o 4"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "376.1",
+      "international_number": "",
+      "name": "Boia N.º 3",
+      "position": {
+        "latitude": "38º28,33'N",
+        "longitude": "8º56,78'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 5s",
+      "altitude_m": "",
+      "nominal_range_m": "4",
+      "details": "Verde Lt 0,5s; Ec 0,5s; Lt 0,5s; Ec 0,5s; Alvo cónico; Lt 0,5s; Ec 2,5s; verde; Refletor radar; Altura da estrutura/alvo: 4 m",
+      "aliases": [
+        "Boia N.º 3",
+        "376.1",
+        "boia n o 3",
+        "376 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "377",
+      "international_number": "D-2150.28",
+      "name": "Baliza N.º 5",
+      "position": {
+        "latitude": "38º29,20'N",
+        "longitude": "8º55,36'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 4s",
+      "altitude_m": "14",
+      "nominal_range_m": "4",
+      "details": "Coluna com Lt 0,5s; Ec 3,5s; faixas brancas Refletor radar; e verdes; Alvo cónico; verde",
+      "aliases": [
+        "Baliza N.º 5",
+        "377",
+        "D-2150.28",
+        "BALIZA N.º 5",
+        "baliza n o 5",
+        "d 2150 28"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "380",
+      "international_number": "D-2150",
+      "name": "Outão",
+      "position": {
+        "latitude": "38º29,31'N",
+        "longitude": "8º56,06'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc R 6s",
+      "altitude_m": "34",
+      "nominal_range_m": "12",
+      "details": "Cúpula Lt 4s; Ec 2s; vermelha sobre; On Outão fort.; estrutura na; No forte do Outão. muralha; Altura da estrutura/alvo: 9 m",
+      "aliases": [
+        "Outão",
+        "380",
+        "D-2150",
+        "OUTÃO",
+        "outao",
+        "d 2150"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "381",
+      "international_number": "",
+      "name": "Boia A3",
+      "position": {
+        "latitude": "38º30,50'N",
+        "longitude": "8º55,20'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Verde",
+      "aliases": [
+        "Boia A3",
+        "381",
+        "A3",
+        "BOIA A3",
+        "a3",
+        "boia a3"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "381.1",
+      "international_number": "",
+      "name": "Boia A1–6",
+      "position": {
+        "latitude": "38º30,45'N",
+        "longitude": "8º55,26'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2+1) R 7s",
+      "altitude_m": "2",
+      "nominal_range_m": "3",
+      "details": "Vermelha com Lt 0,5s; Ec 0,5s; faixa verde Lt 0,5s; Ec 2s; Lt 0,5s; Ec 3s",
+      "aliases": [
+        "Boia A1–6",
+        "381.1",
+        "A1",
+        "BOIA A1-6",
+        "a1",
+        "381 1",
+        "boia a1 6"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "381.2",
+      "international_number": "",
+      "name": "Boia Nº 8",
+      "position": {
+        "latitude": "38º30,48'N",
+        "longitude": "8º55,13'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Vermelha; Alvo cilíndrico",
+      "aliases": [
+        "Boia Nº 8",
+        "381.2",
+        "boia no 8",
+        "381 2"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "382",
+      "international_number": "D-2150.4",
+      "name": "Albarquel",
+      "position": {
+        "latitude": "38º30,66'N",
+        "longitude": "8º54,79'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Iso R 2s",
+      "altitude_m": "18",
+      "nominal_range_m": "6",
+      "details": "Lanterna; vermelha; S corner of; Albarquel fort.; Esquina S do forte; de Albarquel.",
+      "aliases": [
+        "Albarquel",
+        "382",
+        "D-2150.4",
+        "ALBARQUEL",
+        "d 2150 4",
+        "albarquel"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383",
+      "international_number": "",
+      "name": "Boia João Farto",
+      "position": {
+        "latitude": "38º30,30'N",
+        "longitude": "8º54,43'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(9) W 15s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Amarela com Marca Cardeal; uma faixa preta Oeste; Alvo constituído; por dois cones; sobrepostos,; opostos pelos; vértices preto; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia João Farto",
+        "383",
+        "BOIA JOÃO FARTO",
+        "boia joao farto"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383.1",
+      "international_number": "",
+      "name": "Boia N.º 1CC",
+      "position": {
+        "latitude": "38º30,81'N",
+        "longitude": "8º54,02'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc G 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 3s; Ec 1s; Refletor radar; Alvo cónico",
+      "aliases": [
+        "Boia N.º 1CC",
+        "383.1",
+        "1CC",
+        "boia n o 1cc",
+        "1cc",
+        "383 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383.3",
+      "international_number": "",
+      "name": "Boia N.º 3CC",
+      "position": {
+        "latitude": "38º30,96'N",
+        "longitude": "8º53,38'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc(2) G 10s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 2s; Ec 1s; Lt 6s; Ec 1s; Alvo cónico; Refletor radar",
+      "aliases": [
+        "Boia N.º 3CC",
+        "383.3",
+        "3CC",
+        "383 3",
+        "3cc",
+        "boia n o 3cc"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383.5",
+      "international_number": "",
+      "name": "Boia N.º 5CC",
+      "position": {
+        "latitude": "38º30,92'N",
+        "longitude": "8º52,91'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc(3) G 13s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 2s; Ec 1s; Lt 2s; Ec 1s; Alvo cónico; Lt 6s; Ec 1s; Refletor radar",
+      "aliases": [
+        "Boia N.º 5CC",
+        "383.5",
+        "5CC",
+        "383 5",
+        "5cc",
+        "boia n o 5cc"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383.7",
+      "international_number": "",
+      "name": "Boia N.º 7CC",
+      "position": {
+        "latitude": "38º30,69'N",
+        "longitude": "8º52,68'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc(4) G 12s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 1,5s; Ec 0,5s; Lt 1,5s; Ec 0,5s; Alvo cónico; Lt 1,5s; Ec 0,5s; Lt 5,5s; Ec 0,5s; Refletor radar",
+      "aliases": [
+        "Boia N.º 7CC",
+        "383.7",
+        "7CC",
+        "7cc",
+        "boia n o 7cc",
+        "383 7"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "383.9",
+      "international_number": "",
+      "name": "Boia N.º 9CC",
+      "position": {
+        "latitude": "38º30,60'N",
+        "longitude": "8º52,31'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc G 8s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 6s; Ec 2s; Refletor radar; Alvo cónico",
+      "aliases": [
+        "Boia N.º 9CC",
+        "383.9",
+        "9CC",
+        "9cc",
+        "383 9",
+        "boia n o 9cc"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "384",
+      "international_number": "D-2151",
+      "name": "Doca Pesca",
+      "position": {
+        "latitude": "38º31,08'N",
+        "longitude": "8º54,01'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Iso Y 6s",
+      "altitude_m": "14",
+      "nominal_range_m": "22",
+      "details": "Torre com Ldg 039,7º; faixas brancas (barra Setúbal); Front. E pier. 12; e vermelhas; Anterior. Molhe E. 5 Day; Altura da estrutura/alvo: 11 m",
+      "aliases": [
+        "Doca Pesca",
+        "384",
+        "D-2151",
+        "DOCA PESCA",
+        "doca pesca",
+        "d 2151"
+      ]
+    },
+    {
+      "area": "SETÚBAL",
+      "national_number": "385",
+      "international_number": "D-2151.1",
+      "name": "Azeda",
+      "position": {
+        "latitude": "38º32,32'N",
+        "longitude": "8º52,71'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Iso Y 6s",
+      "altitude_m": "61",
+      "nominal_range_m": "22",
+      "details": "Cúpula Ldg 039,7º; vermelha sobre (barra Setúbal); Rear. 2 815 m from 21; torre branca Vis 038,3-041,3 (3); front.; 6 Day com faixas; Posterior. A 2 815; vermelhas; m do anterior.; Altura da estrutura/alvo: 31 m",
+      "aliases": [
+        "Azeda",
+        "385",
+        "D-2151.1",
+        "AZEDA",
+        "d 2151 1",
+        "azeda"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "386",
+      "international_number": "D-2152",
+      "name": "Algarve Exportador",
+      "position": {
+        "latitude": "38º31,21'N",
+        "longitude": "8º53,71'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc R 4s",
+      "altitude_m": "15",
+      "nominal_range_m": "15",
+      "details": "Lanterna Lt 3s; Ec 1s; vermelha Ldg 296,5º; Front. On a (resguardo); building. 2 Day; Anterior. Num; edifício.",
+      "aliases": [
+        "Algarve Exportador",
+        "386",
+        "D-2152",
+        "ALGARVE EXPORTADOR",
+        "algarve exportador",
+        "d 2152"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387",
+      "international_number": "D-2152.1",
+      "name": "Anunciada",
+      "position": {
+        "latitude": "38º31,34'N",
+        "longitude": "8º54,05'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Iso R 4s",
+      "altitude_m": "24",
+      "nominal_range_m": "15",
+      "details": "Lanterna Ldg 296,5º; vermelha (resguardo); Rear. 538 m from; front, on church; Alcance diurno indicado: 2 Day; tower.; Posterior. A 538 m; do anterior, na torre; da igreja.",
+      "aliases": [
+        "Anunciada",
+        "387",
+        "D-2152.1",
+        "ANUNCIADA",
+        "anunciada",
+        "d 2152 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387.5",
+      "international_number": "D-2152.3",
+      "name": "Clube Naval W",
+      "position": {
+        "latitude": "38º31,21'N",
+        "longitude": "8º53,60'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 4s",
+      "altitude_m": "9",
+      "nominal_range_m": "3",
+      "details": "Poste Lt 0,5s; Ec 1s; Lt 0,5s; Ec 2s; W pier Naval Club.; Molhe W do Clube 7; Naval.",
+      "aliases": [
+        "Clube Naval W",
+        "387.5",
+        "D-2152.3",
+        "CLUBE NAVAL W",
+        "387 5",
+        "clube naval w",
+        "d 2152 3"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387.6",
+      "international_number": "D-2152.7",
+      "name": "Fontainhas W",
+      "position": {
+        "latitude": "38º31,23'N",
+        "longitude": "8º53,16'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 6s",
+      "altitude_m": "9",
+      "nominal_range_m": "3",
+      "details": "Poste Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; W pier leisure dock.; Lt 0,5s; Ec 2,5s; Molhe W da doca 7; de recreio.",
+      "aliases": [
+        "Fontainhas W",
+        "387.6",
+        "D-2152.7",
+        "FONTAINHAS W",
+        "d 2152 7",
+        "fontainhas w",
+        "387 6"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387.7",
+      "international_number": "",
+      "name": "Moinho",
+      "position": {
+        "latitude": "38º31,28'N",
+        "longitude": "8º52,37'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Iso GWR 2s",
+      "altitude_m": "67",
+      "nominal_range_m": "4",
+      "details": "Lanterna de Lt 1s; Ec 1s; sectores sobre 068-G-071-W-076-R-; At the top of Bela; estrutura 079; Vista.; 2 Day metálica; No alto do moinho; da Bela Vista.; Altura da estrutura/alvo: 1 m",
+      "aliases": [
+        "Moinho",
+        "387.7",
+        "MOINHO",
+        "moinho",
+        "387 7"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387.51",
+      "international_number": "D-2152.5",
+      "name": "Clube Naval E",
+      "position": {
+        "latitude": "38º31,21'N",
+        "longitude": "8º53,58'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 4s",
+      "altitude_m": "9",
+      "nominal_range_m": "3",
+      "details": "Poste Lt 0,5s; Ec 1s; Lt 0,5s; Ec 2s; E pier Naval Club.; Molhe E do Clube 7; Naval.",
+      "aliases": [
+        "Clube Naval E",
+        "387.51",
+        "D-2152.5",
+        "CLUBE NAVAL E",
+        "clube naval e",
+        "387 51",
+        "d 2152 5"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "387.61",
+      "international_number": "D-2152.9",
+      "name": "Fontainhas E",
+      "position": {
+        "latitude": "38º31,22'N",
+        "longitude": "8º53,11'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 6s",
+      "altitude_m": "9",
+      "nominal_range_m": "3",
+      "details": "Poste Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; E pier leisure dock.; Lt 0,5s; Ec 2,5s; Molhe E doca 7; recreio.",
+      "aliases": [
+        "Fontainhas E",
+        "387.61",
+        "D-2152.9",
+        "FONTAINHAS E",
+        "387 61",
+        "fontainhas e",
+        "d 2152 9"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388",
+      "international_number": "D-2153.8",
+      "name": "Duque d’Alba",
+      "position": {
+        "latitude": "38º30,70'N",
+        "longitude": "8º52,02'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(3) W 5s",
+      "altitude_m": "8",
+      "nominal_range_m": "3",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 2,8s",
+      "aliases": [
+        "Duque d’Alba",
+        "388",
+        "D-2153.8",
+        "DUQUE D’ALBA",
+        "d 2153 8",
+        "duque d alba"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.1",
+      "international_number": "",
+      "name": "Boia N.º 1CN",
+      "position": {
+        "latitude": "38º30,33'N",
+        "longitude": "8º51,46'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 3s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 2,5s; Refletor radar; Alvo cónico",
+      "aliases": [
+        "Boia N.º 1CN",
+        "388.1",
+        "1CN",
+        "388 1",
+        "1cn",
+        "boia n o 1cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.2",
+      "international_number": "",
+      "name": "Boia N.º 2CN",
+      "position": {
+        "latitude": "38º30,42'N",
+        "longitude": "8º51,40'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 3s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha com Lt 0,5s; Ec 2,5s; torre Refletor radar; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 2CN",
+        "388.2",
+        "2CN",
+        "2cn",
+        "388 2",
+        "boia n o 2cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.3",
+      "international_number": "",
+      "name": "Boia N.º 3CN",
+      "position": {
+        "latitude": "38º30,25'N",
+        "longitude": "8º51,22'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cónico; Refletor radar",
+      "aliases": [
+        "Boia N.º 3CN",
+        "388.3",
+        "3CN",
+        "388 3",
+        "boia n o 3cn",
+        "3cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.4",
+      "international_number": "",
+      "name": "Boia N.º 4CN",
+      "position": {
+        "latitude": "38º30,28'N",
+        "longitude": "8º51,06'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cilíndrico; Refletor radar",
+      "aliases": [
+        "Boia N.º 4CN",
+        "388.4",
+        "4CN",
+        "4cn",
+        "388 4",
+        "boia n o 4cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.5",
+      "international_number": "",
+      "name": "Boia N.º 5CN",
+      "position": {
+        "latitude": "38º30,04'N",
+        "longitude": "8º50,88'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; Alvo cónico; Lt 0,5s; Ec 5,5s; Refletor radar",
+      "aliases": [
+        "Boia N.º 5CN",
+        "388.5",
+        "5CN",
+        "5cn",
+        "boia n o 5cn",
+        "388 5"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.6",
+      "international_number": "",
+      "name": "Boia N.º 6CN",
+      "position": {
+        "latitude": "38º30,12'N",
+        "longitude": "8º50,78'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; Alvo cilíndrico; Lt 0,5s; Ec 5,5s; Refletor radar",
+      "aliases": [
+        "Boia N.º 6CN",
+        "388.6",
+        "6CN",
+        "388 6",
+        "boia n o 6cn",
+        "6cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.7",
+      "international_number": "",
+      "name": "Boia N.º 7CN",
+      "position": {
+        "latitude": "38º29,84'N",
+        "longitude": "8º50,65'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 3,5s; Refletor radar; Alvo cónico",
+      "aliases": [
+        "Boia N.º 7CN",
+        "388.7",
+        "7CN",
+        "7cn",
+        "388 7",
+        "boia n o 7cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.9",
+      "international_number": "",
+      "name": "Boia N.º 9CN",
+      "position": {
+        "latitude": "38º29,70'N",
+        "longitude": "8º50,40'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cónico; Refletor radar; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 9CN",
+        "388.9",
+        "9CN",
+        "boia n o 9cn",
+        "9cn",
+        "388 9"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.11",
+      "international_number": "",
+      "name": "Boia N.º 11CN",
+      "position": {
+        "latitude": "38º29,55'N",
+        "longitude": "8º50,06'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo cónico; Lt 0,5s; Ec 4,5s; 2 Refletor radar",
+      "aliases": [
+        "Boia N.º 11CN",
+        "388.11",
+        "11CN",
+        "11cn",
+        "388 11",
+        "boia n o 11cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.12",
+      "international_number": "",
+      "name": "Boia N.º 12CN",
+      "position": {
+        "latitude": "38º29,45'N",
+        "longitude": "8º49,70'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 3s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 2,5s; Refletor radar; Alvo cilíndrico; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 12CN",
+        "388.12",
+        "12CN",
+        "12cn",
+        "388 12",
+        "boia n o 12cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.13",
+      "international_number": "",
+      "name": "Boia N.º 13CN",
+      "position": {
+        "latitude": "38º29,41'N",
+        "longitude": "8º49,73'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 3s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 2,5s; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 13CN",
+        "388.13",
+        "13CN",
+        "13cn",
+        "388 13",
+        "boia n o 13cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.14",
+      "international_number": "",
+      "name": "Boia N.º 14CN",
+      "position": {
+        "latitude": "38º29,28'N",
+        "longitude": "8º49,35'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cilíndrico; Refletor radar; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 14CN",
+        "388.14",
+        "14CN",
+        "14cn",
+        "388 14",
+        "boia n o 14cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.15",
+      "international_number": "",
+      "name": "Boia N.º 15CN",
+      "position": {
+        "latitude": "38º29,25'N",
+        "longitude": "8º49,40'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cónico; Refletor radar; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 15CN",
+        "388.15",
+        "15CN",
+        "boia n o 15cn",
+        "388 15",
+        "15cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.16",
+      "international_number": "",
+      "name": "Boia N.º 17CN",
+      "position": {
+        "latitude": "38º29,11'N",
+        "longitude": "8º49,25'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 4,5s; 2 Refletor radar",
+      "aliases": [
+        "Boia N.º 17CN",
+        "388.16",
+        "17CN",
+        "17cn",
+        "388 16",
+        "boia n o 17cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.17",
+      "international_number": "",
+      "name": "Boia N.º 19CN",
+      "position": {
+        "latitude": "38º28,95'N",
+        "longitude": "8º49,13'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 3,5s; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 19CN",
+        "388.17",
+        "19CN",
+        "boia n o 19cn",
+        "19cn",
+        "388 17"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.18",
+      "international_number": "",
+      "name": "Boia N.º 16CN",
+      "position": {
+        "latitude": "38º28,81'N",
+        "longitude": "8º49,00'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo cilíndrico; Lt 0,5s; Ec 4,5s; 2 Refletor radar",
+      "aliases": [
+        "Boia N.º 16CN",
+        "388.18",
+        "16CN",
+        "388 18",
+        "16cn",
+        "boia n o 16cn"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.19",
+      "international_number": "",
+      "name": "Boia N.º 18CN",
+      "position": {
+        "latitude": "38º28,67'N",
+        "longitude": "8º48,79'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 3,5s; Refletor radar; Alvo cilíndrico; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 18CN",
+        "388.19",
+        "18CN",
+        "boia n o 18cn",
+        "18cn",
+        "388 19"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.21",
+      "international_number": "",
+      "name": "Boia N.º 21CN",
+      "position": {
+        "latitude": "38º28,51'N",
+        "longitude": "8º48,60'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cónico; Refletor radar; Altura da estrutura/alvo: 2 m",
+      "aliases": [
+        "Boia N.º 21CN",
+        "388.21",
+        "21CN",
+        "21cn",
+        "boia n o 21cn",
+        "388 21"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.92",
+      "international_number": "D-2154.7",
+      "name": "Trem W",
+      "position": {
+        "latitude": "38º29,74'N",
+        "longitude": "8º50,27'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Poste cinzento Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Trem Naval Pier.; Molhe do Trem 5; Naval.",
+      "aliases": [
+        "Trem W",
+        "388.92",
+        "D-2154.7",
+        "TREM W",
+        "388 92",
+        "d 2154 7",
+        "trem w"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.94",
+      "international_number": "D-2154.8",
+      "name": "Trem E",
+      "position": {
+        "latitude": "38º29,66'N",
+        "longitude": "8º50,16'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 9s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Poste cinzento Lt 0,3s; Ec 0,7s; Lt 0,3s; Ec 0,7s; Trem Naval Pier.; Lt 0,3s; Ec 6,7s; Molhe do Trem 5; Naval.",
+      "aliases": [
+        "Trem E",
+        "388.94",
+        "D-2154.8",
+        "TREM E",
+        "trem e",
+        "388 94",
+        "d 2154 8"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.96",
+      "international_number": "D-2155.2",
+      "name": "Doca W",
+      "position": {
+        "latitude": "38º29,68'N",
+        "longitude": "8º50,06'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 3s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste cinzento Lt 0,3s; Ec 2,7s; Dock head.; Cabeça da doca. 2,5",
+      "aliases": [
+        "Doca W",
+        "388.96",
+        "D-2155.2",
+        "DOCA W",
+        "doca w",
+        "388 96",
+        "d 2155 2"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL NORTE",
+      "national_number": "388.97",
+      "international_number": "D-2155.4",
+      "name": "Doca E",
+      "position": {
+        "latitude": "38º29,67'N",
+        "longitude": "8º50,03'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 3s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste cinzento Lt 0,3s; Ec 2,7s; Dock head.; Cabeça da doca. 2,5",
+      "aliases": [
+        "Doca E",
+        "388.97",
+        "D-2155.4",
+        "DOCA E",
+        "doca e",
+        "388 97",
+        "d 2155 4"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "390",
+      "international_number": "D-2150.34",
+      "name": "Quebra-mar",
+      "position": {
+        "latitude": "38º29,68'N",
+        "longitude": "8º54,24'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(2) R 6s",
+      "altitude_m": "4",
+      "nominal_range_m": "3",
+      "details": "Coluna com Lt 0,3s; Ec 0,7s; faixas brancas Lt 0,3s; Ec 4,7s; Marina pier.; e vermelhas; Molhe da Marina.; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Quebra-mar",
+        "390",
+        "D-2150.34",
+        "QUEBRA-MAR",
+        "quebra mar",
+        "d 2150 34"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "390.1",
+      "international_number": "D-2150.37",
+      "name": "Molhe Oeste",
+      "position": {
+        "latitude": "38º29,65'N",
+        "longitude": "8º54,22'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(2) G 6s",
+      "altitude_m": "8",
+      "nominal_range_m": "3",
+      "details": "Coluna com Lt 0,3s; Ec 0,7s; faixas brancas Lt 0,3s; Ec 4,7s; Marina pier.; e verdes; Molhe da Marina.; Altura da estrutura/alvo: 4 m",
+      "aliases": [
+        "Molhe Oeste",
+        "390.1",
+        "D-2150.37",
+        "MOLHE OESTE",
+        "390 1",
+        "d 2150 37",
+        "molhe oeste"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "391",
+      "international_number": "D-2156.5",
+      "name": "Troia – N",
+      "position": {
+        "latitude": "38º28,57'N",
+        "longitude": "8º52,29'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 5s",
+      "altitude_m": "7",
+      "nominal_range_m": "5",
+      "details": "Poste Lt 0,5s; Ec 4,5s; N dolphin.; Duque D'Alba N. 4",
+      "aliases": [
+        "Troia – N",
+        "391",
+        "D-2156.5",
+        "TROIA - N",
+        "troia n",
+        "d 2156 5"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "391.1",
+      "international_number": "D-2156.6",
+      "name": "Troia – S",
+      "position": {
+        "latitude": "38º28,43'N",
+        "longitude": "8º52,15'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 10s",
+      "altitude_m": "7",
+      "nominal_range_m": "5",
+      "details": "Poste Lt 0,5s; Ec 1s; Lt 0,5s; Ec 8s; S dolphin.; Duque D'Alba S. 4",
+      "aliases": [
+        "Troia – S",
+        "391.1",
+        "D-2156.6",
+        "TROIA - S",
+        "troia s",
+        "d 2156 6",
+        "391 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "392",
+      "international_number": "D-2156.8",
+      "name": "Troia Ferries N",
+      "position": {
+        "latitude": "38º28,06'N",
+        "longitude": "8º51,82'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 12s",
+      "altitude_m": "9",
+      "nominal_range_m": "5",
+      "details": "Coluna com Lt 0,5s; Ec 2s; faixas brancas Lt 0,5s; Ec 2s; N Pier.; e verdes Lt 0,5s; Ec 6,5s; Cais N.; Altura da estrutura/alvo: 6 m",
+      "aliases": [
+        "Troia Ferries N",
+        "392",
+        "D-2156.8",
+        "TROIA FERRIES N",
+        "d 2156 8",
+        "troia ferries n"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "392.1",
+      "international_number": "D-2156.9",
+      "name": "Troia Ferries S",
+      "position": {
+        "latitude": "38º27,98'N",
+        "longitude": "8º51,72'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) G 15s",
+      "altitude_m": "9",
+      "nominal_range_m": "5",
+      "details": "Coluna com Lt 0,5s; Ec 2s; faixas brancas Lt 0,5s; Ec 2s; S Pier.; e verdes Lt 0,5s; Ec 2s; Cais S. Lt 0,5s; Ec 7s; Altura da estrutura/alvo: 6 m",
+      "aliases": [
+        "Troia Ferries S",
+        "392.1",
+        "D-2156.9",
+        "TROIA FERRIES S",
+        "d 2156 9",
+        "troia ferries s",
+        "392 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "394.2",
+      "international_number": "",
+      "name": "Boia N.º 2CS",
+      "position": {
+        "latitude": "38º29,95'N",
+        "longitude": "8º53,25'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 3s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 2,5s; Refletor radar; Alvo cilíndrico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 2CS",
+        "394.2",
+        "2CS",
+        "2cs",
+        "394 2",
+        "boia n o 2cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "394.4",
+      "international_number": "",
+      "name": "Boia N.º 4CS",
+      "position": {
+        "latitude": "38º29,03'N",
+        "longitude": "8º51,93'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 5s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 3s; Alvo cilíndrico; Refletor radar; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 4CS",
+        "394.4",
+        "4CS",
+        "boia n o 4cs",
+        "4cs",
+        "394 4"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "394.6",
+      "international_number": "",
+      "name": "Boia N.º 6CS",
+      "position": {
+        "latitude": "38º28,53'N",
+        "longitude": "8º50,83'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; Alvo cilíndrico; Lt 0,5s; Ec 2,5s; 3 Refletor radar",
+      "aliases": [
+        "Boia N.º 6CS",
+        "394.6",
+        "6CS",
+        "394 6",
+        "boia n o 6cs",
+        "6cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "394.8",
+      "international_number": "",
+      "name": "Boia N.º 8CS",
+      "position": {
+        "latitude": "38º28,10'N",
+        "longitude": "8º49,61'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl R 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 3,5s; Refletor radar; Alvo cilíndrico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 8CS",
+        "394.8",
+        "8CS",
+        "8cs",
+        "boia n o 8cs",
+        "394 8"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.1",
+      "international_number": "",
+      "name": "Boia N.º 1CS",
+      "position": {
+        "latitude": "38º27,92'N",
+        "longitude": "8º49,72'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q G 1s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,3s; Ec 0,7s; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 1CS",
+        "395.1",
+        "1CS",
+        "1cs",
+        "boia n o 1cs",
+        "395 1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.3",
+      "international_number": "",
+      "name": "Boia N.º 3CS",
+      "position": {
+        "latitude": "38º27,66'N",
+        "longitude": "8º48,92'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) G 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cónico; Refletor radar; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 3CS",
+        "395.3",
+        "3CS",
+        "boia n o 3cs",
+        "395 3",
+        "3cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.5",
+      "international_number": "",
+      "name": "Boia N.º 5CS",
+      "position": {
+        "latitude": "38º27,57'N",
+        "longitude": "8º48,27'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 8s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; Alvo cónico; Lt 0,5s; Ec 4,5s; 3 Refletor Radar",
+      "aliases": [
+        "Boia N.º 5CS",
+        "395.5",
+        "5CS",
+        "5cs",
+        "boia n o 5cs",
+        "395 5"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.7",
+      "international_number": "",
+      "name": "Boia N.º 7CS",
+      "position": {
+        "latitude": "38º27,82'N",
+        "longitude": "8º47,71'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 4s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,5s; Ec 3,5; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 7CS",
+        "395.7",
+        "7CS",
+        "boia n o 7cs",
+        "395 7",
+        "7cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.9",
+      "international_number": "",
+      "name": "Boia N.º 9CS",
+      "position": {
+        "latitude": "38º28,10'N",
+        "longitude": "8º47,10'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q G 1s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Verde Lt 0,3s; Ec 0,7; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 9CS",
+        "395.9",
+        "9CS",
+        "395 9",
+        "9cs",
+        "boia n o 9cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.10",
+      "international_number": "",
+      "name": "Boia N.º 10CS",
+      "position": {
+        "latitude": "38º27,83'N",
+        "longitude": "8º48,92'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 4s; Alvo cilíndrico; Refletor radar; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 10CS",
+        "395.10",
+        "10CS",
+        "boia n o 10cs",
+        "10cs",
+        "395 10"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.11",
+      "international_number": "",
+      "name": "Boia N.º 11CS",
+      "position": {
+        "latitude": "38º28,24'N",
+        "longitude": "8º46,86'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc G 4s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Verde Lt 3s; Ec 1s; Refletor radar; Alvo cónico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 11CS",
+        "395.11",
+        "11CS",
+        "boia n o 11cs",
+        "11cs",
+        "395 11"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.12",
+      "international_number": "",
+      "name": "Boia N.º 12CS",
+      "position": {
+        "latitude": "38º27,77'N",
+        "longitude": "8º48,45'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) R 8s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,5s; Ec 1s; Lt 0,5s; Ec 1s; Alvo cilíndrico; Lt 0,5s; Ec 4,5s; 3 Refletor Radar",
+      "aliases": [
+        "Boia N.º 12CS",
+        "395.12",
+        "12CS",
+        "395 12",
+        "boia n o 12cs",
+        "12cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.13",
+      "international_number": "",
+      "name": "Boia N.º 13CS",
+      "position": {
+        "latitude": "38º28,26'N",
+        "longitude": "8º46,63'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Oc(2) G 10s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Verde Lt 2s; Ec 1s; Lt 6s; Ec 1s; Alvo cónico; Refletor radar; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 13CS",
+        "395.13",
+        "13CS",
+        "boia n o 13cs",
+        "13cs",
+        "395 13"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "395.14",
+      "international_number": "",
+      "name": "Boia N.º 14CS",
+      "position": {
+        "latitude": "38º27,86'N",
+        "longitude": "8º48,09'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q R 1s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Vermelha Lt 0,3s; Ec 0,7; Refletor radar; Alvo cilíndrico; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia N.º 14CS",
+        "395.14",
+        "14CS",
+        "14cs",
+        "395 14",
+        "boia n o 14cs"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.1",
+      "international_number": "",
+      "name": "Baliza WH1",
+      "position": {
+        "latitude": "38º27,60'N",
+        "longitude": "8º45,85'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2+1) R 6s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste vermelho Lt 0,3s; Ec 0,4s; com faixa verde Lt 0,3s; Ec 1,2s; Lt 0,3s; Ec 3,5s; Delimita zona de; Altura da estrutura/alvo: 1,5 m; cultura marinha (Wild; Horse)",
+      "aliases": [
+        "Baliza WH1",
+        "396.1",
+        "WH1",
+        "BALIZA WH1",
+        "wh1",
+        "396 1",
+        "baliza wh1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.2",
+      "international_number": "",
+      "name": "Baliza WH2",
+      "position": {
+        "latitude": "38º27,14'N",
+        "longitude": "8º45,08'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) R 15s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste vermelho Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; 1,5 Lt 0,5s; Ec 8,5s; Delimita zona de; cultura marinha (Wild; Horse)",
+      "aliases": [
+        "Baliza WH2",
+        "396.2",
+        "WH2",
+        "BALIZA WH2",
+        "wh2",
+        "396 2",
+        "baliza wh2"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.3",
+      "international_number": "",
+      "name": "Baliza WH3",
+      "position": {
+        "latitude": "38º27,74'N",
+        "longitude": "8º45,15'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 15s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 1s; Ec 14s; Delimita zona de; cultura marinha; 1,5 (Wild Horse)",
+      "aliases": [
+        "Baliza WH3",
+        "396.3",
+        "WH3",
+        "BALIZA WH3",
+        "396 3",
+        "baliza wh3",
+        "wh3"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.4",
+      "international_number": "",
+      "name": "Baliza WH-3",
+      "position": {
+        "latitude": "38º27,67'N",
+        "longitude": "8º45,48'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste verde Delimita zona de; cultura marinha (Wild; Alvo cónico; Horse); verde; Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza WH-3",
+        "396.4",
+        "BALIZA WH-3",
+        "396 4",
+        "baliza wh 3"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.5",
+      "international_number": "",
+      "name": "Baliza WH-5",
+      "position": {
+        "latitude": "38º27,67'N",
+        "longitude": "8º45,12'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha (Wild; Horse); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza WH-5",
+        "396.5",
+        "BALIZA WH-5",
+        "396 5",
+        "baliza wh 5"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.6",
+      "international_number": "",
+      "name": "Baliza WH-6",
+      "position": {
+        "latitude": "38º27,52'N",
+        "longitude": "8º45,48'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha (Wild; Horse); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza WH-6",
+        "396.6",
+        "BALIZA WH-6",
+        "396 6",
+        "baliza wh 6"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.7",
+      "international_number": "",
+      "name": "Baliza WH-8",
+      "position": {
+        "latitude": "38º27,21'N",
+        "longitude": "8º45,00'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha (Wild; Horse); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza WH-8",
+        "396.7",
+        "BALIZA WH-8",
+        "396 7",
+        "baliza wh 8"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.8",
+      "international_number": "",
+      "name": "Baliza WH-10",
+      "position": {
+        "latitude": "38º27,38'N",
+        "longitude": "8º45,49'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste vermelho Delimita zona de; cultura marinha (Wild; Alvo cilíndrico; Horse); vermelho; Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza WH-10",
+        "396.8",
+        "BALIZA WH-10",
+        "baliza wh 10",
+        "396 8"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.9",
+      "international_number": "",
+      "name": "Baliza BG1",
+      "position": {
+        "latitude": "38º28,35'N",
+        "longitude": "8º44,73'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 10s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 1s; Ec 9s; Delimita zona de; Alvo cónico; cultura marinha; verde; (Bivalgarças); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BG1",
+        "396.9",
+        "BG1",
+        "BALIZA BG1",
+        "bg1",
+        "baliza bg1",
+        "396 9"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.10",
+      "international_number": "",
+      "name": "Baliza BG3",
+      "position": {
+        "latitude": "38º28,71'N",
+        "longitude": "8º44,54'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl G 10s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 1s; Ec 9s; Delimita zona de; Alvo cónico; cultura marinha; verde; (Bivalgarças); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BG3",
+        "396.10",
+        "BG3",
+        "BALIZA BG3",
+        "bg3",
+        "baliza bg3",
+        "396 10"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.11",
+      "international_number": "",
+      "name": "Baliza BG5",
+      "position": {
+        "latitude": "38º28,67'N",
+        "longitude": "8º44,39'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha; (Bivalgarças); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BG5",
+        "396.11",
+        "BG5",
+        "BALIZA BG5",
+        "baliza bg5",
+        "bg5",
+        "396 11"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.12",
+      "international_number": "",
+      "name": "Baliza BG8",
+      "position": {
+        "latitude": "38º28,31'N",
+        "longitude": "8º44,46'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha; (Bivalgarças); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BG8",
+        "396.12",
+        "BG8",
+        "BALIZA BG8",
+        "396 12",
+        "bg8",
+        "baliza bg8"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.13",
+      "international_number": "",
+      "name": "Baliza R5.1",
+      "position": {
+        "latitude": "38º29,18'N",
+        "longitude": "8º44,49'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2+1) G 12s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 0,8s; Ec 1,2s; com faixa Lt 0,8s; Ec 2,4s; vermelha Lt 0,8s; Ec 6,0s; Alvo cónico Delimita zona de; verde cultura marinha; 1,5 (Ribeiro 5)",
+      "aliases": [
+        "Baliza R5.1",
+        "396.13",
+        "R5.1",
+        "BALIZA R5.1",
+        "r5 1",
+        "baliza r5 1",
+        "396 13"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.14",
+      "international_number": "",
+      "name": "Boia CL1",
+      "position": {
+        "latitude": "38º28,90'N",
+        "longitude": "8º45,20'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) Y 20s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Amarela Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo em “X”; Lt 0,5s; Ec 1,5s; amarelo; Lt 0,5s; Ec 13,5s; Altura da estrutura/alvo: 2,5 m; Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL1",
+        "396.14",
+        "CL1",
+        "BOIA CL1",
+        "cl1",
+        "396 14",
+        "boia cl1"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.15",
+      "international_number": "",
+      "name": "Boia CL2",
+      "position": {
+        "latitude": "38º29,25'N",
+        "longitude": "8º45,10'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Amarela Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL2",
+        "396.15",
+        "CL2",
+        "BOIA CL2",
+        "boia cl2",
+        "396 15",
+        "cl2"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.16",
+      "international_number": "",
+      "name": "Boia CL3",
+      "position": {
+        "latitude": "38º29,60'N",
+        "longitude": "8º45,00'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) Y 20s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Amarela Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo em “X”; Lt 0,5s; Ec 1,5s; amarelo; Lt 0,5s; Ec 13,5s; Altura da estrutura/alvo: 2,5 m; Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL3",
+        "396.16",
+        "CL3",
+        "BOIA CL3",
+        "boia cl3",
+        "cl3",
+        "396 16"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.17",
+      "international_number": "",
+      "name": "Boia CL4",
+      "position": {
+        "latitude": "38º29,60'N",
+        "longitude": "8º44,75'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) Y 20s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Amarela Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo em “X”; Lt 0,5s; Ec 1,5s; amarelo; Lt 0,5s; Ec 13,5s; Altura da estrutura/alvo: 2,5 m; Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL4",
+        "396.17",
+        "CL4",
+        "BOIA CL4",
+        "cl4",
+        "boia cl4",
+        "396 17"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.18",
+      "international_number": "",
+      "name": "Boia CL5",
+      "position": {
+        "latitude": "38º29,30'N",
+        "longitude": "8º44,78'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Amarela Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL5",
+        "396.18",
+        "CL5",
+        "BOIA CL5",
+        "boia cl5",
+        "cl5",
+        "396 18"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.19",
+      "international_number": "",
+      "name": "Boia CL6",
+      "position": {
+        "latitude": "38º29,03'N",
+        "longitude": "8º44,80'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(4) Y 20s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Amarela Lt 0,5s; Ec 1,5s; Lt 0,5s; Ec 1,5s; Alvo em “X”; Lt 0,5s; Ec 1,5s; amarelo; Lt 0,5s; Ec 13,5s; Altura da estrutura/alvo: 2,5 m; Delimita zona de; cultura marinha; (Cabeço da Longa)",
+      "aliases": [
+        "Boia CL6",
+        "396.19",
+        "CL6",
+        "BOIA CL6",
+        "396 19",
+        "cl6",
+        "boia cl6"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.20",
+      "international_number": "",
+      "name": "Baliza R5-1a",
+      "position": {
+        "latitude": "38º29,18'N",
+        "longitude": "8º44,49'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2+1) G 12s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 0,8s; Ec 1,2s; com faixa Lt 0,8s; Ec 2,4s; vermelha Lt 0,8s; Ec 6,0s; Alvo cónico Delimita zona de; verde cultura marinha; 1,5 (Ribeiro 5)",
+      "aliases": [
+        "Baliza R5-1a",
+        "396.20",
+        "R5-1A",
+        "BALIZA R5-1A",
+        "396 20",
+        "baliza r5 1a",
+        "r5 1a"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.21",
+      "international_number": "",
+      "name": "Baliza R5-3",
+      "position": {
+        "latitude": "38º29,58'N",
+        "longitude": "8º44,49'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(3) G 15s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste verde Lt 1s; Ec 1s; Lt 1s; Ec 1s; Alvo cónico; Lt 1s; Ec 10s; verde; Delimita zona de; Altura da estrutura/alvo: 1,5 m; cultura marinha; (Ribeiro 5)",
+      "aliases": [
+        "Baliza R5-3",
+        "396.21",
+        "R5-3",
+        "BALIZA R5-3",
+        "396 21",
+        "r5 3",
+        "baliza r5 3"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.22",
+      "international_number": "",
+      "name": "Baliza R5-4",
+      "position": {
+        "latitude": "38º29,67'N",
+        "longitude": "8º44,14'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 15s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste vermelho Lt 1s; Ec 1s; Lt 1s; Ec 12s; Alvo cilíndrico; Delimita zona de; vermelho; cultura marinha; Altura da estrutura/alvo: 1,5 m; (Ribeiro 5)",
+      "aliases": [
+        "Baliza R5-4",
+        "396.22",
+        "R5-4",
+        "BALIZA R5-4",
+        "r5 4",
+        "396 22",
+        "baliza r5 4"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.23",
+      "international_number": "",
+      "name": "Baliza BR-1",
+      "position": {
+        "latitude": "38º28,59'N",
+        "longitude": "8º45,87'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha; (Blue River); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BR-1",
+        "396.23",
+        "BALIZA BR-1",
+        "baliza br 1",
+        "396 23"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.24",
+      "international_number": "",
+      "name": "Baliza BR-2",
+      "position": {
+        "latitude": "38º28,56'N",
+        "longitude": "8º45,82'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 8s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste vermelho Lt 1s; Ec 1s; Lt 1s; Ec 5s; Alvo cilíndrico; Delimita zona de; vermelho; cultura marinha; Altura da estrutura/alvo: 1,5 m; (Blue River)",
+      "aliases": [
+        "Baliza BR-2",
+        "396.24",
+        "BALIZA BR-2",
+        "baliza br 2",
+        "396 24"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.25",
+      "international_number": "",
+      "name": "Baliza BR-3",
+      "position": {
+        "latitude": "38º29,04'N",
+        "longitude": "8º45,48'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "",
+      "altitude_m": "",
+      "nominal_range_m": "",
+      "details": "Poste amarelo Delimita zona de; cultura marinha; (Blue River); Altura da estrutura/alvo: 1,5 m",
+      "aliases": [
+        "Baliza BR-3",
+        "396.25",
+        "BALIZA BR-3",
+        "baliza br 3",
+        "396 25"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "396.26",
+      "international_number": "",
+      "name": "Baliza BR-4",
+      "position": {
+        "latitude": "38º29,00'N",
+        "longitude": "8º45,42'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl(2) R 8s",
+      "altitude_m": "",
+      "nominal_range_m": "2",
+      "details": "Poste vermelho Lt 1s; Ec 1s; Lt 1s; Ec 5s; Alvo cilíndrico; Delimita zona de; vermelho; cultura marinha; Altura da estrutura/alvo: 1,5 m; (Blue River)",
+      "aliases": [
+        "Baliza BR-4",
+        "396.26",
+        "BALIZA BR-4",
+        "baliza br 4",
+        "396 26"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "397",
+      "international_number": "",
+      "name": "Boia Escama Ferro",
+      "position": {
+        "latitude": "38º28,36'N",
+        "longitude": "8º48,69'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "VQ(3) W 5s",
+      "altitude_m": "",
+      "nominal_range_m": "3",
+      "details": "Preta com faixa Marca Cardeal Leste; amarela Refletor radar; Alvo constituído; por dois cones; sobrepostos,; opostos pela; base; Altura da estrutura/alvo: 3 m",
+      "aliases": [
+        "Boia Escama Ferro",
+        "397",
+        "BOIA ESCAMA FERRO",
+        "boia escama ferro"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "397.5",
+      "international_number": "D-2157.4",
+      "name": "Sul",
+      "position": {
+        "latitude": "38º28,30'N",
+        "longitude": "8º48,50'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(5) W 8s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 0,8s; Duque D’Alba. 3 Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 3,8s",
+      "aliases": [
+        "Sul",
+        "397.5",
+        "D-2157.4",
+        "SUL",
+        "397 5",
+        "sul",
+        "d 2157 4"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "397.51",
+      "international_number": "D-2157.5",
+      "name": "Norte",
+      "position": {
+        "latitude": "38º28,36'N",
+        "longitude": "8º48,50'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(3) W 5s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 2,8s; Duque D’Alba. 3",
+      "aliases": [
+        "Norte",
+        "397.51",
+        "D-2157.5",
+        "NORTE",
+        "d 2157 5",
+        "norte",
+        "397 51"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "399.71",
+      "international_number": "D-2157",
+      "name": "Cais Três",
+      "position": {
+        "latitude": "38º28,21'N",
+        "longitude": "8º47,36'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(5) W 8s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 0,8s; Duque D’Alba. 3 Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 3,8s",
+      "aliases": [
+        "Cais Três",
+        "399.71",
+        "D-2157",
+        "CAIS TRÊS",
+        "d 2157",
+        "cais tres",
+        "399 71"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "399.72",
+      "international_number": "D-2157.1",
+      "name": "Cais Dois",
+      "position": {
+        "latitude": "38º28,19'N",
+        "longitude": "8º47,47'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(3) W 5s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 2,8s; Duque D’Alba. 3",
+      "aliases": [
+        "Cais Dois",
+        "399.72",
+        "D-2157.1",
+        "CAIS DOIS",
+        "d 2157 1",
+        "399 72",
+        "cais dois"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "399.73",
+      "international_number": "D-2157.2",
+      "name": "Cais Um",
+      "position": {
+        "latitude": "38º28,21'N",
+        "longitude": "8º47,58'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(5) W 8s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 0,8s; Duque D’Alba. 3 Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 3,8s",
+      "aliases": [
+        "Cais Um",
+        "399.73",
+        "D-2157.2",
+        "CAIS UM",
+        "cais um",
+        "d 2157 2",
+        "399 73"
+      ]
+    },
+    {
+      "area": "SETÚBAL - CANAL SUL",
+      "national_number": "399.74",
+      "international_number": "D-2157.3",
+      "name": "Cais Zero",
+      "position": {
+        "latitude": "38º28,20'N",
+        "longitude": "8º47,85'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Q(3) W 5s",
+      "altitude_m": "8",
+      "nominal_range_m": "6",
+      "details": "Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 2,8s; Duque D’Alba. 3",
+      "aliases": [
+        "Cais Zero",
+        "399.74",
+        "D-2157.3",
+        "CAIS ZERO",
+        "d 2157 3",
+        "cais zero",
+        "399 74"
+      ]
+    },
+    {
+      "area": "PINHEIRO DA CRUZ",
+      "national_number": "399.8",
+      "international_number": "D-2158",
+      "name": "Pinheiro da Cruz",
+      "position": {
+        "latitude": "38º15,48'N",
+        "longitude": "8º46,32'W",
+        "datum": "WGS84"
+      },
+      "characteristic": "Fl W 3s",
+      "altitude_m": "67",
+      "nominal_range_m": "9",
+      "details": "Coluna com Lt 1s; Ec 2s; faixas brancas; e vermelhas",
+      "aliases": [
+        "Pinheiro da Cruz",
+        "399.8",
+        "D-2158",
+        "PINHEIRO DA CRUZ",
+        "pinheiro da cruz",
+        "399 8",
+        "d 2158"
+      ]
+    }
+  ]
+}

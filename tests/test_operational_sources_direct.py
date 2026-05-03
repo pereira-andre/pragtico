@@ -279,6 +279,25 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("fundear", payload["answer"])
         self.assertNotIn("GGp", payload["answer"])
 
+    def test_navigation_light_characteristic_direct_answer(self) -> None:
+        payload = answer_direct_operational_query("Qual e a caracteristica da Boia 1CN?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("navigation_lights", payload["answer_origin"])
+        self.assertIn("Boia N.º 1CN", payload["answer"])
+        self.assertIn("Fl G 3s", payload["answer"])
+        self.assertIn("38º30,33'N", payload["answer"])
+        self.assertIn("IALA A", payload["answer"])
+
+    def test_navigation_light_iala_direct_answer(self) -> None:
+        payload = answer_direct_operational_query("Em Setubal usamos que sistema IALA?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("navigation_lights", payload["answer_origin"])
+        self.assertIn("IALA A", payload["answer"])
+        self.assertIn("bombordo", payload["answer"])
+        self.assertIn("estibordo", payload["answer"])
+
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {
             "items": [

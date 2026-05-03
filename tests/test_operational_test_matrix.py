@@ -82,6 +82,9 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "4.º rebocador: costado ou standby" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
+    assert "Lista de Luzes Setubal incorporada" in html
+    assert "Caracteristica da Boia 1CN" in html
+    assert "Setubal usa IALA A" in html
     assert "/validar-manobra Tanquisado com 2 rebocadores" in html
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html

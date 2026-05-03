@@ -23,6 +23,7 @@ from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
+from domain.navigation_lights import build_navigation_lights_source
 from domain.operational_safety import (
     build_emergency_response_source,
     build_operational_safety_source,
@@ -1005,6 +1006,46 @@ def _answer_emergency_response_direct(question: str, clean_question: str) -> dic
     }
 
 
+def _answer_navigation_lights_direct(question: str, clean_question: str) -> dict | None:
+    source = build_navigation_lights_source(question, _active_knowledge_dir() or "knowledge")
+    if not source:
+        return None
+
+    snippet = str(source.get("snippet") or "").strip()
+    entries = source.get("entries") or []
+    answer_lines = ["Balizagem/luzes de Setúbal:"]
+    seen_lines = set(answer_lines)
+    for raw_line in snippet.splitlines():
+        line = raw_line.strip()
+        if line in seen_lines:
+            continue
+        if not line or line == "Balizagem/luzes de Setúbal:" or line == "Registos relevantes:":
+            continue
+        if line.startswith("Fonte:"):
+            continue
+        if entries and line.startswith("- "):
+            answer_lines.append(line)
+            seen_lines.add(line)
+        elif not entries and (
+            "IALA A" in line
+            or line.startswith("Fonte:")
+            or line.startswith("- SETÚBAL")
+            or line.startswith("- PINHEIRO")
+        ):
+            answer_lines.append(line)
+            seen_lines.add(line)
+        elif "IALA A" in line and line not in answer_lines:
+            answer_lines.append(line)
+            seen_lines.add(line)
+    if not any(line.startswith("- ") for line in answer_lines) and snippet:
+        answer_lines.extend(snippet.splitlines()[1:5])
+    return {
+        "answer": "\n".join(answer_lines[:10]),
+        "sources": [source],
+        "answer_origin": "navigation_lights",
+    }
+
+
 def _answer_unclear_operational_fragment(question: str, clean_question: str) -> dict | None:
     tokens = re.findall(r"[a-z0-9À-ÿ]+", clean_question or "")
     if len(tokens) > 5:
@@ -1089,6 +1130,9 @@ def build_operational_chat_sources(
     safety_source = build_operational_safety_source(question, knowledge_dir)
     if safety_source:
         sources.append(safety_source)
+    navigation_lights_source = build_navigation_lights_source(question, knowledge_dir)
+    if navigation_lights_source:
+        sources.append(navigation_lights_source)
     tug_guidance_source = build_tug_operational_guidance_source(question, knowledge_dir)
     if tug_guidance_source:
         sources.append(tug_guidance_source)
@@ -1117,6 +1161,9 @@ def answer_direct_operational_query(
     emergency_answer = _answer_emergency_response_direct(question, clean_question)
     if emergency_answer:
         return emergency_answer
+    navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
+    if navigation_lights_answer:
+        return navigation_lights_answer
     unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
     if unclear_answer:
         return unclear_answer

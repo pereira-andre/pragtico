@@ -230,6 +230,21 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertNotIn("A resposta direta", result["answer"])
         self.assertNotIn("GGp", result["answer"])
 
+    def test_navigation_light_question_uses_direct_light_source(self) -> None:
+        services.store = FakeStore()
+
+        with self.app.test_request_context("/api/chat"):
+            result = handle_chat_turn(
+                username="admin@porto.pt",
+                role="admin",
+                question="Qual e a caracteristica da Boia 2CS no Canal Sul?",
+            )
+
+        self.assertEqual(result["answer_origin"], "navigation_lights")
+        self.assertIn("Boia N.º 2CS", result["answer"])
+        self.assertIn("Fl R 3s", result["answer"])
+        self.assertIn("IALA A", result["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

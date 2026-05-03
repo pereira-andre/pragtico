@@ -1,0 +1,62 @@
+{
+  "document": "Lista_Luzes_Setubal.txt",
+  "title": "SETÚBAL - BALIZAGEM E LISTA DE LUZES",
+  "aliases": [
+    "Lista_Luzes_Setubal.txt",
+    "Lista_Luzes_Setubal.pdf",
+    "balizagem Setúbal",
+    "luzes Setúbal",
+    "boias Canal Norte",
+    "boias Canal Sul"
+  ],
+  "summary": "Lista operacional de ajudas à navegação de Setúbal, extraída da PN35 do Instituto Hidrográfico (março 2026), com posição WGS84, característica luminosa, alcance, descrição e observações quando presentes. Inclui nota explícita de que Setúbal usa IALA A.",
+  "key_points": [
+    "Setúbal usa o sistema IALA A: entrando do mar para o porto, bombordo é vermelho/cilíndrico e estibordo é verde/cónico.",
+    "A lista estruturada inclui 102 ajudas à navegação nas zonas Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz.",
+    "Cada registo mantém N.º nacional, N.º internacional quando existe, nome, posição WGS84, característica abreviada, alcance e detalhes extraídos.",
+    "Para navegação oficial devem ser confirmados a PN35, avisos aos navegantes e cartas em vigor."
+  ],
+  "faq": [
+    {
+      "question": "Que sistema IALA se usa em Setúbal?",
+      "answer": "Em Setúbal usa-se o sistema IALA A. No sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.",
+      "keywords": [
+        "IALA",
+        "Setúbal",
+        "balizagem",
+        "bombordo",
+        "estibordo"
+      ]
+    },
+    {
+      "question": "Qual é a característica da Boia 1CN?",
+      "answer": "A Boia N.º 1CN tem característica Fl G 3s, posição 38º30,33'N 8º51,46'W, alcance 3 M, descrição verde com alvo cónico e refletor radar.",
+      "keywords": [
+        "1CN",
+        "Boia",
+        "característica",
+        "Canal Norte"
+      ]
+    },
+    {
+      "question": "Qual é a característica da Doca Pesca?",
+      "answer": "A Doca Pesca tem característica Iso Y 6s, posição 38º31,08'N 8º54,01'W, altitude 14 m e enfiamento Ldg 039,7º para a barra de Setúbal.",
+      "keywords": [
+        "Doca Pesca",
+        "Iso Y 6s",
+        "enfiamento",
+        "barra"
+      ]
+    },
+    {
+      "question": "Qual é a característica da Boia 2CS?",
+      "answer": "A Boia N.º 2CS tem característica Fl R 3s, posição 38º29,95'N 8º53,25'W, alcance 3 M, descrição vermelha com alvo cilíndrico e refletor radar.",
+      "keywords": [
+        "2CS",
+        "Boia",
+        "Canal Sul",
+        "Fl R 3s"
+      ]
+    }
+  ]
+}
