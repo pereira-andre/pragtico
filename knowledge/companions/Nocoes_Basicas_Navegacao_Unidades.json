@@ -1,0 +1,47 @@
+{
+  "document": "Nocoes_Basicas_Navegacao_Unidades.txt",
+  "title": "Nocoes basicas de navegacao, unidades e escala Beaufort",
+  "aliases": [
+    "Nocoes_Basicas_Navegacao_Unidades.txt",
+    "unidades nauticas",
+    "conversao de unidades",
+    "milhas nauticas",
+    "manilhas",
+    "jardas",
+    "escala Beaufort",
+    "forca Beaufort"
+  ],
+  "summary": "Equivalencias essenciais entre milhas nauticas, metros, quilometros, jardas, manilhas, nos e km/h, mais tabela Beaufort 0-12 com intervalos em kt e km/h.",
+  "key_points": [
+    "1 milha nautica = 1852 m = 1,852 km.",
+    "1 km = 0,5399568 milhas nauticas.",
+    "1 no = 1 milha nautica por hora = 1,852 km/h.",
+    "1 jarda = 0,9144 m.",
+    "1 manilha = 27,5 m.",
+    "Em navegacao, milha deve ser interpretada como milha nautica salvo indicacao contraria.",
+    "A escala Beaufort deve ser convertida para kt ou km/h antes de comparar com limites operacionais locais.",
+    "Beaufort 6 = 22-27 kt / 39-49 km/h; Beaufort 7 = 28-33 kt / 50-61 km/h; Beaufort 8 = 34-40 kt / 62-74 km/h."
+  ],
+  "faq": [
+    {
+      "question": "20 km sao quantas milhas nauticas?",
+      "answer": "20 km = 10,80 milhas nauticas, usando 1 milha nautica = 1852 m.",
+      "keywords": ["km", "milhas nauticas", "conversao"]
+    },
+    {
+      "question": "1 manilha sao quantos metros?",
+      "answer": "1 manilha = 27,5 m.",
+      "keywords": ["manilha", "metros", "ferro", "amarra"]
+    },
+    {
+      "question": "100 jardas sao quantos metros?",
+      "answer": "100 jardas = 91,44 m, usando 1 jarda = 0,9144 m.",
+      "keywords": ["jardas", "metros", "conversao"]
+    },
+    {
+      "question": "Forca 6 Beaufort equivale a quantos nos?",
+      "answer": "Beaufort 6 = 22-27 kt, equivalente a 39-49 km/h, descrito como vento fresco.",
+      "keywords": ["Beaufort", "forca 6", "vento", "nos", "km/h"]
+    }
+  ]
+}

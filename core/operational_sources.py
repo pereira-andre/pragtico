@@ -23,6 +23,7 @@ from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
+from domain.navigation_basics import answer_navigation_basics_direct, build_navigation_basics_source
 from domain.navigation_lights import build_navigation_lights_source
 from domain.operational_safety import (
     build_emergency_response_source,
@@ -1133,6 +1134,9 @@ def build_operational_chat_sources(
     navigation_lights_source = build_navigation_lights_source(question, knowledge_dir)
     if navigation_lights_source:
         sources.append(navigation_lights_source)
+    navigation_basics_source = build_navigation_basics_source(question, knowledge_dir)
+    if navigation_basics_source:
+        sources.append(navigation_basics_source)
     tug_guidance_source = build_tug_operational_guidance_source(question, knowledge_dir)
     if tug_guidance_source:
         sources.append(tug_guidance_source)
@@ -1164,6 +1168,9 @@ def answer_direct_operational_query(
     navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
     if navigation_lights_answer:
         return navigation_lights_answer
+    navigation_basics_answer = answer_navigation_basics_direct(question)
+    if navigation_basics_answer:
+        return navigation_basics_answer
     unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
     if unclear_answer:
         return unclear_answer

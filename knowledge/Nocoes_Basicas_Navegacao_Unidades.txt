@@ -1,0 +1,79 @@
+DOCUMENTO: NOCOES BASICAS DE NAVEGACAO, UNIDADES E ESCALA BEAUFORT
+FONTE: Referencias nauticas gerais e pratica operacional.
+AMBITO: Conhecimento de base para manter o sistema e o utilizador alinhados em unidades, vento e linguagem nautica corrente.
+
+Este documento fixa equivalencias e conceitos basicos usados em conversa operacional.
+Nao substitui cartas nauticas, publicacoes oficiais, regulamentos locais, informacao do VTS,
+boletins meteorologicos, ordens do Piloto ou decisao do Comandante.
+
+================================================================================
+UNIDADES NAUTICAS ESSENCIAIS
+================================================================================
+
+Distancia:
+- 1 milha nautica = 1852 m = 1,852 km.
+- 1 km = 0,5399568 milhas nauticas.
+- 1 m = 0,0005399568 milhas nauticas.
+- 1 jarda = 0,9144 m.
+- 1 m = 1,09361 jardas.
+- 1 manilha = 27,5 m.
+- 1 manilha = cerca de 30,1 jardas.
+- 1 manilha = cerca de 0,01485 milhas nauticas.
+
+Velocidade:
+- 1 no = 1 milha nautica por hora.
+- 1 no = 1,852 km/h.
+- 1 km/h = 0,5399568 nos.
+
+Notas de uso:
+- Em navegacao, "milha" deve ser interpretada como milha nautica, salvo indicacao contraria.
+- Para distancia de rota, resguardo e alcance de luzes, usar milhas nauticas, metros e cabos/manilhas quando fizer sentido.
+- Para vento e velocidade do navio, usar nos ou km/h, mas as regras operacionais locais devem ser avaliadas nos mesmos termos dos limites publicados.
+- Em emergencias com ferro, a referencia pratica "1 manilha na agua" significa cerca de 27,5 m de amarra na agua.
+
+================================================================================
+ESCALA BEAUFORT
+================================================================================
+
+A escala Beaufort descreve a intensidade do vento por forca 0 a 12. Em contexto operacional,
+deve ser convertida para nos ou km/h antes de comparar com limites locais.
+
+- Beaufort 0: <1 kt (<1 km/h) - calmaria.
+- Beaufort 1: 1-3 kt (1-5 km/h) - aragem.
+- Beaufort 2: 4-6 kt (6-11 km/h) - brisa leve.
+- Beaufort 3: 7-10 kt (12-19 km/h) - brisa fraca.
+- Beaufort 4: 11-16 kt (20-28 km/h) - brisa moderada.
+- Beaufort 5: 17-21 kt (29-38 km/h) - brisa fresca.
+- Beaufort 6: 22-27 kt (39-49 km/h) - vento fresco.
+- Beaufort 7: 28-33 kt (50-61 km/h) - vento forte.
+- Beaufort 8: 34-40 kt (62-74 km/h) - temporal.
+- Beaufort 9: 41-47 kt (75-88 km/h) - temporal forte.
+- Beaufort 10: 48-55 kt (89-102 km/h) - temporal muito forte.
+- Beaufort 11: 56-63 kt (103-117 km/h) - tempestade.
+- Beaufort 12: >=64 kt (>=118 km/h) - furacao.
+
+Leitura operacional simples:
+- Beaufort 4 ja pode ser relevante para aproximacao fina e trabalho de cabos.
+- Beaufort 5 exige atencao em navios leves ou com muita area velica.
+- Beaufort 6 exige avaliacao cuidada de viabilidade, meios e margem.
+- Beaufort 7 entra em zona critica e pode aproximar ou ultrapassar limites locais.
+- Beaufort 8 ou superior ultrapassa 30 kt; aplicar regra local de suspensao quando o vento sustentado ou rajada for superior a 30 kt.
+
+================================================================================
+PERGUNTAS E RESPOSTAS DE REFERENCIA
+================================================================================
+
+Pergunta: 20 km sao quantas milhas nauticas?
+Resposta: 20 km = 10,80 milhas nauticas. Referencia: 1 milha nautica = 1852 m.
+
+Pergunta: 1 manilha sao quantos metros?
+Resposta: 1 manilha = 27,5 m.
+
+Pergunta: 100 jardas sao quantos metros?
+Resposta: 100 jardas = 91,44 m.
+
+Pergunta: Forca 6 Beaufort equivale a quantos nos?
+Resposta: Beaufort 6 = 22-27 kt, equivalente a 39-49 km/h, descrito como vento fresco.
+
+Pergunta: O que significa "1 manilha na agua"?
+Resposta: Significa cerca de 27,5 m de amarra na agua. Em emergencia, a decisao de largar ferro depende sempre de agua, fundo, espaco, trafego, vento/corrente e instrucao operacional.
