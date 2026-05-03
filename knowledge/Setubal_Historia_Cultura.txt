@@ -1,0 +1,78 @@
+DOCUMENTO: SETUBAL - HISTORIA, PATRIMONIO E CULTURA LOCAL
+ENTIDADE EMISSORA: Sintese PRAGtico com base em fontes municipais/turisticas e notas locais
+REVISAO: 2026-05-03
+AMBITO: Contexto historico e cultural para conversa com utilizadores sobre Setubal, sem substituir fontes tecnicas/operacionais.
+
+NOTA DE USO PELO BOT
+Este documento serve para dar contexto humano, historico e cultural sobre Setubal. Nao deve ser usado para validar manobras, limites de vento, calado, rebocadores, VTS, seguranca ou regulamentacao portuaria. Para decisao operacional, usar sempre as IT, regras estruturadas, dados live e documentos tecnicos.
+
+SETUBAL EM POUCAS LINHAS
+Setubal e uma cidade marcada pelo rio Sado, pela barra, pela Arrabida, pela pesca, pela industria, pelo sal, pelo comercio portuario e por uma forte cultura de mar. A identidade local cruza trabalho portuario e piscatorio, patrimonio militar e religioso, gastronomia ligada ao peixe/choco/marisco e uma relacao muito propria com a baia e Troia.
+
+MARCOS HISTORICOS DA CIDADE
+- Ha vestigios de ocupacao humana no concelho desde a pre-historia, incluindo o Neolitico.
+- Na epoca romana, entre os seculos I e IV, desenvolveu-se Cetobriga, nucleo urbano e industrial ligado sobretudo a salga de peixe, com presenca nas duas margens do Sado e em Troia.
+- Depois das fases de abandono associadas as invasoes barbaras, ocupacao arabe e avanco das areias, Setubal foi repovoada apos a conquista de Palmela e a implantacao da Ordem de Santiago da Espada.
+- Em 1249, D. Paio Peres Correia, mestre da Ordem de Santiago, concedeu a primeira carta foral a Setubal.
+- Em 1343, no contexto da delimitacao do termo de Setubal e da defesa dos seus interesses face a concelhos vizinhos, foi impulsionada a construcao de muralhas.
+- No seculo XV, Setubal cresceu com comercio, industria e rendimentos portuarios. O Convento de Jesus e outros conventos franciscanos pertencem a este periodo.
+- Em 1458, D. Afonso V partiu do porto de Setubal para a campanha de Alcacer Ceguer.
+- Em 1487, D. Joao II iniciou a construcao do aqueduto para abastecimento de agua a vila; a obra terminou no reinado de D. Manuel.
+- Em 1514, D. Manuel reformou o foral de Setubal.
+- Em 1525, D. Joao III concedeu a Setubal o titulo de "notavel villa". Em 1553 foram criadas as freguesias de S. Sebastiao e Anunciada.
+- O terramoto de 1755 danificou fortemente a zona baixa da cidade.
+- No seculo XIX, Setubal tornou-se um centro comercial e industrial importante; foi elevada a cidade em 1860.
+- Em 1863 chegaram marcos de modernizacao como a via-ferrea Barreiro-Setubal e a iluminacao a gas.
+- Setubal foi elevada a sede de distrito em 1926 e a cabeca de diocese em 1975.
+
+FORTE DE SAO FILIPE
+- O Forte de Sao Filipe foi mandado construir por Filipe I de Portugal / Filipe II de Espanha, com trabalhos iniciados em 1582, para reforcar a defesa da costa, da entrada do Sado e da cidade.
+- O forte deve ser visto tambem no contexto da Uniao Iberica: para alem da defesa contra ataques vindos do mar, a fortaleza representava poder politico sobre uma cidade estrategica.
+- A atribuicao antiga a Filipe Terzi aparece em algumas narrativas, mas fontes patrimoniais atuais indicam que a fortaleza foi desenhada pelo Capitao Fratino em 1583.
+- A planta e irregular, poligonal, em estrela de seis pontas, com seis baluartes, implantada em declive acentuado sobre o mar e com uma segunda linha amuralhada a norte.
+- A fortaleza domina visualmente a cidade, o porto, a baia do Sado e Troia, sendo hoje um dos melhores pontos de leitura da geografia local.
+- O forte conserva uma capela barroca/joanina com revestimento de azulejos, incluindo paineis datados de 1736 atribuidos a Policarpo de Oliveira Bernardes.
+- Foi classificado como Monumento Nacional em 1933.
+- Um incendio em 1868 destruiu grande parte das estruturas interiores. O espaco interior foi muito transformado no seculo XX, incluindo a adaptacao a Pousada de Portugal a partir de 1964.
+- A encosta do forte tem exigido intervencoes de estabilizacao e monitorizacao para seguranca do monumento e dos utilizadores.
+
+OUTAO E FORTALEZA DE SANTIAGO DO OUTAO
+- O Outao e um promontorio estrategico na entrada da barra do Sado, com grande importancia militar, nautica e paisagistica.
+- A fortificacao inicial remonta a uma atalaia ou torre de vigia mandada erguer em 1390 por D. Joao I.
+- A ocupacao do lugar parece mais antiga: durante obras seiscentistas foram encontrados vestigios associados a um templo romano dedicado a Neptuno.
+- No seculo XVI, a torre primitiva recebeu uma cerca abaluartada adaptada a guerra da polvora.
+- Ao longo dos seculos, o Outao foi recebendo remodelacoes e melhoramentos, sendo referido como a fortificacao verdadeiramente central na defesa da foz do Sado e de Setubal.
+- No seculo XIX, com a perda de importancia estrategica, a fortaleza chegou a ser usada como prisao.
+- Em 1880 foi instalado o farol, hoje associado a imagem do Outao.
+- No fim do seculo XIX, a fortaleza foi adaptada a residencia de ferias da familia real.
+- Em 1900, a rainha D. Amelia ofereceu a fortaleza para instalacao de um sanatorio ligado a Assistencia Nacional aos Tuberculosos.
+- Mais tarde, com a diminuicao da tuberculose, o conjunto evoluiu para o Hospital Ortopedico de Sant'Iago do Outao.
+
+GASTRONOMIA E BONS COSTUMES DA TERRA
+- Em Setubal, falar de comida e falar do mar: peixe fresco, choco, marisco, ostras e pratos de grelha/caldeirada fazem parte da identidade local.
+- O choco frito e provavelmente o prato mais emblematico da cidade. E comum falar dele como imagem de marca de Setubal; aparece muitas vezes servido com batata frita e salada, ou no pao.
+- O choco tambem aparece em outras preparacoes locais, como feijoada de choco ou risotto de choco.
+- Outros sabores muito associados a regiao incluem Tortas de Azeitao e Moscatel de Setubal.
+- Numa resposta de tom local, o bot pode dizer que um visitante deve perceber Setubal pela baia, pela Arrabida, pelo Sado, pelo peixe/choco e pela vida portuaria/piscatoria.
+- O tom deve ser simples e natural: tecnico quando a pergunta e operacional, mas com memoria da terra quando a pergunta e cultural, turistica ou de acolhimento.
+
+RESPOSTAS CURTAS QUE O BOT PODE DAR
+Pergunta: O que devo saber sobre Setubal em poucas palavras?
+Resposta: Setubal e uma cidade de mar e de rio: Sado, Arrabida, porto, pesca, sal, industria e uma gastronomia muito ligada ao peixe, ao choco e ao marisco. Historicamente passa por Cetobriga romana, Ordem de Santiago, crescimento portuario medieval/moderno, Forte de Sao Filipe, Outao e forte transformacao industrial no seculo XIX.
+
+Pergunta: O que e o choco frito?
+Resposta: O choco frito e um dos pratos mais emblematicos de Setubal. Normalmente aparece como choco panado/frito, muitas vezes com batata frita e salada, e tambem pode aparecer no pao. E uma boa forma de explicar que Setubal tem uma cultura gastronomica profundamente ligada ao Sado e ao mar.
+
+Pergunta: O que ha de especial no Forte de Sao Filipe?
+Resposta: O Forte de Sao Filipe domina a cidade e a baia do Sado. Comecou a ser construido em 1582 por ordem de Filipe I/II para defesa da costa e tambem como marca de poder politico. Tem planta em estrela de seis pontas, seis baluartes, vista sobre Setubal/Troia e uma capela com azulejos setecentistas.
+
+Pergunta: O que ha de especial no Outao?
+Resposta: O Outao e um ponto estrategico da barra do Sado. A fortificacao vem de uma atalaia de 1390, foi muito reforcada com a guerra da polvora, teve farol instalado em 1880, passou por uso prisional e real, e acabou ligada a saude como sanatorio e depois Hospital Ortopedico de Sant'Iago do Outao.
+
+FONTES BASE
+- Municipio de Setubal, "Historia, numa pagina": https://www.mun-setubal.pt/historia/
+- Visit Setubal, "Forte de Sao Filipe": https://visitsetubal.com/cultura-patrimonio/forte-de-sao-filipe/
+- Patrimonio Cultural, ficha "Castelo de Sao Filipe": https://imovel.patrimoniocultural.gov.pt/detalhes.php?code=69878
+- Municipio de Setubal, intervencao na encosta do Forte de Sao Filipe: https://www.mun-setubal.pt/intervencao-de-natureza-estrutural-para-evitar-derrocadas-na-encosta-do-forte-de-sao-filipe-fase-2/
+- Visit Setubal, "O mar a mesa": https://visitsetubal.com/eat-drink-generico2/o-mar-a-mesa/
+- Notas locais ja existentes no projeto: historia_outao.txt e historia_forte_sao_filipe.txt.

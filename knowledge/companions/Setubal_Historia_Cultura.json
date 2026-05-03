@@ -1,0 +1,79 @@
+{
+  "document": "Setubal_Historia_Cultura.txt",
+  "title": "SETUBAL - HISTORIA, PATRIMONIO E CULTURA LOCAL",
+  "aliases": [
+    "Setubal_Historia_Cultura.txt",
+    "historia de Setubal",
+    "cultura de Setubal",
+    "bons costumes de Setubal",
+    "choco frito",
+    "Forte de Sao Filipe",
+    "Outao"
+  ],
+  "summary": "Síntese de apoio cultural para o PRAGtico: história geral de Setúbal, Forte de São Filipe, Outão/Fortaleza de Sant'Iago, gastronomia local e bons costumes. Deve dar contexto humano ao bot, mas não servir de base para decisões operacionais.",
+  "key_points": [
+    "Setúbal tem ocupação humana desde a pré-história e, na época romana, desenvolveu Cetóbriga, núcleo ligado à salga de peixe nas margens do Sado.",
+    "A primeira carta foral de Setúbal foi concedida em 1249 por D. Paio Peres Correia, mestre da Ordem de Santiago.",
+    "O Forte de São Filipe começou a ser construído em 1582, por ordem de Filipe I/II, e tem planta em estrela de seis pontas com seis baluartes.",
+    "O Outão tem origem defensiva antiga, com atalaia de 1390, farol instalado em 1880 e transformação posterior em sanatório/hospital ortopédico.",
+    "A gastronomia local é marcada pelo peixe, choco e marisco; o choco frito é um dos símbolos de Setúbal.",
+    "Este documento não substitui instruções de trabalho, regras operacionais, limites de segurança nem fontes live."
+  ],
+  "faq": [
+    {
+      "question": "O que devo saber sobre Setúbal em poucas palavras?",
+      "answer": "Setúbal é uma cidade de mar e de rio: Sado, Arrábida, porto, pesca, sal, indústria e gastronomia ligada ao peixe, ao choco e ao marisco. Historicamente passa por Cetóbriga romana, Ordem de Santiago, crescimento portuário, Forte de São Filipe, Outão e forte transformação industrial no século XIX.",
+      "keywords": [
+        "setubal",
+        "historia",
+        "cidade",
+        "sado",
+        "arrabida"
+      ]
+    },
+    {
+      "question": "O que é o choco frito?",
+      "answer": "O choco frito é um dos pratos mais emblemáticos de Setúbal. Normalmente aparece como choco panado/frito, muitas vezes com batata frita e salada, e também pode aparecer no pão. É uma boa forma de explicar a ligação da cidade ao Sado e ao mar.",
+      "keywords": [
+        "choco",
+        "frito",
+        "gastronomia",
+        "setubal",
+        "comida"
+      ]
+    },
+    {
+      "question": "O que há de especial no Forte de São Filipe?",
+      "answer": "O Forte de São Filipe domina a cidade e a baía do Sado. Começou a ser construído em 1582 por ordem de Filipe I/II para defesa da costa e como marca de poder político. Tem planta em estrela de seis pontas, seis baluartes, vista sobre Setúbal/Troia e uma capela com azulejos setecentistas.",
+      "keywords": [
+        "forte",
+        "sao",
+        "filipe",
+        "patrimonio",
+        "historia"
+      ]
+    },
+    {
+      "question": "O que há de especial no Outão?",
+      "answer": "O Outão é um ponto estratégico da barra do Sado. A fortificação vem de uma atalaia de 1390, foi reforçada com a guerra da pólvora, teve farol instalado em 1880, passou por uso prisional e real, e acabou ligada à saúde como sanatório e depois Hospital Ortopédico de Sant'Iago do Outão.",
+      "keywords": [
+        "outao",
+        "fortaleza",
+        "farol",
+        "hospital",
+        "sado"
+      ]
+    },
+    {
+      "question": "Este conhecimento cultural pode validar uma manobra?",
+      "answer": "Não. Serve apenas para contexto histórico e cultural. Para validar manobras, calados, rebocadores, VTS, meteorologia ou segurança, o bot deve usar as instruções de trabalho, regras estruturadas, fontes operacionais e dados live.",
+      "keywords": [
+        "manobra",
+        "operacional",
+        "seguranca",
+        "cultura",
+        "validar"
+      ]
+    }
+  ]
+}
