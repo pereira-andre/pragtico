@@ -107,7 +107,7 @@
       {% set can_validate_or_report = current_role in ["admin", "piloto"] %}
       {% set can_approve_current = (maneuver.type == "entry" and scale.actions.can_approve_entry) or (maneuver.type == "departure" and scale.actions.can_approve_departure) or (maneuver.type == "shift" and scale.actions.can_approve_shift) %}
       {% set report_action = url_for('port_calls.edit_maneuver_report', port_call_id=port_call.id, maneuver_id=maneuver.id) if maneuver.report_completed else url_for('port_calls.attach_entry_report', port_call_id=port_call.id) if maneuver.type == 'entry' else url_for('port_calls.attach_departure_report', port_call_id=port_call.id) if maneuver.type == 'departure' else url_for('port_calls.attach_shift_report', port_call_id=port_call.id) %}
-      <section class="panel inset-panel scale-actions-panel maneuver-operations-panel">
+      <section class="panel inset-panel scale-actions-panel maneuver-operations-panel" data-action-accordion>
         <div class="section-head compact-head">
           <div>
             <p class="eyebrow">Ações</p>
@@ -124,9 +124,12 @@
             <div class="maneuver-action-controls">
               {% if can_manage_request and is_pending %}
                 {% if maneuver.can_edit_plan %}
-                  <details class="planning-optional-box maneuver-action-details">
-                    <summary>Editar marcação</summary>
-                    <form method="post" action="{{ url_for('port_calls.edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" class="stack planning-optional-body">
+                  <details class="planning-optional-box maneuver-action-details" data-action-disclosure>
+                    <summary class="maneuver-action-summary">
+                      <span>Editar marcação</span>
+                      <small>Hora, origem, destino e meios</small>
+                    </summary>
+                    <form method="post" action="{{ url_for('port_calls.edit_maneuver_plan', port_call_id=port_call.id, maneuver_id=maneuver.id) }}" class="stack planning-optional-body maneuver-action-body">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="redirect_to" value="maneuver">
                       <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
@@ -195,17 +198,22 @@
             </div>
             <div class="maneuver-action-controls">
               {% if can_validate_or_report and is_pending and can_approve_current %}
-                <form method="post" action="{% if maneuver.type == 'shift' %}{{ url_for('port_calls.approve_shift_plan', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.approve_port_call', port_call_id=port_call.id) }}{% endif %}" class="ops-form-card maneuver-inline-form">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="redirect_to" value="maneuver">
-                  <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
-                  <strong>Aprovar {{ maneuver.title|lower }}</strong>
-                  <label>
-                    Nota de validação
-                    <textarea name="approval_note" rows="2" placeholder="Observações para a execução..."></textarea>
-                  </label>
-                  <button type="submit" class="mini-button">Aprovar</button>
-                </form>
+                <details class="planning-optional-box maneuver-action-details" data-action-disclosure>
+                  <summary class="maneuver-action-summary">
+                    <span>Aprovar {{ maneuver.title|lower }}</span>
+                    <small>Validar e libertar execução</small>
+                  </summary>
+                  <form method="post" action="{% if maneuver.type == 'shift' %}{{ url_for('port_calls.approve_shift_plan', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.approve_port_call', port_call_id=port_call.id) }}{% endif %}" class="stack planning-optional-body maneuver-action-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="redirect_to" value="maneuver">
+                    <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+                    <label>
+                      Nota de validação
+                      <textarea name="approval_note" rows="2" placeholder="Observações para a execução..."></textarea>
+                    </label>
+                    <button type="submit" class="mini-button">Aprovar</button>
+                  </form>
+                </details>
               {% else %}
                 <span class="planned-status planned-status-{{ 'approved' if is_approved or is_completed else maneuver.status_class }}">{{ 'Aprovada' if is_approved or is_completed else maneuver.status }}</span>
               {% endif %}
@@ -220,57 +228,67 @@
             </div>
             <div class="maneuver-action-controls">
               {% if can_validate_or_report and is_approved %}
-                <form method="post" action="{% if maneuver.type == 'entry' %}{{ url_for('port_calls.abort_port_call', port_call_id=port_call.id) }}{% elif maneuver.type == 'departure' %}{{ url_for('port_calls.abort_departure_plan', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.abort_shift_plan', port_call_id=port_call.id) }}{% endif %}" class="ops-form-card maneuver-inline-form maneuver-abort-form">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="redirect_to" value="maneuver">
-                  <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
-                  <strong>Abortar {{ maneuver.title|lower }}</strong>
-                  <p class="muted small-note">Tabela APSS: >2h sem cobrança; 2h antes 30%; até 1h depois 50%; depois disso 100%.</p>
-                  <label>
-                    Motivo do aborto
-                    <textarea name="aborted_reason" rows="2" placeholder="Motivo operacional" required></textarea>
-                  </label>
-                  <button type="submit" class="mini-button danger-button">Abortar</button>
-                </form>
+                <details class="planning-optional-box maneuver-action-details maneuver-abort-details" data-action-disclosure>
+                  <summary class="maneuver-action-summary">
+                    <span>Abortar {{ maneuver.title|lower }}</span>
+                    <small>Motivo e impacto tarifário</small>
+                  </summary>
+                  <form method="post" action="{% if maneuver.type == 'entry' %}{{ url_for('port_calls.abort_port_call', port_call_id=port_call.id) }}{% elif maneuver.type == 'departure' %}{{ url_for('port_calls.abort_departure_plan', port_call_id=port_call.id) }}{% else %}{{ url_for('port_calls.abort_shift_plan', port_call_id=port_call.id) }}{% endif %}" class="stack planning-optional-body maneuver-action-body maneuver-abort-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="redirect_to" value="maneuver">
+                    <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+                    <p class="muted small-note">Tabela APSS: >2h sem cobrança; 2h antes 30%; até 1h depois 50%; depois disso 100%.</p>
+                    <label>
+                      Motivo do aborto
+                      <textarea name="aborted_reason" rows="2" placeholder="Motivo operacional" required></textarea>
+                    </label>
+                    <button type="submit" class="mini-button danger-button">Abortar</button>
+                  </form>
+                </details>
               {% endif %}
 
               {% if can_validate_or_report and maneuver.status_key in ["approved", "completed", "aborted"] %}
-                <form method="post" action="{{ report_action }}" class="ops-form-card maneuver-inline-form">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="redirect_to" value="maneuver">
-                  <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
-                  {% if maneuver.report_completed %}
-                    <input type="hidden" name="maneuver_label" value="{{ maneuver.title }}">
-                  {% else %}
-                    <input type="hidden" name="maneuver_id" value="{{ maneuver.id }}">
-                  {% endif %}
-                  <strong>{% if maneuver.report_completed %}Editar registo{% elif is_aborted %}Registar manobra abortada{% else %}Registar manobra{% endif %}</strong>
-                  <div class="mini-grid planned-mini-grid">
+                <details class="planning-optional-box maneuver-action-details" data-action-disclosure>
+                  <summary class="maneuver-action-summary">
+                    <span>{% if maneuver.report_completed %}Editar registo{% elif is_aborted %}Registar manobra abortada{% else %}Registar manobra{% endif %}</span>
+                    <small>Horas, calado e observações</small>
+                  </summary>
+                  <form method="post" action="{{ report_action }}" class="stack planning-optional-body maneuver-action-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="redirect_to" value="maneuver">
+                    <input type="hidden" name="redirect_maneuver_id" value="{{ maneuver.id }}">
+                    {% if maneuver.report_completed %}
+                      <input type="hidden" name="maneuver_label" value="{{ maneuver.title }}">
+                    {% else %}
+                      <input type="hidden" name="maneuver_id" value="{{ maneuver.id }}">
+                    {% endif %}
+                    <div class="mini-grid planned-mini-grid">
+                      <label>
+                        Início da manobra
+                        <input type="datetime-local" name="maneuver_started_local" value="{{ maneuver.execution_started_input_value }}" required>
+                      </label>
+                      <label>
+                        Fim da manobra
+                        <input type="datetime-local" name="maneuver_finished_local" value="{{ maneuver.execution_finished_input_value }}" required>
+                      </label>
+                      <label>
+                        Calado
+                        <input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required>
+                      </label>
+                    </div>
                     <label>
-                      Início da manobra
-                      <input type="datetime-local" name="maneuver_started_local" value="{{ maneuver.execution_started_input_value }}" required>
+                      Observações
+                      <textarea name="notes" rows="2">{{ maneuver.report_note }}</textarea>
                     </label>
-                    <label>
-                      Fim da manobra
-                      <input type="datetime-local" name="maneuver_finished_local" value="{{ maneuver.execution_finished_input_value }}" required>
-                    </label>
-                    <label>
-                      Calado
-                      <input type="text" name="draft_m" value="{{ maneuver.draft if maneuver.draft != '--' else '' }}" required>
-                    </label>
-                  </div>
-                  <label>
-                    Observações
-                    <textarea name="notes" rows="2">{{ maneuver.report_note }}</textarea>
-                  </label>
-                  {% if maneuver.report_completed %}
-                    <label>
-                      Motivo da alteração
-                      <textarea name="change_reason" rows="2" placeholder="Ex.: correção de hora, lapso no registo..." required></textarea>
-                    </label>
-                  {% endif %}
-                  <button type="submit" class="mini-button">Guardar registo</button>
-                </form>
+                    {% if maneuver.report_completed %}
+                      <label>
+                        Motivo da alteração
+                        <textarea name="change_reason" rows="2" placeholder="Ex.: correção de hora, lapso no registo..." required></textarea>
+                      </label>
+                    {% endif %}
+                    <button type="submit" class="mini-button">Guardar registo</button>
+                  </form>
+                </details>
               {% elif not can_validate_or_report %}
                 <span class="planned-status planned-status-{{ maneuver.status_class }}">{{ maneuver.status }}</span>
               {% endif %}
@@ -330,4 +348,16 @@
     </aside>
   </section>
 </main>
+<script>
+  document.querySelectorAll("[data-action-accordion]").forEach((accordion) => {
+    accordion.querySelectorAll("[data-action-disclosure]").forEach((details) => {
+      details.addEventListener("toggle", () => {
+        if (!details.open) return;
+        accordion.querySelectorAll("[data-action-disclosure]").forEach((candidate) => {
+          if (candidate !== details) candidate.open = false;
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}
