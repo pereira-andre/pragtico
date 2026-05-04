@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
 def normalize_entity_text(value: str) -> str:
@@ -38,6 +38,8 @@ PORT_ENTITIES: List[Dict] = [
         "aliases": ["Secil", "Terminal Secil"],
         "must_not_mix_with": [],
         "generic": True,
+        "disambiguation_options": ["Secil W", "Secil E"],
+        "ambiguity_note": "Secil pode referir-se ao cais W/Oeste ou ao cais E/Este.",
     },
     {
         "name": "TMS-1",
@@ -95,6 +97,8 @@ PORT_ENTITIES: List[Dict] = [
         "aliases": ["SAPEC", "Cais da SAPEC"],
         "must_not_mix_with": [],
         "generic": True,
+        "disambiguation_options": ["SAPEC solidos", "SAPEC liquidos"],
+        "ambiguity_note": "SAPEC pode referir-se ao terminal de sólidos ou ao terminal de líquidos.",
     },
     {
         "name": "Alstom",
@@ -109,8 +113,25 @@ PORT_ENTITIES: List[Dict] = [
         "type": "shipyard",
         "channel": "Canal Sul",
         "entry_order": 200,
-        "aliases": ["Lisnave", "LISNAVE", "Estaleiro Lisnave", "Estaleiro Naval Lisnave", "Estaleiros Mitrena", "Mitrena"],
+        "aliases": [
+            "Lisnave",
+            "LISNAVE",
+            "Estaleiro Lisnave",
+            "Estaleiro Naval Lisnave",
+            "Estaleiros Mitrena",
+            "Mitrena",
+            "Terminal Lisnave",
+            "Cais da Lisnave",
+            "Docas da Lisnave",
+            "Docas Lisnave",
+            "Docas 20 21 22",
+            "Doca 20",
+            "Doca 21",
+            "Doca 22",
+            "Hidrolift",
+        ],
         "must_not_mix_with": ["Tanquisado", "Eco-Oil", "SAPEC solidos", "SAPEC liquidos"],
+        "scope_hints": ["estaleiro", "pontes-cais", "docas secas", "hidrolift"],
     },
     {
         "name": "Tanquisado",
@@ -216,6 +237,9 @@ def detect_port_entities(text: str, *, include_generic: bool = True) -> List[Dic
                 "matched_aliases": [],
                 "must_not_mix_with": entity.get("must_not_mix_with", []),
                 "generic": bool(entity.get("generic")),
+                "disambiguation_options": entity.get("disambiguation_options", []),
+                "ambiguity_note": entity.get("ambiguity_note", ""),
+                "scope_hints": entity.get("scope_hints", []),
             },
         )
         current["matched_aliases"].append(alias)
@@ -236,6 +260,37 @@ def specific_entities(entities: List[Dict]) -> List[Dict]:
 
 def entity_names_from_matches(entities: List[Dict]) -> List[str]:
     return [entity["name"] for entity in entities]
+
+
+def resolve_port_entity(text: str, *, include_generic: bool = True) -> Dict[str, Any]:
+    matches = detect_port_entities(text, include_generic=include_generic)
+    specifics = specific_entities(matches)
+    generic_matches = [entity for entity in matches if entity.get("generic")]
+    primary = specifics[0] if specifics else (matches[0] if matches else None)
+
+    disambiguation = None
+    if not specifics:
+        disambiguation_match = next(
+            (
+                entity
+                for entity in generic_matches
+                if entity.get("disambiguation_options")
+            ),
+            None,
+        )
+        if disambiguation_match:
+            disambiguation = {
+                "name": disambiguation_match["name"],
+                "options": list(disambiguation_match.get("disambiguation_options") or []),
+                "note": disambiguation_match.get("ambiguity_note", ""),
+            }
+
+    return {
+        "matches": matches,
+        "primary": primary,
+        "is_ambiguous": bool(disambiguation),
+        "disambiguation": disambiguation,
+    }
 
 
 def primary_entity(text: str) -> Dict | None:

@@ -4,7 +4,12 @@ import unittest
 from pathlib import Path
 
 from domain.knowledge_chunking import structured_chunk_document
-from domain.port_entities import detect_port_entities, entity_names_from_matches
+from domain.port_entities import (
+    detect_port_entities,
+    entity_names_from_matches,
+    primary_entity,
+    resolve_port_entity,
+)
 from integrations.rag_engine import SimpleRAGEngine
 
 
@@ -25,6 +30,40 @@ class PortEntityTests(unittest.TestCase):
 
         names = entity_names_from_matches(detect_port_entities("E a Secil E?"))
         self.assertIn("Secil E", names)
+
+    def test_generic_sapec_and_secil_return_disambiguation_options(self) -> None:
+        sapec = resolve_port_entity("Fala-me da SAPEC")
+        self.assertEqual(sapec["primary"]["name"], "SAPEC")
+        self.assertTrue(sapec["is_ambiguous"])
+        self.assertEqual(sapec["disambiguation"]["options"], ["SAPEC solidos", "SAPEC liquidos"])
+        self.assertNotIn("SAPEC solidos", entity_names_from_matches(sapec["matches"]))
+        self.assertNotIn("SAPEC liquidos", entity_names_from_matches(sapec["matches"]))
+
+        secil = resolve_port_entity("Que regras existem para a Secil?")
+        self.assertEqual(secil["primary"]["name"], "Secil")
+        self.assertTrue(secil["is_ambiguous"])
+        self.assertEqual(secil["disambiguation"]["options"], ["Secil W", "Secil E"])
+        self.assertNotIn("Teporset", entity_names_from_matches(secil["matches"]))
+
+    def test_specific_aliases_override_generic_groups(self) -> None:
+        self.assertEqual(primary_entity("restrições na SAPEC líquidos")["name"], "SAPEC liquidos")
+        self.assertFalse(resolve_port_entity("restrições na SAPEC líquidos")["is_ambiguous"])
+
+        self.assertEqual(primary_entity("navio para o cais oeste da Secil")["name"], "Secil W")
+        self.assertFalse(resolve_port_entity("navio para o cais oeste da Secil")["is_ambiguous"])
+
+    def test_common_alias_variants_resolve_to_expected_terminals(self) -> None:
+        cases = {
+            "Atracar na EcoOil": "Eco-Oil",
+            "ir para a ECOIL": "Eco-Oil",
+            "Terminal ABB-ALSTOM": "Alstom",
+            "Estaleiros Mitrena": "Lisnave",
+            "Docas da Lisnave": "Lisnave",
+            "cais das Praias do Sado": "Praias do Sado",
+        }
+        for query, expected in cases.items():
+            with self.subTest(query=query):
+                self.assertEqual(primary_entity(query)["name"], expected)
 
 
 class StructuredChunkingTests(unittest.TestCase):
