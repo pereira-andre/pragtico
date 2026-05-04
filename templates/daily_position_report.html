@@ -315,7 +315,7 @@
       }
 
       @page {
-        size: A4 landscape;
+        size: A4 portrait;
         margin: 8mm;
       }
 
@@ -324,16 +324,10 @@
           box-shadow: none !important;
         }
 
-        html,
-        body {
-          width: 297mm;
-          min-height: 210mm;
-        }
-
         body {
           background: #fff;
-          font-size: 8.5pt;
-          line-height: 1.24;
+          font-size: 7.9pt;
+          line-height: 1.2;
           print-color-adjust: exact;
           -webkit-print-color-adjust: exact;
         }
@@ -349,7 +343,7 @@
 
         .report-header,
         .report-section {
-          margin: 0 0 3.2mm;
+          margin: 0 0 2.4mm;
           border-radius: 0;
           border-left: 0;
           border-right: 0;
@@ -363,14 +357,20 @@
         }
 
         .report-header {
-          padding: 0 0 3mm;
-          gap: 2.5mm;
+          padding: 0 0 2.4mm;
+          gap: 2mm;
           border-top: 0;
         }
 
         .report-title-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
           align-items: flex-end;
           gap: 6mm;
+        }
+
+        .report-title-row > div:first-child {
+          min-width: 0;
         }
 
         .report-meta {
@@ -379,16 +379,16 @@
         }
 
         h1 {
-          font-size: 18pt;
+          font-size: 16pt;
           line-height: 1;
         }
 
         h2 {
-          font-size: 10pt;
+          font-size: 9pt;
         }
 
         h3 {
-          font-size: 8.8pt;
+          font-size: 8.2pt;
         }
 
         .report-kicker,
@@ -403,16 +403,16 @@
 
         .report-kpi {
           gap: 0;
-          padding: 2mm 2.5mm;
+          padding: 1.6mm 2mm;
           border-radius: 2.5mm;
         }
 
         .report-kpi strong {
-          font-size: 13pt;
+          font-size: 11.5pt;
         }
 
         .report-section-head {
-          padding: 2mm 0;
+          padding: 1.6mm 0;
           background: #fff;
         }
 
@@ -424,13 +424,14 @@
 
         .report-context-grid {
           grid-template-columns: 0.75fr 1.25fr;
-          gap: 3mm;
-          padding: 2mm 0;
+          gap: 2.4mm;
+          padding: 1.6mm 0;
+          align-items: stretch;
         }
 
         .report-mini-card {
-          gap: 1.4mm;
-          padding: 2mm;
+          gap: 1mm;
+          padding: 1.6mm;
           border-radius: 2mm;
         }
 
@@ -446,13 +447,18 @@
         }
 
         .report-tide-events {
-          gap: 2mm;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 1.6mm;
         }
 
         .report-tide-event {
           gap: 0.8mm;
-          padding: 2mm;
+          padding: 1.5mm;
           border-radius: 2mm;
+        }
+
+        .report-tide-event strong {
+          font-size: 9pt;
         }
 
         table {
@@ -470,9 +476,10 @@
 
         th,
         td {
-          padding: 1.45mm 1.8mm;
-          font-size: 7.7pt;
-          line-height: 1.18;
+          padding: 1.2mm 1.4mm;
+          font-size: 7pt;
+          line-height: 1.14;
+          overflow-wrap: anywhere;
         }
 
         .position-name {
@@ -480,7 +487,7 @@
         }
 
         .report-empty {
-          padding: 2mm 0;
+          padding: 1.4mm 0;
         }
       }
     </style>
