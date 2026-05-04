@@ -103,6 +103,13 @@ def _short_maneuver_id(maneuver: Dict) -> str:
     return raw_id.split("-", 1)[0].upper()
 
 
+def _short_label(value: str, *, limit: int = 26) -> str:
+    clean = _clean_text(value)
+    if len(clean) <= limit:
+        return clean
+    return clean[: limit - 3].rstrip() + "..."
+
+
 def _port_call_scope_organization(port_call: Dict) -> str:
     for key in ("agent_profile", "created_by_profile", "reported_by_profile"):
         profile = port_call.get(key) or {}
@@ -141,23 +148,23 @@ def _build_message(
     actor_label: str,
     previous_maneuver: Optional[Dict] = None,
 ) -> str:
-    vessel_name = _clean_text(port_call.get("vessel_name")) or "Navio"
+    vessel_name = _short_label(_clean_text(port_call.get("vessel_name")) or "Navio")
     maneuver_id = _short_maneuver_id(maneuver)
     maneuver_type = _maneuver_type_label(maneuver.get("type"))
     if event_type == "created":
         planned_time = _time_label(maneuver.get("planned_at"))
-        suffix = f" planeada para {planned_time}" if planned_time != "--" else " criada"
-        return f"Manobra {maneuver_id} · {vessel_name} · {maneuver_type}{suffix} - {actor_label}"
+        suffix = f"{maneuver_type} {planned_time}" if planned_time != "--" else f"{maneuver_type} criada"
+        return f"🟡 {maneuver_id} · {vessel_name} · {suffix} · {actor_label}"
     if event_type == "approved":
-        return f"Manobra {maneuver_id} · {vessel_name} · {maneuver_type} aprovada - {actor_label}"
+        return f"✅ {maneuver_id} · {vessel_name} · {maneuver_type} aprovada · {actor_label}"
     if event_type == "completed":
         finished_time = _time_label(maneuver.get("execution_finished_at") or maneuver.get("completed_at"))
-        suffix = f" concluida as {finished_time}" if finished_time != "--" else " concluida"
-        return f"Manobra {maneuver_id} · {vessel_name} · {maneuver_type}{suffix} - {actor_label}"
+        suffix = f"{maneuver_type} concluida {finished_time}" if finished_time != "--" else f"{maneuver_type} concluida"
+        return f"✅ {maneuver_id} · {vessel_name} · {suffix} · {actor_label}"
     if event_type == "report_updated":
-        return f"Manobra {maneuver_id} · {vessel_name} · {maneuver_type} registo revisto - {actor_label}"
+        return f"📝 {maneuver_id} · {vessel_name} · registo revisto · {actor_label}"
     summary = _plan_update_summary(previous_maneuver, maneuver)
-    return f"Manobra {maneuver_id} · {vessel_name} · {maneuver_type} {summary} - {actor_label}"
+    return f"✏️ {maneuver_id} · {vessel_name} · {maneuver_type} {summary} · {actor_label}"
 
 
 def record_maneuver_notification(

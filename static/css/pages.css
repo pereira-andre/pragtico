@@ -5334,16 +5334,45 @@ button:hover {
   align-self: end;
 }
 
+.admin-audit-table {
+  min-width: 1060px;
+}
+
+.admin-audit-table th,
+.admin-audit-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+  font-size: 0.84rem;
+  line-height: 1.28;
+}
+
+.admin-audit-table th {
+  font-size: 0.72rem;
+}
+
+.admin-audit-table td strong {
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
 .admin-audit-table td:first-child,
 .admin-audit-table td:nth-child(3),
 .admin-audit-table td:nth-child(6) {
   display: grid;
-  gap: 3px;
+  gap: 1px;
 }
 
 .admin-audit-table td span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-table td:nth-child(7) {
+  max-width: 260px;
+  color: var(--muted);
+  font-size: 0.76rem;
   overflow-wrap: anywhere;
 }
 
