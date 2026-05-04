@@ -4,7 +4,7 @@ FONTE: PN35 - Ajudas à Navegação - Lista de Luzes, março 2026
 ÂMBITO: Porto de Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz
 DATUM: WGS84
 SISTEMA IALA: Setúbal usa o sistema IALA A. No sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.
-AVISO: Conhecimento de apoio ao bot/RAG. Para navegação oficial confirmar PN35, avisos aos navegantes e cartas em vigor.
+AVISO: Conhecimento de apoio operacional. Para navegação oficial confirmar PN35, avisos aos navegantes e cartas em vigor.
 
 RESUMO POR ZONA:
 - SETÚBAL: 18 ajudas à navegação registadas.

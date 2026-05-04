@@ -6,7 +6,7 @@
   "datum": "WGS84",
   "iala_region": "A",
   "iala_note": "Em Setúbal usa-se o sistema IALA A: no sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.",
-  "warning": "Fonte de apoio operacional/RAG. Para navegação oficial confirmar sempre a publicação PN35, avisos aos navegantes e cartas em vigor.",
+  "warning": "Fonte de apoio operacional. Para navegação oficial confirmar sempre a publicação PN35, avisos aos navegantes e cartas em vigor.",
   "entry_count": 102,
   "entries": [
     {

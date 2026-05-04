@@ -2,7 +2,7 @@ DOCUMENTO: PORTO DE SETÚBAL — INFORMAÇÃO GERAL E NÁUTICA (ADMIRALTY PILOT)
 FONTE: Admiralty Pilot — West Coasts of Spain and Portugal (NP 67), Capítulo 5
         e secções gerais sobre Portugal. Crown Copyright 2005.
 NATUREZA: Descrição náutica oficial do Porto de Setúbal e das costas de Portugal,
-          traduzida e adaptada para indexação vetorial RAG. Inclui posição geográfica,
+          traduzida e adaptada para indexação vetorial de conhecimento. Inclui posição geográfica,
           condições de acesso, pilotagem, rebocadores, fundeadouros, cais, canais,
           serviços portuários e condições naturais.
 AVISO DE DESATUALIZAÇÃO: Os dados operacionais (calados, comprimentos, tráfego,
@@ -732,5 +732,5 @@ Resposta: A amplitude média das marés de águas vivas é de cerca de 2,9 metro
 A amplitude média das marés de águas mortas é de cerca de 1,2 metros.
 
 ================================================================================
-FIM DO DOCUMENTO — ADMIRALTY PILOT PORTO DE SETÚBAL (TRADUZIDO PT-PT, RAG)
+FIM DO DOCUMENTO — ADMIRALTY PILOT PORTO DE SETÚBAL (TRADUZIDO PT-PT, CONHECIMENTO INDEXAVEL)
 ================================================================================

@@ -8,7 +8,7 @@ FINALIDADE
 
 Este documento existe para perguntas amplas sobre quais os terminais, cais, docas
 e instalacoes operacionais existentes no Porto de Setubal. Deve ser usado como
-ponte de sintese para o RAG quando a pergunta nao aponta para um terminal
+ponte de sintese para a recuperacao documental quando a pergunta nao aponta para um terminal
 especifico.
 
 IMPORTANTE:

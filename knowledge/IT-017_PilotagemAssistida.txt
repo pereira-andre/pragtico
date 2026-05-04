@@ -112,7 +112,7 @@ PASSO 3 — Piloto de terra:
   usar o canal 10 para comunicações). Informa o navio que o rumo de entrada é
   040 graus e que a velocidade deve ser adequada, não inferior a 10 nós. O
   documento identifica este valor apenas como "rumo 040"; para uso operacional
-  ou RAG não se deve acrescentar qualificação que não conste da IT.
+  ou qualquer resposta derivada nao se deve acrescentar qualificação que não conste da IT.
   O VTS vigia outra navegação.
 
 PASSO 4 — Piloto de terra:

@@ -1,4 +1,4 @@
-RELATORIO DE AUDITORIA RAG E RECOMENDACOES DE RESOLUCAO
+RELATORIO DE AUDITORIA DE CONHECIMENTO E RECOMENDACOES DE RESOLUCAO
 Projeto: PRAGtico
 Data: 2026-04-29
 Objetivo: guiar a evolucao do bot para respostas documentais mais rigorosas, inteligentes e confiaveis.
@@ -7,8 +7,8 @@ Objetivo: guiar a evolucao do bot para respostas documentais mais rigorosas, int
 1. RESUMO EXECUTIVO
 ===============================================================================
 
-O problema principal observado ate agora nao parece estar no modelo LLM em si.
-O problema mais provavel esta no pipeline RAG e na forma como a informacao
+O problema principal observado ate agora nao parece estar no motor de resposta em si.
+O problema mais provavel esta no pipeline de recuperacao documental e na forma como a informacao
 documental e transformada em chunks pesquisaveis.
 
 Os documentos na pasta knowledge estao, em geral, bem escritos e ricos em
@@ -31,7 +31,7 @@ Isto explica respostas em que o bot:
 - nao consegue justificar a resposta com fonte, pagina e seccao.
 
 Conclusao principal:
-O bot ja tem uma boa base de conhecimento, mas precisa de um RAG mais documental:
+O bot ja tem uma boa base de conhecimento, mas precisa de uma recuperacao documental mais rigorosa:
 chunking por seccao, metadados ricos, normalizacao de entidades, pesquisa hibrida,
 guardrails contra mistura de cais e modo debug para perceber onde cada resposta
 falhou.
@@ -75,10 +75,10 @@ Vector store:
 - Implementacao: integrations/vector_store.py.
 - Schema: sql/pgvector_schema.sql.
 
-LLM e embeddings:
+motor de resposta e embeddings:
 - Abstracao em integrations/llm_provider.py.
 - Configuracao em core/runtime.py.
-- Providers suportados: Gemini, OpenAI, OpenRouter, DeepSeek/OpenAI-compatible.
+- Providers suportados: Gemini, provider compativel, OpenRouter, DeepSeek/endpoint compativel.
 
 Autenticacao:
 - Sessao Flask.
@@ -91,7 +91,7 @@ Ingestao documental:
 - Persistencia documental: storage/postgres_documents.py.
 - Extracao de texto: domain/document_processing.py.
 
-RAG:
+recuperacao documental:
 - Chunking, embeddings, retrieval e prompt: integrations/rag_engine.py.
 - Estado/reindexacao: core/knowledge_runtime.py.
 - Vector store: integrations/vector_store.py.
@@ -103,7 +103,7 @@ Chat:
 - Planeamento/estado conversacional: core/chat_planner.py e core/chat_reasoning.py.
 
 ===============================================================================
-4. FICHEIROS CRITICOS DO PIPELINE RAG
+4. FICHEIROS CRITICOS DO PIPELINE recuperacao documental
 ===============================================================================
 
 Upload/leitura de documentos:
@@ -173,7 +173,7 @@ indice vetorial principal por este caminho. Eles sao usados por outras camadas
 do runtime.
 
 Isto significa que ha duas fontes de comportamento:
-1. RAG vetorial sobre documentos .txt/.md/.pdf/.docx/.csv.
+1. recuperacao documental vetorial sobre documentos .txt/.md/.pdf/.docx/.csv.
 2. Camadas auxiliares: companions, berth profiles, feedback, experiencia,
    regras praticas, fontes live, etc.
 
@@ -340,7 +340,7 @@ Metadata atual dos chunks:
 - embedding
 - preview
 
-Metadata necessaria para RAG documental rigoroso:
+Metadata necessaria para recuperacao documental rigorosa:
 - chunk_id
 - document_title
 - document_name
@@ -389,13 +389,13 @@ Exemplos provaveis:
 Causa provavel:
 - prompt recebe chunks sem estrutura;
 - retrieval devolve contexto generico;
-- companions e respostas revistas podem sobrepor-se ao RAG;
+- companions e respostas revistas podem sobrepor-se ao recuperacao documental;
 - o modelo tenta ser util quando o contexto e fraco.
 
 9.3 Bot fica preso no contexto errado
 
 Causa provavel:
-- historico recente e enviado ao LLM;
+- historico recente e enviado ao motor de resposta;
 - query rewriting e parcial;
 - estado conversacional nao distingue bem entidades;
 - pergunta de seguimento pode herdar entidade errada.
@@ -420,7 +420,7 @@ Separar tres coisas:
 1. Memoria da conversa:
    Serve para perceber a pergunta.
 
-2. Documentos/RAG:
+2. Documentos/recuperacao documental:
    Servem para responder.
 
 3. Dados live:
@@ -657,7 +657,7 @@ sobre [entidade]. Recomendo rever os documentos de origem ou refazer a pesquisa
 com termos mais especificos."
 
 ===============================================================================
-17. DEBUG RAG ALVO
+17. DEBUG DE RECUPERACAO DOCUMENTAL ALVO
 ===============================================================================
 
 Criar modo debug apenas para admin/desenvolvimento.
@@ -670,7 +670,7 @@ Para cada pergunta, mostrar:
 - chunks candidatos;
 - scores;
 - chunks finais;
-- prompt enviado ao LLM;
+- prompt enviado ao motor de resposta;
 - resposta final;
 - motivo pelo qual cada chunk foi escolhido;
 - avisos de baixa confianca.
@@ -721,7 +721,7 @@ P0 - Critico
 4. Guardar metadata rica nos chunks.
 5. Impedir resposta quando pergunta menciona uma entidade e chunks sao de outra.
 6. Separar Secil W/E e SAPEC solidos/liquidos.
-7. Criar modo debug RAG minimo para admin.
+7. Criar modo debug recuperacao documental minimo para admin.
 
 P1 - Muito importante
 
@@ -742,7 +742,7 @@ P2 - Boa melhoria
 
 P3 - Futuro
 
-1. Avaliador LLM secundario para verificar resposta contra fontes.
+1. Avaliador secundario para verificar resposta contra fontes.
 2. Comparacao automatica entre respostas novas e golden evals.
 3. Alertas quando novas perguntas falham.
 4. Analise estatistica de feedback por tema/documento.
@@ -882,7 +882,7 @@ Esperado:
 [ ] Guardrails bloqueiam mistura de entidade.
 [ ] Prompt impede alucinacao.
 [ ] Debug mostra chunks e scores.
-[ ] Testes RAG existem.
+[ ] Testes recuperacao documental existem.
 [ ] Perguntas de seguimento funcionam.
 [ ] Feedback ignorado nao contamina o bot.
 [ ] Bot sabe dizer "nao sei" quando nao ha suporte documental.
@@ -910,7 +910,7 @@ mas o problema volta assim que os documentos forem reindexados da mesma forma.
 
 O bot tem informacao suficiente para ser muito melhor do que esta a demonstrar em
 alguns casos. O problema e que a informacao ainda nao esta representada de forma
-suficientemente estruturada para um RAG tecnico-operacional.
+suficientemente estruturada para recuperacao documental tecnico-operacional.
 
 A prioridade e transformar o conhecimento de "texto pesquisavel" em "conhecimento
 documental estruturado":
@@ -922,7 +922,7 @@ documental estruturado":
 - pagina;
 - confianca.
 
-Com isso, o LLM deixa de tentar adivinhar a partir de excertos soltos e passa a
+Com isso, o motor de resposta deixa de tentar adivinhar a partir de excertos soltos e passa a
 responder como leitor tecnico dos documentos certos.
 
 ===============================================================================
@@ -960,7 +960,7 @@ Foram implementadas as primeiras melhorias P0/P1:
 
 7. Debug no playground admin:
    - templates/admin_bot.html
-   - o trace passa a mostrar validacao RAG, entidade, qualidade e fonte.
+   - o trace passa a mostrar validacao documental, entidade, qualidade e fonte.
 
 8. Scripts locais:
    - scripts/audit_knowledge_chunks.py
@@ -979,7 +979,7 @@ python3 -m py_compile core/chat_runtime.py integrations/rag_engine.py integratio
 
 Resultado:
 - 7 testes unitarios passaram.
-- 8/8 evals RAG passaram em memoria.
+- 8/8 evals recuperacao documental passaram em memoria.
 - A auditoria continua a assinalar chunks comparativos/mistos, mas estes ficam
   agora classificados e penalizados no reranking quando a pergunta e especifica.
 
