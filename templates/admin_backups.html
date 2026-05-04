@@ -66,6 +66,7 @@
         <span class="admin-status-badge is-neutral">Manual</span>
       </div>
       <form method="post" action="{{ url_for('admin.create_system_backup') }}" class="admin-backup-action-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p class="admin-status-note">O pacote fica guardado no histórico e pode ser descarregado manualmente pelo admin.</p>
         <button type="submit">Criar backup completo</button>
       </form>
@@ -136,6 +137,7 @@
                 <td class="admin-backup-actions">
                   <a class="mini-button secondary-button" href="{{ url_for('admin.download_system_backup', filename=item.filename) }}">Download</a>
                   <form method="post" action="{{ url_for('admin.delete_system_backup', filename=item.filename) }}" onsubmit="return confirm('Apagar este backup local? Confirma que tens outra cópia antes de continuar.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="mini-button danger-button">Apagar</button>
                   </form>
                 </td>
@@ -158,6 +160,7 @@
       <span class="admin-status-badge is-degraded">Ação sensível</span>
     </div>
     <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-backup-restore-form" onsubmit="return confirm('Confirmas que queres importar este backup? Em modo substituir, a base atual é trocada pelos dados do ficheiro.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
         Ficheiro ZIP ou JSON
         <input type="file" name="system_database_file" accept=".zip,.json,application/json,application/zip" required>
@@ -199,6 +202,7 @@
       </article>
     </div>
     <form method="post" action="{{ url_for('admin.wipe_system_database') }}" class="admin-backup-wipe-form" onsubmit="return confirm('Primeira confirmação: vais limpar a base de dados aplicacional. Continuar?') && confirm('Segunda confirmação: confirma que tens backup e queres apagar estes dados.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
         Password do admin atual
         <input type="password" name="admin_password" autocomplete="current-password" required>

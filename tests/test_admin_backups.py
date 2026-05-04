@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
+from pathlib import Path
+import re
 import zipfile
 
 from flask import Flask
 
 from blueprints import admin as admin_module
 from core import services
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class BackupFakeStore:
@@ -141,6 +146,14 @@ def test_system_backup_zip_contains_json_and_readme(tmp_path, monkeypatch) -> No
     assert payload["payload"]["tables"]["app_users"][0]["username"] == "admin@porto.pt"
     assert "Conversas, mensagens" in readme
     assert "backup.json" in readme
+
+
+def test_admin_backups_post_forms_include_csrf_token() -> None:
+    template = (PROJECT_ROOT / "templates" / "admin_backups.html").read_text(encoding="utf-8")
+    post_forms = re.findall(r"<form\b[^>]*method=\"post\"[\s\S]*?</form>", template)
+
+    assert post_forms
+    assert all('name="csrf_token"' in form for form in post_forms)
 
 
 def test_json_upload_accepts_backup_zip(tmp_path, monkeypatch) -> None:
