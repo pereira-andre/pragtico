@@ -63,47 +63,28 @@
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
               {% if current_role == "admin" %}
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_bot', 'admin.admin_casebooks'] else '' }}" href="{{ url_for('admin.admin_bot') }}">Bot</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_event_reports', 'admin.event_report_detail'] else '' }}" href="{{ url_for('admin.admin_event_reports') }}">Eventos</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_documents' else '' }}" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_backups' else '' }}" href="{{ url_for('admin.admin_backups') }}">Backups</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_audit' else '' }}" href="{{ url_for('admin.admin_audit') }}">Auditoria</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_status' else '' }}" href="{{ url_for('admin.admin_status') }}">Estado</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_operational_tests' else '' }}" href="{{ url_for('admin.admin_operational_tests') }}">Testes</a>
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_users' else '' }}" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_bot', 'admin.admin_casebooks', 'admin.admin_event_reports', 'admin.event_report_detail', 'admin.admin_documents', 'admin.admin_backups', 'admin.admin_audit', 'admin.admin_status', 'admin.admin_operational_tests', 'admin.admin_users'] else '' }}" href="{{ url_for('admin.admin_bot') }}">Admin</a>
               {% endif %}
-              <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'auth.profile' else '' }}" href="{{ url_for('auth.profile') }}">Perfil</a>
             </nav>
           </div>
           <div class="portal-nav-tools">
-            <form class="portal-page-jump" action="#" method="get">
-              <label for="portal-page-jump-select" class="mini-label">Ir para</label>
+            {% if current_role == "admin" %}
+            <form class="portal-page-jump portal-admin-jump" action="#" method="get">
+              <label for="portal-page-jump-select" class="mini-label">Ferramentas</label>
               <select id="portal-page-jump-select" data-page-jump>
-                <option value="">Escolher página...</option>
-                <option value="{{ url_for('dashboard_bp.dashboard') }}">Quadro</option>
-                {% if current_role in ["admin", "agente"] %}
-                  <option value="{{ url_for('port_calls.port_call_register') }}">Escalas</option>
-                {% endif %}
-                {% if current_role == "admin" %}
-                  <option value="{{ url_for('port_calls.vessel_catalog') }}">Navios</option>
-                {% endif %}
-                <option value="{{ url_for('dashboard_bp.maneuver_archive') }}">Arquivo</option>
-                <option value="{{ url_for('chat.chat_archive') }}">Conversas</option>
-                <option value="{{ url_for('dashboard_bp.local_warnings') }}">Avisos locais</option>
-                <option value="{{ url_for('dashboard_bp.contact') }}">Contacto e suporte</option>
-                {% if current_role == "admin" %}
-                  <option value="{{ url_for('admin.admin_bot') }}">Bot e evals</option>
-                  <option value="{{ url_for('admin.admin_event_reports') }}">Relatórios de eventos</option>
-                  <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
-                  <option value="{{ url_for('admin.admin_backups') }}">Backups</option>
-                  <option value="{{ url_for('admin.admin_audit') }}">Auditoria</option>
-                  <option value="{{ url_for('admin.admin_status') }}">Estado da plataforma</option>
-                  <option value="{{ url_for('admin.admin_operational_tests') }}">Testes operacionais</option>
-                  <option value="{{ url_for('admin.admin_users') }}">Utilizadores</option>
-                {% endif %}
-                <option value="{{ url_for('auth.profile') }}">Perfil</option>
+                <option value="">Abrir...</option>
+                <option value="{{ url_for('admin.admin_bot') }}">Bot</option>
+                <option value="{{ url_for('admin.admin_event_reports') }}">Eventos</option>
+                <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
+                <option value="{{ url_for('admin.admin_backups') }}">Backups</option>
+                <option value="{{ url_for('admin.admin_audit') }}">Auditoria</option>
+                <option value="{{ url_for('admin.admin_status') }}">Estado</option>
+                <option value="{{ url_for('admin.admin_operational_tests') }}">Testes</option>
+                <option value="{{ url_for('admin.admin_users') }}">Utilizadores</option>
               </select>
             </form>
+            {% endif %}
+            <a class="portal-nav-profile {{ 'is-active' if current_endpoint == 'auth.profile' else '' }}" href="{{ url_for('auth.profile') }}">Perfil</a>
             <a class="portal-nav-logout" href="{{ url_for('auth.logout') }}">Sair</a>
           </div>
         </header>

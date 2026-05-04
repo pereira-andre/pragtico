@@ -4193,6 +4193,16 @@ button:hover {
   }
 }
 
+@media (max-width: 640px) {
+  .pragtico-hero .hero-meta-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 170px);
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+}
+
 /* ── Admin bot v2 — redesenho ─────────────────────────────────────── */
 .admin-bot-v2 .admin-bot-health-hero {
   gap: 18px;

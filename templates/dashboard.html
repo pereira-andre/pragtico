@@ -9,9 +9,16 @@
         <p class="lead">Chegadas, movimentos em porto, planeamento de manobras e contexto meteorológico contínuo num único ecrã.</p>
       </div>
       <aside class="hero-brand-plaque" aria-label="Marca do sistema">
-        <span class="hero-brand-kicker">Sistema</span>
-        <strong>PRAGtico</strong>
-        <small>Quadro operacional assistido para decisão, contexto e acompanhamento contínuo.</small>
+        <img
+          class="hero-brand-mascot"
+          src="{{ url_for('dashboard_bp.image_asset', asset_path='icon.png') }}"
+          alt="Mascote PRAGtico"
+        >
+        <div class="hero-brand-copy">
+          <span class="hero-brand-kicker">Sistema</span>
+          <strong>PRAGtico</strong>
+          <small>Quadro operacional para decisão, contexto e acompanhamento contínuo.</small>
+        </div>
       </aside>
     </div>
 
@@ -81,14 +88,19 @@
       </div>
       <div class="ops-hover-chart js-hover-chart" data-chart-mode="tide" data-samples='{{ tide_window.chart.samples|tojson }}'>
         <svg viewBox="0 0 {{ tide_window.chart.width }} {{ tide_window.chart.height }}" class="tide-visual-chart tide-visual-chart-wide" aria-label="Variação contínua de maré em vários dias">
-          <line x1="24" y1="{{ tide_window.chart.height - 28 }}" x2="{{ tide_window.chart.width - 24 }}" y2="{{ tide_window.chart.height - 28 }}"></line>
+          <rect class="ops-chart-surface tide-chart-surface" x="{{ tide_window.chart.left_pad }}" y="{{ tide_window.chart.top_pad }}" width="{{ tide_window.chart.width - tide_window.chart.left_pad - tide_window.chart.right_pad }}" height="{{ tide_window.chart.height - tide_window.chart.top_pad - tide_window.chart.bottom_pad }}" rx="16"></rect>
+          <line x1="{{ tide_window.chart.left_pad }}" y1="{{ tide_window.chart.height - tide_window.chart.bottom_pad }}" x2="{{ tide_window.chart.width - tide_window.chart.right_pad }}" y2="{{ tide_window.chart.height - tide_window.chart.bottom_pad }}"></line>
+          {% for tick in tide_window.chart.y_ticks %}
+            <line class="tide-grid-line" x1="{{ tide_window.chart.left_pad }}" y1="{{ tick.y }}" x2="{{ tide_window.chart.width - tide_window.chart.right_pad }}" y2="{{ tick.y }}"></line>
+            <text class="tide-axis-text" x="{{ tide_window.chart.left_pad - 10 }}" y="{{ tick.y + 4 }}">{{ tick.value }} m</text>
+          {% endfor %}
           {% for divider in tide_window.chart.day_dividers %}
-            <line class="tide-grid-line" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
-            <text class="tide-grid-label {{ 'tide-grid-label-today' if divider.is_today }}" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+            <line class="tide-grid-line" x1="{{ divider.x }}" y1="{{ tide_window.chart.top_pad }}" x2="{{ divider.x }}" y2="{{ tide_window.chart.height - tide_window.chart.bottom_pad }}"></line>
+            <text class="tide-grid-label {{ 'tide-grid-label-today' if divider.is_today }}" x="{{ divider.x + 4 }}" y="{{ tide_window.chart.top_pad - 6 }}">{{ divider.label }}</text>
           {% endfor %}
           {% if tide_window.chart.now_marker_x %}
-            <line class="tide-now-line" x1="{{ tide_window.chart.now_marker_x }}" y1="14" x2="{{ tide_window.chart.now_marker_x }}" y2="{{ tide_window.chart.height - 28 }}"></line>
-            <text class="tide-now-label" x="{{ tide_window.chart.now_marker_x + 6 }}" y="{{ tide_window.chart.height - 34 }}">Agora</text>
+            <line class="tide-now-line" x1="{{ tide_window.chart.now_marker_x }}" y1="{{ tide_window.chart.top_pad }}" x2="{{ tide_window.chart.now_marker_x }}" y2="{{ tide_window.chart.height - tide_window.chart.bottom_pad }}"></line>
+            <text class="tide-now-label" x="{{ tide_window.chart.now_marker_x + 6 }}" y="{{ tide_window.chart.height - tide_window.chart.bottom_pad - 6 }}">Agora</text>
           {% endif %}
           <path class="tide-curve" d="{{ tide_window.chart.path_d }}"></path>
           {% for point in tide_window.chart.points %}
@@ -96,7 +108,7 @@
               <title>{{ point.label }}</title>
             </circle>
           {% endfor %}
-          <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ tide_window.chart.height - 28 }}" hidden></line>
+          <line class="chart-hover-line" x1="0" y1="{{ tide_window.chart.top_pad }}" x2="0" y2="{{ tide_window.chart.height - tide_window.chart.bottom_pad }}" hidden></line>
           <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
         </svg>
         <div class="chart-hover-tooltip" hidden></div>
@@ -261,20 +273,20 @@
                       <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.03"></stop>
                     </linearGradient>
                   </defs>
-                  <rect class="ops-chart-surface" x="44" y="18" width="{{ weather_charts.width - 72 }}" height="{{ weather_charts.height - 52 }}" rx="20"></rect>
-                  <line x1="44" y1="{{ weather_charts.height - 34 }}" x2="{{ weather_charts.width - 28 }}" y2="{{ weather_charts.height - 34 }}"></line>
+                  <rect class="ops-chart-surface" x="{{ weather_charts.left_pad }}" y="{{ weather_charts.top_pad }}" width="{{ weather_charts.width - weather_charts.left_pad - weather_charts.right_pad }}" height="{{ weather_charts.height - weather_charts.top_pad - weather_charts.bottom_pad }}" rx="16"></rect>
+                  <line x1="{{ weather_charts.left_pad }}" y1="{{ weather_charts.height - weather_charts.bottom_pad }}" x2="{{ weather_charts.width - weather_charts.right_pad }}" y2="{{ weather_charts.height - weather_charts.bottom_pad }}"></line>
                   {% for tick in weather_charts.wind.y_ticks %}
-                    <line class="ops-chart-grid" x1="44" y1="{{ tick.y }}" x2="{{ weather_charts.width - 28 }}" y2="{{ tick.y }}"></line>
-                    <text class="ops-chart-axis-text" x="8" y="{{ tick.y + 4 }}">{{ tick.value }} kt</text>
+                    <line class="ops-chart-grid" x1="{{ weather_charts.left_pad }}" y1="{{ tick.y }}" x2="{{ weather_charts.width - weather_charts.right_pad }}" y2="{{ tick.y }}"></line>
+                    <text class="ops-chart-axis-text" x="{{ weather_charts.left_pad - 10 }}" y="{{ tick.y + 4 }}">{{ tick.value }} kt</text>
                   {% endfor %}
                   {% for divider in weather_charts.wind.day_dividers %}
-                    <line class="ops-chart-divider" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ weather_charts.height - 34 }}"></line>
-                    <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+                    <line class="ops-chart-divider" x1="{{ divider.x }}" y1="{{ weather_charts.top_pad }}" x2="{{ divider.x }}" y2="{{ weather_charts.height - weather_charts.bottom_pad }}"></line>
+                    <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="{{ weather_charts.top_pad - 6 }}">{{ divider.label }}</text>
                   {% endfor %}
                   <path class="ops-chart-area ops-chart-area-wind" d="{{ weather_charts.wind.wind_area_d }}"></path>
                   <path class="ops-chart-line ops-chart-line-wind" d="{{ weather_charts.wind.wind_path_d }}"></path>
                   <path class="ops-chart-line ops-chart-line-gust" d="{{ weather_charts.wind.gust_path_d }}"></path>
-                  <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ weather_charts.height - 34 }}" hidden></line>
+                  <line class="chart-hover-line" x1="0" y1="{{ weather_charts.top_pad }}" x2="0" y2="{{ weather_charts.height - weather_charts.bottom_pad }}" hidden></line>
                   <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
                   <circle class="chart-hover-dot chart-hover-dot-secondary" cx="0" cy="0" r="5" hidden></circle>
                 </svg>
@@ -318,26 +330,26 @@
                       <stop offset="100%" stop-color="#fb7185" stop-opacity="0.03"></stop>
                     </linearGradient>
                   </defs>
-                  <rect class="ops-chart-surface" x="44" y="18" width="{{ weather_charts.width - 72 }}" height="{{ weather_charts.height - 52 }}" rx="20"></rect>
-                  <line x1="44" y1="{{ weather_charts.height - 34 }}" x2="{{ weather_charts.width - 28 }}" y2="{{ weather_charts.height - 34 }}"></line>
+                  <rect class="ops-chart-surface" x="{{ weather_charts.left_pad }}" y="{{ weather_charts.top_pad }}" width="{{ weather_charts.width - weather_charts.left_pad - weather_charts.right_pad }}" height="{{ weather_charts.height - weather_charts.top_pad - weather_charts.bottom_pad }}" rx="16"></rect>
+                  <line x1="{{ weather_charts.left_pad }}" y1="{{ weather_charts.height - weather_charts.bottom_pad }}" x2="{{ weather_charts.width - weather_charts.right_pad }}" y2="{{ weather_charts.height - weather_charts.bottom_pad }}"></line>
                   {% for tick in weather_charts.temp_precip.temp_ticks %}
-                    <line class="ops-chart-grid" x1="44" y1="{{ tick.y }}" x2="{{ weather_charts.width - 28 }}" y2="{{ tick.y }}"></line>
-                    <text class="ops-chart-axis-text" x="8" y="{{ tick.y + 4 }}">{{ tick.value }}°</text>
+                    <line class="ops-chart-grid" x1="{{ weather_charts.left_pad }}" y1="{{ tick.y }}" x2="{{ weather_charts.width - weather_charts.right_pad }}" y2="{{ tick.y }}"></line>
+                    <text class="ops-chart-axis-text" x="{{ weather_charts.left_pad - 10 }}" y="{{ tick.y + 4 }}">{{ tick.value }}°</text>
                   {% endfor %}
                   {% for tick in weather_charts.temp_precip.precip_ticks %}
-                    <text class="ops-chart-axis-text ops-chart-axis-text-right" x="{{ weather_charts.width - 20 }}" y="{{ tick.y + 4 }}">{{ tick.value }} mm</text>
+                    <text class="ops-chart-axis-text ops-chart-axis-text-right" x="{{ weather_charts.width - 8 }}" y="{{ tick.y + 4 }}">{{ tick.value }} mm</text>
                   {% endfor %}
                   {% for divider in weather_charts.temp_precip.day_dividers %}
-                    <line class="ops-chart-divider" x1="{{ divider.x }}" y1="18" x2="{{ divider.x }}" y2="{{ weather_charts.height - 34 }}"></line>
-                    <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="16">{{ divider.label }}</text>
+                    <line class="ops-chart-divider" x1="{{ divider.x }}" y1="{{ weather_charts.top_pad }}" x2="{{ divider.x }}" y2="{{ weather_charts.height - weather_charts.bottom_pad }}"></line>
+                    <text class="ops-chart-day-label" x="{{ divider.x + 4 }}" y="{{ weather_charts.top_pad - 6 }}">{{ divider.label }}</text>
                   {% endfor %}
                   {% for bar in weather_charts.temp_precip.precip_bars %}
                     <rect class="ops-chart-bar" x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}"></rect>
                   {% endfor %}
                   <path class="ops-chart-area ops-chart-area-temp" d="{{ weather_charts.temp_precip.temp_area_d }}"></path>
                   <path class="ops-chart-line ops-chart-line-temp" d="{{ weather_charts.temp_precip.temp_path_d }}"></path>
-                  <line class="chart-hover-line" x1="0" y1="18" x2="0" y2="{{ weather_charts.height - 34 }}" hidden></line>
-                  <rect class="chart-hover-bar" x="0" y="{{ weather_charts.height - 34 }}" width="0" height="0" hidden></rect>
+                  <line class="chart-hover-line" x1="0" y1="{{ weather_charts.top_pad }}" x2="0" y2="{{ weather_charts.height - weather_charts.bottom_pad }}" hidden></line>
+                  <rect class="chart-hover-bar" x="0" y="{{ weather_charts.height - weather_charts.bottom_pad }}" width="0" height="0" hidden></rect>
                   <circle class="chart-hover-dot chart-hover-dot-primary" cx="0" cy="0" r="5" hidden></circle>
                 </svg>
                 <div class="chart-hover-tooltip" hidden></div>

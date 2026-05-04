@@ -35,6 +35,55 @@ def _build_svg_area_path(points: list[tuple[float, float]], baseline_y: float) -
     return f"{line_path} L {last_x:.1f},{baseline_y:.1f} L {first_x:.1f},{baseline_y:.1f} Z"
 
 
+def _nice_number(value: float) -> float:
+    if value <= 0:
+        return 1.0
+    exponent = math.floor(math.log10(value))
+    fraction = value / (10 ** exponent)
+    if fraction <= 1:
+        nice_fraction = 1
+    elif fraction <= 2:
+        nice_fraction = 2
+    elif fraction <= 5:
+        nice_fraction = 5
+    else:
+        nice_fraction = 10
+    return nice_fraction * (10 ** exponent)
+
+
+def _format_axis_value(value: float) -> int | float:
+    if abs(value - round(value)) < 0.05:
+        return int(round(value))
+    return round(value, 1)
+
+
+def _build_axis_ticks(
+    min_value: float,
+    max_value: float,
+    *,
+    max_ticks: int = 5,
+    include_zero: bool = False,
+) -> tuple[list[float], float, float]:
+    if include_zero:
+        min_value = min(0.0, min_value)
+        max_value = max(0.0, max_value)
+    if max_value <= min_value:
+        max_value = min_value + 1.0
+
+    target_slots = max(max_ticks - 1, 1)
+    step = _nice_number((max_value - min_value) / target_slots)
+    start = math.floor(min_value / step) * step
+    end = math.ceil(max_value / step) * step
+    ticks = []
+    value = start
+    for _ in range(max_ticks + 3):
+        if value > end + (step * 0.5):
+            break
+        ticks.append(round(value, 6))
+        value += step
+    return ticks, start, end
+
+
 def _build_chart_day_dividers(slots: list[dict]) -> list[dict]:
     dividers = []
     seen_dates = set()
@@ -59,8 +108,8 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
 
     width = 1180
     height = 248
-    left_pad = 44
-    right_pad = 28
+    left_pad = 62
+    right_pad = 58
     top_pad = 18
     bottom_pad = 34
     usable_width = width - left_pad - right_pad
@@ -79,7 +128,7 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
     wind_only_values = [float(slot.get("wind_kts")) for slot in weather_timeline if slot.get("wind_kts") is not None]
     gust_only_values = [float(slot.get("gust_kts")) for slot in weather_timeline if slot.get("gust_kts") is not None]
     max_wind = max(wind_values, default=10.0)
-    wind_ceiling = max(10.0, math.ceil(max_wind / 5.0) * 5.0)
+    wind_ticks, _wind_floor, wind_ceiling = _build_axis_ticks(0.0, max(10.0, max_wind), max_ticks=5, include_zero=True)
 
     def wind_to_y(value: float | None) -> float:
         amount = float(value or 0.0)
@@ -109,11 +158,21 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
 
     temp_values = [float(slot.get("temp_c")) for slot in weather_timeline if slot.get("temp_c") is not None]
     precip_values = [float(slot.get("precip_mm") or 0.0) for slot in weather_timeline]
-    temp_min = math.floor(min(temp_values, default=0.0) - 1.0)
-    temp_max = math.ceil(max(temp_values, default=1.0) + 1.0)
-    if temp_max - temp_min < 4:
-        temp_max = temp_min + 4
-    precip_ceiling = max(1.0, math.ceil(max(precip_values, default=0.0)))
+    actual_temp_min = min(temp_values, default=0.0)
+    actual_temp_max = max(temp_values, default=1.0)
+    temp_ticks, temp_min, temp_max = _build_axis_ticks(
+        actual_temp_min - 1.0,
+        actual_temp_max + 1.0,
+        max_ticks=5,
+    )
+    precip_ticks, _precip_floor, precip_ceiling = _build_axis_ticks(
+        0.0,
+        max(1.0, max(precip_values, default=0.0)),
+        max_ticks=4,
+        include_zero=True,
+    )
+    if precip_ceiling <= 1.0:
+        precip_ticks = [0.0, 1.0]
 
     def temp_to_y(value: float | None) -> float:
         amount = float(value or 0.0)
@@ -162,6 +221,8 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
     return {
         "width": width,
         "height": height,
+        "left_pad": left_pad,
+        "right_pad": right_pad,
         "top_pad": top_pad,
         "bottom_pad": bottom_pad,
         "wind": {
@@ -177,17 +238,16 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
             "samples": wind_samples,
             "day_dividers": dividers,
             "y_ticks": [
-                {"value": 0, "y": round(wind_to_y(0), 1)},
-                {"value": round(wind_ceiling / 2, 1), "y": round(wind_to_y(wind_ceiling / 2), 1)},
-                {"value": round(wind_ceiling, 1), "y": round(wind_to_y(wind_ceiling), 1)},
+                {"value": _format_axis_value(value), "y": round(wind_to_y(value), 1)}
+                for value in wind_ticks
             ],
         },
         "temp_precip": {
-            "temp_min_c": temp_min,
-            "temp_max_c": temp_max,
+            "temp_min_c": _format_axis_value(temp_min),
+            "temp_max_c": _format_axis_value(temp_max),
             "precip_max_mm": round(precip_ceiling, 1),
             "summary": {
-                "temp_span_c": round(temp_max - temp_min, 1),
+                "temp_span_c": round(actual_temp_max - actual_temp_min, 1) if temp_values else 0.0,
                 "precip_total_mm": round(sum(precip_values), 1),
                 "wet_slots": sum(1 for value in precip_values if value > 0),
             },
@@ -197,14 +257,12 @@ def build_weather_charts(weather_timeline: list[dict]) -> dict:
             "samples": temp_samples,
             "day_dividers": dividers,
             "temp_ticks": [
-                {"value": temp_min, "y": round(temp_to_y(temp_min), 1)},
-                {"value": round((temp_min + temp_max) / 2, 1), "y": round(temp_to_y((temp_min + temp_max) / 2), 1)},
-                {"value": temp_max, "y": round(temp_to_y(temp_max), 1)},
+                {"value": _format_axis_value(value), "y": round(temp_to_y(value), 1)}
+                for value in temp_ticks
             ],
             "precip_ticks": [
-                {"value": 0, "y": round(height - bottom_pad, 1)},
-                {"value": round(precip_ceiling / 2, 1), "y": round(height - bottom_pad - precip_to_height(precip_ceiling / 2), 1)},
-                {"value": round(precip_ceiling, 1), "y": round(height - bottom_pad - precip_to_height(precip_ceiling), 1)},
+                {"value": _format_axis_value(value), "y": round(height - bottom_pad - precip_to_height(value), 1)}
+                for value in precip_ticks
             ],
         },
     }

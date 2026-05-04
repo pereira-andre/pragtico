@@ -299,11 +299,11 @@ class TideService:
 
     def window_summary(self, start_date: date, days: int = 4) -> Dict:
         width = 1180
-        height = 220
-        left_pad = 24
+        height = 230
+        left_pad = 54
         right_pad = 24
-        top_pad = 22
-        bottom_pad = 28
+        top_pad = 24
+        bottom_pad = 32
         end_date = start_date + timedelta(days=days)
         events = [
             item for item in self._load_events()
@@ -350,6 +350,10 @@ class TideService:
             "chart": {
                 "width": width,
                 "height": height,
+                "left_pad": left_pad,
+                "right_pad": right_pad,
+                "top_pad": top_pad,
+                "bottom_pad": bottom_pad,
                 "path_d": self._build_smooth_path(chart_points),
                 "samples": chart_samples,
                 "points": [
@@ -368,6 +372,11 @@ class TideService:
                 "amplitude_m": round(max_height - min_height, 2),
                 "min_height_m": round(min_height, 2),
                 "max_height_m": round(max_height, 2),
+                "y_ticks": [
+                    {"value": round(min_height, 1), "y": round(to_y(min_height), 1)},
+                    {"value": round((min_height + max_height) / 2, 1), "y": round(to_y((min_height + max_height) / 2), 1)},
+                    {"value": round(max_height, 1), "y": round(to_y(max_height), 1)},
+                ],
             },
         }
 
