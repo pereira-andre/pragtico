@@ -36,7 +36,8 @@ BARE_LOA_RE = re.compile(
     flags=re.IGNORECASE,
 )
 DRAFT_RE = re.compile(
-    r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?calado\b",
+    r"\b(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\s*(?:de )?calado\b"
+    r"|\bcalado\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*m(?:etros?)?\b",
     flags=re.IGNORECASE,
 )
 BEAM_RE = re.compile(
@@ -72,8 +73,8 @@ WIND_PATTERNS = (
 PROPELLER_RE = re.compile(r"\bpasso\s+(direito|esquerdo)\b", flags=re.IGNORECASE)
 BERTHING_SIDE_RE = re.compile(r"\b(?:por|a|ao)\s+(estibordo|bombordo)\b", flags=re.IGNORECASE)
 TIME_RE = re.compile(
-    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}[:h]\d{2})\b"
-    r"|\b(\d{1,2}[:h]\d{2})\b",
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2}))\b"
+    r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
     flags=re.IGNORECASE,
 )
 DATE_RE = re.compile(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
@@ -94,8 +95,32 @@ FACILITY_PATTERNS = (
 
 def split_message_utterances(content: str) -> list[str]:
     """Split a compound user message without breaking decimal numbers such as 9.5m."""
-    raw_parts = re.split(r"(?<=[.!?])\s+|\n+", str(content or "").strip())
-    return [part.strip() for part in raw_parts if part and part.strip()]
+    text = str(content or "").strip()
+    if not text:
+        return []
+
+    parts: list[str] = []
+    start = 0
+    for index, char in enumerate(text):
+        if char == ".":
+            previous_char = text[index - 1] if index > 0 else ""
+            next_char = text[index + 1] if index + 1 < len(text) else ""
+            if previous_char.isdigit() and next_char.isdigit():
+                continue
+            if next_char and not next_char.isspace():
+                continue
+        elif char not in {"?", "!"}:
+            continue
+
+        segment = text[start:index + 1].strip()
+        if segment:
+            parts.append(segment)
+        start = index + 1
+
+    tail = text[start:].strip()
+    if tail:
+        parts.extend(part.strip() for part in re.split(r"\n+", tail) if part.strip())
+    return parts
 
 
 def build_compound_message_analysis_source(question: str) -> dict | None:
@@ -131,6 +156,13 @@ def _clean_numeric(value: str) -> str:
     return str(value or "").strip().replace(".", ",")
 
 
+def _clean_time(value: str) -> str:
+    clean_value = str(value or "").strip().lower().replace("h", ":")
+    if clean_value.endswith(":"):
+        clean_value += "00"
+    return clean_value
+
+
 def _extract_message_facts(content: str) -> list[str]:
     clean = normalize_planner_text(content)
     facts: list[str] = []
@@ -148,6 +180,8 @@ def _extract_message_facts(content: str) -> list[str]:
         facts.append("Operação pretendida: atracação.")
     elif re.search(r"\b(mudanca|shift)\b", clean):
         facts.append("Operação pretendida: mudança.")
+    if re.search(r"\b(cancelaram|cancelada|cancelado|cancelar|cancelou|abortada|abortado|abortar)\b", clean):
+        facts.append("Contexto referido: manobra cancelada/abortada.")
 
     for token, label in VESSEL_TYPE_LABELS.items():
         if token in clean:
@@ -169,7 +203,7 @@ def _extract_message_facts(content: str) -> list[str]:
 
     draft_match = DRAFT_RE.search(content or "")
     if draft_match:
-        facts.append(f"Calado: {_clean_numeric(draft_match.group(1))} m.")
+        facts.append(f"Calado: {_clean_numeric(draft_match.group(1) or draft_match.group(2))} m.")
 
     beam_match = BEAM_RE.search(content or "")
     if beam_match:
@@ -199,15 +233,14 @@ def _extract_message_facts(content: str) -> list[str]:
 
     time_match = TIME_RE.search(content or "")
     if time_match:
-        raw_time = (time_match.group(1) or time_match.group(2) or "").replace("h", ":")
+        raw_time = _clean_time(time_match.group(1) or time_match.group(2) or "")
         facts.append(f"Hora planeada/referida: {raw_time}.")
 
     date_match = DATE_RE.search(content or "")
     if date_match:
         facts.append(f"Data referida: {date_match.group(0)}.")
     else:
-        relative_date_match = RELATIVE_DATE_RE.search(content or "")
-        if relative_date_match:
+        for relative_date_match in RELATIVE_DATE_RE.finditer(content or ""):
             facts.append(f"Data relativa referida: {relative_date_match.group(1)}.")
 
     return list(dict.fromkeys(facts))
