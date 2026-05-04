@@ -179,5 +179,49 @@
     </form>
     <p class="admin-status-note is-danger">Antes de usar “Substituir”, cria um backup do estado atual e confirma que o ficheiro contém pelo menos um admin.</p>
   </section>
+
+  <section class="panel section-panel admin-backup-wipe-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Zona crítica</p>
+        <h2>Limpar base de dados</h2>
+      </div>
+      <span class="admin-status-badge is-offline">Irreversível</span>
+    </div>
+    <div class="admin-status-split">
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>O que será apagado</strong>
+        </div>
+        <p class="admin-status-note">Escalas, manobras, documentos registados, conversas, mensagens, eventos WhatsApp, feedback, casos, estados runtime e restantes utilizadores.</p>
+        <p class="admin-status-note">Ficam preservados o admin atual (`{{ backup.wipe.preserved_user }}`), os backups locais e os ficheiros de conhecimento no disco.</p>
+      </article>
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Travões de segurança</strong>
+        </div>
+        <p class="admin-status-note">Antes de limpar, a aplicação cria automaticamente um backup pré-limpeza. A ação exige password do admin, caixa de confirmação e a frase exata.</p>
+      </article>
+    </div>
+    <form method="post" action="{{ url_for('admin.wipe_system_database') }}" class="admin-backup-wipe-form" onsubmit="return confirm('Primeira confirmação: vais limpar a base de dados aplicacional. Continuar?') && confirm('Segunda confirmação: confirma que tens backup e queres apagar estes dados.');">
+      <label>
+        Password do admin atual
+        <input type="password" name="admin_password" autocomplete="current-password" required>
+      </label>
+      <label>
+        Frase de confirmação
+        <input type="text" name="confirmation_phrase" placeholder="{{ backup.wipe.confirmation_phrase }}" required>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="understand_wipe" value="1" required>
+        Compreendo que esta limpeza apaga os dados aplicacionais e preserva apenas o admin atual.
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="send_email" value="1" {% if backup.email.enabled %}checked{% endif %}>
+        Enviar o backup pré-limpeza por e-mail quando SMTP estiver configurado
+      </label>
+      <button type="submit" class="danger-button">Criar backup e limpar base</button>
+    </form>
+  </section>
 </main>
 {% endblock %}

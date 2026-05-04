@@ -5237,12 +5237,14 @@ button:hover {
 }
 
 .admin-backup-action-form,
-.admin-backup-restore-form {
+.admin-backup-restore-form,
+.admin-backup-wipe-form {
   display: grid;
   gap: 14px;
 }
 
-.admin-backup-action-form .checkbox-row {
+.admin-backup-action-form .checkbox-row,
+.admin-backup-wipe-form .checkbox-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5261,6 +5263,27 @@ button:hover {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.admin-backup-wipe-panel {
+  border-color: rgba(214, 69, 69, 0.38);
+}
+
+.admin-backup-wipe-form {
+  margin-top: 16px;
+}
+
+.admin-backup-wipe-form > label:not(.checkbox-row) {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.admin-backup-wipe-form input[type="password"],
+.admin-backup-wipe-form input[type="text"] {
+  width: 100%;
 }
 
 .admin-backup-table td:first-child {

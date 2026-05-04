@@ -109,6 +109,7 @@ BACKUP_PACKAGE_DATA_FILENAME = "backup.json"
 BACKUP_PACKAGE_README_FILENAME = "README.md"
 BACKUP_FILENAME_RE = re.compile(r"^pragtico-backup-\d{8}-\d{6}(?:-\d{6})?\.(?:zip|json)$")
 BACKUP_AUTO_CHECK_THROTTLE_SECONDS = 60
+DATABASE_WIPE_CONFIRMATION_PHRASE = "LIMPAR BASE PRAGTICO"
 POSTGRES_EXPORT_TABLES = {
     "app_users": {
         "pk": ("username",),
@@ -1044,6 +1045,10 @@ def _backup_page_payload() -> dict:
         "retention_count": config["retention_count"],
         "storage_bytes": storage_bytes,
         "storage_label": _format_size(storage_bytes),
+        "wipe": {
+            "confirmation_phrase": DATABASE_WIPE_CONFIRMATION_PHRASE,
+            "preserved_user": session.get("username", ""),
+        },
         "metrics": [
             {"label": "Backups guardados", "value": len(records), "detail": f"mantidos até {config['retention_count']} pacotes"},
             {"label": "Último backup", "value": last_backup.get("created_at_label") if last_backup else "Sem backup", "detail": last_backup.get("filename", "") if last_backup else "cria um pacote inicial"},
@@ -1051,6 +1056,60 @@ def _backup_page_payload() -> dict:
             {"label": "Espaço usado", "value": _format_size(storage_bytes), "detail": "armazenamento local"},
         ],
     }
+
+
+def _authenticate_database_wipe(password: str) -> dict:
+    username = (session.get("username") or "").strip().lower()
+    if not username:
+        raise ValueError("Sessão expirada. Faz login novamente.")
+    if not password:
+        raise ValueError("Indica a password do admin atual.")
+    profile = services.auth_service.authenticate(username, password)
+    if not profile or (profile.get("role") or "").strip().lower() != "admin":
+        raise ValueError("Password inválida ou utilizador sem perfil admin.")
+    return profile
+
+
+def _validate_database_wipe_confirmation(*, password: str, phrase: str, checkbox: bool) -> dict:
+    profile = _authenticate_database_wipe(password)
+    if not checkbox:
+        raise ValueError("Confirma explicitamente que compreendes a limpeza da base.")
+    if " ".join((phrase or "").strip().split()) != DATABASE_WIPE_CONFIRMATION_PHRASE:
+        raise ValueError(f"Frase de confirmação inválida. Escreve exatamente: {DATABASE_WIPE_CONFIRMATION_PHRASE}")
+    return profile
+
+
+def _wipe_database_preserving_admin(username: str) -> dict:
+    clean_username = (username or "").strip().lower()
+    if not clean_username:
+        raise ValueError("Admin atual indisponível para preservar acesso.")
+    store = services.store
+    connect = getattr(store, "_connect", None)
+    if not callable(connect):
+        raise ValueError("Limpeza completa só está disponível com backend PostgreSQL.")
+
+    stats = {"tables": 0, "records": 0, "preserved_admin": clean_username}
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT username, role FROM app_users WHERE username = %s AND role = 'admin'",
+                (clean_username,),
+            )
+            if not cur.fetchone():
+                raise ValueError("O admin atual não existe na base ou deixou de ser admin.")
+            for table in POSTGRES_DELETE_ORDER:
+                if table == "app_users":
+                    continue
+                cur.execute(f"DELETE FROM {table}")
+                stats["tables"] += 1
+                if cur.rowcount and cur.rowcount > 0:
+                    stats["records"] += cur.rowcount
+            cur.execute("DELETE FROM app_users WHERE username <> %s", (clean_username,))
+            stats["tables"] += 1
+            if cur.rowcount and cur.rowcount > 0:
+                stats["records"] += cur.rowcount
+        conn.commit()
+    return stats
 
 
 def _safe_backup_path(filename: str) -> Path:
@@ -2179,6 +2238,37 @@ def delete_system_backup(filename: str):
         flash(f"Backup apagado: {filename}.", "success")
     except OSError as exc:
         flash(f"Falha ao apagar backup: {exc}", "error")
+    return redirect(url_for("admin.admin_backups"))
+
+
+@bp.route("/admin/backups/wipe-database", methods=["POST"])
+@login_required
+@role_required("admin")
+def wipe_system_database():
+    """Limpar a base aplicacional preservando o admin atual."""
+    try:
+        profile = _validate_database_wipe_confirmation(
+            password=request.form.get("admin_password", ""),
+            phrase=request.form.get("confirmation_phrase", ""),
+            checkbox=request.form.get("understand_wipe", "") == "1",
+        )
+        backup_record = _create_system_backup(
+            created_by=profile["username"],
+            send_email=request.form.get("send_email", "1") == "1",
+            source="pre_wipe",
+        )
+        stats = _wipe_database_preserving_admin(profile["username"])
+        flash(
+            "Base limpa com sucesso. "
+            f"Backup pré-limpeza: {backup_record['filename']}. "
+            f"Registos apagados: {stats['records']}. Admin preservado: {stats['preserved_admin']}.",
+            "success",
+        )
+    except ValueError as exc:
+        flash(flash_error_message(str(exc)), "error")
+    except Exception as exc:
+        logger.exception("Falha inesperada ao limpar base de dados.")
+        flash(f"Falha inesperada ao limpar base de dados: {exc}", "error")
     return redirect(url_for("admin.admin_backups"))
 
 
