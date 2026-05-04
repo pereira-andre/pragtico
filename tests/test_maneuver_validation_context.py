@@ -154,6 +154,130 @@ def test_tanquisado_entry_two_hours_before_reponto_is_valid_tide_window(monkeypa
     assert "não cai suficientemente" not in tide_check["detail"]
 
 
+def test_tanquisado_entry_outside_required_reponto_blocks_validation(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-tanquisado",
+            "vessel_type": "Graneis liquidos",
+            "vessel_loa_m": "101.4",
+            "vessel_beam_m": "16.6",
+            "vessel_gt_t": "4500",
+            "vessel_max_draft_m": "5.0",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "entry-tanquisado",
+            "type": "entry",
+            "state": "pending",
+            "planned_at": "2026-04-30T18:00:00+00:00",
+            "planned_input_value": "2026-04-30T18:00",
+            "origin": "Sines",
+            "destination": "Tanquisado (lado jusante)",
+            "tug_count": "3",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert assessment["decision"] == "NÃO AVANÇAR"
+    assert tide_check["status"] == "block"
+    assert "19:30-20:00" in tide_check["detail"]
+    assert "A marcação não cai suficientemente em cima do reponto" in tide_check["detail"]
+
+
+def test_tanquisado_departure_outside_reponto_allows_documented_ebb_exception(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-tanquisado",
+            "vessel_type": "Graneis liquidos",
+            "vessel_loa_m": "101.4",
+            "vessel_beam_m": "16.6",
+            "vessel_gt_t": "4500",
+            "vessel_max_draft_m": "5.0",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "departure-tanquisado",
+            "type": "departure",
+            "state": "pending",
+            "planned_at": "2026-05-05T08:00:00+01:00",
+            "planned_input_value": "2026-05-05T08:00",
+            "origin": "Tanquisado (lado jusante)",
+            "destination": "Sines",
+            "tug_count": "3",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "exceção de saída em vazante" in tide_check["detail"]
+    assert "2.9 m <= 3,0 m" in tide_check["detail"]
+
+
+def test_shift_from_ecooil_to_lisnave_uses_one_hour_reponto_window(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-slops",
+            "vessel_type": "Graneis liquidos",
+            "vessel_loa_m": "120",
+            "vessel_beam_m": "20",
+            "vessel_gt_t": "8000",
+            "vessel_max_draft_m": "5.0",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "shift-ecooil-lisnave",
+            "type": "shift",
+            "state": "pending",
+            "planned_at": "2026-04-30T20:12:00+01:00",
+            "planned_input_value": "2026-04-30T20:12",
+            "origin": "Eco-Oil",
+            "destination": "Lisnave - Cais 1 A",
+            "tug_count": "3",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "1h de Tanquisado/Eco-Oil para Lisnave" in tide_check["detail"]
+    assert "A marcação acerta a janela de reponto" in tide_check["detail"]
+
+
 def test_tanquisado_entry_with_two_tugs_blocks_on_minimum(monkeypatch) -> None:
     monkeypatch.setattr(
         services,

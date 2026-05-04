@@ -318,6 +318,14 @@ def _format_local_datetime(value: datetime | None) -> str:
     return value.strftime("%d/%m/%Y %H:%M")
 
 
+def _format_local_time(value: datetime | None) -> str:
+    if not value:
+        return "--"
+    if value.tzinfo is not None:
+        value = value.astimezone(LISBON_TZ)
+    return value.strftime("%H:%M")
+
+
 def _daylight_bounds(target_dt: datetime) -> tuple[datetime | None, datetime | None]:
     tide_service = getattr(services, "tide_service", None)
     if not tide_service:
@@ -368,6 +376,14 @@ def _nearest_tide_event(target_dt: datetime):
     return min(events, key=lambda item: abs((item.timestamp - target_dt).total_seconds()))
 
 
+def _previous_high_tide(target_dt: datetime):
+    events = _tide_events_around(target_dt)
+    high_tides = [item for item in events if item.timestamp <= target_dt and item.tide_type == "preia-mar"]
+    if not high_tides:
+        return None
+    return max(high_tides, key=lambda item: item.timestamp)
+
+
 def _tide_height_at(target_dt: datetime) -> tuple[float | None, str]:
     tide_service = getattr(services, "tide_service", None)
     if not tide_service or not hasattr(tide_service, "_height_at_datetime"):
@@ -415,6 +431,8 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
         if "fundeadouro sul" in destination_key or "troia" in destination_key:
             return {"minutes": (45, 60), "label": "45 min a 1h desde a Barra", "source": "Notas_Pilotagem.txt"}
     if maneuver_type == "shift":
+        if any(marker in origin_key for marker in ("tanquisado", "eco oil", "ecooil")) and any(marker in destination_key for marker in ("lisnave", "mitrena")):
+            return {"minutes": (60, 60), "label": "1h de Tanquisado/Eco-Oil para Lisnave", "source": "ajuste operacional local"}
         if "fundeadouro norte" in origin_key and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
             return {"minutes": (90, 90), "label": "1h30 desde o Fundeadouro Norte para cais do Canal Sul", "source": "Marcar_manobra_repontos_mare.txt"}
         if ("troia" in origin_key or "fundeadouro sul" in origin_key) and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
@@ -481,6 +499,28 @@ def _profile_requires_reponto(profile: dict, maneuver_type: str) -> bool:
     if maneuver_type == "entry" and any(marker in clean for marker in ("atracacao", "entrada", "regra geral")):
         return True
     return maneuver_type in {"entry", "departure", "shift"}
+
+
+def _departure_outside_reponto_exception(profile: dict, maneuver_type: str, planned_at: datetime) -> str | None:
+    if maneuver_type != "departure":
+        return None
+    text = " ".join(
+        str(value or "")
+        for key in ("maneuver_rules", "night_rules", "restrictions", "draft_rules")
+        for value in (profile.get(key) or [])
+    )
+    clean = _operational_lookup_key(text)
+    if "saida fora de reponto apenas em vazante" not in clean:
+        return None
+    _height, trend = _tide_height_at(planned_at)
+    previous_high = _previous_high_tide(planned_at)
+    if trend == "a descer" and previous_high and previous_high.height <= 3.0:
+        return (
+            "Fora do reponto, mas enquadra a exceção de saída em vazante "
+            f"com preia-mar precedente {_format_local_time(previous_high.timestamp)} "
+            f"({previous_high.height:.1f} m <= 3,0 m)."
+        )
+    return None
 
 
 def _weather_hour_for_datetime(target_dt: datetime) -> tuple[dict | None, str]:
@@ -554,13 +594,16 @@ def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dic
         if tide_event:
             in_window = arrival_start <= tide_event.timestamp <= arrival_end
             delta_minutes = abs((tide_event.timestamp - target_dt).total_seconds()) / 60
-            status = "ok" if in_window or delta_minutes <= 30 else "caution"
+            if requires_reponto:
+                status = "ok" if in_window else "block"
+            else:
+                status = "ok" if in_window or delta_minutes <= 30 else "caution"
             reference_label = "hora de embarque/entrada da barra" if maneuver_type == "entry" else "hora de largada da origem"
             timing = (
                 f"Se {_format_local_datetime(planned_at)} for {reference_label}, "
                 f"a chegada estimada ao destino é {_format_local_datetime(arrival_start)}-"
-                f"{arrival_end.strftime('%H:%M')} ({transit['label']}). "
-                f"Reponto mais próximo: {tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
+                f"{_format_local_time(arrival_end)} ({transit['label']}). "
+                f"Reponto mais próximo: {tide_event.tide_type} às {_format_local_time(tide_event.timestamp)} "
                 f"({tide_event.height:.1f} m)."
             )
             if requires_reponto and status == "ok":
@@ -569,21 +612,31 @@ def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dic
                 timing += " A marcação não cai suficientemente em cima do reponto."
             checks.append({"status": status, "title": "Maré/tempo", "detail": timing})
         else:
-            checks.append({"status": "info", "title": "Maré/tempo", "detail": f"Trânsito estimado: {transit['label']}; sem tabela de maré disponível para confirmar reponto."})
+            status = "caution" if requires_reponto else "info"
+            detail = f"Trânsito estimado: {transit['label']}; sem tabela de maré disponível para confirmar reponto."
+            if requires_reponto:
+                detail += " Como o perfil exige reponto, confirmar maré antes de validar."
+            checks.append({"status": status, "title": "Maré/tempo", "detail": detail})
     else:
         tide_event = _nearest_tide_event(planned_at)
         if tide_event and requires_reponto:
             delta_minutes = abs((tide_event.timestamp - planned_at).total_seconds()) / 60
-            status = "ok" if delta_minutes <= 45 else "caution"
+            exception_detail = None
+            if delta_minutes > 45:
+                exception_detail = _departure_outside_reponto_exception(profile, maneuver_type, planned_at)
+            status = "ok" if delta_minutes <= 45 or exception_detail else "block"
+            detail = (
+                f"Hora planeada {_format_local_datetime(planned_at)}; reponto mais próximo "
+                f"{tide_event.tide_type} às {_format_local_time(tide_event.timestamp)} "
+                f"({tide_event.height:.1f} m), diferença {delta_minutes:.0f} min."
+            )
+            if exception_detail:
+                detail += f" {exception_detail}"
             checks.append(
                 {
                     "status": status,
                     "title": "Maré/tempo",
-                    "detail": (
-                        f"Hora planeada {_format_local_datetime(planned_at)}; reponto mais próximo "
-                        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
-                        f"({tide_event.height:.1f} m), diferença {delta_minutes:.0f} min."
-                    ),
+                    "detail": detail,
                 }
             )
         elif tide_event:
@@ -593,7 +646,7 @@ def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dic
                     "title": "Maré/tempo",
                     "detail": (
                         f"Hora planeada {_format_local_datetime(planned_at)}; maré mais próxima "
-                        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} ({tide_event.height:.1f} m)."
+                        f"{tide_event.tide_type} às {_format_local_time(tide_event.timestamp)} ({tide_event.height:.1f} m)."
                     ),
                 }
             )
