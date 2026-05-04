@@ -314,16 +314,173 @@
         }
       }
 
+      @page {
+        size: A4 landscape;
+        margin: 8mm;
+      }
+
       @media print {
-        body { background: #fff; }
-        .report-shell { width: auto; padding: 0; gap: 12px; }
+        * {
+          box-shadow: none !important;
+        }
+
+        html,
+        body {
+          width: 297mm;
+          min-height: 210mm;
+        }
+
+        body {
+          background: #fff;
+          font-size: 8.5pt;
+          line-height: 1.24;
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+
+        .report-shell {
+          width: auto;
+          max-width: none;
+          padding: 0;
+          display: block;
+        }
+
         .report-toolbar { display: none; }
+
         .report-header,
         .report-section {
+          margin: 0 0 3.2mm;
           border-radius: 0;
           border-left: 0;
           border-right: 0;
+          background: #fff;
+        }
+
+        .report-header,
+        .report-section-compact {
+          break-inside: avoid-page;
+          page-break-inside: avoid;
+        }
+
+        .report-header {
+          padding: 0 0 3mm;
+          gap: 2.5mm;
+          border-top: 0;
+        }
+
+        .report-title-row {
+          align-items: flex-end;
+          gap: 6mm;
+        }
+
+        .report-meta {
+          min-width: auto;
+          font-size: 8pt;
+        }
+
+        h1 {
+          font-size: 18pt;
+          line-height: 1;
+        }
+
+        h2 {
+          font-size: 10pt;
+        }
+
+        h3 {
+          font-size: 8.8pt;
+        }
+
+        .report-kicker,
+        th {
+          font-size: 6.4pt;
+          letter-spacing: 0.05em;
+        }
+
+        .report-kpis {
+          gap: 2mm;
+        }
+
+        .report-kpi {
+          gap: 0;
+          padding: 2mm 2.5mm;
+          border-radius: 2.5mm;
+        }
+
+        .report-kpi strong {
+          font-size: 13pt;
+        }
+
+        .report-section-head {
+          padding: 2mm 0;
+          background: #fff;
+        }
+
+        .report-count {
+          min-width: 7mm;
+          min-height: 5.5mm;
+          padding: 0 2mm;
+        }
+
+        .report-context-grid {
+          grid-template-columns: 0.75fr 1.25fr;
+          gap: 3mm;
+          padding: 2mm 0;
+        }
+
+        .report-mini-card {
+          gap: 1.4mm;
+          padding: 2mm;
+          border-radius: 2mm;
+        }
+
+        .report-light-list,
+        .report-tide-list {
+          gap: 1mm;
+        }
+
+        .report-light-row,
+        .report-tide-row {
+          grid-template-columns: 18mm minmax(0, 1fr);
+          gap: 2mm;
+        }
+
+        .report-tide-events {
+          gap: 2mm;
+        }
+
+        .report-tide-event {
+          gap: 0.8mm;
+          padding: 2mm;
+          border-radius: 2mm;
+        }
+
+        table {
+          page-break-inside: auto;
+        }
+
+        thead {
+          display: table-header-group;
+        }
+
+        tr {
           break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        th,
+        td {
+          padding: 1.45mm 1.8mm;
+          font-size: 7.7pt;
+          line-height: 1.18;
+        }
+
+        .position-name {
+          width: 20%;
+        }
+
+        .report-empty {
+          padding: 2mm 0;
         }
       }
     </style>
@@ -373,7 +530,7 @@
         </div>
       </header>
 
-      <section class="report-section">
+      <section class="report-section report-section-compact">
         <div class="report-section-head">
           <h2>Marés e luz do dia</h2>
           <span class="report-count">{{ report.tide_day.events|length if report.tide_day else 0 }}</span>
@@ -415,7 +572,7 @@
         </div>
       </section>
 
-      <section class="report-section">
+      <section class="report-section report-section-compact">
         <div class="report-section-head">
           <h2>Previstos a chegar hoje</h2>
           <span class="report-count">{{ report.arrivals|length }}</span>
@@ -448,7 +605,7 @@
         {% endif %}
       </section>
 
-      <section class="report-section">
+      <section class="report-section report-section-compact">
         <div class="report-section-head">
           <h2>Mudanças internas previstas</h2>
           <span class="report-count">{{ report.shifts|length }}</span>
@@ -481,7 +638,7 @@
         {% endif %}
       </section>
 
-      <section class="report-section">
+      <section class="report-section report-position-section">
         <div class="report-section-head">
           <h2>Cais por ordem</h2>
           <span class="report-count">{{ report.berthed|length }}</span>
@@ -523,7 +680,7 @@
         {% endif %}
       </section>
 
-      <section class="report-section">
+      <section class="report-section report-position-section">
         <div class="report-section-head">
           <h2>Fundeadouros e quadro</h2>
           <span class="report-count">{{ report.anchorages|length }}</span>
