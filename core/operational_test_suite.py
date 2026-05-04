@@ -48,6 +48,8 @@ QUERY_SLASH_COMMANDS = {
     "planning",
     "planning_approved",
     "planning_pending",
+    "colreg_list",
+    "colreg_rule",
     "consult_scale",
     "consult_maneuver",
     "consult_scale_cost",
@@ -2496,6 +2498,10 @@ class OperationalFlowSuite:
             return f"{head} hoje"
         if command in {"planning", "planning_approved", "planning_pending"}:
             return head
+        if command == "colreg_list":
+            return head
+        if command == "colreg_rule":
+            return f"{head} 35"
         if command == "rule":
             return head
         if command in {"consult_scale", "consult_scale_cost"}:
@@ -2734,6 +2740,8 @@ class OperationalFlowSuite:
                 "ondulacao",
                 "mares",
                 "meteorologia",
+                "colreg-lista",
+                "colreg",
                 "planeamento",
                 "consultar-escala",
                 "consultar-manobra",

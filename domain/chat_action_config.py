@@ -329,6 +329,13 @@ SLASH_COMMAND_ALIASES = {
     "abortar-manobra": "abort_maneuver",
     "mares": "tides",
     "meteorologia": "weather",
+    "colreg-lista": "colreg_list",
+    "colregs": "colreg_list",
+    "rieam-lista": "colreg_list",
+    "colreg": "colreg_rule",
+    "rieam": "colreg_rule",
+    "regra-colreg": "colreg_rule",
+    "regra-rieam": "colreg_rule",
     "regra": "rule",
     "regras": "rule",
 }

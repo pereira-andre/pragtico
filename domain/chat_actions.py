@@ -801,6 +801,8 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         return {"intent": "query", "command": "weather", "argument": body}
     if command in {"planning", "planning_approved", "planning_pending"}:
         return {"intent": "query", "command": command, "argument": body}
+    if command in {"colreg_list", "colreg_rule"}:
+        return {"intent": "query", "command": command, "argument": body or tail.strip()}
     if command == "rule":
         return {"intent": "query", "command": "rule", "argument": body or tail.strip()}
     if command in {

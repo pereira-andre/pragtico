@@ -52,6 +52,7 @@ from domain.chat_actions import (
     resolve_maneuver,
     resolve_port_call,
 )
+from domain.colreg_rules import COLREG_SOURCE_DOCUMENT, format_colreg_catalog, format_colreg_rule, parse_colreg_rule_number
 from domain.cost_engine import (
     ManoeuvreInput,
     ManoeuvreType,
@@ -441,6 +442,18 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
             "answer": _format_planning_query_answer(status_filter),
             "sources": [],
             "answer_origin": "slash_planning",
+        }
+    if command == "colreg_list":
+        return {
+            "answer": format_colreg_catalog(),
+            "sources": [{"document": COLREG_SOURCE_DOCUMENT, "retrieval_mode": "colreg_catalog"}],
+            "answer_origin": "slash_colreg",
+        }
+    if command == "colreg_rule":
+        return {
+            "answer": format_colreg_rule(parse_colreg_rule_number(clean_argument)),
+            "sources": [{"document": COLREG_SOURCE_DOCUMENT, "retrieval_mode": "colreg_rule"}],
+            "answer_origin": "slash_colreg",
         }
     if command == "rule":
         code_match = re.search(r"\b(\d{3})\b", clean_argument)

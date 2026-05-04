@@ -120,6 +120,8 @@ class SlashPlanningTests(unittest.TestCase):
         self.assertIn("/manobras-previstas", help_text)
         self.assertIn("/ondulação", help_text)
         self.assertIn("/leitura-costeira", help_text)
+        self.assertIn("/colreg-lista", help_text)
+        self.assertIn("/colreg 19", help_text)
 
     def test_help_mentions_current_admin_aliases(self) -> None:
         help_text = build_slash_help("admin")

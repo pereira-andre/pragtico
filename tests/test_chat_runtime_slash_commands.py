@@ -245,6 +245,17 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertIn("Fl R 3s", result["answer"])
         self.assertIn("IALA A", result["answer"])
 
+    def test_colreg_slash_command_uses_structured_rule_answer(self) -> None:
+        services.store = FakeStore()
+
+        with self.app.test_request_context("/api/chat"):
+            result = handle_chat_turn(username="admin@porto.pt", role="admin", question="/colreg 23")
+
+        self.assertEqual(result["answer_origin"], "slash_colreg")
+        self.assertIn("Regra 23 - Navios de propulsão mecânica a navegar", result["answer"])
+        self.assertIn("⚪ farol de mastro a vante", result["answer"])
+        self.assertIn("🔴 BB + 🟢 EB", result["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()
