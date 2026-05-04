@@ -546,6 +546,24 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "message": "Reindexação em curso.",
         "user_message": "Já existe uma reindexação em curso.",
     },
+    "RAG_EMBEDDING_CLIENT_UNSUPPORTED": {
+        "code": 4023,
+        "category": "rag",
+        "message": "Cliente de embeddings sem suporte.",
+        "user_message": "O cliente de embeddings configurado não suporta embeddings.",
+    },
+    "RAG_EMBEDDING_FAILED": {
+        "code": 4024,
+        "category": "rag",
+        "message": "Falha ao gerar embeddings.",
+        "user_message": "Falha inesperada ao gerar embeddings.",
+    },
+    "RAG_EMBEDDING_QUOTA_BLOCKED": {
+        "code": 4025,
+        "category": "rag",
+        "message": "Quota de embeddings indisponível.",
+        "user_message": "Pesquisa semântica indisponível enquanto a quota de embeddings não renovar.",
+    },
 
     # =====================================================================
     # 5xxx — Bot e chat
@@ -616,11 +634,41 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "message": "Revisão sem motivo.",
         "user_message": "Para rever sem reutilizar indica o motivo. Para reutilizar uma correção, usa Corrigir.",
     },
+    "FEEDBACK_RESPONSE_NOT_FOUND": {
+        "code": 5034,
+        "category": "chat",
+        "message": "Resposta não encontrada.",
+        "user_message": "Resposta não encontrada.",
+    },
+    "FEEDBACK_ORIGINAL_QUESTION_NOT_FOUND": {
+        "code": 5035,
+        "category": "chat",
+        "message": "Pergunta original não encontrada.",
+        "user_message": "Não encontrei a pergunta original dessa resposta.",
+    },
+    "FEEDBACK_NO_PREVIOUS_RESPONSE": {
+        "code": 5036,
+        "category": "chat",
+        "message": "Sem resposta anterior para rever.",
+        "user_message": "Não encontrei uma resposta anterior nesta conversa para rever.",
+    },
+    "WHATSAPP_SPLIT_LIMIT_INVALID": {
+        "code": 5037,
+        "category": "chat",
+        "message": "Limite de divisão WhatsApp inválido.",
+        "user_message": "Limite WhatsApp demasiado baixo para dividir mensagens.",
+    },
     "CONVERSATION_ID_MISSING": {
         "code": 5060,
         "category": "chat",
         "message": "conversation_id em falta.",
         "user_message": "conversation_id em falta.",
+    },
+    "CHAT_EXPORT_FORMAT_INVALID": {
+        "code": 5070,
+        "category": "chat",
+        "message": "Formato de exportação inválido.",
+        "user_message": "Formato de exportação inválido.",
     },
     "LLM_NOT_CONFIGURED": {
         "code": 5050,
@@ -673,6 +721,48 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "category": "whatsapp",
         "message": "Formato de imagem inválido.",
         "user_message": "A imagem de perfil deve ser PNG ou JPEG.",
+    },
+    "WA_MEDIA_DOWNLOAD_CREDENTIALS_MISSING": {
+        "code": 6016,
+        "category": "whatsapp",
+        "message": "Credenciais de descarga de media em falta.",
+        "user_message": "WhatsApp Cloud API sem credenciais para descarregar media.",
+    },
+    "WA_MEDIA_URL_MISSING": {
+        "code": 6017,
+        "category": "whatsapp",
+        "message": "URL de media em falta.",
+        "user_message": "A Meta não devolveu URL para o media recebido.",
+    },
+    "WA_PROFILE_CREDENTIALS_MISSING": {
+        "code": 6018,
+        "category": "whatsapp",
+        "message": "Credenciais de perfil WhatsApp em falta.",
+        "user_message": "WhatsApp Cloud API sem credenciais de business profile configuradas.",
+    },
+    "WA_UPLOAD_SESSION_MISSING": {
+        "code": 6019,
+        "category": "whatsapp",
+        "message": "Upload session WhatsApp em falta.",
+        "user_message": "A Meta não devolveu um upload session id.",
+    },
+    "WA_PROFILE_HANDLE_MISSING": {
+        "code": 6020,
+        "category": "whatsapp",
+        "message": "Profile picture handle em falta.",
+        "user_message": "A Meta não devolveu o profile picture handle.",
+    },
+    "WA_PROFILE_IMAGE_NOT_FOUND": {
+        "code": 6021,
+        "category": "whatsapp",
+        "message": "Imagem de perfil não encontrada.",
+        "user_message": "Ficheiro de imagem não encontrado:",
+    },
+    "WA_SEND_CREDENTIALS_MISSING": {
+        "code": 6022,
+        "category": "whatsapp",
+        "message": "Credenciais de envio WhatsApp em falta.",
+        "user_message": "WhatsApp Cloud API sem credenciais de envio configuradas.",
     },
 
     # =====================================================================
@@ -754,6 +844,96 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "message": "Backup sem admin.",
         "user_message": "O backup de sistema não contém nenhum utilizador admin.",
     },
+    "BACKUP_JSON_REQUIRED": {
+        "code": 8012,
+        "category": "admin",
+        "message": "Payload JSON em falta.",
+        "user_message": "Carrega um ficheiro JSON ou cola o conteúdo JSON.",
+    },
+    "BACKUP_ZIP_INVALID": {
+        "code": 8013,
+        "category": "admin",
+        "message": "ZIP de backup inválido.",
+        "user_message": "ZIP de backup inválido.",
+    },
+    "BACKUP_ZIP_JSON_MISSING": {
+        "code": 8014,
+        "category": "admin",
+        "message": "ZIP sem JSON.",
+        "user_message": "O pacote ZIP não contém nenhum ficheiro JSON.",
+    },
+    "BACKUP_OBJECT_REQUIRED": {
+        "code": 8015,
+        "category": "admin",
+        "message": "Backup sem objeto JSON principal.",
+        "user_message": "O backup tem de ser um objeto JSON principal.",
+    },
+    "BACKUP_BOT_FORMAT_UNSUPPORTED": {
+        "code": 8016,
+        "category": "admin",
+        "message": "Tipo de backup do bot não suportado.",
+        "user_message": "Tipo de backup do bot não suportado.",
+    },
+    "BACKUP_SYSTEM_FORMAT_UNSUPPORTED": {
+        "code": 8017,
+        "category": "admin",
+        "message": "Tipo de backup de sistema não suportado.",
+        "user_message": "Tipo de backup de sistema não suportado.",
+    },
+    "BACKUP_KNOWLEDGE_DIR_UNAVAILABLE": {
+        "code": 8018,
+        "category": "admin",
+        "message": "Diretoria knowledge indisponível.",
+        "user_message": "Diretoria knowledge indisponível para restaurar ficheiros.",
+    },
+    "BACKUP_IMPORT_BACKEND_UNAVAILABLE": {
+        "code": 8019,
+        "category": "admin",
+        "message": "Backend PostgreSQL indisponível.",
+        "user_message": "Backend PostgreSQL indisponível para importação de tabelas.",
+    },
+    "WIPE_PASSWORD_REQUIRED": {
+        "code": 8020,
+        "category": "admin",
+        "message": "Password de wipe em falta.",
+        "user_message": "Indica a password do admin atual.",
+    },
+    "WIPE_PASSWORD_INVALID": {
+        "code": 8021,
+        "category": "admin",
+        "message": "Password de wipe inválida.",
+        "user_message": "Password inválida ou utilizador sem perfil admin.",
+    },
+    "WIPE_CONFIRMATION_REQUIRED": {
+        "code": 8022,
+        "category": "admin",
+        "message": "Confirmação de wipe em falta.",
+        "user_message": "Confirma explicitamente que compreendes a limpeza da base.",
+    },
+    "WIPE_CONFIRMATION_PHRASE_INVALID": {
+        "code": 8023,
+        "category": "admin",
+        "message": "Frase de wipe inválida.",
+        "user_message": "Frase de confirmação inválida.",
+    },
+    "WIPE_ADMIN_UNAVAILABLE": {
+        "code": 8024,
+        "category": "admin",
+        "message": "Admin atual indisponível.",
+        "user_message": "Admin atual indisponível para preservar acesso.",
+    },
+    "WIPE_POSTGRES_REQUIRED": {
+        "code": 8025,
+        "category": "admin",
+        "message": "Wipe requer PostgreSQL.",
+        "user_message": "Limpeza completa só está disponível com backend PostgreSQL.",
+    },
+    "WIPE_ADMIN_NOT_FOUND": {
+        "code": 8026,
+        "category": "admin",
+        "message": "Admin preservado não encontrado.",
+        "user_message": "O admin atual não existe na base ou deixou de ser admin.",
+    },
     "FEEDBACK_NOTE_REQUIRED": {
         "code": 8030,
         "category": "admin",
@@ -777,6 +957,30 @@ ERROR_DEFINITIONS: dict[str, dict[str, Any]] = {
         "category": "system",
         "message": "Falha na ligação à base de dados.",
         "user_message": "Serviço temporariamente indisponível.",
+    },
+    "DATABASE_URL_MISSING": {
+        "code": 8061,
+        "category": "system",
+        "message": "DATABASE_URL em falta.",
+        "user_message": "Define DATABASE_URL para arrancar a aplicação em Railway.",
+    },
+    "POSTGRES_DRIVER_MISSING": {
+        "code": 8062,
+        "category": "system",
+        "message": "Driver PostgreSQL em falta.",
+        "user_message": "Instala `psycopg[binary]` para usar PostgreSQL.",
+    },
+    "PGVECTOR_DRIVER_MISSING": {
+        "code": 8063,
+        "category": "system",
+        "message": "Dependências pgvector em falta.",
+        "user_message": "Instala `psycopg[binary]` e `pgvector` para usar o índice PostgreSQL.",
+    },
+    "PGVECTOR_EXTENSION_MISSING": {
+        "code": 8064,
+        "category": "system",
+        "message": "Extensão pgvector em falta.",
+        "user_message": "A base de dados ligada ao Railway não tem a extensão pgvector disponível.",
     },
     "EVENT_REPORT_NOT_FOUND": {
         "code": 8075,
