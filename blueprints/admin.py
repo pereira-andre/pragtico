@@ -2,15 +2,12 @@
 
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
-from email.message import EmailMessage
-from email.utils import formatdate
 from io import BytesIO
 import json
 import logging
 import os
 from pathlib import Path
 import re
-import smtplib
 import threading
 import time
 from urllib.parse import urlsplit
@@ -732,129 +729,6 @@ def _build_backup_readme(*, payload: dict, filename: str, created_by: str, sourc
     )
 
 
-def _backup_email_recipients() -> list[str]:
-    raw = os.getenv("BACKUP_EMAIL_TO", "").strip() or os.getenv("ADMIN_EMAIL", "").strip()
-    recipients = []
-    for item in raw.split(","):
-        email = item.strip()
-        if email and email not in recipients:
-            recipients.append(email)
-    return recipients
-
-
-def _backup_email_status() -> dict:
-    enabled = _env_flag("BACKUP_EMAIL_ENABLED", "1")
-    recipients = _backup_email_recipients()
-    host = os.getenv("SMTP_HOST", "").strip()
-    sender = (
-        os.getenv("BACKUP_EMAIL_FROM", "").strip()
-        or os.getenv("SMTP_FROM", "").strip()
-        or os.getenv("SMTP_USERNAME", "").strip()
-        or (recipients[0] if recipients else "")
-    )
-    ready = bool(enabled and recipients and host and sender)
-    missing = []
-    if not enabled:
-        missing.append("envio desativado")
-    if not recipients:
-        missing.append("destinatário")
-    if not host:
-        missing.append("SMTP_HOST")
-    if not sender:
-        missing.append("remetente")
-    return {
-        "enabled": enabled,
-        "ready": ready,
-        "state": "online" if ready else "degraded",
-        "label": "Configurado" if ready else "Por configurar",
-        "detail": "Pronto para enviar backups por e-mail." if ready else "Falta configurar " + ", ".join(missing) + ".",
-        "recipients": recipients,
-        "sender": sender,
-        "host": host,
-    }
-
-
-def _send_backup_email(backup_path: Path, record: dict) -> dict:
-    status = _backup_email_status()
-    if not status["ready"]:
-        return {
-            "state": "skipped",
-            "label": "E-mail não enviado",
-            "detail": status["detail"],
-            "sent_at": "",
-            "recipients": status["recipients"],
-        }
-
-    max_mb = _env_int("BACKUP_EMAIL_MAX_MB", 15, minimum=1)
-    max_bytes = max_mb * 1024 * 1024
-    size_bytes = backup_path.stat().st_size
-    if size_bytes > max_bytes:
-        return {
-            "state": "skipped",
-            "label": "Ficheiro demasiado grande",
-            "detail": f"Backup com {_format_size(size_bytes)}; limite de e-mail configurado: {max_mb} MB.",
-            "sent_at": "",
-            "recipients": status["recipients"],
-        }
-
-    message = EmailMessage()
-    message["Subject"] = os.getenv("BACKUP_EMAIL_SUBJECT", "Backup PRAGtico")
-    message["From"] = status["sender"]
-    message["To"] = ", ".join(status["recipients"])
-    message["Date"] = formatdate(localtime=True)
-    message.set_content(
-        "\n".join(
-            [
-                "Backup completo do PRAGtico em anexo.",
-                f"Data: {record.get('created_at_label') or record.get('created_at') or '--'}",
-                f"Registos: {record.get('total_records', 0)}",
-                f"Tamanho: {record.get('size_label') or _format_size(size_bytes)}",
-                "",
-                "Guarda este ficheiro em local seguro.",
-            ]
-        )
-    )
-    message.add_attachment(
-        backup_path.read_bytes(),
-        maintype="application",
-        subtype="zip" if backup_path.suffix.lower() == ".zip" else "json",
-        filename=backup_path.name,
-    )
-
-    port = _env_int("SMTP_PORT", 587, minimum=1)
-    timeout = _env_int("SMTP_TIMEOUT_SECONDS", 20, minimum=1)
-    username = os.getenv("SMTP_USERNAME", "").strip()
-    password = os.getenv("SMTP_PASSWORD", "").strip()
-    use_ssl = _env_flag("SMTP_USE_SSL", "0")
-    use_tls = _env_flag("SMTP_USE_TLS", "1")
-
-    try:
-        smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
-        with smtp_class(status["host"], port, timeout=timeout) as smtp:
-            if use_tls and not use_ssl:
-                smtp.starttls()
-            if username:
-                smtp.login(username, password)
-            smtp.send_message(message)
-    except Exception as exc:
-        logger.exception("Falha ao enviar backup por e-mail.")
-        return {
-            "state": "failed",
-            "label": "Falhou",
-            "detail": str(exc),
-            "sent_at": "",
-            "recipients": status["recipients"],
-        }
-
-    return {
-        "state": "sent",
-        "label": "Enviado",
-        "detail": "Backup enviado por e-mail.",
-        "sent_at": datetime.now(timezone.utc).isoformat(),
-        "recipients": status["recipients"],
-    }
-
-
 def _backup_retention_count() -> int:
     return _env_int("BACKUP_RETENTION_COUNT", 30, minimum=1)
 
@@ -874,7 +748,6 @@ def _backup_record_from_file(path: Path) -> dict:
         "size_label": _format_size(stat.st_size),
         "total_records": 0,
         "counts": {},
-        "email": {"state": "unknown", "label": "Sem registo", "detail": ""},
     }
 
 
@@ -902,7 +775,6 @@ def _list_backup_records() -> list[dict]:
         record.setdefault("status", "available")
         record.setdefault("status_label", "Disponível")
         record.setdefault("counts", {})
-        record.setdefault("email", {"state": "unknown", "label": "Sem registo", "detail": ""})
         records.append(record)
     records.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
     return records
@@ -924,7 +796,7 @@ def _save_backup_records(records: list[dict]) -> list[dict]:
     return kept
 
 
-def _create_system_backup(*, created_by: str, send_email: bool = True, source: str = "manual") -> dict:
+def _create_system_backup(*, created_by: str, source: str = "manual") -> dict:
     with _backup_lock:
         created_at_dt = datetime.now().astimezone()
         filename = _backup_filename(created_at_dt)
@@ -969,10 +841,7 @@ def _create_system_backup(*, created_by: str, send_email: bool = True, source: s
             "size_label": _format_size(backup_path.stat().st_size),
             "total_records": counts["total_records"],
             "counts": counts,
-            "email": {"state": "not_requested", "label": "Não pedido", "detail": ""},
         }
-        if send_email:
-            record["email"] = _send_backup_email(backup_path, record)
 
         records = [record] + [item for item in _list_backup_records() if item.get("filename") != filename]
         _save_backup_records(records)
@@ -988,7 +857,6 @@ def _create_system_backup(*, created_by: str, send_email: bool = True, source: s
                 "source": source,
                 "size_bytes": record["size_bytes"],
                 "counts": counts,
-                "email": record.get("email", {}),
             },
         )
         return record
@@ -1000,7 +868,6 @@ def _backup_auto_config() -> dict:
         "enabled": _env_flag("BACKUP_AUTO_ENABLED", "1"),
         "interval_hours": interval_hours,
         "interval_seconds": interval_hours * 3600,
-        "email_enabled": _env_flag("BACKUP_AUTO_EMAIL_ENABLED", "1"),
         "retention_count": _backup_retention_count(),
     }
 
@@ -1040,7 +907,6 @@ def _backup_auto_due(records: list[dict], config: dict) -> bool:
 def _backup_page_payload() -> dict:
     records = _list_backup_records()
     config = _backup_auto_config()
-    email_status = _backup_email_status()
     backup_dir = _backup_dir()
     storage_bytes = sum(int(item.get("size_bytes") or 0) for item in records)
     last_backup = records[0] if records else None
@@ -1056,7 +922,6 @@ def _backup_page_payload() -> dict:
             "label": "Ativo" if config["enabled"] else "Desativado",
             "due": _backup_auto_due(records, config),
         },
-        "email": email_status,
         "backup_dir": str(backup_dir),
         "retention_count": config["retention_count"],
         "storage_bytes": storage_bytes,
@@ -1225,7 +1090,6 @@ def _start_auto_backup_if_due() -> None:
                 auto_config = _backup_auto_config()
                 _create_system_backup(
                     created_by="automatic",
-                    send_email=auto_config["email_enabled"],
                     source="automatic",
                 )
         except Exception:
@@ -2318,18 +2182,14 @@ def download_audit_log():
 @login_required
 @role_required("admin")
 def create_system_backup():
-    """Criar um pacote de backup completo e opcionalmente enviá-lo por e-mail."""
-    send_email = request.form.get("send_email", "1") == "1"
+    """Criar um pacote de backup completo."""
     try:
         record = _create_system_backup(
             created_by=session.get("username", "admin"),
-            send_email=send_email,
             source="manual",
         )
-        email_state = (record.get("email") or {}).get("state")
-        email_note = " E-mail enviado." if email_state == "sent" else " E-mail não enviado." if send_email else ""
         flash(
-            f"Backup criado: {record['filename']} ({record['size_label']}).{email_note}",
+            f"Backup criado: {record['filename']} ({record['size_label']}).",
             "success",
         )
     except Exception as exc:
@@ -2340,7 +2200,7 @@ def create_system_backup():
             severity="critical",
             result="failed",
             resource="backup",
-            details={"error": str(exc), "send_email": send_email},
+            details={"error": str(exc)},
         )
         flash(f"Falha ao criar backup: {exc}", "error")
     return redirect(url_for("admin.admin_backups"))
@@ -2410,7 +2270,6 @@ def wipe_system_database():
         )
         backup_record = _create_system_backup(
             created_by=profile["username"],
-            send_email=request.form.get("send_email", "1") == "1",
             source="pre_wipe",
         )
         stats = _wipe_database_preserving_admin(profile["username"])

@@ -63,14 +63,10 @@
           <p class="eyebrow">Criar agora</p>
           <h2>Novo pacote completo</h2>
         </div>
-        <span class="admin-status-badge is-{{ backup.email.state }}">E-mail {{ backup.email.label }}</span>
+        <span class="admin-status-badge is-neutral">Manual</span>
       </div>
       <form method="post" action="{{ url_for('admin.create_system_backup') }}" class="admin-backup-action-form">
-        <label class="checkbox-row">
-          <input type="checkbox" name="send_email" value="1" {% if backup.email.enabled %}checked{% endif %}>
-          Enviar também por e-mail quando SMTP estiver configurado
-        </label>
-        <p class="admin-status-note">{{ backup.email.detail }}</p>
+        <p class="admin-status-note">O pacote fica guardado no histórico e pode ser descarregado manualmente pelo admin.</p>
         <button type="submit">Criar backup completo</button>
       </form>
     </section>
@@ -123,7 +119,6 @@
               <th>Registos</th>
               <th>WhatsApp</th>
               <th>Tamanho</th>
-              <th>E-mail</th>
               <th></th>
             </tr>
           </thead>
@@ -138,7 +133,6 @@
                 <td>{{ item.total_records }}</td>
                 <td>{{ item.counts.whatsapp_messages or 0 }} msg · {{ item.counts.whatsapp_events or 0 }} eventos</td>
                 <td>{{ item.size_label }}</td>
-                <td><span class="admin-status-badge is-{{ 'online' if item.email.state == 'sent' else 'degraded' if item.email.state in ['failed', 'skipped'] else 'neutral' }}">{{ item.email.label }}</span></td>
                 <td class="admin-backup-actions">
                   <a class="mini-button secondary-button" href="{{ url_for('admin.download_system_backup', filename=item.filename) }}">Download</a>
                   <form method="post" action="{{ url_for('admin.delete_system_backup', filename=item.filename) }}" onsubmit="return confirm('Apagar este backup local? Confirma que tens outra cópia antes de continuar.');">
@@ -216,10 +210,6 @@
       <label class="checkbox-row">
         <input type="checkbox" name="understand_wipe" value="1" required>
         Compreendo que esta limpeza apaga os dados aplicacionais e preserva apenas o admin atual.
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" name="send_email" value="1" {% if backup.email.enabled %}checked{% endif %}>
-        Enviar o backup pré-limpeza por e-mail quando SMTP estiver configurado
       </label>
       <button type="submit" class="danger-button">Criar backup e limpar base</button>
     </form>

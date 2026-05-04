@@ -108,7 +108,6 @@ def test_system_backup_zip_contains_json_and_readme(tmp_path, monkeypatch) -> No
     monkeypatch.setattr(services, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(services, "KNOWLEDGE_DIR", str(knowledge_dir))
     monkeypatch.setenv("BACKUP_DIR", str(backup_dir))
-    monkeypatch.setenv("BACKUP_EMAIL_ENABLED", "0")
     monkeypatch.setattr(
         admin_module,
         "_postgres_table_rows",
@@ -123,7 +122,6 @@ def test_system_backup_zip_contains_json_and_readme(tmp_path, monkeypatch) -> No
     with app.app_context():
         record = admin_module._create_system_backup(
             created_by="admin@porto.pt",
-            send_email=True,
             source="manual",
         )
 
