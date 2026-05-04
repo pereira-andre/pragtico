@@ -274,6 +274,13 @@
   pointer-events: none;
 }
 
+.chart-hover-tooltip[hidden],
+.chart-hover-line[hidden],
+.chart-hover-dot[hidden],
+.chart-hover-bar[hidden] {
+  display: none;
+}
+
 .chart-tooltip-title {
   color: var(--text-strong);
   font-size: 0.98rem;
@@ -467,30 +474,30 @@
 }
 
 .ops-chart-surface {
-  fill: rgba(255, 255, 255, 0.025);
-  stroke: rgba(255, 255, 255, 0.05);
+  fill: rgba(255, 255, 255, 0.035);
+  stroke: rgba(130, 160, 195, 0.18);
   stroke-width: 1;
 }
 
 .ops-metric-chart line {
-  stroke: rgba(255, 255, 255, 0.18);
+  stroke: rgba(247, 244, 239, 0.22);
 }
 
 .ops-chart-grid {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: rgba(130, 160, 195, 0.16);
   stroke-width: 1;
 }
 
 .ops-chart-divider {
-  stroke: rgba(255, 255, 255, 0.12);
+  stroke: rgba(130, 160, 195, 0.24);
   stroke-width: 1;
 }
 
 .ops-chart-axis-text,
 .ops-chart-day-label {
-  fill: rgba(247, 244, 239, 0.86);
-  font-size: 12px;
-  font-weight: 600;
+  fill: rgba(247, 244, 239, 0.78);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .ops-chart-axis-text {
@@ -503,6 +510,7 @@
 
 .ops-chart-axis-text-right {
   text-anchor: end;
+  fill: rgba(145, 184, 214, 0.86);
 }
 
 .ops-chart-line {

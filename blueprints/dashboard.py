@@ -19,6 +19,7 @@ from domain.cost_engine import (
     calculate_scale_cost,
 )
 from domain.dashboard_data import build_weather_charts
+from integrations.tide_service import LISBON_TZ
 from core.helpers import (
     build_weather_timeline,
     filter_port_activity_for_session,
@@ -239,6 +240,162 @@ def _build_archive_context() -> tuple[dict, dict, list[dict], dict]:
     filters = _build_archive_filters(port_activity.get("archived_scales", []))
     filtered_scales = _filter_archived_scales(port_activity.get("archived_scales", []), filters)
     return port_activity, filters, filtered_scales, _archive_summary(filtered_scales, filters)
+
+
+def _daily_report_datetime(value: str | None) -> datetime | None:
+    return _parse_archive_datetime(value)
+
+
+def _daily_report_date(value: str | None) -> date | None:
+    dt = _daily_report_datetime(value)
+    if not dt:
+        return None
+    return dt.astimezone().date() if dt.tzinfo else dt.date()
+
+
+def _daily_report_timestamp(value: str | None) -> float:
+    dt = _daily_report_datetime(value)
+    if not dt:
+        return float("inf")
+    return dt.timestamp()
+
+
+def _daily_report_agency_label(item: dict) -> str:
+    profile = item.get("agent_profile") or {}
+    return (
+        profile.get("organization")
+        or item.get("agent_organization")
+        or item.get("agency")
+        or item.get("agent_label")
+        or "--"
+    )
+
+
+def _daily_report_is_today(item: dict, target_date: date, fields: tuple[str, ...]) -> bool:
+    return any(_daily_report_date(item.get(field)) == target_date for field in fields)
+
+
+def _daily_report_maneuver_type(item: dict) -> str:
+    raw_type = (item.get("maneuver_type") or "").strip().casefold()
+    raw_label = (item.get("maneuver_label") or "").strip().casefold()
+    if raw_type in {"entry", "departure", "shift"}:
+        return raw_type
+    if raw_label in {"entrar", "entrada"}:
+        return "entry"
+    if raw_label in {"sair", "saida", "saída"}:
+        return "departure"
+    if raw_label in {"mudanca", "mudança", "mudança interna"}:
+        return "shift"
+    return raw_type
+
+
+def _daily_report_movement_row(item: dict, *, movement_type: str) -> dict:
+    time_value = item.get("planned_value") or item.get("eta") or item.get("eta_value") or item.get("date_value")
+    return {
+        "id": item.get("port_call_id") or item.get("id") or item.get("reference_code") or item.get("vessel_name") or "",
+        "time_label": item.get("planned_label") or item.get("eta_label") or item.get("date_label") or "--",
+        "sort_value": _daily_report_timestamp(time_value),
+        "vessel_name": item.get("vessel_name") or "Navio",
+        "reference_code": item.get("reference_code") or "--",
+        "agency_label": _daily_report_agency_label(item),
+        "origin": item.get("local_origin") or item.get("last_port") or "--",
+        "destination": item.get("local_destination") or item.get("berth_label") or item.get("berth") or "--",
+        "movement_type": movement_type,
+        "situation_label": item.get("situation_label") or "",
+    }
+
+
+def _daily_report_position_groups(groups: list[dict]) -> list[dict]:
+    position_groups = []
+    for group in groups or []:
+        vessels = []
+        for vessel in group.get("vessels", []):
+            departure_label = vessel.get("planned_departure_label") or ""
+            note = f"Saída planeada: {departure_label}" if departure_label else ""
+            vessels.append(
+                {
+                    "id": vessel.get("id") or "",
+                    "vessel_name": vessel.get("vessel_name") or "Navio",
+                    "reference_code": vessel.get("reference_code") or "--",
+                    "agency_label": _daily_report_agency_label(vessel),
+                    "ship_type_label": vessel.get("ship_type_label") or "--",
+                    "note": note,
+                }
+            )
+        position_groups.append(
+            {
+                "berth": group.get("berth") or "Sem posição",
+                "count": len(vessels),
+                "vessels": vessels,
+            }
+        )
+    return position_groups
+
+
+def _build_daily_position_report_context(
+    port_activity: dict,
+    *,
+    target_date: date | None = None,
+    generated_at: datetime | None = None,
+    tide_day: dict | None = None,
+) -> dict:
+    target_date = target_date or datetime.now(LISBON_TZ).date()
+    generated_at = generated_at or datetime.now().astimezone()
+
+    planned_today = [
+        item
+        for item in port_activity.get("planned_maneuvers", [])
+        if _daily_report_is_today(item, target_date, ("planned_value", "date_value", "actual_value"))
+    ]
+    planned_entries = [
+        _daily_report_movement_row(item, movement_type="entry")
+        for item in planned_today
+        if _daily_report_maneuver_type(item) == "entry"
+    ]
+    planned_entry_ids = {item["id"] for item in planned_entries if item.get("id")}
+    scheduled_entries = [
+        _daily_report_movement_row(item, movement_type="entry")
+        for item in port_activity.get("arrivals", [])
+        if _daily_report_is_today(item, target_date, ("eta", "eta_value", "date_value"))
+        and (item.get("id") or item.get("reference_code") or item.get("vessel_name")) not in planned_entry_ids
+    ]
+    arrivals = sorted(planned_entries + scheduled_entries, key=lambda item: (item["sort_value"], item["vessel_name"]))
+
+    shifts = sorted(
+        [
+            _daily_report_movement_row(item, movement_type="shift")
+            for item in planned_today
+            if _daily_report_maneuver_type(item) == "shift"
+        ],
+        key=lambda item: (item["sort_value"], item["vessel_name"]),
+    )
+
+    berthed = _daily_report_position_groups(port_activity.get("berthed", []))
+    anchorages = _daily_report_position_groups(port_activity.get("anchorages", []))
+    position_vessel_count = sum(group["count"] for group in berthed + anchorages)
+    departing_today_count = sum(
+        1
+        for group in berthed + anchorages
+        for vessel in group["vessels"]
+        if vessel.get("note")
+    )
+
+    return {
+        "target_date": target_date,
+        "date_label": target_date.strftime("%d/%m/%Y"),
+        "generated_at_label": generated_at.strftime("%d/%m/%Y %H:%M"),
+        "arrivals": arrivals,
+        "shifts": shifts,
+        "berthed": berthed,
+        "anchorages": anchorages,
+        "tide_day": tide_day or {},
+        "summary": {
+            "arrivals": len(arrivals),
+            "shifts": len(shifts),
+            "positions": position_vessel_count,
+            "departures_planned": departing_today_count,
+        },
+    }
 
 
 def _filtered_archive_maneuvers(scales: list[dict], filters: dict) -> list[dict]:
@@ -805,6 +962,27 @@ def dashboard():
         local_warnings_status=local_warnings_status,
         ais=ais_context,
         title="PRAGtico",
+    )
+
+
+@bp.route("/dashboard/fotografia-dia")
+@login_required
+def daily_position_report():
+    """Relatório imprimível com a fotografia operacional do dia."""
+    refresh_knowledge_state(force_reindex=False)
+    target_date = datetime.now(LISBON_TZ).date()
+    port_activity = services.store.get_port_activity_snapshot(window_days=5)
+    planning_activity = services.store.get_port_activity_snapshot(window_days=3650)
+    port_activity["planned_maneuvers"] = planning_activity.get("planned_maneuvers", [])
+    report_context = _build_daily_position_report_context(
+        port_activity,
+        target_date=target_date,
+        tide_day=services.tide_service.summary_for_date(target_date),
+    )
+    return render_template(
+        "daily_position_report.html",
+        report=report_context,
+        title="Fotografia Operacional do Dia",
     )
 
 

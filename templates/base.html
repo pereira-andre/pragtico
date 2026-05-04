@@ -70,7 +70,7 @@
           <div class="portal-nav-tools">
             {% if current_role == "admin" %}
             <form class="portal-page-jump portal-admin-jump" action="#" method="get">
-              <label for="portal-page-jump-select" class="mini-label">Ferramentas</label>
+              <label for="portal-page-jump-select" class="mini-label portal-admin-jump-label">Ferramentas</label>
               <select id="portal-page-jump-select" data-page-jump>
                 <option value="">Abrir...</option>
                 <option value="{{ url_for('admin.admin_bot') }}">Bot</option>

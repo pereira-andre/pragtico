@@ -3,10 +3,14 @@
 <main class="ops-shell">
   <section class="hero-card pragtico-hero">
     <div class="hero-topline">
-      <div>
+      <div class="dashboard-hero-copy">
         <p class="eyebrow">Coordenação Portuária · Porto de Setúbal</p>
         <h1>Quadro operacional</h1>
-        <p class="lead">Chegadas, movimentos em porto, planeamento de manobras e contexto meteorológico contínuo num único ecrã.</p>
+        <p class="lead">Fotografia operacional de hoje com chegadas, navios em porto, manobras planeadas e condições relevantes.</p>
+        <div class="dashboard-hero-actions">
+          <a class="hero-link hero-link-primary" href="{{ url_for('dashboard_bp.daily_position_report') }}" target="_blank" rel="noopener">Imprimir fotografia do dia</a>
+          <span class="ops-pill">{{ port_activity.stats.scheduled_count }} chegadas · {{ port_activity.stats.planned_count }} manobras</span>
+        </div>
       </div>
       <aside class="hero-brand-plaque" aria-label="Marca do sistema">
         <img
@@ -67,14 +71,14 @@
         <div class="sector-info">
           <span class="sector-day" title="Sector diurno">
             ☀️ {{ today_astro.sunrise or '--' }} – {{ today_astro.sunset or '--' }}
-            {% if today_astro.daylight_duration_label %} · {{ today_astro.daylight_duration_label }} de luz{% endif %}
+            {% if today_astro.daylight_duration_label %} · {{ today_astro.daylight_duration_label }}{% endif %}
           </span>
           <span class="sector-night" title="Sector nocturno">
             🌙 {{ today_astro.sunset or '--' }} – {{ today_astro.sunrise or '--' }}
             {% if today_astro.night_duration_label %} · {{ today_astro.night_duration_label }}{% endif %}
           </span>
           {% if today_astro.moon_phase %}
-            <span class="sector-moon" title="Fase lunar">{{ today_astro.moon_phase_icon or '🌙' }} {{ today_astro.moon_phase }} ({{ today_astro.moon_illumination or '--' }}%)</span>
+            <span class="sector-moon" title="Fase lunar">{{ today_astro.moon_phase_icon or '🌙' }} {{ today_astro.moon_phase_label or today_astro.moon_phase }} ({{ today_astro.moon_illumination or '--' }}%)</span>
           {% endif %}
         </div>
       {% endif %}
@@ -161,7 +165,7 @@
             <span>{{ day.condition }}</span>
             <span>{{ day.min_temp_c }}–{{ day.max_temp_c }} °C</span>
             <span>vento máx {{ day.max_wind_kts }} kts</span>
-            <span class="meteo-astro">☀️ {{ day.sunrise }} → {{ day.sunset }}{% if day.moon_phase %} · 🌙 {{ day.moon_phase }}{% endif %}</span>
+            <span class="meteo-astro">☀️ {{ day.sunrise }} → {{ day.sunset }}{% if day.moon_phase %} · {{ day.moon_phase_icon or '🌙' }} {{ day.moon_phase_label or day.moon_phase }}{% endif %}</span>
           </article>
         {% endfor %}
       </div>

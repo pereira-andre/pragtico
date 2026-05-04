@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Fotografia Operacional do Dia" }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #14263a;
+        --muted: #667789;
+        --line: #d8e0e8;
+        --panel: #ffffff;
+        --soft: #f5f8fb;
+        --accent: #0b6d88;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+        background: #edf3f8;
+        color: var(--ink);
+      }
+
+      .report-shell {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 28px 0;
+        display: grid;
+        gap: 18px;
+      }
+
+      .report-toolbar,
+      .report-header,
+      .report-section {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+      }
+
+      .report-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+      }
+
+      .report-toolbar p,
+      .report-header p,
+      .report-empty {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .report-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .report-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .report-button-primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .report-header {
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+      }
+
+      .report-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .report-kicker,
+      th {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.6rem);
+        line-height: 0.95;
+      }
+
+      .report-meta {
+        display: grid;
+        gap: 4px;
+        min-width: 190px;
+        text-align: right;
+      }
+
+      .report-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .report-kpi {
+        display: grid;
+        gap: 4px;
+        padding: 13px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--soft);
+      }
+
+      .report-kpi span,
+      .position-note {
+        color: var(--muted);
+      }
+
+      .report-kpi strong {
+        font-size: 1.35rem;
+      }
+
+      .report-section {
+        overflow: hidden;
+      }
+
+      .report-context-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 14px;
+        padding: 16px 18px 18px;
+      }
+
+      .report-mini-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--soft);
+      }
+
+      .report-mini-card h3 {
+        font-size: 1rem;
+      }
+
+      .report-light-list,
+      .report-tide-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+
+      .report-light-row,
+      .report-tide-row {
+        display: grid;
+        grid-template-columns: minmax(105px, auto) minmax(0, 1fr);
+        gap: 10px;
+        align-items: baseline;
+      }
+
+      .report-light-row dt,
+      .report-tide-row dt {
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .report-light-row dd,
+      .report-tide-row dd {
+        margin: 0;
+        font-weight: 700;
+      }
+
+      .report-tide-events {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .report-tide-event {
+        display: grid;
+        gap: 4px;
+        padding: 11px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .report-tide-event strong {
+        font-size: 1.05rem;
+      }
+
+      .report-tide-event span,
+      .report-tide-event small {
+        color: var(--muted);
+      }
+
+      .report-section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        background: #f8fafc;
+      }
+
+      .report-count {
+        display: inline-flex;
+        min-width: 36px;
+        min-height: 28px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: #e8f4f7;
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 11px 13px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.92rem;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .position-name {
+        width: 26%;
+        font-weight: 800;
+      }
+
+      .position-vessel {
+        display: grid;
+        gap: 2px;
+      }
+
+      .position-vessel small,
+      .report-ref {
+        color: var(--muted);
+      }
+
+      .position-note {
+        font-weight: 700;
+      }
+
+      .report-empty {
+        padding: 18px;
+      }
+
+      @media (max-width: 760px) {
+        .report-toolbar,
+        .report-title-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .report-meta {
+          text-align: left;
+        }
+
+        .report-kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .report-context-grid,
+        .report-tide-events {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          min-width: 760px;
+        }
+
+        .report-section {
+          overflow-x: auto;
+        }
+      }
+
+      @media print {
+        body { background: #fff; }
+        .report-shell { width: auto; padding: 0; gap: 12px; }
+        .report-toolbar { display: none; }
+        .report-header,
+        .report-section {
+          border-radius: 0;
+          border-left: 0;
+          border-right: 0;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report-shell">
+      <section class="report-toolbar">
+        <div>
+          <strong>Fotografia operacional do dia</strong>
+          <p>Relatório preparado para impressão ou exportação em PDF.</p>
+        </div>
+        <div class="report-actions">
+          <a class="report-button" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao quadro</a>
+          <button type="button" class="report-button report-button-primary" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+      </section>
+
+      <header class="report-header">
+        <div class="report-title-row">
+          <div>
+            <p class="report-kicker">Porto de Setúbal · {{ report.date_label }}</p>
+            <h1>Fotografia operacional do dia</h1>
+            <p>Chegadas previstas, mudanças internas e ocupação por cais e fundeadouro.</p>
+          </div>
+          <div class="report-meta">
+            <span>Gerado em</span>
+            <strong>{{ report.generated_at_label }}</strong>
+          </div>
+        </div>
+        <div class="report-kpis">
+          <article class="report-kpi">
+            <span>Chegadas</span>
+            <strong>{{ report.summary.arrivals }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>Mudanças internas</span>
+            <strong>{{ report.summary.shifts }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>Navios em posição</span>
+            <strong>{{ report.summary.positions }}</strong>
+          </article>
+          <article class="report-kpi">
+            <span>Saídas planeadas</span>
+            <strong>{{ report.summary.departures_planned }}</strong>
+          </article>
+        </div>
+      </header>
+
+      <section class="report-section">
+        <div class="report-section-head">
+          <h2>Marés e luz do dia</h2>
+          <span class="report-count">{{ report.tide_day.events|length if report.tide_day else 0 }}</span>
+        </div>
+        <div class="report-context-grid">
+          <article class="report-mini-card">
+            <h3>Períodos de luz</h3>
+            {% if report.tide_day and report.tide_day.luminosity %}
+              <dl class="report-light-list">
+                <div class="report-light-row">
+                  <dt>☀️ Dia</dt>
+                  <dd>{{ report.tide_day.luminosity.sunrise }} – {{ report.tide_day.luminosity.sunset }} · {{ report.tide_day.luminosity.daylight_duration }}</dd>
+                </div>
+                <div class="report-light-row">
+                  <dt>🌙 Noite</dt>
+                  <dd>{{ report.tide_day.luminosity.sunset }} – {{ report.tide_day.luminosity.sunrise }} · {{ report.tide_day.luminosity.night_duration }}</dd>
+                </div>
+              </dl>
+            {% else %}
+              <p class="report-empty">Sem dados de luz disponíveis.</p>
+            {% endif %}
+          </article>
+          <article class="report-mini-card">
+            <h3>Marés do dia</h3>
+            {% if report.tide_day and report.tide_day.events %}
+              <div class="report-tide-events">
+                {% for event in report.tide_day.events %}
+                  <div class="report-tide-event">
+                    <strong>{{ event.time }}</strong>
+                    <span>{{ event.height_m }} m</span>
+                    <small>{{ '▲ preia-mar' if event.type == 'preia-mar' else '▼ baixa-mar' }}</small>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="report-empty">Sem marés registadas para este dia.</p>
+            {% endif %}
+          </article>
+        </div>
+      </section>
+
+      <section class="report-section">
+        <div class="report-section-head">
+          <h2>Previstos a chegar hoje</h2>
+          <span class="report-count">{{ report.arrivals|length }}</span>
+        </div>
+        {% if report.arrivals %}
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Navio</th>
+                <th>Agência</th>
+                <th>Origem</th>
+                <th>Destino</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in report.arrivals %}
+                <tr>
+                  <td>{{ item.time_label }}</td>
+                  <td><strong>{{ item.vessel_name }}</strong><br><span class="report-ref">{{ item.reference_code }}</span></td>
+                  <td>{{ item.agency_label }}</td>
+                  <td>{{ item.origin }}</td>
+                  <td>{{ item.destination }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="report-empty">Sem chegadas previstas para hoje.</p>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <div class="report-section-head">
+          <h2>Mudanças internas previstas</h2>
+          <span class="report-count">{{ report.shifts|length }}</span>
+        </div>
+        {% if report.shifts %}
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Navio</th>
+                <th>Agência</th>
+                <th>Origem</th>
+                <th>Destino</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in report.shifts %}
+                <tr>
+                  <td>{{ item.time_label }}</td>
+                  <td><strong>{{ item.vessel_name }}</strong><br><span class="report-ref">{{ item.reference_code }}</span></td>
+                  <td>{{ item.agency_label }}</td>
+                  <td>{{ item.origin }}</td>
+                  <td>{{ item.destination }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="report-empty">Sem mudanças internas previstas para hoje.</p>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <div class="report-section-head">
+          <h2>Cais por ordem</h2>
+          <span class="report-count">{{ report.berthed|length }}</span>
+        </div>
+        {% if report.berthed %}
+          <table>
+            <thead>
+              <tr>
+                <th>Posição</th>
+                <th>Navio</th>
+                <th>Tipo</th>
+                <th>Agência</th>
+                <th>Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for group in report.berthed %}
+                {% for vessel in group.vessels %}
+                  <tr>
+                    {% if loop.first %}
+                      <td class="position-name" rowspan="{{ group.vessels|length }}">{{ group.berth }}</td>
+                    {% endif %}
+                    <td>
+                      <span class="position-vessel">
+                        <strong>{{ vessel.vessel_name }}</strong>
+                        <small>{{ vessel.reference_code }}</small>
+                      </span>
+                    </td>
+                    <td>{{ vessel.ship_type_label }}</td>
+                    <td>{{ vessel.agency_label }}</td>
+                    <td class="position-note">{{ vessel.note or "--" }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="report-empty">Sem navios atracados em cais.</p>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <div class="report-section-head">
+          <h2>Fundeadouros e quadro</h2>
+          <span class="report-count">{{ report.anchorages|length }}</span>
+        </div>
+        {% if report.anchorages %}
+          <table>
+            <thead>
+              <tr>
+                <th>Posição</th>
+                <th>Navio</th>
+                <th>Tipo</th>
+                <th>Agência</th>
+                <th>Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for group in report.anchorages %}
+                {% for vessel in group.vessels %}
+                  <tr>
+                    {% if loop.first %}
+                      <td class="position-name" rowspan="{{ group.vessels|length }}">{{ group.berth }}</td>
+                    {% endif %}
+                    <td>
+                      <span class="position-vessel">
+                        <strong>{{ vessel.vessel_name }}</strong>
+                        <small>{{ vessel.reference_code }}</small>
+                      </span>
+                    </td>
+                    <td>{{ vessel.ship_type_label }}</td>
+                    <td>{{ vessel.agency_label }}</td>
+                    <td class="position-note">{{ vessel.note or "--" }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="report-empty">Sem navios em fundeadouro ou quadro.</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
