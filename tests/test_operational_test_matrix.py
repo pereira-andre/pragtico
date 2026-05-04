@@ -79,6 +79,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Eco-Oil na checklist" in html
     assert "Perda de maquina: ferro e VTS" in html
     assert "Emergencia: perda de bow" in html
+    assert "Nevoeiro súbito em navegação: COLREG" in html
     assert "4.º rebocador: costado ou standby" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html

@@ -26,6 +26,7 @@ from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_ru
 from domain.navigation_basics import answer_navigation_basics_direct, build_navigation_basics_source
 from domain.navigation_lights import build_navigation_lights_source
 from domain.operational_safety import (
+    build_fog_underway_procedure_source,
     build_emergency_response_source,
     build_operational_safety_source,
     build_weather_safety_status_lines,
@@ -1007,6 +1008,28 @@ def _answer_emergency_response_direct(question: str, clean_question: str) -> dic
     }
 
 
+def _answer_fog_underway_procedure_direct(question: str, clean_question: str) -> dict | None:
+    source = build_fog_underway_procedure_source(question, _active_knowledge_dir() or "knowledge")
+    if not source:
+        return None
+
+    answer_lines = [
+        "Nevoeiro súbito com o navio já a navegar:",
+        "- Primeiro estabilizar: reduzir para velocidade de segurança, máquinas prontas, vigia visual/auditiva reforçada, radar/ECDIS/AIS bem acompanhados e avaliação contínua do risco de abalroamento.",
+        "- Aplicar RIEAM/COLREG: Regra 5 (vigia), Regra 6 (velocidade segura), Regras 7/8 (risco e manobra) e Regra 19 (visibilidade reduzida). Se ouvir sinal para vante ou não conseguir evitar aproximação excessiva, reduzir ao mínimo para governar, anular seguimento se necessário e navegar com extrema precaução.",
+        "- Fazer os sinais de nevoeiro da Regra 35: com seguimento, 1 som prolongado no máximo de 2 em 2 minutos; pairando/sem seguimento, 2 sons prolongados. Se houver dúvida/perigo sobre outro navio, usar pelo menos 5 sons curtos; se houver perigo ou necessidade de auxílio, usar sinais de perigo.",
+        "- Avaliar posição, fundo, tráfego, corrente/vento, distância ao cais/canal/fundeadouro e altura do dia. De dia pode ser mais difícil identificar referências; de noite as luzes ajudam mas não substituem radar e vigia.",
+        "- Se estiver junto do cais de destino e houver margem real, meios e referências suficientes, tentar atracar com muito cuidado. Se não, seguir para fundeadouro/posição de espera adequada e aguardar melhoria.",
+        "- Se vier de entrada e ainda estiver antes do canal, tentar abortar antes de entrar, dar a volta em segurança e aguardar fora/num fundeadouro apropriado.",
+        "- Reportar e coordenar sempre com Setúbal Port Control / VTS local no VHF 73 e pilotos no canal 14; usar canal 71 em manobras Lisnave.",
+    ]
+    return {
+        "answer": "\n".join(answer_lines),
+        "sources": [source],
+        "answer_origin": "fog_underway_procedure",
+    }
+
+
 def _answer_navigation_lights_direct(question: str, clean_question: str) -> dict | None:
     source = build_navigation_lights_source(question, _active_knowledge_dir() or "knowledge")
     if not source:
@@ -1099,6 +1122,9 @@ def build_operational_chat_sources(
     emergency_source = build_emergency_response_source(question, knowledge_dir)
     if emergency_source:
         return [emergency_source]
+    fog_underway_source = build_fog_underway_procedure_source(question, knowledge_dir)
+    if fog_underway_source:
+        return [fog_underway_source]
 
     recent_port_activity: dict | None = None
     sources: list[dict] = []
@@ -1165,6 +1191,9 @@ def answer_direct_operational_query(
     emergency_answer = _answer_emergency_response_direct(question, clean_question)
     if emergency_answer:
         return emergency_answer
+    fog_underway_answer = _answer_fog_underway_procedure_direct(question, clean_question)
+    if fog_underway_answer:
+        return fog_underway_answer
     navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
     if navigation_lights_answer:
         return navigation_lights_answer

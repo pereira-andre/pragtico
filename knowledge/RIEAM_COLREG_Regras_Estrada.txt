@@ -37,6 +37,8 @@ VISIBILIDADE REDUZIDA
 - Regra 19 - Conduta: navegar a velocidade de seguranca adaptada; navios de propulsao mecanica devem ter maquinas prontas a manobrar imediatamente; usar radar e todos os meios para avaliar aproximacao excessiva/risco.
 - Regra 19 - Manobra por radar: se a manobra for alteracao de rumo, evitar guinar para bombordo para navio para vante do traves, exceto se esse navio estiver a ser alcancado; evitar guinar na direcao de navio pelo traves ou para re do traves.
 - Regra 19 - Sinal de nevoeiro para vante: se ouvir sinal de nevoeiro para vante do traves, ou nao puder evitar aproximacao excessiva de navio para vante, reduzir a velocidade ao minimo necessario para governar, anular seguimento se necessario e navegar com extrema precaucao ate o risco passar.
+- Nevoeiro subitamente encontrado em navegacao: primeiro estabilizar a navegacao, reduzir para velocidade de seguranca, reforcar vigia visual/auditiva, ter maquinas prontas, usar radar/ECDIS/AIS/VHF como auxiliares, emitir sinais de nevoeiro adequados e avaliar posicao, fundo, trafego, corrente/vento, distancia ao cais/canal/fundeadouro e altura do dia.
+- Em contexto portuario, se o navio ja esta junto do cais de destino e houver margem real, meios e referencias suficientes, pode tentar atracar com extrema cautela. Se nao estiver em condicoes de atracar com seguranca, deve procurar fundeadouro/posicao de espera adequada. Se vier de entrada e ainda estiver antes do canal, a opcao prudente e abortar antes de entrar, dar a volta em seguranca e aguardar.
 
 LUZES E MARCAS
 - Regras 20 a 31: definem quando e como mostrar farois/luzes e baloes/marcas.
@@ -78,3 +80,6 @@ Resposta: Pela Regra 17, deve manter rumo e velocidade no inicio. Pode manobrar 
 
 Pergunta: Em nevoeiro, que devo fazer se oiço sinal de outro navio para vante?
 Resposta: Pela Regra 19, reduzir a velocidade ao minimo necessario para governar, anular seguimento se necessario e navegar com extrema precaucao ate o risco passar. Maquinas prontas a manobrar imediatamente.
+
+Pergunta: Se um navio for apanhado de surpresa no meio do nevoeiro a navegar, que procedimentos deve adoptar?
+Resposta: Aplicar Regra 19 e as regras gerais de vigia, velocidade segura, risco e manobra. Reduzir para velocidade de seguranca, ter maquinas prontas, reforcar vigia, usar radar/ECDIS/AIS/VHF, emitir sinais de nevoeiro da Regra 35 e avaliar posicao, fundo, trafego, corrente/vento, distancia ao cais/canal/fundeadouro e altura do dia. Se estiver junto do cais de destino e houver margem real, pode tentar atracar com extrema cautela; se nao, procurar fundeadouro/posicao de espera; se vier de entrada antes do canal, abortar antes de entrar e aguardar.

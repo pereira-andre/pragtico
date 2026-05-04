@@ -19,7 +19,9 @@
     "Regra 13: o navio que alcança deve sempre afastar-se do caminho do navio alcançado.",
     "Regra 14: em roda a roda, ambos os navios de propulsão mecânica guinam para estibordo.",
     "Regra 15: em rumos cruzados, o navio que vê o outro por estibordo afasta-se e evita cortar a proa.",
-    "Regra 19: em visibilidade reduzida, velocidade segura, máquinas prontas, radar bem usado e extrema precaução."
+    "Regra 19: em visibilidade reduzida, velocidade segura, máquinas prontas, radar bem usado e extrema precaução.",
+    "Regra 35: em visibilidade reduzida, emitir os sinais sonoros adequados ao estado do navio.",
+    "Se o nevoeiro apanhar o navio já a navegar em porto, avaliar posição, altura do dia, fundo, tráfego, corrente/vento e escolher entre atracar com cautela, seguir para fundeadouro/espera ou abortar antes do canal."
   ],
   "faq": [
     {
@@ -72,6 +74,20 @@
         "visibilidade reduzida",
         "sinal sonoro",
         "regra 19"
+      ]
+    },
+    {
+      "question": "Se um navio for apanhado de surpresa no meio do nevoeiro a navegar, que procedimentos deve adoptar?",
+      "answer": "Aplicar Regra 19 e as regras gerais de vigia, velocidade segura, risco e manobra. Reduzir para velocidade de segurança, ter máquinas prontas, reforçar vigia, usar radar/ECDIS/AIS/VHF, emitir sinais de nevoeiro da Regra 35 e avaliar posição, fundo, tráfego, corrente/vento, distância ao cais/canal/fundeadouro e altura do dia. Se estiver junto do cais de destino e houver margem real, pode tentar atracar com extrema cautela; se não, procurar fundeadouro/posição de espera; se vier de entrada antes do canal, abortar antes de entrar e aguardar.",
+      "keywords": [
+        "nevoeiro",
+        "visibilidade reduzida",
+        "a navegar",
+        "regra 19",
+        "regra 35",
+        "sinais de nevoeiro",
+        "fundeadouro",
+        "abortar entrada"
       ]
     }
   ]

@@ -59,6 +59,44 @@
     "Se a suspensao por vento ja tiver sido acionada, nao considerar retoma operacional ate vento abaixo de 25 kt.",
     "Estas regras aplicam-se a todas as manobras, independentemente do cais, tipo de navio ou numero de rebocadores."
   ],
+  "fog_underway_response": {
+    "title": "Nevoeiro subitamente encontrado com o navio ja em navegacao",
+    "trigger_terms": [
+      "apanhado no nevoeiro",
+      "meio do nevoeiro",
+      "nevoeiro a navegar",
+      "visibilidade reduzida a navegar",
+      "procedimentos colreg nevoeiro",
+      "sinais de nevoeiro"
+    ],
+    "colreg_basis": [
+      "Aplicar RIEAM/COLREG: Regra 5 (vigia visual e auditiva), Regra 6 (velocidade de seguranca), Regra 7 (risco de abalroamento), Regra 8 (manobra cedo/clara/ampla) e Regra 19 (visibilidade reduzida).",
+      "Em visibilidade reduzida, navio de propulsao mecanica deve navegar a velocidade de seguranca, ter maquinas prontas a manobrar imediatamente, usar radar/ECDIS/AIS/VHF como auxiliares e manter extrema precaucao.",
+      "Se ouvir sinal de nevoeiro para vante do traves, ou nao conseguir evitar aproximacao excessiva a navio para vante, reduzir ao minimo necessario para governar, anular seguimento se necessario e continuar com extrema precaucao ate o risco passar.",
+      "Se a manobra por radar for alteracao de rumo, evitar guinar para bombordo para navio para vante do traves, exceto se estiver a alcancar; evitar tambem guinar na direcao de navio pelo traves ou para re do traves."
+    ],
+    "signals": [
+      "Regra 35: navio de propulsao mecanica com seguimento em visibilidade reduzida emite 1 som prolongado a intervalos maximos de 2 minutos.",
+      "Regra 35: navio de propulsao mecanica pairando e sem seguimento emite 2 sons prolongados a intervalos maximos de 2 minutos.",
+      "Regra 35: navio a vela, pesca, desgovernado, capacidade de manobra reduzida, condicionado pelo calado, rebocador ou navio a rebocar emite 1 som prolongado seguido de 2 curtos.",
+      "Regra 35: navio rebocado, se tripulado, emite 1 som prolongado seguido de 3 curtos, logo depois do sinal do rebocador se praticavel.",
+      "Regra 34: se houver duvida sobre intencoes ou perigo de abalroamento, usar pelo menos 5 sons curtos e rapidos; pode complementar com sinal luminoso equivalente.",
+      "Regra 37: se houver perigo ou necessidade de auxilio, usar sinais de perigo adequados."
+    ],
+    "local_guidance": [
+      "Avaliar imediatamente posicao, margem de agua/fundo, trafego, corrente, vento, distancia ao canal/cais/fundeadouro, meios disponiveis e altura do dia.",
+      "De dia pode ser mais dificil identificar referencias visuais; de noite as luzes podem ajudar, mas nao dispensam radar, vigia auditiva e navegacao prudente.",
+      "Se estiver junto do cais de destino e houver margem, meios e referencias suficientes, pode tentar atracar com muito cuidado, sempre sem contrariar RIEAM/COLREG e instrucoes locais.",
+      "Se nao estiver em condicoes de atracar com seguranca, seguir para fundeadouro/posicao de espera adequada e aguardar melhoria de visibilidade.",
+      "Se vier de entrada e ainda nao chegou ao canal, tentar abortar antes de entrar no canal, dar a volta em seguranca e aguardar fora/num fundeadouro apropriado.",
+      "Reportar e coordenar sempre com Setubal Port Control / VTS local no VHF 73 e pilotos no canal 14; usar canal 71 em manobras Lisnave."
+    ],
+    "response_guidance": [
+      "Nao responder apenas com 'manobras suspensas' quando a pergunta descreve navio ja em navegacao apanhado subitamente por nevoeiro.",
+      "A resposta deve separar: movimentos novos ficam suspensos; navio ja em navegacao deve estabilizar a situacao, cumprir RIEAM/COLREG, avaliar posicao/altura do dia e escolher cais, fundeadouro ou abortar entrada conforme margem real.",
+      "Comecar pela seguranca imediata: velocidade segura, maquinas prontas, vigia reforcada, radar, sinais de nevoeiro e comunicacao VHF."
+    ]
+  },
   "emergency_response": {
     "title": "Resposta imediata a emergencias de manobra",
     "trigger_terms": [

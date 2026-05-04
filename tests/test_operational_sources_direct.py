@@ -239,6 +239,25 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("VHF 73", answer)
         self.assertIn("canal 14", answer)
 
+    def test_fog_underway_colreg_procedure_is_not_plain_suspension(self) -> None:
+        question = "Se um navio for apanhado no meio do nevoeiro a navegar, que procedimentos deve adoptar segundo a COLREG?"
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(question)
+            sources = build_operational_chat_sources(question)
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("fog_underway_procedure", payload["answer_origin"])
+        self.assertIn("Regra 19", payload["answer"])
+        self.assertIn("Regra 35", payload["answer"])
+        self.assertIn("1 som prolongado", payload["answer"])
+        self.assertIn("Avaliar posição", payload["answer"])
+        self.assertIn("cais de destino", payload["answer"])
+        self.assertIn("fundeadouro", payload["answer"])
+        self.assertIn("abortar antes de entrar", payload["answer"])
+        self.assertIn("VHF 73", payload["answer"])
+        self.assertNotIn("Não. Com nevoeiro em porto", payload["answer"])
+        self.assertEqual(["fog_underway_procedure"], [source.get("retrieval_mode") for source in sources])
+
     def test_parted_mooring_lines_emergency_prepares_lines_and_tugs(self) -> None:
         answer = self._answer("Se partirem cabos na manobra, qual e a resposta imediata?")
 

@@ -36,6 +36,15 @@ EMERGENCY_STANDALONE_RE = re.compile(
     r"cabo\s+do\s+reboque|encalh\w*|colid\w*|colis[aã]o|abalro\w*)\b",
     flags=re.IGNORECASE,
 )
+FOG_UNDERWAY_RE = re.compile(
+    r"\b(nevoeiro|nevoa|névoa|neblina|fog|mist|visibilidade\s+reduzida)\b.*\b("
+    r"apanh\w*|surpresa|meio|naveg\w*|procediment\w*|adoptar|adotar|colreg|rieam|"
+    r"sinais?|sonor\w*|luminos\w*)\b"
+    r"|"
+    r"\b(colreg|rieam|procediment\w*|sinais?|sonor\w*|luminos\w*|naveg\w*)\b.*\b("
+    r"nevoeiro|nevoa|névoa|neblina|fog|mist|visibilidade\s+reduzida)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _normalize_text(value: str | None) -> str:
@@ -88,6 +97,10 @@ def looks_like_emergency_response_question(question: str) -> bool:
         MANEUVER_QUERY_RE.search(text)
         or re.search(r"\b(porto|setubal|setúbal|vts|vhf|canal|rebocador|rebocadores)\b", text, re.IGNORECASE)
     )
+
+
+def looks_like_fog_underway_procedure_question(question: str) -> bool:
+    return bool(FOG_UNDERWAY_RE.search(question or ""))
 
 
 def _safe_float(value) -> float | None:
@@ -272,4 +285,37 @@ def build_emergency_response_source(question: str, knowledge_dir: str) -> dict[s
         "retrieval_mode": "operational_emergency_response",
         "snippet": snippet,
         "text": snippet,
+    }
+
+
+def build_fog_underway_procedure_source(question: str, knowledge_dir: str) -> dict[str, Any] | None:
+    guidance = load_operational_safety_limits(knowledge_dir)
+    procedure = guidance.get("fog_underway_response") or {}
+    if not procedure or not looks_like_fog_underway_procedure_question(question):
+        return None
+
+    lines = [procedure.get("title") or "Nevoeiro encontrado com o navio em navegacao"]
+    for heading, key in (
+        ("Base RIEAM/COLREG:", "colreg_basis"),
+        ("Sinais sonoros/luminosos:", "signals"),
+        ("Orientacao local:", "local_guidance"),
+        ("Orientacao de resposta:", "response_guidance"),
+    ):
+        items = [str(item or "").strip() for item in procedure.get(key) or [] if str(item or "").strip()]
+        if not items:
+            continue
+        lines.append(heading)
+        for item in items:
+            lines.append(f"- {item}")
+
+    snippet = "\n".join(lines)
+    return {
+        "source_id": "SAFE_FOG_UNDERWAY",
+        "document": SAFETY_LIMITS_FILENAME,
+        "chunk_id": 3,
+        "score": 1.0,
+        "retrieval_mode": "fog_underway_procedure",
+        "snippet": snippet,
+        "text": snippet,
+        "procedure": procedure,
     }
