@@ -6,23 +6,18 @@
       <div class="dashboard-hero-copy">
         <p class="eyebrow">Coordenação Portuária · Porto de Setúbal</p>
         <h1>Quadro operacional</h1>
-        <p class="lead">Fotografia operacional de hoje com chegadas, navios em porto, manobras planeadas e condições relevantes.</p>
+        <p class="lead">Relatório diário com chegadas, navios em porto, manobras planeadas e condições relevantes.</p>
         <div class="dashboard-hero-actions">
-          <a class="hero-link hero-link-primary" href="{{ url_for('dashboard_bp.daily_position_report') }}" target="_blank" rel="noopener">Imprimir fotografia do dia</a>
+          <a class="hero-link hero-link-primary" href="{{ url_for('dashboard_bp.daily_position_report') }}" target="_blank" rel="noopener">Imprimir relatório diário</a>
           <span class="ops-pill">{{ port_activity.stats.scheduled_count }} chegadas · {{ port_activity.stats.planned_count }} manobras</span>
         </div>
       </div>
-      <aside class="hero-brand-plaque" aria-label="Marca do sistema">
+      <aside class="hero-brand-plaque" aria-hidden="true">
         <img
           class="hero-brand-mascot"
           src="{{ url_for('dashboard_bp.image_asset', asset_path='icon.png') }}"
-          alt="Mascote PRAGtico"
+          alt=""
         >
-        <div class="hero-brand-copy">
-          <span class="hero-brand-kicker">Sistema</span>
-          <strong>PRAGtico</strong>
-          <small>Quadro operacional para decisão, contexto e acompanhamento contínuo.</small>
-        </div>
       </aside>
     </div>
 

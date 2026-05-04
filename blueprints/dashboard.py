@@ -968,7 +968,7 @@ def dashboard():
 @bp.route("/dashboard/fotografia-dia")
 @login_required
 def daily_position_report():
-    """Relatório imprimível com a fotografia operacional do dia."""
+    """Relatório diário imprimível do estado operacional."""
     refresh_knowledge_state(force_reindex=False)
     target_date = datetime.now(LISBON_TZ).date()
     port_activity = services.store.get_port_activity_snapshot(window_days=5)
@@ -982,7 +982,7 @@ def daily_position_report():
     return render_template(
         "daily_position_report.html",
         report=report_context,
-        title="Fotografia Operacional do Dia",
+        title="Relatório Diário",
     )
 
 
