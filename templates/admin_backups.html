@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell admin-status-page admin-backups-page">
+  <section class="hero-card admin-status-hero admin-backups-hero">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Proteção de dados</p>
+        <h1>Backups</h1>
+        <p class="lead">Pacotes completos com base aplicacional, utilizadores, conversas, eventos WhatsApp e ficheiros de conhecimento.</p>
+      </div>
+      <div class="admin-status-hero-tools">
+        <span class="admin-status-badge is-{{ backup.auto.state }}">Automático {{ backup.auto.label }}</span>
+        <a class="outline-link" href="{{ url_for('admin.admin_status') }}">Estado</a>
+      </div>
+    </div>
+
+    <div class="hero-meta-grid admin-status-hero-grid">
+      {% for item in backup.metrics %}
+        <article class="hero-stat">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <small>{{ item.detail }}</small>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel section-panel admin-backup-explainer">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Conteúdo</p>
+        <h2>O que cada backup inclui</h2>
+      </div>
+      <span class="admin-status-badge is-neutral">ZIP + README</span>
+    </div>
+    <div class="admin-backup-include-grid">
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Base e operação</strong>
+        </div>
+        <p class="admin-status-note">Utilizadores, roles, perfis, documentos registados, escalas, navios, manobras, histórico operacional e estado runtime.</p>
+      </article>
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Conversas e WhatsApp</strong>
+        </div>
+        <p class="admin-status-note">Conversas, mensagens, feedback, metadados de canal, eventos WhatsApp, números e opt-in dos utilizadores.</p>
+      </article>
+      <article class="admin-status-surface">
+        <div class="admin-status-surface-head">
+          <strong>Conhecimento e reposição</strong>
+        </div>
+        <p class="admin-status-note">Ficheiros `.txt`, `.md` e `.json` exportáveis. O ZIP traz `backup.json` para repor e `README.md` com passos e avisos.</p>
+      </article>
+    </div>
+  </section>
+
+  <div class="admin-status-layout">
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Criar agora</p>
+          <h2>Novo pacote completo</h2>
+        </div>
+        <span class="admin-status-badge is-{{ backup.email.state }}">E-mail {{ backup.email.label }}</span>
+      </div>
+      <form method="post" action="{{ url_for('admin.create_system_backup') }}" class="admin-backup-action-form">
+        <label class="checkbox-row">
+          <input type="checkbox" name="send_email" value="1" {% if backup.email.enabled %}checked{% endif %}>
+          Enviar também por e-mail quando SMTP estiver configurado
+        </label>
+        <p class="admin-status-note">{{ backup.email.detail }}</p>
+        <button type="submit">Criar backup completo</button>
+      </form>
+    </section>
+
+    <section class="panel section-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Automático</p>
+          <h2>Estado da rotina</h2>
+        </div>
+        <span class="admin-status-badge is-{{ backup.auto.state }}">{{ backup.auto.label }}</span>
+      </div>
+      <div class="admin-status-compact-grid">
+        <div class="admin-status-fact">
+          <span>Intervalo</span>
+          <strong>{{ backup.auto.interval_hours }} h</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Próximo</span>
+          <strong>{{ backup.next_due_label }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Retenção</span>
+          <strong>{{ backup.retention_count }}</strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Diretoria</span>
+          <strong>{{ backup.backup_dir }}</strong>
+        </div>
+      </div>
+      <p class="admin-status-note">A rotina corre quando a aplicação recebe tráfego e cria novo pacote se o intervalo já tiver passado.</p>
+    </section>
+  </div>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Histórico</p>
+        <h2>Backups guardados</h2>
+      </div>
+      <span class="admin-status-badge is-neutral">{{ backup.storage_label }}</span>
+    </div>
+    {% if backup.records %}
+      <div class="planned-table-wrap">
+        <table class="planned-table admin-backup-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Origem</th>
+              <th>Registos</th>
+              <th>WhatsApp</th>
+              <th>Tamanho</th>
+              <th>E-mail</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in backup.records %}
+              <tr>
+                <td>
+                  <strong>{{ item.created_at_label }}</strong>
+                  <span>{{ item.filename }}</span>
+                </td>
+                <td>{{ item.source or item.created_by }}</td>
+                <td>{{ item.total_records }}</td>
+                <td>{{ item.counts.whatsapp_messages or 0 }} msg · {{ item.counts.whatsapp_events or 0 }} eventos</td>
+                <td>{{ item.size_label }}</td>
+                <td><span class="admin-status-badge is-{{ 'online' if item.email.state == 'sent' else 'degraded' if item.email.state in ['failed', 'skipped'] else 'neutral' }}">{{ item.email.label }}</span></td>
+                <td class="admin-backup-actions">
+                  <a class="mini-button secondary-button" href="{{ url_for('admin.download_system_backup', filename=item.filename) }}">Download</a>
+                  <form method="post" action="{{ url_for('admin.delete_system_backup', filename=item.filename) }}" onsubmit="return confirm('Apagar este backup local? Confirma que tens outra cópia antes de continuar.');">
+                    <button type="submit" class="mini-button danger-button">Apagar</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="admin-status-note">Ainda não existe nenhum backup guardado.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel section-panel admin-backup-restore-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Reposição</p>
+        <h2>Restaurar pacote</h2>
+      </div>
+      <span class="admin-status-badge is-degraded">Ação sensível</span>
+    </div>
+    <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-backup-restore-form" onsubmit="return confirm('Confirmas que queres importar este backup? Em modo substituir, a base atual é trocada pelos dados do ficheiro.');">
+      <label>
+        Ficheiro ZIP ou JSON
+        <input type="file" name="system_database_file" accept=".zip,.json,application/json,application/zip" required>
+      </label>
+      <label>
+        Modo
+        <select name="import_mode">
+          <option value="merge">Juntar / atualizar</option>
+          <option value="replace">Substituir base</option>
+        </select>
+      </label>
+      <input type="hidden" name="return_to" value="{{ url_for('admin.admin_backups') }}">
+      <button type="submit" class="danger-button">Importar backup</button>
+    </form>
+    <p class="admin-status-note is-danger">Antes de usar “Substituir”, cria um backup do estado atual e confirma que o ficheiro contém pelo menos um admin.</p>
+  </section>
+</main>
+{% endblock %}

@@ -17,7 +17,7 @@ ACTION_SPECS = {
     },
     "delete_port_call": {
         "label": "Apagar escala",
-        "roles": {"admin", "agente"},
+        "roles": {"admin"},
         "requires_target": True,
     },
     # --- Entrada — Piloto/Admin operam ---

@@ -5229,3 +5229,70 @@ button:hover {
     text-align: left;
   }
 }
+
+.admin-backups-page .admin-backup-include-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-backup-action-form,
+.admin-backup-restore-form {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-backup-action-form .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.admin-backup-restore-form {
+  grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.5fr) auto;
+  align-items: end;
+}
+
+.admin-backup-restore-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.admin-backup-table td:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-backup-table td:first-child span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-backup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-backup-actions form {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .admin-backups-page .admin-backup-include-grid,
+  .admin-backup-restore-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-backup-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

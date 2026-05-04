@@ -18,15 +18,8 @@ def ensure_session_user_profile() -> bool:
         return False
     profile = services.store.get_user_profile(username)
     if profile:
-        session_role = (session.get("role") or "").strip().lower()
         profile_role = (profile.get("role") or "").strip().lower()
-        if session_role in {"admin", "agente", "piloto"} and session_role != profile_role:
-            if session_role == "admin":
-                profile = services.store.set_user_role(username, "admin")
-            else:
-                session["role"] = profile_role
-                return True
-        session["role"] = profile.get("role", session_role or "piloto")
+        session["role"] = profile_role if profile_role in {"admin", "agente", "piloto"} else "piloto"
         return True
     session.clear()
     return False

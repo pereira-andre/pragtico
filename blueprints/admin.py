@@ -1,13 +1,20 @@
 """Admin blueprint — users, documents, status and reindex."""
 
 from collections import Counter
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from email.message import EmailMessage
+from email.utils import formatdate
+from io import BytesIO
 import json
 import logging
 import os
 from pathlib import Path
 import re
+import smtplib
+import threading
+import time
 from urllib.parse import urlsplit
+import zipfile
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
@@ -84,6 +91,10 @@ from storage.utils import _local_iso_to_label
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("admin", __name__)
+_backup_lock = threading.Lock()
+_backup_auto_lock = threading.Lock()
+_backup_auto_running = False
+_backup_auto_last_check = 0.0
 
 PRACTICE_EXPERIENCE_SOURCE_FILENAME = PRACTICE_EXPERIENCE_KNOWLEDGE_FILENAME
 
@@ -93,6 +104,11 @@ DATABASE_EXPORT_VERSION = 1
 ADMIN_CASEBOOK_DEFAULT_LIMIT = 8
 ADMIN_CASEBOOK_ALLOWED_LIMITS = (8, 16, 40, 80)
 SYSTEM_KNOWLEDGE_ALLOWED_SUFFIXES = {".txt", ".md", ".json"}
+BACKUP_MANIFEST_FILENAME = "backup_manifest.json"
+BACKUP_PACKAGE_DATA_FILENAME = "backup.json"
+BACKUP_PACKAGE_README_FILENAME = "README.md"
+BACKUP_FILENAME_RE = re.compile(r"^pragtico-backup-\d{8}-\d{6}(?:-\d{6})?\.(?:zip|json)$")
+BACKUP_AUTO_CHECK_THROTTLE_SECONDS = 60
 POSTGRES_EXPORT_TABLES = {
     "app_users": {
         "pk": ("username",),
@@ -429,7 +445,20 @@ def _read_admin_json_upload(field_name: str) -> dict:
     uploaded_file = request.files.get(field_name)
     raw_payload = ""
     if uploaded_file and uploaded_file.filename:
-        raw_payload = uploaded_file.read().decode("utf-8-sig")
+        filename = uploaded_file.filename.lower()
+        raw_bytes = uploaded_file.read()
+        if filename.endswith(".zip"):
+            try:
+                with zipfile.ZipFile(BytesIO(raw_bytes)) as archive:
+                    names = [name for name in archive.namelist() if name.lower().endswith(".json")]
+                    preferred = BACKUP_PACKAGE_DATA_FILENAME if BACKUP_PACKAGE_DATA_FILENAME in names else names[0] if names else ""
+                    if not preferred:
+                        raise ValueError("O pacote ZIP não contém nenhum ficheiro JSON.")
+                    raw_payload = archive.read(preferred).decode("utf-8-sig")
+            except zipfile.BadZipFile as exc:
+                raise ValueError("ZIP de backup inválido.") from exc
+        else:
+            raw_payload = raw_bytes.decode("utf-8-sig")
     if not raw_payload.strip():
         raw_payload = request.form.get("payload_json", "")
     if not raw_payload.strip():
@@ -534,6 +563,547 @@ def _build_system_database_export() -> dict:
             "bot_database": _build_bot_database_export()["payload"],
         },
     }
+
+
+def _env_flag(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off", ""}
+
+
+def _env_int(name: str, default: int, *, minimum: int = 0) -> int:
+    try:
+        value = int(str(os.getenv(name, str(default))).strip())
+    except ValueError:
+        value = default
+    return max(value, minimum)
+
+
+def _backup_dir() -> Path:
+    configured = os.getenv("BACKUP_DIR", "").strip()
+    if configured:
+        base_dir = Path(configured)
+    else:
+        data_dir = getattr(services, "DATA_DIR", "") or str(Path(current_app.root_path) / "data")
+        base_dir = Path(data_dir) / "backups"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return base_dir
+
+
+def _backup_manifest_path() -> Path:
+    return _backup_dir() / BACKUP_MANIFEST_FILENAME
+
+
+def _format_size(size_bytes: int | float | None) -> str:
+    size = float(size_bytes or 0)
+    units = ("B", "KB", "MB", "GB")
+    unit = units[0]
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            break
+        size /= 1024
+    if unit == "B":
+        return f"{int(size)} {unit}"
+    return f"{size:.1f} {unit}"
+
+
+def _backup_filename(created_at: datetime) -> str:
+    return f"pragtico-backup-{created_at.strftime('%Y%m%d-%H%M%S')}.zip"
+
+
+def _is_backup_filename(filename: str) -> bool:
+    return bool(BACKUP_FILENAME_RE.match(filename or ""))
+
+
+def _read_backup_manifest() -> list[dict]:
+    path = _backup_manifest_path()
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Falha ao ler manifesto de backups.")
+        return []
+    records = payload.get("records") if isinstance(payload, dict) else []
+    return [item for item in records if isinstance(item, dict)]
+
+
+def _write_backup_manifest(records: list[dict]) -> None:
+    path = _backup_manifest_path()
+    payload = {
+        "version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "records": records,
+    }
+    path.write_text(json.dumps(_json_safe(payload), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _backup_table_counts(payload: dict) -> dict:
+    body = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+    tables = body.get("tables") if isinstance(body.get("tables"), dict) else {}
+    table_counts = {
+        table: len(rows)
+        for table, rows in tables.items()
+        if isinstance(rows, list)
+    }
+    messages = tables.get("messages") if isinstance(tables.get("messages"), list) else []
+    channel_events = tables.get("channel_events") if isinstance(tables.get("channel_events"), list) else []
+    whatsapp_messages = [
+        item for item in messages
+        if str(item.get("channel") or "").strip().lower() == "whatsapp"
+        or str(item.get("channel_user_id") or "").strip()
+    ]
+    bot_database = body.get("bot_database") if isinstance(body.get("bot_database"), dict) else {}
+    return {
+        "tables": table_counts,
+        "total_records": sum(table_counts.values()),
+        "users": table_counts.get("app_users", 0),
+        "conversations": table_counts.get("conversations", 0),
+        "messages": table_counts.get("messages", 0),
+        "whatsapp_messages": len(whatsapp_messages),
+        "whatsapp_events": len(channel_events),
+        "knowledge_files": len(body.get("knowledge_files") or []),
+        "feedback_eval_cases": len(bot_database.get("feedback_eval_cases") or []),
+        "maneuver_cases": len(bot_database.get("maneuver_cases") or []),
+    }
+
+
+def _build_backup_readme(*, payload: dict, filename: str, created_by: str, source: str, counts: dict) -> str:
+    exported_at = payload.get("exported_at") or datetime.now(timezone.utc).isoformat()
+    backend = payload.get("backend") or "--"
+    table_counts = counts.get("tables") or {}
+    table_lines = [
+        f"- {table}: {count}"
+        for table, count in sorted(table_counts.items())
+    ] or ["- Sem tabelas exportadas neste ambiente."]
+    return "\n".join(
+        [
+            "# Backup PRAGtico",
+            "",
+            f"Ficheiro: {filename}",
+            f"Criado em: {exported_at}",
+            f"Criado por: {created_by}",
+            f"Origem: {source}",
+            f"Backend: {backend}",
+            "",
+            "## Conteudo do pacote",
+            "",
+            f"- `{BACKUP_PACKAGE_DATA_FILENAME}`: dados completos para reposicao.",
+            f"- `{BACKUP_PACKAGE_README_FILENAME}`: este resumo.",
+            "",
+            "## O que fica incluido",
+            "",
+            "- Utilizadores, roles, perfis, numeros WhatsApp, opt-in e hashes de password.",
+            "- Escalas, navios, manobras, historico operacional, notas e estados.",
+            "- Conversas, mensagens, feedback, metadados de canal e eventos WhatsApp.",
+            "- Estado runtime, definicoes operacionais, casos de avaliacao e casos de manobra.",
+            "- Ficheiros de conhecimento `.txt`, `.md` e `.json` exportaveis.",
+            "",
+            "## Contagens principais",
+            "",
+            f"- Registos totais de tabelas: {counts.get('total_records', 0)}",
+            f"- Utilizadores: {counts.get('users', 0)}",
+            f"- Conversas: {counts.get('conversations', 0)}",
+            f"- Mensagens: {counts.get('messages', 0)}",
+            f"- Mensagens WhatsApp: {counts.get('whatsapp_messages', 0)}",
+            f"- Eventos WhatsApp: {counts.get('whatsapp_events', 0)}",
+            f"- Ficheiros de conhecimento: {counts.get('knowledge_files', 0)}",
+            "",
+            "## Tabelas exportadas",
+            "",
+            *table_lines,
+            "",
+            "## Reposicao",
+            "",
+            "1. Entra como admin.",
+            "2. Abre a pagina de Backups.",
+            "3. Carrega este ZIP ou o `backup.json` extraido.",
+            "4. Usa `Juntar` para acrescentar/atualizar dados ou `Substituir` para trocar a base pelas tabelas do backup.",
+            "5. Depois de repor, confirma que existe pelo menos um admin funcional.",
+            "",
+            "## Notas de seguranca",
+            "",
+            "- Este pacote contem dados sensiveis. Guarda-o fora do repositorio e em local protegido.",
+            "- O backup guarda hashes de password, nao passwords em texto claro.",
+            "- Conversas e eventos WhatsApp podem conter dados pessoais e contexto operacional.",
+            "- Antes de uma reposicao destrutiva, cria sempre outro backup do estado atual.",
+            "",
+        ]
+    )
+
+
+def _backup_email_recipients() -> list[str]:
+    raw = os.getenv("BACKUP_EMAIL_TO", "").strip() or os.getenv("ADMIN_EMAIL", "").strip()
+    recipients = []
+    for item in raw.split(","):
+        email = item.strip()
+        if email and email not in recipients:
+            recipients.append(email)
+    return recipients
+
+
+def _backup_email_status() -> dict:
+    enabled = _env_flag("BACKUP_EMAIL_ENABLED", "1")
+    recipients = _backup_email_recipients()
+    host = os.getenv("SMTP_HOST", "").strip()
+    sender = (
+        os.getenv("BACKUP_EMAIL_FROM", "").strip()
+        or os.getenv("SMTP_FROM", "").strip()
+        or os.getenv("SMTP_USERNAME", "").strip()
+        or (recipients[0] if recipients else "")
+    )
+    ready = bool(enabled and recipients and host and sender)
+    missing = []
+    if not enabled:
+        missing.append("envio desativado")
+    if not recipients:
+        missing.append("destinatário")
+    if not host:
+        missing.append("SMTP_HOST")
+    if not sender:
+        missing.append("remetente")
+    return {
+        "enabled": enabled,
+        "ready": ready,
+        "state": "online" if ready else "degraded",
+        "label": "Configurado" if ready else "Por configurar",
+        "detail": "Pronto para enviar backups por e-mail." if ready else "Falta configurar " + ", ".join(missing) + ".",
+        "recipients": recipients,
+        "sender": sender,
+        "host": host,
+    }
+
+
+def _send_backup_email(backup_path: Path, record: dict) -> dict:
+    status = _backup_email_status()
+    if not status["ready"]:
+        return {
+            "state": "skipped",
+            "label": "E-mail não enviado",
+            "detail": status["detail"],
+            "sent_at": "",
+            "recipients": status["recipients"],
+        }
+
+    max_mb = _env_int("BACKUP_EMAIL_MAX_MB", 15, minimum=1)
+    max_bytes = max_mb * 1024 * 1024
+    size_bytes = backup_path.stat().st_size
+    if size_bytes > max_bytes:
+        return {
+            "state": "skipped",
+            "label": "Ficheiro demasiado grande",
+            "detail": f"Backup com {_format_size(size_bytes)}; limite de e-mail configurado: {max_mb} MB.",
+            "sent_at": "",
+            "recipients": status["recipients"],
+        }
+
+    message = EmailMessage()
+    message["Subject"] = os.getenv("BACKUP_EMAIL_SUBJECT", "Backup PRAGtico")
+    message["From"] = status["sender"]
+    message["To"] = ", ".join(status["recipients"])
+    message["Date"] = formatdate(localtime=True)
+    message.set_content(
+        "\n".join(
+            [
+                "Backup completo do PRAGtico em anexo.",
+                f"Data: {record.get('created_at_label') or record.get('created_at') or '--'}",
+                f"Registos: {record.get('total_records', 0)}",
+                f"Tamanho: {record.get('size_label') or _format_size(size_bytes)}",
+                "",
+                "Guarda este ficheiro em local seguro.",
+            ]
+        )
+    )
+    message.add_attachment(
+        backup_path.read_bytes(),
+        maintype="application",
+        subtype="zip" if backup_path.suffix.lower() == ".zip" else "json",
+        filename=backup_path.name,
+    )
+
+    port = _env_int("SMTP_PORT", 587, minimum=1)
+    timeout = _env_int("SMTP_TIMEOUT_SECONDS", 20, minimum=1)
+    username = os.getenv("SMTP_USERNAME", "").strip()
+    password = os.getenv("SMTP_PASSWORD", "").strip()
+    use_ssl = _env_flag("SMTP_USE_SSL", "0")
+    use_tls = _env_flag("SMTP_USE_TLS", "1")
+
+    try:
+        smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+        with smtp_class(status["host"], port, timeout=timeout) as smtp:
+            if use_tls and not use_ssl:
+                smtp.starttls()
+            if username:
+                smtp.login(username, password)
+            smtp.send_message(message)
+    except Exception as exc:
+        logger.exception("Falha ao enviar backup por e-mail.")
+        return {
+            "state": "failed",
+            "label": "Falhou",
+            "detail": str(exc),
+            "sent_at": "",
+            "recipients": status["recipients"],
+        }
+
+    return {
+        "state": "sent",
+        "label": "Enviado",
+        "detail": "Backup enviado por e-mail.",
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "recipients": status["recipients"],
+    }
+
+
+def _backup_retention_count() -> int:
+    return _env_int("BACKUP_RETENTION_COUNT", 30, minimum=1)
+
+
+def _backup_record_from_file(path: Path) -> dict:
+    stat = path.stat()
+    created_at = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+    return {
+        "filename": path.name,
+        "created_at": created_at,
+        "created_at_label": _local_iso_to_label(created_at),
+        "created_by": "desconhecido",
+        "status": "available",
+        "status_label": "Disponível",
+        "backend": "",
+        "size_bytes": stat.st_size,
+        "size_label": _format_size(stat.st_size),
+        "total_records": 0,
+        "counts": {},
+        "email": {"state": "unknown", "label": "Sem registo", "detail": ""},
+    }
+
+
+def _list_backup_records() -> list[dict]:
+    base_dir = _backup_dir()
+    records_by_file = {
+        str(item.get("filename") or ""): dict(item)
+        for item in _read_backup_manifest()
+        if _is_backup_filename(str(item.get("filename") or ""))
+    }
+    for path in sorted(base_dir.glob("pragtico-backup-*.json")):
+        if not _is_backup_filename(path.name):
+            continue
+        records_by_file.setdefault(path.name, _backup_record_from_file(path))
+
+    records = []
+    for filename, record in records_by_file.items():
+        path = base_dir / filename
+        if not path.exists():
+            continue
+        size_bytes = path.stat().st_size
+        record["size_bytes"] = size_bytes
+        record["size_label"] = _format_size(size_bytes)
+        record["created_at_label"] = _local_iso_to_label(record.get("created_at"))
+        record.setdefault("status", "available")
+        record.setdefault("status_label", "Disponível")
+        record.setdefault("counts", {})
+        record.setdefault("email", {"state": "unknown", "label": "Sem registo", "detail": ""})
+        records.append(record)
+    records.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+    return records
+
+
+def _save_backup_records(records: list[dict]) -> list[dict]:
+    records = sorted(records, key=lambda item: str(item.get("created_at") or ""), reverse=True)
+    retention = _backup_retention_count()
+    kept = records[:retention]
+    removed = records[retention:]
+    for record in removed:
+        filename = str(record.get("filename") or "")
+        if _is_backup_filename(filename):
+            try:
+                (_backup_dir() / filename).unlink(missing_ok=True)
+            except OSError:
+                logger.exception("Falha ao remover backup antigo %s.", filename)
+    _write_backup_manifest(kept)
+    return kept
+
+
+def _create_system_backup(*, created_by: str, send_email: bool = True, source: str = "manual") -> dict:
+    with _backup_lock:
+        created_at_dt = datetime.now().astimezone()
+        filename = _backup_filename(created_at_dt)
+        backup_path = _backup_dir() / filename
+        if backup_path.exists():
+            filename = f"pragtico-backup-{created_at_dt.strftime('%Y%m%d-%H%M%S-%f')}.zip"
+            backup_path = _backup_dir() / filename
+
+        payload = _build_system_database_export()
+        counts = _backup_table_counts(payload)
+        payload["backup"] = {
+            "created_by": created_by,
+            "created_at": payload.get("exported_at") or created_at_dt.isoformat(),
+            "source": source,
+            "filename": filename,
+            "counts": counts,
+        }
+        body = json.dumps(_json_safe(payload), ensure_ascii=False, indent=2) + "\n"
+        tmp_path = backup_path.with_suffix(".tmp")
+        readme = _build_backup_readme(
+            payload=payload,
+            filename=filename,
+            created_by=created_by,
+            source=source,
+            counts=counts,
+        )
+        with zipfile.ZipFile(tmp_path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(BACKUP_PACKAGE_DATA_FILENAME, body)
+            archive.writestr(BACKUP_PACKAGE_README_FILENAME, readme)
+        tmp_path.replace(backup_path)
+
+        record = {
+            "filename": filename,
+            "created_at": payload["backup"]["created_at"],
+            "created_at_label": _local_iso_to_label(payload["backup"]["created_at"]),
+            "created_by": created_by,
+            "source": source,
+            "status": "completed",
+            "status_label": "Concluído",
+            "backend": payload.get("backend", ""),
+            "size_bytes": backup_path.stat().st_size,
+            "size_label": _format_size(backup_path.stat().st_size),
+            "total_records": counts["total_records"],
+            "counts": counts,
+            "email": {"state": "not_requested", "label": "Não pedido", "detail": ""},
+        }
+        if send_email:
+            record["email"] = _send_backup_email(backup_path, record)
+
+        records = [record] + [item for item in _list_backup_records() if item.get("filename") != filename]
+        _save_backup_records(records)
+        return record
+
+
+def _backup_auto_config() -> dict:
+    interval_hours = _env_int("BACKUP_AUTO_INTERVAL_HOURS", 24, minimum=1)
+    return {
+        "enabled": _env_flag("BACKUP_AUTO_ENABLED", "1"),
+        "interval_hours": interval_hours,
+        "interval_seconds": interval_hours * 3600,
+        "email_enabled": _env_flag("BACKUP_AUTO_EMAIL_ENABLED", "1"),
+        "retention_count": _backup_retention_count(),
+    }
+
+
+def _parse_backup_datetime(value: str | None) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _backup_next_due_at(records: list[dict], config: dict) -> str:
+    completed = [
+        _parse_backup_datetime(item.get("created_at"))
+        for item in records
+        if item.get("status") in {"completed", "available"}
+    ]
+    completed = [item for item in completed if item is not None]
+    if not completed:
+        return ""
+    return (max(completed) + timedelta(seconds=config["interval_seconds"])).isoformat()
+
+
+def _backup_auto_due(records: list[dict], config: dict) -> bool:
+    if not config["enabled"]:
+        return False
+    next_due_at = _backup_next_due_at(records, config)
+    if not next_due_at:
+        return True
+    next_dt = _parse_backup_datetime(next_due_at)
+    return bool(next_dt and datetime.now(timezone.utc) >= next_dt.astimezone(timezone.utc))
+
+
+def _backup_page_payload() -> dict:
+    records = _list_backup_records()
+    config = _backup_auto_config()
+    email_status = _backup_email_status()
+    backup_dir = _backup_dir()
+    storage_bytes = sum(int(item.get("size_bytes") or 0) for item in records)
+    last_backup = records[0] if records else None
+    next_due_at = _backup_next_due_at(records, config)
+    return {
+        "records": records,
+        "last_backup": last_backup,
+        "next_due_at": next_due_at,
+        "next_due_label": _local_iso_to_label(next_due_at) if next_due_at else "Quando houver tráfego",
+        "auto": {
+            **config,
+            "state": "online" if config["enabled"] else "neutral",
+            "label": "Ativo" if config["enabled"] else "Desativado",
+            "due": _backup_auto_due(records, config),
+        },
+        "email": email_status,
+        "backup_dir": str(backup_dir),
+        "retention_count": config["retention_count"],
+        "storage_bytes": storage_bytes,
+        "storage_label": _format_size(storage_bytes),
+        "metrics": [
+            {"label": "Backups guardados", "value": len(records), "detail": f"mantidos até {config['retention_count']} pacotes"},
+            {"label": "Último backup", "value": last_backup.get("created_at_label") if last_backup else "Sem backup", "detail": last_backup.get("filename", "") if last_backup else "cria um pacote inicial"},
+            {"label": "Registos no último", "value": last_backup.get("total_records", 0) if last_backup else 0, "detail": "tabelas aplicacionais"},
+            {"label": "Espaço usado", "value": _format_size(storage_bytes), "detail": "armazenamento local"},
+        ],
+    }
+
+
+def _safe_backup_path(filename: str) -> Path:
+    if not _is_backup_filename(filename):
+        abort(404)
+    path = (_backup_dir() / filename).resolve()
+    base_dir = _backup_dir().resolve()
+    if base_dir not in path.parents or not path.exists() or not path.is_file():
+        abort(404)
+    return path
+
+
+def _start_auto_backup_if_due() -> None:
+    global _backup_auto_last_check, _backup_auto_running
+    if current_app.config.get("TESTING"):
+        return
+    now = time.monotonic()
+    with _backup_auto_lock:
+        if _backup_auto_running or now - _backup_auto_last_check < BACKUP_AUTO_CHECK_THROTTLE_SECONDS:
+            return
+        _backup_auto_last_check = now
+    try:
+        records = _list_backup_records()
+        config = _backup_auto_config()
+        if not _backup_auto_due(records, config):
+            return
+    except Exception:
+        logger.exception("Falha ao avaliar backup automático.")
+        return
+
+    app = current_app._get_current_object()
+    with _backup_auto_lock:
+        if _backup_auto_running:
+            return
+        _backup_auto_running = True
+
+    def worker() -> None:
+        global _backup_auto_running
+        try:
+            with app.app_context():
+                auto_config = _backup_auto_config()
+                _create_system_backup(
+                    created_by="automatic",
+                    send_email=auto_config["email_enabled"],
+                    source="automatic",
+                )
+        except Exception:
+            logger.exception("Falha no backup automático.")
+        finally:
+            with _backup_auto_lock:
+                _backup_auto_running = False
+
+    threading.Thread(target=worker, name="system-backup-auto", daemon=True).start()
 
 
 def _normalize_bot_import_payload(payload: dict) -> dict:
@@ -1548,6 +2118,68 @@ def _build_admin_casebooks_payload() -> dict:
         "governed_case_rows": governed_case_rows,
         "feedback_governance_options": governance_options(),
     }
+
+
+@bp.before_app_request
+def ensure_automatic_backups_started():
+    _start_auto_backup_if_due()
+
+
+@bp.route("/admin/backups")
+@login_required
+@role_required("admin")
+def admin_backups():
+    """Página de criação e consulta de backups completos."""
+    return render_template("admin_backups.html", backup=_backup_page_payload(), title="Backups")
+
+
+@bp.route("/admin/backups/create", methods=["POST"])
+@login_required
+@role_required("admin")
+def create_system_backup():
+    """Criar um pacote de backup completo e opcionalmente enviá-lo por e-mail."""
+    send_email = request.form.get("send_email", "1") == "1"
+    try:
+        record = _create_system_backup(
+            created_by=session.get("username", "admin"),
+            send_email=send_email,
+            source="manual",
+        )
+        email_state = (record.get("email") or {}).get("state")
+        email_note = " E-mail enviado." if email_state == "sent" else " E-mail não enviado." if send_email else ""
+        flash(
+            f"Backup criado: {record['filename']} ({record['size_label']}).{email_note}",
+            "success",
+        )
+    except Exception as exc:
+        logger.exception("Falha ao criar backup.")
+        flash(f"Falha ao criar backup: {exc}", "error")
+    return redirect(url_for("admin.admin_backups"))
+
+
+@bp.route("/admin/backups/<path:filename>/download")
+@login_required
+@role_required("admin")
+def download_system_backup(filename: str):
+    """Download de um pacote de backup guardado."""
+    path = _safe_backup_path(filename)
+    return send_file(path, as_attachment=True, download_name=path.name)
+
+
+@bp.route("/admin/backups/<path:filename>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def delete_system_backup(filename: str):
+    """Apagar um pacote de backup local."""
+    path = _safe_backup_path(filename)
+    try:
+        path.unlink()
+        records = [item for item in _list_backup_records() if item.get("filename") != filename]
+        _write_backup_manifest(records)
+        flash(f"Backup apagado: {filename}.", "success")
+    except OSError as exc:
+        flash(f"Falha ao apagar backup: {exc}", "error")
+    return redirect(url_for("admin.admin_backups"))
 
 
 @bp.route("/admin/status")

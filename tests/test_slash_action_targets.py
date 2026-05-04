@@ -4,7 +4,7 @@ import unittest
 
 from core import services
 from core.operational_actions import finalize_operational_proposal
-from domain.chat_actions import format_action_summary, parse_slash_command, proposal_missing_field_labels
+from domain.chat_actions import build_slash_help, format_action_summary, parse_slash_command, proposal_missing_field_labels
 
 
 class FakeStore:
@@ -123,6 +123,15 @@ class SlashActionTargetTests(unittest.TestCase):
 
         self.assertEqual(edit_proposal["missing_fields"], [])
         self.assertEqual(delete_proposal["missing_fields"], [])
+
+    def test_agent_cannot_delete_scale_by_command(self) -> None:
+        parsed = parse_slash_command("/apagar-escala\nRef: PTSET26ABCD1234", "agente")
+
+        self.assertEqual(parsed["intent"], "unsupported")
+        self.assertIn("não está autorizada", parsed["answer"])
+        self.assertNotIn("Ref:", parsed["answer"])
+        self.assertNotIn("/apagar-escala", build_slash_help("agente"))
+        self.assertIn("/apagar-escala", build_slash_help("admin"))
 
     def test_edit_scale_with_one_change_does_not_require_other_scale_fields(self) -> None:
         missing = proposal_missing_field_labels(

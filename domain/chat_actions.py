@@ -1063,7 +1063,7 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
                 fields["origin_berth"] = fields["origin"]
     if not proposal or proposal.get("intent") != "action":
         answer = proposal.get("reason") if proposal else "Comando inválido."
-        if template:
+        if template and not (proposal and proposal.get("intent") == "unsupported"):
             answer = f"{answer}\n\n{template}"
         return {"intent": "unsupported", "answer": answer}
     return {"intent": "action", "proposal": proposal}

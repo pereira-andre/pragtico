@@ -266,6 +266,11 @@ def build_slash_help(role: str) -> str:
             [
                 "/editar-escala",
                 "  atualiza os dados da escala; usa a Ref da escala",
+            ]
+        )
+    if clean_role == "admin":
+        lines.extend(
+            [
                 "/apagar-escala",
                 "  remove a escala; basta a Ref da escala",
             ]
