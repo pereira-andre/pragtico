@@ -1,55 +1,70 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="auth-layout">
-  <section class="hero-card auth-hero-card">
-    <p class="eyebrow">Sistema operacional</p>
-    <h1>PRAGtico</h1>
-    <p class="lead">
-      Sistema de Coordenação Portuária · Porto de Setúbal
+<main class="login-page">
+  <section class="login-identity" aria-labelledby="login-brand-title">
+    <div class="login-brand-row">
+      <img
+        class="login-mascot"
+        src="{{ url_for('dashboard_bp.image_asset', asset_path='icon.png') }}"
+        alt="Mascote PRAGtico"
+      >
+      <div class="login-brand-copy">
+        <p class="eyebrow">Porto de Setúbal</p>
+        <h1 id="login-brand-title">PRAGtico</h1>
+        <p>Sistema de Coordenação Portuária</p>
+      </div>
+    </div>
+
+    <dl class="login-signal-grid">
+      <div>
+        <dt>Escalas</dt>
+        <dd>Planeamento</dd>
+      </div>
+      <div>
+        <dt>Manobras</dt>
+        <dd>Acompanhamento</dd>
+      </div>
+      <div>
+        <dt>Arquivo</dt>
+        <dd>Consulta</dd>
+      </div>
+      <div>
+        <dt>Auditoria</dt>
+        <dd>Registo</dd>
+      </div>
+    </dl>
+
+    <p class="login-academic-note">
+      Projeto de fim de curso da Universidade Aberta · André Pereira · nº 2202880
     </p>
-    <div class="auth-hero-copy">
-      <p>Projeto de fim de curso da Universidade Aberta.</p>
-      <p>André Pereira · nº 2202880</p>
-    </div>
-    <div class="card-grid mini-grid auth-hero-grid">
-      <article class="mini-card auth-hero-mini-card">
-        <h2>Operação</h2>
-        <p>Escalas, manobras, contexto marítimo e coordenação contínua.</p>
-      </article>
-      <article class="mini-card auth-hero-mini-card">
-        <h2>Perfis</h2>
-        <p>Admin, agente e piloto com acesso segmentado.</p>
-      </article>
-      <article class="mini-card auth-hero-mini-card">
-        <h2>Assistente</h2>
-        <p>Consulta documental, estado operacional e apoio ao registo.</p>
-      </article>
-      <article class="mini-card auth-hero-mini-card">
-        <h2>Contexto</h2>
-        <p>Marés, meteorologia, arquivo e planeamento no mesmo portal.</p>
-      </article>
-    </div>
   </section>
 
-  <section class="panel auth-panel">
-    <h2>Entrar</h2>
-    <form method="post" class="stack">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="panel auth-panel login-panel" aria-labelledby="login-title">
+    <p class="eyebrow">Acesso operacional</p>
+    <h2 id="login-title">Entrar</h2>
+    <form method="post" class="stack login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
         Email
-        <input type="email" name="email" placeholder="operador@porto.pt" required>
+        <input
+          type="email"
+          name="email"
+          placeholder="operador@porto.pt"
+          autocomplete="email"
+          required
+        >
       </label>
       <label>
-        Password
-        <input type="password" name="password" required>
+        Palavra-passe
+        <input type="password" name="password" autocomplete="current-password" required>
       </label>
       <button type="submit">Iniciar sessão</button>
     </form>
 
-    <p class="muted">
-      Usa o email e a password da conta já criada na aplicação.
-    </p>
-    <p class="link-line">Ou cria uma conta em <a href="{{ url_for('auth.register') }}">registo</a>.</p>
+    <div class="login-panel-footer">
+      <p class="muted">Usa as credenciais da conta já criada na aplicação.</p>
+      <p class="link-line">Sem conta? <a href="{{ url_for('auth.register') }}">Criar registo</a></p>
+    </div>
   </section>
 </main>
 {% endblock %}

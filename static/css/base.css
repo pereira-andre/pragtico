@@ -396,6 +396,181 @@ body {
   align-self: center;
 }
 
+.login-page {
+  min-height: calc(100vh - 96px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+  gap: 22px;
+  align-items: center;
+}
+
+.login-identity {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  padding: 34px;
+  border: 1px solid rgba(88, 189, 218, 0.2);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, rgba(13, 35, 60, 0.96), rgba(10, 25, 44, 0.94));
+  box-shadow: var(--shadow);
+}
+
+.login-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+}
+
+.login-mascot {
+  width: clamp(132px, 17vw, 220px);
+  height: auto;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.28));
+}
+
+.login-brand-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.login-brand-copy h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 6.4rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: var(--text-strong);
+}
+
+.login-brand-copy p {
+  margin: 0;
+}
+
+.login-brand-copy > p:last-child {
+  color: rgba(228, 233, 240, 0.82);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+}
+
+.login-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.login-signal-grid div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.login-signal-grid dt,
+.login-signal-grid dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.login-signal-grid dt {
+  color: rgba(228, 233, 240, 0.72);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-signal-grid dd {
+  color: var(--text-strong);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.login-academic-note {
+  margin: 0;
+  color: rgba(228, 233, 240, 0.68);
+  line-height: 1.5;
+}
+
+.login-page .login-panel {
+  display: grid;
+  gap: 18px;
+  align-self: center;
+  padding: 30px;
+  border-color: rgba(88, 189, 218, 0.2);
+  background: rgba(14, 30, 49, 0.98);
+}
+
+.login-panel h2 {
+  font-size: clamp(2rem, 3vw, 2.7rem);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.login-form {
+  gap: 16px;
+}
+
+.login-form button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.login-panel-footer {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.login-panel-footer p {
+  margin: 0;
+}
+
+@media (max-width: 1080px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .login-identity,
+  .login-page .login-panel {
+    align-self: auto;
+  }
+
+  .login-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .login-page {
+    min-height: auto;
+    gap: 14px;
+  }
+
+  .login-identity,
+  .login-page .login-panel {
+    padding: 22px;
+  }
+
+  .login-brand-row {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .login-mascot {
+    width: 96px;
+  }
+
+  .login-brand-copy h1 {
+    font-size: clamp(2.5rem, 16vw, 4rem);
+  }
+}
+
 .auth-hero-card {
   display: grid;
   gap: 18px;
