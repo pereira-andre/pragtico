@@ -5334,46 +5334,164 @@ button:hover {
   align-self: end;
 }
 
-.admin-audit-table {
-  min-width: 1060px;
+.admin-audit-console {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(139, 163, 190, 0.2);
+  border-radius: 16px;
+  background: rgba(3, 12, 24, 0.48);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-.admin-audit-table th,
-.admin-audit-table td {
-  padding: 8px 10px;
-  vertical-align: middle;
-  font-size: 0.84rem;
-  line-height: 1.28;
+.admin-audit-console-head,
+.admin-audit-log-row {
+  display: grid;
+  grid-template-columns: 156px 108px 86px minmax(150px, 0.55fr) minmax(0, 2.45fr);
+  align-items: center;
+  gap: 12px;
 }
 
-.admin-audit-table th {
-  font-size: 0.72rem;
+.admin-audit-console-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(139, 163, 190, 0.18);
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.admin-audit-table td strong {
-  font-size: 0.84rem;
+.admin-audit-log-row {
+  min-height: 38px;
+  padding: 5px 14px;
+  border-bottom: 1px solid rgba(139, 163, 190, 0.1);
+  color: var(--text);
+  font-size: 0.78rem;
   line-height: 1.25;
 }
 
-.admin-audit-table td:first-child,
-.admin-audit-table td:nth-child(3),
-.admin-audit-table td:nth-child(6) {
-  display: grid;
-  gap: 1px;
+.admin-audit-log-row:last-child {
+  border-bottom: 0;
 }
 
-.admin-audit-table td span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+.admin-audit-log-row:hover {
+  background: rgba(56, 189, 248, 0.055);
 }
 
-.admin-audit-table td:nth-child(7) {
-  max-width: 260px;
+.admin-audit-log-time,
+.admin-audit-log-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-audit-log-time {
+  color: var(--text);
+}
+
+.admin-audit-log-time strong,
+.admin-audit-log-event strong,
+.admin-audit-log-actor,
+.admin-audit-log-request,
+.admin-audit-log-event span,
+.admin-audit-log-event code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-audit-log-time strong {
+  flex: 0 0 auto;
+  max-width: 92px;
+}
+
+.admin-audit-log-time span {
+  flex: 1 1 auto;
+}
+
+.admin-audit-log-request {
+  flex: 0 0 auto;
+  max-width: 160px;
+}
+
+.admin-audit-log-event strong {
+  flex: 0 0 auto;
+  max-width: 220px;
+}
+
+.admin-audit-log-event span:not(.admin-audit-log-request) {
+  flex: 0 1 auto;
+  max-width: 210px;
+}
+
+.admin-audit-log-event code {
+  flex: 1 1 auto;
+}
+
+.admin-audit-log-time strong,
+.admin-audit-log-event strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.admin-audit-log-time span,
+.admin-audit-log-event span,
+.admin-audit-log-event code {
   color: var(--muted);
-  font-size: 0.76rem;
-  overflow-wrap: anywhere;
+  font-size: 0.7rem;
+}
+
+.admin-audit-log-event code {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
+.admin-audit-log-pill,
+.admin-audit-log-result {
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-audit-log-pill {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.admin-audit-log-result.is-success {
+  border: 1px solid rgba(52, 211, 153, 0.26);
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+}
+
+.admin-audit-log-result.is-failed {
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+}
+
+.admin-audit-log-result.is-warning {
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
 }
 
 @media (max-width: 720px) {
@@ -5386,5 +5504,27 @@ button:hover {
   .admin-backup-actions {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .admin-audit-console-head {
+    display: none;
+  }
+
+  .admin-audit-log-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .admin-audit-log-event {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .admin-audit-log-pill,
+  .admin-audit-log-result {
+    width: max-content;
+    max-width: 100%;
   }
 }

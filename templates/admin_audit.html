@@ -98,42 +98,35 @@
       <span class="admin-status-badge is-neutral">Limite {{ audit.limit }}</span>
     </div>
     {% if audit.events %}
-      <div class="planned-table-wrap">
-        <table class="planned-table admin-audit-table">
-          <thead>
-            <tr>
-              <th>Quando</th>
-              <th>Categoria</th>
-              <th>Ação</th>
-              <th>Utilizador</th>
-              <th>Resultado</th>
-              <th>Pedido</th>
-              <th>Detalhe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in audit.events %}
-              <tr>
-                <td>
-                  <strong>{{ item.at_label }}</strong>
-                  <span>{{ item.ip }}</span>
-                </td>
-                <td><span class="admin-status-badge is-neutral">{{ item.category or 'sistema' }}</span></td>
-                <td>
-                  <strong>{{ item.action }}</strong>
-                  <span>{{ item.resource }} {{ item.resource_id }}</span>
-                </td>
-                <td>{{ item.actor }}</td>
-                <td><span class="admin-status-badge is-{{ 'online' if item.result == 'success' else 'offline' if item.result in ['failed', 'denied'] else 'degraded' }}">{{ item.result }}</span></td>
-                <td>
-                  <strong>{{ item.method }}</strong>
-                  <span>{{ item.path }}</span>
-                </td>
-                <td>{{ item.details_preview }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="admin-audit-console" role="table" aria-label="Últimos registos de auditoria">
+        <div class="admin-audit-console-head" role="row">
+          <span>Quando</span>
+          <span>Categoria</span>
+          <span>Estado</span>
+          <span>Utilizador</span>
+          <span>Evento</span>
+        </div>
+        {% for item in audit.events %}
+          <article class="admin-audit-log-row is-{{ item.result }}" role="row">
+            <div class="admin-audit-log-time" role="cell" title="{{ item.at_label }} · {{ item.ip }}">
+              <strong>{{ item.at_label }}</strong>
+              <span>{{ item.ip }}</span>
+            </div>
+            <span class="admin-audit-log-pill" role="cell">{{ item.category or 'sistema' }}</span>
+            <span class="admin-audit-log-result is-{{ 'success' if item.result == 'success' else 'failed' if item.result in ['failed', 'denied'] else 'warning' }}" role="cell">{{ item.result }}</span>
+            <span class="admin-audit-log-actor" role="cell">{{ item.actor }}</span>
+            <div class="admin-audit-log-event" role="cell" title="{{ item.method }} {{ item.path }} · {{ item.action }} · {{ item.resource }} {{ item.resource_id }} · {{ item.details_preview }}">
+              <span class="admin-audit-log-request">{{ item.method }} {{ item.path }}</span>
+              <strong>{{ item.action }}</strong>
+              {% if item.resource or item.resource_id %}
+                <span>{{ item.resource }} {{ item.resource_id }}</span>
+              {% endif %}
+              {% if item.details_preview and item.details_preview != '{}' %}
+                <code>{{ item.details_preview }}</code>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <p class="admin-status-note">Sem eventos correspondentes aos filtros atuais.</p>
