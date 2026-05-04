@@ -162,9 +162,13 @@ TUG_DOCUMENT_QUERY_RE = re.compile(
 
 
 def _active_knowledge_dir() -> str:
-    return (
+    configured_dir = (
         getattr(getattr(services, "store", None), "knowledge_dir", "") or getattr(services, "KNOWLEDGE_DIR", "") or ""
     )
+    if configured_dir:
+        return configured_dir
+    fallback_dir = os.path.join(os.getcwd(), "knowledge")
+    return fallback_dir if os.path.isdir(fallback_dir) else ""
 
 
 @contextmanager
@@ -1119,9 +1123,10 @@ def playground_answer(
         supplemental_sources.extend(targeted_document_context["document_sources"])
 
         allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+        allow_berth_profile_shortcut = not execution_plan.requires_live_reasoning
         answer: dict | None = None
         global_companion_match: dict | None = None
-        if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+        if berth_profile_answer and allow_berth_profile_shortcut and _should_prefer_berth_profile_answer(
             clean_question,
             targeted_document_context["companion_answer"],
         ):
@@ -1729,7 +1734,8 @@ def handle_chat_turn(
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
             allow_companion_shortcut = not execution_plan.requires_llm_synthesis and not is_revision_attempt
-            if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
+            allow_berth_profile_shortcut = not execution_plan.requires_live_reasoning and not is_revision_attempt
+            if berth_profile_answer and allow_berth_profile_shortcut and _should_prefer_berth_profile_answer(
                 lookup_question,
                 targeted_document_context["companion_answer"],
             ):

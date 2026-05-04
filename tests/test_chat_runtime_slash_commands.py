@@ -15,6 +15,9 @@ class FakeRag:
     client = None
     last_index_error = ""
 
+    def can_generate(self) -> bool:
+        return False
+
     def has_active_reindex_worker(self) -> bool:
         return False
 
@@ -362,6 +365,32 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
                     os.environ.pop("EVENT_REPORTS_DIR", None)
                 else:
                     os.environ["EVENT_REPORTS_DIR"] = previous_reports_dir
+
+    def test_teporset_followup_changes_focus_without_repeating_user_question(self) -> None:
+        services.store = FakeStore()
+
+        with self.app.test_request_context("/api/chat"):
+            general = handle_chat_turn(
+                username="admin@porto.pt",
+                role="admin",
+                question="O que me podes dizer sobre o cais da Teporset em termos gerais?",
+            )
+            rules = handle_chat_turn(
+                username="admin@porto.pt",
+                role="admin",
+                question="Quais são as regras para o cais da Teporset?",
+                conversation_id=general["conversation_id"],
+            )
+
+        self.assertEqual(general["answer_origin"], "berth_profile")
+        self.assertEqual(rules["answer_origin"], "berth_profile")
+        self.assertIn("TEPORSET (IT-062) em termos operacionais:", general["answer"])
+        self.assertIn("TEPORSET (IT-062): restrições principais:", rules["answer"])
+        self.assertIn("Calado maximo = 7,4 m + altura da preia-mar", rules["answer"])
+        self.assertIn("LOA de referencia 200 m", rules["answer"])
+        self.assertNotEqual(general["answer"], rules["answer"])
+        self.assertFalse(general["answer"].startswith("O que me podes dizer sobre"))
+        self.assertFalse(rules["answer"].startswith("Quais são as regras"))
 
 
 if __name__ == "__main__":
