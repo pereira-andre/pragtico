@@ -4,6 +4,8 @@ import unittest
 
 from core import services
 from core.operational_actions import finalize_operational_proposal
+from core.operational_test_suite import OperationalFlowSuite
+from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_actions import build_slash_help, format_action_summary, parse_slash_command, proposal_missing_field_labels
 
 
@@ -289,6 +291,43 @@ class SlashActionTargetTests(unittest.TestCase):
         self.assertEqual(finalized["target"]["maneuver_type"], "departure")
         self.assertEqual(finalized["fields"]["destination"], "Setúbal")
         self.assertEqual(finalized["missing_fields"], [])
+
+    def test_every_registered_slash_alias_is_parseable(self) -> None:
+        suite = OperationalFlowSuite(actor_username="admin@porto.pt", cleanup_after=False)
+        ctx = suite._slash_context()
+        failures = []
+
+        for index, (alias, command) in enumerate(sorted(SLASH_COMMAND_ALIASES.items()), start=1):
+            sample = suite._slash_sample_for_alias(alias, command, ctx, index)
+            parsed = parse_slash_command(sample, "admin")
+            expected_intents = suite._slash_expected_intents(command)
+            if not isinstance(parsed, dict) or parsed.get("intent") not in expected_intents:
+                failures.append(f"/{alias}: {parsed}")
+
+        self.assertEqual(failures, [])
+
+    def test_slash_help_and_unknown_command_are_actionable(self) -> None:
+        help_text = build_slash_help("admin")
+        for alias in (
+            "help",
+            "consultar-escala",
+            "consultar-manobra",
+            "consultar-navio",
+            "validar-manobra",
+            "registar-escala",
+            "editar-escala",
+            "criar-manobra",
+            "aprovar",
+            "registar-manobra",
+            "reportar-evento",
+        ):
+            self.assertIn(f"/{alias}", help_text)
+
+        parsed = parse_slash_command("/comando-que-nao-existe", "admin")
+
+        self.assertEqual(parsed["intent"], "help")
+        self.assertIn("Comando não reconhecido", parsed["answer"])
+        self.assertIn("/help", parsed["answer"])
 
 
 if __name__ == "__main__":
