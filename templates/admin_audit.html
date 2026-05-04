@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="ops-shell admin-status-page admin-audit-page">
+  <section class="hero-card admin-status-hero admin-audit-hero">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Segurança</p>
+        <h1>Auditoria</h1>
+        <p class="lead">Registo cronológico de ações sensíveis, permissões, operação, backups, configuração e eventos de administração.</p>
+      </div>
+      <div class="admin-status-hero-tools">
+        <span class="admin-status-badge is-{{ 'degraded' if audit.summary.failed else 'online' }}">{{ audit.summary.total }} eventos</span>
+        <a class="outline-link" href="{{ url_for('admin.admin_backups') }}">Backups</a>
+      </div>
+    </div>
+    <div class="hero-meta-grid admin-status-hero-grid">
+      {% for item in audit.metrics %}
+        <article class="hero-stat">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <small>{{ item.detail }}</small>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Filtros</p>
+        <h2>Consultar eventos</h2>
+      </div>
+      <div class="admin-audit-actions">
+        {% set audit_query = request.query_string.decode() %}
+        <a class="mini-button secondary-button" href="{{ url_for('admin.export_audit_log_json') }}{% if audit_query %}?{{ audit_query }}{% endif %}">JSON</a>
+        <a class="mini-button secondary-button" href="{{ url_for('admin.download_audit_log') }}{% if audit_query %}?{{ audit_query }}{% endif %}">JSONL</a>
+      </div>
+    </div>
+    <form method="get" action="{{ url_for('admin.admin_audit') }}" class="admin-audit-filter-form">
+      <label>
+        Desde
+        <input type="date" name="date_from" value="{{ audit.filters.date_from[:10] if audit.filters.date_from else '' }}">
+      </label>
+      <label>
+        Até
+        <input type="date" name="date_to" value="{{ audit.filters.date_to[:10] if audit.filters.date_to else '' }}">
+      </label>
+      <label>
+        Categoria
+        <select name="category">
+          {% for option in audit.category_options %}
+            <option value="{{ option }}" {% if audit.filters.category == option %}selected{% endif %}>{{ option or 'Todas' }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Severidade
+        <select name="severity">
+          {% for option in audit.severity_options %}
+            <option value="{{ option }}" {% if audit.filters.severity == option %}selected{% endif %}>{{ option or 'Todas' }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Resultado
+        <select name="result">
+          {% for option in audit.result_options %}
+            <option value="{{ option }}" {% if audit.filters.result == option %}selected{% endif %}>{{ option or 'Todos' }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Utilizador
+        <input type="search" name="actor" value="{{ audit.filters.actor }}" placeholder="admin@porto.pt">
+      </label>
+      <label>
+        Ação
+        <input type="search" name="action" value="{{ audit.filters.action }}" placeholder="database.wipe">
+      </label>
+      <label>
+        Pesquisa
+        <input type="search" name="q" value="{{ audit.filters.q }}" placeholder="cais, endpoint, recurso...">
+      </label>
+      <div class="admin-audit-filter-buttons">
+        <button type="submit">Filtrar</button>
+        <a class="mini-button secondary-button" href="{{ url_for('admin.admin_audit') }}">Limpar</a>
+      </div>
+    </form>
+    <p class="admin-status-note">Diretoria: {{ audit.audit_dir }}. O wipe da base não apaga estes ficheiros.</p>
+  </section>
+
+  <section class="panel section-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Eventos</p>
+        <h2>Últimos registos</h2>
+      </div>
+      <span class="admin-status-badge is-neutral">Limite {{ audit.limit }}</span>
+    </div>
+    {% if audit.events %}
+      <div class="planned-table-wrap">
+        <table class="planned-table admin-audit-table">
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Categoria</th>
+              <th>Ação</th>
+              <th>Utilizador</th>
+              <th>Resultado</th>
+              <th>Pedido</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in audit.events %}
+              <tr>
+                <td>
+                  <strong>{{ item.at_label }}</strong>
+                  <span>{{ item.ip }}</span>
+                </td>
+                <td><span class="admin-status-badge is-neutral">{{ item.category or 'sistema' }}</span></td>
+                <td>
+                  <strong>{{ item.action }}</strong>
+                  <span>{{ item.resource }} {{ item.resource_id }}</span>
+                </td>
+                <td>{{ item.actor }}</td>
+                <td><span class="admin-status-badge is-{{ 'online' if item.result == 'success' else 'offline' if item.result in ['failed', 'denied'] else 'degraded' }}">{{ item.result }}</span></td>
+                <td>
+                  <strong>{{ item.method }}</strong>
+                  <span>{{ item.path }}</span>
+                </td>
+                <td>{{ item.details_preview }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="admin-status-note">Sem eventos correspondentes aos filtros atuais.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

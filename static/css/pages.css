@@ -5308,9 +5308,49 @@ button:hover {
   margin: 0;
 }
 
+.admin-audit-actions,
+.admin-audit-filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-audit-filter-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-audit-filter-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.admin-audit-filter-buttons {
+  align-self: end;
+}
+
+.admin-audit-table td:first-child,
+.admin-audit-table td:nth-child(3),
+.admin-audit-table td:nth-child(6) {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-audit-table td span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 720px) {
   .admin-backups-page .admin-backup-include-grid,
-  .admin-backup-restore-form {
+  .admin-backup-restore-form,
+  .admin-audit-filter-form {
     grid-template-columns: 1fr;
   }
 

@@ -67,6 +67,7 @@
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_event_reports', 'admin.event_report_detail'] else '' }}" href="{{ url_for('admin.admin_event_reports') }}">Eventos</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_documents' else '' }}" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_backups' else '' }}" href="{{ url_for('admin.admin_backups') }}">Backups</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_audit' else '' }}" href="{{ url_for('admin.admin_audit') }}">Auditoria</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_status' else '' }}" href="{{ url_for('admin.admin_status') }}">Estado</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_operational_tests' else '' }}" href="{{ url_for('admin.admin_operational_tests') }}">Testes</a>
                 <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'admin.admin_users' else '' }}" href="{{ url_for('admin.admin_users') }}">Utilizadores</a>
@@ -95,6 +96,7 @@
                   <option value="{{ url_for('admin.admin_event_reports') }}">Relatórios de eventos</option>
                   <option value="{{ url_for('admin.admin_documents') }}">Documentos</option>
                   <option value="{{ url_for('admin.admin_backups') }}">Backups</option>
+                  <option value="{{ url_for('admin.admin_audit') }}">Auditoria</option>
                   <option value="{{ url_for('admin.admin_status') }}">Estado da plataforma</option>
                   <option value="{{ url_for('admin.admin_operational_tests') }}">Testes operacionais</option>
                   <option value="{{ url_for('admin.admin_users') }}">Utilizadores</option>

@@ -58,6 +58,7 @@ from domain.event_reports import (
     update_event_report,
 )
 from core.admin_status import load_admin_status
+from core.audit_log import AUDIT_CATEGORIES, audit_dir, audit_summary, iter_audit_events, write_audit_event
 from core.helpers import login_required, role_required
 from core.knowledge_runtime import (
     current_reindex_status_payload,
@@ -975,6 +976,21 @@ def _create_system_backup(*, created_by: str, send_email: bool = True, source: s
 
         records = [record] + [item for item in _list_backup_records() if item.get("filename") != filename]
         _save_backup_records(records)
+        write_audit_event(
+            "backup.create",
+            category="backups",
+            actor=created_by,
+            severity="critical" if source == "pre_wipe" else "warning",
+            result="success",
+            resource="backup",
+            resource_id=filename,
+            details={
+                "source": source,
+                "size_bytes": record["size_bytes"],
+                "counts": counts,
+                "email": record.get("email", {}),
+            },
+        )
         return record
 
 
@@ -1054,6 +1070,62 @@ def _backup_page_payload() -> dict:
             {"label": "Último backup", "value": last_backup.get("created_at_label") if last_backup else "Sem backup", "detail": last_backup.get("filename", "") if last_backup else "cria um pacote inicial"},
             {"label": "Registos no último", "value": last_backup.get("total_records", 0) if last_backup else 0, "detail": "tabelas aplicacionais"},
             {"label": "Espaço usado", "value": _format_size(storage_bytes), "detail": "armazenamento local"},
+        ],
+    }
+
+
+def _audit_filters_from_request() -> dict:
+    date_from = (request.args.get("date_from") or "").strip()
+    date_to = (request.args.get("date_to") or "").strip()
+    if date_from and len(date_from) == 10:
+        date_from = f"{date_from}T00:00:00+00:00"
+    if date_to and len(date_to) == 10:
+        date_to = f"{date_to}T23:59:59+00:00"
+    return {
+        "q": (request.args.get("q") or "").strip(),
+        "actor": (request.args.get("actor") or "").strip(),
+        "action": (request.args.get("action") or "").strip(),
+        "category": (request.args.get("category") or "").strip(),
+        "severity": (request.args.get("severity") or "").strip(),
+        "result": (request.args.get("result") or "").strip(),
+        "date_from": date_from,
+        "date_to": date_to,
+    }
+
+
+def _audit_display_event(event: dict) -> dict:
+    request_payload = event.get("request") if isinstance(event.get("request"), dict) else {}
+    details = event.get("details") if isinstance(event.get("details"), dict) else {}
+    return {
+        **event,
+        "at_label": _local_iso_to_label(event.get("at")),
+        "method": request_payload.get("method", ""),
+        "path": request_payload.get("path", ""),
+        "endpoint": request_payload.get("endpoint", ""),
+        "ip": request_payload.get("ip", ""),
+        "details_preview": _preview_text(json.dumps(details, ensure_ascii=False, sort_keys=True), limit=180),
+    }
+
+
+def _audit_page_payload() -> dict:
+    filters = _audit_filters_from_request()
+    limit = _env_int("AUDIT_PAGE_LIMIT", 300, minimum=50)
+    events = iter_audit_events(filters, limit=limit)
+    summary = audit_summary(events)
+    return {
+        "filters": filters,
+        "events": [_audit_display_event(item) for item in events],
+        "summary": summary,
+        "audit_dir": str(audit_dir()),
+        "limit": limit,
+        "category_options": ("", *AUDIT_CATEGORIES),
+        "severity_options": ("", "info", "warning", "critical"),
+        "result_options": ("", "success", "failed", "denied", "skipped"),
+        "metrics": [
+            {"label": "Eventos visíveis", "value": summary["total"], "detail": f"limite {limit}"},
+            {"label": "Críticos", "value": summary["critical"], "detail": "ações admin e segurança"},
+            {"label": "Falhas/negados", "value": summary["failed"], "detail": "a rever"},
+            {"label": "Utilizadores", "value": len(summary["actors"]), "detail": "atores distintos"},
         ],
     }
 
@@ -2192,6 +2264,56 @@ def admin_backups():
     return render_template("admin_backups.html", backup=_backup_page_payload(), title="Backups")
 
 
+@bp.route("/admin/auditoria")
+@login_required
+@role_required("admin")
+def admin_audit():
+    """Página de consulta do audit log aplicacional."""
+    return render_template("admin_audit.html", audit=_audit_page_payload(), title="Auditoria")
+
+
+@bp.route("/admin/auditoria/export.json")
+@login_required
+@role_required("admin")
+def export_audit_log_json():
+    """Exportar eventos de auditoria filtrados em JSON."""
+    payload = {
+        "exported_at": _exported_at(),
+        "filters": _audit_filters_from_request(),
+        "events": iter_audit_events(_audit_filters_from_request(), limit=_env_int("AUDIT_EXPORT_LIMIT", 5000, minimum=100)),
+    }
+    write_audit_event(
+        "audit.export_json",
+        category="seguranca",
+        severity="critical",
+        result="success",
+        resource="audit_log",
+        details={"count": len(payload["events"]), "filters": payload["filters"]},
+    )
+    return _json_download_response(payload, f"pragtico-audit-{datetime.now().strftime('%Y%m%d-%H%M')}.json")
+
+
+@bp.route("/admin/auditoria/export.jsonl")
+@login_required
+@role_required("admin")
+def download_audit_log():
+    """Exportar eventos de auditoria filtrados em JSONL."""
+    filters = _audit_filters_from_request()
+    events = iter_audit_events(filters, limit=_env_int("AUDIT_EXPORT_LIMIT", 5000, minimum=100))
+    body = "\n".join(json.dumps(_json_safe(item), ensure_ascii=False, sort_keys=True) for item in events) + ("\n" if events else "")
+    write_audit_event(
+        "audit.export_jsonl",
+        category="seguranca",
+        severity="critical",
+        result="success",
+        resource="audit_log",
+        details={"count": len(events), "filters": filters},
+    )
+    response = current_app.response_class(body, mimetype="application/x-ndjson; charset=utf-8")
+    response.headers["Content-Disposition"] = f"attachment; filename=pragtico-audit-{datetime.now().strftime('%Y%m%d-%H%M')}.jsonl"
+    return response
+
+
 @bp.route("/admin/backups/create", methods=["POST"])
 @login_required
 @role_required("admin")
@@ -2212,6 +2334,14 @@ def create_system_backup():
         )
     except Exception as exc:
         logger.exception("Falha ao criar backup.")
+        write_audit_event(
+            "backup.create",
+            category="backups",
+            severity="critical",
+            result="failed",
+            resource="backup",
+            details={"error": str(exc), "send_email": send_email},
+        )
         flash(f"Falha ao criar backup: {exc}", "error")
     return redirect(url_for("admin.admin_backups"))
 
@@ -2222,6 +2352,15 @@ def create_system_backup():
 def download_system_backup(filename: str):
     """Download de um pacote de backup guardado."""
     path = _safe_backup_path(filename)
+    write_audit_event(
+        "backup.download",
+        category="backups",
+        severity="critical",
+        result="success",
+        resource="backup",
+        resource_id=filename,
+        details={"size_bytes": path.stat().st_size},
+    )
     return send_file(path, as_attachment=True, download_name=path.name)
 
 
@@ -2235,8 +2374,25 @@ def delete_system_backup(filename: str):
         path.unlink()
         records = [item for item in _list_backup_records() if item.get("filename") != filename]
         _write_backup_manifest(records)
+        write_audit_event(
+            "backup.delete",
+            category="backups",
+            severity="critical",
+            result="success",
+            resource="backup",
+            resource_id=filename,
+        )
         flash(f"Backup apagado: {filename}.", "success")
     except OSError as exc:
+        write_audit_event(
+            "backup.delete",
+            category="backups",
+            severity="critical",
+            result="failed",
+            resource="backup",
+            resource_id=filename,
+            details={"error": str(exc)},
+        )
         flash(f"Falha ao apagar backup: {exc}", "error")
     return redirect(url_for("admin.admin_backups"))
 
@@ -2258,6 +2414,19 @@ def wipe_system_database():
             source="pre_wipe",
         )
         stats = _wipe_database_preserving_admin(profile["username"])
+        write_audit_event(
+            "database.wipe",
+            category="base_dados",
+            actor=profile["username"],
+            severity="critical",
+            result="success",
+            resource="system_database",
+            details={
+                "backup_filename": backup_record["filename"],
+                "deleted_records": stats["records"],
+                "preserved_admin": stats["preserved_admin"],
+            },
+        )
         flash(
             "Base limpa com sucesso. "
             f"Backup pré-limpeza: {backup_record['filename']}. "
@@ -2265,9 +2434,25 @@ def wipe_system_database():
             "success",
         )
     except ValueError as exc:
+        write_audit_event(
+            "database.wipe",
+            category="base_dados",
+            severity="critical",
+            result="denied",
+            resource="system_database",
+            details={"error": str(exc)},
+        )
         flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao limpar base de dados.")
+        write_audit_event(
+            "database.wipe",
+            category="base_dados",
+            severity="critical",
+            result="failed",
+            resource="system_database",
+            details={"error": str(exc)},
+        )
         flash(f"Falha inesperada ao limpar base de dados: {exc}", "error")
     return redirect(url_for("admin.admin_backups"))
 
@@ -2401,9 +2586,25 @@ def admin_bot_settings():
         for bool_key in ("auto_promote_corrections", "auto_trust_positive_feedback", "require_admin_validation"):
             updates[bool_key] = bool_key in request.form
         save_bot_settings(updates, updated_by=session.get("username") or "admin")
+        write_audit_event(
+            "bot.settings.update",
+            category="configuracao",
+            severity="critical",
+            result="success",
+            resource="bot_settings",
+            details={"keys": sorted(updates.keys())},
+        )
         flash("Definições do bot atualizadas.", "success")
     except Exception as exc:
         logger.exception("Falha ao guardar definições do bot.")
+        write_audit_event(
+            "bot.settings.update",
+            category="configuracao",
+            severity="critical",
+            result="failed",
+            resource="bot_settings",
+            details={"error": str(exc)},
+        )
         flash(f"Falha ao guardar definições do bot: {exc}", "error")
     return redirect(return_to)
 
@@ -2415,6 +2616,13 @@ def admin_bot_settings_reset():
     """Repor definições do bot para os valores por defeito."""
     return_to = _safe_return_to(request.form.get("return_to")) or url_for("admin.admin_bot")
     reset_bot_settings(updated_by=session.get("username") or "admin")
+    write_audit_event(
+        "bot.settings.reset",
+        category="configuracao",
+        severity="critical",
+        result="success",
+        resource="bot_settings",
+    )
     flash("Definições do bot repostas aos valores por defeito.", "success")
     return redirect(return_to)
 
@@ -2437,9 +2645,25 @@ def admin_bot_rerun_evals():
         total = snapshot.get("active_cases_total", 0)
         failed = snapshot.get("failed_total", 0)
         suffix = f" Run {run.get('run_id')} guardado." if run else ""
+        write_audit_event(
+            "bot.evals.rerun",
+            category="configuracao",
+            severity="warning",
+            result="success",
+            resource="bot_evals",
+            details={"passed": passed, "total": total, "failed": failed, "run_id": run.get("run_id") if run else ""},
+        )
         flash(f"Evals executados: {passed}/{total} passam ({failed} a falhar).{suffix}", "success")
     except Exception as exc:
         logger.exception("Falha a correr evals.")
+        write_audit_event(
+            "bot.evals.rerun",
+            category="configuracao",
+            severity="warning",
+            result="failed",
+            resource="bot_evals",
+            details={"error": str(exc)},
+        )
         flash(f"Falha a correr evals: {exc}", "error")
     return redirect(return_to)
 
@@ -2482,6 +2706,13 @@ def admin_bot_playground():
 @role_required("admin")
 def export_bot_database():
     """Exportar dados de governação/aprendizagem do bot em JSON."""
+    write_audit_event(
+        "bot.database.export",
+        category="configuracao",
+        severity="critical",
+        result="success",
+        resource="bot_database",
+    )
     return _json_download_response(_build_bot_database_export(), "pragtico-bot-database.json")
 
 
@@ -2490,6 +2721,13 @@ def export_bot_database():
 @role_required("admin")
 def export_system_database():
     """Exportar dados aplicacionais e ficheiros knowledge em JSON."""
+    write_audit_event(
+        "system.database.export",
+        category="base_dados",
+        severity="critical",
+        result="success",
+        resource="system_database",
+    )
     return _json_download_response(_build_system_database_export(), "pragtico-system-database.json")
 
 
@@ -2502,6 +2740,14 @@ def import_bot_database():
     try:
         payload = _read_admin_json_upload("bot_database_file")
         stats = _import_bot_database_payload(payload)
+        write_audit_event(
+            "bot.database.import",
+            category="configuracao",
+            severity="critical",
+            result="success",
+            resource="bot_database",
+            details=stats,
+        )
         flash(
             "Base do bot importada: "
             f"{stats['feedback_eval_cases']} eval(s), {stats['chat_feedback']} feedback(s) de chat, "
@@ -2511,9 +2757,25 @@ def import_bot_database():
             "success",
         )
     except ValueError as exc:
+        write_audit_event(
+            "bot.database.import",
+            category="configuracao",
+            severity="critical",
+            result="failed",
+            resource="bot_database",
+            details={"error": str(exc)},
+        )
         flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao importar base do bot.")
+        write_audit_event(
+            "bot.database.import",
+            category="configuracao",
+            severity="critical",
+            result="failed",
+            resource="bot_database",
+            details={"error": str(exc)},
+        )
         flash(f"Falha inesperada ao importar base do bot: {exc}", "error")
     return redirect(return_to)
 
@@ -2531,6 +2793,14 @@ def import_system_database():
         payload = _read_admin_json_upload("system_database_file")
         stats = _import_system_database_payload(payload, mode=mode)
         refresh_knowledge_state(force_reindex=True)
+        write_audit_event(
+            "system.database.import",
+            category="base_dados",
+            severity="critical",
+            result="success",
+            resource="system_database",
+            details={"mode": mode, "stats": stats},
+        )
         flash(
             "Base do sistema importada em modo "
             f"{'substituir' if mode == 'replace' else 'juntar'}: "
@@ -2539,9 +2809,25 @@ def import_system_database():
             "success",
         )
     except ValueError as exc:
+        write_audit_event(
+            "system.database.import",
+            category="base_dados",
+            severity="critical",
+            result="failed",
+            resource="system_database",
+            details={"mode": mode, "error": str(exc)},
+        )
         flash(flash_error_message(str(exc)), "error")
     except Exception as exc:
         logger.exception("Falha inesperada ao importar base do sistema.")
+        write_audit_event(
+            "system.database.import",
+            category="base_dados",
+            severity="critical",
+            result="failed",
+            resource="system_database",
+            details={"mode": mode, "error": str(exc)},
+        )
         flash(f"Falha inesperada ao importar base do sistema: {exc}", "error")
     return redirect(return_to)
 
@@ -2939,6 +3225,8 @@ def admin_update_user(username: str):
         existing_user = services.store.get_user_profile(target_username)
         if not existing_user:
             raise ValueError("Utilizador não encontrado.")
+        previous_role = (existing_user.get("role") or "").strip().lower()
+        previous_username = existing_user.get("username", target_username)
         login_email = validate_email(request.form.get("login_email", ""))
         updated_role = validate_role(request.form.get("role", ""))
         full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
@@ -2982,11 +3270,44 @@ def admin_update_user(username: str):
         if session.get("username") == target_username:
             session["username"] = effective_target_username
             session["role"] = updated_user["role"]
+        write_audit_event(
+            "user.permissions.update",
+            category="utilizadores",
+            severity="critical",
+            result="success",
+            resource="app_user",
+            resource_id=effective_target_username,
+            details={
+                "previous_username": previous_username,
+                "new_username": effective_target_username,
+                "previous_role": previous_role,
+                "new_role": updated_user.get("role", updated_role),
+                "password_reset": bool(new_password),
+                "whatsapp_opt_in": whatsapp_opt_in,
+            },
+        )
     except ValueError as exc:
+        write_audit_event(
+            "user.permissions.update",
+            category="utilizadores",
+            severity="critical",
+            result="failed",
+            resource="app_user",
+            resource_id=target_username,
+            details={"error": str(exc)},
+        )
         flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("admin.admin_users"))
     except Exception:
         logger.exception("Falha inesperada ao atualizar utilizador %s.", target_username)
+        write_audit_event(
+            "user.permissions.update",
+            category="utilizadores",
+            severity="critical",
+            result="failed",
+            resource="app_user",
+            resource_id=target_username,
+        )
         flash("Falha inesperada ao atualizar o utilizador.", "error")
         return redirect(url_for("admin.admin_users"))
 
@@ -3021,15 +3342,49 @@ def admin_delete_user(username: str):
     """Apagar a conta de um utilizador do sistema."""
     target_username = username.strip().lower()
     if session.get("username") == target_username:
+        write_audit_event(
+            "user.delete",
+            category="utilizadores",
+            severity="critical",
+            result="denied",
+            resource="app_user",
+            resource_id=target_username,
+            details={"reason": "self_delete_blocked"},
+        )
         flash("Não podes apagar a tua própria conta enquanto estás autenticado.", "error")
         return redirect(url_for("admin.admin_users"))
     try:
         services.store.delete_user(target_username)
+        write_audit_event(
+            "user.delete",
+            category="utilizadores",
+            severity="critical",
+            result="success",
+            resource="app_user",
+            resource_id=target_username,
+        )
     except ValueError as exc:
+        write_audit_event(
+            "user.delete",
+            category="utilizadores",
+            severity="critical",
+            result="failed",
+            resource="app_user",
+            resource_id=target_username,
+            details={"error": str(exc)},
+        )
         flash(flash_error_message(str(exc)), "error")
         return redirect(url_for("admin.admin_users"))
     except Exception:
         logger.exception("Falha inesperada ao apagar utilizador %s.", target_username)
+        write_audit_event(
+            "user.delete",
+            category="utilizadores",
+            severity="critical",
+            result="failed",
+            resource="app_user",
+            resource_id=target_username,
+        )
         flash("Falha inesperada ao apagar o utilizador.", "error")
         return redirect(url_for("admin.admin_users"))
 

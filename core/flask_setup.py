@@ -62,6 +62,16 @@ def register_request_hooks(app: Flask, ensure_external_refresh_started) -> None:
         session.modified = True
         return None
 
+    @app.after_request
+    def audit_sensitive_request(response):
+        try:
+            from core.audit_log import audit_request_response
+
+            audit_request_response(response)
+        except Exception:
+            app.logger.exception("Falha ao escrever audit log.")
+        return response
+
 
 def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(RequestEntityTooLarge)

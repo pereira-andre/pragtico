@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from domain.error_catalog import flash_error_message
 
+from core.audit_log import write_audit_event
 from core import services
 from core.whatsapp_support import verify_user_whatsapp
 from core.helpers import (
@@ -62,12 +63,29 @@ def login():
             flash(flash_error_message(str(exc)), "error")
             return render_template("login.html")
         if not user:
+            write_audit_event(
+                "auth.login",
+                category="seguranca",
+                actor=username,
+                severity="warning",
+                result="failed",
+                resource="session",
+            )
             flash("Credenciais invalidas.", "error")
             return render_template("login.html")
 
         session["username"] = user["username"]
         session["role"] = user["role"]
         session.permanent = True
+        write_audit_event(
+            "auth.login",
+            category="seguranca",
+            actor=user["username"],
+            actor_role=user["role"],
+            severity="info",
+            result="success",
+            resource="session",
+        )
         flash(f"Entraste como {user['role']}.", "success")
         if session_profile_incomplete():
             flash("Completa o teu perfil operacional antes de continuar.", "error")
@@ -109,6 +127,17 @@ def register():
         except ValueError as exc:
             flash(flash_error_message(str(exc)), "error")
             return render_template("register.html", form_data=_registration_form_data())
+        write_audit_event(
+            "auth.register",
+            category="utilizadores",
+            actor=username,
+            actor_role=role,
+            severity="warning",
+            result="success",
+            resource="app_user",
+            resource_id=username,
+            details={"role": role, "whatsapp_opt_in": whatsapp_opt_in},
+        )
 
         if created_user.get("whatsapp_opt_in") and created_user.get("whatsapp_number"):
             whatsapp_result = verify_user_whatsapp(
@@ -173,6 +202,18 @@ def profile():
 @bp.route("/logout")
 def logout():
     """Terminar sessão e redirecionar para a página de login."""
+    username = session.get("username", "")
+    role = session.get("role", "")
+    if username:
+        write_audit_event(
+            "auth.logout",
+            category="seguranca",
+            actor=username,
+            actor_role=role,
+            severity="info",
+            result="success",
+            resource="session",
+        )
     session.clear()
     flash("Sessao terminada.", "success")
     return redirect(url_for("auth.login"))
