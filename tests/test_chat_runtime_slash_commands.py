@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 import unittest
 
 from flask import Flask
@@ -30,6 +33,11 @@ class FakeStore:
             "id": "pc1",
             "reference_code": "PTSET26GALB123",
             "vessel_name": "GALBOT",
+            "vessel_imo": "9234567",
+            "vessel_type": "restantes",
+            "vessel_gt_t": "20000",
+            "vessel_loa_m": "100",
+            "vessel_beam_m": "18",
             "last_port": "Sines",
             "next_port": "Lisboa",
             "berth": "Tanquisado (lado jusante)",
@@ -255,6 +263,105 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertIn("Regra 23 - Navios de propulsão mecânica a navegar", result["answer"])
         self.assertIn("⚪ farol de mastro a vante", result["answer"])
         self.assertIn("🔴 BB + 🟢 EB", result["answer"])
+
+    def test_issue_9_slash_query_commands_return_expected_records(self) -> None:
+        services.store = FakeStore()
+
+        cases = [
+            (
+                "/consultar-escala PTSET26GALB123",
+                "slash_consult_scale",
+                ["Escala PTSET26GALB123", "Navio: GALBOT"],
+                ["Estimativa de custos"],
+            ),
+            (
+                "/consultar-escala-custo PTSET26GALB123",
+                "slash_consult_scale",
+                ["Escala PTSET26GALB123", "Estimativa de custos", "Total estimado"],
+                [],
+            ),
+            (
+                "/consultar-manobra 86683899",
+                "slash_consult_maneuver",
+                ["Manobra 86683899", "Tipo: saída", "Escala: PTSET26GALB123"],
+                ["Estimativa de custos"],
+            ),
+            (
+                "/consultar-manobra-custo 86683899",
+                "slash_consult_maneuver",
+                ["Manobra 86683899", "Estimativa de custos", "Total estimado"],
+                [],
+            ),
+            (
+                "/consultar-navio 9234567",
+                "slash_consult_vessel",
+                ["Navio: GALBOT", "IMO: 9234567", "Ultima escala visivel: PTSET26GALB123"],
+                [],
+            ),
+            (
+                "/regra 999",
+                "slash_rule",
+                ["Não encontrei a regra 999", "Regras/instruções disponíveis por código"],
+                [],
+            ),
+        ]
+
+        with self.app.test_request_context("/api/chat"):
+            for command, expected_origin, expected_snippets, forbidden_snippets in cases:
+                with self.subTest(command=command):
+                    result = handle_chat_turn(
+                        username="admin@porto.pt",
+                        role="admin",
+                        question=command,
+                    )
+
+                    self.assertEqual(result["answer_origin"], expected_origin)
+                    for snippet in expected_snippets:
+                        self.assertIn(snippet, result["answer"])
+                    for snippet in forbidden_snippets:
+                        self.assertNotIn(snippet, result["answer"])
+
+    def test_issue_9_event_report_command_prompts_for_optional_photo_and_archives_without_one(self) -> None:
+        services.store = FakeStore()
+        previous_reports_dir = os.environ.get("EVENT_REPORTS_DIR")
+
+        with tempfile.TemporaryDirectory() as reports_dir:
+            os.environ["EVENT_REPORTS_DIR"] = reports_dir
+            try:
+                with self.app.test_request_context("/api/chat"):
+                    pending = handle_chat_turn(
+                        username="admin@porto.pt",
+                        role="admin",
+                        question="/reportar_evento AVARIA. cais Teporset. o guincho do cais nao esta a funcionar",
+                    )
+
+                    self.assertEqual(pending["answer_origin"], "event_report_pending")
+                    self.assertIn("Queres anexar uma foto?", pending["answer"])
+
+                    registered = handle_chat_turn(
+                        username="admin@porto.pt",
+                        role="admin",
+                        question="não",
+                        conversation_id=pending["conversation_id"],
+                    )
+
+                self.assertEqual(registered["answer_origin"], "event_report_registered")
+                self.assertIn("Relatório de evento registado", registered["answer"])
+                self.assertIn("Referencia: #EVT-", registered["answer"])
+                self.assertIn("Anexo: sem foto", registered["answer"])
+
+                events_path = os.path.join(reports_dir, "eventos.json")
+                with open(events_path, encoding="utf-8") as handle:
+                    events = json.load(handle)
+                self.assertEqual(len(events), 1)
+                self.assertEqual(events[0]["tag"], "AVARIA")
+                self.assertEqual(events[0]["local"], "cais Teporset")
+                self.assertEqual(events[0]["username"], "admin@porto.pt")
+            finally:
+                if previous_reports_dir is None:
+                    os.environ.pop("EVENT_REPORTS_DIR", None)
+                else:
+                    os.environ["EVENT_REPORTS_DIR"] = previous_reports_dir
 
 
 if __name__ == "__main__":
