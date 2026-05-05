@@ -1037,6 +1037,118 @@
   gap: 12px;
 }
 
+.planning-admin-tools {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 16px;
+  border: 1px solid rgba(130, 160, 195, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(26, 159, 255, 0.08), rgba(255, 255, 255, 0.035)),
+    rgba(7, 16, 29, 0.2);
+}
+
+.planning-admin-tools-head,
+.planning-admin-foot,
+.planning-admin-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planning-admin-tools-head h3 {
+  margin: 2px 0 0;
+}
+
+.planning-admin-tools-head p:not(.eyebrow),
+.planning-admin-foot p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.planning-admin-actions {
+  justify-content: flex-start;
+  padding: 10px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 16, 29, 0.22);
+}
+
+.planning-admin-actions .mini-button,
+.planning-admin-foot .mini-button {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.planning-admin-json-form {
+  display: grid;
+  padding: 0;
+}
+
+.planning-json-input-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.72fr) minmax(0, 1.28fr);
+  gap: 12px;
+}
+
+.planning-json-file-field,
+.planning-json-paste-field {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.planning-json-file-field {
+  align-content: start;
+  border-style: dashed;
+}
+
+.planning-json-file-field small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.planning-json-file-field code {
+  color: var(--text);
+}
+
+.planning-json-template-details {
+  overflow: hidden;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.planning-json-template-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.planning-json-template-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.planning-json-template-details summary small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .planning-json-textarea,
 .planning-json-template {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -1051,11 +1163,18 @@
 .planning-json-template {
   margin: 0;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(8, 67, 63, 0.12);
   background: rgba(9, 24, 44, 0.08);
   overflow-x: auto;
   white-space: pre-wrap;
+}
+
+.planning-json-template-details .planning-json-template {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
 }
 
 .vessel-catalog-list {
@@ -1358,6 +1477,21 @@
 }
 
 @media (max-width: 860px) {
+  .planning-admin-tools-head,
+  .planning-admin-foot,
+  .planning-admin-actions {
+    flex-direction: column;
+  }
+
+  .planning-json-input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-admin-actions .mini-button,
+  .planning-admin-foot .mini-button {
+    width: 100% !important;
+  }
+
   .vessel-management-pane-head,
   .vessel-edit-card-head {
     flex-direction: column;

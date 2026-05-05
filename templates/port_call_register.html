@@ -208,37 +208,52 @@
         <button type="submit">Guardar Escala</button>
       </form>
       {% if current_role == "admin" %}
-        <details class="planning-optional-box planning-json-import-box">
-          <summary>Importar escala por JSON</summary>
-          <div class="stack planning-optional-body planning-json-import-body">
-            <p class="muted">Podes colar um objeto, uma lista, ou <code>{"port_calls":[...]}</code>. Se o navio já existir no catálogo, basta indicar IMO, indicativo ou nome e os campos técnicos em falta são preenchidos automaticamente.</p>
-            <p><a class="inline-link" href="{{ url_for('port_calls.export_port_calls_json') }}">Exportar escalas por JSON</a></p>
-            <form
-              method="post"
-              action="{{ url_for('port_calls.import_port_call_json') }}"
-              enctype="multipart/form-data"
-              class="stack planning-form planning-json-import-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <label>
-                Ficheiro JSON
+        <section class="planning-admin-tools" aria-labelledby="scale-admin-tools-title">
+          <div class="planning-admin-tools-head">
+            <div>
+              <p class="eyebrow">Admin</p>
+              <h3 id="scale-admin-tools-title">Importação técnica</h3>
+              <p>Importa escalas por ficheiro ou JSON colado. A exportação descarrega o estado atual para conferência.</p>
+            </div>
+            <span class="ops-pill ops-pill-strong">JSON</span>
+          </div>
+          <div class="planning-admin-actions">
+            <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_port_calls_json') }}">Exportar escalas</a>
+          </div>
+          <form
+            method="post"
+            action="{{ url_for('port_calls.import_port_call_json') }}"
+            enctype="multipart/form-data"
+            class="planning-form planning-json-import-form planning-admin-json-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="planning-json-input-grid">
+              <label class="planning-json-file-field">
+                <span class="mini-label">Ficheiro JSON</span>
                 <input type="file" name="payload_file" accept=".json,application/json">
+                <small>Objeto, lista, ou <code>{"port_calls":[...]}</code>.</small>
               </label>
-              <label>
-                JSON da escala
+              <label class="planning-json-paste-field">
+                <span class="mini-label">Colar JSON</span>
                 <textarea
                   name="payload_json"
-                  rows="14"
+                  rows="10"
                   class="planning-json-textarea"
                   placeholder='{"vessel_name":"MSC Lyria", ...}'></textarea>
               </label>
-              <button type="submit">Importar Escala por JSON</button>
-            </form>
-            <div class="planning-json-template-block">
-              <span class="mini-label">Modelo</span>
-              <pre class="planning-json-template">{{ port_call_json_template }}</pre>
             </div>
-          </div>
-        </details>
+            <div class="planning-admin-foot">
+              <p class="muted">Se existir ficha no catálogo, IMO, indicativo ou nome podem preencher os campos técnicos em falta.</p>
+              <button type="submit" class="mini-button">Importar escala</button>
+            </div>
+          </form>
+          <details class="planning-json-template-details">
+            <summary>
+              <span>Modelo esperado</span>
+              <small>Ver exemplo</small>
+            </summary>
+            <pre class="planning-json-template">{{ port_call_json_template }}</pre>
+          </details>
+        </section>
       {% endif %}
     </section>
 
