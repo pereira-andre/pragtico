@@ -1068,22 +1068,94 @@
 }
 
 .archive-page .cost-simulator-grid {
+  display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   gap: 18px;
+  align-items: stretch;
 }
 
 .archive-page .cost-simulator-form {
+  display: grid;
   gap: 14px;
 }
 
-.archive-page .cost-sim-checks {
+.archive-simulator-layout {
+  min-height: 0;
+}
+
+.archive-sim-surface {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.archive-sim-surface-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.archive-sim-surface-head .mini-label {
+  margin: 0;
+}
+
+.archive-sim-field-grid,
+.archive-sim-two-column {
+  display: grid;
+  gap: 10px;
+}
+
+.archive-sim-field-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.archive-sim-field-grid-narrow {
+  grid-template-columns: minmax(160px, 0.55fr) minmax(0, 1fr);
+}
+
+.archive-sim-two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.archive-page .cost-sim-checks,
+.archive-sim-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.archive-page .constraint-option {
-  min-height: 42px;
+.archive-simulator-panel .constraint-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.archive-simulator-panel .constraint-option input {
+  width: 16px;
+  height: 16px;
+  justify-self: center;
+}
+
+.archive-simulator-panel .constraint-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.archive-sim-action-strip {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  border-radius: 14px;
+  background: rgba(7, 16, 29, 0.2);
 }
 
 .archive-simulator-actions {
@@ -1093,6 +1165,21 @@
 
 .archive-simulator-actions .mini-button {
   width: 100% !important;
+}
+
+.archive-sim-result-column {
+  min-width: 0;
+}
+
+.archive-sim-result-surface {
+  height: 100%;
+  align-content: start;
+}
+
+.archive-page .cost-simulator-result {
+  min-height: 100%;
+  padding: 14px;
+  border-radius: 12px;
 }
 
 .eyebrow,
@@ -4240,6 +4327,9 @@ button:hover {
   .archive-filter-grid-compact,
   .archive-page .archive-selection-actions,
   .archive-page .cost-simulator-grid,
+  .archive-sim-field-grid,
+  .archive-sim-field-grid-narrow,
+  .archive-sim-two-column,
   .archive-simulator-actions {
     grid-template-columns: 1fr 1fr;
   }
@@ -4342,6 +4432,11 @@ button:hover {
   .archive-filter-grid-compact,
   .archive-page .archive-selection-actions,
   .archive-page .cost-simulator-grid,
+  .archive-sim-field-grid,
+  .archive-sim-field-grid-narrow,
+  .archive-sim-two-column,
+  .archive-page .cost-sim-checks,
+  .archive-sim-option-grid,
   .archive-simulator-actions {
     grid-template-columns: 1fr;
   }

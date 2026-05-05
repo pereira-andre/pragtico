@@ -61,4 +61,7 @@ def test_archive_uses_refined_filter_and_selection_layout() -> None:
     assert "archive-filter-grid-compact" in html
     assert "archive-filter-actions" in html
     assert "archive-report-panel" in html
+    assert "archive-sim-surface-base" in html
+    assert "archive-sim-two-column" in html
+    assert "archive-sim-result-column" in html
     assert "archive-simulator-actions" in html

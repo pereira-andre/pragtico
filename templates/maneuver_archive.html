@@ -247,75 +247,104 @@
       <span class="ops-pill ops-pill-strong archive-simulator-toggle">Abrir</span>
     </summary>
     <div class="archive-simulator-body">
-      <div class="cost-simulator-grid">
-        <div class="cost-simulator-form">
-          <div class="mini-grid planned-mini-grid">
-            <label>
-              Navio (opcional)
-              <input type="text" id="sim-vessel" placeholder="Ex.: MSC Lyria">
-            </label>
-            <label>
-              Tipo de navio
-              <select id="sim-vessel-type">
-                <option value="restantes">Restantes</option>
-                <option value="contentores">Contentores</option>
-                <option value="roll-on_roll-off">Ro-Ro / PCC</option>
-                <option value="passageiros">Passageiros</option>
-                <option value="tanque">Tanque</option>
-              </select>
-            </label>
-            <label>
-              GT (t)
-              <input type="number" id="sim-gt" placeholder="Ex.: 32540" min="1" required>
-            </label>
-            <label>
-              Dias em porto
-              <input type="number" id="sim-days" value="1" min="0.5" step="0.5">
-            </label>
-          </div>
-          <div class="cost-sim-manoeuvres">
-            <span class="mini-label">Manobras a simular</span>
-            <div class="cost-sim-checks">
-              <label class="constraint-option"><input type="checkbox" id="sim-entry" checked> <span>Entrada</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-departure" checked> <span>Saída</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-shift"> <span>Mudança</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-anchoring"> <span>Fundeadouro</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-trials"> <span>Experiências</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-standby"> <span>Pilotagem à ordem</span></label>
+      <div class="cost-simulator-grid archive-simulator-layout">
+        <div class="cost-simulator-form archive-simulator-form">
+          <section class="archive-sim-surface archive-sim-surface-base">
+            <div class="archive-sim-surface-head">
+              <span class="mini-label">Dados base</span>
             </div>
-          </div>
-          <div class="mini-grid planned-mini-grid">
-            <label>
-              Horas à ordem
-              <input type="number" id="sim-standby-hours" value="1" min="0" step="0.5">
-            </label>
-            <label>
-              Escalas da linha nos últimos 365 dias
-              <input type="number" id="sim-regular-line-calls" value="6" min="0" step="1" placeholder="Ex.: 26">
-              <small class="muted">Conta escalas efetuadas no último ano. Não é um limite de dias e pode ser superior a 365.</small>
-            </label>
-          </div>
-          <div class="cost-sim-modifiers">
-            <span class="mini-label">Condições</span>
-            <div class="cost-sim-checks">
-              <label class="constraint-option"><input type="checkbox" id="sim-no-prop"> <span>Sem propulsão (+25%)</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-special"> <span>Agulhas / assistência especial (+25%)</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-regular"> <span>Linha regular (-25%)</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-cabotage"> <span>Cabotagem (-10%)</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-technical"> <span>Escala técnica (-30%)</span></label>
-              <label class="constraint-option"><input type="checkbox" id="sim-include-tup" checked> <span>Incluir TUP</span></label>
+            <div class="archive-sim-field-grid">
+              <label>
+                Navio (opcional)
+                <input type="text" id="sim-vessel" placeholder="Ex.: MSC Lyria">
+              </label>
+              <label>
+                Tipo de navio
+                <select id="sim-vessel-type">
+                  <option value="restantes">Restantes</option>
+                  <option value="contentores">Contentores</option>
+                  <option value="roll-on_roll-off">Ro-Ro / PCC</option>
+                  <option value="passageiros">Passageiros</option>
+                  <option value="tanque">Tanque</option>
+                </select>
+              </label>
+              <label>
+                GT (t)
+                <input type="number" id="sim-gt" placeholder="Ex.: 32540" min="1" required>
+              </label>
+              <label>
+                Dias em porto
+                <input type="number" id="sim-days" value="1" min="0.5" step="0.5">
+              </label>
             </div>
+          </section>
+
+          <div class="archive-sim-two-column">
+            <section class="archive-sim-surface">
+              <div class="archive-sim-surface-head">
+                <span class="mini-label">Manobras</span>
+              </div>
+              <div class="cost-sim-checks archive-sim-option-grid">
+                <label class="constraint-option"><input type="checkbox" id="sim-entry" checked> <span>Entrada</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-departure" checked> <span>Saída</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-shift"> <span>Mudança</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-anchoring"> <span>Fundeadouro</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-trials"> <span>Experiências</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-standby"> <span>Pilotagem à ordem</span></label>
+              </div>
+            </section>
+
+            <section class="archive-sim-surface">
+              <div class="archive-sim-surface-head">
+                <span class="mini-label">Condições</span>
+              </div>
+              <div class="cost-sim-checks archive-sim-option-grid">
+                <label class="constraint-option"><input type="checkbox" id="sim-no-prop"> <span>Sem propulsão (+25%)</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-special"> <span>Agulhas / assistência especial (+25%)</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-regular"> <span>Linha regular (-25%)</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-cabotage"> <span>Cabotagem (-10%)</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-technical"> <span>Escala técnica (-30%)</span></label>
+                <label class="constraint-option"><input type="checkbox" id="sim-include-tup" checked> <span>Incluir TUP</span></label>
+              </div>
+            </section>
           </div>
-          <div class="archive-actions archive-simulator-actions">
-            <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
-            <button type="button" class="mini-button secondary-button" id="sim-open-report" disabled>Abrir relatório formal</button>
-            <button type="button" class="mini-button secondary-button" id="sim-copy-link" disabled>Partilhar ligação</button>
-            <button type="button" class="mini-button secondary-button" id="sim-print-pdf" disabled>Imprimir / PDF</button>
+
+          <section class="archive-sim-surface archive-sim-surface-inline">
+            <div class="archive-sim-surface-head">
+              <span class="mini-label">Parâmetros adicionais</span>
+            </div>
+            <div class="archive-sim-field-grid archive-sim-field-grid-narrow">
+              <label>
+                Horas à ordem
+                <input type="number" id="sim-standby-hours" value="1" min="0" step="0.5">
+              </label>
+              <label>
+                Escalas da linha nos últimos 365 dias
+                <input type="number" id="sim-regular-line-calls" value="6" min="0" step="1" placeholder="Ex.: 26">
+                <small class="muted">Conta escalas efetuadas no último ano.</small>
+              </label>
+            </div>
+          </section>
+
+          <div class="archive-sim-action-strip">
+            <div class="archive-actions archive-simulator-actions">
+              <button type="button" class="mini-button" id="sim-calculate">Calcular estimativa</button>
+              <button type="button" class="mini-button secondary-button" id="sim-open-report" disabled>Abrir relatório formal</button>
+              <button type="button" class="mini-button secondary-button" id="sim-copy-link" disabled>Partilhar ligação</button>
+              <button type="button" class="mini-button secondary-button" id="sim-print-pdf" disabled>Imprimir / PDF</button>
+            </div>
+            <p class="muted archive-report-hint" id="sim-report-status">Calcula primeiro a estimativa para gerar uma ligação formal partilhável.</p>
           </div>
-          <p class="muted archive-report-hint" id="sim-report-status">Calcula primeiro a estimativa para gerar uma ligação formal partilhável.</p>
         </div>
-        <div class="cost-simulator-result" id="sim-result">
-          <p class="muted">Preenche os campos e clica em calcular para ver a estimativa.</p>
+        <div class="archive-sim-result-column">
+          <div class="archive-sim-surface archive-sim-result-surface">
+            <div class="archive-sim-surface-head">
+              <span class="mini-label">Resultado</span>
+            </div>
+            <div class="cost-simulator-result" id="sim-result">
+              <p class="muted">Preenche os campos e clica em calcular para ver a estimativa.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
