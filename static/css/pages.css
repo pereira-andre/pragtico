@@ -755,6 +755,33 @@
   gap: 12px;
 }
 
+.archive-page > .archive-hero {
+  order: 1;
+}
+
+.archive-page .archive-workspace-panel {
+  order: 2;
+  display: grid;
+  gap: 16px;
+}
+
+.archive-page .archive-simulator-panel {
+  order: 3;
+}
+
+.archive-hero h1 {
+  max-width: 12ch;
+}
+
+.archive-hero .lead {
+  max-width: 680px;
+}
+
+.archive-hero .hero-meta-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 920px;
+}
+
 .archive-head {
   align-items: flex-start;
 }
@@ -772,6 +799,44 @@
   align-items: end;
 }
 
+.archive-filter-card {
+  padding: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 16px;
+  background: rgba(7, 16, 29, 0.22);
+}
+
+.archive-filter-grid-compact {
+  grid-template-columns: minmax(260px, 1.55fr) repeat(4, minmax(130px, 1fr));
+}
+
+.archive-filter-card label {
+  min-width: 0;
+}
+
+.archive-filter-card input,
+.archive-filter-card select,
+.archive-selection-actions select {
+  min-height: 42px;
+}
+
+.archive-page .archive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.archive-page .archive-actions .mini-button {
+  width: auto;
+  min-height: 42px;
+  flex: 0 0 auto;
+}
+
+.archive-filter-actions {
+  padding-top: 2px;
+}
+
 .archive-selection-bar {
   display: flex;
   flex-wrap: wrap;
@@ -784,11 +849,53 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.archive-report-panel {
+  align-items: stretch;
+}
+
 .archive-selection-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: end;
+}
+
+.archive-page .archive-selection-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) repeat(4, minmax(132px, auto));
+  align-items: end;
+  justify-content: end;
+}
+
+.archive-page .archive-selection-actions label {
+  min-width: 0;
+}
+
+.archive-page .archive-selection-actions .mini-button {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.archive-page .archive-table {
+  min-width: 1380px;
+}
+
+.archive-page .archive-table th,
+.archive-page .archive-table td {
+  padding: 9px 10px;
+  vertical-align: middle;
+}
+
+.archive-page .archive-table th {
+  white-space: nowrap;
+}
+
+.archive-page .archive-table td {
+  white-space: nowrap;
+}
+
+.archive-page .archive-table .planned-detail-cell {
+  min-width: 260px;
 }
 
 .event-reports-admin-page .archive-selection-actions .mini-button {
@@ -900,6 +1007,92 @@
 
 .archive-report-hint {
   margin: 0;
+}
+
+.archive-simulator-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.archive-simulator-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 18px 20px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text);
+}
+
+.archive-simulator-summary::-webkit-details-marker {
+  display: none;
+}
+
+.archive-simulator-summary h2 {
+  margin: 2px 0 0;
+  color: var(--text-strong);
+}
+
+.archive-simulator-summary .muted {
+  margin: 8px 0 0;
+}
+
+.archive-simulator-toggle {
+  flex: 0 0 auto;
+}
+
+.archive-simulator-panel[open] .archive-simulator-toggle {
+  color: #d7f8ef;
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.archive-simulator-panel[open] .archive-simulator-toggle::before {
+  content: "Aberto";
+}
+
+.archive-simulator-panel[open] .archive-simulator-toggle {
+  font-size: 0;
+}
+
+.archive-simulator-panel[open] .archive-simulator-toggle::before {
+  font-size: 0.78rem;
+}
+
+.archive-simulator-panel[open] .archive-simulator-summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.archive-simulator-body {
+  padding: 18px 20px 20px;
+}
+
+.archive-page .cost-simulator-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+}
+
+.archive-page .cost-simulator-form {
+  gap: 14px;
+}
+
+.archive-page .cost-sim-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: 8px;
+}
+
+.archive-page .constraint-option {
+  min-height: 42px;
+}
+
+.archive-simulator-actions {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.archive-simulator-actions .mini-button {
+  width: 100% !important;
 }
 
 .eyebrow,
@@ -4044,6 +4237,13 @@ button:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .archive-filter-grid-compact,
+  .archive-page .archive-selection-actions,
+  .archive-page .cost-simulator-grid,
+  .archive-simulator-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .event-report-detail-grid {
     grid-template-columns: 1fr;
   }
@@ -4125,6 +4325,29 @@ button:hover {
   .event-report-edit-form .form-grid.two-col,
   .archive-selection-actions {
     grid-template-columns: 1fr;
+  }
+
+  .archive-hero .hero-meta-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 170px);
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .archive-hero h1 {
+    max-width: 8ch;
+  }
+
+  .archive-filter-grid-compact,
+  .archive-page .archive-selection-actions,
+  .archive-page .cost-simulator-grid,
+  .archive-simulator-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-simulator-summary {
+    flex-direction: column;
   }
 
   .event-report-side-panel .admin-status-compact-grid {
