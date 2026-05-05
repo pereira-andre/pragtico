@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 
 from flask import session
 
@@ -134,7 +135,7 @@ def load_admin_status() -> dict:
             "state": state,
             "state_label": {
                 "online": "Ligado",
-                "degraded": "Degradado",
+                "degraded": "Aviso",
                 "offline": "Desligado",
             }[state],
         }
@@ -315,6 +316,12 @@ def load_admin_status() -> dict:
             technical=storage_technical,
         ),
     ]
+    service_counts = {
+        "online": sum(1 for item in service_health if item["state"] == "online"),
+        "degraded": sum(1 for item in service_health if item["state"] == "degraded"),
+        "offline": sum(1 for item in service_health if item["state"] == "offline"),
+        "total": len(service_health),
+    }
 
     alerts = []
     if db_runtime_error:
@@ -408,6 +415,8 @@ def load_admin_status() -> dict:
         "port_activity": port_activity,
         "local_counts": local_counts,
         "service_health": service_health,
+        "service_counts": service_counts,
+        "checked_at_label": datetime.now().astimezone().strftime("%d/%m/%Y %H:%M"),
         "alerts": alerts,
         "overall_status": {
             "state": overall_state,
@@ -421,4 +430,3 @@ def load_admin_status() -> dict:
         "db_metrics": db_metrics,
         "rag_metrics": rag_metrics,
     }
-

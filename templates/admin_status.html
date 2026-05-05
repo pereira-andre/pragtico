@@ -1,17 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell admin-status-page">
+<main class="ops-shell admin-status-page admin-status-v2">
   <section class="hero-card admin-status-hero">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Controlo técnico</p>
-        <h1>Estado da plataforma</h1>
-        <p class="lead">Leitura operacional da infraestrutura, integrações e dados ativos, com foco em disponibilidade real e sinais de risco.</p>
+        <p class="eyebrow">Vigilância técnica</p>
+        <h1>Estado</h1>
+        <p class="lead">Painel de saúde da plataforma: serviços críticos, dados aplicacionais, índice documental, operação portuária e integrações externas.</p>
       </div>
       <div class="admin-status-hero-tools">
         <span class="admin-status-badge is-{{ admin.overall_status.state }}">{{ admin.overall_status.label }}</span>
-        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Abrir quadro</a>
+        <a class="outline-link" href="{{ url_for('admin.admin_audit') }}">Auditoria</a>
+        <a class="outline-link" href="{{ url_for('admin.admin_backups') }}">Backups</a>
+        <a class="outline-link" href="{{ url_for('dashboard_bp.dashboard') }}">Quadro</a>
       </div>
+    </div>
+
+    <div class="admin-status-checkline">
+      <span>Verificação {{ admin.checked_at_label }}</span>
+      <span>{{ admin.service_counts.online }}/{{ admin.service_counts.total }} serviços ligados</span>
+      <span>{{ admin.rag_coverage_pct }}% índice documental</span>
     </div>
 
     <div class="hero-meta-grid admin-status-hero-grid">
@@ -21,36 +29,63 @@
         <small>{% if admin.alerts %}requerem revisão{% else %}sem erros críticos detetados{% endif %}</small>
       </article>
       <article class="hero-stat">
-        <span>Autenticação</span>
-        <strong>{{ admin.auth_backend_label }}</strong>
-        <small>{{ admin.auth_method_label }}</small>
+        <span>Serviços</span>
+        <strong>{{ admin.service_counts.online }}/{{ admin.service_counts.total }}</strong>
+        <small>{{ admin.service_counts.degraded }} aviso(s) · {{ admin.service_counts.offline }} desligado(s)</small>
       </article>
       <article class="hero-stat">
-        <span>Persistência</span>
+        <span>Dados</span>
         <strong>{{ admin.storage_backend_label }}</strong>
-        <small>{{ admin.local_counts.documents }} documentos registados</small>
+        <small>{{ admin.local_counts.documents }} documentos · {{ admin.local_counts.users }} utilizadores</small>
       </article>
       <article class="hero-stat">
         <span>Índice</span>
         <strong>{{ admin.rag_coverage_pct }}%</strong>
-        <small>cobertura atual dos embeddings</small>
+        <small>{{ admin.rag_status.embedded_chunks or 0 }}/{{ admin.rag_status.chunk_count or 0 }} chunks com embedding</small>
       </article>
     </div>
+  </section>
 
+  <nav class="admin-status-page-nav" aria-label="Atalhos da página de estado">
+    <a href="#services">Serviços</a>
+    <a href="#operation">Operação</a>
+    <a href="#database">Dados</a>
+    <a href="#index">Índice</a>
+    <a href="#ais">AIS</a>
+  </nav>
+
+  <section class="panel section-panel admin-status-alert-panel" id="alerts">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Alertas</p>
+        <h2>O que precisa de atenção</h2>
+      </div>
+      <span class="admin-status-badge is-{{ 'degraded' if admin.alerts else 'online' }}">
+        {% if admin.alerts %}{{ admin.alerts|length }} ativo(s){% else %}Sem alertas{% endif %}
+      </span>
+    </div>
     {% if admin.alerts %}
       <div class="admin-status-alert-list">
         {% for alert in admin.alerts %}
           <article class="admin-status-alert">{{ alert }}</article>
         {% endfor %}
       </div>
+    {% else %}
+      <p class="admin-status-note">Não há erros críticos registados nesta verificação. Continua a confirmar os serviços externos quando houver alterações de ambiente ou deploy.</p>
     {% endif %}
   </section>
 
-  <section class="panel section-panel admin-status-panel">
-    <div class="section-head">
+  <section class="panel section-panel admin-status-panel" id="services">
+    <div class="section-head compact-head">
       <div>
         <p class="eyebrow">Serviços críticos</p>
         <h2>Disponibilidade real dos motores e integrações</h2>
+        <p class="admin-status-section-copy">Cada cartão mostra estado, origem e detalhe técnico suficiente para perceber rapidamente onde está o problema.</p>
+      </div>
+      <div class="admin-status-service-summary">
+        <span class="admin-status-badge is-online">{{ admin.service_counts.online }} ligados</span>
+        <span class="admin-status-badge is-degraded">{{ admin.service_counts.degraded }} avisos</span>
+        <span class="admin-status-badge is-offline">{{ admin.service_counts.offline }} desligados</span>
       </div>
     </div>
     <div class="admin-status-service-grid">
@@ -68,12 +103,13 @@
     </div>
   </section>
 
-  <div class="admin-status-layout">
-    <section class="panel section-panel">
-      <div class="section-head">
+  <div class="admin-status-two-column">
+    <section class="panel section-panel" id="operation">
+      <div class="section-head compact-head">
         <div>
           <p class="eyebrow">Operação portuária</p>
           <h2>Volume vivo e ocupação</h2>
+          <p class="admin-status-section-copy">Leitura calculada a partir das escalas, navios em porto, saídas recentes e manobras planeadas.</p>
         </div>
       </div>
       <div class="admin-status-metric-grid">
@@ -87,92 +123,46 @@
       {% if admin.port_activity.error %}
         <p class="admin-status-note is-danger">{{ admin.port_activity.error }}</p>
       {% else %}
-        <p class="admin-status-note">
-          Snapshot operacional calculado a partir do estado atual das escalas e manobras. A ocupação mostra slots usados face à capacidade configurada.
-        </p>
+        <p class="admin-status-note">A ocupação mostra slots usados face à capacidade configurada. Pendências e manobras planeadas devem ser confirmadas antes de alterações operacionais.</p>
       {% endif %}
     </section>
 
-    <section class="panel section-panel">
-      <div class="section-head">
+    <section class="panel section-panel" id="database">
+      <div class="section-head compact-head">
         <div>
           <p class="eyebrow">Persistência</p>
           <h2>Base aplicacional</h2>
+          <p class="admin-status-section-copy">Estado da ligação PostgreSQL, extensão vetorial e contagens principais do sistema.</p>
         </div>
-      </div>
-      <div class="admin-status-split">
-        <article class="admin-status-surface">
-          <div class="admin-status-surface-head">
-            <strong>Runtime de dados</strong>
-            <span class="admin-status-badge is-{{ 'online' if admin.db_runtime else 'offline' }}">
-              {{ 'Ligado' if admin.db_runtime else 'Sem runtime' }}
-            </span>
-          </div>
-          <div class="admin-status-compact-grid">
-            {% for item in admin.db_metrics %}
-              <div class="admin-status-fact">
-                <span>{{ item.label }}</span>
-                <strong>{{ item.value }}</strong>
-              </div>
-            {% endfor %}
-          </div>
-          {% if admin.db_runtime_error %}
-            <p class="admin-status-note is-danger">{{ admin.db_runtime_error }}</p>
-          {% elif admin.db_runtime %}
-            <p class="admin-status-note">Ligação PostgreSQL confirmada com contagens aplicacionais e verificação de `pgvector`.</p>
-          {% else %}
-            <p class="admin-status-note">Runtime PostgreSQL obrigatório neste ambiente.</p>
-          {% endif %}
-        </article>
-      </div>
-    </section>
-
-    <section class="panel section-panel">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">AIS</p>
-          <h2>Mapa e referência geográfica</h2>
-        </div>
-        <span class="admin-status-badge is-{{ 'online' if admin.ais_status.map_available else 'offline' }}">
-          {{ 'Disponível' if admin.ais_status.map_available else 'Indisponível' }}
+        <span class="admin-status-badge is-{{ 'online' if admin.db_runtime else 'offline' }}">
+          {{ 'Ligado' if admin.db_runtime else 'Sem runtime' }}
         </span>
       </div>
-      <div class="admin-status-split">
-        <article class="admin-status-surface">
-          <div class="admin-status-compact-grid">
-            <div class="admin-status-fact"><span>Modo</span><strong>Embed web público</strong></div>
-            <div class="admin-status-fact"><span>Fornecedor</span><strong>{{ admin.ais_status.provider_name }}</strong></div>
-            <div class="admin-status-fact"><span>Centro</span><strong>{{ admin.ais_status.embed.latitude_dm }}</strong></div>
-            <div class="admin-status-fact"><span>Longitude</span><strong>{{ admin.ais_status.embed.longitude_dm }}</strong></div>
-            <div class="admin-status-fact"><span>Zoom</span><strong>{{ admin.ais_status.embed.zoom }}</strong></div>
-            <div class="admin-status-fact"><span>Nomes</span><strong>{{ 'Visíveis' if admin.ais_status.embed.names else 'Ocultos' }}</strong></div>
-          </div>
-        </article>
-        <article class="admin-status-surface">
-          <div class="admin-status-surface-head">
-            <strong>Origem e ligação</strong>
-          </div>
-          <p class="admin-status-note">Serviço de mapa preparado com `{{ admin.ais_status.provider_name }}` e centro fixado na área operacional de Setúbal.</p>
+      <div class="admin-status-compact-grid">
+        {% for item in admin.db_metrics %}
           <div class="admin-status-fact">
-            <span>Página do fornecedor</span>
-            <strong><a class="inline-link" href="{{ admin.ais_status.dashboard_url }}" target="_blank" rel="noopener noreferrer">{{ admin.ais_status.dashboard_url }}</a></strong>
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
           </div>
-          <div class="admin-status-fact">
-            <span>Script</span>
-            <strong>{{ admin.ais_status.area_endpoint }}</strong>
-          </div>
-          {% if admin.ais_status.last_error %}
-            <p class="admin-status-note is-danger">{{ admin.ais_status.last_error }}</p>
-          {% endif %}
-        </article>
+        {% endfor %}
       </div>
+      {% if admin.db_runtime_error %}
+        <p class="admin-status-note is-danger">{{ admin.db_runtime_error }}</p>
+      {% elif admin.db_runtime %}
+        <p class="admin-status-note">Ligação PostgreSQL confirmada com contagens aplicacionais e verificação de pgvector.</p>
+      {% else %}
+        <p class="admin-status-note is-danger">Runtime PostgreSQL obrigatório neste ambiente.</p>
+      {% endif %}
     </section>
+  </div>
 
-    <section class="panel section-panel">
-      <div class="section-head">
+  <div class="admin-status-two-column">
+    <section class="panel section-panel" id="index">
+      <div class="section-head compact-head">
         <div>
           <p class="eyebrow">Índice documental</p>
           <h2>Estado semântico e reindexação</h2>
+          <p class="admin-status-section-copy">Confirma cobertura dos chunks, backend de índice e último ciclo de reindexação.</p>
         </div>
         <span class="admin-status-badge is-{{ 'offline' if admin.rag_status.index_error else 'online' }}">{{ admin.rag_coverage_pct }}%</span>
       </div>
@@ -187,7 +177,7 @@
             {% endfor %}
           </div>
         </article>
-        <article class="admin-status-surface">
+        <article class="admin-status-surface admin-status-reindex-card">
           <div class="admin-status-surface-head">
             <strong>Última verificação</strong>
             <span class="admin-status-badge is-{{ 'offline' if admin.rag_reindex_status.state == 'error' else 'degraded' if admin.rag_reindex_status.state == 'running' else 'online' }}">
@@ -195,13 +185,15 @@
             </span>
           </div>
           <p class="admin-status-migration-copy">{{ admin.rag_reindex_status.message }}</p>
-          <div class="admin-status-fact">
-            <span>Fase</span>
-            <strong>{{ admin.rag_reindex_status.phase }}</strong>
-          </div>
-          <div class="admin-status-fact">
-            <span>Progresso</span>
-            <strong>{{ (admin.rag_reindex_status.progress_pct or 0)|round|int }}%</strong>
+          <div class="admin-status-reindex-grid">
+            <div class="admin-status-fact">
+              <span>Fase</span>
+              <strong>{{ admin.rag_reindex_status.phase }}</strong>
+            </div>
+            <div class="admin-status-fact">
+              <span>Progresso</span>
+              <strong>{{ (admin.rag_reindex_status.progress_pct or 0)|round|int }}%</strong>
+            </div>
           </div>
           {% if admin.rag_status.index_error %}
             <p class="admin-status-note is-danger">{{ admin.rag_status.index_error }}</p>
@@ -210,6 +202,44 @@
           {% endif %}
         </article>
       </div>
+    </section>
+
+    <section class="panel section-panel" id="ais">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">AIS</p>
+          <h2>Mapa e referência geográfica</h2>
+          <p class="admin-status-section-copy">Estado do embed público usado como referência visual para tráfego na área de Setúbal.</p>
+        </div>
+        <span class="admin-status-badge is-{{ 'online' if admin.ais_status.map_available else 'offline' }}">
+          {{ 'Disponível' if admin.ais_status.map_available else 'Indisponível' }}
+        </span>
+      </div>
+      <div class="admin-status-compact-grid admin-status-ais-grid">
+        <div class="admin-status-fact"><span>Modo</span><strong>Embed web público</strong></div>
+        <div class="admin-status-fact"><span>Fornecedor</span><strong>{{ admin.ais_status.provider_name }}</strong></div>
+        <div class="admin-status-fact"><span>Centro</span><strong>{{ admin.ais_status.embed.latitude_dm }}</strong></div>
+        <div class="admin-status-fact"><span>Longitude</span><strong>{{ admin.ais_status.embed.longitude_dm }}</strong></div>
+        <div class="admin-status-fact"><span>Zoom</span><strong>{{ admin.ais_status.embed.zoom }}</strong></div>
+        <div class="admin-status-fact"><span>Nomes</span><strong>{{ 'Visíveis' if admin.ais_status.embed.names else 'Ocultos' }}</strong></div>
+      </div>
+      <article class="admin-status-surface admin-status-link-card">
+        <div class="admin-status-surface-head">
+          <strong>Origem e ligação</strong>
+        </div>
+        <p class="admin-status-note">Serviço de mapa preparado com {{ admin.ais_status.provider_name }} e centro fixado na área operacional de Setúbal.</p>
+        <div class="admin-status-fact">
+          <span>Página do fornecedor</span>
+          <strong><a class="inline-link" href="{{ admin.ais_status.dashboard_url }}" target="_blank" rel="noopener noreferrer">{{ admin.ais_status.dashboard_url }}</a></strong>
+        </div>
+        <div class="admin-status-fact">
+          <span>Script</span>
+          <strong>{{ admin.ais_status.area_endpoint }}</strong>
+        </div>
+        {% if admin.ais_status.last_error %}
+          <p class="admin-status-note is-danger">{{ admin.ais_status.last_error }}</p>
+        {% endif %}
+      </article>
     </section>
   </div>
 </main>

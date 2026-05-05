@@ -2590,6 +2590,7 @@
 }
 
 .admin-status-hero-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 10px;
 }
 
@@ -2854,6 +2855,203 @@
   border-radius: 14px;
   border: 1px solid rgba(29, 44, 43, 0.08);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-status-v2 {
+  gap: 18px;
+}
+
+.admin-status-v2 .admin-status-hero {
+  display: grid;
+  gap: 22px;
+  padding: 36px 38px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 14%, rgba(26, 159, 255, 0.16), transparent 28%),
+    radial-gradient(circle at 8% 4%, rgba(34, 197, 94, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(10, 27, 44, 0.98), rgba(13, 25, 39, 0.96));
+}
+
+.admin-status-v2 .admin-status-hero h1 {
+  max-width: none;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+}
+
+.admin-status-v2 .admin-status-hero .lead {
+  max-width: 78ch;
+}
+
+.admin-status-v2 .hero-stat strong {
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+
+.admin-status-v2 .panel h2,
+.admin-status-v2 .panel h3 {
+  letter-spacing: 0;
+}
+
+.admin-status-checkline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-status-checkline span,
+.admin-status-service-summary span {
+  white-space: nowrap;
+}
+
+.admin-status-checkline span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-status-page-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(8, 16, 27, 0.18);
+}
+
+.admin-status-page-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-status-page-nav a:hover {
+  border-color: rgba(26, 159, 255, 0.32);
+  background: rgba(26, 159, 255, 0.1);
+}
+
+.admin-status-v2 .section-head {
+  align-items: flex-start;
+}
+
+.admin-status-section-copy {
+  max-width: 76ch;
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.94rem;
+}
+
+.admin-status-alert-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-status-v2 .admin-status-alert-list {
+  margin-top: 0;
+}
+
+.admin-status-v2 .admin-status-service-grid {
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+}
+
+.admin-status-service-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-status-v2 .system-state-card {
+  min-height: 178px;
+  align-content: start;
+  padding-left: 20px;
+}
+
+.admin-status-v2 .system-state-card strong,
+.admin-status-v2 .admin-status-fact strong,
+.admin-status-v2 .admin-status-surface strong,
+.admin-status-v2 .admin-status-metric strong {
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+
+.admin-status-v2 .system-state-card strong {
+  font-size: 1.05rem;
+}
+
+.admin-status-v2 .system-state-card p,
+.admin-status-v2 .system-state-card small {
+  line-height: 1.45;
+}
+
+.admin-status-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.admin-status-two-column > .section-panel {
+  display: grid;
+  align-content: start;
+}
+
+.admin-status-v2 .admin-status-metric-grid,
+.admin-status-v2 .admin-status-compact-grid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.admin-status-v2 .admin-status-metric,
+.admin-status-v2 .admin-status-fact {
+  min-width: 0;
+}
+
+.admin-status-v2 .admin-status-metric strong,
+.admin-status-v2 .admin-status-fact strong {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.admin-status-v2 .admin-status-split {
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: start;
+}
+
+.admin-status-reindex-card,
+.admin-status-link-card {
+  align-content: start;
+}
+
+.admin-status-reindex-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-status-ais-grid {
+  margin-bottom: 14px;
+}
+
+.admin-status-v2 .inline-link {
+  overflow-wrap: anywhere;
 }
 
 .admin-bot-hero {
@@ -4396,6 +4594,8 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
+  .admin-status-page-nav,
+  .admin-status-two-column,
   .admin-casebook-kpi-grid,
   .admin-status-split,
   .admin-bot-data-actions,
@@ -4406,6 +4606,10 @@ button:hover {
 
   .admin-bot-hero-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-status-v2 .admin-status-hero-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -4486,6 +4690,8 @@ button:hover {
   .admin-status-service-grid,
   .admin-status-metric-grid,
   .admin-status-compact-grid,
+  .admin-status-page-nav,
+  .admin-status-two-column,
   .admin-casebook-kpi-grid,
   .admin-status-split,
   .admin-bot-data-actions,
@@ -4498,11 +4704,25 @@ button:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-status-v2 .admin-status-hero-grid {
+    grid-auto-flow: initial;
+    grid-auto-columns: initial;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .admin-status-v2 .admin-status-split,
+  .admin-status-reindex-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-bot-failure-row {
     grid-template-columns: 1fr;
   }
 
   .admin-status-hero-tools,
+  .admin-status-service-summary,
   .system-state-head,
   .admin-status-surface-head,
   .admin-bot-case-head {
