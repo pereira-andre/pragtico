@@ -6,15 +6,16 @@
   <section class="hero-card admin-status-hero admin-bot-hero admin-bot-health-hero">
     <div class="hero-topline">
       <div>
-        <p class="eyebrow">Saúde do bot</p>
-        <h1>Painel operacional do assistente</h1>
-        <p class="lead muted">Estado vivo das fontes de conhecimento, sinais de aprendizagem e exceções a rever.</p>
+        <p class="eyebrow">Bot operacional</p>
+        <h1>Bot</h1>
+        <p class="lead muted">Centro de controlo do motor de resposta: saúde, fontes, qualidade, calibração e exceções que precisam de decisão do admin.</p>
       </div>
       <div class="admin-status-hero-tools">
         <span class="admin-status-badge is-{{ health.state }}" data-health-label>{{ health.label }}</span>
         <span class="admin-bot-live-clock">Atualizado: <strong data-bot-monitor-clock>{{ monitor.checked_at_label }}</strong></span>
         <a class="outline-link" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
         <a class="outline-link" href="{{ url_for('admin.admin_documents') }}">Documentos</a>
+        <a class="outline-link" href="{{ url_for('admin.admin_operational_tests') }}">Testes</a>
       </div>
     </div>
 
@@ -47,12 +48,23 @@
     </div>
   </section>
 
+  <nav class="admin-bot-page-nav" aria-label="Atalhos da página do bot">
+    <a href="#monitor">Estado live</a>
+    <a href="#playground">Teste rápido</a>
+    <a href="#processo">Fluxo</a>
+    <a href="#sources">Fontes</a>
+    <a href="#quality">Qualidade</a>
+    <a href="#toolbox">Definições</a>
+  </nav>
+
   {# ── Zona 2 · Monitor e processo ───────────────────────────────── #}
+  <div class="admin-bot-control-grid">
   <section class="panel section-panel admin-bot-monitor" id="monitor">
     <div class="section-head compact-head">
       <div>
         <p class="eyebrow">Monitor live</p>
         <h2>Como o bot está a operar agora</h2>
+        <p class="admin-bot-section-copy">Resumo de execução em tempo real: disponibilidade das fontes, qualidade dos testes, sinais de feedback e pendências que podem afetar respostas.</p>
       </div>
       <span class="muted small-note">Atualização automática a cada 20 s</span>
     </div>
@@ -96,49 +108,15 @@
     </div>
   </section>
 
-  <section class="panel section-panel admin-bot-process" id="processo">
-    <div class="section-head compact-head">
-      <div>
-        <p class="eyebrow">Processo</p>
-        <h2>Fluxo de decisão do assistente</h2>
-      </div>
-    </div>
-    <div class="admin-bot-process-flow">
-      {% for step in monitor.pipeline_steps %}
-        <article class="admin-bot-process-step admin-bot-state-{{ step.state }}">
-          <span class="admin-bot-process-index">{{ loop.index }}</span>
-          <strong>{{ step.label }}</strong>
-          <p>{{ step.detail }}</p>
-        </article>
-      {% endfor %}
-    </div>
-    <div class="admin-bot-context-mix">
-      <div>
-        <p class="eyebrow">Composição de fontes</p>
-        <h3>Contexto disponível ao RAG</h3>
-      </div>
-      <div class="admin-bot-context-bars">
-        {% for item in monitor.context_mix %}
-          <div class="admin-bot-context-row" data-source-row="{{ item.id }}">
-            <span>{{ item.label }}</span>
-            <div class="admin-bot-bar-track">
-              <i class="admin-bot-bar-fill admin-bot-state-{{ item.state }}" style="--bar: {{ item.bar_pct|int }}%;"></i>
-            </div>
-            <strong data-source-count>{{ item.count }}</strong>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-  </section>
-
   {# ── Zona 3 · Playground inline ─────────────────────────────────── #}
   <section class="panel section-panel admin-bot-playground" id="playground">
     <div class="section-head compact-head">
       <div>
-        <p class="eyebrow">Playground</p>
-        <h2>Testar uma pergunta sem registar a conversa</h2>
+        <p class="eyebrow">Teste rápido</p>
+        <h2>Experimentar uma pergunta</h2>
+        <p class="admin-bot-section-copy">Usa o pipeline real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom e raciocínio antes de mexer nas definições.</p>
       </div>
-      <span class="muted small-note">Usa o pipeline real mas não persiste histórico.</span>
+      <span class="muted small-note">Não persiste histórico.</span>
     </div>
     <form id="bot-playground-form" class="admin-bot-playground-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -165,6 +143,43 @@
       </article>
     </div>
   </section>
+  </div>
+
+  <section class="panel section-panel admin-bot-process" id="processo">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Processo</p>
+        <h2>Fluxo de decisão do assistente</h2>
+        <p class="admin-bot-section-copy">Mostra a sequência simplificada que transforma uma pergunta numa resposta útil: interpretar, procurar contexto, verificar segurança operacional e devolver a conclusão.</p>
+      </div>
+    </div>
+    <div class="admin-bot-process-flow">
+      {% for step in monitor.pipeline_steps %}
+        <article class="admin-bot-process-step admin-bot-state-{{ step.state }}">
+          <span class="admin-bot-process-index">{{ loop.index }}</span>
+          <strong>{{ step.label }}</strong>
+          <p>{{ step.detail }}</p>
+        </article>
+      {% endfor %}
+    </div>
+    <div class="admin-bot-context-mix">
+      <div>
+        <p class="eyebrow">Composição de fontes</p>
+        <h3>Contexto disponível para resposta</h3>
+      </div>
+      <div class="admin-bot-context-bars">
+        {% for item in monitor.context_mix %}
+          <div class="admin-bot-context-row" data-source-row="{{ item.id }}">
+            <span>{{ item.label }}</span>
+            <div class="admin-bot-bar-track">
+              <i class="admin-bot-bar-fill admin-bot-state-{{ item.state }}" style="--bar: {{ item.bar_pct|int }}%;"></i>
+            </div>
+            <strong data-source-count>{{ item.count }}</strong>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
 
   {# ── Zona 3 · Pipeline / diagrama de decisão ───────────────────── #}
   <section class="panel section-panel admin-bot-pipeline-panel" id="pipeline">
@@ -172,6 +187,7 @@
       <div>
         <p class="eyebrow">Arquitetura</p>
         <h2>Como o bot decide</h2>
+        <p class="admin-bot-section-copy">Leitura técnica do caminho de decisão. Útil para perceber se a resposta veio de regras diretas, documentos, feedback validado ou proteção contra respostas frágeis.</p>
       </div>
       <span class="muted small-note">
         {{ tuning.summary.verified_total }} / {{ tuning.summary.implemented_total }} mecanismos com dados ou configuração ativa
@@ -213,6 +229,7 @@
       <div>
         <p class="eyebrow">Mapa de afinação</p>
         <h2>Inputs que o bot pode reutilizar</h2>
+        <p class="admin-bot-section-copy">Inventário dos dados que alimentam respostas futuras. Ajuda a perceber que partes estão ativas, parciais ou ainda sem dados reais.</p>
       </div>
       <span class="muted small-note">
         {{ tuning.summary.online_total }} ativos · {{ tuning.summary.degraded_total }} parciais · {{ tuning.summary.offline_total }} sem dados
@@ -285,6 +302,7 @@
         <div>
           <p class="eyebrow">Fontes</p>
           <h2>De onde o bot aprende</h2>
+          <p class="admin-bot-section-copy">Documentos, regras, casos e registos usados como base de resposta. Estados parciais indicam dados incompletos ou cobertura insuficiente.</p>
         </div>
         <span class="muted small-note">{{ sources|length }} fontes monitorizadas</span>
       </div>
@@ -316,7 +334,8 @@
       <div class="section-head compact-head">
         <div>
           <p class="eyebrow">Sinais ({{ signals.window_hours // 24 }} dias)</p>
-          <h2>O que o bot está a aprender</h2>
+          <h2>Sinais de calibração</h2>
+          <p class="admin-bot-section-copy">Mostra feedback recente, correções e tópicos mais frequentes. Serve para perceber onde o bot está a melhorar e onde ainda exige revisão.</p>
         </div>
       </div>
       <div class="admin-bot-signals-grid">
@@ -369,7 +388,7 @@
       </div>
 
       {% if signals.recent_events %}
-        <details class="documents-collapse-card admin-bot-collapse" open>
+        <details class="documents-collapse-card admin-bot-collapse">
           <summary class="documents-collapse-summary">
             <div>
               <h3>Últimos sinais registados</h3>
@@ -395,6 +414,7 @@
         <div>
           <p class="eyebrow">Calibração</p>
           <h2>Feedback que precisa de decisão</h2>
+          <p class="admin-bot-section-copy">Fila de correções e revisões que ainda precisam de destino claro: memória validada, regra, documento base ou ignorar.</p>
         </div>
         <span class="admin-status-badge is-{{ 'degraded' if feedback_governance.actionable_total else 'online' }}">
           {{ feedback_governance.actionable_total }} ação(ões)
@@ -449,6 +469,7 @@
         <div>
           <p class="eyebrow">Exceções</p>
           <h2>Só o que precisa de ti</h2>
+          <p class="admin-bot-section-copy">Lista curta de problemas que justificam ação humana. Se estiver vazia, a operação do bot não tem pendências críticas abertas.</p>
         </div>
         <span class="admin-status-badge is-{{ 'degraded' if exceptions.total else 'online' }}">
           {% if exceptions.total %}{{ exceptions.total }} item(ns){% else %}Sem pendências{% endif %}
@@ -479,6 +500,7 @@
         <div>
           <p class="eyebrow">Qualidade</p>
           <h2>Evals de conhecimento</h2>
+          <p class="admin-bot-section-copy">Bateria de perguntas controladas que confirma se o bot continua a responder com base nas regras e documentos esperados.</p>
         </div>
         <div class="inline-link-row">
           <span class="admin-status-badge is-{{ 'online' if quality.failed_total == 0 and quality.active_cases_total else 'degraded' if quality.active_cases_total else 'offline' }}">
@@ -517,7 +539,7 @@
         </div>
       {% endif %}
       {% if eval_run_history.runs %}
-        <details class="documents-collapse-card admin-bot-collapse admin-bot-run-history" open>
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-run-history">
           <summary class="documents-collapse-summary">
             <div>
               <h3>Histórico de runs</h3>
@@ -569,7 +591,7 @@
         <p class="admin-status-note">Ainda não há histórico guardado. Usa “Reexecutar agora” para gravar o primeiro run de calibração.</p>
       {% endif %}
       {% if quality.scenario_pack_rows %}
-        <details class="documents-collapse-card admin-bot-collapse admin-bot-scenario-collapse" open>
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-scenario-collapse">
           <summary class="documents-collapse-summary">
             <div>
               <h3>Packs de cenários</h3>
@@ -599,7 +621,7 @@
         </details>
       {% endif %}
       {% if quality.protected_total %}
-        <details class="documents-collapse-card admin-bot-collapse admin-bot-protected-collapse" open>
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-protected-collapse">
           <summary class="documents-collapse-summary">
             <div>
               <h3>Casos críticos protegidos</h3>
@@ -625,7 +647,7 @@
         </details>
       {% endif %}
       {% if quality.failure_rows %}
-        <details class="documents-collapse-card admin-bot-collapse" open>
+        <details class="documents-collapse-card admin-bot-collapse">
           <summary class="documents-collapse-summary">
             <div>
               <h3>{{ quality.failed_total }} caso(s) a falhar</h3>
@@ -649,7 +671,7 @@
                     </div>
                     <div>
                       <span>Atual</span>
-                      <p>{{ item.current_answer or 'O companion não devolveu resposta.' }}</p>
+                      <p>{{ item.current_answer or 'O motor de resposta não devolveu resposta.' }}</p>
                     </div>
                   </div>
                   <div class="admin-bot-failure-meta">
@@ -745,7 +767,8 @@
       <div class="section-head compact-head">
         <div>
           <p class="eyebrow">Controlos</p>
-          <h2>Definições e aprendizagem automática</h2>
+          <h2>Definições e calibração do bot</h2>
+          <p class="admin-bot-section-copy">Alterações sensíveis ficam aqui: promoção de correções, limites de similaridade, importação/exportação e reposição de defaults.</p>
         </div>
         <span class="muted small-note">
           {% if settings.updated_at %}última alteração: {{ settings.updated_at }}{% else %}defaults{% endif %}

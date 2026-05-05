@@ -63,7 +63,7 @@
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'chat.chat_archive' else '' }}" href="{{ url_for('chat.chat_archive') }}">Conversas</a>
               <a class="portal-nav-link {{ 'is-active' if current_endpoint == 'dashboard_bp.local_warnings' else '' }}" href="{{ url_for('dashboard_bp.local_warnings') }}">Avisos</a>
               {% if current_role == "admin" %}
-                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_bot', 'admin.admin_casebooks', 'admin.admin_event_reports', 'admin.event_report_detail', 'admin.admin_documents', 'admin.admin_backups', 'admin.admin_audit', 'admin.admin_status', 'admin.admin_operational_tests', 'admin.admin_users'] else '' }}" href="{{ url_for('admin.admin_bot') }}">Admin</a>
+                <a class="portal-nav-link {{ 'is-active' if current_endpoint in ['admin.admin_bot', 'admin.admin_casebooks', 'admin.admin_event_reports', 'admin.event_report_detail', 'admin.admin_documents', 'admin.admin_backups', 'admin.admin_audit', 'admin.admin_status', 'admin.admin_operational_tests', 'admin.admin_users'] else '' }}" href="{{ url_for('admin.admin_bot') }}">Bot</a>
               {% endif %}
             </nav>
           </div>

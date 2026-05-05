@@ -4522,9 +4522,36 @@ button:hover {
 }
 
 /* ── Admin bot v2 — redesenho ─────────────────────────────────────── */
-.admin-bot-v2 .admin-bot-health-hero {
+.admin-bot-v2 {
   gap: 18px;
 }
+
+.admin-bot-v2 .admin-bot-health-hero {
+  display: grid;
+  gap: 24px;
+  padding: 36px 38px;
+  overflow: hidden;
+}
+
+.admin-bot-v2 .admin-bot-health-hero h1 {
+  max-width: none;
+  font-size: clamp(3rem, 5vw, 5.4rem);
+}
+
+.admin-bot-v2 .admin-bot-health-hero .lead {
+  max-width: 72ch;
+}
+
+.admin-bot-v2 .admin-status-hero-tools {
+  justify-content: flex-end;
+}
+
+.admin-bot-v2 .admin-status-hero-tools .outline-link,
+.admin-bot-v2 .admin-status-hero-tools .admin-status-badge,
+.admin-bot-v2 .admin-status-hero-tools .admin-bot-live-clock {
+  min-height: 42px;
+}
+
 .admin-bot-live-clock {
   display: inline-flex;
   align-items: center;
@@ -4540,6 +4567,42 @@ button:hover {
 .admin-bot-live-clock strong {
   color: var(--text);
   font-weight: 800;
+}
+.admin-bot-page-nav {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(8, 16, 27, 0.18);
+}
+.admin-bot-page-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.admin-bot-page-nav a:hover {
+  border-color: rgba(26, 159, 255, 0.32);
+  background: rgba(26, 159, 255, 0.1);
+}
+.admin-bot-section-copy {
+  max-width: 76ch;
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.94rem;
 }
 .admin-bot-health-grid {
   display: grid;
@@ -4601,6 +4664,12 @@ button:hover {
 }
 
 /* Monitor */
+.admin-bot-control-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
 .admin-bot-monitor,
 .admin-bot-process {
   display: grid;
@@ -4793,8 +4862,15 @@ button:hover {
 .admin-bot-playground {
   display: grid;
   gap: 14px;
+  align-self: stretch;
+}
+.admin-bot-playground-form {
+  display: grid;
+  gap: 12px;
 }
 .admin-bot-playground-form textarea {
+  width: 100%;
+  min-height: 160px;
   resize: vertical;
   font-family: inherit;
 }
@@ -4901,6 +4977,23 @@ button:hover {
   color: var(--muted);
   font-size: 0.82rem;
   margin: 0;
+}
+
+.admin-bot-v2 .admin-status-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.admin-bot-v2 .admin-status-layout > *,
+.admin-bot-control-grid > *,
+.admin-bot-v2 .section-panel {
+  min-width: 0;
+}
+
+.admin-bot-v2 #quality,
+.admin-bot-v2 #toolbox,
+.admin-bot-v2 .admin-bot-legacy-casebooks {
+  grid-column: 1 / -1;
 }
 
 /* Signals grid */
@@ -5246,6 +5339,17 @@ button:hover {
 }
 
 @media (max-width: 960px) {
+  .admin-bot-v2 .admin-bot-health-hero {
+    padding: 28px;
+  }
+  .admin-bot-v2 .admin-status-hero-tools {
+    justify-content: flex-start;
+  }
+  .admin-bot-page-nav,
+  .admin-bot-control-grid,
+  .admin-bot-v2 .admin-status-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .admin-bot-health-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5598,7 +5702,8 @@ button:hover {
   .admin-casebook-grid-fields,
   .admin-bot-health-breakdown,
   .admin-bot-config-strip,
-  .admin-bot-process-flow {
+  .admin-bot-process-flow,
+  .admin-bot-health-grid {
     grid-template-columns: 1fr;
   }
   .admin-bot-breakdown-row,

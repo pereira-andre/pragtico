@@ -2396,7 +2396,7 @@ def admin_bot():
         settings_defaults=BOT_SETTINGS_DEFAULTS,
         eval_run_history=load_bot_eval_run_history(),
         casebooks=_build_admin_casebooks_payload(),
-        title="Bot e evals",
+        title="Bot",
     )
 
 
