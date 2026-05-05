@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="chat-workspace">
-  <aside class="panel chat-sidebar-panel">
-    <div class="chat-sidebar-head">
+<main class="chat-workspace chat-archive-page">
+  <section class="hero-card compact chat-archive-hero">
+    <div class="hero-topline">
       <div>
         <p class="eyebrow">Assistente</p>
         <h1>Conversas</h1>
-        <p class="muted">Histórico privado por utilizador com resposta e execução operacional no mesmo ecrã.</p>
+        <p class="lead">Histórico privado por utilizador, com resposta, fontes, feedback e execução operacional no mesmo ecrã.</p>
       </div>
-      <div class="chat-sidebar-actions">
+      <div class="chat-archive-hero-actions">
         <details class="chat-toolbar-menu">
           <summary class="mini-button secondary-button">Exportar</summary>
           <div class="chat-toolbar-menu-body">
@@ -20,58 +20,90 @@
         <form method="post" action="{{ url_for('chat.create_conversation') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="redirect_to" value="archive">
-          <button type="submit" class="mini-button">Nova</button>
+          <button type="submit" class="mini-button">Nova conversa</button>
         </form>
       </div>
     </div>
-
-    <label class="admin-search-field">
-      <span class="mini-label">Filtrar conversas</span>
-      <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
-    </label>
-
-    <div class="chat-sidebar-list" id="chat-sidebar-list">
-      {% for conv in conversations %}
-        {% set search_text = (conv.title ~ ' ' ~ conv.updated_at_label)|lower %}
-        <article class="chat-sidebar-card {{ 'is-active' if conv.id == current_conversation.id }}" data-chat-conversation data-search="{{ search_text }}">
-          <a class="chat-sidebar-link" href="{{ url_for('chat.chat_archive', conversation_id=conv.id) }}">
-            <strong title="{{ conv.title }}">{{ conv.title }}</strong>
-            <span>Atualizada {{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
-          </a>
-          <details class="chat-sidebar-menu">
-            <summary class="chat-sidebar-menu-toggle" aria-label="Opções da conversa">⋯</summary>
-            <div class="chat-sidebar-menu-body">
-              <div class="chat-sidebar-menu-links">
-                <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_json', conversation_id=conv.id) }}">JSON</a>
-                <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_txt', conversation_id=conv.id) }}">TXT</a>
-                <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_pdf', conversation_id=conv.id) }}">PDF</a>
-              </div>
-              <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-sidebar-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="redirect_to" value="archive">
-                <input type="text" name="title" value="{{ conv.title }}" required>
-                <button type="submit" class="mini-button secondary-button">OK</button>
-              </form>
-              <div class="chat-sidebar-inline-actions">
-                <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="redirect_to" value="archive">
-                  <button type="submit" class="mini-button secondary-button">Limpar</button>
-                </form>
-                <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="redirect_to" value="archive">
-                  <button type="submit" class="mini-button danger-button">Apagar</button>
-                </form>
-              </div>
-            </div>
-          </details>
-        </article>
-      {% else %}
-        <article class="ops-empty"><p>Sem conversas registadas.</p></article>
-      {% endfor %}
+    <div class="hero-meta-grid chat-archive-hero-grid">
+      <article class="hero-stat">
+        <span>Conversa ativa</span>
+        <strong>{{ current_conversation.title }}</strong>
+        <small>{{ messages|length }} mensagem(ns) nesta conversa</small>
+      </article>
+      <article class="hero-stat">
+        <span>Histórico</span>
+        <strong>{{ conversations|length }}</strong>
+        <small>conversa(s) disponíveis</small>
+      </article>
+      <article class="hero-stat">
+        <span>Serviço</span>
+        <strong>{{ chatbot_model or 'operacional' }}</strong>
+        <small>estado usado no envio de novas perguntas</small>
+      </article>
     </div>
-    <p id="chat-sidebar-empty" class="muted hidden">Nenhuma conversa corresponde ao filtro.</p>
+  </section>
+
+  <aside class="panel chat-sidebar-panel">
+    <div class="chat-sidebar-head">
+      <div>
+        <p class="eyebrow">Histórico</p>
+        <h2>Lista de conversas</h2>
+        <p class="muted">Pesquisa, exportação e gestão rápida das conversas guardadas.</p>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ conversations|length }}</span>
+    </div>
+
+    <div class="chat-sidebar-list-shell">
+      <div class="chat-sidebar-list-head">
+        <label class="admin-search-field chat-sidebar-search-field">
+          <span class="mini-label">Filtrar conversas</span>
+          <input id="chat-conversation-search" type="search" placeholder="Título ou atualização...">
+        </label>
+      </div>
+
+      <div class="chat-sidebar-list" id="chat-sidebar-list">
+        {% for conv in conversations %}
+          {% set search_text = (conv.title ~ ' ' ~ conv.updated_at_label)|lower %}
+          <article class="chat-sidebar-card {{ 'is-active' if conv.id == current_conversation.id }}" data-chat-conversation data-search="{{ search_text }}">
+            <a class="chat-sidebar-link" href="{{ url_for('chat.chat_archive', conversation_id=conv.id) }}">
+              <strong title="{{ conv.title }}">{{ conv.title }}</strong>
+              <span>Atualizada {{ conv.updated_at_label }} · {{ conv.message_count|default(0) }} mensagens</span>
+            </a>
+            <details class="chat-sidebar-menu">
+              <summary class="chat-sidebar-menu-toggle" aria-label="Opções da conversa">⋯</summary>
+              <div class="chat-sidebar-menu-body">
+                <div class="chat-sidebar-menu-links">
+                  <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_json', conversation_id=conv.id) }}">JSON</a>
+                  <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_txt', conversation_id=conv.id) }}">TXT</a>
+                  <a class="chat-sidebar-menu-link" href="{{ url_for('chat.export_conversation_pdf', conversation_id=conv.id) }}">PDF</a>
+                </div>
+                <form method="post" action="{{ url_for('chat.rename_conversation', conversation_id=conv.id) }}" class="chat-sidebar-inline-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="redirect_to" value="archive">
+                  <input type="text" name="title" value="{{ conv.title }}" required>
+                  <button type="submit" class="mini-button secondary-button">OK</button>
+                </form>
+                <div class="chat-sidebar-inline-actions">
+                  <form method="post" action="{{ url_for('chat.clear_conversation', conversation_id=conv.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="redirect_to" value="archive">
+                    <button type="submit" class="mini-button secondary-button">Limpar</button>
+                  </form>
+                  <form method="post" action="{{ url_for('chat.delete_conversation', conversation_id=conv.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="redirect_to" value="archive">
+                    <button type="submit" class="mini-button danger-button">Apagar</button>
+                  </form>
+                </div>
+              </div>
+            </details>
+          </article>
+        {% else %}
+          <article class="ops-empty"><p>Sem conversas registadas.</p></article>
+        {% endfor %}
+      </div>
+      <p id="chat-sidebar-empty" class="muted hidden">Nenhuma conversa corresponde ao filtro.</p>
+    </div>
   </aside>
 
   <section class="panel chat-main-panel">
