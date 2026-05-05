@@ -65,22 +65,27 @@
     </div>
   </section>
 
-  <section class="panel planned-panel">
-    <div class="section-head archive-head">
+  <section class="panel planned-panel vessel-search-panel">
+    <div class="vessel-search-head">
       <div>
         <p class="eyebrow">Gerir navios frequentes</p>
         <h2>Pesquisa e catálogo</h2>
       </div>
-      <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }}/{{ vessel_summary.total_count }}</span>
+      <div class="vessel-search-count">
+        <span class="ops-pill ops-pill-strong">{{ vessel_summary.filtered_count }}/{{ vessel_summary.total_count }}</span>
+        {% if vessel_filters.q or vessel_filters.vessel_type %}
+          <a class="mini-button secondary-button" href="{{ url_for('port_calls.vessel_catalog') }}">Limpar filtros</a>
+        {% endif %}
+      </div>
     </div>
 
-    <form method="get" action="{{ url_for('port_calls.vessel_catalog') }}" class="archive-filter-form">
-      <div class="archive-filter-grid">
-        <label class="archive-search-field">
+    <form method="get" action="{{ url_for('port_calls.vessel_catalog') }}" class="vessel-search-form">
+      <div class="vessel-search-bar">
+        <label class="vessel-search-field">
           <span class="mini-label">Pesquisa</span>
           <input name="q" type="search" value="{{ vessel_filters.q }}" placeholder="Navio, IMO, indicativo, bandeira, escala...">
         </label>
-        <label>
+        <label class="vessel-type-field">
           <span class="mini-label">Tipo de navio</span>
           <select name="vessel_type">
             <option value="" {% if not vessel_filters.vessel_type %}selected{% endif %}>Todos</option>
@@ -89,11 +94,15 @@
             {% endfor %}
           </select>
         </label>
+        <div class="vessel-search-actions">
+          <button type="submit" class="mini-button">Pesquisar</button>
+          <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json', q=vessel_filters.q, vessel_type=vessel_filters.vessel_type) }}">Exportar JSON</a>
+        </div>
       </div>
-      <div class="archive-actions">
-        <button type="submit" class="mini-button">Aplicar filtros</button>
-        <a class="mini-button secondary-button" href="{{ url_for('port_calls.vessel_catalog') }}">Limpar</a>
-        <a class="mini-button secondary-button" href="{{ url_for('port_calls.export_vessel_catalog_json', q=vessel_filters.q, vessel_type=vessel_filters.vessel_type) }}">Exportar catálogo JSON</a>
+      <div class="vessel-filter-state" aria-label="Filtro atual">
+        <span>Filtro atual</span>
+        <strong>{{ vessel_filters.q or "Todos os navios" }}</strong>
+        <strong>{{ vessel_filters.vessel_type or "Todos os tipos" }}</strong>
       </div>
     </form>
   </section>

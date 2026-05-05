@@ -1230,6 +1230,112 @@
   padding: 0 16px 16px;
 }
 
+.vessel-search-panel {
+  display: grid;
+  gap: 16px;
+  order: 2;
+}
+
+.vessel-admin-page > .hero-card {
+  order: 1;
+}
+
+.vessel-admin-page .vessel-management-panel {
+  order: 3;
+}
+
+.vessel-admin-page .vessel-table-panel {
+  order: 4;
+}
+
+.vessel-search-head,
+.vessel-search-count,
+.vessel-search-actions,
+.vessel-filter-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vessel-search-head {
+  justify-content: space-between;
+}
+
+.vessel-search-head h2 {
+  margin: 0;
+}
+
+.vessel-search-count,
+.vessel-search-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.vessel-search-count .mini-button,
+.vessel-search-actions .mini-button {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.vessel-search-form {
+  display: grid;
+  gap: 10px;
+}
+
+.vessel-search-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.6fr) minmax(220px, 0.75fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 14px;
+  background: rgba(7, 16, 29, 0.24);
+}
+
+.vessel-search-field,
+.vessel-type-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.vessel-search-field input,
+.vessel-type-field select {
+  min-height: 42px;
+}
+
+.vessel-filter-state {
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.vessel-filter-state span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.vessel-filter-state strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .vessel-management-panel {
   margin-top: 18px;
 }
@@ -1477,6 +1583,23 @@
 }
 
 @media (max-width: 860px) {
+  .vessel-search-head,
+  .vessel-search-count,
+  .vessel-search-actions,
+  .vessel-filter-state {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vessel-search-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .vessel-search-count .mini-button,
+  .vessel-search-actions .mini-button {
+    width: 100% !important;
+  }
+
   .planning-admin-tools-head,
   .planning-admin-foot,
   .planning-admin-actions {
