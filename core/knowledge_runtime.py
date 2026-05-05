@@ -131,7 +131,7 @@ def current_reindex_status_payload() -> dict:
             if services.rag.is_embedding_quota_exhausted()
             else "Pesquisa semântica disponível."
             if services.rag.client
-            else "Pesquisa semântica em modo lexical: provider de embeddings indisponível."
+            else "Pesquisa semântica em modo lexical: motor de embeddings indisponível."
         ),
         "scheduled_retry_at": retry_status.get("scheduled_for"),
         "scheduled_retry_eta_seconds": retry_status.get("eta_seconds"),

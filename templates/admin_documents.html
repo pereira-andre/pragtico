@@ -59,10 +59,14 @@
         >{{ reindex_status.query_embedding_summary or "" }}</p>
       </div>
       <div class="index-console-status">
-        <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">{{ reindex_status.state }}</span>
+        <span class="reindex-chip is-{{ reindex_status.state }}" id="reindex-state-chip">
+          {% if reindex_status.state == "completed" %}Sincronizado{% elif reindex_status.state == "running" %}A correr{% elif reindex_status.state == "error" %}Erro{% else %}Em espera{% endif %}
+        </span>
         <span class="index-console-provider-chip">
-          <small>provider</small>
-          <strong id="reindex-embedding-provider">{{ reindex_status.embedding_provider or "indisponivel" }}</strong>
+          <small>motor</small>
+          <strong id="reindex-embedding-provider">
+            {% if reindex_status.query_embedding_status == "available" %}Configurado{% elif reindex_status.query_embedding_status == "blocked" %}Quota{% else %}Indisponível{% endif %}
+          </strong>
         </span>
       </div>
     </header>
@@ -83,7 +87,9 @@
           </div>
         </div>
         <p class="index-console-gauge-caption">
-          <span id="reindex-embedding-provider-card">{{ reindex_status.embedding_provider or "indisponivel" }}</span>
+          <span id="reindex-embedding-provider-card">
+            {% if reindex_status.query_embedding_status == "available" %}Motor configurado{% elif reindex_status.query_embedding_status == "blocked" %}Quota limitada{% else %}Motor indisponível{% endif %}
+          </span>
           <small>motor de embeddings ativo</small>
         </p>
       </article>
@@ -95,7 +101,9 @@
             <strong id="reindex-progress-label">{{ (reindex_status.progress_pct or 0)|round|int }}%</strong>
           </div>
           <div class="index-console-progress-meta">
-            <span class="index-console-pill" id="reindex-phase">{{ reindex_status.phase }}</span>
+            <span class="index-console-pill" id="reindex-phase">
+              {% if reindex_status.phase in ["up_to_date", "idle"] %}Atualizado{% elif reindex_status.phase == "error" %}Erro{% else %}{{ reindex_status.phase|replace("_", " ") }}{% endif %}
+            </span>
             <span class="index-console-pill" id="reindex-eta">
               {% if reindex_status.eta_seconds %}
                 ETA {{ reindex_status.eta_seconds }}s
@@ -467,6 +475,24 @@
     }).join("");
   }
 
+  function formatProviderLabel(payload, context = "chip") {
+    const status = payload?.query_embedding_status || "";
+    if (status === "available") return context === "caption" ? "Motor configurado" : "Configurado";
+    if (status === "blocked") return context === "caption" ? "Quota limitada" : "Quota";
+    return context === "caption" ? "Motor indisponível" : "Indisponível";
+  }
+
+  function formatStateLabel(state) {
+    const labels = { completed: "Sincronizado", running: "A correr", error: "Erro", idle: "Em espera" };
+    return labels[state] || state || "Em espera";
+  }
+
+  function formatPhaseLabel(phase) {
+    if (!phase || phase === "idle" || phase === "up_to_date") return "Atualizado";
+    if (phase === "error") return "Erro";
+    return String(phase).replaceAll("_", " ");
+  }
+
   function renderReindexStatus(p) {
     if (!p || !reindexCard) return;
     const s = p.state || "idle";
@@ -474,18 +500,18 @@
     const coveragePct = Math.max(0, Math.min(100, Math.round(p.semantic_chunk_coverage_pct || 0)));
     reindexCard.dataset.state = s;
     reindexMessage.textContent = p.message || "Sem atividade.";
-    reindexStateChip.textContent = s;
+    reindexStateChip.textContent = formatStateLabel(s);
     reindexStateChip.className = "reindex-chip is-" + s;
     reindexProgressFill.style.width = pct + "%";
-    reindexPhase.textContent = p.phase || "idle";
+    reindexPhase.textContent = formatPhaseLabel(p.phase);
     reindexProgressLabel.textContent = pct + "%";
     reindexChunks.textContent = (p.embedded_chunks||0) + "/" + (p.total_chunks||0);
     reindexDocs.textContent = (p.processed_documents||0) + "/" + (p.total_documents||0);
     if (p.eta_seconds) reindexEta.textContent = "ETA " + p.eta_seconds + "s";
     else if (p.scheduled_retry_eta_seconds) reindexEta.textContent = "Nova tentativa em " + p.scheduled_retry_eta_seconds + "s";
     else reindexEta.textContent = "ETA --";
-    if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = p.embedding_provider || "indisponivel";
-    if (reindexEmbeddingProviderCard) reindexEmbeddingProviderCard.textContent = p.embedding_provider || "indisponivel";
+    if (reindexEmbeddingProvider) reindexEmbeddingProvider.textContent = formatProviderLabel(p);
+    if (reindexEmbeddingProviderCard) reindexEmbeddingProviderCard.textContent = formatProviderLabel(p, "caption");
     if (reindexSemanticCoverage) reindexSemanticCoverage.textContent = coveragePct + "%";
     if (reindexGauge) reindexGauge.style.setProperty("--coverage", coveragePct);
     if (reindexFullyEmbeddedDocs) reindexFullyEmbeddedDocs.textContent = p.fully_embedded_documents || 0;
