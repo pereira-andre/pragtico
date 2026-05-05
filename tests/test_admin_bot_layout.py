@@ -17,6 +17,7 @@ def test_admin_bot_page_uses_clean_control_layout() -> None:
     assert "Centro de controlo do motor de resposta" in template
     assert "admin-bot-page-nav" in template
     assert "admin-bot-control-grid" in template
+    assert "admin-bot-decision-map" in template
     assert '<a href="#casebooks">Governança detalhada</a>' in template
     assert "Teste rápido" in template
     assert "Contexto disponível para resposta" in template

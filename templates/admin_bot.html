@@ -195,6 +195,46 @@
       </span>
     </div>
     <p class="admin-status-note admin-bot-section-note">{{ pipeline.note }}</p>
+    <div class="admin-bot-decision-map" aria-label="Diagrama do funcionamento do bot">
+      <article class="admin-bot-decision-rail">
+        <span class="eyebrow">Entrada</span>
+        <strong>Pedido operacional</strong>
+        <small>Mensagem, comando, dúvida técnica ou caso de manobra.</small>
+      </article>
+      <article class="admin-bot-decision-core">
+        <div class="admin-bot-decision-core-head">
+          <span>Motor de decisão</span>
+          <strong>Interpretar → fundamentar → validar</strong>
+        </div>
+        <div class="admin-bot-decision-lanes">
+          <div class="admin-bot-decision-lane">
+            <span>01</span>
+            <strong>Normalização</strong>
+            <small>Aliases, cais, comandos e intenção.</small>
+          </div>
+          <div class="admin-bot-decision-lane">
+            <span>02</span>
+            <strong>Contexto</strong>
+            <small>Regras, documentos e feedback validado.</small>
+          </div>
+          <div class="admin-bot-decision-lane">
+            <span>03</span>
+            <strong>Verificações</strong>
+            <small>Casos críticos, qualidade e exceções.</small>
+          </div>
+          <div class="admin-bot-decision-lane">
+            <span>04</span>
+            <strong>Resposta</strong>
+            <small>Conclusão curta, rastreável e operacional.</small>
+          </div>
+        </div>
+      </article>
+      <article class="admin-bot-decision-rail admin-bot-decision-rail-output">
+        <span class="eyebrow">Saída</span>
+        <strong>Resposta fundamentada</strong>
+        <small>{{ quality.passed_total }}/{{ quality.active_cases_total }} evals · {{ sources|length }} fontes · {{ exceptions.total }} exceções abertas.</small>
+      </article>
+    </div>
     <div class="admin-bot-summary-strip">
       {% for card in pipeline.summary_cards %}
         <article class="admin-bot-summary-card">
