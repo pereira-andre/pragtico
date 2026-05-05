@@ -3515,6 +3515,11 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
+.admin-casebooks-v2 .admin-casebooks-filter-grid {
+  grid-template-columns: minmax(260px, 1.4fr) repeat(5, minmax(145px, 1fr));
+  align-items: end;
+}
+
 .admin-bot-data-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3722,6 +3727,252 @@
   border-radius: 14px;
   border: 1px solid rgba(29, 44, 43, 0.08);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-casebooks-v2 {
+  gap: 18px;
+}
+
+.admin-casebooks-v2 .admin-casebooks-hero {
+  display: grid;
+  gap: 22px;
+  padding: 36px 38px;
+}
+
+.admin-casebooks-v2 .admin-casebooks-hero h1 {
+  max-width: none;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+}
+
+.admin-casebooks-v2 .admin-status-hero-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.admin-casebook-filter-panel,
+.admin-casebook-list-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(17, 30, 47, 0.96));
+}
+
+.admin-casebook-filter-panel .section-head,
+.admin-casebook-list-panel .section-head {
+  margin-bottom: 12px;
+}
+
+.admin-casebook-row-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-casebook-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(290px, 0.95fr) minmax(210px, 0.55fr) minmax(340px, 1.2fr) auto;
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px 14px;
+  border: 1px solid rgba(130, 160, 195, 0.13);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+    rgba(8, 19, 32, 0.44);
+}
+
+.admin-casebook-row:hover {
+  border-color: rgba(26, 159, 255, 0.22);
+  background:
+    linear-gradient(180deg, rgba(26, 159, 255, 0.06), rgba(255, 255, 255, 0.018)),
+    rgba(8, 19, 32, 0.52);
+}
+
+.admin-casebook-row:target {
+  border-color: rgba(245, 199, 74, 0.46);
+  box-shadow: 0 0 0 3px rgba(245, 199, 74, 0.1);
+}
+
+.admin-casebook-row-main,
+.admin-casebook-row-learning,
+.admin-casebook-row-summary {
+  min-width: 0;
+}
+
+.admin-casebook-row-main {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-casebook-row-reference,
+.admin-casebook-row-route,
+.admin-casebook-row-context,
+.admin-casebook-row-learning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.admin-casebook-row-reference strong,
+.admin-casebook-row-route strong {
+  color: var(--text-strong);
+  font-size: 0.98rem;
+}
+
+.admin-casebook-row-reference span,
+.admin-casebook-row-route span,
+.admin-casebook-row-context span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.admin-casebook-row-reference span,
+.admin-casebook-row-context span,
+.admin-casebook-row-learning .casebook-tag {
+  display: inline-block;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 160, 195, 0.13);
+  background: rgba(255, 255, 255, 0.035);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-casebook-row-learning {
+  align-content: start;
+  align-self: start;
+}
+
+.admin-casebook-row-summary {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.admin-casebook-row-summary p {
+  margin: 0;
+}
+
+.admin-casebook-row-summary strong,
+.admin-casebook-note strong {
+  color: var(--text);
+}
+
+.admin-casebook-row-detail {
+  border-radius: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.admin-casebook-row-detail summary {
+  display: block;
+  min-height: 34px;
+  padding: 0 10px;
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 800;
+  list-style: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-casebook-row-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-casebook-row-detail[open] {
+  padding-bottom: 10px;
+}
+
+.admin-casebook-match-table {
+  display: grid;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.admin-casebook-match-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.5fr) minmax(110px, 0.8fr) minmax(180px, 1.1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-casebook-match-row strong {
+  color: var(--text);
+}
+
+.admin-casebook-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-self: start;
+}
+
+.admin-casebook-row-menu[open] {
+  z-index: 55;
+}
+
+.admin-casebook-row-menu .chat-sidebar-menu-toggle {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(130, 160, 195, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-casebook-row-menu[open] .chat-sidebar-menu-toggle {
+  border-color: rgba(26, 159, 255, 0.36);
+  background: rgba(26, 159, 255, 0.12);
+}
+
+.admin-casebook-menu-body {
+  width: min(420px, calc(100vw - 48px));
+  max-height: min(680px, calc(100vh - 120px));
+  overflow-y: auto;
+  padding: 14px;
+  border-color: rgba(26, 159, 255, 0.18);
+}
+
+.admin-casebook-menu-body-wide {
+  width: min(560px, calc(100vw - 48px));
+}
+
+.admin-casebook-menu-form {
+  gap: 10px;
+}
+
+.admin-casebook-menu-form label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.admin-casebook-menu-form select,
+.admin-casebook-menu-form textarea,
+.admin-casebook-menu-form input {
+  margin-top: 5px;
+}
+
+.admin-casebook-section-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.admin-casebook-section-title h3 {
+  margin-top: 4px;
+}
+
+.admin-casebook-chat-row {
+  grid-template-columns: minmax(280px, 0.8fr) minmax(230px, 0.55fr) minmax(420px, 1.35fr) auto;
 }
 
 .admin-bot-document-card .admin-status-compact-grid {
@@ -4452,14 +4703,16 @@ button:hover {
 }
 
 .casebook-tag {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
+  max-width: 100%;
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #f5f8fb;
   font-size: 0.76rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .casebook-tag-feedback {
@@ -5005,6 +5258,21 @@ button:hover {
   .admin-status-v2 .admin-status-hero-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .admin-casebooks-v2 .admin-status-hero-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-casebook-row,
+  .admin-casebook-chat-row,
+  .admin-casebooks-v2 .admin-casebooks-filter-grid,
+  .admin-casebook-match-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-casebook-row-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 720px) {
@@ -5127,6 +5395,40 @@ button:hover {
     grid-template-columns: 1fr;
     overflow: visible;
     padding-bottom: 0;
+  }
+
+  .admin-casebooks-v2 .admin-status-hero-grid {
+    grid-auto-flow: initial;
+    grid-auto-columns: initial;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .admin-casebooks-v2 .admin-casebooks-hero {
+    padding: 24px;
+  }
+
+  .admin-casebooks-v2 .section-head,
+  .admin-casebooks-v2 .compact-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-casebook-section-title,
+  .admin-casebook-row-reference,
+  .admin-casebook-row-route,
+  .admin-casebook-row-context,
+  .admin-casebook-row-learning {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-casebook-row-menu .chat-sidebar-menu-body {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 8px;
   }
 
   .admin-status-v2 .admin-status-split,

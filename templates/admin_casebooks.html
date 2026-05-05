@@ -1,78 +1,286 @@
 {% extends "base.html" %}
-{% macro render_casebook_case(item, casebooks) -%}
-  <article class="admin-bot-case admin-casebook-card">
-    <div class="admin-bot-case-head">
-      <div>
-        <strong>{{ item.reference_code }}</strong>
-        <p class="admin-casebook-route">{{ item.maneuver_type_label }} · {{ item.route_label }}</p>
-      </div>
-      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
+{% macro casebook_case_action_menu(item, casebooks) -%}
+  <details class="chat-sidebar-menu admin-casebook-row-menu">
+    <summary class="chat-sidebar-menu-toggle" aria-label="Opções do caso {{ item.reference_code }}">⋯</summary>
+    <div class="chat-sidebar-menu-body admin-casebook-menu-body">
+      <a class="chat-sidebar-menu-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir manobra</a>
+      <form method="post" action="{{ url_for('admin.admin_casebooks_maneuver_feedback', maneuver_id=item.maneuver_id) }}" class="stack admin-casebook-menu-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+        <label>
+          Decisão operacional
+          <select name="feedback_status" required>
+            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Experiência validada</option>
+            <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
+            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever caso</option>
+          </select>
+        </label>
+        <label>
+          Nota de validação
+          <textarea name="feedback_note" rows="3" placeholder="Decisão, ressalvas, exceções ou boa prática...">{{ item.feedback_note }}</textarea>
+        </label>
+        <button type="submit" class="mini-button">Guardar caso</button>
+      </form>
     </div>
-    <p class="admin-bot-case-meta"><strong>{{ item.vessel_name }}</strong> · {{ item.state_label }} · {{ item.latest_event_label }}</p>
-    <p class="admin-bot-case-meta">{{ item.feature_label }}</p>
-    <div class="casebook-tag-list">
+  </details>
+{%- endmacro %}
+
+{% macro render_casebook_case_row(item, casebooks) -%}
+  <article class="admin-casebook-row" id="case-{{ item.maneuver_id }}">
+    <div class="admin-casebook-row-main">
+      <div class="admin-casebook-row-reference">
+        <strong>{{ item.reference_code }}</strong>
+        <span>{{ item.maneuver_type_label }}</span>
+      </div>
+      <div class="admin-casebook-row-route">
+        <strong>{{ item.vessel_name }}</strong>
+        <span>{{ item.route_label }}</span>
+      </div>
+      <div class="admin-casebook-row-context">
+        <span>{{ item.state_label }}</span>
+        <span>{{ item.latest_event_label }}</span>
+        <span>{{ item.feature_label }}</span>
+      </div>
+    </div>
+    <div class="admin-casebook-row-learning">
+      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
       <span class="admin-status-badge is-{{ item.learning_badge }}">{{ item.learning_title }}</span>
       {% if item.feedback_updated_at_label %}
         <span class="casebook-tag">decisão {{ item.feedback_updated_at_label }}</span>
       {% endif %}
     </div>
-    <p class="admin-casebook-learning">{{ item.learning_summary }}</p>
-    {% if item.decision_flags %}
-      <div class="casebook-tag-list">
-        {% for flag in item.decision_flags %}
-          <span class="casebook-tag">{{ flag }}</span>
-        {% endfor %}
-      </div>
-    {% endif %}
-    {% if item.top_matches %}
-      <div class="admin-casebook-match-list">
-        {% for match in item.top_matches %}
-          <article class="admin-casebook-match">
-            <div class="admin-bot-case-head">
-              <strong>{{ match.reference_code }}</strong>
-              <span class="casebook-score">{{ match.similarity_score }}</span>
-            </div>
-            <p class="admin-bot-case-meta">{{ match.vessel_name }} · {{ match.state_label }}</p>
-            <p class="admin-bot-case-meta">{{ match.route_label }}</p>
-            <p class="admin-bot-case-meta">{{ match.reasons_label }}</p>
-            <p class="admin-bot-case-meta">{{ match.latest_event_label }}</p>
-            <div class="casebook-tag-list">
-              <span class="admin-status-badge is-{{ match.experience_badge }}">{{ match.experience_label }}</span>
-              <span class="admin-status-badge is-{{ match.feedback_badge }}">{{ match.feedback_status_label }}</span>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="admin-status-note">Sem correlações relevantes ainda para este caso.</p>
-    {% endif %}
-    {% if item.feedback_note %}
-      <p class="admin-bot-case-meta"><strong>Nota atual:</strong> {{ item.feedback_note }}</p>
-    {% endif %}
-    <div class="inline-link-row">
-      <a class="inline-link" href="{{ url_for('port_calls.maneuver_detail', port_call_id=item.port_call_id, maneuver_id=item.maneuver_id) }}">Abrir manobra</a>
+    <div class="admin-casebook-row-summary">
+      <p>{{ item.learning_summary }}</p>
+      {% if item.decision_flags %}
+        <div class="casebook-tag-list">
+          {% for flag in item.decision_flags[:3] %}
+            <span class="casebook-tag">{{ flag }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if item.top_matches %}
+        <details class="admin-casebook-row-detail">
+          <summary>Correlações: {{ item.top_matches_label or item.top_matches|length }}</summary>
+          <div class="admin-casebook-match-table">
+            {% for match in item.top_matches %}
+              <article class="admin-casebook-match-row">
+                <strong>{{ match.reference_code }}</strong>
+                <span>{{ match.vessel_name }}</span>
+                <span>{{ match.route_label }}</span>
+                <span>{{ match.similarity_score }}</span>
+                <span>{{ match.feedback_status_label }}</span>
+              </article>
+            {% endfor %}
+          </div>
+        </details>
+      {% else %}
+        <span class="muted">Sem correlações relevantes.</span>
+      {% endif %}
+      {% if item.feedback_note %}
+        <p class="admin-casebook-note"><strong>Nota:</strong> {{ item.feedback_note }}</p>
+      {% endif %}
     </div>
-    <form method="post" action="{{ url_for('admin.admin_casebooks_maneuver_feedback', maneuver_id=item.maneuver_id) }}" class="stack admin-casebook-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-      <label>
-        Decisão operacional
-        <select name="feedback_status" required>
-          <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Experiência validada</option>
-          <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
-          <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever caso</option>
-        </select>
-      </label>
-      <label>
-        Nota de validação
-        <textarea name="feedback_note" rows="3" placeholder="Decisão, ressalvas, exceções ou boa prática...">{{ item.feedback_note }}</textarea>
-      </label>
-      <button type="submit" class="mini-button">Guardar caso</button>
-    </form>
+    <div class="admin-casebook-row-actions">
+      {{ casebook_case_action_menu(item, casebooks) }}
+    </div>
   </article>
 {%- endmacro %}
+
+{% macro practice_action_menu(item, casebooks) -%}
+  <details class="chat-sidebar-menu admin-casebook-row-menu">
+    <summary class="chat-sidebar-menu-toggle" aria-label="Opções da prática {{ item.reference_code }}">⋯</summary>
+    <div class="chat-sidebar-menu-body admin-casebook-menu-body">
+      <form method="post" action="{{ url_for('admin.update_practice_experience', record_id=item.id) }}" class="stack admin-casebook-menu-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+        <label>
+          Decisão operacional
+          <select name="feedback_status" required>
+            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Padrão validado</option>
+            <option value="avoid" {% if item.feedback_status == "avoid" %}selected{% endif %}>Evitar como padrão</option>
+            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Rever padrão</option>
+          </select>
+        </label>
+        <label>
+          Nota de validação
+          <textarea name="feedback_note" rows="3" placeholder="Justificação operacional ou ressalva...">{{ item.feedback_note }}</textarea>
+        </label>
+        <button type="submit" class="mini-button">Guardar prática</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.delete_practice_experience', record_id=item.id) }}" class="stack admin-casebook-menu-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+        <button type="submit" class="mini-button danger-button" onclick="return confirm('Remover este padrão importado?')">Remover padrão</button>
+      </form>
+    </div>
+  </details>
+{%- endmacro %}
+
+{% macro render_practice_row(item, casebooks) -%}
+  <article class="admin-casebook-row" id="practice-{{ item.id }}">
+    <div class="admin-casebook-row-main">
+      <div class="admin-casebook-row-reference">
+        <strong>{{ item.reference_code }}</strong>
+        <span>{{ item.maneuver_type_label }}</span>
+      </div>
+      <div class="admin-casebook-row-route">
+        <strong>{{ item.vessel_name }}</strong>
+        <span>{{ item.route_label }}</span>
+      </div>
+      <div class="admin-casebook-row-context">
+        <span>{{ item.source_filename }}</span>
+        <span>{{ item.profile_label }}</span>
+      </div>
+    </div>
+    <div class="admin-casebook-row-learning">
+      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
+      <span class="casebook-tag">{{ item.case_count }} casos</span>
+      <span class="casebook-tag">{{ item.duration_median_label }}</span>
+    </div>
+    <div class="admin-casebook-row-summary">
+      <p><strong>Reboques:</strong> {{ item.tug_distribution_label }}</p>
+      <p><strong>Exemplos:</strong> {{ item.vessel_examples_label }}</p>
+      {% if item.comments_label %}
+        <p><strong>Notas:</strong> {{ item.comments_label }}</p>
+      {% endif %}
+      {% if item.feedback_note %}
+        <p class="admin-casebook-note"><strong>Validação:</strong> {{ item.feedback_note }}</p>
+      {% endif %}
+    </div>
+    <div class="admin-casebook-row-actions">
+      {{ practice_action_menu(item, casebooks) }}
+    </div>
+  </article>
+{%- endmacro %}
+
+{% macro chat_action_menu(item, casebooks) -%}
+  <details class="chat-sidebar-menu admin-casebook-row-menu">
+    <summary class="chat-sidebar-menu-toggle" aria-label="Opções da mensagem {{ item.id }}">⋯</summary>
+    <div class="chat-sidebar-menu-body admin-casebook-menu-body admin-casebook-menu-body-wide">
+      <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="stack admin-casebook-menu-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
+        <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
+        <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
+        <label>
+          Decisão
+          <select name="feedback_status" required>
+            <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar resposta original</option>
+            <option value="corrected" {% if item.feedback_status == "corrected" %}selected{% endif %}>Guardar correção classificada</option>
+            <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Manter bloqueada para revisão</option>
+            <option value="ignored" {% if item.feedback_status == "ignored" %}selected{% endif %}>Ignorar: sem aprendizagem</option>
+          </select>
+        </label>
+        <label>
+          Nota
+          <textarea name="feedback_note" rows="2" placeholder="Motivo da decisão, ressalvas ou contexto...">{{ item.feedback_note }}</textarea>
+        </label>
+        <label>
+          Correção / resposta esperada
+          <textarea name="feedback_correction" rows="3" placeholder="Resposta corrigida para memória, eval ou alteração de fonte/regra...">{{ item.feedback_correction }}</textarea>
+        </label>
+        <label>
+          Documento alvo
+          <input type="text" name="feedback_correction_document" value="{{ item.feedback_correction_document }}" placeholder="Opcional se houver um único documento citado">
+        </label>
+        <div class="admin-casebook-grid-fields">
+          <label>
+            Tipo de problema
+            <select name="feedback_error_type">
+              <option value="">Sem tipo / aprovação simples</option>
+              {% for option in casebooks.feedback_governance_options.error_types %}
+                <option value="{{ option.value }}" {% if item.feedback_error_type == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Escopo
+            <select name="feedback_scope">
+              <option value="">Sem escopo</option>
+              {% for option in casebooks.feedback_governance_options.scopes %}
+                <option value="{{ option.value }}" {% if item.feedback_scope == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Destino
+            <select name="feedback_destination">
+              <option value="">Default conservador</option>
+              {% for option in casebooks.feedback_governance_options.destinations %}
+                <option value="{{ option.value }}" {% if item.feedback_destination == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Criticidade
+            <select name="feedback_criticality">
+              <option value="">Default</option>
+              {% for option in casebooks.feedback_governance_options.criticalities %}
+                <option value="{{ option.value }}" {% if item.feedback_criticality == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <button type="submit" class="mini-button">Guardar decisão</button>
+      </form>
+    </div>
+  </details>
+{%- endmacro %}
+
+{% macro render_chat_row(item, casebooks) -%}
+  <article class="admin-casebook-row admin-casebook-chat-row" id="chat-{{ item.id }}">
+    <div class="admin-casebook-row-main">
+      <div class="admin-casebook-row-reference">
+        <strong>{{ item.owner_username }}</strong>
+        <span>{{ item.channel_label }}</span>
+      </div>
+      <div class="admin-casebook-row-route">
+        <strong>{{ item.conversation_title }}</strong>
+        <span>{{ item.created_at_label }}</span>
+      </div>
+      <div class="admin-casebook-row-context">
+        {% if item.citation_documents %}
+          {% for document in item.citation_documents[:2] %}
+            <span>{{ document }}</span>
+          {% endfor %}
+        {% else %}
+          <span>Sem documentos citados</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="admin-casebook-row-learning">
+      <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
+      {% if item.feedback_governance %}
+        <span class="casebook-tag">Destino: {{ item.feedback_governance.destination_label }}</span>
+        <span class="casebook-tag">Criticidade: {{ item.feedback_governance.criticality_label }}</span>
+      {% endif %}
+    </div>
+    <div class="admin-casebook-row-summary">
+      <p><strong>Pergunta:</strong> {{ item.question_preview }}</p>
+      <p><strong>Resposta:</strong> {{ item.answer_preview }}</p>
+      {% if item.answer != item.answer_preview or item.feedback_correction %}
+        <details class="admin-casebook-row-detail">
+          <summary>Ver detalhe</summary>
+          {% if item.answer != item.answer_preview %}
+            <div class="admin-casebook-longtext">{{ item.answer }}</div>
+          {% endif %}
+          {% if item.feedback_correction %}
+            <div class="admin-casebook-longtext"><strong>Correção:</strong> {{ item.feedback_correction }}</div>
+          {% endif %}
+        </details>
+      {% endif %}
+      {% if item.feedback_note %}
+        <p class="admin-casebook-note"><strong>Nota:</strong> {{ item.feedback_note }}</p>
+      {% endif %}
+    </div>
+    <div class="admin-casebook-row-actions">
+      {{ chat_action_menu(item, casebooks) }}
+    </div>
+  </article>
+{%- endmacro %}
+
 {% block content %}
-<main class="ops-shell admin-status-page admin-casebooks-page">
+<main class="ops-shell admin-status-page admin-casebooks-page admin-casebooks-v2">
   <section class="hero-card admin-status-hero admin-casebooks-hero">
     <div class="hero-topline">
       <div>
@@ -104,11 +312,6 @@
         <small>correção classificada</small>
       </article>
       <article class="hero-stat">
-        <span>Mensagens ignoradas</span>
-        <strong>{{ casebooks.chat_ignored_total }}</strong>
-        <small>fora da aprendizagem e dos evals</small>
-      </article>
-      <article class="hero-stat">
         <span>Casos por validar</span>
         <strong>{{ casebooks.case_pending_total }}</strong>
         <small>correlações em observação</small>
@@ -128,15 +331,29 @@
     <p class="admin-status-note admin-bot-summary">{{ casebooks.summary }}</p>
   </section>
 
-  <section class="panel section-panel">
-    <div class="section-head">
+  <section class="panel section-panel admin-casebook-filter-panel">
+    <div class="section-head compact-head">
       <div>
         <p class="eyebrow">Filtros</p>
         <h2>Vista de revisão</h2>
       </div>
+      <span class="admin-status-badge is-{{ casebooks.state }}">{{ casebooks.display_limit }} por bloco</span>
     </div>
     <form method="get" class="archive-filter-form">
       <div class="archive-filter-grid admin-casebooks-filter-grid">
+        <label class="archive-search-field">
+          Pesquisa
+          <input name="q" type="search" value="{{ casebooks.filters.q }}" placeholder="Navio, rota, documento, pergunta...">
+        </label>
+        <label>
+          Origem
+          <select name="source_type">
+            <option value="all" {% if casebooks.filters.source_type == "all" %}selected{% endif %}>Tudo</option>
+            <option value="chat" {% if casebooks.filters.source_type == "chat" %}selected{% endif %}>Chat</option>
+            <option value="maneuver" {% if casebooks.filters.source_type == "maneuver" %}selected{% endif %}>Manobras</option>
+            <option value="practice" {% if casebooks.filters.source_type == "practice" %}selected{% endif %}>Prática importada</option>
+          </select>
+        </label>
         <label>
           Mensagens do chat
           <select name="chat_feedback">
@@ -167,161 +384,66 @@
             <option value="shift" {% if casebooks.filters.case_type == "shift" %}selected{% endif %}>Mudança</option>
           </select>
         </label>
+        <label>
+          Limite
+          <select name="limit">
+            {% for limit in casebooks.allowed_limits %}
+              <option value="{{ limit }}" {% if casebooks.filters.limit == limit %}selected{% endif %}>{{ limit }}</option>
+            {% endfor %}
+          </select>
+        </label>
       </div>
-      <div class="inline-link-row">
+      <div class="archive-actions">
         <button type="submit" class="mini-button">Aplicar filtros</button>
-        <a class="outline-link" href="{{ url_for('admin.admin_casebooks') }}">Limpar</a>
+        <a class="mini-button secondary-button" href="{{ url_for('admin.admin_casebooks') }}">Limpar</a>
       </div>
     </form>
   </section>
 
-  <section class="panel section-panel">
-    <div class="section-head">
+  <section class="panel section-panel admin-casebook-list-panel">
+    <div class="section-head compact-head">
       <div>
         <p class="eyebrow">Chat</p>
         <h2>Mensagens para governança</h2>
       </div>
+      <span class="ops-pill ops-pill-strong">{{ casebooks.chat_rows|length }}/{{ casebooks.chat_visible_total }}</span>
     </div>
     {% if casebooks.chat_rows %}
-      <div class="admin-bot-case-grid">
+      <div class="admin-casebook-row-list admin-casebook-chat-list">
         {% for item in casebooks.chat_rows %}
-          <article class="admin-bot-case admin-casebook-card" id="chat-{{ item.id }}">
-            <div class="admin-bot-case-head">
-              <div>
-                <strong>{{ item.owner_username }}</strong>
-                <p class="admin-casebook-route">{{ item.conversation_title }}</p>
-              </div>
-              <span class="admin-status-badge is-{{ item.feedback_badge }}">{{ item.feedback_status_label }}</span>
-            </div>
-            <p class="admin-bot-case-meta"><strong>Origem:</strong> {{ item.channel_label }} · {{ item.created_at_label }}</p>
-            <p class="admin-bot-case-question">{{ item.question_preview }}</p>
-            <p class="admin-bot-case-answer">{{ item.answer_preview }}</p>
-            {% if item.answer != item.answer_preview %}
-              <details class="planning-optional-box">
-                <summary>Ver resposta completa</summary>
-                <div class="admin-casebook-longtext">{{ item.answer }}</div>
-              </details>
-            {% endif %}
-            {% if item.citation_documents %}
-              <div class="casebook-tag-list">
-                {% for document in item.citation_documents %}
-                  <span class="casebook-tag">{{ document }}</span>
-                {% endfor %}
-              </div>
-            {% endif %}
-            {% if item.feedback_note %}
-              <p class="admin-bot-case-meta"><strong>Nota atual:</strong> {{ item.feedback_note }}</p>
-            {% endif %}
-            {% if item.feedback_correction %}
-              <details class="planning-optional-box">
-                <summary>Ver correção persistida</summary>
-                <div class="admin-casebook-longtext">{{ item.feedback_correction }}</div>
-              </details>
-            {% endif %}
-            {% if item.feedback_governance %}
-              <div class="casebook-tag-list">
-                <span class="casebook-tag">Destino: {{ item.feedback_governance.destination_label }}</span>
-                <span class="casebook-tag">Escopo: {{ item.feedback_governance.scope_label }}</span>
-                <span class="casebook-tag">Criticidade: {{ item.feedback_governance.criticality_label }}</span>
-                {% if item.feedback_governance.missing %}
-                  <span class="casebook-tag casebook-tag-feedback">Falta: {{ item.feedback_governance.missing|join(', ') }}</span>
-                {% endif %}
-              </div>
-            {% endif %}
-            <form method="post" action="{{ url_for('admin.admin_casebooks_message_feedback', message_id=item.id) }}" class="stack admin-casebook-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="owner_username" value="{{ item.owner_username }}">
-              <input type="hidden" name="conversation_id" value="{{ item.conversation_id }}">
-              <input type="hidden" name="return_to" value="{{ casebooks.return_to }}">
-              <label>
-                Decisão
-                <select name="feedback_status" required>
-                  <option value="approved" {% if item.feedback_status == "approved" %}selected{% endif %}>Aprovar resposta original</option>
-                  <option value="corrected" {% if item.feedback_status == "corrected" %}selected{% endif %}>Guardar correção classificada</option>
-                  <option value="review" {% if item.feedback_status == "review" %}selected{% endif %}>Manter bloqueada para revisão</option>
-                  <option value="ignored" {% if item.feedback_status == "ignored" %}selected{% endif %}>Ignorar: sem aprendizagem</option>
-                </select>
-              </label>
-              <label>
-                Nota
-                <textarea name="feedback_note" rows="2" placeholder="Motivo da decisão, ressalvas ou contexto...">{{ item.feedback_note }}</textarea>
-              </label>
-              <label>
-                Correção / resposta esperada
-                <textarea name="feedback_correction" rows="3" placeholder="Resposta corrigida para memória, eval ou alteração de fonte/regra...">{{ item.feedback_correction }}</textarea>
-              </label>
-              <label>
-                Documento alvo
-                <input type="text" name="feedback_correction_document" value="{{ item.feedback_correction_document }}" placeholder="Opcional se houver um único documento citado">
-              </label>
-              <div class="admin-casebook-grid-fields">
-                <label>
-                  Tipo de problema
-                  <select name="feedback_error_type">
-                    <option value="">Sem tipo / aprovação simples</option>
-                    {% for option in casebooks.feedback_governance_options.error_types %}
-                      <option value="{{ option.value }}" {% if item.feedback_error_type == option.value %}selected{% endif %}>{{ option.label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label>
-                  Escopo
-                  <select name="feedback_scope">
-                    <option value="">Sem escopo</option>
-                    {% for option in casebooks.feedback_governance_options.scopes %}
-                      <option value="{{ option.value }}" {% if item.feedback_scope == option.value %}selected{% endif %}>{{ option.label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label>
-                  Destino
-                  <select name="feedback_destination">
-                    <option value="">Default conservador</option>
-                    {% for option in casebooks.feedback_governance_options.destinations %}
-                      <option value="{{ option.value }}" {% if item.feedback_destination == option.value %}selected{% endif %}>{{ option.label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label>
-                  Criticidade
-                  <select name="feedback_criticality">
-                    <option value="">Default</option>
-                    {% for option in casebooks.feedback_governance_options.criticalities %}
-                      <option value="{{ option.value }}" {% if item.feedback_criticality == option.value %}selected{% endif %}>{{ option.label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-              </div>
-              <button type="submit" class="mini-button">Guardar decisão</button>
-            </form>
-          </article>
+          {{ render_chat_row(item, casebooks) }}
         {% endfor %}
       </div>
+      {% if casebooks.chat_has_more %}
+        <a class="outline-link" href="{{ url_for('admin.admin_casebooks', chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, source_type=casebooks.filters.source_type, q=casebooks.filters.q, limit=casebooks.next_limit) }}">Mostrar mais mensagens</a>
+      {% endif %}
     {% else %}
       <p class="admin-status-note">Nenhuma mensagem do chat corresponde aos filtros atuais.</p>
     {% endif %}
   </section>
 
-  <section class="panel section-panel">
-    <div class="section-head">
+  <section class="panel section-panel admin-casebook-list-panel">
+    <div class="section-head compact-head">
       <div>
         <p class="eyebrow">Casebook</p>
         <h2>Casos operacionais e correlações</h2>
       </div>
+      <span class="ops-pill ops-pill-strong">{{ casebooks.case_rows|length }}/{{ casebooks.case_visible_total }}</span>
     </div>
     {% if casebooks.observation_case_rows or casebooks.governed_case_rows %}
       <div class="admin-casebook-section-block">
-        <div class="section-head compact-head">
+        <div class="admin-casebook-section-title">
           <div>
             <p class="eyebrow">Observação</p>
             <h3>Correlações em observação</h3>
           </div>
+          <span class="admin-casebook-count">{{ casebooks.observation_case_rows|length }} linhas</span>
         </div>
         <p class="admin-status-note">Casos sem decisão final ou marcados como correlação observada. Continuam fora da experiência recomendável até validação explícita.</p>
         {% if casebooks.observation_case_rows %}
-          <div class="admin-bot-case-grid">
+          <div class="admin-casebook-row-list">
             {% for item in casebooks.observation_case_rows %}
-              {{ render_casebook_case(item, casebooks) }}
+              {{ render_casebook_case_row(item, casebooks) }}
             {% endfor %}
           </div>
         {% else %}
@@ -330,17 +452,18 @@
       </div>
 
       <div class="admin-casebook-section-block">
-        <div class="section-head compact-head">
+        <div class="admin-casebook-section-title">
           <div>
             <p class="eyebrow">Governança</p>
             <h3>Experiência e decisões operacionais</h3>
           </div>
+          <span class="admin-casebook-count">{{ casebooks.governed_case_rows|length }} linhas</span>
         </div>
         <p class="admin-status-note">Aqui ficam as referências já validadas e também os contraexemplos ou casos mantidos em revisão para não contaminarem a recomendação automática.</p>
         {% if casebooks.governed_case_rows %}
-          <div class="admin-bot-case-grid">
+          <div class="admin-casebook-row-list">
             {% for item in casebooks.governed_case_rows %}
-              {{ render_casebook_case(item, casebooks) }}
+              {{ render_casebook_case_row(item, casebooks) }}
             {% endfor %}
           </div>
         {% else %}
@@ -349,6 +472,29 @@
       </div>
     {% else %}
       <p class="admin-status-note">Nenhum caso operacional corresponde aos filtros atuais.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel section-panel admin-casebook-list-panel">
+    <div class="section-head compact-head">
+      <div>
+        <p class="eyebrow">Prática importada</p>
+        <h2>Padrões agregados</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ casebooks.practice_rows|length }}/{{ casebooks.practice_visible_total }}</span>
+    </div>
+    <p class="admin-status-note">Experiência prática carregada de ficheiros estruturados. Só padrões validados devem influenciar o apoio operacional.</p>
+    {% if casebooks.practice_rows %}
+      <div class="admin-casebook-row-list">
+        {% for item in casebooks.practice_rows %}
+          {{ render_practice_row(item, casebooks) }}
+        {% endfor %}
+      </div>
+      {% if casebooks.practice_has_more %}
+        <a class="outline-link" href="{{ url_for('admin.admin_casebooks', chat_feedback=casebooks.filters.chat_feedback, case_feedback=casebooks.filters.case_feedback, case_type=casebooks.filters.case_type, source_type=casebooks.filters.source_type, q=casebooks.filters.q, limit=casebooks.next_limit) }}">Mostrar mais prática importada</a>
+      {% endif %}
+    {% else %}
+      <p class="admin-status-note">Nenhum padrão importado corresponde aos filtros atuais.</p>
     {% endif %}
   </section>
 </main>
