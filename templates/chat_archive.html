@@ -215,6 +215,7 @@
   const pendingMissing = document.getElementById("chat-page-pending-missing");
   const pendingConfirm = document.getElementById("chat-page-pending-confirm");
   const pendingCancel = document.getElementById("chat-page-pending-cancel");
+  const sidebarMenus = Array.from(document.querySelectorAll(".chat-archive-page .chat-sidebar-menu"));
   const autocomplete = window.PRAGticoChatCommandAutocomplete
     ? window.PRAGticoChatCommandAutocomplete.attach({
         textarea: chatQuestion,
@@ -222,6 +223,74 @@
         role: "{{ current_role or '' }}",
       })
     : { handleKeydown() { return false; } };
+
+  function closeSidebarMenus(exceptMenu = null) {
+    sidebarMenus.forEach((menu) => {
+      if (menu !== exceptMenu) {
+        menu.open = false;
+        restoreSidebarMenu(menu);
+      }
+    });
+  }
+
+  function restoreSidebarMenu(menu) {
+    const body = menu?._floatingMenuBody || menu?.querySelector(".chat-sidebar-menu-body");
+    if (!body) return;
+    body.classList.remove("chat-sidebar-floating-menu");
+    body.style.removeProperty("--chat-menu-top");
+    body.style.removeProperty("--chat-menu-left");
+    body.style.removeProperty("--chat-menu-width");
+    body.style.removeProperty("--chat-menu-max-height");
+    if (body.parentElement !== menu) menu.appendChild(body);
+  }
+
+  function floatSidebarMenu(menu) {
+    const body = menu?._floatingMenuBody || menu?.querySelector(".chat-sidebar-menu-body");
+    if (!body) return;
+    menu._floatingMenuBody = body;
+    if (body.parentElement !== document.body) document.body.appendChild(body);
+    body.classList.add("chat-sidebar-floating-menu");
+    positionSidebarMenu(menu);
+  }
+
+  function positionSidebarMenu(menu) {
+    const toggle = menu?.querySelector(".chat-sidebar-menu-toggle");
+    const body = menu?._floatingMenuBody || menu?.querySelector(".chat-sidebar-menu-body");
+    if (!menu?.open || !toggle || !body) return;
+    const rect = toggle.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 32);
+    const maxHeight = Math.max(220, window.innerHeight - 32);
+    body.style.setProperty("--chat-menu-width", width + "px");
+    body.style.setProperty("--chat-menu-max-height", maxHeight + "px");
+    const menuHeight = Math.min(body.scrollHeight || 260, maxHeight);
+    let top = rect.bottom + 8;
+    if (top + menuHeight > window.innerHeight - 16) top = rect.top - menuHeight - 8;
+    const left = Math.min(window.innerWidth - width - 16, Math.max(16, rect.right - width));
+    body.style.setProperty("--chat-menu-top", Math.max(16, top) + "px");
+    body.style.setProperty("--chat-menu-left", left + "px");
+  }
+
+  function positionOpenSidebarMenus() {
+    sidebarMenus.forEach(positionSidebarMenu);
+  }
+
+  sidebarMenus.forEach((menu) => {
+    menu.addEventListener("toggle", () => {
+      if (!menu.open) {
+        restoreSidebarMenu(menu);
+        return;
+      }
+      closeSidebarMenus(menu);
+      floatSidebarMenu(menu);
+    });
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".chat-sidebar-menu") && !event.target.closest(".chat-sidebar-floating-menu")) {
+      closeSidebarMenus();
+    }
+  });
+  window.addEventListener("resize", positionOpenSidebarMenus);
+  document.addEventListener("scroll", positionOpenSidebarMenus, true);
 
   function feedbackStatusLabel(status) {
     if (status === "approved") return "Aprovada";

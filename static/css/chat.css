@@ -637,15 +637,28 @@
 }
 
 .chat-archive-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  align-items: start;
   gap: 10px;
+  width: min(390px, 100%);
+  min-width: 0;
+}
+
+.chat-archive-hero-actions .chat-toolbar-menu {
   min-width: 0;
 }
 
 .chat-archive-hero-actions form {
   margin: 0;
+  min-width: 0;
+}
+
+.chat-archive-hero-actions .mini-button {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  white-space: nowrap;
 }
 
 .chat-archive-hero-grid {
@@ -683,12 +696,17 @@
 .chat-archive-page .chat-sidebar-panel,
 .chat-archive-page .chat-main-panel {
   min-width: 0;
-  min-height: min(780px, calc(100vh - 240px));
 }
 
 .chat-archive-page .chat-sidebar-panel {
+  min-height: min(780px, calc(100vh - 240px));
   padding: 24px;
   gap: 16px;
+}
+
+.chat-archive-page .chat-main-panel {
+  align-self: start;
+  min-height: 0;
 }
 
 .chat-archive-page .chat-sidebar-head {
@@ -906,14 +924,14 @@
 }
 
 .chat-archive-page .chat-sidebar-menu[open] {
-  grid-column: 1 / -1;
-  justify-self: stretch;
-  display: grid;
-  justify-items: end;
+  z-index: 30;
 }
 
 .chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-toggle {
   justify-self: end;
+  border-color: rgba(26, 159, 255, 0.34);
+  color: var(--text);
+  background: rgba(26, 159, 255, 0.1);
 }
 
 .chat-toolbar-menu summary,
@@ -942,13 +960,23 @@
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
 }
 
-.chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-body {
-  position: static;
-  width: 100%;
+.chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-body,
+.chat-sidebar-floating-menu {
+  position: fixed !important;
+  top: var(--chat-menu-top, 96px);
+  left: var(--chat-menu-left, 24px);
+  right: auto;
+  z-index: 80;
+  width: var(--chat-menu-width, min(320px, calc(100vw - 32px)));
   min-width: 0;
-  margin-top: 8px;
-  background: rgba(8, 16, 27, 0.38);
-  box-shadow: none;
+  max-height: var(--chat-menu-max-height, calc(100vh - 120px));
+  overflow-y: auto;
+  padding: 12px;
+  border-color: rgba(26, 159, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(12, 23, 38, 0.98);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.36);
 }
 
 .chat-toolbar-menu-link,
@@ -1004,16 +1032,21 @@
 }
 
 .chat-archive-page .chat-sidebar-menu-links,
-.chat-archive-page .chat-sidebar-inline-actions {
+.chat-archive-page .chat-sidebar-inline-actions,
+.chat-sidebar-floating-menu .chat-sidebar-menu-links,
+.chat-sidebar-floating-menu .chat-sidebar-inline-actions {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.chat-archive-page .chat-sidebar-inline-actions {
+.chat-archive-page .chat-sidebar-inline-actions,
+.chat-sidebar-floating-menu .chat-sidebar-inline-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .chat-archive-page .chat-sidebar-menu-link,
-.chat-archive-page .chat-sidebar-inline-actions .mini-button {
+.chat-archive-page .chat-sidebar-inline-actions .mini-button,
+.chat-sidebar-floating-menu .chat-sidebar-menu-link,
+.chat-sidebar-floating-menu .chat-sidebar-inline-actions .mini-button {
   justify-content: center;
   width: 100%;
 }
@@ -1042,8 +1075,8 @@
 }
 
 .chat-archive-page .chat-page-log {
-  min-height: clamp(440px, 60vh, 780px);
-  max-height: none;
+  min-height: clamp(220px, 26vh, 320px);
+  max-height: clamp(260px, 30vh, 380px);
 }
 
 .chat-page-input {
@@ -1059,6 +1092,10 @@
   width: 100%;
   min-height: 116px;
   resize: vertical;
+}
+
+.chat-archive-page .chat-page-input textarea {
+  min-height: 92px;
 }
 
 .chat-page-toolbar {
@@ -1095,7 +1132,8 @@
   }
 
   .chat-archive-page .chat-page-log {
-    min-height: 430px;
+    min-height: 280px;
+    max-height: 360px;
   }
 
   .chat-sidebar-head,
@@ -1133,6 +1171,8 @@
 
   .chat-archive-hero-actions {
     justify-content: stretch;
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .chat-archive-hero-actions .mini-button,
@@ -1148,6 +1188,13 @@
   .chat-archive-page .chat-sidebar-inline-actions,
   .chat-sidebar-inline-form {
     grid-template-columns: 1fr;
+  }
+
+  .chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-body,
+  .chat-sidebar-floating-menu {
+    left: 16px;
+    right: 16px;
+    width: auto;
   }
 }
 

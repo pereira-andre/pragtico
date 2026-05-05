@@ -53,13 +53,17 @@ def test_chat_archive_has_refined_workspace_and_sidebar_shell() -> None:
     assert "chat-sidebar-search-field" in html
     assert "Nova conversa" in html
     assert "Lista de conversas" in html
+    assert "positionSidebarMenu" in html
 
 
-def test_chat_archive_css_keeps_sidebar_list_wide_and_unclipped() -> None:
+def test_chat_archive_css_keeps_sidebar_list_wide_and_menu_floating() -> None:
     css = Path("static/css/chat.css").read_text(encoding="utf-8")
 
     assert ".chat-archive-page .chat-sidebar-card" in css
     assert "grid-template-columns: minmax(0, 1fr) auto;" in css
     assert "height: clamp(430px, 58vh, 760px);" in css
     assert ".chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-body" in css
-    assert "position: static;" in css
+    assert "position: fixed;" in css
+    assert "min-height: clamp(220px, 26vh, 320px);" in css
+    assert "min-height: 92px;" in css
+    assert "grid-template-columns: repeat(2, minmax(150px, 1fr));" in css
