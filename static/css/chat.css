@@ -617,8 +617,9 @@
 }
 
 .chat-archive-page {
+  --chat-archive-panel-height: clamp(600px, 72vh, 760px);
   grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
 }
 
 .chat-archive-hero {
@@ -695,18 +696,19 @@
 
 .chat-archive-page .chat-sidebar-panel,
 .chat-archive-page .chat-main-panel {
+  height: var(--chat-archive-panel-height);
   min-width: 0;
+  min-height: 0;
 }
 
 .chat-archive-page .chat-sidebar-panel {
-  min-height: min(780px, calc(100vh - 240px));
   padding: 24px;
   gap: 16px;
 }
 
 .chat-archive-page .chat-main-panel {
-  align-self: start;
-  min-height: 0;
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .chat-archive-page .chat-sidebar-head {
@@ -730,6 +732,7 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
     rgba(8, 16, 27, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
 }
 
 .chat-sidebar-list-head {
@@ -752,10 +755,12 @@
 
 .chat-archive-page .chat-sidebar-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
-  height: clamp(430px, 58vh, 760px);
+  height: auto;
   max-height: none;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 2px 8px 2px 2px;
@@ -1075,8 +1080,9 @@
 }
 
 .chat-archive-page .chat-page-log {
-  min-height: clamp(220px, 26vh, 320px);
-  max-height: clamp(260px, 30vh, 380px);
+  height: auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .chat-page-input {
@@ -1124,11 +1130,13 @@
 
   .chat-archive-page .chat-sidebar-panel,
   .chat-archive-page .chat-main-panel {
+    height: auto;
     min-height: 0;
   }
 
   .chat-archive-page .chat-sidebar-list {
     height: clamp(300px, 46vh, 480px);
+    flex: none;
   }
 
   .chat-archive-page .chat-page-log {
