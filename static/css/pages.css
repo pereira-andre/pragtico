@@ -4542,6 +4542,11 @@ button:hover {
   max-width: 72ch;
 }
 
+.admin-bot-v2 .panel h2,
+.admin-bot-v2 .panel h3 {
+  letter-spacing: 0;
+}
+
 .admin-bot-v2 .admin-status-hero-tools {
   justify-content: flex-end;
 }
@@ -4570,7 +4575,7 @@ button:hover {
 }
 .admin-bot-page-nav {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
   gap: 10px;
   padding: 10px;
   border-radius: 20px;
@@ -4666,9 +4671,12 @@ button:hover {
 /* Monitor */
 .admin-bot-control-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+}
+.admin-bot-control-grid > .section-panel {
+  height: 100%;
 }
 .admin-bot-monitor,
 .admin-bot-process {
@@ -4677,12 +4685,12 @@ button:hover {
 }
 .admin-bot-monitor-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.95fr);
   gap: 14px;
 }
 .admin-bot-runtime-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 .admin-bot-runtime-card,
@@ -4698,7 +4706,7 @@ button:hover {
 .admin-bot-runtime-card {
   display: grid;
   gap: 7px;
-  min-height: 118px;
+  min-height: 106px;
   padding: 14px;
   align-content: start;
 }
@@ -4870,7 +4878,7 @@ button:hover {
 }
 .admin-bot-playground-form textarea {
   width: 100%;
-  min-height: 160px;
+  min-height: 132px;
   resize: vertical;
   font-family: inherit;
 }
@@ -4981,7 +4989,7 @@ button:hover {
 
 .admin-bot-v2 .admin-status-layout {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
 }
 
 .admin-bot-v2 .admin-status-layout > *,
@@ -4994,6 +5002,23 @@ button:hover {
 .admin-bot-v2 #toolbox,
 .admin-bot-v2 .admin-bot-legacy-casebooks {
   grid-column: 1 / -1;
+}
+
+.admin-bot-v2 #feedback-governance,
+.admin-bot-v2 #exceptions,
+.admin-bot-v2 #quality {
+  display: grid;
+  align-content: start;
+}
+
+.admin-bot-v2 #quality .section-head {
+  align-items: flex-start;
+}
+
+.admin-bot-v2 #quality .inline-link-row {
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* Signals grid */
@@ -5257,9 +5282,40 @@ button:hover {
   display: grid;
   gap: 18px;
 }
+.admin-bot-settings-form {
+  display: grid;
+  gap: 14px;
+}
+.admin-bot-settings-block,
+.admin-bot-data-section {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.018);
+}
+.admin-bot-block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.admin-bot-block-head h3 {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+.admin-bot-block-head .small-note {
+  max-width: 260px;
+  text-align: right;
+}
 .admin-bot-toggle-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .admin-bot-toggle {
@@ -5285,7 +5341,7 @@ button:hover {
 }
 .admin-bot-setting-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .admin-bot-setting-grid label {
@@ -5303,6 +5359,33 @@ button:hover {
 .admin-bot-reset-form {
   display: flex;
   justify-content: flex-end;
+}
+.admin-bot-data-section .admin-bot-data-actions {
+  margin-top: 0;
+}
+.admin-bot-data-box {
+  display: grid;
+  gap: 14px;
+  align-content: space-between;
+}
+.admin-bot-import-form {
+  gap: 10px;
+}
+.admin-bot-import-form-with-mode {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.35fr) auto;
+}
+.admin-bot-import-form input[type="file"] {
+  min-height: 42px;
+  padding: 9px;
+}
+.admin-bot-import-form input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(88, 189, 218, 0.18);
+  color: var(--text-strong);
+  font-weight: 800;
 }
 .admin-bot-settings-history {
   list-style: none;
@@ -5579,6 +5662,7 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  margin: 14px 0 16px;
 }
 .admin-bot-feedback-card {
   display: grid;
@@ -5633,6 +5717,26 @@ button:hover {
   padding: 0;
   margin: 0;
 }
+.admin-bot-v2 .documents-collapse-summary h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  letter-spacing: 0;
+}
+.admin-bot-v2 .documents-collapse-summary .muted {
+  display: block;
+  margin-top: 4px;
+}
+.admin-bot-v2 .admin-bot-legacy-summary h2 {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  letter-spacing: 0;
+}
 .admin-bot-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -5678,10 +5782,18 @@ button:hover {
   line-height: 1.5;
 }
 .admin-bot-governance-list {
-  margin-top: 12px;
+  margin-top: 0;
 }
 .admin-bot-governance-list .outline-link {
   justify-self: start;
+  margin-top: 4px;
+}
+.admin-bot-governance-collapse[open] .documents-collapse-body {
+  max-height: 460px;
+  overflow: auto;
+  padding-right: 6px;
+}
+.admin-bot-coverage-sheet {
   margin-top: 4px;
 }
 
@@ -5689,6 +5801,18 @@ button:hover {
   .admin-bot-pipeline-diagram,
   .admin-bot-feedback-grid {
     grid-template-columns: 1fr;
+  }
+  .admin-bot-toggle-grid,
+  .admin-bot-setting-grid,
+  .admin-bot-import-form-with-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-bot-block-head {
+    display: grid;
+  }
+  .admin-bot-block-head .small-note {
+    max-width: none;
+    text-align: left;
   }
   .admin-bot-map-group-head {
     flex-direction: column;

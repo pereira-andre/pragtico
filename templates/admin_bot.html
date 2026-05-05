@@ -55,6 +55,7 @@
     <a href="#sources">Fontes</a>
     <a href="#quality">Qualidade</a>
     <a href="#toolbox">Definições</a>
+    <a href="#casebooks">Governança detalhada</a>
   </nav>
 
   {# ── Zona 2 · Monitor e processo ───────────────────────────────── #}
@@ -66,7 +67,7 @@
         <h2>Como o bot está a operar agora</h2>
         <p class="admin-bot-section-copy">Resumo de execução em tempo real: disponibilidade das fontes, qualidade dos testes, sinais de feedback e pendências que podem afetar respostas.</p>
       </div>
-      <span class="muted small-note">Atualização automática a cada 20 s</span>
+      <span class="muted small-note">Auto · 20 s</span>
     </div>
 
     <div class="admin-bot-monitor-grid">
@@ -116,7 +117,7 @@
         <h2>Experimentar uma pergunta</h2>
         <p class="admin-bot-section-copy">Usa o pipeline real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom e raciocínio antes de mexer nas definições.</p>
       </div>
-      <span class="muted small-note">Não persiste histórico.</span>
+      <span class="muted small-note">Sem histórico.</span>
     </div>
     <form id="bot-playground-form" class="admin-bot-playground-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -444,20 +445,30 @@
         </ul>
       {% endif %}
       {% if feedback_governance.rows %}
-        <ul class="admin-bot-feedback-list admin-bot-governance-list">
-          {% for row in feedback_governance.rows %}
-            <li>
-              <span class="admin-bot-feedback-source">{{ row.state_label }}</span>
-              <strong>{{ row.question or 'Sem pergunta identificada' }}</strong>
-              <p>{{ row.answer }}</p>
-              <small>
-                {{ row.destination_label }} · {{ row.scope_label }} · {{ row.criticality_label }}
-                {% if row.missing %} · falta {{ row.missing }}{% endif %}
-              </small>
-              <a class="outline-link" href="{{ row.action_url }}">Classificar</a>
-            </li>
-          {% endfor %}
-        </ul>
+        <details class="documents-collapse-card admin-bot-collapse admin-bot-governance-collapse">
+          <summary class="documents-collapse-summary">
+            <div>
+              <h3>Casos que faltam classificar</h3>
+              <span class="muted">{{ feedback_governance.rows|length }} item(ns) com ação manual disponível</span>
+            </div>
+          </summary>
+          <div class="documents-collapse-body">
+            <ul class="admin-bot-feedback-list admin-bot-governance-list">
+              {% for row in feedback_governance.rows %}
+                <li>
+                  <span class="admin-bot-feedback-source">{{ row.state_label }}</span>
+                  <strong>{{ row.question or 'Sem pergunta identificada' }}</strong>
+                  <p>{{ row.answer }}</p>
+                  <small>
+                    {{ row.destination_label }} · {{ row.scope_label }} · {{ row.criticality_label }}
+                    {% if row.missing %} · falta {{ row.missing }}{% endif %}
+                  </small>
+                  <a class="outline-link" href="{{ row.action_url }}">Classificar</a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </details>
       {% else %}
         <p class="admin-status-note">Sem feedback pendente para calibração.</p>
       {% endif %}
@@ -784,60 +795,78 @@
       </div>
       <form method="post" action="{{ url_for('admin.admin_bot_settings') }}" class="admin-bot-settings-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="admin-bot-toggle-grid">
-          <label class="admin-bot-toggle">
-            <input type="checkbox" name="auto_promote_corrections" {% if settings.auto_promote_corrections %}checked{% endif %}>
-            <span>
-              <strong>Auto-promover correções</strong>
-              <small class="muted">Correções do admin viram eval cases automaticamente, sem re-validação.</small>
-            </span>
-          </label>
-          <label class="admin-bot-toggle">
-            <input type="checkbox" name="auto_trust_positive_feedback" {% if settings.auto_trust_positive_feedback %}checked{% endif %}>
-            <span>
-              <strong>Confiar no feedback positivo</strong>
-              <small class="muted">Thumbs-up do utilizador passam a guiar respostas futuras sem aprovação extra.</small>
-            </span>
-          </label>
-          <label class="admin-bot-toggle">
-            <input type="checkbox" name="require_admin_validation" {% if settings.require_admin_validation %}checked{% endif %}>
-            <span>
-              <strong>Exigir validação admin</strong>
-              <small class="muted">Modo antigo: cada mensagem e manobra tem de passar pelo admin.</small>
-            </span>
-          </label>
+        <div class="admin-bot-settings-block">
+          <div class="admin-bot-block-head">
+            <div>
+              <p class="eyebrow">Comportamento</p>
+              <h3>Como o bot usa sinais aprovados</h3>
+            </div>
+            <span class="muted small-note">Alterações com impacto em respostas futuras.</span>
+          </div>
+          <div class="admin-bot-toggle-grid">
+            <label class="admin-bot-toggle">
+              <input type="checkbox" name="auto_promote_corrections" {% if settings.auto_promote_corrections %}checked{% endif %}>
+              <span>
+                <strong>Auto-promover correções</strong>
+                <small class="muted">Correções do admin passam a casos de teste sem nova validação.</small>
+              </span>
+            </label>
+            <label class="admin-bot-toggle">
+              <input type="checkbox" name="auto_trust_positive_feedback" {% if settings.auto_trust_positive_feedback %}checked{% endif %}>
+              <span>
+                <strong>Confiar no feedback positivo</strong>
+                <small class="muted">Feedback positivo pode orientar respostas futuras sem aprovação extra.</small>
+              </span>
+            </label>
+            <label class="admin-bot-toggle">
+              <input type="checkbox" name="require_admin_validation" {% if settings.require_admin_validation %}checked{% endif %}>
+              <span>
+                <strong>Exigir validação admin</strong>
+                <small class="muted">Cada mensagem e manobra fica dependente de validação manual.</small>
+              </span>
+            </label>
+          </div>
         </div>
-        <div class="admin-bot-setting-grid">
-          <label>
-            Janela dos sinais (horas)
-            <input type="number" name="signals_window_hours" value="{{ settings.signals_window_hours }}" min="24" max="720">
-            <small class="muted">Default: {{ settings_defaults.signals_window_hours }}. Controla tendências e alertas recentes.</small>
-          </label>
-          <label>
-            Similaridade de guard (review)
-            <input type="number" step="0.01" min="0.5" max="1" name="review_guard_similarity" value="{{ settings.review_guard_similarity }}">
-            <small class="muted">Default: {{ settings_defaults.review_guard_similarity }}. Acima disto uma revisão parecida bloqueia reutilização cega.</small>
-          </label>
-          <label>
-            Similaridade de bloqueio
-            <input type="number" step="0.01" min="0.5" max="1" name="review_block_similarity" value="{{ settings.review_block_similarity }}">
-            <small class="muted">Default: {{ settings_defaults.review_block_similarity }}. Bloqueio rígido para respostas quase iguais.</small>
-          </label>
-          <label>
-            Similaridade de correção
-            <input type="number" step="0.01" min="0.5" max="1" name="review_correction_similarity" value="{{ settings.review_correction_similarity }}">
-            <small class="muted">Default: {{ settings_defaults.review_correction_similarity }}. Usa correção do operador quando a pergunta bate forte.</small>
-          </label>
-          <label>
-            Hint de documento confiável
-            <input type="number" step="0.01" min="0.5" max="1" name="trusted_document_hint_similarity" value="{{ settings.trusted_document_hint_similarity }}">
-            <small class="muted">Default: {{ settings_defaults.trusted_document_hint_similarity }}. Ajuda a resolver o documento certo por feedback.</small>
-          </label>
-          <label>
-            Outlier de manobra
-            <input type="number" step="0.01" min="0.5" max="1" name="outlier_review_threshold" value="{{ settings.outlier_review_threshold }}">
-            <small class="muted">Default: {{ settings_defaults.outlier_review_threshold }}. Define quando casos operacionais pedem revisão.</small>
-          </label>
+        <div class="admin-bot-settings-block">
+          <div class="admin-bot-block-head">
+            <div>
+              <p class="eyebrow">Limiares de decisão</p>
+              <h3>Similaridade, bloqueios e revisão</h3>
+            </div>
+            <span class="muted small-note">Valores altos tornam a reutilização mais conservadora.</span>
+          </div>
+          <div class="admin-bot-setting-grid">
+            <label>
+              Janela dos sinais (horas)
+              <input type="number" name="signals_window_hours" value="{{ settings.signals_window_hours }}" min="24" max="720">
+              <small class="muted">Default: {{ settings_defaults.signals_window_hours }}. Controla tendências e alertas recentes.</small>
+            </label>
+            <label>
+              Guard de revisão
+              <input type="number" step="0.01" min="0.5" max="1" name="review_guard_similarity" value="{{ settings.review_guard_similarity }}">
+              <small class="muted">Default: {{ settings_defaults.review_guard_similarity }}. Semelhança que pede cautela antes de reutilizar.</small>
+            </label>
+            <label>
+              Bloqueio de resposta
+              <input type="number" step="0.01" min="0.5" max="1" name="review_block_similarity" value="{{ settings.review_block_similarity }}">
+              <small class="muted">Default: {{ settings_defaults.review_block_similarity }}. Semelhança que bloqueia respostas quase iguais.</small>
+            </label>
+            <label>
+              Correção reutilizável
+              <input type="number" step="0.01" min="0.5" max="1" name="review_correction_similarity" value="{{ settings.review_correction_similarity }}">
+              <small class="muted">Default: {{ settings_defaults.review_correction_similarity }}. Semelhança necessária para usar correção validada.</small>
+            </label>
+            <label>
+              Documento confiável
+              <input type="number" step="0.01" min="0.5" max="1" name="trusted_document_hint_similarity" value="{{ settings.trusted_document_hint_similarity }}">
+              <small class="muted">Default: {{ settings_defaults.trusted_document_hint_similarity }}. Ajuda a resolver o documento certo por feedback.</small>
+            </label>
+            <label>
+              Outlier de manobra
+              <input type="number" step="0.01" min="0.5" max="1" name="outlier_review_threshold" value="{{ settings.outlier_review_threshold }}">
+              <small class="muted">Default: {{ settings_defaults.outlier_review_threshold }}. Define quando um caso operacional pede revisão.</small>
+            </label>
+          </div>
         </div>
         <div class="admin-bot-toolbox-actions">
           <button type="submit" class="mini-button">Guardar definições</button>
@@ -848,42 +877,51 @@
         <button type="submit" class="mini-button secondary-button">Repor defaults</button>
       </form>
 
-      <div class="admin-bot-data-actions">
-        <article class="admin-status-surface admin-bot-data-box">
-          <div class="admin-status-surface-head">
-            <strong>Base do bot</strong>
-            <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar bot</a>
+      <div class="admin-bot-data-section">
+        <div class="admin-bot-block-head">
+          <div>
+            <p class="eyebrow">Dados</p>
+            <h3>Importação e exportação</h3>
           </div>
-          <form method="post" action="{{ url_for('admin.import_bot_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>
-              Importar bot
-              <input type="file" name="bot_database_file" accept=".json,application/json">
-            </label>
-            <button type="submit" class="mini-button">Importar</button>
-          </form>
-        </article>
-        <article class="admin-status-surface admin-bot-data-box">
-          <div class="admin-status-surface-head">
-            <strong>Base do sistema</strong>
-            <a class="outline-link" href="{{ url_for('admin.export_system_database') }}">Exportar sistema</a>
-          </div>
-          <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>
-              Importar sistema
-              <input type="file" name="system_database_file" accept=".json,application/json">
-            </label>
-            <label>
-              Modo
-              <select name="import_mode">
-                <option value="merge" selected>Juntar / atualizar</option>
-                <option value="replace">Substituir tudo</option>
-              </select>
-            </label>
-            <button type="submit" class="mini-button">Importar</button>
-          </form>
-        </article>
+          <span class="muted small-note">Operações manuais para cópias controladas.</span>
+        </div>
+        <div class="admin-bot-data-actions">
+          <article class="admin-status-surface admin-bot-data-box">
+            <div class="admin-status-surface-head">
+              <strong>Base do bot</strong>
+              <a class="outline-link" href="{{ url_for('admin.export_bot_database') }}">Exportar bot</a>
+            </div>
+            <form method="post" action="{{ url_for('admin.import_bot_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label>
+                Importar bot
+                <input type="file" name="bot_database_file" accept=".json,application/json">
+              </label>
+              <button type="submit" class="mini-button">Importar</button>
+            </form>
+          </article>
+          <article class="admin-status-surface admin-bot-data-box">
+            <div class="admin-status-surface-head">
+              <strong>Base do sistema</strong>
+              <a class="outline-link" href="{{ url_for('admin.export_system_database') }}">Exportar sistema</a>
+            </div>
+            <form method="post" action="{{ url_for('admin.import_system_database') }}" enctype="multipart/form-data" class="admin-sheet-form admin-bot-import-form admin-bot-import-form-with-mode">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label>
+                Importar sistema
+                <input type="file" name="system_database_file" accept=".json,application/json">
+              </label>
+              <label>
+                Modo
+                <select name="import_mode">
+                  <option value="merge" selected>Juntar / atualizar</option>
+                  <option value="replace">Substituir tudo</option>
+                </select>
+              </label>
+              <button type="submit" class="mini-button">Importar</button>
+            </form>
+          </article>
+        </div>
       </div>
     </section>
 
