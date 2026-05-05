@@ -9,6 +9,8 @@ def test_admin_navigation_labels_bot_entry() -> None:
 
     assert 'href="{{ url_for(\'admin.admin_bot\') }}">Bot</a>' in base
     assert 'href="{{ url_for(\'admin.admin_bot\') }}">Admin</a>' not in base
+    assert '<option value="{{ url_for(\'admin.admin_casebooks\') }}">Casebooks</option>' in base
+    assert '<option value="{{ url_for(\'admin.admin_bot\') }}">Bot</option>' not in base
 
 
 def test_admin_bot_page_uses_clean_control_layout() -> None:
