@@ -7471,6 +7471,17 @@ button:hover {
   }
 }
 
+.admin-backups-v2 {
+  gap: 18px;
+}
+
+.admin-backups-v2 .admin-backups-hero,
+.admin-audit-v2 .admin-audit-hero {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.1), transparent 28%),
+    linear-gradient(135deg, rgba(15, 43, 69, 0.98), rgba(13, 28, 45, 0.98));
+}
+
 .admin-backups-page .admin-backup-include-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7484,6 +7495,41 @@ button:hover {
   gap: 14px;
 }
 
+.admin-backup-action-panel,
+.admin-backup-auto-panel,
+.admin-backup-history-panel,
+.admin-backup-restore-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.06), transparent 28%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(17, 30, 47, 0.96));
+}
+
+.admin-backup-action-form {
+  align-content: start;
+  justify-items: start;
+}
+
+.admin-backup-primary-button,
+.admin-backup-form-button,
+.admin-backup-wipe-button {
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  justify-self: start;
+  padding: 0 18px;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+.admin-backup-form-button {
+  justify-self: end;
+  min-width: 168px;
+}
+
+.admin-backup-wipe-button {
+  min-width: 236px;
+}
+
 .admin-backup-action-form .checkbox-row,
 .admin-backup-wipe-form .checkbox-row {
   display: flex;
@@ -7494,7 +7540,7 @@ button:hover {
 }
 
 .admin-backup-restore-form {
-  grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.5fr) auto;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px) auto;
   align-items: end;
 }
 
@@ -7512,6 +7558,13 @@ button:hover {
 
 .admin-backup-wipe-form {
   margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.admin-backup-wipe-form .checkbox-row,
+.admin-backup-wipe-form .admin-backup-wipe-button {
+  grid-column: 1 / -1;
 }
 
 .admin-backup-wipe-form > label:not(.checkbox-row) {
@@ -7538,15 +7591,41 @@ button:hover {
   overflow-wrap: anywhere;
 }
 
+.admin-backup-table-wrap {
+  border-radius: 18px;
+  border-color: rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.46);
+}
+
+.admin-backup-table {
+  min-width: 900px;
+}
+
+.admin-backup-table th,
+.admin-backup-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
 .admin-backup-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .admin-backup-actions form {
   margin: 0;
+}
+
+.admin-backup-actions .mini-button,
+.admin-backup-actions .danger-button {
+  width: auto;
+  min-width: 94px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
 }
 
 .admin-audit-actions,
@@ -7555,6 +7634,24 @@ button:hover {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-audit-filter-panel,
+.admin-audit-log-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.06), transparent 28%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(17, 30, 47, 0.96));
+}
+
+.admin-audit-actions .mini-button,
+.admin-audit-filter-buttons .mini-button,
+.admin-audit-filter-buttons button {
+  width: auto;
+  min-width: 96px;
+  min-height: 42px;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 12px;
 }
 
 .admin-audit-filter-form {
@@ -7577,7 +7674,8 @@ button:hover {
 
 .admin-audit-console {
   display: grid;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid rgba(139, 163, 190, 0.2);
   border-radius: 16px;
   background: rgba(3, 12, 24, 0.48);
@@ -7587,9 +7685,10 @@ button:hover {
 .admin-audit-console-head,
 .admin-audit-log-row {
   display: grid;
-  grid-template-columns: 156px 108px 86px minmax(150px, 0.55fr) minmax(0, 2.45fr);
+  grid-template-columns: 132px 112px 92px minmax(150px, 210px) minmax(420px, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 1020px;
 }
 
 .admin-audit-console-head {
@@ -7605,7 +7704,7 @@ button:hover {
 
 .admin-audit-log-row {
   min-height: 38px;
-  padding: 5px 14px;
+  padding: 6px 14px;
   border-bottom: 1px solid rgba(139, 163, 190, 0.1);
   color: var(--text);
   font-size: 0.78rem;
@@ -7620,12 +7719,20 @@ button:hover {
   background: rgba(56, 189, 248, 0.055);
 }
 
-.admin-audit-log-time,
-.admin-audit-log-event {
+.admin-audit-log-time {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.admin-audit-log-event {
+  display: grid;
+  grid-template-columns: minmax(112px, 150px) minmax(130px, 210px) minmax(80px, 160px) minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .admin-audit-log-time {
@@ -7654,22 +7761,23 @@ button:hover {
 }
 
 .admin-audit-log-request {
-  flex: 0 0 auto;
-  max-width: 160px;
+  max-width: none;
 }
 
 .admin-audit-log-event strong {
-  flex: 0 0 auto;
-  max-width: 220px;
+  max-width: none;
 }
 
-.admin-audit-log-event span:not(.admin-audit-log-request) {
-  flex: 0 1 auto;
-  max-width: 210px;
+.admin-audit-log-resource {
+  max-width: none;
+}
+
+.admin-audit-log-detail {
+  grid-column: 4;
 }
 
 .admin-audit-log-event code {
-  flex: 1 1 auto;
+  max-width: none;
 }
 
 .admin-audit-log-time strong,
@@ -7738,6 +7846,7 @@ button:hover {
 @media (max-width: 720px) {
   .admin-backups-page .admin-backup-include-grid,
   .admin-backup-restore-form,
+  .admin-backup-wipe-form,
   .admin-audit-filter-form {
     grid-template-columns: 1fr;
   }
@@ -7747,6 +7856,14 @@ button:hover {
     flex-wrap: wrap;
   }
 
+  .admin-backup-primary-button,
+  .admin-backup-form-button,
+  .admin-backup-wipe-button {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
   .admin-audit-console-head {
     display: none;
   }
@@ -7754,13 +7871,18 @@ button:hover {
   .admin-audit-log-row {
     grid-template-columns: 1fr;
     gap: 8px;
+    min-width: 0;
     padding: 12px;
   }
 
   .admin-audit-log-event {
+    grid-template-columns: 1fr;
     align-items: flex-start;
-    flex-direction: column;
     gap: 3px;
+  }
+
+  .admin-audit-log-detail {
+    grid-column: auto;
   }
 
   .admin-audit-log-pill,

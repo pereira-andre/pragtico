@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell admin-status-page admin-audit-page">
+<main class="ops-shell admin-status-page admin-audit-page admin-audit-v2">
   <section class="hero-card admin-status-hero admin-audit-hero">
     <div class="hero-topline">
       <div>
@@ -24,7 +24,7 @@
     </div>
   </section>
 
-  <section class="panel section-panel">
+  <section class="panel section-panel admin-audit-filter-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Filtros</p>
@@ -89,7 +89,7 @@
     <p class="admin-status-note">Diretoria: {{ audit.audit_dir }}. O wipe da base não apaga estes ficheiros.</p>
   </section>
 
-  <section class="panel section-panel">
+  <section class="panel section-panel admin-audit-log-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Eventos</p>
@@ -119,10 +119,10 @@
               <span class="admin-audit-log-request">{{ item.method }} {{ item.path }}</span>
               <strong>{{ item.action }}</strong>
               {% if item.resource or item.resource_id %}
-                <span>{{ item.resource }} {{ item.resource_id }}</span>
+                <span class="admin-audit-log-resource">{{ item.resource }} {{ item.resource_id }}</span>
               {% endif %}
               {% if item.details_preview and item.details_preview != '{}' %}
-                <code>{{ item.details_preview }}</code>
+                <code class="admin-audit-log-detail">{{ item.details_preview }}</code>
               {% endif %}
             </div>
           </article>

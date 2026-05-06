@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell admin-status-page admin-backups-page">
+<main class="ops-shell admin-status-page admin-backups-page admin-backups-v2">
   <section class="hero-card admin-status-hero admin-backups-hero">
     <div class="hero-topline">
       <div>
@@ -57,7 +57,7 @@
   </section>
 
   <div class="admin-status-layout">
-    <section class="panel section-panel">
+    <section class="panel section-panel admin-backup-action-panel">
       <div class="section-head">
         <div>
           <p class="eyebrow">Criar agora</p>
@@ -68,11 +68,11 @@
       <form method="post" action="{{ url_for('admin.create_system_backup') }}" class="admin-backup-action-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p class="admin-status-note">O pacote fica guardado no histórico e pode ser descarregado manualmente pelo admin.</p>
-        <button type="submit">Criar backup completo</button>
+        <button type="submit" class="admin-backup-primary-button">Criar backup completo</button>
       </form>
     </section>
 
-    <section class="panel section-panel">
+    <section class="panel section-panel admin-backup-auto-panel">
       <div class="section-head">
         <div>
           <p class="eyebrow">Automático</p>
@@ -102,7 +102,7 @@
     </section>
   </div>
 
-  <section class="panel section-panel">
+  <section class="panel section-panel admin-backup-history-panel">
     <div class="section-head">
       <div>
         <p class="eyebrow">Histórico</p>
@@ -111,7 +111,7 @@
       <span class="admin-status-badge is-neutral">{{ backup.storage_label }}</span>
     </div>
     {% if backup.records %}
-      <div class="planned-table-wrap">
+      <div class="planned-table-wrap admin-backup-table-wrap">
         <table class="planned-table admin-backup-table">
           <thead>
             <tr>
@@ -173,7 +173,7 @@
         </select>
       </label>
       <input type="hidden" name="return_to" value="{{ url_for('admin.admin_backups') }}">
-      <button type="submit" class="danger-button">Importar backup</button>
+      <button type="submit" class="danger-button admin-backup-form-button">Importar backup</button>
     </form>
     <p class="admin-status-note is-danger">Antes de usar “Substituir”, cria um backup do estado atual e confirma que o ficheiro contém pelo menos um admin.</p>
   </section>
@@ -215,7 +215,7 @@
         <input type="checkbox" name="understand_wipe" value="1" required>
         Compreendo que esta limpeza apaga os dados aplicacionais e preserva apenas o admin atual.
       </label>
-      <button type="submit" class="danger-button">Criar backup e limpar base</button>
+      <button type="submit" class="danger-button admin-backup-wipe-button">Criar backup e limpar base</button>
     </form>
   </section>
 </main>
