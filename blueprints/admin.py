@@ -352,10 +352,39 @@ def _resolved_whatsapp_opt_in_at(existing_user: dict | None, whatsapp_number: st
 
 def _admin_users_payload() -> list[dict]:
     service = getattr(services, "whatsapp_service", None)
-    return [
+    role_order = {"admin": 0, "piloto": 1, "agente": 2}
+    users = [
         build_user_whatsapp_view(user, service, services.store)
         for user in services.store.list_users()
     ]
+    return sorted(
+        users,
+        key=lambda item: (
+            role_order.get((item.get("role") or "").strip().lower(), 9),
+            (item.get("organization") or "").strip().lower(),
+            (item.get("full_name") or item.get("username") or "").strip().lower(),
+        ),
+    )
+
+
+def _admin_users_summary(users: list[dict]) -> dict:
+    def profile_complete(user: dict) -> bool:
+        return bool(user.get("full_name") and user.get("organization") and user.get("email") and user.get("phone"))
+
+    complete_total = sum(1 for user in users if profile_complete(user))
+    whatsapp_total = sum(1 for user in users if user.get("whatsapp_number") and user.get("whatsapp_opt_in"))
+    whatsapp_ok_total = sum(1 for user in users if user.get("whatsapp_status_ok"))
+    role_counts = Counter((user.get("role") or "operacional").strip().lower() for user in users)
+    return {
+        "total": len(users),
+        "complete_total": complete_total,
+        "incomplete_total": max(len(users) - complete_total, 0),
+        "whatsapp_total": whatsapp_total,
+        "whatsapp_ok_total": whatsapp_ok_total,
+        "admin_total": role_counts.get("admin", 0),
+        "pilot_total": role_counts.get("piloto", 0),
+        "agent_total": role_counts.get("agente", 0),
+    }
 
 
 def _manual_knowledge_authoring_enabled() -> bool:
@@ -3071,7 +3100,81 @@ def admin_casebooks_maneuver_feedback(maneuver_id: str):
 @role_required("admin")
 def admin_users():
     """Página de gestão de utilizadores do sistema."""
-    return render_template("admin_users.html", users=_admin_users_payload(), title="Utilizadores")
+    users = _admin_users_payload()
+    return render_template(
+        "admin_users.html",
+        users=users,
+        users_summary=_admin_users_summary(users),
+        title="Utilizadores",
+    )
+
+
+@bp.route("/admin/users/create", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_create_user():
+    """Criar um utilizador diretamente pela gestão admin."""
+    try:
+        username = validate_email(request.form.get("email", ""))
+        password = validate_password(request.form.get("password", ""))
+        role = validate_role(request.form.get("role", "piloto"))
+        full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
+        organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
+        phone = validate_phone(request.form.get("phone", ""))
+        whatsapp_number = validate_whatsapp_phone(request.form.get("whatsapp_number", ""), required=False)
+        whatsapp_opt_in = request.form.get("whatsapp_opt_in", "") == "1"
+        if whatsapp_opt_in and not whatsapp_number:
+            raise ValueError("Se ativares WhatsApp, tens de indicar o respetivo número.")
+        if role == "admin" and any(
+            (user.get("role") or "").strip().lower() == "admin"
+            for user in services.store.list_users()
+        ):
+            raise ValueError("Já existe um administrador no sistema. Só pode haver 1 admin.")
+        created_user = services.store.create_user(
+            username=username,
+            password=password,
+            role=role,
+            full_name=full_name,
+            organization=organization,
+            email=username,
+            phone=phone,
+            whatsapp_number=whatsapp_number,
+            whatsapp_opt_in=whatsapp_opt_in,
+            whatsapp_opt_in_at=_resolved_whatsapp_opt_in_at(None, whatsapp_number, whatsapp_opt_in),
+        )
+        write_audit_event(
+            "user.create",
+            category="utilizadores",
+            severity="critical" if role == "admin" else "warning",
+            result="success",
+            resource="app_user",
+            resource_id=created_user.get("username", username),
+            details={"role": role, "whatsapp_opt_in": whatsapp_opt_in},
+        )
+        flash(f"Utilizador {created_user.get('username', username)} criado.", "success")
+    except ValueError as exc:
+        write_audit_event(
+            "user.create",
+            category="utilizadores",
+            severity="warning",
+            result="failed",
+            resource="app_user",
+            resource_id=(request.form.get("email") or "").strip().lower(),
+            details={"error": str(exc)},
+        )
+        flash(flash_error_message(str(exc)), "error")
+    except Exception:
+        logger.exception("Falha inesperada ao criar utilizador.")
+        write_audit_event(
+            "user.create",
+            category="utilizadores",
+            severity="warning",
+            result="failed",
+            resource="app_user",
+            resource_id=(request.form.get("email") or "").strip().lower(),
+        )
+        flash("Falha inesperada ao criar o utilizador.", "error")
+    return redirect(url_for("admin.admin_users"))
 
 
 @bp.route("/admin/users/<username>", methods=["POST"])

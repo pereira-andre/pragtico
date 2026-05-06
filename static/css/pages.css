@@ -4335,7 +4335,383 @@
   max-width: 560px;
 }
 
+.profile-page,
+.admin-users-v2 {
+  gap: 18px;
+}
+
+.profile-hero,
+.admin-users-hero {
+  display: grid;
+  gap: 22px;
+  padding: 36px 38px;
+}
+
+.profile-hero h1,
+.admin-users-hero h1 {
+  max-width: none;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+}
+
+.profile-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.profile-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.34fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.profile-form-shell,
+.profile-side-panel,
+.admin-user-create-panel,
+.admin-users-table-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(17, 30, 47, 0.96));
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-form-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 160, 195, 0.13);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+    rgba(8, 19, 32, 0.42);
+}
+
+.profile-form-card .auth-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-form-card label,
+.admin-user-create-grid label,
+.admin-user-filter-bar label,
+.admin-user-menu-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.profile-form-card input,
+.profile-form-card select,
+.admin-user-create-grid input,
+.admin-user-create-grid select,
+.admin-user-filter-bar input,
+.admin-user-filter-bar select,
+.admin-user-menu-grid input,
+.admin-user-menu-grid select {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.profile-form-card input[readonly] {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.profile-consent-state,
+.profile-account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-side-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-account-list article {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.profile-account-list span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-account-list strong {
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.profile-save-button {
+  justify-self: end;
+}
+
+.admin-users-v2 .admin-users-head {
+  align-items: flex-start;
+  border-bottom-color: rgba(130, 160, 195, 0.12);
+}
+
+.admin-user-create-panel {
+  padding: 0;
+}
+
+.admin-user-create-summary {
+  padding: 22px 24px;
+  cursor: pointer;
+}
+
+.admin-user-create-form {
+  display: grid;
+  gap: 14px;
+  padding: 0 24px 24px;
+}
+
+.admin-user-create-grid,
+.admin-user-filter-bar {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-user-create-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-user-filter-bar {
+  grid-template-columns: minmax(260px, 1.25fr) repeat(3, minmax(150px, 0.55fr));
+  align-items: end;
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-user-create-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-user-create-foot .admin-status-note {
+  max-width: 720px;
+  margin: 0;
+}
+
+.admin-user-console {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid rgba(130, 160, 195, 0.13);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(7, 16, 29, 0.74), rgba(7, 16, 29, 0.56)),
+    rgba(8, 19, 32, 0.58);
+}
+
+.admin-user-console-head,
+.admin-user-console-row {
+  display: grid;
+  grid-template-columns: minmax(250px, 1.1fr) minmax(185px, 0.72fr) minmax(170px, 0.68fr) minmax(210px, 0.82fr) minmax(215px, 0.86fr) 62px;
+  min-width: 1040px;
+}
+
+.admin-user-console-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid rgba(130, 160, 195, 0.16);
+  background:
+    linear-gradient(180deg, rgba(35, 50, 70, 0.98), rgba(31, 45, 63, 0.96));
+}
+
+.admin-user-console-head span {
+  padding: 11px 14px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.admin-user-console-body {
+  display: grid;
+}
+
+.admin-user-console-row {
+  align-items: center;
+  min-height: 72px;
+  border-bottom: 1px solid rgba(130, 160, 195, 0.1);
+}
+
+.admin-user-console-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-user-console-row:hover {
+  background:
+    linear-gradient(90deg, rgba(26, 159, 255, 0.08), transparent 72%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.admin-user-console-row > div {
+  min-width: 0;
+  padding: 10px 14px;
+}
+
+.admin-user-console-user,
+.admin-user-console-text {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-user-console-user strong,
+.admin-user-console-text strong {
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.admin-user-console-user span,
+.admin-user-console-text span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-console-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-user-console-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-user-row-menu[open] {
+  z-index: 60;
+}
+
+.admin-user-row-menu .chat-sidebar-menu-toggle {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(130, 160, 195, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-user-row-menu[open] .chat-sidebar-menu-toggle {
+  border-color: rgba(26, 159, 255, 0.36);
+  background: rgba(26, 159, 255, 0.12);
+}
+
+.admin-user-menu-body {
+  width: min(640px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 120px));
+  overflow-y: auto;
+  padding: 14px;
+  border-color: rgba(26, 159, 255, 0.18);
+}
+
+.admin-user-form,
+.admin-user-menu-grid,
+.admin-user-whatsapp-check {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-user-menu-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.admin-user-menu-head h3 {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-menu-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-user-whatsapp-check {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-user-whatsapp-check p,
+.admin-user-whatsapp-check .admin-whatsapp-meta {
+  margin: 0;
+}
+
+.admin-user-delete-button {
+  width: 100%;
+}
+
 @media (max-width: 780px) {
+  .profile-workspace,
+  .profile-form-grid,
+  .profile-form-card .auth-form-grid,
+  .admin-user-create-grid,
+  .admin-user-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-hero,
+  .admin-users-hero {
+    padding: 24px;
+  }
+
+  .profile-save-button {
+    justify-self: stretch;
+  }
+
+  .admin-user-create-summary,
+  .admin-user-create-form {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .admin-user-console-head,
+  .admin-user-console-row {
+    grid-template-columns: minmax(220px, 1fr) minmax(170px, 0.7fr) minmax(160px, 0.65fr) minmax(190px, 0.75fr) minmax(190px, 0.8fr) 58px;
+    min-width: 930px;
+  }
+
+  .admin-user-menu-body {
+    width: min(560px, calc(100vw - 32px));
+  }
+
+  .admin-user-menu-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-users-topbar {
     align-items: stretch;
   }

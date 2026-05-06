@@ -1,76 +1,148 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="auth-layout">
-  <section class="hero-card compact">
-    <p class="eyebrow">Perfil operacional</p>
-    <h1>Completa a tua ficha de contacto.</h1>
-    <p class="lead">
-      O teu nome, agência ou entidade, email e telefone ficam associados às manobras e aprovações que registares.
-    </p>
+{% set profile_email = profile.email or profile.username or current_user %}
+{% set profile_ok = profile.full_name and profile.organization and profile_email and profile.phone %}
+{% set whatsapp_ready = profile.whatsapp_number and profile.whatsapp_opt_in %}
+<main class="ops-shell profile-page">
+  <section class="hero-card admin-status-hero profile-hero">
+    <div class="hero-topline">
+      <div>
+        <p class="eyebrow">Perfil operacional</p>
+        <h1>A tua ficha de contacto</h1>
+        <p class="lead">Dados usados nas escalas, aprovações, validações e contactos operacionais.</p>
+      </div>
+      <span class="admin-status-badge is-{{ 'online' if profile_ok else 'degraded' }}">
+        {{ 'Ficha completa' if profile_ok else 'Ficha por concluir' }}
+      </span>
+    </div>
+    <div class="profile-status-grid">
+      <article class="hero-stat">
+        <span>Papel</span>
+        <strong>{{ (current_role or profile.role or 'operacional')|capitalize }}</strong>
+        <small>permissões da sessão</small>
+      </article>
+      <article class="hero-stat">
+        <span>Entidade</span>
+        <strong>{{ profile.organization or '--' }}</strong>
+        <small>associada aos registos</small>
+      </article>
+      <article class="hero-stat">
+        <span>Telefone</span>
+        <strong>{{ profile.phone or '--' }}</strong>
+        <small>contacto operacional</small>
+      </article>
+      <article class="hero-stat">
+        <span>WhatsApp</span>
+        <strong>{{ 'Ativo' if whatsapp_ready else 'Opcional' }}</strong>
+        <small>{{ profile.whatsapp_number or 'sem número configurado' }}</small>
+      </article>
+    </div>
   </section>
 
-  <section class="panel auth-panel">
-    <h2>{{ (current_role or profile.role or 'operacional')|capitalize }}</h2>
-    <form method="post" class="stack auth-form-pro">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="profile-workspace">
+    <form method="post" class="panel section-panel profile-form-shell">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-      <section class="auth-form-section">
-        <div class="auth-form-head">
-          <h3>Identificação</h3>
-          <p>Usada como assinatura operacional em aprovações e registos.</p>
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">Ficha</p>
+          <h2>Identificação e contacto</h2>
         </div>
-        <div class="auth-form-grid">
-          <label>
-            Nome completo
-            <input type="text" name="full_name" value="{{ profile.full_name or '' }}" required>
-          </label>
-          <label>
-            Entidade / agência
-            <input type="text" name="organization" value="{{ profile.organization or '' }}" required>
-          </label>
-          <label>
-            Email
-            <input type="email" name="email" value="{{ profile.email or profile.username or '' }}" readonly>
-          </label>
-          <label>
-            Telefone
-            <input type="text" name="phone" value="{{ profile.phone or '' }}" required>
-          </label>
-        </div>
-      </section>
-      <section class="auth-form-section">
-        <div class="auth-form-head">
-          <h3>WhatsApp</h3>
-          <p>Opcional. O consentimento fica guardado para uso operacional e verificação admin.</p>
-        </div>
-        <div class="auth-form-grid">
-          <label>
-            Número WhatsApp
-            <input type="text" name="whatsapp_number" value="{{ profile.whatsapp_number or '' }}" placeholder="3519xxxxxxxx">
-          </label>
-          <label class="checkbox-field">
-            <span>Consentimento</span>
-            <span class="checkbox-inline">
-              <input type="checkbox" name="whatsapp_opt_in" value="1" {% if profile.whatsapp_opt_in %}checked{% endif %}>
-              <small>Autorizo o envio de mensagens operacionais por WhatsApp.</small>
+        <button type="submit" class="mini-button profile-save-button">Guardar perfil</button>
+      </div>
+
+      <div class="profile-form-grid">
+        <section class="profile-form-card">
+          <div class="auth-form-head">
+            <h3>Identificação</h3>
+            <p>Assinatura operacional usada no portal e no histórico.</p>
+          </div>
+          <div class="auth-form-grid">
+            <label>
+              Nome completo
+              <input type="text" name="full_name" value="{{ profile.full_name or '' }}" required>
+            </label>
+            <label>
+              Entidade / agência
+              <input type="text" name="organization" value="{{ profile.organization or '' }}" required>
+            </label>
+            <label>
+              Email
+              <input type="email" name="email" value="{{ profile_email }}" readonly>
+            </label>
+            <label>
+              Telefone
+              <input type="text" name="phone" value="{{ profile.phone or '' }}" required>
+            </label>
+          </div>
+        </section>
+
+        <section class="profile-form-card">
+          <div class="auth-form-head">
+            <h3>WhatsApp</h3>
+            <p>Canal opcional para mensagens operacionais quando existir consentimento.</p>
+          </div>
+          <div class="auth-form-grid">
+            <label>
+              Número WhatsApp
+              <input type="text" name="whatsapp_number" value="{{ profile.whatsapp_number or '' }}" placeholder="3519xxxxxxxx">
+            </label>
+            <label class="checkbox-field">
+              <span>Consentimento</span>
+              <span class="checkbox-inline">
+                <input type="checkbox" name="whatsapp_opt_in" value="1" {% if profile.whatsapp_opt_in %}checked{% endif %}>
+                <small>Autorizo mensagens operacionais por WhatsApp.</small>
+              </span>
+            </label>
+          </div>
+          <div class="profile-consent-state">
+            <span class="admin-status-badge is-{{ 'online' if whatsapp_ready else 'neutral' }}">
+              {{ 'Consentimento ativo' if whatsapp_ready else 'Sem canal ativo' }}
             </span>
-          </label>
-        </div>
-        {% if profile.whatsapp_opt_in_at %}
-          <p class="form-note">Consentimento registado em {{ profile.whatsapp_opt_in_at }}.</p>
-        {% endif %}
-      </section>
-      <button type="submit">Guardar perfil</button>
+            {% if profile.whatsapp_opt_in_at %}
+              <p class="form-note">Consentimento registado em {{ profile.whatsapp_opt_in_at }}.</p>
+            {% else %}
+              <p class="form-note">O canal só fica operacional quando o número e o consentimento estiverem preenchidos.</p>
+            {% endif %}
+          </div>
+        </section>
+      </div>
     </form>
-    <p class="muted auth-note">Se saíres desta página sem concluir, a sessão é terminada e o acesso volta ao login.</p>
+
+    <aside class="panel section-panel profile-side-panel">
+      <div>
+        <p class="eyebrow">Conta</p>
+        <h2>Estado da sessão</h2>
+      </div>
+      <div class="profile-account-list">
+        <article>
+          <span>Email de acesso</span>
+          <strong>{{ profile_email }}</strong>
+        </article>
+        <article>
+          <span>Perfil</span>
+          <strong>{{ (current_role or profile.role or 'operacional')|capitalize }}</strong>
+        </article>
+        <article>
+          <span>Ficha obrigatória</span>
+          <strong>{{ 'Completa' if profile_ok else 'Por concluir' }}</strong>
+        </article>
+      </div>
+      {% if not profile_ok %}
+        <p class="admin-status-note is-danger">Conclui nome, entidade, email e telefone antes de sair desta página.</p>
+      {% else %}
+        <p class="admin-status-note">Mantém estes dados atualizados para o histórico operacional ficar claro.</p>
+      {% endif %}
+    </aside>
   </section>
 </main>
+{% if not profile_ok %}
 <script>
   (() => {
     let skipAutoLogout = false;
-    const form = document.querySelector('form');
+    const form = document.querySelector("form");
     if (form) {
-      form.addEventListener('submit', () => {
+      form.addEventListener("submit", () => {
         skipAutoLogout = true;
       });
     }
@@ -79,12 +151,13 @@
       try {
         navigator.sendBeacon('{{ url_for("auth.logout_beacon") }}');
       } catch (error) {
-        fetch('{{ url_for("auth.logout_beacon") }}', { method: 'POST', keepalive: true }).catch(() => {});
+        fetch('{{ url_for("auth.logout_beacon") }}', { method: "POST", keepalive: true }).catch(() => {});
       }
     };
-    window.addEventListener('pagehide', sendLogout);
-    window.addEventListener('beforeunload', sendLogout);
-    window.addEventListener('popstate', sendLogout);
+    window.addEventListener("pagehide", sendLogout);
+    window.addEventListener("beforeunload", sendLogout);
+    window.addEventListener("popstate", sendLogout);
   })();
 </script>
+{% endif %}
 {% endblock %}

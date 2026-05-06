@@ -1,332 +1,435 @@
 {% extends "base.html" %}
+{% macro role_label(role) -%}
+  {{ {'admin': 'Admin', 'agente': 'Agente', 'piloto': 'Piloto'}.get(role, role|capitalize) }}
+{%- endmacro %}
 {% block content %}
-<main class="dashboard">
-  <aside class="sidebar panel">
-    <div>
-      <p class="eyebrow">Admin</p>
-      <h1>Utilizadores</h1>
-      <p class="muted">Editar perfis locais, papéis e contactos operacionais.</p>
-    </div>
-    <div class="stack tight">
+<main class="ops-shell admin-users-page admin-users-v2">
+  <section class="hero-card admin-status-hero admin-users-hero">
+    <div class="hero-topline">
       <div>
-        <p class="mini-label">Total</p>
-        <strong>{{ users|length }}</strong>
+        <p class="eyebrow">Administração</p>
+        <h1>Gestão de utilizadores</h1>
+        <p class="lead">Acessos, permissões, contactos e estado operacional das contas do portal.</p>
       </div>
-      <div>
-        <p class="mini-label">Perfis</p>
-        <strong>admin · agente · piloto</strong>
-      </div>
+      <span class="admin-status-badge is-{{ 'online' if users_summary.incomplete_total == 0 else 'degraded' }}">
+        {{ 'Tudo completo' if users_summary.incomplete_total == 0 else users_summary.incomplete_total ~ ' por completar' }}
+      </span>
     </div>
-    <a class="secondary-link" href="{{ url_for('dashboard_bp.dashboard') }}">Voltar ao portal</a>
-    <a class="secondary-link" href="{{ url_for('admin.admin_status') }}">Estado admin</a>
-  </aside>
+    <div class="profile-status-grid">
+      <article class="hero-stat">
+        <span>Contas</span>
+        <strong>{{ users_summary.total }}</strong>
+        <small>{{ users_summary.complete_total }} completas</small>
+      </article>
+      <article class="hero-stat">
+        <span>Admin</span>
+        <strong>{{ users_summary.admin_total }}</strong>
+        <small>gestão crítica</small>
+      </article>
+      <article class="hero-stat">
+        <span>Pilotos</span>
+        <strong>{{ users_summary.pilot_total }}</strong>
+        <small>validação e execução</small>
+      </article>
+      <article class="hero-stat">
+        <span>Agentes</span>
+        <strong>{{ users_summary.agent_total }}</strong>
+        <small>pedido e planeamento</small>
+      </article>
+      <article class="hero-stat">
+        <span>WhatsApp</span>
+        <strong>{{ users_summary.whatsapp_total }}</strong>
+        <small>{{ users_summary.whatsapp_ok_total }} verificados</small>
+      </article>
+    </div>
+  </section>
 
-  <section class="main-column">
-    <section class="panel section-panel admin-users-panel">
-      <div class="admin-users-topbar">
-        <div class="admin-users-kpis">
-          <span class="admin-users-kpi">{{ users|length }} contas</span>
-          <span class="admin-users-kpi">Gestão local</span>
-        </div>
+  <details class="panel section-panel admin-user-create-panel">
+    <summary class="documents-collapse-summary admin-user-create-summary">
+      <div>
+        <p class="eyebrow">Nova conta</p>
+        <h2>Criar utilizador</h2>
       </div>
-
-      <div class="section-head admin-users-head">
-        <div>
-          <p class="eyebrow">Perfis</p>
-          <h2>Gestão de utilizadores</h2>
-          <p class="muted admin-users-intro">Administra acessos, corrige perfis e controla a operação sem edições acidentais.</p>
-        </div>
-        <div class="admin-users-tools">
-          <label class="admin-search-field">
-            <span class="mini-label">Buscar utilizador</span>
-            <input id="user-search" type="search" placeholder="Email, nome, agência, telefone...">
-          </label>
-        </div>
+      <span class="ops-pill ops-pill-strong">Admin</span>
+    </summary>
+    <form method="post" action="{{ url_for('admin.admin_create_user') }}" class="admin-user-create-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="admin-user-create-grid">
+        <label>
+          Papel
+          <select name="role" required>
+            <option value="piloto">Piloto</option>
+            <option value="agente">Agente</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" placeholder="utilizador@porto.pt" required>
+        </label>
+        <label>
+          Password inicial
+          <input type="password" name="password" required>
+        </label>
+        <label>
+          Nome completo
+          <input type="text" name="full_name" required>
+        </label>
+        <label>
+          Entidade / agência
+          <input type="text" name="organization" required>
+        </label>
+        <label>
+          Telefone
+          <input type="text" name="phone" required>
+        </label>
+        <label>
+          WhatsApp
+          <input type="text" name="whatsapp_number" placeholder="3519xxxxxxxx">
+        </label>
+        <label class="admin-checkbox-field">
+          Consentimento WhatsApp
+          <span class="checkbox-inline">
+            <input type="checkbox" name="whatsapp_opt_in" value="1">
+            <small>Ativar canal operacional para esta conta.</small>
+          </span>
+        </label>
       </div>
+      <div class="admin-user-create-foot">
+        <p class="admin-status-note">Só deve existir uma conta admin principal. As restantes contas devem ficar como piloto ou agente.</p>
+        <button type="submit" class="mini-button">Criar utilizador</button>
+      </div>
+    </form>
+  </details>
 
-      <div class="admin-user-list" id="admin-user-list">
+  <section class="panel section-panel admin-users-table-panel">
+    <div class="section-head compact-head admin-users-head">
+      <div>
+        <p class="eyebrow">Contas</p>
+        <h2>Lista operacional</h2>
+      </div>
+      <span class="ops-pill ops-pill-strong">{{ users|length }} registos</span>
+    </div>
+
+    <div class="admin-user-filter-bar">
+      <label class="admin-search-field">
+        <span class="mini-label">Pesquisa</span>
+        <input id="user-search" type="search" placeholder="Email, nome, agência, telefone...">
+      </label>
+      <label>
+        Papel
+        <select id="user-role-filter">
+          <option value="all">Todos</option>
+          <option value="admin">Admin</option>
+          <option value="piloto">Piloto</option>
+          <option value="agente">Agente</option>
+        </select>
+      </label>
+      <label>
+        Ficha
+        <select id="user-profile-filter">
+          <option value="all">Todas</option>
+          <option value="complete">Completa</option>
+          <option value="incomplete">Incompleta</option>
+        </select>
+      </label>
+      <label>
+        WhatsApp
+        <select id="user-whatsapp-filter">
+          <option value="all">Todos</option>
+          <option value="active">Ativo</option>
+          <option value="pending">Por validar</option>
+          <option value="none">Sem canal</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="admin-user-console" id="admin-user-list" role="table" aria-label="Lista de utilizadores">
+      <div class="admin-user-console-head" role="row">
+        <span>Utilizador</span>
+        <span>Papel</span>
+        <span>Entidade</span>
+        <span>Contacto</span>
+        <span>WhatsApp</span>
+        <span>Ações</span>
+      </div>
+      <div class="admin-user-console-body">
         {% for user in users %}
           {% set profile_ok = user.full_name and user.organization and user.email and user.phone %}
           {% set has_whatsapp = user.whatsapp_number %}
+          {% set whatsapp_active = has_whatsapp and user.whatsapp_opt_in %}
+          {% set whatsapp_filter = 'active' if whatsapp_active and user.whatsapp_status_ok else 'pending' if whatsapp_active else 'none' %}
           {% set search_text = (user.username ~ ' ' ~ (user.full_name or '') ~ ' ' ~ (user.organization or '') ~ ' ' ~ (user.phone or '') ~ ' ' ~ (user.role or '') ~ ' ' ~ (user.whatsapp_number or '') ~ ' ' ~ (user.whatsapp_status or ''))|lower %}
-          <article class="admin-user-card admin-user-edit-card" data-user-card data-search="{{ search_text }}">
-            <form method="post" action="{{ url_for('admin.admin_update_user', username=user.username) }}" class="admin-user-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <div class="admin-user-form-head">
-                <div>
-                  <p class="mini-label">Email de acesso</p>
-                  <h3>{{ user.username }}</h3>
+          <article
+            class="admin-user-console-row"
+            role="row"
+            data-user-card
+            data-search="{{ search_text }}"
+            data-role="{{ user.role }}"
+            data-profile="{{ 'complete' if profile_ok else 'incomplete' }}"
+            data-whatsapp="{{ whatsapp_filter }}"
+          >
+            <div class="admin-user-console-user" role="cell">
+              <strong>{{ user.full_name or user.username }}</strong>
+              <span>{{ user.username }}</span>
+            </div>
+            <div class="admin-user-console-pills" role="cell">
+              <span class="doc-badge">{{ role_label(user.role) }}</span>
+              <span class="doc-badge {{ 'doc-badge-ok' if profile_ok else 'doc-badge-warn' }}" data-profile-badge>
+                {{ 'Completa' if profile_ok else 'Incompleta' }}
+              </span>
+            </div>
+            <div class="admin-user-console-text" role="cell">
+              <strong>{{ user.organization or '--' }}</strong>
+              <span>{{ 'Conta principal' if user.role == 'admin' else 'Conta operacional' }}</span>
+            </div>
+            <div class="admin-user-console-text" role="cell">
+              <strong>{{ user.phone or '--' }}</strong>
+              <span>{{ user.email or user.username }}</span>
+            </div>
+            <div class="admin-user-console-pills" role="cell">
+              <span class="doc-badge {{ 'doc-badge-ok' if user.whatsapp_local_allowed else 'doc-badge-warn' if has_whatsapp else '' }}" data-whatsapp-local-badge>
+                {% if has_whatsapp %}
+                  {{ 'Local OK' if user.whatsapp_local_allowed else 'Bloqueado' }}
+                {% else %}
+                  Sem número
+                {% endif %}
+              </span>
+              <span class="doc-badge {{ 'doc-badge-ok' if user.whatsapp_status_ok else 'doc-badge-warn' if whatsapp_active else '' }}" data-whatsapp-result-badge>
+                {{ (user.whatsapp_status or 'unknown')|replace('_', ' ')|title }}
+              </span>
+            </div>
+            <div class="admin-user-console-actions" role="cell">
+              <details class="chat-sidebar-menu admin-user-row-menu">
+                <summary class="chat-sidebar-menu-toggle" aria-label="Opções de {{ user.username }}">⋯</summary>
+                <div class="chat-sidebar-menu-body admin-user-menu-body">
+                  <form method="post" action="{{ url_for('admin.admin_update_user', username=user.username) }}" class="admin-user-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="admin-user-menu-head">
+                      <div>
+                        <p class="eyebrow">Editar</p>
+                        <h3>{{ user.username }}</h3>
+                      </div>
+                      <span class="doc-badge">{{ role_label(user.role) }}</span>
+                    </div>
+                    <div class="admin-user-menu-grid">
+                      <label>
+                        Email de acesso
+                        <input type="email" name="login_email" value="{{ user.username }}" placeholder="utilizador@porto.pt" required>
+                      </label>
+                      <label>
+                        Papel
+                        <select name="role" required>
+                          <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
+                          <option value="agente" {% if user.role == "agente" %}selected{% endif %}>Agente</option>
+                          <option value="piloto" {% if user.role == "piloto" %}selected{% endif %}>Piloto</option>
+                        </select>
+                      </label>
+                      <label>
+                        Nome completo
+                        <input type="text" name="full_name" value="{{ user.full_name or '' }}" required>
+                      </label>
+                      <label>
+                        Entidade / agência
+                        <input type="text" name="organization" value="{{ user.organization or '' }}" required>
+                      </label>
+                      <label>
+                        Telefone
+                        <input type="text" name="phone" value="{{ user.phone or '' }}" required>
+                      </label>
+                      <label>
+                        WhatsApp
+                        <input type="text" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" placeholder="3519xxxxxxxx">
+                      </label>
+                      <label>
+                        Nova password
+                        <input type="password" name="new_password" value="" placeholder="Opcional">
+                      </label>
+                      <label class="admin-checkbox-field">
+                        Consentimento WhatsApp
+                        <span class="checkbox-inline">
+                          <input type="checkbox" name="whatsapp_opt_in" value="1" {% if user.whatsapp_opt_in %}checked{% endif %}>
+                          <small>{% if user.whatsapp_opt_in_at %}Opt-in {{ user.whatsapp_opt_in_at }}{% else %}Ativar canal operacional{% endif %}</small>
+                        </span>
+                      </label>
+                    </div>
+                    <section class="admin-user-whatsapp-check" data-whatsapp-status>
+                      <div>
+                        <span class="mini-label">WhatsApp</span>
+                        <strong data-whatsapp-summary>{{ user.whatsapp_status_summary }}</strong>
+                      </div>
+                      <p class="muted" data-whatsapp-details>{{ user.whatsapp_status_details or 'Sem detalhe adicional.' }}</p>
+                      <div class="admin-whatsapp-meta">
+                        <span data-whatsapp-local>
+                          {% if has_whatsapp %}
+                            {{ 'Lista local: permitida' if user.whatsapp_local_allowed else 'Lista local: bloqueada' }}
+                          {% else %}
+                            Sem número configurado
+                          {% endif %}
+                        </span>
+                        <span data-whatsapp-checked>Último check: {{ user.whatsapp_status_checked_at_label }}</span>
+                      </div>
+                      <code class="admin-whatsapp-message-id {% if not user.whatsapp_status_message_id %}hidden{% endif %}" data-whatsapp-message-id>
+                        {% if user.whatsapp_status_message_id %}Message ID: {{ user.whatsapp_status_message_id }}{% endif %}
+                      </code>
+                      <button type="button" class="mini-button secondary-button" data-whatsapp-check data-check-url="{{ url_for('admin.admin_check_user_whatsapp', username=user.username) }}">
+                        Testar WhatsApp
+                      </button>
+                    </section>
+                    <button type="submit" class="mini-button">Guardar alterações</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.admin_delete_user', username=user.username) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button
+                      type="submit"
+                      class="mini-button danger-button admin-user-delete-button"
+                      onclick="return confirm('Apagar o utilizador {{ user.username }}? Esta ação remove também o histórico de conversas dessa conta.')"
+                    >
+                      Apagar utilizador
+                    </button>
+                  </form>
                 </div>
-                <div class="admin-user-badges">
-                  <span class="doc-badge">{{ user.role }}</span>
-                  <span class="doc-badge {{ 'doc-badge-ok' if profile_ok else 'doc-badge-warn' }}">
-                    {{ 'Perfil completo' if profile_ok else 'Perfil incompleto' }}
-                  </span>
-                  <span class="doc-badge {{ 'doc-badge-ok' if user.whatsapp_local_allowed else 'doc-badge-warn' if has_whatsapp else '' }}" data-whatsapp-local-badge>
-                    {% if has_whatsapp %}
-                      {{ 'WhatsApp local OK' if user.whatsapp_local_allowed else 'WhatsApp local bloqueado' }}
-                    {% else %}
-                      Sem WhatsApp
-                    {% endif %}
-                  </span>
-                  <span class="doc-badge {{ 'doc-badge-ok' if user.whatsapp_status_ok else 'doc-badge-warn' if has_whatsapp else '' }}" data-whatsapp-result-badge>
-                    {{ (user.whatsapp_status or 'unknown')|replace('_', ' ')|title }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="admin-user-lockbar">
-                <button type="button" class="admin-edit-toggle" data-edit-toggle aria-pressed="false">
-                  <span class="admin-edit-toggle-icon" aria-hidden="true">+</span>
-                  <span data-edit-toggle-label>Editar utilizador</span>
-                </button>
-                <span class="admin-edit-state is-locked" data-edit-status>Edição bloqueada</span>
-              </div>
-
-              <div class="admin-user-grid">
-                <label>
-                  Email de acesso
-                  <input type="email" name="login_email" value="{{ user.username }}" placeholder="utilizador@porto.pt" disabled data-lockable>
-                </label>
-                <label>
-                  Nome completo
-                  <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Nome do utilizador" disabled data-lockable>
-                </label>
-                <label>
-                  Entidade / agência
-                  <input type="text" name="organization" value="{{ user.organization or '' }}" placeholder="Organização" disabled data-lockable>
-                </label>
-                <label>
-                  Telefone
-                  <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="Contacto" disabled data-lockable>
-                </label>
-                <label>
-                  WhatsApp
-                  <input type="text" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" placeholder="3519xxxxxxxx" disabled data-lockable>
-                </label>
-                <label class="admin-checkbox-field">
-                  Consentimento WhatsApp
-                  <span class="checkbox-inline">
-                    <input type="checkbox" name="whatsapp_opt_in" value="1" {% if user.whatsapp_opt_in %}checked{% endif %} disabled data-lockable>
-                    <small>{% if user.whatsapp_opt_in_at %}Opt-in registado em {{ user.whatsapp_opt_in_at }}{% else %}Ativar envio e verificação remota{% endif %}</small>
-                  </span>
-                </label>
-                <label>
-                  Nova password
-                  <input type="password" name="new_password" value="" placeholder="Opcional: redefine a password" disabled data-lockable>
-                </label>
-                <label>
-                  Papel
-                  <select name="role" required disabled data-lockable>
-                    <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
-                    <option value="agente" {% if user.role == "agente" %}selected{% endif %}>Agente</option>
-                    <option value="piloto" {% if user.role == "piloto" %}selected{% endif %}>Piloto</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="admin-whatsapp-status" data-whatsapp-status>
-                <div class="admin-whatsapp-status-head">
-                  <div>
-                    <p class="mini-label">Diagnóstico WhatsApp</p>
-                    <strong data-whatsapp-summary>{{ user.whatsapp_status_summary }}</strong>
-                  </div>
-                  <button type="button" class="mini-button secondary-button" data-whatsapp-check data-check-url="{{ url_for('admin.admin_check_user_whatsapp', username=user.username) }}">
-                    Verificar Meta
-                  </button>
-                </div>
-                <p class="muted" data-whatsapp-details>
-                  {{ user.whatsapp_status_details or 'Sem detalhe adicional.' }}
-                </p>
-                <div class="admin-whatsapp-meta">
-                  <span data-whatsapp-local>
-                    {% if has_whatsapp %}
-                      {{ 'Whitelist local do backend: permitida' if user.whatsapp_local_allowed else 'Whitelist local do backend: bloqueada' }}
-                    {% else %}
-                      Sem número WhatsApp configurado
-                    {% endif %}
-                  </span>
-                  <span data-whatsapp-checked>Último check: {{ user.whatsapp_status_checked_at_label }}</span>
-                </div>
-                <p class="muted admin-whatsapp-note">A verificação remota envia um template real via Meta. Usa apenas com consentimento ativo.</p>
-                <code class="admin-whatsapp-message-id {% if not user.whatsapp_status_message_id %}hidden{% endif %}" data-whatsapp-message-id>
-                  {% if user.whatsapp_status_message_id %}Message ID: {{ user.whatsapp_status_message_id }}{% endif %}
-                </code>
-              </div>
-
-              <div class="admin-user-form-foot">
-                <p class="muted">O email de login fica associado à conta e é usado como identificador principal.</p>
-                <div class="admin-user-actions">
-                  <button type="submit" class="mini-button" disabled data-lockable>Guardar utilizador</button>
-                  <button
-                    type="submit"
-                    class="mini-button danger-button"
-                    formaction="{{ url_for('admin.admin_delete_user', username=user.username) }}"
-                    formmethod="post"
-                    onclick="return confirm('Apagar o utilizador {{ user.username }}? Esta ação remove também o histórico de conversas dessa conta.')"
-                  >
-                    Apagar
-                  </button>
-                </div>
-              </div>
-            </form>
+              </details>
+            </div>
           </article>
         {% endfor %}
       </div>
-      <p id="admin-user-empty" class="muted hidden">Nenhum utilizador corresponde à pesquisa.</p>
-    </section>
+    </div>
+    <p id="admin-user-empty" class="admin-status-note hidden">Nenhum utilizador corresponde aos filtros ativos.</p>
   </section>
 </main>
 
 <script>
   const searchField = document.getElementById("user-search");
+  const roleFilter = document.getElementById("user-role-filter");
+  const profileFilter = document.getElementById("user-profile-filter");
+  const whatsappFilter = document.getElementById("user-whatsapp-filter");
   const emptyState = document.getElementById("admin-user-empty");
   const userCards = Array.from(document.querySelectorAll("[data-user-card]"));
 
   function filterUsers() {
     const query = (searchField?.value || "").trim().toLowerCase();
+    const role = roleFilter?.value || "all";
+    const profile = profileFilter?.value || "all";
+    const whatsapp = whatsappFilter?.value || "all";
     let visible = 0;
     userCards.forEach((card) => {
-      const haystack = card.dataset.search || "";
-      const match = !query || haystack.includes(query);
+      const matchQuery = !query || (card.dataset.search || "").includes(query);
+      const matchRole = role === "all" || card.dataset.role === role;
+      const matchProfile = profile === "all" || card.dataset.profile === profile;
+      const matchWhatsApp = whatsapp === "all" || card.dataset.whatsapp === whatsapp;
+      const match = matchQuery && matchRole && matchProfile && matchWhatsApp;
       card.classList.toggle("hidden", !match);
       if (match) visible += 1;
     });
-    emptyState.classList.toggle("hidden", visible !== 0);
+    emptyState?.classList.toggle("hidden", visible !== 0);
   }
 
-  if (searchField) {
-    searchField.addEventListener("input", filterUsers);
+  [searchField, roleFilter, profileFilter, whatsappFilter].forEach((field) => {
+    if (field) field.addEventListener("input", filterUsers);
+    if (field) field.addEventListener("change", filterUsers);
+  });
+
+  function updateWhatsAppStatus(row, user, fallbackResult) {
+    const statusPanel = row.querySelector("[data-whatsapp-status]");
+    if (!statusPanel) return;
+
+    const summary = statusPanel.querySelector("[data-whatsapp-summary]");
+    const details = statusPanel.querySelector("[data-whatsapp-details]");
+    const checked = statusPanel.querySelector("[data-whatsapp-checked]");
+    const local = statusPanel.querySelector("[data-whatsapp-local]");
+    const messageId = statusPanel.querySelector("[data-whatsapp-message-id]");
+    const localBadge = row.querySelector("[data-whatsapp-local-badge]");
+    const resultBadge = row.querySelector("[data-whatsapp-result-badge]");
+
+    const statusValue = (user && user.whatsapp_status) || (fallbackResult && fallbackResult.category) || "unknown";
+    const summaryValue = (user && user.whatsapp_status_summary) || (fallbackResult && fallbackResult.summary) || "Sem detalhe";
+    const detailsValue = (user && user.whatsapp_status_details) || (fallbackResult && fallbackResult.details) || "Sem detalhe adicional.";
+    const checkedLabel = (user && user.whatsapp_status_checked_at_label) || "Agora";
+    const localAllowed = Boolean(user && user.whatsapp_local_allowed);
+    const hasNumber = Boolean(user && user.whatsapp_number);
+    const optedIn = Boolean(user && user.whatsapp_opt_in);
+    const messageValue = (user && user.whatsapp_status_message_id) || (fallbackResult && fallbackResult.message_id) || "";
+
+    if (summary) summary.textContent = summaryValue;
+    if (details) details.textContent = detailsValue;
+    if (checked) checked.textContent = "Último check: " + checkedLabel;
+    if (local) {
+      local.textContent = hasNumber
+        ? (localAllowed ? "Lista local: permitida" : "Lista local: bloqueada")
+        : "Sem número configurado";
+    }
+    if (messageId) {
+      messageId.textContent = messageValue ? "Message ID: " + messageValue : "";
+      messageId.classList.toggle("hidden", !messageValue);
+    }
+    if (localBadge) {
+      localBadge.textContent = hasNumber
+        ? (localAllowed ? "Local OK" : "Local bloqueado")
+        : "Sem WhatsApp";
+      localBadge.classList.toggle("doc-badge-ok", hasNumber && localAllowed);
+      localBadge.classList.toggle("doc-badge-warn", hasNumber && !localAllowed);
+    }
+    if (resultBadge) {
+      resultBadge.textContent = statusValue.replaceAll("_", " ");
+      resultBadge.classList.toggle("doc-badge-ok", Boolean(user && user.whatsapp_status_ok));
+      resultBadge.classList.toggle("doc-badge-warn", !Boolean(user && user.whatsapp_status_ok) && hasNumber && optedIn);
+    }
+    row.dataset.whatsapp = hasNumber && optedIn && Boolean(user && user.whatsapp_status_ok)
+      ? "active"
+      : hasNumber && optedIn
+        ? "pending"
+        : "none";
+    filterUsers();
   }
 
-  document.querySelectorAll(".admin-user-form").forEach((form) => {
-    const toggle = form.querySelector("[data-edit-toggle]");
-    const status = form.querySelector("[data-edit-status]");
-    const fields = Array.from(form.querySelectorAll("[data-lockable]"));
-    const checkButton = form.querySelector("[data-whatsapp-check]");
-    const csrfToken = form.querySelector('input[name="csrf_token"]')?.value || "";
-    let unlocked = false;
-
-    function renderLockState() {
-      fields.forEach((field) => {
-        field.disabled = !unlocked;
-      });
-      if (toggle) {
-        toggle.setAttribute("aria-pressed", unlocked ? "true" : "false");
-        toggle.classList.toggle("is-unlocked", unlocked);
-        const label = toggle.querySelector("[data-edit-toggle-label]");
-        if (label) {
-          label.textContent = unlocked ? "Bloquear edição" : "Editar utilizador";
+  document.querySelectorAll("[data-whatsapp-check]").forEach((checkButton) => {
+    checkButton.addEventListener("click", async () => {
+      const row = checkButton.closest("[data-user-card]");
+      const url = checkButton.dataset.checkUrl;
+      const csrfToken = row?.querySelector('input[name="csrf_token"]')?.value || "";
+      if (!row || !url) return;
+      checkButton.disabled = true;
+      const originalLabel = checkButton.textContent;
+      checkButton.textContent = "A verificar...";
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "X-Requested-With": "fetch"
+          },
+          body: "{}"
+        });
+        const contentType = response.headers.get("content-type") || "";
+        let payload = null;
+        if (contentType.includes("application/json")) {
+          payload = await response.json();
+        } else {
+          const rawText = await response.text();
+          payload = {
+            ok: false,
+            result: {
+              category: "request_error",
+              summary: "O backend devolveu uma resposta não JSON.",
+              details: rawText.slice(0, 240) || "Sem detalhe adicional."
+            }
+          };
         }
+        updateWhatsAppStatus(row, payload.user || null, payload.result || payload || null);
+      } catch (error) {
+        updateWhatsAppStatus(row, null, {
+          category: "network_error",
+          summary: "Falha ao contactar o endpoint de verificação.",
+          details: (error && error.message) || "Erro de rede sem detalhe adicional."
+        });
+      } finally {
+        checkButton.disabled = false;
+        checkButton.textContent = originalLabel;
       }
-      if (status) {
-        status.textContent = unlocked ? "Edição desbloqueada" : "Edição bloqueada";
-        status.classList.toggle("is-unlocked", unlocked);
-        status.classList.toggle("is-locked", !unlocked);
-      }
-    }
-
-    renderLockState();
-
-    if (toggle) {
-      toggle.addEventListener("click", () => {
-        unlocked = !unlocked;
-        renderLockState();
-      });
-    }
-
-    function updateWhatsAppStatus(user, fallbackResult) {
-      const statusPanel = form.querySelector("[data-whatsapp-status]");
-      if (!statusPanel) return;
-
-      const summary = statusPanel.querySelector("[data-whatsapp-summary]");
-      const details = statusPanel.querySelector("[data-whatsapp-details]");
-      const checked = statusPanel.querySelector("[data-whatsapp-checked]");
-      const local = statusPanel.querySelector("[data-whatsapp-local]");
-      const messageId = statusPanel.querySelector("[data-whatsapp-message-id]");
-      const localBadge = form.querySelector("[data-whatsapp-local-badge]");
-      const resultBadge = form.querySelector("[data-whatsapp-result-badge]");
-
-      const statusValue = (user && user.whatsapp_status) || (fallbackResult && fallbackResult.category) || "unknown";
-      const summaryValue = (user && user.whatsapp_status_summary) || (fallbackResult && fallbackResult.summary) || "Sem detalhe";
-      const detailsValue = (user && user.whatsapp_status_details) || (fallbackResult && fallbackResult.details) || "Sem detalhe adicional.";
-      const checkedLabel = (user && user.whatsapp_status_checked_at_label) || "Agora";
-      const localAllowed = Boolean(user && user.whatsapp_local_allowed);
-      const hasNumber = Boolean(user && user.whatsapp_number);
-      const messageValue = (user && user.whatsapp_status_message_id) || (fallbackResult && fallbackResult.message_id) || "";
-
-      if (summary) summary.textContent = summaryValue;
-      if (details) details.textContent = detailsValue;
-      if (checked) checked.textContent = "Último check: " + checkedLabel;
-      if (local) {
-        local.textContent = hasNumber
-          ? (localAllowed ? "Whitelist local do backend: permitida" : "Whitelist local do backend: bloqueada")
-          : "Sem número WhatsApp configurado";
-      }
-      if (messageId) {
-        messageId.textContent = messageValue ? "Message ID: " + messageValue : "";
-        messageId.classList.toggle("hidden", !messageValue);
-      }
-      if (localBadge) {
-        localBadge.textContent = hasNumber
-          ? (localAllowed ? "WhatsApp local OK" : "WhatsApp local bloqueado")
-          : "Sem WhatsApp";
-        localBadge.classList.toggle("doc-badge-ok", hasNumber && localAllowed);
-        localBadge.classList.toggle("doc-badge-warn", hasNumber && !localAllowed);
-      }
-      if (resultBadge) {
-        resultBadge.textContent = statusValue.replaceAll("_", " ");
-        resultBadge.classList.toggle("doc-badge-ok", Boolean(user && user.whatsapp_status_ok));
-        resultBadge.classList.toggle("doc-badge-warn", !Boolean(user && user.whatsapp_status_ok) && hasNumber);
-      }
-    }
-
-    if (checkButton) {
-      checkButton.addEventListener("click", async () => {
-        const url = checkButton.dataset.checkUrl;
-        if (!url) return;
-        checkButton.disabled = true;
-        const originalLabel = checkButton.textContent;
-        checkButton.textContent = "A verificar...";
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Accept": "application/json",
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrfToken,
-              "X-Requested-With": "fetch"
-            },
-            body: "{}"
-          });
-          const contentType = response.headers.get("content-type") || "";
-          let payload = null;
-          if (contentType.includes("application/json")) {
-            payload = await response.json();
-          } else {
-            const rawText = await response.text();
-            payload = {
-              ok: false,
-              result: {
-                category: "request_error",
-                summary: "O backend devolveu uma resposta não JSON.",
-                details: rawText.slice(0, 240) || "Sem detalhe adicional."
-              }
-            };
-          }
-          updateWhatsAppStatus(payload.user || null, payload.result || payload || null);
-        } catch (error) {
-          updateWhatsAppStatus(null, {
-            category: "network_error",
-            summary: "Falha ao contactar o endpoint de verificação.",
-            details: (error && error.message) || "Erro de rede sem detalhe adicional."
-          });
-        } finally {
-          checkButton.disabled = false;
-          checkButton.textContent = originalLabel;
-        }
-      });
-    }
+    });
   });
 </script>
 {% endblock %}
