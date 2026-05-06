@@ -2665,12 +2665,185 @@
   background: rgba(7, 16, 29, 0.5);
 }
 
+.event-reports-v2 {
+  gap: 18px;
+}
+
+.event-reports-v2 .event-reports-hero {
+  display: grid;
+  gap: 22px;
+  padding: 36px 38px;
+}
+
+.event-reports-v2 .event-reports-hero h1 {
+  max-width: none;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+}
+
+.event-reports-v2 .event-report-catalog-panel {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(20, 36, 56, 0.96));
+}
+
+.event-reports-v2 .event-report-summary {
+  align-items: center;
+  min-height: 82px;
+}
+
+.event-reports-v2 .documents-collapse-body {
+  display: grid;
+  gap: 18px;
+}
+
 .event-reports-admin-page .planned-table {
   min-width: 1040px;
 }
 
 .event-report-filter-grid {
   grid-template-columns: minmax(240px, 1.6fr) repeat(3, minmax(150px, 1fr));
+}
+
+.event-reports-v2 .event-report-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.event-reports-v2 .event-report-filter-actions .mini-button {
+  width: min(180px, 100%);
+  min-height: 44px;
+  justify-content: center;
+}
+
+.event-reports-v2 .event-report-selection-bar {
+  align-items: stretch;
+  margin-bottom: 0;
+  border-color: rgba(130, 160, 195, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025)),
+    rgba(7, 16, 29, 0.38);
+}
+
+.event-reports-v2 .event-report-selection-bar > div:first-child {
+  flex: 1 1 310px;
+  min-width: min(310px, 100%);
+}
+
+.event-reports-v2 .event-report-selection-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(138px, 1fr));
+  flex: 2 1 760px;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.event-reports-v2 .event-report-selection-actions .mini-button,
+.event-reports-v2 .event-report-selection-actions .danger-button {
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+.event-reports-v2 .event-report-selection-actions .mini-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.event-reports-v2 .event-report-table-head {
+  margin: 2px 0 -4px;
+}
+
+.event-reports-v2 .event-report-window-table {
+  border-radius: 18px;
+  border-color: rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.event-reports-v2 .event-report-table {
+  min-width: 1160px;
+}
+
+.event-reports-v2 .event-report-table th {
+  background: rgba(8, 19, 32, 0.94);
+  color: rgba(148, 173, 200, 0.9);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.event-reports-v2 .event-report-table th,
+.event-reports-v2 .event-report-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.event-reports-v2 .event-report-table tbody tr {
+  transition: background 0.18s ease;
+}
+
+.event-reports-v2 .event-report-table tbody tr:hover {
+  background: rgba(26, 159, 255, 0.05);
+}
+
+.event-reports-v2 .event-report-table td:nth-child(2) {
+  min-width: 320px;
+  vertical-align: top;
+}
+
+.event-reports-v2 .event-report-table td:last-child {
+  width: 70px;
+  text-align: right;
+}
+
+.event-reports-v2 .archive-select-cell input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.event-reports-v2 .document-window-preview {
+  max-width: 70ch;
+  color: rgba(126, 147, 168, 0.92);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.event-reports-v2 .document-row-menu {
+  justify-self: end;
+}
+
+.event-reports-v2 .document-row-menu .chat-sidebar-menu-toggle {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(130, 160, 195, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.event-reports-v2 .document-row-menu[open] .chat-sidebar-menu-toggle {
+  border-color: rgba(26, 159, 255, 0.36);
+  background: rgba(26, 159, 255, 0.12);
+}
+
+.event-reports-v2 .document-row-menu .chat-sidebar-menu-body {
+  min-width: 190px;
+  padding: 10px;
+  border-color: rgba(26, 159, 255, 0.18);
+}
+
+.event-reports-v2 .document-row-menu .chat-sidebar-menu-link,
+.event-reports-v2 .document-row-menu .mini-button {
+  width: 100%;
+  min-height: 36px;
+  justify-content: center;
 }
 
 .event-report-row-meta {
@@ -5698,6 +5871,10 @@ button:hover {
 
   .event-reports-admin-page .archive-selection-actions .mini-button,
   .event-reports-admin-page .archive-selection-actions .danger-button {
+    width: 100%;
+  }
+
+  .event-reports-v2 .event-report-filter-actions .mini-button {
     width: 100%;
   }
 

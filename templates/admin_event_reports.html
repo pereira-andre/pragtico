@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="ops-shell event-reports-admin-page">
-  <section class="hero-card compact">
+<main class="ops-shell event-reports-admin-page event-reports-v2">
+  <section class="hero-card compact admin-status-hero event-reports-hero">
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Ocorrências operacionais</p>
@@ -36,8 +36,8 @@
     </div>
   </section>
 
-  <details class="panel section-panel document-catalog-detail" id="event-report-catalog" open>
-    <summary class="documents-collapse-summary">
+  <details class="panel section-panel document-catalog-detail event-report-catalog-panel" id="event-report-catalog" open>
+    <summary class="documents-collapse-summary event-report-summary">
       <div>
         <p class="eyebrow">Catálogo</p>
         <h2>Eventos registados</h2>
@@ -78,7 +78,7 @@
             </select>
           </label>
         </div>
-        <div class="archive-actions">
+        <div class="archive-actions event-report-filter-actions">
           <button type="submit" class="mini-button">Aplicar filtros</button>
           <a class="mini-button secondary-button" href="{{ url_for('admin.admin_event_reports') }}#event-report-catalog">Limpar</a>
         </div>
@@ -102,12 +102,12 @@
         {% endfor %}
       </form>
 
-      <div class="archive-selection-bar">
+      <div class="archive-selection-bar event-report-selection-bar">
         <div>
           <p class="eyebrow">Seleção</p>
           <p id="event-report-selection-summary" class="muted">Sem seleção manual. Podes imprimir vários relatórios de uma vez ou apagar os selecionados.</p>
         </div>
-        <div class="archive-selection-actions">
+        <div class="archive-selection-actions event-report-selection-actions">
           <button type="button" class="mini-button secondary-button" id="event-report-select-filtered">Selecionar filtro</button>
           <button type="button" class="mini-button secondary-button" id="event-report-clear-selection">Nenhum</button>
           <button type="submit" class="mini-button secondary-button" form="event-report-print-form" id="event-report-print-selected">Imprimir / PDF</button>
@@ -116,7 +116,7 @@
         </div>
       </div>
 
-      <div class="section-head">
+      <div class="section-head event-report-table-head">
         <div>
           <p class="eyebrow">Eventos abertos</p>
           <h2>Abertos e resolvidos por arquivar</h2>
@@ -125,7 +125,7 @@
           <span class="ops-pill ops-pill-strong">{{ archive_resolved_event_ids|length }} resolvido(s)</span>
         {% endif %}
       </div>
-      <div class="document-window-table">
+      <div class="document-window-table event-report-window-table">
         <table class="planned-table event-report-table">
           <thead>
             <tr>
@@ -194,8 +194,8 @@
     </div>
   </details>
 
-  <details class="panel section-panel document-catalog-detail" id="event-report-closed-catalog" open>
-    <summary class="documents-collapse-summary">
+  <details class="panel section-panel document-catalog-detail event-report-catalog-panel" id="event-report-closed-catalog" open>
+    <summary class="documents-collapse-summary event-report-summary">
       <div>
         <p class="eyebrow">Eventos fechados</p>
         <h2>Arquivados</h2>
@@ -203,7 +203,7 @@
       <span class="ops-pill ops-pill-strong">{{ closed_events|length }}</span>
     </summary>
     <div class="documents-collapse-body">
-      <div class="document-window-table">
+      <div class="document-window-table event-report-window-table">
         <table class="planned-table event-report-table">
           <thead>
             <tr>
