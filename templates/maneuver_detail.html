@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 {% set maneuver = maneuver_view.maneuver %}
-<main class="ops-shell">
-  <section class="hero-card compact">
+<main class="ops-shell maneuver-detail-page maneuver-detail-v2">
+  <section class="hero-card compact maneuver-hero-v2">
     <div class="hero-topline">
       <div>
         <p class="eyebrow">Manobra</p>
@@ -30,7 +30,7 @@
   </section>
 
   <section class="detail-layout scale-detail-layout">
-    <section class="panel detail-main">
+    <section class="panel detail-main maneuver-main-panel">
       <div class="section-head">
         <div>
           <p class="eyebrow">Fluxo</p>
@@ -49,7 +49,7 @@
         {% endfor %}
       </div>
 
-      <section class="panel inset-panel">
+      <section class="panel inset-panel maneuver-summary-panel">
         <div class="section-head compact-head">
           <div>
             <p class="eyebrow">Dados</p>
@@ -71,7 +71,7 @@
         {% endif %}
       </section>
 
-      <section class="panel inset-panel">
+      <section class="panel inset-panel maneuver-checklist-panel">
         <div class="section-head compact-head">
           <div>
             <p class="eyebrow">Checklist</p>
@@ -298,9 +298,9 @@
       </section>
     </section>
 
-    <aside class="detail-side">
+    <aside class="detail-side maneuver-side-panel">
       {% if current_role == "admin" %}
-        <section class="panel inset-panel">
+        <section class="panel inset-panel maneuver-side-card">
           <div class="section-head">
             <div>
               <p class="eyebrow">Experiência</p>
@@ -312,7 +312,7 @@
             <a class="outline-link" href="{{ url_for('admin.admin_bot', case_type=maneuver.type, _anchor='casebooks') }}">Abrir casebooks</a>
           </div>
         </section>
-        <section class="panel inset-panel admin-danger-zone">
+        <section class="panel inset-panel admin-danger-zone maneuver-side-card">
           <div class="section-head">
             <div>
               <p class="eyebrow danger">Zona de risco</p>
@@ -327,7 +327,7 @@
         </section>
       {% endif %}
 
-      <section class="panel inset-panel">
+      <section class="panel inset-panel maneuver-side-card maneuver-context-panel">
         <div class="section-head">
           <div>
             <p class="eyebrow">Escala</p>

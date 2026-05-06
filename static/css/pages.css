@@ -5,6 +5,29 @@
   gap: 22px;
 }
 
+.scale-detail-page,
+.maneuver-detail-page,
+.vessel-print-v2 {
+  gap: 18px;
+}
+
+.scale-hero-v2,
+.maneuver-hero-v2 {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.12), transparent 30%),
+    linear-gradient(135deg, rgba(15, 43, 69, 0.98), rgba(13, 28, 45, 0.98));
+}
+
+.scale-main-panel,
+.maneuver-main-panel,
+.scale-side-card,
+.maneuver-side-card,
+.vessel-print-card {
+  background:
+    radial-gradient(circle at top right, rgba(26, 159, 255, 0.06), transparent 30%),
+    linear-gradient(180deg, rgba(16, 30, 48, 0.98), rgba(17, 30, 47, 0.96));
+}
+
 .scale-hero-copy {
   display: grid;
   gap: 12px;
@@ -42,6 +65,8 @@
 .scale-meta-card {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  min-height: 94px;
   padding: 16px 18px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -57,7 +82,9 @@
 
 .scale-kpi strong,
 .scale-meta-card strong {
+  min-width: 0;
   font-size: 1.35rem;
+  overflow-wrap: anywhere;
 }
 
 .scale-masthead {
@@ -68,6 +95,12 @@
 
 .scale-detail-layout {
   align-items: start;
+}
+
+.scale-detail-page .section-head,
+.maneuver-detail-page .section-head,
+.vessel-print-v2 .section-head {
+  align-items: flex-start;
 }
 
 .scale-overview-grid {
@@ -184,6 +217,10 @@
   background: rgba(10, 108, 102, 0.04);
 }
 
+.maneuver-main-panel > .section-head {
+  padding-bottom: 2px;
+}
+
 .maneuver-action-stack {
   display: grid;
   gap: 14px;
@@ -195,9 +232,9 @@
   gap: 16px;
   align-items: start;
   padding: 16px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(130, 160, 195, 0.14);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .maneuver-action-copy {
@@ -218,6 +255,7 @@
 .maneuver-action-controls {
   display: grid;
   gap: 12px;
+  justify-items: start;
 }
 
 .maneuver-inline-action {
@@ -226,6 +264,7 @@
 }
 
 .maneuver-action-details {
+  width: 100%;
   border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.035);
@@ -305,6 +344,26 @@
 .scale-maneuvers-panel {
   background:
     linear-gradient(180deg, rgba(10, 108, 102, 0.04), rgba(255, 255, 255, 0.04));
+}
+
+.scale-change-table-wrap {
+  border-radius: 16px;
+  border-color: rgba(130, 160, 195, 0.14);
+  background: rgba(7, 16, 29, 0.48);
+}
+
+.scale-change-table {
+  min-width: 940px;
+}
+
+.scale-change-table th,
+.scale-change-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.scale-change-table td {
+  overflow-wrap: anywhere;
 }
 
 .scale-summary-grid {
@@ -499,6 +558,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 64px;
   border-radius: 8px;
   border: 1px solid var(--line);
   padding: 6px 10px;
@@ -509,19 +569,44 @@
 .scale-fact-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 14px;
+  min-width: 0;
+  min-height: 50px;
   padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid rgba(130, 160, 195, 0.13);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .scale-fact-row span {
+  min-width: 0;
   color: var(--muted);
 }
 
 .scale-fact-row strong {
+  min-width: 0;
+  max-width: 62%;
   text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.scale-detail-page .mini-button,
+.maneuver-detail-page .mini-button,
+.vessel-print-v2 .mini-button,
+.scale-detail-page .danger-button,
+.maneuver-detail-page .danger-button,
+.vessel-print-v2 .danger-button {
+  width: auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.vessel-print-v2 .print-actions {
+  justify-content: flex-end;
 }
 
 .scale-timeline {
@@ -5725,6 +5810,12 @@ button:hover {
 
   .scale-fact-row {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .scale-fact-row strong {
+    max-width: 100%;
+    text-align: left;
   }
 
   .planned-head-meta {
