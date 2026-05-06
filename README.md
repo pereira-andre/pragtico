@@ -379,3 +379,17 @@ Na ultima validacao local, a suite principal passou com `182 passed`.
   o catalogo documenta as areas que faltam mapear.
 - Providers custom devem usar `LLM_API_KEY` e `LLM_BASE_URL`; nomes de variaveis
   fora da configuracao atual nao sao lidos automaticamente.
+
+## Licenca e integridade academica
+
+Este repositorio e disponibilizado publicamente para avaliacao academica,
+demonstracao de portfolio e revisao tecnica do projeto PRAGtico. O codigo e os
+materiais especificos do projeto nao sao publicados como open source.
+
+Todos os direitos estao reservados ao autor. Nao e permitida a copia,
+redistribuicao, reutilizacao, adaptacao, alojamento ou submissao deste trabalho,
+no todo ou em parte, como projeto academico, profissional ou comercial de outra
+pessoa. Pequenos excertos podem ser citados para revisao ou discussao academica,
+desde que com atribuicao clara.
+
+Ver `LICENSE` e `NOTICE.md` para os termos completos.

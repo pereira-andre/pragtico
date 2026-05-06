@@ -16,6 +16,11 @@ reportes/
 .venv/
 venv/
 
+# Documentacao academica local, rascunhos, PDFs e artefactos LaTeX.
+# O repositorio publico deve conter o codigo do projeto, nao a pasta de trabalho
+# do relatorio.
+REPORT_UAb/
+
 data/
 knowledge/*
 !knowledge/.gitkeep
