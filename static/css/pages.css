@@ -7625,9 +7625,21 @@ button:hover {
 .admin-backup-wipe-form .checkbox-row {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   font-weight: 700;
   color: var(--text-strong);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.admin-backup-action-form .checkbox-row input[type="checkbox"],
+.admin-backup-wipe-form .checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .admin-backup-restore-form {
@@ -7656,6 +7668,11 @@ button:hover {
 .admin-backup-wipe-form .checkbox-row,
 .admin-backup-wipe-form .admin-backup-wipe-button {
   grid-column: 1 / -1;
+}
+
+.admin-backup-wipe-form .checkbox-row {
+  justify-self: start;
+  max-width: min(720px, 100%);
 }
 
 .admin-backup-wipe-form > label:not(.checkbox-row) {
@@ -7699,7 +7716,8 @@ button:hover {
 }
 
 .admin-backup-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(94px, max-content));
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -7708,6 +7726,7 @@ button:hover {
 
 .admin-backup-actions form {
   margin: 0;
+  min-width: 0;
 }
 
 .admin-backup-actions .mini-button,
@@ -7737,12 +7756,16 @@ button:hover {
 .admin-audit-actions .mini-button,
 .admin-audit-filter-buttons .mini-button,
 .admin-audit-filter-buttons button {
-  width: auto;
+  width: 100%;
   min-width: 96px;
   min-height: 42px;
   justify-content: center;
   padding: 0 14px;
   border-radius: 12px;
+}
+
+.admin-audit-actions .mini-button {
+  width: auto;
 }
 
 .admin-audit-filter-form {
@@ -7761,6 +7784,14 @@ button:hover {
 
 .admin-audit-filter-buttons {
   align-self: end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, max-content));
+  justify-content: start;
+  min-width: 0;
+}
+
+.admin-audit-filter-panel .admin-status-note {
+  overflow-wrap: anywhere;
 }
 
 .admin-audit-console {
@@ -7944,7 +7975,14 @@ button:hover {
 
   .admin-backup-actions {
     justify-content: flex-start;
-    flex-wrap: wrap;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-backup-actions .mini-button,
+  .admin-backup-actions .danger-button {
+    width: 100%;
+    min-width: 0;
   }
 
   .admin-backup-primary-button,
@@ -7953,6 +7991,16 @@ button:hover {
     width: 100%;
     min-width: 0;
     justify-self: stretch;
+  }
+
+  .admin-audit-filter-buttons {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-audit-filter-buttons .mini-button,
+  .admin-audit-filter-buttons button {
+    min-width: 0;
   }
 
   .admin-audit-console-head {

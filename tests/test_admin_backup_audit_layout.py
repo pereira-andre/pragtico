@@ -20,6 +20,8 @@ def test_admin_backups_uses_compact_action_buttons() -> None:
     assert ".admin-backup-primary-button" in stylesheet
     assert ".admin-backup-form-button" in stylesheet
     assert ".admin-backup-actions .danger-button" in stylesheet
+    assert '.admin-backup-wipe-form .checkbox-row input[type="checkbox"]' in stylesheet
+    assert "flex: 0 0 18px;" in stylesheet
     assert "min-width: 236px;" in stylesheet
 
 
@@ -39,4 +41,5 @@ def test_admin_audit_console_has_non_overlapping_columns() -> None:
     assert "grid-template-columns: 132px 112px 92px minmax(150px, 210px) minmax(420px, 1fr);" in stylesheet
     assert "min-width: 1020px;" in stylesheet
     assert ".admin-audit-log-detail" in stylesheet
+    assert "grid-template-columns: repeat(2, minmax(92px, max-content));" in stylesheet
     assert "overflow-x: auto;" in stylesheet
