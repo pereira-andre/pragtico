@@ -8,8 +8,6 @@ import os
 import time
 from typing import Dict, List, Optional
 
-from werkzeug.security import generate_password_hash
-
 from domain.document_processing import (
     build_preview,
     extract_text_from_path,
@@ -25,7 +23,6 @@ from .maneuver_case_helpers import (
     build_maneuver_case,
 )
 from .constants import (
-    PASSWORD_HASH_METHOD,
     PORT_CALL_APPROVAL_PENDING,
 )
 from .port_call_helpers import (
@@ -668,19 +665,6 @@ class PostgresStore(
     def _seed_defaults(self) -> None:
         with self._connect() as conn:
             with conn.cursor() as cur:
-                for username, password, role in (
-                    ("admin", "admin123", "admin"),
-                    ("agente", "agente123", "agente"),
-                    ("piloto", "piloto123", "piloto"),
-                ):
-                    cur.execute(
-                        """
-                        INSERT INTO app_users (username, password_hash, role, full_name, organization, email, phone)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (username) DO NOTHING
-                        """,
-                        (username, generate_password_hash(password, method=PASSWORD_HASH_METHOD), role, "", "", "", ""),
-                    )
                 cur.execute("SELECT COUNT(*) AS total FROM port_calls")
                 port_calls_count = int(cur.fetchone()["total"])
             conn.commit()

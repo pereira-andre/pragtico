@@ -166,11 +166,13 @@ def register():
 def profile():
     """Página de edição do perfil operacional do utilizador."""
     existing_profile = current_user_profile() or {"username": session["username"], "role": session.get("role", "piloto")}
+    profile_role = (existing_profile.get("role") or session.get("role") or "").strip().lower()
+    phone_required = profile_role in {"agente", "piloto"}
     if request.method == "POST":
         try:
             full_name = validate_required_text(request.form.get("full_name", ""), "Nome completo")
             organization = validate_required_text(request.form.get("organization", ""), "Agência/entidade")
-            phone = validate_phone(request.form.get("phone", ""))
+            phone = validate_phone(request.form.get("phone", ""), required=phone_required)
             whatsapp_number = validate_whatsapp_phone(request.form.get("whatsapp_number", ""), required=False)
             whatsapp_opt_in = request.form.get("whatsapp_opt_in", "") == "1"
             if whatsapp_opt_in and not whatsapp_number:

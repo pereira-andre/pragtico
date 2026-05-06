@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -286,9 +287,38 @@ def log_embedding_status(runtime: Runtime, app_logger: logging.Logger) -> None:
         app_logger.warning("Embeddings indisponíveis: configura o provider/API key de embeddings.")
 
 
+def _first_configured_admin_whatsapp_number() -> str:
+    candidates = [
+        os.getenv("ADMIN_WHATSAPP_NUMBER", ""),
+        os.getenv("WHATSAPP_TEST_TO", ""),
+    ]
+    candidates.extend(str(os.getenv("WHATSAPP_ALLOWED_NUMBERS", "")).split(","))
+    for value in candidates:
+        digits = re.sub(r"\D+", "", str(value or ""))
+        if digits:
+            return digits
+    return ""
+
+
+def _remove_legacy_default_users(store: object, admin_email: str, app_logger: logging.Logger) -> None:
+    for username in ("admin", "agente", "piloto"):
+        if username == admin_email:
+            continue
+        try:
+            profile = store.get_user_profile(username)
+            if not profile:
+                continue
+            store.delete_user(username)
+            app_logger.info("[seed] Utilizador default removido: %s", username)
+        except Exception as exc:
+            app_logger.warning("[seed] Falha ao remover utilizador default %s: %s", username, exc)
+
+
 def seed_admin(store: object, app_logger: logging.Logger) -> None:
     admin_email = os.getenv("ADMIN_EMAIL", "admin@porto.pt").strip().lower()
     admin_password = os.getenv("ADMIN_PASSWORD", "123456").strip()
+    admin_whatsapp_number = _first_configured_admin_whatsapp_number()
+    admin_phone = os.getenv("ADMIN_PHONE", "").strip() or (f"+{admin_whatsapp_number}" if admin_whatsapp_number else "")
     if not admin_email:
         return
     try:
@@ -301,7 +331,18 @@ def seed_admin(store: object, app_logger: logging.Logger) -> None:
                 store.reset_user_password(admin_email, admin_password)
             except Exception:
                 pass
+            store.update_user_profile(
+                admin_email,
+                full_name=(existing.get("full_name") or "Administrador"),
+                organization=(existing.get("organization") or "APSS"),
+                email=admin_email,
+                phone=(existing.get("phone") or admin_phone),
+                whatsapp_number=(existing.get("whatsapp_number") or admin_whatsapp_number),
+                whatsapp_opt_in=bool(existing.get("whatsapp_opt_in") or admin_whatsapp_number),
+                whatsapp_opt_in_at=existing.get("whatsapp_opt_in_at") or "",
+            )
             app_logger.info("[seed] Admin verificado: %s", admin_email)
+            _remove_legacy_default_users(store, admin_email, app_logger)
             return
         store.create_user(
             username=admin_email,
@@ -310,8 +351,11 @@ def seed_admin(store: object, app_logger: logging.Logger) -> None:
             full_name="Administrador",
             organization="APSS",
             email=admin_email,
-            phone="",
+            phone=admin_phone,
+            whatsapp_number=admin_whatsapp_number,
+            whatsapp_opt_in=bool(admin_whatsapp_number),
         )
         app_logger.info("[seed] Admin criado: %s", admin_email)
+        _remove_legacy_default_users(store, admin_email, app_logger)
     except Exception as exc:
         app_logger.warning("[seed] Falha ao criar admin: %s", exc)

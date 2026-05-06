@@ -165,6 +165,8 @@ guardar segredos no Git.
 | `FLASK_SECRET_KEY` | Chave de sessao Flask. Obrigatoria em producao. |
 | `ADMIN_EMAIL` | Admin inicial. Default: `admin@porto.pt`. |
 | `ADMIN_PASSWORD` | Password inicial/admin seed. Default local: `123456`. |
+| `ADMIN_PHONE` | Telefone opcional do admin principal. |
+| `ADMIN_WHATSAPP_NUMBER` | WhatsApp do admin principal; se vazio usa `WHATSAPP_TEST_TO` ou o primeiro autorizado. |
 | `FLASK_ENV` | Usar `production` em deploy. |
 | `MAX_UPLOAD_MB` | Limite de upload. Default: `64`. |
 | `SESSION_IDLE_MINUTES` | Tempo de sessao. Default: `45`. |

@@ -13,7 +13,9 @@ def test_profile_page_uses_operational_layout() -> None:
         "profile-workspace",
         "profile-form-card",
         "profile-side-panel",
-        "{% if not profile_ok %}",
+        "profile_required",
+        "{% if profile_required and not profile_ok %}",
+        "{% if profile_required %}required{% endif %}",
     ):
         assert marker in template
 

@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 {% set profile_email = profile.email or profile.username or current_user %}
-{% set profile_ok = profile.full_name and profile.organization and profile_email and profile.phone %}
+{% set profile_role = (current_role or profile.role or 'operacional')|lower %}
+{% set profile_required = profile_role in ['agente', 'piloto'] %}
+{% set required_fields_ok = profile.full_name and profile.organization and profile_email and profile.phone %}
+{% set profile_ok = required_fields_ok if profile_required else true %}
 {% set whatsapp_ready = profile.whatsapp_number and profile.whatsapp_opt_in %}
 <main class="ops-shell profile-page">
   <section class="hero-card admin-status-hero profile-hero">
@@ -12,7 +15,7 @@
         <p class="lead">Dados usados nas escalas, aprovações, validações e contactos operacionais.</p>
       </div>
       <span class="admin-status-badge is-{{ 'online' if profile_ok else 'degraded' }}">
-        {{ 'Ficha completa' if profile_ok else 'Ficha por concluir' }}
+        {% if profile_required %}{{ 'Ficha completa' if profile_ok else 'Ficha por concluir' }}{% else %}Ficha admin{% endif %}
       </span>
     </div>
     <div class="profile-status-grid">
@@ -72,7 +75,7 @@
             </label>
             <label>
               Telefone
-              <input type="text" name="phone" value="{{ profile.phone or '' }}" required>
+              <input type="text" name="phone" value="{{ profile.phone or '' }}" {% if profile_required %}required{% endif %}>
             </label>
           </div>
         </section>
@@ -125,18 +128,20 @@
         </article>
         <article>
           <span>Ficha obrigatória</span>
-          <strong>{{ 'Completa' if profile_ok else 'Por concluir' }}</strong>
+          <strong>{% if profile_required %}{{ 'Completa' if profile_ok else 'Por concluir' }}{% else %}Não obrigatória{% endif %}</strong>
         </article>
       </div>
-      {% if not profile_ok %}
+      {% if profile_required and not profile_ok %}
         <p class="admin-status-note is-danger">Conclui nome, entidade, email e telefone antes de sair desta página.</p>
+      {% elif not required_fields_ok %}
+        <p class="admin-status-note">A ficha admin pode ficar sem telefone/WhatsApp. Preenche estes campos se quiseres usar a conta também como contacto operacional do portal.</p>
       {% else %}
         <p class="admin-status-note">Mantém estes dados atualizados para o histórico operacional ficar claro.</p>
       {% endif %}
     </aside>
   </section>
 </main>
-{% if not profile_ok %}
+{% if profile_required and not profile_ok %}
 <script>
   (() => {
     let skipAutoLogout = false;
