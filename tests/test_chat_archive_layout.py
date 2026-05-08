@@ -52,6 +52,9 @@ def test_chat_archive_has_refined_workspace_and_sidebar_shell() -> None:
     assert "chat-sidebar-list-shell" in html
     assert "chat-context-note" in html
     assert "Use uma conversa por manobra/caso" in html
+    assert html.index("Histórico privado por utilizador") < html.index("chat-context-note")
+    assert html.index("chat-context-note") < html.index("chat-archive-hero-grid")
+    assert html.index("chat-context-note") < html.index("chat-sidebar-panel")
     assert "chat-sidebar-search-field" in html
     assert "Nova conversa" in html
     assert "Lista de conversas" in html
@@ -67,6 +70,7 @@ def test_chat_archive_css_keeps_sidebar_list_wide_and_menu_floating() -> None:
     assert "grid-template-rows: auto minmax(0, 1fr) auto;" in css
     assert ".chat-archive-page .chat-sidebar-menu[open] .chat-sidebar-menu-body" in css
     assert ".chat-context-note" in css
+    assert "max-width: 78ch;" in css
     assert "position: fixed;" in css
     assert "height: var(--chat-archive-panel-height);" in css
     assert "min-height: 92px;" in css

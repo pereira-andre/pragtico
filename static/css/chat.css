@@ -719,11 +719,13 @@
 .chat-context-note {
   display: grid;
   gap: 6px;
+  margin-top: 16px;
   padding: 14px 16px;
   border: 1px solid rgba(26, 159, 255, 0.18);
   border-radius: 12px;
   background: rgba(26, 159, 255, 0.08);
   color: var(--text);
+  max-width: 78ch;
 }
 
 .chat-context-note strong {
