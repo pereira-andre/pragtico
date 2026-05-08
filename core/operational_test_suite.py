@@ -171,6 +171,27 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": ("Local: SECIL", "SECIL W/Oeste", "todos os navios atracam proximo do reponto"),
     },
     {
+        "id": "diagnostic-secil-isolates-old-lisnave-context",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico SECIL sem herdar Lisnave",
+        "question": "Marquei manobra de entrada para a Secil E as 1925. Está correto?",
+        "history": [
+            {
+                "role": "user",
+                "content": "Um navio na LISNAVE de 300 m manobra com quantos rebocadores normalmente?",
+            },
+            {"role": "assistant", "content": "Recomendo 6 rebocadores grandes."},
+            {"role": "user", "content": "Com nevoeiro em porto posso avancar?"},
+        ],
+        "expected_summary": "A ficha deve tratar a SECIL E como novo caso e nao herdar Lisnave, nevoeiro ou rebocadores antigos.",
+        "source": "core/chat_context_scope.py + core/operational_diagnostics.py",
+        "expected_tokens": ("Local: SECIL", "Doca/cais: SECIL E/Este", "Hora referida: 19:25"),
+        "forbidden_tokens": ("Local: LISNAVE", "6 rebocador", "nevoeiro"),
+    },
+    {
         "id": "tanquisado-east-side-push",
         "group": "Rebocadores e vento",
         "risk": "Alto",
@@ -930,6 +951,11 @@ def operational_test_inventory() -> dict:
 def _missing_expected_tokens(text: str, expected_tokens: tuple[str, ...] | list[str]) -> list[str]:
     folded = str(text or "").casefold()
     return [str(token) for token in expected_tokens if str(token or "").strip() and str(token).casefold() not in folded]
+
+
+def _present_forbidden_tokens(text: str, forbidden_tokens: tuple[str, ...] | list[str]) -> list[str]:
+    folded = str(text or "").casefold()
+    return [str(token) for token in forbidden_tokens if str(token or "").strip() and str(token).casefold() in folded]
 
 
 def _critical_knowledge_dir() -> str:
@@ -3316,6 +3342,7 @@ class OperationalFlowSuite:
                 elif runner == "operational_diagnostic":
                     diagnostic = build_operational_diagnostic(
                         item.get("question", ""),
+                        history=item.get("history") or [],
                         knowledge_dir=_active_knowledge_dir() or "knowledge",
                     )
                     text = format_operational_diagnostic(diagnostic)
@@ -3350,6 +3377,7 @@ class OperationalFlowSuite:
                 continue
 
             missing = _missing_expected_tokens(text, expected_tokens)
+            forbidden = _present_forbidden_tokens(text, item.get("forbidden_tokens") or ())
             expected_parts = [str(item.get("expected_summary") or "Termos criticos presentes.")]
             if item.get("expected_origin"):
                 expected_parts.append(f"origem {item['expected_origin']}")
@@ -3358,9 +3386,10 @@ class OperationalFlowSuite:
                 label,
                 str(item.get("source") or runner or "--"),
                 " ".join(expected_parts),
-                origin_ok and bool(text.strip()) and not missing,
+                origin_ok and bool(text.strip()) and not missing and not forbidden,
                 (
                     f"origem={origin or '--'} · falta={', '.join(missing) if missing else 'nada'} · "
+                    f"proibido={', '.join(forbidden) if forbidden else 'nada'} · "
                     f"{text[:260] or '--'}"
                 ),
             )

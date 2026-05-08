@@ -6,6 +6,7 @@ import re
 import unicodedata
 from typing import Any, Iterable
 
+from core.chat_context_scope import scoped_history_for_question
 from domain.route_transit import route_transit_answer
 from domain.tug_guidance import build_tug_operational_guidance_source
 
@@ -30,7 +31,7 @@ DRAFT_RE = re.compile(
 )
 TUG_RE = re.compile(r"\b(\d{1,2})\s*(?:reboques?|rebocadores?)\b", flags=re.IGNORECASE)
 TIME_RE = re.compile(
-    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2}))\b"
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2})|\d{3,4})\b"
     r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
     flags=re.IGNORECASE,
 )
@@ -52,12 +53,42 @@ def _normalize(value: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
 
 
+def looks_like_operational_diagnostic_request(text: str) -> bool:
+    clean = _normalize(str(text or "")).strip()
+    if not clean:
+        return False
+    exact_commands = {
+        "diagnostico",
+        "mostra diagnostico",
+        "explica diagnostico",
+        "porque",
+        "por que",
+        "debug",
+        "trace",
+    }
+    slash_clean = clean.removeprefix("/")
+    if slash_clean in exact_commands:
+        return True
+    return slash_clean.startswith("diagnostico ") or slash_clean.startswith("debug ")
+
+
 def _display_number(value: float | int | None) -> str:
     if value is None:
         return ""
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return f"{value}".replace(".", ",")
+
+
+def _display_time(value: str) -> str:
+    clean = str(value or "").strip().lower()
+    if re.fullmatch(r"\d{3,4}", clean):
+        digits = clean.zfill(4)
+        return f"{digits[:2]}:{digits[2:]}"
+    clean = clean.replace("h", ":")
+    if clean.endswith(":"):
+        clean += "00"
+    return clean
 
 
 def _safe_float(value: str | None) -> float | None:
@@ -221,8 +252,9 @@ def build_operational_diagnostic(
     knowledge_dir: str = "knowledge",
 ) -> dict:
     """Build a compact operational case card for user-facing diagnostics."""
-    recent_text = _recent_user_text(history)
     current_text = str(question or "").strip()
+    scoped_history = scoped_history_for_question(current_text, history or [], max_messages=4)
+    recent_text = _recent_user_text(scoped_history, limit=2)
     combined_text = " ".join(part for part in (recent_text, current_text) if part).strip()
     clean = _normalize(combined_text)
     current_clean = _normalize(current_text)
@@ -267,7 +299,7 @@ def build_operational_diagnostic(
     if case["requested_tugs"] is not None:
         case_lines.append(f"Rebocadores indicados: {case['requested_tugs']}")
     if case["time"]:
-        case_lines.append(f"Hora referida: {case['time'].replace('h', ':')}")
+        case_lines.append(f"Hora referida: {_display_time(case['time'])}")
     if case["route"]:
         case_lines.append(f"Percurso: {case['route']['origin']} -> {case['route']['destination']}")
 

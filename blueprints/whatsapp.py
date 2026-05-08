@@ -12,7 +12,11 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from core import services
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
-from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
+from core.operational_diagnostics import (
+    build_operational_diagnostic,
+    format_operational_diagnostic,
+    looks_like_operational_diagnostic_request,
+)
 from core.rule_catalog import _active_knowledge_dir
 from core.event_report_runtime import (
     finalize_pending_event_report,
@@ -443,23 +447,7 @@ def _whatsapp_answer_retry_requested(text: str) -> bool:
 
 
 def _whatsapp_diagnostic_requested(text: str) -> bool:
-    clean = _normalize_command_text(text).strip(" ?!.")
-    if not clean:
-        return False
-    exact_commands = {
-        "/diagnostico",
-        "diagnostico",
-        "mostra diagnostico",
-        "explica diagnostico",
-        "/porque",
-        "/por que",
-        "/porque?",
-        "porque",
-        "por que",
-    }
-    if clean in exact_commands:
-        return True
-    return clean.startswith("/diagnostico ") or clean.startswith("diagnostico da resposta")
+    return looks_like_operational_diagnostic_request(text)
 
 
 def _assistant_message_is_revisable(message: dict) -> bool:
@@ -469,7 +457,12 @@ def _assistant_message_is_revisable(message: dict) -> bool:
     if not isinstance(metadata, dict):
         metadata = {}
     message_kind = str(metadata.get("message_kind") or "").strip()
-    return message_kind not in _NON_REVISABLE_ASSISTANT_MESSAGE_KINDS
+    if message_kind in _NON_REVISABLE_ASSISTANT_MESSAGE_KINDS:
+        return False
+    content = str(message.get("content") or "")
+    if "Comando não reconhecido" in content and "Comandos disponíveis" in content:
+        return False
+    return True
 
 
 def _latest_assistant_diagnostic(
@@ -487,24 +480,22 @@ def _latest_assistant_diagnostic(
         metadata = target.get("channel_metadata") or {}
         if not isinstance(metadata, dict):
             metadata = {}
-        diagnostic = metadata.get("operational_diagnostic")
-        if not isinstance(diagnostic, dict) or not diagnostic.get("present"):
-            previous_user = next(
-                (
-                    item
-                    for item in reversed(messages[:target_index])
-                    if item.get("role") == "user" and str(item.get("content") or "").strip()
-                ),
-                None,
-            )
-            if not previous_user:
-                raise ValueError("Não encontrei a pergunta original dessa resposta.")
-            diagnostic = build_operational_diagnostic(
-                str(previous_user.get("content") or ""),
-                history=messages[:target_index],
-                answer={"answer": str(target.get("content") or "")},
-                knowledge_dir=_active_knowledge_dir() or "knowledge",
-            )
+        previous_user = next(
+            (
+                item
+                for item in reversed(messages[:target_index])
+                if item.get("role") == "user" and str(item.get("content") or "").strip()
+            ),
+            None,
+        )
+        if not previous_user:
+            raise ValueError("Não encontrei a pergunta original dessa resposta.")
+        diagnostic = build_operational_diagnostic(
+            str(previous_user.get("content") or ""),
+            history=messages[:target_index],
+            answer={"answer": str(target.get("content") or "")},
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
         return diagnostic
     raise ValueError("Não encontrei uma resposta anterior nesta conversa para diagnosticar.")
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Iterable
 import re
 
+from core.chat_context_scope import scoped_history_for_question
 from core.chat_planner import ChatExecutionPlan, normalize_planner_text
 
 VESSEL_TYPE_LABELS = {
@@ -73,7 +74,7 @@ WIND_PATTERNS = (
 PROPELLER_RE = re.compile(r"\bpasso\s+(direito|esquerdo)\b", flags=re.IGNORECASE)
 BERTHING_SIDE_RE = re.compile(r"\b(?:por|a|ao)\s+(estibordo|bombordo)\b", flags=re.IGNORECASE)
 TIME_RE = re.compile(
-    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2}))\b"
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2})|\d{3,4})\b"
     r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
     flags=re.IGNORECASE,
 )
@@ -157,7 +158,11 @@ def _clean_numeric(value: str) -> str:
 
 
 def _clean_time(value: str) -> str:
-    clean_value = str(value or "").strip().lower().replace("h", ":")
+    clean_value = str(value or "").strip().lower()
+    if re.fullmatch(r"\d{3,4}", clean_value):
+        digits = clean_value.zfill(4)
+        return f"{digits[:2]}:{digits[2:]}"
+    clean_value = clean_value.replace("h", ":")
     if clean_value.endswith(":"):
         clean_value += "00"
     return clean_value
@@ -269,7 +274,8 @@ def build_conversation_reasoning_state(
 
     fact_lines: list[str] = []
     prior_recommendation = ""
-    recent_messages = list(_iter_recent_messages(history))
+    scoped_history = scoped_history_for_question(question, history, max_messages=6)
+    recent_messages = list(_iter_recent_messages(scoped_history))
     for entry in recent_messages:
         role = str(entry.get("role") or "").strip().lower()
         content = str(entry.get("content") or "").strip()

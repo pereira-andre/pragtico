@@ -12,6 +12,7 @@ from core.operational_test_suite import (
     _critical_json_source_text,
     _critical_text_source_text,
     _missing_expected_tokens,
+    _present_forbidden_tokens,
     critical_bot_test_matrix,
     critical_maneuver_checklist_text,
     critical_slash_validation_text,
@@ -88,6 +89,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico Tanquisado com 2 rebocadores" in html
     assert "Diagnostico percurso e reponto" in html
     assert "Diagnostico SECIL com reponto" in html
+    assert "Diagnostico SECIL sem herdar Lisnave" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html
@@ -138,10 +140,17 @@ def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
             elif runner == "slash_validation":
                 text = critical_slash_validation_text(item["fixture"])
             elif runner == "operational_diagnostic":
-                text = format_operational_diagnostic(build_operational_diagnostic(item["question"]))
+                text = format_operational_diagnostic(
+                    build_operational_diagnostic(
+                        item["question"],
+                        history=item.get("history") or [],
+                    )
+                )
             else:
                 continue
             missing = _missing_expected_tokens(text, item.get("expected_tokens") or ())
+            forbidden = _present_forbidden_tokens(text, item.get("forbidden_tokens") or ())
 
             assert text.strip(), item["id"]
             assert not missing, item["id"]
+            assert not forbidden, item["id"]

@@ -64,3 +64,21 @@ def test_generic_secil_diagnostic_asks_for_west_or_east() -> None:
     assert "SECIL W/Oeste" in rendered
     assert "SECIL E/Este" in rendered
     assert "Confirmar se e SECIL W/Oeste ou SECIL E/Este" in rendered
+
+
+def test_explicit_secil_diagnostic_does_not_reuse_old_lisnave_context() -> None:
+    diagnostic = build_operational_diagnostic(
+        "Marquei manobra de entrada para a Secil E as 1925. Está correto?",
+        history=[
+            {"role": "user", "content": "Um navio na LISNAVE de 300 m manobra com quantos rebocadores?"},
+            {"role": "assistant", "content": "Recomendo 6 rebocadores."},
+            {"role": "user", "content": "Com nevoeiro em porto posso sair?"},
+        ],
+    )
+    rendered = format_operational_diagnostic(diagnostic)
+
+    assert "Local: SECIL" in rendered
+    assert "Doca/cais: SECIL E/Este" in rendered
+    assert "LISNAVE" not in rendered
+    assert "6 rebocador" not in rendered
+    assert "nevoeiro" not in rendered.lower()
