@@ -317,6 +317,18 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("bombordo", payload["answer"])
         self.assertIn("estibordo", payload["answer"])
 
+    def test_hidrolift_beam_limit_triggers_without_lisnave_word(self) -> None:
+        payload = answer_direct_operational_query(
+            "Tenho um navio para entrar no hidrolift no preia-mar das 20:03. "
+            "O navio tem 45 m de boca, pode manobrar para entrar a essa hora?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_rule", payload["answer_origin"])
+        self.assertIn("Não.", payload["answer"])
+        self.assertIn("boca máxima de 32 m", payload["answer"])
+        self.assertIn("45 m de boca", payload["answer"])
+
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {
             "items": [
@@ -365,6 +377,13 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Resumo das próximas horas", answer)
         self.assertIn("vento", answer)
         self.assertIn("rajadas", answer)
+
+    def test_weather_typo_forecast_next_hours_uses_live_weather(self) -> None:
+        answer = self._answer("previsao metrologica proximas horas")
+
+        self.assertIn("Previsão meteorológica", answer)
+        self.assertIn("Resumo das próximas horas", answer)
+        self.assertIn("vento", answer)
 
     def test_next_days_forecast_includes_wind_and_gusts(self) -> None:
         answer = self._answer("Meteo próximos dias")

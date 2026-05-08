@@ -61,10 +61,10 @@ DAYLIGHT_QUERY_RE = re.compile(
 )
 MOON_QUERY_RE = re.compile(r"\b(lua|fase da lua|fase lunar|moon)\b")
 WEATHER_FORECAST_TODAY_RE = re.compile(
-    r"\b(previsao|previsoes|previsao meteorologica|previsoes meteorologicas|prognostico|"
+    r"\b(previsao|previsoes|previsao meteorologica|previsoes meteorologicas|metrologia|metrologica|metereologia|metereologica|prognostico|"
     r"como vai estar|vai estar|meteo)\b.*\b(hoje|resto do dia|proximas horas|próximas horas)\b"
     r"|"
-    r"\b(hoje|resto do dia)\b.*\b(previsao|previsoes|prognostico|meteorologia|meteo|tempo)\b"
+    r"\b(hoje|resto do dia|proximas horas|próximas horas)\b.*\b(previsao|previsoes|prognostico|meteorologia|metrologia|metereologia|meteo|tempo)\b"
 )
 WEATHER_FORECAST_DAYS_RE = re.compile(
     r"\b(proximos dias|próximos dias|dias seguintes|amanha|amanhã|depois de amanha|depois de amanhã|"
@@ -755,9 +755,15 @@ def _extract_hidrolift_beam_m(question: str) -> float | None:
 
 
 def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> dict | None:
-    if "lisnave" not in clean_question:
-        return None
-    if not any(token in clean_question for token in ("hidrolift", "eclusa", "doca 31", "doca 32", "doca 33", "d31", "d32", "d33")):
+    mentions_hidrolift = "hidrolift" in clean_question
+    mentions_lisnave_hidrolift_area = any(
+        token in clean_question
+        for token in ("doca 31", "doca 32", "doca 33", "d31", "d32", "d33")
+    )
+    mentions_lisnave_eclusa = "eclusa" in clean_question and (
+        "lisnave" in clean_question or "doca" in clean_question or "mitrena" in clean_question
+    )
+    if not (mentions_hidrolift or mentions_lisnave_hidrolift_area or mentions_lisnave_eclusa):
         return None
     beam_m = _extract_hidrolift_beam_m(question)
     if beam_m is None or beam_m <= 32:
@@ -943,7 +949,7 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
 
     if not applicable:
         return None
-    first_rule = applicable[0]
+    first_rule = _select_primary_tug_rule(applicable)
     count_match = re.search(r"\b(\d+)\s+rebocador(?:es)?\b", first_rule, flags=re.IGNORECASE)
     if not count_match:
         return None
@@ -961,8 +967,9 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         f"Recomendo {tug_label}.",
         f"Regra prática aplicável: {first_rule}",
     ]
-    if len(applicable) > 1:
-        answer_lines.append("Outras regras relevantes: " + " ".join(applicable[1:3]))
+    other_applicable = [rule for rule in applicable if rule != first_rule]
+    if other_applicable:
+        answer_lines.append("Outras regras relevantes: " + " ".join(other_applicable[:2]))
     if positioning and positioning_question:
         specific_positioning = [
             item
@@ -979,6 +986,25 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         "sources": [source],
         "answer_origin": "operational_tug_guidance",
     }
+
+
+def _select_primary_tug_rule(applicable: list[str]) -> str:
+    """Choose the most specific/conservative tug rule from extracted guidance lines."""
+    ranked = []
+    for index, rule in enumerate(applicable):
+        count_match = re.search(r"\b(\d+)\s+rebocador(?:es)?\b", rule, flags=re.IGNORECASE)
+        tug_count = int(count_match.group(1)) if count_match else 0
+        clean_rule = rule.lower()
+        specificity = 0
+        if any(token in clean_rule for token in ("loa", "acima", "ate", "até", "mais de", "entre", "<=", ">")):
+            specificity += 2
+        if any(token in clean_rule for token in ("vento", "hidrolift", "eclusa", "doca")):
+            specificity += 1
+        if "usar sempre no minimo" in clean_rule or "usar sempre no mínimo" in clean_rule:
+            specificity -= 1
+        ranked.append((tug_count, specificity, index, rule))
+    ranked.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+    return ranked[0][3]
 
 
 def _answer_emergency_response_direct(question: str, clean_question: str) -> dict | None:

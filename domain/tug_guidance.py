@@ -425,7 +425,6 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
 
     context = _extract_context(question, guidance)
     applicable_rules = []
-    applicable_rules.extend(_berth_minimum_rules(guidance, context))
     applicable_rules.extend(_matrix_rules(guidance, context))
     no_bow_rule = _minimum_no_bow_rule(question, context["loa"], context["draft"], guidance)
     if no_bow_rule:
@@ -433,6 +432,7 @@ def build_tug_operational_guidance_source(question: str, knowledge_dir: str) -> 
     lisnave_rule = _lisnave_rule(question, context["loa"], guidance)
     if lisnave_rule:
         applicable_rules.append(lisnave_rule)
+    applicable_rules.extend(_berth_minimum_rules(guidance, context))
 
     lines = [
         f"{guidance.get('title') or 'Regras praticas de rebocadores'}:",

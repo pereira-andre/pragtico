@@ -24,6 +24,13 @@ class ChatPlannerLiveFacetTests(unittest.TestCase):
         self.assertIn("weather", plan.live_facets)
         self.assertEqual(plan.primary_intent, "live_environment")
 
+    def test_weather_typo_next_hours_uses_weather_live_facet(self) -> None:
+        plan = build_chat_execution_plan("previsao metrologica proximas horas")
+
+        self.assertIn("weather", plan.live_facets)
+        self.assertEqual(plan.weather_mode, "timeline")
+        self.assertEqual(plan.primary_intent, "live_environment")
+
 
 if __name__ == "__main__":
     unittest.main()

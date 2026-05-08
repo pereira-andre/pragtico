@@ -17,6 +17,23 @@ class TugOperationalGuidanceTests(unittest.TestCase):
 
         self.assertIn("Lisnave acima de 100 m ate 150 m: 3 rebocadores", snippet)
 
+    def test_lisnave_over_250_direct_answer_uses_six_tugs(self) -> None:
+        payload = answer_direct_operational_query(
+            "Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertIn("Recomendo 6 rebocadores", payload["answer"])
+        self.assertIn("Lisnave acima de 250 m: 6 rebocadores", payload["answer"])
+        self.assertNotIn("Recomendo 3 rebocadores", payload["answer"])
+
+    def test_lisnave_over_250_guidance_orders_specific_rule_before_generic_minimum(self) -> None:
+        snippet = self._snippet("Um navio na LISNAVE de 300 m manobra com quantos rebocadores normalmente?")
+
+        specific = snippet.index("Lisnave acima de 250 m: 6 rebocadores")
+        generic = snippet.index("Lisnave: usar sempre no minimo 3 rebocadores")
+        self.assertLess(specific, generic)
+
     def test_critical_south_channel_berths_use_three_tugs_minimum(self) -> None:
         snippet = self._snippet("Navio de 101 m com bowthruster para Tanquisado precisa de quantos rebocadores?")
 
