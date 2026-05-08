@@ -94,11 +94,11 @@
 }
 
 .chatbot-title-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .chatbot-title-row.hidden {
@@ -114,8 +114,11 @@
 }
 
 .chatbot-drawer-title h3 {
+  flex: 0 1 auto;
   margin: 0;
+  max-width: calc(100% - 38px);
   font-size: 1rem;
+  line-height: 1.2;
   font-family: var(--font-display);
   color: #fff;
   cursor: text;
@@ -126,12 +129,12 @@
 }
 
 .chatbot-title-edit {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.14);
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.18);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -153,9 +156,15 @@
   outline-offset: 2px;
 }
 
-.chatbot-title-edit .chatbot-glyph {
-  width: 15px;
-  height: 15px;
+.chatbot-title-edit-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .chatbot-title-form {
