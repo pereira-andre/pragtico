@@ -12,6 +12,8 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from core import services
 from core.chat_feedback import sync_feedback_correction_eval_case
 from core.chat_runtime import handle_chat_turn
+from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
+from core.rule_catalog import _active_knowledge_dir
 from core.event_report_runtime import (
     finalize_pending_event_report,
     format_event_report_answer,
@@ -374,6 +376,7 @@ _NON_REVISABLE_ASSISTANT_MESSAGE_KINDS = {
     "feedback_correction_ack",
     "feedback_correction_prompt",
     "answer_retry_without_context",
+    "answer_diagnostic",
     "sos_cancelled",
     "sos_cancel_without_pending",
     "sos_disabled",
@@ -439,6 +442,26 @@ def _whatsapp_answer_retry_requested(text: str) -> bool:
     )
 
 
+def _whatsapp_diagnostic_requested(text: str) -> bool:
+    clean = _normalize_command_text(text).strip(" ?!.")
+    if not clean:
+        return False
+    exact_commands = {
+        "/diagnostico",
+        "diagnostico",
+        "mostra diagnostico",
+        "explica diagnostico",
+        "/porque",
+        "/por que",
+        "/porque?",
+        "porque",
+        "por que",
+    }
+    if clean in exact_commands:
+        return True
+    return clean.startswith("/diagnostico ") or clean.startswith("diagnostico da resposta")
+
+
 def _assistant_message_is_revisable(message: dict) -> bool:
     if message.get("role") != "assistant":
         return False
@@ -447,6 +470,43 @@ def _assistant_message_is_revisable(message: dict) -> bool:
         metadata = {}
     message_kind = str(metadata.get("message_kind") or "").strip()
     return message_kind not in _NON_REVISABLE_ASSISTANT_MESSAGE_KINDS
+
+
+def _latest_assistant_diagnostic(
+    username: str,
+    conversation_id: str,
+) -> dict:
+    conversation = services.store.ensure_conversation(username, conversation_id)
+    if conversation["id"] != conversation_id:
+        raise ValueError("Conversa não encontrada.")
+    messages = services.store.list_messages(username, conversation_id)
+    for target_index in range(len(messages) - 1, -1, -1):
+        target = messages[target_index]
+        if not _assistant_message_is_revisable(target):
+            continue
+        metadata = target.get("channel_metadata") or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+        diagnostic = metadata.get("operational_diagnostic")
+        if not isinstance(diagnostic, dict) or not diagnostic.get("present"):
+            previous_user = next(
+                (
+                    item
+                    for item in reversed(messages[:target_index])
+                    if item.get("role") == "user" and str(item.get("content") or "").strip()
+                ),
+                None,
+            )
+            if not previous_user:
+                raise ValueError("Não encontrei a pergunta original dessa resposta.")
+            diagnostic = build_operational_diagnostic(
+                str(previous_user.get("content") or ""),
+                history=messages[:target_index],
+                answer={"answer": str(target.get("content") or "")},
+                knowledge_dir=_active_knowledge_dir() or "knowledge",
+            )
+        return diagnostic
+    raise ValueError("Não encontrei uma resposta anterior nesta conversa para diagnosticar.")
 
 
 def _assistant_revision_context_from_messages(
@@ -1550,6 +1610,70 @@ def whatsapp_webhook_receive():
                         message_id,
                     )
                     continue
+
+            if _whatsapp_diagnostic_requested(text):
+                conversation = services.store.ensure_conversation(username=profile["username"])
+                user_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content=text,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_message_id=message_id,
+                    channel_metadata={
+                        "message_kind": "answer_diagnostic_request",
+                        "profile_name": event.get("profile_name", ""),
+                        "timestamp": event.get("timestamp", ""),
+                    },
+                )
+                services.store.record_channel_event(
+                    channel="whatsapp",
+                    event_type="incoming_answer_diagnostic_request",
+                    payload=event.get("raw") or {},
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    local_message_id=user_message["id"],
+                    channel_user_id=from_number,
+                    external_event_id=message_id,
+                    external_message_id=message_id,
+                )
+                try:
+                    diagnostic = _latest_assistant_diagnostic(profile["username"], conversation["id"])
+                    reply_text = format_operational_diagnostic(diagnostic)
+                except ValueError:
+                    reply_text = (
+                        "Não encontrei uma resposta anterior nesta conversa para diagnosticar. "
+                        "Faz a pergunta de novo com navio, cais/doca, hora e decisão pretendida."
+                    )
+                reply_message = services.store.append_chat_message(
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    role="assistant",
+                    content=reply_text,
+                    channel="whatsapp",
+                    channel_user_id=from_number,
+                    external_reply_to_id=message_id,
+                    channel_metadata={"message_kind": "answer_diagnostic"},
+                )
+                _send_and_record_outbound_message(
+                    service,
+                    username=profile["username"],
+                    conversation_id=conversation["id"],
+                    local_message_id=reply_message["id"],
+                    content=reply_text,
+                    to_number=from_number,
+                    reply_to_message_id=message_id,
+                    event_type="outgoing_answer_diagnostic",
+                )
+                _mark_inbound_processed(
+                    message_id,
+                    from_number=from_number,
+                    conversation_id=conversation["id"],
+                    answer=reply_text,
+                )
+                delivered += 1
+                continue
 
             if _whatsapp_answer_retry_requested(text):
                 conversation = services.store.ensure_conversation(username=profile["username"])

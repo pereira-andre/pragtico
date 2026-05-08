@@ -27,6 +27,7 @@ from core.form_helpers import (
     ensure_portal_berth_is_physically_available,
 )
 from core.maneuver_context import answer_slash_validation, build_scale_context
+from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
 from core.operational_actions import answer_slash_query, finalize_operational_proposal
 from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 from core.portal_notifications import latest_maneuver_by_type
@@ -96,6 +97,66 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "source": "knowledge/tug_operational_guidance.json",
         "expected_origin": "operational_tug_guidance",
         "expected_tokens": ("Recomendo 3 rebocadores", "acima de 100 m ate 150 m", "Quatro rebocadores sao excessivos"),
+    },
+    {
+        "id": "diagnostic-lisnave-300-six-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Lisnave 300 m",
+        "question": "Um navio na LISNAVE de 300 m manobra com quantos rebocadores normalmente?",
+        "expected_summary": "A ficha deve aplicar o patamar especifico antes de qualquer minimo generico.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Minimo critico identificado: 6 rebocador", "Lisnave acima de 250 m: 6 rebocadores"),
+    },
+    {
+        "id": "diagnostic-hidrolift-beam-limit",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Hidrolift boca 45 m",
+        "question": "Tenho um navio para entrar no hidrolift no preia-mar das 20:03. O navio tem 45 m de boca, pode manobrar?",
+        "expected_summary": "A ficha bloqueia pela boca antes de discutir a hora.",
+        "source": "core/operational_diagnostics.py + IT-014",
+        "expected_tokens": ("Bloqueio dimensional", "boca maxima 32 m", "Boca: 45 m"),
+    },
+    {
+        "id": "diagnostic-ecooil-two-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Eco-Oil com 2 rebocadores",
+        "question": "Entrada para Eco-Oil com 2 rebocadores pode avancar?",
+        "expected_summary": "A ficha deve chamar o minimo pratico local de 3 rebocadores.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Eco-Oil: usar sempre no minimo 3 rebocadores", "Rebocadores insuficientes"),
+    },
+    {
+        "id": "diagnostic-tanquisado-two-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Tanquisado com 2 rebocadores",
+        "question": "Entrada para Tanquisado com 2 rebocadores pode avancar?",
+        "expected_summary": "A ficha deve chamar o minimo pratico local de 3 rebocadores.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Tanquisado: usar sempre no minimo 3 rebocadores", "Rebocadores insuficientes"),
+    },
+    {
+        "id": "diagnostic-route-reponto-lead-time",
+        "group": "Diagnostico operacional",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico percurso e reponto",
+        "question": "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?",
+        "expected_summary": "A ficha deve validar duracao origem-destino e hora de chegada ao ponto critico.",
+        "source": "core/operational_diagnostics.py + knowledge/Notas_Pilotagem.txt",
+        "expected_tokens": ("Percurso/duracao", "cerca de 1 hora", "fase critica no cais/doca"),
     },
     {
         "id": "tanquisado-east-side-push",
@@ -3240,6 +3301,13 @@ class OperationalFlowSuite:
                     text = str(payload.get("answer") or "")
                     origin = str(payload.get("answer_origin") or "")
                     origin_ok = not item.get("expected_origin") or origin == item.get("expected_origin")
+                elif runner == "operational_diagnostic":
+                    diagnostic = build_operational_diagnostic(
+                        item.get("question", ""),
+                        knowledge_dir=_active_knowledge_dir() or "knowledge",
+                    )
+                    text = format_operational_diagnostic(diagnostic)
+                    origin_ok = bool(diagnostic.get("present"))
                 elif runner == "knowledge_json":
                     text = _critical_json_source_text(str(item.get("source_path") or ""))
                     origin_ok = True

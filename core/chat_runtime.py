@@ -45,6 +45,7 @@ from core.helpers import (
     refresh_knowledge_state,
     save_pending_chat_action,
 )
+from core.operational_diagnostics import build_operational_diagnostic
 from domain.chat_actions import (
     build_action_reply_template,
     format_action_summary,
@@ -433,6 +434,27 @@ def _compact_review_match(match: dict | None) -> dict | None:
     }
 
 
+def _build_answer_diagnostic(
+    question: str,
+    *,
+    history: list[dict] | None = None,
+    answer: dict | None = None,
+) -> dict:
+    existing = (answer or {}).get("operational_diagnostic")
+    if isinstance(existing, dict) and existing.get("present"):
+        return existing
+    try:
+        return build_operational_diagnostic(
+            question,
+            history=history or [],
+            answer=answer,
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
+    except Exception:
+        logger.exception("Falha ao construir diagnostico operacional da resposta.")
+        return {"present": False}
+
+
 def _build_playground_trace(
     *,
     execution_plan: ChatExecutionPlan | None,
@@ -448,6 +470,7 @@ def _build_playground_trace(
     review_correction_match: dict | None = None,
     retrieval_validation: dict | None = None,
     direct_answer_used: bool = False,
+    operational_diagnostic: dict | None = None,
 ) -> dict:
     target_record = (targeted_document_context or {}).get("record") or {}
     document_sources = (targeted_document_context or {}).get("document_sources") or []
@@ -484,6 +507,7 @@ def _build_playground_trace(
         "review_guard": _compact_review_match(review_guard_match),
         "review_correction": _compact_review_match(review_correction_match),
         "retrieval_validation": retrieval_validation or {},
+        "operational_diagnostic": operational_diagnostic or {},
         "used_llm": answer_origin == "llm",
         "used_direct_answer": direct_answer_used,
         "used_shortcut": answer_origin in {
@@ -1078,6 +1102,9 @@ def playground_answer(
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
+            diagnostic = _build_answer_diagnostic(clean_question, answer=direct_answer)
+            if diagnostic.get("present"):
+                direct_answer["operational_diagnostic"] = diagnostic
             direct_answer["trace"] = _build_playground_trace(
                 execution_plan=execution_plan,
                 answer_origin=direct_answer.get("answer_origin", "direct_operational"),
@@ -1087,6 +1114,7 @@ def playground_answer(
                 review_guard_match=review_guard_match,
                 review_correction_match=review_correction_match,
                 direct_answer_used=True,
+                operational_diagnostic=diagnostic,
             )
             return direct_answer
 
@@ -1189,6 +1217,7 @@ def playground_answer(
                             reviewed_answers=synthesis_reviewed_answers,
                             review_guard_match=review_guard_match,
                             review_correction_match=review_correction_match,
+                            operational_diagnostic=_build_answer_diagnostic(clean_question, answer=answer),
                         )
                         return answer
                     answer = services.rag.answer(
@@ -1208,6 +1237,9 @@ def playground_answer(
             answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"},
             clean_question,
         )
+        diagnostic = _build_answer_diagnostic(clean_question, history=runtime_history, answer=answer)
+        if diagnostic.get("present"):
+            answer["operational_diagnostic"] = diagnostic
         answer["trace"] = _build_playground_trace(
             execution_plan=execution_plan,
             answer_origin=answer.get("answer_origin", ""),
@@ -1221,6 +1253,7 @@ def playground_answer(
             review_guard_match=review_guard_match,
             review_correction_match=review_correction_match,
             retrieval_validation=answer.get("retrieval_validation"),
+            operational_diagnostic=diagnostic,
         )
         return answer
 
@@ -1820,6 +1853,15 @@ def handle_chat_turn(
             )
 
         answer = add_contextual_response_emojis(answer, clean_question)
+        diagnostic_question = lookup_question if is_revision_attempt else clean_question
+        diagnostic_history = history + [user_message]
+        diagnostic = _build_answer_diagnostic(
+            diagnostic_question,
+            history=diagnostic_history,
+            answer=answer,
+        )
+        if diagnostic.get("present"):
+            answer["operational_diagnostic"] = diagnostic
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:
@@ -1855,6 +1897,11 @@ def handle_chat_turn(
             channel=channel,
             channel_user_id=channel_user_id,
             external_reply_to_id=inbound_message_id,
+            channel_metadata=(
+                {"operational_diagnostic": answer.get("operational_diagnostic")}
+                if answer.get("operational_diagnostic")
+                else {}
+            ),
         )
         return {
             **answer,

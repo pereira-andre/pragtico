@@ -17,6 +17,7 @@ from core.chat_planner import (
 )
 from core.form_helpers import _local_iso_to_label
 from core.maneuver_context import _match_port_call_from_question, build_maneuver_case_context_source
+from core.operational_diagnostics import build_operational_diagnostic
 from core.operational_common import _operational_lookup_key, current_resolvable_port_calls
 from core.rule_catalog import _active_knowledge_dir
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
@@ -114,6 +115,23 @@ AGENT_AGENCY_QUERY_RE = re.compile(
 AGENT_LOOKUP_QUERY_RE = re.compile(r"\b(qual|quem)\b.*\bagente\b|\bagente\b.*\b(navio|escala|manobra)\b")
 VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
 VESSEL_CATALOG_DELETED_KEYS_KEY = "deleted_keys"
+
+
+def _attach_operational_diagnostic(answer: dict | None, question: str) -> dict | None:
+    if not answer:
+        return answer
+    try:
+        diagnostic = build_operational_diagnostic(
+            question,
+            answer=answer,
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
+    except Exception:
+        logger.exception("Falha ao construir diagnostico operacional.")
+        diagnostic = {}
+    if diagnostic.get("present"):
+        answer["operational_diagnostic"] = diagnostic
+    return answer
 
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
@@ -1216,64 +1234,64 @@ def answer_direct_operational_query(
     clean_question = plan.normalized_question or _operational_lookup_key(question)
     emergency_answer = _answer_emergency_response_direct(question, clean_question)
     if emergency_answer:
-        return emergency_answer
+        return _attach_operational_diagnostic(emergency_answer, question)
     fog_underway_answer = _answer_fog_underway_procedure_direct(question, clean_question)
     if fog_underway_answer:
-        return fog_underway_answer
+        return _attach_operational_diagnostic(fog_underway_answer, question)
     navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
     if navigation_lights_answer:
-        return navigation_lights_answer
+        return _attach_operational_diagnostic(navigation_lights_answer, question)
     navigation_basics_answer = answer_navigation_basics_direct(question)
     if navigation_basics_answer:
-        return navigation_basics_answer
+        return _attach_operational_diagnostic(navigation_basics_answer, question)
     unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
     if unclear_answer:
-        return unclear_answer
+        return _attach_operational_diagnostic(unclear_answer, question)
     safety_answer = _answer_safety_hard_limit(question, clean_question)
     if safety_answer:
-        return safety_answer
+        return _attach_operational_diagnostic(safety_answer, question)
     hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
     if hard_limit_answer:
-        return hard_limit_answer
+        return _attach_operational_diagnostic(hard_limit_answer, question)
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
-        return tug_guidance_answer
+        return _attach_operational_diagnostic(tug_guidance_answer, question)
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
-        return route_answer
+        return _attach_operational_diagnostic(route_answer, question)
     if plan.requires_llm_synthesis:
         return None
 
     live_environment_answer = _answer_live_environment_query(question, clean_question, plan=plan)
     if live_environment_answer:
-        return live_environment_answer
+        return _attach_operational_diagnostic(live_environment_answer, question)
     berthed_vessels_answer = _answer_berthed_vessels_query(question, clean_question)
     if berthed_vessels_answer:
-        return berthed_vessels_answer
+        return _attach_operational_diagnostic(berthed_vessels_answer, question)
     vessel_detail_answer = _answer_vessel_detail_query(question, clean_question)
     if vessel_detail_answer:
-        return vessel_detail_answer
+        return _attach_operational_diagnostic(vessel_detail_answer, question)
     maneuver_actor_answer = _answer_maneuver_actor_query(question, clean_question, plan=plan)
     if maneuver_actor_answer:
-        return maneuver_actor_answer
+        return _attach_operational_diagnostic(maneuver_actor_answer, question)
     agent_lookup_answer = _answer_agent_lookup_query(question, clean_question, plan=plan)
     if agent_lookup_answer:
-        return agent_lookup_answer
+        return _attach_operational_diagnostic(agent_lookup_answer, question)
     agent_agency_answer = _answer_agent_agency_query(question, clean_question)
     if agent_agency_answer:
-        return agent_agency_answer
+        return _attach_operational_diagnostic(agent_agency_answer, question)
     maneuver_id_answer = _answer_maneuver_id_query(question, clean_question, plan=plan)
     if maneuver_id_answer:
-        return maneuver_id_answer
+        return _attach_operational_diagnostic(maneuver_id_answer, question)
     recent_departures_answer = _answer_recent_departures_query(question, clean_question)
     if recent_departures_answer:
-        return recent_departures_answer
+        return _attach_operational_diagnostic(recent_departures_answer, question)
     expected_arrivals_answer = _answer_expected_arrivals_query(question, clean_question)
     if expected_arrivals_answer:
-        return expected_arrivals_answer
+        return _attach_operational_diagnostic(expected_arrivals_answer, question)
     planned_maneuvers_answer = _answer_planned_maneuvers_query(question, clean_question)
     if planned_maneuvers_answer:
-        return planned_maneuvers_answer
+        return _attach_operational_diagnostic(planned_maneuvers_answer, question)
 
     maneuver_type = plan.maneuver_lookup_type or ""
     maneuver_label = "manobra"
@@ -1300,7 +1318,10 @@ def answer_direct_operational_query(
         maneuvers = [item for item in maneuvers if (item.get("type") or "").strip().lower() == maneuver_type]
     if not maneuvers:
         answer = f"Não encontrei {maneuver_label} para {resolved_port_call.get('vessel_name', 'este navio')}."
-        return {"answer": answer, "sources": [], "answer_origin": "operational_lookup"}
+        return _attach_operational_diagnostic(
+            {"answer": answer, "sources": [], "answer_origin": "operational_lookup"},
+            question,
+        )
 
     maneuvers.sort(
         key=lambda item: (
@@ -1318,7 +1339,7 @@ def answer_direct_operational_query(
         f"O ID da {type_label} de {resolved_port_call.get('vessel_name', 'este navio')} "
         f"é {short_id} (completo: {maneuver_id})."
     )
-    return {
+    return _attach_operational_diagnostic({
         "answer": answer,
         "sources": [
             {
@@ -1329,7 +1350,7 @@ def answer_direct_operational_query(
             }
         ],
         "answer_origin": "operational_lookup",
-    }
+    }, question)
 
 
 def _source_from_answer(document: str, source_id: str, answer: str, question: str) -> list[dict]:

@@ -2584,6 +2584,7 @@ def admin_bot_playground():
             "answer": result.get("answer", ""),
             "sources": result.get("sources", []),
             "answer_origin": result.get("answer_origin", ""),
+            "operational_diagnostic": result.get("operational_diagnostic", {}),
             "trace": result.get("trace", {}),
         }
     )

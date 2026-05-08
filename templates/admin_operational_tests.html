@@ -53,7 +53,7 @@
         {{ inventory.bot_matrix_automatic_count }} auto · {{ inventory.bot_matrix_manual_count }} manual
       </span>
     </div>
-    <p class="admin-status-note">Esta matriz fixa os casos que têm de continuar coerentes nas respostas do bot e na checklist das manobras dos cais críticos.</p>
+    <p class="admin-status-note">Esta matriz fixa os casos que têm de continuar coerentes nas respostas do bot, no diagnóstico operacional e na checklist das manobras dos cais críticos.</p>
     <div class="operational-tests-scenario-list">
       {% for group in inventory.bot_matrix_groups %}
         <details class="planning-optional-box operational-tests-scenario operational-tests-matrix-group" {% if loop.first %}open{% endif %}>

@@ -115,7 +115,7 @@
       <div>
         <p class="eyebrow">Teste rápido</p>
         <h2>Experimentar uma pergunta</h2>
-        <p class="admin-bot-section-copy">Usa o pipeline real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom e raciocínio antes de mexer nas definições.</p>
+        <p class="admin-bot-section-copy">Usa o circuito real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom, ficha operacional e regras críticas antes de mexer nas definições.</p>
       </div>
       <span class="muted small-note">Sem histórico.</span>
     </div>
@@ -138,7 +138,7 @@
           <ul id="bot-playground-sources"></ul>
         </details>
         <details class="admin-bot-playground-trace" id="bot-playground-trace-wrapper" hidden open>
-          <summary>Trace da decisão</summary>
+          <summary>Diagnóstico da decisão</summary>
           <div class="admin-bot-trace-grid" id="bot-playground-trace"></div>
         </details>
       </article>
@@ -151,7 +151,7 @@
       <div>
         <p class="eyebrow">Processo</p>
         <h2>Fluxo de decisão do assistente</h2>
-        <p class="admin-bot-section-copy">Mostra a sequência simplificada que transforma uma pergunta numa resposta útil: interpretar, procurar contexto, verificar segurança operacional e devolver a conclusão.</p>
+        <p class="admin-bot-section-copy">Mostra a sequência simplificada que transforma uma pergunta numa resposta útil: interpretar o caso, preparar a ficha operacional, procurar contexto, verificar segurança operacional e devolver a conclusão. No WhatsApp, <code>/diagnostico</code> mostra a ficha e regras usadas na resposta anterior.</p>
       </div>
     </div>
     <div class="admin-bot-process-flow">
@@ -1051,6 +1051,24 @@
       traceWrapper.hidden = true;
       return;
     }
+    const diagnostic = trace.operational_diagnostic || {};
+    if (diagnostic.present) {
+      appendTraceCard("Ficha operacional", [
+        diagnostic.summary || "Ficha preparada.",
+        ...((diagnostic.case_lines || []).slice(0, 5)),
+      ]);
+      if ((diagnostic.critical_rules || []).length) {
+        appendTraceCard("Regras críticas", (diagnostic.critical_rules || [])
+          .slice(0, 5)
+          .map((item) => item.detail || item.title || ""));
+      }
+      if ((diagnostic.warnings || []).length || (diagnostic.missing_fields || []).length) {
+        appendTraceCard("Alertas e faltas", [
+          ...((diagnostic.warnings || []).slice(0, 3)),
+          ...((diagnostic.missing_fields || []).slice(0, 3)),
+        ]);
+      }
+    }
     const plan = trace.execution_plan || {};
     const liveFacets = (plan.live_facets || []).join(", ") || "nenhum";
     const sourceModes = (trace.source_mode_counts || [])
@@ -1065,7 +1083,7 @@
       `Origem: ${trace.answer_origin || "n/d"}`,
       `Resposta direta: ${boolLabel(trace.used_direct_answer)}`,
       `Atalho estruturado: ${boolLabel(trace.used_shortcut)}`,
-      `Motor generativo usado: ${boolLabel(trace.used_llm)}`,
+      `Síntese textual usada: ${boolLabel(trace.used_llm)}`,
     ]);
     appendTraceCard("Conhecimento", [
       `Documento alvo: ${trace.target_document || "sem alvo"}`,
@@ -1082,7 +1100,7 @@
     ]);
     const retrievalValidation = trace.retrieval_validation || {};
     if (Object.keys(retrievalValidation).length) {
-      appendTraceCard("RAG documental", [
+      appendTraceCard("Validação documental", [
         `Pode responder: ${boolLabel(retrievalValidation.can_answer)}`,
         `Entidade correta: ${retrievalValidation.entity_match === null ? "n/a" : boolLabel(retrievalValidation.entity_match)}`,
         `Qualidade: ${retrievalValidation.source_quality || "n/d"}`,

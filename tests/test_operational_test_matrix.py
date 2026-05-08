@@ -17,6 +17,7 @@ from core.operational_test_suite import (
     critical_slash_validation_text,
     operational_test_inventory,
 )
+from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
 
 
 class FakeStore:
@@ -81,6 +82,11 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Emergencia: perda de bow" in html
     assert "Nevoeiro súbito em navegação: COLREG" in html
     assert "4.º rebocador: costado ou standby" in html
+    assert "Diagnostico Lisnave 300 m" in html
+    assert "Diagnostico Hidrolift boca 45 m" in html
+    assert "Diagnostico Eco-Oil com 2 rebocadores" in html
+    assert "Diagnostico Tanquisado com 2 rebocadores" in html
+    assert "Diagnostico percurso e reponto" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html
@@ -130,6 +136,8 @@ def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
                 text = critical_maneuver_checklist_text(item["fixture"])
             elif runner == "slash_validation":
                 text = critical_slash_validation_text(item["fixture"])
+            elif runner == "operational_diagnostic":
+                text = format_operational_diagnostic(build_operational_diagnostic(item["question"]))
             else:
                 continue
             missing = _missing_expected_tokens(text, item.get("expected_tokens") or ())
