@@ -79,6 +79,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
@@ -88,12 +89,20 @@
 .chatbot-drawer-title {
   display: grid;
   gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .chatbot-title-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chatbot-title-row.hidden {
+  display: none;
 }
 
 .chatbot-drawer-title .eyebrow {
@@ -110,30 +119,48 @@
   font-family: var(--font-display);
   color: #fff;
   cursor: text;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chatbot-title-edit {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  border: none;
-  background: transparent;
-  color: rgba(255,255,255,0.72);
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.14);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.chatbot-title-edit:hover {
+.chatbot-title-edit:hover,
+.chatbot-title-edit:focus-visible {
   color: #fff;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.24);
+  border-color: rgba(255,255,255,0.42);
+}
+
+.chatbot-title-edit:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.55);
+  outline-offset: 2px;
+}
+
+.chatbot-title-edit .chatbot-glyph {
+  width: 15px;
+  height: 15px;
 }
 
 .chatbot-title-form {
   margin: 0;
+  width: 100%;
 }
 
 .chatbot-title-form.hidden {
@@ -141,7 +168,8 @@
 }
 
 .chatbot-title-form input {
-  width: min(220px, 100%);
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 10px;
   background: rgba(7, 20, 36, 0.22);
@@ -163,6 +191,7 @@
 .chatbot-drawer-controls {
   display: flex;
   gap: 6px;
+  flex: 0 0 auto;
 }
 
 .chatbot-icon-btn {

@@ -10,8 +10,8 @@
     <div class="chatbot-drawer-title">
       <p class="eyebrow">Assistente</p>
       <div class="chatbot-title-row" id="chatbot-title-row">
-        <h3 id="chatbot-conv-title" title="Duplo clique para renomear conversa">{{ chatbot_conversation.title if chatbot_conversation else 'Nova conversa' }}</h3>
-        <button type="button" class="chatbot-title-edit" id="chatbot-title-edit" title="Renomear conversa">
+        <h3 id="chatbot-conv-title" title="{{ chatbot_conversation.title if chatbot_conversation else 'Nova conversa' }}">{{ chatbot_conversation.title if chatbot_conversation else 'Nova conversa' }}</h3>
+        <button type="button" class="chatbot-title-edit" id="chatbot-title-edit" title="Renomear conversa" aria-label="Renomear conversa">
           <span class="chatbot-glyph chatbot-glyph-edit" aria-hidden="true"></span>
         </button>
       </div>
@@ -418,7 +418,10 @@
 
   function setConversationTitle(value) {
     const title = normalizeConversationTitle(value);
-    if (convTitle) convTitle.textContent = title;
+    if (convTitle) {
+      convTitle.textContent = title;
+      convTitle.title = title;
+    }
     if (convTitleInput && document.activeElement !== convTitleInput) convTitleInput.value = title;
   }
 
