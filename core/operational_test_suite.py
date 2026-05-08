@@ -159,6 +159,18 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": ("Percurso/duracao", "cerca de 1 hora", "fase critica no cais/doca"),
     },
     {
+        "id": "diagnostic-secil-reponto",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico SECIL com reponto",
+        "question": "Entrada para a SECIL W marcada para as 13:30, tenho de ir ao reponto?",
+        "expected_summary": "A ficha deve tratar a SECIL como local critico de reponto e distinguir Oeste/Este.",
+        "source": "core/operational_diagnostics.py + IT-009_Secil.txt",
+        "expected_tokens": ("Local: SECIL", "SECIL W/Oeste", "todos os navios atracam proximo do reponto"),
+    },
+    {
         "id": "tanquisado-east-side-push",
         "group": "Rebocadores e vento",
         "risk": "Alto",

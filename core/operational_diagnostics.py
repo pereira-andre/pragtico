@@ -128,6 +128,8 @@ def _infer_facility(clean: str) -> str:
         return "Eco-Oil"
     if re.search(r"\btanquisado\b", clean):
         return "Tanquisado"
+    if re.search(r"\b(secil|outao)\b", clean):
+        return "SECIL"
     if re.search(r"\b(auto europa|autoeuropa|roro|ro ro|ro ro|cais 10|cais 11)\b", clean):
         return "Autoeuropa / Ro-Ro"
     if re.search(r"\btms\s*2\b|\btms2\b", clean):
@@ -138,6 +140,10 @@ def _infer_facility(clean: str) -> str:
 
 
 def _infer_dock(clean: str) -> str:
+    if re.search(r"\b(secil w|secil oeste|cais oeste|cais de oeste|cais a secil|outao w|outao oeste)\b", clean):
+        return "SECIL W/Oeste"
+    if re.search(r"\b(secil e|secil este|cais este|cais de este|cais b secil|outao e|outao este)\b", clean):
+        return "SECIL E/Este"
     match = re.search(r"\b(?:doca\s*(20|21|22|31|32|33)|d(20|21|22|31|32|33))\b", clean)
     if not match:
         return ""
@@ -289,6 +295,25 @@ def build_operational_diagnostic(
         _add_unique_rule(critical_rules, "Rebocadores", f"{case['facility']}: usar sempre no minimo 3 rebocadores.", "critical")
         minimum_tugs = max(minimum_tugs or 0, 3)
         _add_unique_rule(critical_rules, case["facility"], "Validar chegada ao reponto, calado, vento lateral e posicionamento proa/popa/costado.", "info")
+    if case["facility"] == "SECIL":
+        _add_unique_rule(
+            critical_rules,
+            "SECIL",
+            "SECIL W/Oeste: todos os navios atracam proximo do reponto; LOA > 170 m exige luz do dia e preia-mar.",
+            "critical",
+        )
+        _add_unique_rule(
+            critical_rules,
+            "SECIL",
+            "SECIL E/Este: em mares vivas, atracar proximo do reponto; confirmar se a janela e de mares vivas ou mortas.",
+            "critical",
+        )
+        _add_unique_rule(
+            critical_rules,
+            "SECIL",
+            "Marcacao pratica: entradas 30-45 min antes do reponto desde Barra/Fundeadouro Norte; 45 min a 1 h desde Troia/outro cais; saidas cerca de 15 min antes do reponto.",
+            "info",
+        )
 
     if case.get("wind_kts") and case["wind_kts"] > 30:
         warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: manobras suspensas acima de 30 kt.")
@@ -321,6 +346,8 @@ def build_operational_diagnostic(
         missing_fields.append("Cais/doca/terminal para aplicar excecoes locais.")
     if case["facility"] == "LISNAVE / Mitrena" and case["loa_m"] and case["loa_m"] > 250:
         missing_fields.append("DWT, carga perigosa, estado carregado/vazio e thrusters podem agravar os meios.")
+    if case["facility"] == "SECIL" and not case["dock"]:
+        missing_fields.append("Confirmar se e SECIL W/Oeste ou SECIL E/Este, porque a regra de reponto muda por cais.")
     if tide_topic and not case["time"]:
         missing_fields.append("Hora de largada e hora prevista de chegada ao ponto critico.")
 

@@ -87,6 +87,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico Eco-Oil com 2 rebocadores" in html
     assert "Diagnostico Tanquisado com 2 rebocadores" in html
     assert "Diagnostico percurso e reponto" in html
+    assert "Diagnostico SECIL com reponto" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html

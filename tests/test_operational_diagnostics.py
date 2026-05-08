@@ -43,3 +43,24 @@ def test_diagnostic_uses_recent_user_context_for_follow_up() -> None:
     rendered = format_operational_diagnostic(diagnostic)
 
     assert "Lisnave acima de 250 m: 6 rebocadores" in rendered
+
+
+def test_secil_diagnostic_includes_reponto_rules_and_side() -> None:
+    diagnostic = build_operational_diagnostic(
+        "Entrada para a SECIL W marcada para as 13:30, tenho de ir ao reponto?"
+    )
+    rendered = format_operational_diagnostic(diagnostic)
+
+    assert "Local: SECIL" in rendered
+    assert "Doca/cais: SECIL W/Oeste" in rendered
+    assert "todos os navios atracam proximo do reponto" in rendered
+    assert "entradas 30-45 min antes do reponto" in rendered
+
+
+def test_generic_secil_diagnostic_asks_for_west_or_east() -> None:
+    diagnostic = build_operational_diagnostic("Entrada para a SECIL tem de ser ao reponto?")
+    rendered = format_operational_diagnostic(diagnostic)
+
+    assert "SECIL W/Oeste" in rendered
+    assert "SECIL E/Este" in rendered
+    assert "Confirmar se e SECIL W/Oeste ou SECIL E/Este" in rendered
