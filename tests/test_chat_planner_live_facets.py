@@ -31,6 +31,12 @@ class ChatPlannerLiveFacetTests(unittest.TestCase):
         self.assertEqual(plan.weather_mode, "timeline")
         self.assertEqual(plan.primary_intent, "live_environment")
 
+    def test_plain_four_digit_maneuver_hour_uses_tide_live_facet(self) -> None:
+        plan = build_chat_execution_plan("Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?")
+
+        self.assertIn("tides", plan.live_facets)
+        self.assertTrue(plan.requires_live_reasoning)
+
 
 if __name__ == "__main__":
     unittest.main()

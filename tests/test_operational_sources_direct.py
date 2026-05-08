@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 import unittest
+from zoneinfo import ZoneInfo
 
 from flask import Flask
 
@@ -109,10 +111,41 @@ class FakeWeatherService:
         return []
 
 
+class FakeTideEvent:
+    def __init__(self, year: int, month: int, day: int, hour: int, minute: int, height: float) -> None:
+        self.timestamp = datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Europe/Lisbon"))
+        self.height = height
+
+    @property
+    def date_value(self) -> date:
+        return self.timestamp.date()
+
+    @property
+    def tide_type(self) -> str:
+        return "preia-mar" if self.height >= 2.0 else "baixa-mar"
+
+
+class FakeTideService:
+    def __init__(self) -> None:
+        self.events = [
+            FakeTideEvent(2026, 5, 8, 1, 29, 1.2),
+            FakeTideEvent(2026, 5, 8, 7, 42, 2.5),
+            FakeTideEvent(2026, 5, 8, 13, 30, 1.4),
+            FakeTideEvent(2026, 5, 8, 20, 3, 2.7),
+        ]
+
+    def resolve_query_dates(self, question: str) -> list[date]:
+        return [date(2026, 5, 8)]
+
+    def events_for_date(self, target_date: date) -> list[FakeTideEvent]:
+        return [item for item in self.events if item.date_value == target_date]
+
+
 class OperationalSourcesDirectTests(unittest.TestCase):
     def setUp(self) -> None:
         self.previous_store = services.store
         self.previous_weather_service = services.weather_service
+        self.previous_tide_service = services.tide_service
         self.app = Flask(__name__)
         self.app.secret_key = "test"
         self.activity = {
@@ -178,10 +211,12 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         }
         services.store = FakeStore(self.activity)
         services.weather_service = FakeWeatherService()
+        services.tide_service = FakeTideService()
 
     def tearDown(self) -> None:
         services.store = self.previous_store
         services.weather_service = self.previous_weather_service
+        services.tide_service = self.previous_tide_service
 
     def _answer(self, question: str) -> str:
         with self.app.test_request_context("/"):
@@ -328,6 +363,20 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Não.", payload["answer"])
         self.assertIn("boca máxima de 32 m", payload["answer"])
         self.assertIn("45 m de boca", payload["answer"])
+
+    def test_secil_e_entry_timing_compares_marked_hour_with_reponto(self) -> None:
+        payload = answer_direct_operational_query(
+            "Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_entry_timing", payload["answer_origin"])
+        self.assertIn("19:25", payload["answer"])
+        self.assertIn("38 min antes do reponto", payload["answer"])
+        self.assertIn("20:03", payload["answer"])
+        self.assertIn("30-45 min", payload["answer"])
+        self.assertIn("Atenção: o critério principal aqui não é apenas ser dia/noite", payload["answer"])
+        self.assertNotIn("não há proibição", payload["answer"].lower())
 
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {

@@ -3,7 +3,7 @@
 import logging
 import math
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from flask import has_request_context, session
 
@@ -20,6 +20,7 @@ from core.maneuver_context import _match_port_call_from_question, build_maneuver
 from core.operational_diagnostics import build_operational_diagnostic
 from core.operational_common import _operational_lookup_key, current_resolvable_port_calls
 from core.rule_catalog import _active_knowledge_dir
+from integrations.tide_service import LISBON_TZ
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
@@ -113,6 +114,11 @@ AGENT_AGENCY_QUERY_RE = re.compile(
     r"\b(agent\w*|trabalha|pertence)\b.*\b(agencia|agência)\b"
 )
 AGENT_LOOKUP_QUERY_RE = re.compile(r"\b(qual|quem)\b.*\bagente\b|\bagente\b.*\b(navio|escala|manobra)\b")
+MANEUVER_TIME_RE = re.compile(
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2})|\d{3,4})\b"
+    r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
+    flags=re.IGNORECASE,
+)
 VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
 VESSEL_CATALOG_DELETED_KEYS_KEY = "deleted_keys"
 
@@ -816,6 +822,184 @@ def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> 
     }
 
 
+def _parse_maneuver_time(question: str) -> tuple[int, int, str] | None:
+    value = ""
+    for match in MANEUVER_TIME_RE.finditer(str(question or "")):
+        value = next((group for group in match.groups() if group), "")
+    clean_value = value.strip().lower()
+    if not clean_value:
+        return None
+    if re.fullmatch(r"\d{3,4}", clean_value):
+        digits = clean_value.zfill(4)
+        hour = int(digits[:2])
+        minute = int(digits[2:])
+    else:
+        clean_value = clean_value.replace("h", ":")
+        if clean_value.endswith(":"):
+            clean_value += "00"
+        parts = clean_value.split(":", 1)
+        if len(parts) != 2:
+            return None
+        hour = int(parts[0])
+        minute = int(parts[1])
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour, minute, f"{hour:02d}:{minute:02d}"
+
+
+def _planned_datetime_for_question(question: str, hour: int, minute: int, tide_service) -> datetime | None:
+    target_dates: list[date] = []
+    try:
+        if tide_service and hasattr(tide_service, "resolve_query_dates"):
+            target_dates = list(tide_service.resolve_query_dates(question))
+    except Exception:
+        logger.exception("Falha ao resolver data de maré para hora de manobra.")
+    if not target_dates:
+        target_dates = [datetime.now(LISBON_TZ).date()]
+    target_date = target_dates[0]
+    return datetime(target_date.year, target_date.month, target_date.day, hour, minute, tzinfo=LISBON_TZ)
+
+
+def _nearest_tide_event(planned_dt: datetime, tide_service):
+    if not tide_service or not hasattr(tide_service, "events_for_date"):
+        return None
+    events = []
+    try:
+        for offset in (-1, 0, 1):
+            events.extend(tide_service.events_for_date((planned_dt + timedelta(days=offset)).date()))
+    except Exception:
+        logger.exception("Falha ao obter marés para validação horária SECIL.")
+        return None
+    if not events:
+        return None
+    return min(events, key=lambda item: abs((item.timestamp - planned_dt).total_seconds()))
+
+
+def _is_operational_spring_tide(tide_event, tide_service) -> bool | None:
+    if not tide_event or not tide_service or not hasattr(tide_service, "events_for_date"):
+        return None
+    try:
+        day_events = tide_service.events_for_date(tide_event.date_value)
+    except Exception:
+        return None
+    high_tides = [item.height for item in day_events if getattr(item, "tide_type", "") == "preia-mar"]
+    low_tides = [item.height for item in day_events if getattr(item, "tide_type", "") == "baixa-mar"]
+    if not high_tides or not low_tides:
+        return None
+    return max(high_tides) > 3.0 and min(low_tides) < 1.0
+
+
+def _format_tide_context(tide_event) -> str:
+    if not tide_event:
+        return ""
+    return (
+        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
+        f"({tide_event.height:.1f} m)"
+    )
+
+
+def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(e|este|east|cais e|cais este|cais b)\b", clean_question):
+        return None
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|marquei|marcada|marcar)\b", clean_question):
+        return None
+    if not re.search(r"\b(hora|horario|horário|corret|correct|certo|certa|marquei|marcada|marcar)\b", clean_question):
+        return None
+    parsed_time = _parse_maneuver_time(question)
+    if not parsed_time:
+        return None
+
+    hour, minute, time_label = parsed_time
+    tide_service = getattr(services, "tide_service", None)
+    planned_dt = _planned_datetime_for_question(question, hour, minute, tide_service)
+    tide_event = _nearest_tide_event(planned_dt, tide_service) if planned_dt else None
+    tide_context = _format_tide_context(tide_event)
+    spring_tide = _is_operational_spring_tide(tide_event, tide_service)
+
+    if tide_event and planned_dt:
+        signed_minutes = int(round((tide_event.timestamp - planned_dt).total_seconds() / 60))
+        abs_minutes = abs(signed_minutes)
+        if signed_minutes >= 0:
+            if 30 <= signed_minutes <= 45:
+                conclusion = (
+                    f"Sim, a marcação das {time_label} está alinhada com a prática para entrada na SECIL E "
+                    f"vinda de fora da Barra ou do Fundeadouro Norte: fica {signed_minutes} min antes do reponto, "
+                    f"dentro da janela 30-45 min "
+                    f"({tide_context})."
+                )
+            elif 45 < signed_minutes <= 60:
+                conclusion = (
+                    f"Sim, a marcação das {time_label} fica {signed_minutes} min antes do reponto ({tide_context}), "
+                    "o que encaixa melhor na janela 45 min a 1 h para uma entrada vinda de Tróia ou de outro cais."
+                )
+            elif signed_minutes < 30:
+                conclusion = (
+                    f"Eu ajustava: {time_label} fica só {signed_minutes} min antes do reponto ({tide_context}). "
+                    "Para entrada na Secil, a prática é marcar 30-45 min antes se vier de fora da Barra/Fundeadouro Norte, "
+                    "ou 45 min a 1 h se vier de Tróia/outro cais."
+                )
+            else:
+                conclusion = (
+                    f"Eu ajustava: {time_label} fica {signed_minutes} min antes do reponto ({tide_context}), "
+                    "mais cedo do que a prática normal de entrada para a Secil."
+                )
+        else:
+            conclusion = (
+                f"Não. {time_label} fica {abs_minutes} min depois do reponto mais próximo ({tide_context}). "
+                "Para entrada na Secil E, em especial se forem marés vivas, a referência deve ser chegar ao cais junto do reponto."
+            )
+    else:
+        conclusion = (
+            f"Não valido a hora só por não haver proibição noturna no Cais de Este. Para entrada na Secil E, "
+            f"a marcação das {time_label} tem de ser cruzada com o reponto de maré: 30-45 min antes se vier "
+            "de fora da Barra/Fundeadouro Norte, ou 45 min a 1 h se vier de Tróia/outro cais."
+        )
+
+    tide_note = ""
+    if spring_tide is True:
+        tide_note = "Pelo critério operacional disponível, trata-se de maré viva; no Cais de Este a atracação deve ficar junto do reponto."
+    elif spring_tide is False:
+        tide_note = "Pelo critério operacional disponível, não parece maré viva; mesmo assim a prática local de marcação continua a usar o reponto como referência."
+    else:
+        tide_note = "Confirma se a janela é de marés vivas; no Cais de Este, se for maré viva, a atracação deve ficar junto do reponto."
+
+    answer = (
+        f"{conclusion}\n\n"
+        "Atenção: o critério principal aqui não é apenas ser dia/noite. "
+        "A IT-009 diz que a Secil E atraca no reponto em marés vivas, e as notas práticas indicam a antecedência de marcação para entradas.\n\n"
+        f"{tide_note}\n\n"
+        "Antes de fechar, confirmar ainda LOA de referência 140 m, calado de referência 8,0 m, origem da entrada e validação do Piloto Coordenador."
+    )
+    sources = [
+        {
+            "document": "IT-009_Secil.txt",
+            "source_id": "SECIL_ENTRY_TIMING_RULE",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "operational_rule",
+            "snippet": (
+                "Secil E/Cais de Este: em marés vivas, atracar próximo do reponto. "
+                "Entradas para a Secil: de fora da Barra/Fundeadouro Norte marcar 30-45 min antes do reponto; "
+                "de Tróia ou outro cais marcar 45 min a 1 h antes."
+            ),
+        }
+    ]
+    if tide_event:
+        sources.append(
+            {
+                "document": "Marés Setúbal / Troia",
+                "source_id": "SECIL_ENTRY_TIMING_TIDE",
+                "chunk_id": 0,
+                "score": 1.0,
+                "retrieval_mode": "structured",
+                "snippet": f"Reponto usado para validação: {tide_context}. Hora marcada: {time_label}.",
+            }
+        )
+    return {"answer": answer, "sources": sources, "answer_origin": "secil_entry_timing"}
+
+
 def _extract_wind_kts_from_question(question: str) -> float | None:
     text = str(question or "").lower().replace(",", ".")
     patterns = (
@@ -1253,6 +1437,9 @@ def answer_direct_operational_query(
     hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
     if hard_limit_answer:
         return _attach_operational_diagnostic(hard_limit_answer, question)
+    secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
+    if secil_entry_timing_answer:
+        return _attach_operational_diagnostic(secil_entry_timing_answer, question)
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return _attach_operational_diagnostic(tug_guidance_answer, question)

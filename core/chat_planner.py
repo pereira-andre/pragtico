@@ -35,7 +35,7 @@ WARNING_QUERY_RE = re.compile(
     r"\b(aviso local|avisos locais|avisos em vigor|avisos da capitania|anav|capitania|avisos?)\b"
 )
 OPERATION_TIME_RE = re.compile(
-    r"\b(?:as|às|para as|para às|para|pelas)\s*\d{1,2}[:h]\d{2}\b"
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(?:\d{1,2}[:h]\d{2}|\d{3,4})\b"
     r"|\b\d{1,2}[:h]\d{2}\b"
     r"|\b(?:hoje|amanha|amanhã|depois de amanha|depois de amanhã)\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b",
@@ -93,7 +93,7 @@ LIVE_REASONING_RE = re.compile(
     r"devo|deve\w*|devia\w*|deveri\w*|pod\w*|posso|podes|podia\w*|poderi\w*|"
     r"precis\w*|necessari\w*|convem|marc\w*|embarc\w*|traz\w*|autor\w*|aprov\w*|"
     r"permit\w*|viavel|aceitavel|suficient\w*|bast\w*|cheg\w*|ach\w*|"
-    r"segur\w*|risco\w*|arrisc\w*|condicion\w*|limit\w*|imped\w*|"
+    r"corret\w*|correct\w*|cert\w*|segur\w*|risco\w*|arrisc\w*|condicion\w*|limit\w*|imped\w*|"
     r"suspens\w*|suspend\w*|cancel\w*|abort\w*|adi\w*)\b"
     r"|"
     r"\b(da para|faz sentido|vale a pena|e melhor|melhor opcao|melhor opção)\b"

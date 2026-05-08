@@ -90,6 +90,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico percurso e reponto" in html
     assert "Diagnostico SECIL com reponto" in html
     assert "Diagnostico SECIL sem herdar Lisnave" in html
+    assert "Entrada Secil E 19:25 validada contra reponto" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html
@@ -115,9 +116,11 @@ def test_direct_operational_matrix_cases_pass(monkeypatch) -> None:
         payload = answer_direct_operational_query(item["question"]) or {}
         answer = payload.get("answer", "")
         missing = _missing_expected_tokens(answer, item.get("expected_tokens") or ())
+        forbidden = _present_forbidden_tokens(answer, item.get("forbidden_tokens") or ())
 
         assert payload.get("answer_origin") == item.get("expected_origin")
         assert not missing, item["id"]
+        assert not forbidden, item["id"]
 
 
 def test_source_and_checklist_matrix_cases_pass(monkeypatch) -> None:
