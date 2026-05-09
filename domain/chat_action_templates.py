@@ -341,6 +341,13 @@ def build_slash_help(role: str) -> str:
     lines.extend(
         [
             "",
+            "Contexto WhatsApp:",
+            "/start",
+            "  mostra uma mensagem curta de boas-vindas",
+            "/new",
+            "  inicia uma nova conversa e fecha o contexto anterior",
+            "  aliases: /nova, /nova-conversa, /reset-contexto",
+            "",
             "Emergência WhatsApp:",
             "SOS",
             "  inicia pedido de ajuda via WhatsApp com partilha de localização",

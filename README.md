@@ -80,8 +80,13 @@ Comandos principais:
 
 No WhatsApp, o modo SOS usa:
 
+- `/start`
+- `/new`
 - `SOS`
 - `CANCELAR SOS`
+
+`/new` inicia uma nova conversa para o mesmo numero WhatsApp, mantendo o
+historico anterior guardado mas fora do contexto usado nas respostas seguintes.
 
 #### Planeamento de percursos e ETA
 
