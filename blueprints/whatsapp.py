@@ -75,12 +75,73 @@ def _welcome_sent_key(from_number: str) -> str:
     return f"whatsapp:welcome:{from_number}"
 
 
+def _active_whatsapp_conversation_key(from_number: str) -> str:
+    return f"whatsapp:active_conversation:{from_number}"
+
+
 def _pending_feedback_correction_key(from_number: str) -> str:
     return f"whatsapp:feedback-correction:{from_number}"
 
 
 def _outbound_message_alias_key(external_message_id: str) -> str:
     return f"whatsapp:outbound:{external_message_id}"
+
+
+def _set_active_whatsapp_conversation(*, from_number: str, username: str, conversation_id: str) -> None:
+    if not from_number or not username or not conversation_id:
+        return
+    services.store.set_runtime_state(
+        _active_whatsapp_conversation_key(from_number),
+        {
+            "from_number": from_number,
+            "username": username,
+            "conversation_id": conversation_id,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
+def _ensure_whatsapp_conversation(username: str, from_number: str) -> dict:
+    state = services.store.get_runtime_state(_active_whatsapp_conversation_key(from_number)) or {}
+    active_username = str(state.get("username") or "").strip()
+    active_conversation_id = str(state.get("conversation_id") or "").strip()
+    if active_username == username and active_conversation_id:
+        try:
+            conversation = services.store.ensure_conversation(
+                username=username,
+                conversation_id=active_conversation_id,
+            )
+            if conversation.get("id") == active_conversation_id:
+                return conversation
+        except Exception:
+            current_app.logger.exception("Falha não bloqueante ao resolver conversa WhatsApp ativa.")
+
+    conversation = services.store.ensure_conversation(username=username)
+    _set_active_whatsapp_conversation(
+        from_number=from_number,
+        username=username,
+        conversation_id=conversation["id"],
+    )
+    return conversation
+
+
+def _whatsapp_conversation_for_id_or_active(
+    username: str,
+    from_number: str,
+    conversation_id: str = "",
+) -> dict:
+    clean_conversation_id = str(conversation_id or "").strip()
+    if clean_conversation_id:
+        try:
+            conversation = services.store.ensure_conversation(
+                username=username,
+                conversation_id=clean_conversation_id,
+            )
+            if conversation.get("id") == clean_conversation_id:
+                return conversation
+        except Exception:
+            current_app.logger.exception("Falha não bloqueante ao resolver conversa WhatsApp por ID.")
+    return _ensure_whatsapp_conversation(username, from_number)
 
 
 def _sos_user_label(profile: dict | None, fallback_name: str = "") -> str:
@@ -146,7 +207,7 @@ def _send_sos_alerts(
         username = recipient.get("username", "")
         try:
             if username:
-                conversation = services.store.ensure_conversation(username=username)
+                conversation = _ensure_whatsapp_conversation(username, number)
                 local_message = services.store.append_chat_message(
                     username=username,
                     conversation_id=conversation["id"],
@@ -227,7 +288,7 @@ def _send_whatsapp_error_reply(
     error_text = user_error_message("CHAT_RUNTIME_FAILED", channel="whatsapp")
     username = str((profile or {}).get("username") or _whatsapp_username(from_number)).strip()
     try:
-        conversation = services.store.ensure_conversation(username=username)
+        conversation = _ensure_whatsapp_conversation(username, from_number)
         assistant_message = services.store.append_chat_message(
             username=username,
             conversation_id=conversation["id"],
@@ -886,13 +947,18 @@ def _process_whatsapp_context_reset_command(
     text: str,
 ) -> dict:
     username = profile["username"]
-    previous_conversation = services.store.ensure_conversation(username=username)
+    previous_conversation = _ensure_whatsapp_conversation(username, from_number)
     _clear_whatsapp_transient_context(
         username=username,
         conversation_id=previous_conversation["id"],
         from_number=from_number,
     )
     conversation = services.store.create_conversation(username=username, title="Nova conversa WhatsApp")
+    _set_active_whatsapp_conversation(
+        from_number=from_number,
+        username=username,
+        conversation_id=conversation["id"],
+    )
     user_message = services.store.append_chat_message(
         username=username,
         conversation_id=conversation["id"],
@@ -945,7 +1011,7 @@ def _process_whatsapp_start_command(
     text: str,
 ) -> dict:
     username = profile["username"]
-    conversation = services.store.ensure_conversation(username=username)
+    conversation = _ensure_whatsapp_conversation(username, from_number)
     user_message = services.store.append_chat_message(
         username=username,
         conversation_id=conversation["id"],
@@ -1225,7 +1291,12 @@ def whatsapp_webhook_receive():
                 continue
 
             if event_type == "message_location":
-                conversation = services.store.ensure_conversation(username=profile["username"])
+                pending_sos = _load_pending_sos(from_number)
+                conversation = _whatsapp_conversation_for_id_or_active(
+                    profile["username"],
+                    from_number,
+                    str(pending_sos.get("conversation_id") or ""),
+                )
                 try:
                     latitude, longitude = normalize_location(event.get("latitude"), event.get("longitude"))
                 except ValueError as exc:
@@ -1271,7 +1342,6 @@ def whatsapp_webhook_receive():
                     external_message_id=message_id,
                 )
 
-                pending_sos = _load_pending_sos(from_number)
                 if not pending_sos:
                     _append_send_and_mark_reply(
                         service,
@@ -1366,7 +1436,7 @@ def whatsapp_webhook_receive():
                 continue
 
             if event_type == "message_media":
-                conversation = services.store.ensure_conversation(username=profile["username"])
+                conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
                 media_kind = (event.get("media_kind") or "").strip().lower()
                 media_id = (event.get("media_id") or "").strip()
                 media_message = services.store.append_chat_message(
@@ -1528,7 +1598,7 @@ def whatsapp_webhook_receive():
                 if not conversation_id and last_sos_event:
                     conversation_id = str(last_sos_event.get("conversation_id") or "").strip()
                 if not conversation_id:
-                    conversation = services.store.ensure_conversation(username=profile["username"])
+                    conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
                     conversation_id = conversation["id"]
                 sos_event_id = str(
                     pending_sos.get("event_id") or last_sos_event.get("event_id") or ""
@@ -1631,7 +1701,7 @@ def whatsapp_webhook_receive():
                 continue
 
             if is_sos_trigger(text):
-                conversation = services.store.ensure_conversation(username=profile["username"])
+                conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
                 user_message = services.store.append_chat_message(
                     username=profile["username"],
                     conversation_id=conversation["id"],
@@ -1818,7 +1888,7 @@ def whatsapp_webhook_receive():
                     continue
 
             if _whatsapp_diagnostic_requested(text):
-                conversation = services.store.ensure_conversation(username=profile["username"])
+                conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
                 user_message = services.store.append_chat_message(
                     username=profile["username"],
                     conversation_id=conversation["id"],
@@ -1882,7 +1952,7 @@ def whatsapp_webhook_receive():
                 continue
 
             if _whatsapp_answer_retry_requested(text):
-                conversation = services.store.ensure_conversation(username=profile["username"])
+                conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
                 try:
                     revision_context = _latest_assistant_revision_context(
                         profile["username"],
@@ -1946,6 +2016,7 @@ def whatsapp_webhook_receive():
                 delivered += 1
                 continue
 
+            conversation = _ensure_whatsapp_conversation(profile["username"], from_number)
             pre_response_messages = []
             if getattr(service, "welcome_enabled", False) and not _welcome_already_sent(from_number):
                 welcome_message = service.build_welcome_message(event)
@@ -1976,6 +2047,7 @@ def whatsapp_webhook_receive():
                 username=profile["username"],
                 role=profile.get("role", getattr(service, "default_role", "piloto")),
                 question=text,
+                conversation_id=conversation["id"],
                 channel="whatsapp",
                 allow_mutations=False,
                 channel_user_id=from_number,

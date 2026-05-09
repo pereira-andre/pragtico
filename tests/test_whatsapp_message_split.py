@@ -9,7 +9,9 @@ from core import services
 from core.operational_actions import pending_action_state_key
 from domain.event_reports import pending_event_report_key
 from blueprints.whatsapp import (
+    _active_whatsapp_conversation_key,
     _claim_inbound_processing,
+    _ensure_whatsapp_conversation,
     _pending_feedback_correction_key,
     _process_whatsapp_context_reset_command,
     _process_whatsapp_start_command,
@@ -299,6 +301,10 @@ class WhatsappMessageSplitTests(unittest.TestCase):
         self.assertEqual(fake_store.messages[0]["role"], "user")
         self.assertEqual(fake_store.messages[1]["channel_metadata"]["message_kind"], "context_reset")
         self.assertIn("Nova conversa iniciada", service.sent[0]["text"])
+        self.assertEqual(
+            fake_store.runtime_state[_active_whatsapp_conversation_key(from_number)]["conversation_id"],
+            "new-conv-1",
+        )
         self.assertNotIn(pending_action_state_key(username, old_conversation_id), fake_store.runtime_state)
         self.assertNotIn(_pending_feedback_correction_key(from_number), fake_store.runtime_state)
         self.assertEqual(fake_store.events[0]["event_type"], "incoming_context_reset")
@@ -340,6 +346,9 @@ class WhatsappMessageSplitTests(unittest.TestCase):
             def update_message_channel_metadata(self, *args, **kwargs):
                 return None
 
+            def get_runtime_state(self, key):
+                return self.runtime_state.get(key)
+
             def set_runtime_state(self, key, value):
                 self.runtime_state[key] = value
                 return value
@@ -365,6 +374,43 @@ class WhatsappMessageSplitTests(unittest.TestCase):
         self.assertIn("Sou o PRAGtico", service.sent[0]["text"])
         self.assertEqual(fake_store.messages[-1]["channel_metadata"]["message_kind"], "start")
         self.assertIn(_welcome_sent_key("351900000000"), fake_store.runtime_state)
+
+    def test_active_whatsapp_conversation_survives_old_conversation_status_updates(self) -> None:
+        class FakeStore:
+            def __init__(self) -> None:
+                self.conversations = {
+                    "new-conv": {"id": "new-conv", "username": "u", "title": "Nova"},
+                    "old-conv": {"id": "old-conv", "username": "u", "title": "Antiga"},
+                }
+                self.runtime_state = {
+                    _active_whatsapp_conversation_key("351900000000"): {
+                        "username": "u",
+                        "conversation_id": "new-conv",
+                    }
+                }
+
+            def ensure_conversation(self, username: str, conversation_id: str | None = None) -> dict:
+                if conversation_id:
+                    return self.conversations.get(conversation_id) or self.conversations["old-conv"]
+                return self.conversations["old-conv"]
+
+            def get_runtime_state(self, key):
+                return self.runtime_state.get(key)
+
+            def set_runtime_state(self, key, value):
+                self.runtime_state[key] = value
+                return value
+
+        previous_store = services.store
+        services.store = FakeStore()
+        app = Flask(__name__)
+        try:
+            with app.app_context():
+                conversation = _ensure_whatsapp_conversation("u", "351900000000")
+        finally:
+            services.store = previous_store
+
+        self.assertEqual(conversation["id"], "new-conv")
 
 
 if __name__ == "__main__":
