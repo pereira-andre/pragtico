@@ -163,7 +163,7 @@ guardar segredos no Git.
 |---|---|
 | `DATABASE_URL` | Ligacao PostgreSQL. Obrigatoria para arrancar. |
 | `FLASK_SECRET_KEY` | Chave de sessao Flask. Obrigatoria em producao. |
-| `ADMIN_EMAIL` | Admin inicial. Default: `admin@porto.pt`. |
+| `ADMIN_EMAIL` | Admin inicial. Default: `admin@porto.com`. |
 | `ADMIN_PASSWORD` | Password inicial/admin seed. Default local: `123456`. |
 | `ADMIN_PHONE` | Telefone opcional do admin principal. |
 | `ADMIN_WHATSAPP_NUMBER` | WhatsApp do admin principal; se vazio usa `WHATSAPP_TEST_TO` ou o primeiro autorizado. |
