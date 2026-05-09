@@ -54,6 +54,50 @@ class RouteTransitAnswerTests(unittest.TestCase):
                 self.assertIn(token, answer["answer"])
                 self.assertIn("pode ser somada", answer["answer"])
 
+    def test_setubal_route_graph_calculates_remaining_north_channel(self) -> None:
+        answer = route_transit_answer("Estou na Bóia João Farto para a Alstom, quanto falta?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Canal Norte", answer["answer"])
+        self.assertIn("5,0 milhas náuticas", answer["answer"])
+        self.assertIn("Bóia João Farto -> Bóia 1CC: rumo 040°", answer["answer"])
+        self.assertIn("SAPEC -> Cais ALSTOM: rumo 120°", answer["answer"])
+
+    def test_setubal_route_graph_calculates_eta_from_speed_and_start_time(self) -> None:
+        answer = route_transit_answer(
+            "Da Bóia 12 CS para a Lisnave a 6 nós, saída às 10:00, qual ETA?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertIn("Canal Sul para LISNAVE", answer["answer"])
+        self.assertIn("1,0 milha náutica", answer["answer"])
+        self.assertIn("Bóia 12CS -> Bóia 14CS", answer["answer"])
+        self.assertIn("A 6,0 kt, duração estimada: 10 min.", answer["answer"])
+        self.assertIn("ETA ao destino: 10:10", answer["answer"])
+
+    def test_setubal_route_graph_reverses_headings_for_departure(self) -> None:
+        answer = route_transit_answer("Da Lisnave para o Pilar 2, quais os rumos de saída?")
+
+        self.assertIsNotNone(answer)
+        self.assertIn("10,5 milhas náuticas", answer["answer"])
+        self.assertIn("LISNAVE / docas / Hidrolift -> Bóia 14CS / fim do Canal Sul: rumo 210°", answer["answer"])
+        self.assertIn("Outão -> Pilar 2 / entrada da Barra: rumo 220°", answer["answer"])
+
+    def test_setubal_route_graph_covers_full_north_and_south_channel_totals(self) -> None:
+        north = route_transit_answer("Da posição de embarque até ao fim do canal norte, qual a distância?")
+        south = route_transit_answer("Da entrada da barra até ao fim do canal sul, quais as milhas?")
+
+        self.assertIsNotNone(north)
+        self.assertIn("Canal Norte", north["answer"])
+        self.assertIn("10,3 milhas náuticas", north["answer"])
+        self.assertIn("Pilot station / posição de embarque -> Pilar 2", north["answer"])
+
+        self.assertIsNotNone(south)
+        self.assertIn("Canal Sul", south["answer"])
+        self.assertIn("10,0 milhas náuticas", south["answer"])
+        self.assertIn("Bóia 12CS -> Bóia 14CS", south["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

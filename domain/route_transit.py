@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 import re
 import unicodedata
+from zoneinfo import ZoneInfo
 
 
 def _normalize(value: str | None) -> str:
@@ -12,10 +14,16 @@ def _normalize(value: str | None) -> str:
 
 
 TIME_QUERY_RE = re.compile(
-    r"\b(quanto tempo|tempo|demora|demoram|leva|levo|levam|transito|viagem|percurso)\b"
+    r"\b(quanto tempo|tempo|demora|demoram|leva|levo|levam|transito|viagem|percurso|eta|chegada)\b"
 )
-DISTANCE_QUERY_RE = re.compile(r"\b(distancia|distancias|milha|milhas|mn|nm)\b")
-ROUTE_LINK_RE = re.compile(r"\b(ate|a|ao|aos|para)\b")
+DISTANCE_QUERY_RE = re.compile(r"\b(distancia|distancias|milha|milhas|mn|nm|quanto falta|falta|faltam)\b")
+ROUTE_DETAIL_QUERY_RE = re.compile(r"\b(rumo|rumos|proa|pernada|pernadas|wpt|waypoint|waypoints)\b")
+ROUTE_LINK_RE = re.compile(r"\b(ate|a|ao|aos|para|desde|de|do|da)\b")
+SPEED_RE = re.compile(r"\b(\d{1,2}(?:[,.]\d+)?)\s*(?:kt|kts|nos|n[oó]s)\b")
+START_TIME_RE = re.compile(
+    r"\b(?:as|às|pelas|sair|saio|saida|saída|largada|partida)"
+    r"(?:\s+(?:as|às|pelas))?\s+(\d{1,2})(?:\s*:?\s*(\d{2}))\b"
+)
 
 ORIGIN_BARRA = (
     r"\bentrada da barra\b",
@@ -145,6 +153,140 @@ class RouteTransitFact:
     reverse_answer: str = ""
 
 
+@dataclass(frozen=True)
+class RouteLeg:
+    origin: str
+    destination: str
+    inbound_heading: int
+    distance_nm: float
+
+    @property
+    def outbound_heading(self) -> int:
+        return (self.inbound_heading + 180) % 360
+
+
+@dataclass(frozen=True)
+class RoutePlan:
+    route_id: str
+    label: str
+    legs: tuple[RouteLeg, ...]
+
+
+WAYPOINT_LABELS: dict[str, str] = {
+    "pilot_station": "Pilot station / posição de embarque",
+    "pilar_2": "Pilar 2 / entrada da Barra",
+    "outao": "Outão",
+    "joao_farto": "Bóia João Farto",
+    "boia_1cc": "Bóia 1CC",
+    "boia_3cc": "Bóia 3CC",
+    "boia_5cc": "Bóia 5CC",
+    "auto_europa": "Autoeuropa",
+    "praias_sado": "Praias do Sado",
+    "sapec": "SAPEC",
+    "alstom": "Cais ALSTOM",
+    "boia_4cs": "Bóia 4CS",
+    "boia_6cs": "Bóia 6CS",
+    "boia_12cs": "Bóia 12CS",
+    "boia_14cs": "Bóia 14CS / fim do Canal Sul",
+    "tanquisado_ecooil": "Tanquisado / Eco-Oil",
+    "lisnave": "LISNAVE / docas / Hidrolift",
+    "teporset": "Teporset",
+}
+
+WAYPOINT_PATTERNS: dict[str, tuple[str, ...]] = {
+    "pilot_station": (
+        r"\bpilot\s+station\b",
+        r"\bposicao\s+de\s+embarque\b",
+        r"\bposicao\s+embarque\b",
+        r"\b1\s*nm\s+fora\s+da\s+barra\b",
+        r"\buma\s+milha\s+fora\s+da\s+barra\b",
+    ),
+    "pilar_2": (
+        r"\bpilar\s*2\b",
+        r"\bpilar\s*n\s*2\b",
+        r"\bentrada\s+da\s+barra\b",
+        r"\bbarra\b",
+        r"\bentrada\b",
+    ),
+    "outao": (r"\boutao\b",),
+    "joao_farto": (
+        r"\bboia\s+joao\s+farto\b",
+        r"\bjoao\s+farto\b",
+    ),
+    "boia_1cc": (r"\bboia\s*1\s*cc\b", r"\b1\s*cc\b"),
+    "boia_3cc": (r"\bboia\s*3\s*cc\b", r"\b3\s*cc\b"),
+    "boia_5cc": (r"\bboia\s*5\s*cc\b", r"\b5\s*cc\b"),
+    "auto_europa": (r"\bauto\s*europa\b", r"\bautoeuropa\b", r"\bcais\s*10\b", r"\bcais\s*11\b"),
+    "praias_sado": (r"\bpraias\s+do\s+sado\b", r"\bpraias\b"),
+    "sapec": (r"\bsapec\b",),
+    "alstom": (r"\balstom\b", r"\babb\s*-?\s*alstom\b", r"\bfim\s+do\s+canal\s+norte\b"),
+    "boia_4cs": (r"\bboia\s*4\s*cs\b", r"\b4\s*cs\b"),
+    "boia_6cs": (r"\bboia\s*6\s*cs\b", r"\b6\s*cs\b"),
+    "boia_12cs": (r"\bboia\s*12\s*cs\b", r"\b12\s*cs\b"),
+    "boia_14cs": (
+        r"\bboia\s*14\s*cs\b",
+        r"\b14\s*cs\b",
+        r"\bfim\s+do\s+canal\s+sul\b",
+    ),
+    "tanquisado_ecooil": (
+        r"\btanquisado\b",
+        r"\beco\s*oil\b",
+        r"\becooil\b",
+        r"\becoil\b",
+    ),
+    "lisnave": (
+        r"\blisnave\b",
+        r"\bmitrena\b",
+        r"\bdocas\b",
+        r"\bhidrolift\b",
+    ),
+    "teporset": (r"\bteporset\b", r"\btepor\s*set\b"),
+}
+
+
+NORTH_CHANNEL_LEGS: tuple[RouteLeg, ...] = (
+    RouteLeg("pilot_station", "pilar_2", 40, 1.0),
+    RouteLeg("pilar_2", "outao", 40, 2.8),
+    RouteLeg("outao", "joao_farto", 40, 1.5),
+    RouteLeg("joao_farto", "boia_1cc", 40, 0.6),
+    RouteLeg("boia_1cc", "boia_3cc", 74, 0.7),
+    RouteLeg("boia_3cc", "boia_5cc", 105, 0.5),
+    RouteLeg("boia_5cc", "auto_europa", 120, 0.8),
+    RouteLeg("auto_europa", "praias_sado", 115, 0.7),
+    RouteLeg("praias_sado", "sapec", 130, 0.6),
+    RouteLeg("sapec", "alstom", 120, 1.1),
+)
+
+SOUTH_CHANNEL_COMMON_LEGS: tuple[RouteLeg, ...] = (
+    RouteLeg("pilot_station", "pilar_2", 40, 1.0),
+    RouteLeg("pilar_2", "outao", 40, 2.8),
+    RouteLeg("outao", "joao_farto", 55, 1.4),
+    RouteLeg("joao_farto", "boia_4cs", 110, 1.0),
+    RouteLeg("boia_4cs", "boia_6cs", 125, 2.3),
+    RouteLeg("boia_6cs", "boia_12cs", 110, 2.0),
+    RouteLeg("boia_12cs", "boia_14cs", 65, 0.5),
+)
+
+SETUBAL_ROUTE_PLANS: tuple[RoutePlan, ...] = (
+    RoutePlan("canal_norte", "Canal Norte", NORTH_CHANNEL_LEGS),
+    RoutePlan(
+        "canal_sul_tanquisado_ecooil",
+        "Canal Sul para Tanquisado / Eco-Oil",
+        SOUTH_CHANNEL_COMMON_LEGS + (RouteLeg("boia_14cs", "tanquisado_ecooil", 311, 0.6),),
+    ),
+    RoutePlan(
+        "canal_sul_lisnave",
+        "Canal Sul para LISNAVE / docas / Hidrolift",
+        SOUTH_CHANNEL_COMMON_LEGS + (RouteLeg("boia_14cs", "lisnave", 30, 0.5),),
+    ),
+    RoutePlan(
+        "canal_sul_teporset",
+        "Canal Sul para Teporset",
+        SOUTH_CHANNEL_COMMON_LEGS + (RouteLeg("boia_14cs", "teporset", 60, 1.0),),
+    ),
+)
+
+
 def _segment_distance_answer(origin: str, destination: str, distance: str) -> str:
     unit = "milha náutica" if distance == "1,0" else "milhas náuticas"
     return (
@@ -161,6 +303,224 @@ def _segment_distance_reverse(origin: str, reverse_origin_phrase: str, distance:
         "É uma distância de referência por segmento e pode ser somada a outros segmentos "
         "quando o percurso operacional fizer sentido."
     )
+
+
+def _decimal_comma(value: float, *, digits: int = 1) -> str:
+    return f"{value:.{digits}f}".replace(".", ",")
+
+
+def _heading_label(value: int) -> str:
+    return f"{value % 360:03d}°"
+
+
+def _distance_unit(value: float) -> str:
+    return "milha náutica" if abs(value - 1.0) < 0.05 else "milhas náuticas"
+
+
+def _format_minutes(total_minutes: int) -> str:
+    minutes = max(int(round(total_minutes)), 0)
+    if minutes < 60:
+        return f"{minutes} min"
+    hours, remainder = divmod(minutes, 60)
+    if remainder == 0:
+        return f"{hours} h"
+    return f"{hours} h {remainder:02d} min"
+
+
+def _route_preference(clean_question: str) -> str:
+    if re.search(r"\bcanal\s+norte\b", clean_question):
+        return "canal_norte"
+    if re.search(r"\bcanal\s+sul\b", clean_question):
+        return "canal_sul"
+    return ""
+
+
+def _matched_waypoints(clean_question: str) -> list[tuple[str, int, int]]:
+    matches: list[tuple[str, int, int]] = []
+    for waypoint_id, patterns in WAYPOINT_PATTERNS.items():
+        waypoint_matches = [
+            match
+            for pattern in patterns
+            for match in [re.search(pattern, clean_question)]
+            if match
+        ]
+        if not waypoint_matches:
+            continue
+        best = sorted(waypoint_matches, key=lambda item: (item.start(), -(item.end() - item.start())))[0]
+        matches.append((waypoint_id, best.start(), best.end()))
+    return sorted(matches, key=lambda item: (item[1], -(item[2] - item[1])))
+
+
+def _route_points(route: RoutePlan) -> list[str]:
+    if not route.legs:
+        return []
+    points = [route.legs[0].origin]
+    points.extend(leg.destination for leg in route.legs)
+    return points
+
+
+def _reverse_leg(leg: RouteLeg) -> RouteLeg:
+    return RouteLeg(
+        origin=leg.destination,
+        destination=leg.origin,
+        inbound_heading=leg.outbound_heading,
+        distance_nm=leg.distance_nm,
+    )
+
+
+def _route_candidate_legs(route: RoutePlan, origin: str, destination: str) -> tuple[RouteLeg, ...]:
+    points = _route_points(route)
+    if origin not in points or destination not in points or origin == destination:
+        return ()
+    origin_index = points.index(origin)
+    destination_index = points.index(destination)
+    if origin_index < destination_index:
+        return route.legs[origin_index:destination_index]
+    return tuple(_reverse_leg(leg) for leg in reversed(route.legs[destination_index:origin_index]))
+
+
+def _best_route_plan(
+    clean_question: str,
+    origin: str,
+    destination: str,
+) -> tuple[RoutePlan, tuple[RouteLeg, ...]] | None:
+    preference = _route_preference(clean_question)
+    candidates: list[tuple[int, float, int, RoutePlan, tuple[RouteLeg, ...]]] = []
+    for index, route in enumerate(SETUBAL_ROUTE_PLANS):
+        legs = _route_candidate_legs(route, origin, destination)
+        if not legs:
+            continue
+        distance = sum(leg.distance_nm for leg in legs)
+        preference_score = 0
+        if preference == route.route_id or (preference == "canal_sul" and route.route_id.startswith("canal_sul")):
+            preference_score = 10
+        candidates.append((preference_score, -distance, -index, route, legs))
+    if not candidates:
+        return None
+    _, _, _, route, legs = sorted(candidates, key=lambda item: (item[0], item[1], item[2]), reverse=True)[0]
+    return route, legs
+
+
+def _extract_route_points(clean_question: str) -> tuple[str, str] | None:
+    matched = _matched_waypoints(clean_question)
+    distinct: list[str] = []
+    for waypoint_id, _, _ in matched:
+        if waypoint_id not in distinct:
+            distinct.append(waypoint_id)
+    if len(distinct) < 2:
+        return None
+    return distinct[0], distinct[1]
+
+
+def _extract_speed_knots(clean_question: str) -> float | None:
+    speed_matches = list(SPEED_RE.finditer(clean_question))
+    if not speed_matches:
+        return None
+    for match in speed_matches:
+        before = clean_question[max(0, match.start() - 16):match.start()]
+        if "vento" in before:
+            continue
+        value = float(match.group(1).replace(",", "."))
+        if value > 0:
+            return value
+    return None
+
+
+def _extract_start_time(clean_question: str) -> datetime | None:
+    local_tz = ZoneInfo("Europe/Lisbon")
+    now = datetime.now(local_tz)
+    match = START_TIME_RE.search(clean_question)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if re.search(r"\bagora\b", clean_question):
+        return now.replace(second=0, microsecond=0)
+    return None
+
+
+def _eta_line(clean_question: str, distance_nm: float) -> str:
+    speed = _extract_speed_knots(clean_question)
+    if not speed:
+        return ""
+    minutes = int(round((distance_nm / speed) * 60))
+    text = f"A {_decimal_comma(speed)} kt, duração estimada: {_format_minutes(minutes)}."
+    start_time = _extract_start_time(clean_question)
+    if start_time:
+        eta = start_time + timedelta(minutes=minutes)
+        text += f" ETA ao destino: {eta.strftime('%H:%M')}."
+    return text
+
+
+def _format_route_plan_answer(
+    question: str,
+    clean_question: str,
+    route: RoutePlan,
+    legs: tuple[RouteLeg, ...],
+) -> dict:
+    origin_label = WAYPOINT_LABELS.get(legs[0].origin, legs[0].origin)
+    destination_label = WAYPOINT_LABELS.get(legs[-1].destination, legs[-1].destination)
+    total_distance = sum(leg.distance_nm for leg in legs)
+    distance_label = _decimal_comma(total_distance)
+    unit = _distance_unit(total_distance)
+    leg_lines = [
+        (
+            f"- {WAYPOINT_LABELS.get(leg.origin, leg.origin)} -> "
+            f"{WAYPOINT_LABELS.get(leg.destination, leg.destination)}: "
+            f"rumo {_heading_label(leg.inbound_heading)}, "
+            f"{_decimal_comma(leg.distance_nm)} NM "
+            f"(rumo inverso {_heading_label(leg.outbound_heading)})"
+        )
+        for leg in legs
+    ]
+    eta_text = _eta_line(clean_question, total_distance)
+    answer_parts = [
+        (
+            f"De {origin_label} até {destination_label}, pelo {route.label}, "
+            f"faltam {distance_label} {unit}."
+        ),
+        "Pernadas:",
+        *leg_lines,
+    ]
+    if eta_text:
+        answer_parts.append(eta_text)
+    answer_parts.append(
+        "Para a saída no sentido contrário, usar os rumos inversos: rumo de entrada + 180° (mod 360)."
+    )
+    answer = "\n".join(answer_parts)
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "setubal_route_planning.json",
+                "source_id": f"SETUBAL_ROUTE_PLAN_{route.route_id.upper()}",
+                "retrieval_mode": "route_planning_graph",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
+def _setubal_route_plan_answer(question: str, clean_question: str) -> dict | None:
+    wants_route_plan = bool(
+        DISTANCE_QUERY_RE.search(clean_question)
+        or ROUTE_DETAIL_QUERY_RE.search(clean_question)
+        or _extract_speed_knots(clean_question)
+    )
+    if not wants_route_plan or not ROUTE_LINK_RE.search(clean_question):
+        return None
+    route_points = _extract_route_points(clean_question)
+    if not route_points:
+        return None
+    origin, destination = route_points
+    selected = _best_route_plan(clean_question, origin, destination)
+    if not selected:
+        return None
+    route, legs = selected
+    return _format_route_plan_answer(question, clean_question, route, legs)
 
 
 ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
@@ -494,6 +854,10 @@ def _looks_like_route_question(clean_question: str) -> bool:
 
 def route_transit_answer(question: str, clean_question: str | None = None) -> dict | None:
     clean = clean_question or _normalize(question)
+    route_plan = _setubal_route_plan_answer(question, clean)
+    if route_plan:
+        return route_plan
+
     if not _looks_like_route_question(clean):
         return None
 
