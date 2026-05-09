@@ -180,6 +180,8 @@ WAYPOINT_LABELS: dict[str, str] = {
     "boia_1cc": "Bóia 1CC",
     "boia_3cc": "Bóia 3CC",
     "boia_5cc": "Bóia 5CC",
+    "tms1": "TMS 1",
+    "tms2": "TMS 2",
     "auto_europa": "Autoeuropa",
     "praias_sado": "Praias do Sado",
     "sapec": "SAPEC",
@@ -216,6 +218,19 @@ WAYPOINT_PATTERNS: dict[str, tuple[str, ...]] = {
     "boia_1cc": (r"\bboia\s*1\s*cc\b", r"\b1\s*cc\b"),
     "boia_3cc": (r"\bboia\s*3\s*cc\b", r"\b3\s*cc\b"),
     "boia_5cc": (r"\bboia\s*5\s*cc\b", r"\b5\s*cc\b"),
+    "tms1": (
+        r"\btms\s*1\b",
+        r"\btms1\b",
+        r"\bterminal\s+multiusos\s+1\b",
+        r"\bterminal\s+multiusos\s+zona\s+1\b",
+    ),
+    "tms2": (
+        r"\btms\s*2\b",
+        r"\btms2\b",
+        r"\bterminal\s+multiusos\s+2\b",
+        r"\bterminal\s+multiusos\s+zona\s+2\b",
+        r"\bterminal\s+de\s+contentores\b",
+    ),
     "auto_europa": (r"\bauto\s*europa\b", r"\bautoeuropa\b", r"\bcais\s*10\b", r"\bcais\s*11\b"),
     "praias_sado": (r"\bpraias\s+do\s+sado\b", r"\bpraias\b"),
     "sapec": (r"\bsapec\b",),
@@ -250,8 +265,10 @@ NORTH_CHANNEL_LEGS: tuple[RouteLeg, ...] = (
     RouteLeg("outao", "joao_farto", 40, 1.5),
     RouteLeg("joao_farto", "boia_1cc", 40, 0.6),
     RouteLeg("boia_1cc", "boia_3cc", 74, 0.7),
-    RouteLeg("boia_3cc", "boia_5cc", 105, 0.5),
-    RouteLeg("boia_5cc", "auto_europa", 120, 0.8),
+    RouteLeg("boia_3cc", "tms1", 105, 0.3),
+    RouteLeg("tms1", "boia_5cc", 105, 0.2),
+    RouteLeg("boia_5cc", "tms2", 120, 0.4),
+    RouteLeg("tms2", "auto_europa", 120, 0.4),
     RouteLeg("auto_europa", "praias_sado", 115, 0.7),
     RouteLeg("praias_sado", "sapec", 130, 0.6),
     RouteLeg("sapec", "alstom", 120, 1.1),
@@ -521,6 +538,14 @@ def _setubal_route_plan_answer(question: str, clean_question: str) -> dict | Non
         return None
     route, legs = selected
     return _format_route_plan_answer(question, clean_question, route, legs)
+
+
+def _route_plan_should_precede_fact(clean_question: str) -> bool:
+    return bool(
+        ROUTE_DETAIL_QUERY_RE.search(clean_question)
+        or _extract_speed_knots(clean_question)
+        or re.search(r"\bquanto falta\b|\bfalta\b|\bfaltam\b|\bfim\s+do\s+canal\b", clean_question)
+    )
 
 
 ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
@@ -854,9 +879,10 @@ def _looks_like_route_question(clean_question: str) -> bool:
 
 def route_transit_answer(question: str, clean_question: str | None = None) -> dict | None:
     clean = clean_question or _normalize(question)
-    route_plan = _setubal_route_plan_answer(question, clean)
-    if route_plan:
-        return route_plan
+    if _route_plan_should_precede_fact(clean):
+        route_plan = _setubal_route_plan_answer(question, clean)
+        if route_plan:
+            return route_plan
 
     if not _looks_like_route_question(clean):
         return None
@@ -870,7 +896,7 @@ def route_transit_answer(question: str, clean_question: str | None = None) -> di
         and _matches_any(clean, fact.destination_patterns)
     ]
     if not matches:
-        return None
+        return _setubal_route_plan_answer(question, clean)
 
     fact = sorted(matches, key=lambda item: item.specificity, reverse=True)[0]
     origin_index = _first_match_index(clean, fact.origin_patterns)

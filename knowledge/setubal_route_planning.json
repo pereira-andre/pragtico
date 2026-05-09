@@ -1,7 +1,7 @@
 {
   "document": "Planeamento interno de distancias e rumos do Porto de Setubal",
   "datum": "Rumos verdadeiros 000-359 graus; distancias em milhas nauticas.",
-  "rule": "Cada linha representa a pernada do waypoint indicado para o waypoint seguinte. Para a saida no sentido inverso, somar 180 graus ao rumo de entrada e aplicar modulo 360.",
+  "rule": "Cada linha representa a pernada do waypoint indicado para o waypoint seguinte. Para a saida no sentido inverso, somar 180 graus ao rumo de entrada e aplicar modulo 360. TMS 1 e TMS 2 entram como referencias de posicionamento no Canal Norte para orientar distancias e canais, nao como coordenadas hidrográficas exatas.",
   "waypoints": {
     "pilot_station": {
       "label": "Pilot station / posicao de embarque",
@@ -14,6 +14,14 @@
     "boia_14cs": {
       "label": "Boia 14CS / fim do Canal Sul",
       "notes": "Ponto de decisao para Tanquisado/Eco-Oil, LISNAVE/docas/Hidrolift e Teporset."
+    },
+    "tms1": {
+      "label": "TMS 1",
+      "notes": "Referencia no Canal Norte entre a Boia 3CC e a Boia 5CC, antes do TMS 2 e da Autoeuropa."
+    },
+    "tms2": {
+      "label": "TMS 2",
+      "notes": "Referencia no Canal Norte entre a Boia 5CC e a Autoeuropa."
     }
   },
   "routes": {
@@ -23,8 +31,10 @@
       {"from": "outao", "to": "joao_farto", "heading_in": 40, "heading_out": 220, "distance_nm": 1.5},
       {"from": "joao_farto", "to": "boia_1cc", "heading_in": 40, "heading_out": 220, "distance_nm": 0.6},
       {"from": "boia_1cc", "to": "boia_3cc", "heading_in": 74, "heading_out": 254, "distance_nm": 0.7},
-      {"from": "boia_3cc", "to": "boia_5cc", "heading_in": 105, "heading_out": 285, "distance_nm": 0.5},
-      {"from": "boia_5cc", "to": "auto_europa", "heading_in": 120, "heading_out": 300, "distance_nm": 0.8},
+      {"from": "boia_3cc", "to": "tms1", "heading_in": 105, "heading_out": 285, "distance_nm": 0.3},
+      {"from": "tms1", "to": "boia_5cc", "heading_in": 105, "heading_out": 285, "distance_nm": 0.2},
+      {"from": "boia_5cc", "to": "tms2", "heading_in": 120, "heading_out": 300, "distance_nm": 0.4},
+      {"from": "tms2", "to": "auto_europa", "heading_in": 120, "heading_out": 300, "distance_nm": 0.4},
       {"from": "auto_europa", "to": "praias_sado", "heading_in": 115, "heading_out": 295, "distance_nm": 0.7},
       {"from": "praias_sado", "to": "sapec", "heading_in": 130, "heading_out": 310, "distance_nm": 0.6},
       {"from": "sapec", "to": "alstom", "heading_in": 120, "heading_out": 300, "distance_nm": 1.1}
@@ -45,7 +55,11 @@
     ]
   },
   "totals": {
+    "pilot_station_to_tms1_canal_norte_nm": 6.9,
+    "pilot_station_to_tms2_canal_norte_nm": 7.5,
     "pilot_station_to_alstom_canal_norte_nm": 10.3,
+    "pilar_2_to_tms1_canal_norte_nm": 5.9,
+    "pilar_2_to_tms2_canal_norte_nm": 6.5,
     "pilot_station_to_boia_14cs_canal_sul_nm": 11.0,
     "pilar_2_to_boia_14cs_canal_sul_nm": 10.0,
     "pilar_2_to_lisnave_canal_sul_nm": 10.5

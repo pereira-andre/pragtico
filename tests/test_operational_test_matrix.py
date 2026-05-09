@@ -135,6 +135,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Distancia TMS 1 - fora da Barra" in html
     assert "Planeamento Canal Norte Joao Farto - ALSTOM" in html
     assert "Canal Norte completo desde embarque" in html
+    assert "Referencia TMS2 no Canal Norte" in html
     assert "Canal Sul ate Boia 14CS" in html
     assert "ETA Boia 12CS - Lisnave" in html
     assert "Rumos inversos Lisnave - Pilar 2" in html

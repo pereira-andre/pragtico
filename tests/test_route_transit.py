@@ -62,7 +62,19 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("Canal Norte", answer["answer"])
         self.assertIn("5,0 milhas náuticas", answer["answer"])
         self.assertIn("Bóia João Farto -> Bóia 1CC: rumo 040°", answer["answer"])
+        self.assertIn("Bóia 3CC -> TMS 1: rumo 105°", answer["answer"])
+        self.assertIn("Bóia 5CC -> TMS 2: rumo 120°", answer["answer"])
         self.assertIn("SAPEC -> Cais ALSTOM: rumo 120°", answer["answer"])
+
+    def test_tms_references_are_on_north_channel_before_autoeuropa(self) -> None:
+        answer = route_transit_answer("Da entrada da barra ao TMS2 pelo canal norte, quanto falta?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Canal Norte", answer["answer"])
+        self.assertIn("6,5 milhas náuticas", answer["answer"])
+        self.assertIn("TMS 1 -> Bóia 5CC", answer["answer"])
+        self.assertIn("Bóia 5CC -> TMS 2", answer["answer"])
 
     def test_setubal_route_graph_calculates_eta_from_speed_and_start_time(self) -> None:
         answer = route_transit_answer(
