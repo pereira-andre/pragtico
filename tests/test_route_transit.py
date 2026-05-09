@@ -20,6 +20,17 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("Da LISNAVE/Mitrena até ao Pilar 2", answer["answer"])
         self.assertIn("1 hora e 30 minutos a 2 horas", answer["answer"])
 
+    def test_alstom_barra_uses_high_water_lead_time(self) -> None:
+        answer = route_transit_answer(
+            "Quanto tempo da Barra para o Cais Alstom para apanhar o reponto de preia-mar?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Cais ALSTOM", answer["answer"])
+        self.assertIn("1 hora e 30 minutos antes da preia-mar", answer["answer"])
+        self.assertIn("reponto de preia-mar", answer["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

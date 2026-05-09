@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import date, datetime
 import unittest
 from zoneinfo import ZoneInfo
@@ -89,6 +90,9 @@ class FakeWeatherService:
             },
         ],
     }
+
+    def __init__(self) -> None:
+        self.forecast = deepcopy(self.forecast)
 
     def get_forecast(self, days: int = 3) -> dict:
         return self.forecast
@@ -521,6 +525,25 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("WAY FORWARD", answer)
         self.assertIn("Entrar 15:00", answer)
         self.assertIn("manobra 768AB23C", answer)
+
+    def test_tug_question_with_current_weather_uses_wind_before_recommending(self) -> None:
+        services.weather_service.forecast["current"]["wind_kts"] = 13
+        services.weather_service.forecast["current"]["gust_kts"] = 20
+        services.weather_service.forecast["current"]["wind_dir"] = "S"
+
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(
+                "Tenho um navio para sair da Autoeuropa. É um roro com 200 m e tem bowthruster. "
+                "Quantos reboques devo pedir face às condições meteorológicas atuais?"
+            )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 2 rebocadores", payload["answer"])
+        self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Meteorologia considerada", payload["answer"])
+        self.assertIn("rajadas 20 kts", payload["answer"])
+        self.assertIn("ponderar atrasar", payload["answer"])
 
 
 if __name__ == "__main__":

@@ -101,20 +101,47 @@ CONDIÇÃO 2 — CALADO NO CANAL (FÓRMULA DE PROFUNDIDADE):
   for baixa, mesmo que o calado do navio respeite o máximo do cais.
 
 ================================================================================
-REGRA DE PERÍODO DO DIA — NAVIOS COM LOA SUPERIOR A 90 METROS
+REGRAS OPERACIONAIS OBRIGATÓRIAS — ATRACAÇÃO, MARÉ, VENTO E SEQUÊNCIA
 ================================================================================
 
-Navios com comprimento total (LOA) superior a 90 metros:
-  — Só podem ENTRAR no Cais ALSTOM durante o período diurno (com luz do dia).
-  — Podem SAIR no período noturno sem restrição de período do dia.
+As seguintes regras são obrigatórias para planeamento e validação operacional no
+Cais ALSTOM:
 
-Esta assimetria (entrada só de dia, saída permitida de noite) é comum em terminais
-com canais estreitos ou manobras de aproximação complexas, onde a visibilidade
-diurna é considerada essencial para a entrada segura mas menos crítica para a
-saída.
+1. BORDO DE ATRACAÇÃO
+  Os navios no Cais ALSTOM só atracam por estibordo.
 
-Para navios com LOA igual ou inferior a 90 metros, não existe restrição de período
-do dia — podem entrar e sair tanto de dia como de noite.
+2. REPONTO DE PREIA-MAR
+  As manobras do Cais ALSTOM só devem ser executadas no reponto de maré de
+  preia-mar. Não usar baixa-mar como reponto operacional para este cais.
+
+3. ANTECEDÊNCIA DE MARCAÇÃO PARA APANHAR O REPONTO
+  Para chegar ao cais no reponto de preia-mar:
+    — Entrada desde a Barra: marcar 1 hora e 30 minutos antes da preia-mar.
+    — Mudança/entrada desde o Fundeadouro Norte: marcar 45 minutos antes da
+      preia-mar.
+
+4. VENTO
+  A manobra só deve ser validada com vento inferior a 15 nós. Vento igual ou
+  superior a 15 nós bloqueia a manobra, incluindo quando a rajada atinge esse
+  limite.
+
+5. SEQUÊNCIA DE MANOBRAS
+  Só deve haver um navio por reponto. Nunca planear duas manobras ALSTOM em
+  simultâneo ou no mesmo reponto.
+
+6. PERÍODO DO DIA
+  As manobras do Cais ALSTOM devem ser executadas apenas de dia.
+
+================================================================================
+REGRA DE PERÍODO DO DIA — TODAS AS MANOBRAS
+================================================================================
+
+Regra operacional obrigatória atual:
+  — Todas as manobras no Cais ALSTOM devem ser executadas apenas durante o
+    período diurno.
+  — Esta regra aplica-se a entradas, saídas e mudanças, independentemente do LOA.
+  — Não usar exceções noturnas históricas por comprimento para validar uma
+    manobra ALSTOM.
 
 ================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
@@ -136,15 +163,31 @@ Pergunta: Qual a profundidade disponível no Canal ABB-ALSTOM com maré de 1,0 m
 Resposta: 5 + 1,0 = 6,0 metros.
 
 Pergunta: Com que condições de vento se pode transitar no Canal ABB-ALSTOM?
-Resposta: Com vento igual ou inferior a 15 nós.
+Resposta: Para validação operacional conservadora do Cais ALSTOM, apenas com
+vento inferior a 15 nós.
+
+Pergunta: Por que bordo atracam os navios no Cais ALSTOM?
+Resposta: Só atracam por estibordo.
+
+Pergunta: Em que reponto se manobra no Cais ALSTOM?
+Resposta: Só no reponto de preia-mar.
+
+Pergunta: Com que antecedência se marca uma entrada da Barra para o Cais ALSTOM?
+Resposta: 1 hora e 30 minutos antes da preia-mar, para chegar ao cais no
+reponto de preia-mar.
+
+Pergunta: Com que antecedência se marca uma mudança do Fundeadouro Norte para o Cais ALSTOM?
+Resposta: 45 minutos antes da preia-mar, para chegar ao cais no reponto de
+preia-mar.
+
+Pergunta: Podem ser feitas duas manobras ALSTOM no mesmo reponto?
+Resposta: Não. Só um navio por reponto.
 
 Pergunta: Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?
-Resposta: Não. Navios com LOA superior a 90 metros só podem entrar durante
-o período diurno. Podem sair de noite.
+Resposta: Não. As manobras ALSTOM devem ser feitas apenas de dia.
 
 Pergunta: Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?
-Resposta: Sim. A restrição de entrada diurna aplica-se apenas a navios com LOA
-superior a 90 metros.
+Resposta: Não. A regra operacional obrigatória é manobrar apenas de dia.
 
 Pergunta: Quem valida as requisições de manobra no Cais ALSTOM?
 Resposta: O Piloto Coordenador.

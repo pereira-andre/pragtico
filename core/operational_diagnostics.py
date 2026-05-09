@@ -161,6 +161,8 @@ def _infer_facility(clean: str) -> str:
         return "Tanquisado"
     if re.search(r"\b(secil|outao)\b", clean):
         return "SECIL"
+    if re.search(r"\b(alstom|abb alstom)\b", clean):
+        return "ALSTOM"
     if re.search(r"\b(auto europa|autoeuropa|roro|ro ro|ro ro|cais 10|cais 11)\b", clean):
         return "Autoeuropa / Ro-Ro"
     if re.search(r"\btms\s*2\b|\btms2\b", clean):
@@ -346,6 +348,33 @@ def build_operational_diagnostic(
             "Marcacao pratica: entradas 30-45 min antes do reponto desde Barra/Fundeadouro Norte; 45 min a 1 h desde Troia/outro cais; saidas cerca de 15 min antes do reponto.",
             "info",
         )
+    if case["facility"] == "ALSTOM":
+        _add_unique_rule(
+            critical_rules,
+            "ALSTOM",
+            "Navios no Cais ALSTOM atracam apenas por estibordo.",
+            "critical",
+        )
+        _add_unique_rule(
+            critical_rules,
+            "ALSTOM",
+            "Manobras apenas no reponto de preia-mar, uma manobra por reponto, sempre de dia.",
+            "critical",
+        )
+        _add_unique_rule(
+            critical_rules,
+            "ALSTOM",
+            "Marcações para apanhar a preia-mar: 1h30 antes desde a Barra; 45 min antes desde o Fundeadouro Norte.",
+            "critical",
+        )
+        _add_unique_rule(
+            critical_rules,
+            "ALSTOM",
+            "Vento tem de ser inferior a 15 kt; com vento >= 15 kt não validar a manobra.",
+            "critical",
+        )
+        if case.get("wind_kts") is not None and case["wind_kts"] >= 15:
+            warnings.append(f"ALSTOM: vento {_display_number(case['wind_kts'])} kt atinge/excede o limite local < 15 kt.")
 
     if case.get("wind_kts") and case["wind_kts"] > 30:
         warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: manobras suspensas acima de 30 kt.")

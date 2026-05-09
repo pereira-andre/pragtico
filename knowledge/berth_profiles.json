@@ -162,7 +162,7 @@
       "document": "IT-038_Alstom.txt",
       "aliases": ["alstom", "abb-alstom", "abb alstom", "cais alstom", "cais da alstom"],
       "category": "instalacao industrial com canal interior",
-      "overview": "Cais industrial com acesso pelo Canal ABB-ALSTOM. A regra principal combina LOA, calado, vento no canal e periodo diurno/noturno.",
+      "overview": "Cais industrial com acesso pelo Canal ABB-ALSTOM. A regra principal combina LOA, calado, vento no canal, reponto obrigatorio de preia-mar, bordo de atracacao e periodo diurno.",
       "dimensions": [
         "Comprimento fisico do cais: 91 m.",
         "LOA ate 110 m: calado maximo 7,0 m.",
@@ -171,7 +171,8 @@
       ],
       "vessel_limits": [
         "LOA maximo absoluto: 120 m.",
-        "Entrada noturna proibida para LOA superior a 90 m; estes navios podem sair de noite."
+        "Manobras apenas de dia.",
+        "So um navio por reponto; nunca planear duas manobras ALSTOM no mesmo reponto."
       ],
       "draft_rules": [
         "Calado maximo base 7,0 m ate LOA 110 m.",
@@ -179,17 +180,22 @@
         "Canal ABB-ALSTOM: profundidade disponivel = 5 m + altura de mare."
       ],
       "maneuver_rules": [
-        "Transito no canal apenas com vento igual ou inferior a 15 nos.",
-        "O canal e estreito; vento acima de 15 nos deve bloquear o transito."
+        "Navios so atracam por estibordo.",
+        "Manobras apenas no reponto de preia-mar; nao usar baixa-mar como reponto operacional.",
+        "Para chegar ao cais no reponto: desde a Barra marcar 1h30 antes da preia-mar; desde o Fundeadouro Norte marcar 45 min antes.",
+        "Transito/manobra apenas com vento inferior a 15 nos; vento igual ou superior a 15 nos deve bloquear a manobra.",
+        "O canal e estreito; vento no limite exige decisao conservadora."
       ],
       "night_rules": [
-        "LOA > 90 m: entrada so de dia; saida pode ser noturna.",
-        "LOA <= 90 m: entrada noturna nao fica proibida por esta regra especifica."
+        "Manobras ALSTOM apenas de dia."
       ],
       "restrictions": [
-        "Vento no canal <= 15 nos.",
+        "Vento no canal < 15 nos.",
         "LOA maximo 120 m.",
-        "Relacao LOA/calado obrigatoria acima de 110 m."
+        "Relacao LOA/calado obrigatoria acima de 110 m.",
+        "Atracacao so por estibordo.",
+        "Reponto obrigatorio de preia-mar.",
+        "Um navio por reponto."
       ],
       "tug_guidance": [
         "Aplicar IT-016; por ser canal estreito, vento e capacidade lateral do navio devem pesar na decisao final."

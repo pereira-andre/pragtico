@@ -414,6 +414,12 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
     origin_key = _operational_lookup_key(maneuver.get("origin"))
     destination_key = _operational_lookup_key(maneuver.get("destination"))
     if maneuver_type == "entry":
+        if "alstom" in destination_key:
+            return {
+                "minutes": (90, 90),
+                "label": "1h30 desde a Barra para chegar ao Cais ALSTOM no reponto de preia-mar",
+                "source": "IT-038_Alstom.txt",
+            }
         if any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
             return {
                 "minutes": (90, 120),
@@ -431,6 +437,12 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
         if "fundeadouro sul" in destination_key or "troia" in destination_key:
             return {"minutes": (45, 60), "label": "45 min a 1h desde a Barra", "source": "Notas_Pilotagem.txt"}
     if maneuver_type == "shift":
+        if "fundeadouro norte" in origin_key and "alstom" in destination_key:
+            return {
+                "minutes": (45, 45),
+                "label": "45 min desde o Fundeadouro Norte para chegar ao Cais ALSTOM no reponto de preia-mar",
+                "source": "IT-038_Alstom.txt",
+            }
         if any(marker in origin_key for marker in ("tanquisado", "eco oil", "ecooil")) and any(marker in destination_key for marker in ("lisnave", "mitrena")):
             return {"minutes": (60, 60), "label": "1h de Tanquisado/Eco-Oil para Lisnave", "source": "ajuste operacional local"}
         if "fundeadouro norte" in origin_key and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):

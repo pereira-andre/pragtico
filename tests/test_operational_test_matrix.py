@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 
 from flask import Flask, session
@@ -42,9 +43,43 @@ class FakeStore:
         }
 
 
+class FakeWeatherService:
+    enabled = True
+    forecast = {
+        "location": {"name": "Setúbal", "localtime": "2026-05-09 10:40"},
+        "current": {
+            "condition": "Parcialmente nublado",
+            "temp_c": 18,
+            "wind_kts": 13,
+            "gust_kts": 20,
+            "wind_dir": "S",
+            "humidity": 70,
+            "vis_km": 10,
+            "precip_mm": 0,
+        },
+        "forecast_days": [],
+        "hourly_groups": [],
+    }
+
+    def __init__(self) -> None:
+        self.forecast = deepcopy(self.forecast)
+
+    def get_forecast(self, days: int = 3) -> dict:
+        return self.forecast
+
+    def context_for_question(self, question: str) -> dict:
+        return {
+            "document": "Meteorologia teste Setúbal",
+            "retrieval_mode": "live_api",
+            "snippet": "vento S 13 kt, rajadas 20 kt",
+            "text": "vento S 13 kt, rajadas 20 kt",
+        }
+
+
 def _install_fake_store(monkeypatch) -> None:
     monkeypatch.setattr(services, "store", FakeStore())
     monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+    monkeypatch.setattr(services, "weather_service", FakeWeatherService())
 
 
 def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None:
@@ -83,14 +118,17 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Emergencia: perda de bow" in html
     assert "Nevoeiro súbito em navegação: COLREG" in html
     assert "4.º rebocador: costado ou standby" in html
+    assert "Autoeuropa Ro-Ro com meteorologia atual" in html
     assert "Diagnostico Lisnave 300 m" in html
     assert "Diagnostico Hidrolift boca 45 m" in html
     assert "Diagnostico Eco-Oil com 2 rebocadores" in html
     assert "Diagnostico Tanquisado com 2 rebocadores" in html
     assert "Diagnostico percurso e reponto" in html
     assert "Diagnostico SECIL com reponto" in html
+    assert "Diagnostico ALSTOM regras obrigatorias" in html
     assert "Diagnostico SECIL sem herdar Lisnave" in html
     assert "Entrada Secil E 19:25 validada contra reponto" in html
+    assert "ALSTOM desde a Barra para preia-mar" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html

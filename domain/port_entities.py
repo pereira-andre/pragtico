@@ -105,7 +105,16 @@ PORT_ENTITIES: List[Dict] = [
         "type": "terminal",
         "channel": "Canal Norte",
         "entry_order": 160,
-        "aliases": ["Alstom", "Terminal Alstom", "Alstom Portugal", "ABB Alstom"],
+        "aliases": [
+            "Alstom",
+            "Terminal Alstom",
+            "Cais Alstom",
+            "Cais da Alstom",
+            "Alstom Portugal",
+            "ABB Alstom",
+            "ABB-ALSTOM",
+            "Cais ABB Alstom",
+        ],
         "must_not_mix_with": ["SAPEC solidos", "SAPEC liquidos"],
     },
     {

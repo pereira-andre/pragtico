@@ -12,7 +12,7 @@ EXPLICIT_OPERATIONAL_ANCHOR_RE = re.compile(
     r"lisnave|mitrena|hidrolift|eclusa|doca\s*(?:20|21|22|31|32|33)|d(?:20|21|22|31|32|33)|"
     r"secil|outao|outão|eco\s*-?\s*oil|ecooil|ecoil|tanquisado|"
     r"tms\s*1|tms1|tms\s*2|tms2|autoeuropa|auto\s*europa|"
-    r"sapec|praias\s+do\s+sado|pirites|tepor\s*set|teporset|termitrena|"
+    r"sapec|praias\s+do\s+sado|pirites|alstom|abb\s*-?\s*alstom|tepor\s*set|teporset|termitrena|"
     r"fundeadouro\s+(?:norte|sul|troia|tr[oó]ia)|barra|pilar\s*2|canal\s+(?:norte|sul)"
     r")\b",
     flags=re.IGNORECASE,

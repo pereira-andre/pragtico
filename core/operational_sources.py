@@ -72,6 +72,11 @@ WEATHER_FORECAST_DAYS_RE = re.compile(
     r"\b(proximos dias|próximos dias|dias seguintes|amanha|amanhã|depois de amanha|depois de amanhã|"
     r"previsao geral|previsões gerais|previsoes gerais)\b"
 )
+TUG_LIVE_WEATHER_RE = re.compile(
+    r"\b(meteorolog\w*|metereolog\w*|metrolog\w*|meteo|condicoes meteorologicas|"
+    r"condicoes do tempo|estado do tempo|tempo|atual|atuais|actual|actuais|"
+    r"agora|neste momento|previst\w*|previs\w*|proximas horas|próximas horas)\b"
+)
 LOCAL_WARNING_CODE_RE = re.compile(r"\b(?:anav\s*)?(?:n[.ºo]*\s*)?(\d{1,3}/\d{2,4})\b", re.IGNORECASE)
 BERTHED_VESSELS_QUERY_RE = re.compile(
     r"\b(navios?|embarcacoes|embarcações)\b.*\b(em cais|atracad\w*|amarrad\w*)\b"
@@ -271,6 +276,22 @@ def _weather_wind_summary(hours: list[dict]) -> dict:
         "max_wind_kts": round(max(wind_values), 1) if wind_values else None,
         "max_gust_kts": round(max(gust_values), 1) if gust_values else None,
     }
+
+
+def _safe_weather_float(value: object) -> float | None:
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_weather_kts(value: object) -> str:
+    numeric = _safe_weather_float(value)
+    if numeric is None:
+        return "--"
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f"{numeric:.1f}"
 
 
 def _select_weather_days(forecast: dict, weather_service, question: str, *, default_count: int = 1) -> list[dict]:
@@ -1067,13 +1088,185 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
     return None
 
 
+def _weather_slot_datetime(slot: dict) -> datetime | None:
+    timestamp = str(slot.get("timestamp") or "").strip()
+    if timestamp:
+        try:
+            return datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+        except ValueError:
+            pass
+    slot_date = str(slot.get("date") or slot.get("day_label") or "").strip()
+    slot_time = str(slot.get("time") or "").strip()
+    if not slot_date or not slot_time:
+        return None
+    try:
+        return datetime.strptime(f"{slot_date} {slot_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+
+
+def _target_weather_date(weather_service, question: str, reference_dt: datetime) -> date:
+    try:
+        if hasattr(weather_service, "_resolve_query_dates"):
+            dates = list(weather_service._resolve_query_dates(question, reference_dt.date()))
+            if dates:
+                first = dates[0]
+                if isinstance(first, date):
+                    return first
+                return datetime.strptime(str(first), "%Y-%m-%d").date()
+    except Exception:
+        logger.exception("Falha ao resolver data para meteorologia da manobra.")
+    return reference_dt.date()
+
+
+def _nearest_weather_slot(forecast: dict, target_dt: datetime) -> dict | None:
+    selected: tuple[float, dict] | None = None
+    for slot in build_weather_timeline(forecast, max_hours=72):
+        slot_dt = _weather_slot_datetime(slot)
+        if not slot_dt:
+            continue
+        distance = abs((slot_dt - target_dt).total_seconds())
+        if selected is None or distance < selected[0]:
+            selected = (distance, slot)
+    return selected[1] if selected else None
+
+
+def _guidance_weather_direction(direction: object) -> str:
+    label = re.sub(r"[^A-Z]", "", str(direction or "").upper())
+    if not label:
+        return ""
+    if "SW" in label or label in {"SSW", "WSW"}:
+        return "SW"
+    if label.startswith("S"):
+        return "S"
+    if label.startswith("N"):
+        return "N"
+    if label.startswith("E"):
+        return "E"
+    if label.startswith("W"):
+        return "W"
+    return ""
+
+
+def _build_tug_weather_source(question: str, weather_service, summary: str) -> dict:
+    context = None
+    try:
+        if hasattr(weather_service, "context_for_question"):
+            context = weather_service.context_for_question(question)
+    except Exception:
+        context = None
+    source = dict(context or {})
+    source.update(
+        {
+            "document": source.get("document") or "Meteorologia operacional",
+            "source_id": "WEATHER_TUG_CONTEXT",
+            "chunk_id": source.get("chunk_id", 0),
+            "score": source.get("score", 1.0),
+            "retrieval_mode": "live_weather_context",
+            "snippet": summary,
+            "text": summary,
+        }
+    )
+    return source
+
+
+def _tug_live_weather_context(question: str, clean_question: str) -> dict:
+    if not TUG_LIVE_WEATHER_RE.search(clean_question):
+        return {"guidance_question": question, "lines": [], "sources": []}
+
+    weather_service = getattr(services, "weather_service", None)
+    if not weather_service or not getattr(weather_service, "enabled", False):
+        return {
+            "guidance_question": question,
+            "lines": [
+                "Meteorologia: não consegui confirmar vento/rajadas atuais ou previstos. "
+                "Não fechar a decisão operacional sem essa confirmação."
+            ],
+            "sources": [],
+        }
+
+    try:
+        forecast = weather_service.get_forecast(days=3)
+    except Exception:
+        logger.exception("Falha ao obter meteorologia para recomendacao de rebocadores.")
+        return {
+            "guidance_question": question,
+            "lines": [
+                "Meteorologia: falhou a consulta de vento/rajadas. "
+                "Não fechar a decisão operacional sem essa confirmação."
+            ],
+            "sources": [],
+        }
+
+    reference_dt = _parse_weather_reference_datetime(forecast) or datetime.now()
+    observation = dict(forecast.get("current") or {})
+    context_label = "atual"
+    parsed_time = _parse_maneuver_time(question)
+    if parsed_time:
+        hour, minute, time_label = parsed_time
+        target_date = _target_weather_date(weather_service, question, reference_dt)
+        target_dt = datetime(target_date.year, target_date.month, target_date.day, hour, minute)
+        slot = _nearest_weather_slot(forecast, target_dt)
+        if slot:
+            observation = dict(slot)
+            context_label = f"prevista para {slot.get('date_label') or target_date.isoformat()} {slot.get('time') or time_label}"
+        else:
+            context_label = f"atual; sem slot horário para {target_date.strftime('%d/%m/%Y')} {time_label}"
+
+    wind = _safe_weather_float(observation.get("wind_kts"))
+    gust = _safe_weather_float(observation.get("gust_kts"))
+    wind_dir = str(observation.get("wind_dir") or "").strip()
+    values = [value for value in (wind, gust) if value is not None]
+    strongest = max(values) if values else None
+    summary = (
+        f"Meteorologia considerada ({context_label}): vento {_format_weather_kts(wind)} kts "
+        f"{wind_dir or '--'}; rajadas {_format_weather_kts(gust)} kts."
+    )
+    lines = [summary]
+    if strongest is not None:
+        if strongest >= 30:
+            lines.append("Com vento/rajadas >= 30 kt, a regra operacional é suspender manobras.")
+        elif strongest >= 25:
+            lines.append("Vento/rajadas >= 25 kt: não fechar a manobra sem validação superior e ponderar atrasar.")
+        elif strongest >= 20:
+            lines.append("Rajadas/vento no limiar de vento forte (>= 20 kt); manter recomendação conservadora e ponderar atrasar se a tendência não baixar.")
+        elif strongest >= 15:
+            lines.append("Vento/rajadas já exigem cautela; confirmar tendência na hora antes de fechar meios.")
+
+    direction = _guidance_weather_direction(wind_dir)
+    guidance_question = question
+    if direction:
+        strength = " forte" if strongest is not None and strongest >= 20 else ""
+        guidance_question = f"{question} vento {direction}{strength}"
+
+    return {
+        "guidance_question": guidance_question,
+        "lines": lines,
+        "sources": [_build_tug_weather_source(question, weather_service, " ".join(lines))],
+    }
+
+
+def _append_tug_weather_lines(answer_lines: list[str], weather_context: dict) -> None:
+    lines = list(weather_context.get("lines") or [])
+    if not lines:
+        return
+    answer_lines.append("")
+    answer_lines.extend(lines)
+
+
+def _tug_guidance_sources(source: dict, weather_context: dict) -> list[dict]:
+    return [source] + list(weather_context.get("sources") or [])
+
+
 def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
     if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado)\b", clean_question):
         return None
 
-    source = build_tug_operational_guidance_source(question, _active_knowledge_dir() or "knowledge")
+    weather_context = _tug_live_weather_context(question, clean_question)
+    guidance_question = str(weather_context.get("guidance_question") or question)
+    source = build_tug_operational_guidance_source(guidance_question, _active_knowledge_dir() or "knowledge")
     if not source:
         return None
     snippet = str(source.get("snippet") or "")
@@ -1117,9 +1310,10 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         answer_lines = ["Regra prática de posicionamento dos rebocadores:"]
         for item in relevant_positioning[:3]:
             answer_lines.append(f"- {item}")
+        _append_tug_weather_lines(answer_lines, weather_context)
         return {
             "answer": "\n".join(answer_lines),
-            "sources": [source],
+            "sources": _tug_guidance_sources(source, weather_context),
             "answer_origin": "operational_tug_guidance",
         }
 
@@ -1143,9 +1337,10 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
             answer_lines.append(f"- {item}")
         if applicable:
             answer_lines.append(f"Base/minimo a respeitar: {applicable[0]}")
+        _append_tug_weather_lines(answer_lines, weather_context)
         return {
             "answer": "\n".join(answer_lines),
-            "sources": [source],
+            "sources": _tug_guidance_sources(source, weather_context),
             "answer_origin": "operational_tug_guidance",
         }
 
@@ -1183,9 +1378,10 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         answer_lines.append(
             "Confirma DWT, carga perigosa, estado carregado/vazio e thrusters; a IT-016 pode agravar mínimos, mas não deve reduzir esta recomendação prática."
         )
+    _append_tug_weather_lines(answer_lines, weather_context)
     return {
         "answer": "\n".join(answer_lines),
-        "sources": [source],
+        "sources": _tug_guidance_sources(source, weather_context),
         "answer_origin": "operational_tug_guidance",
     }
 

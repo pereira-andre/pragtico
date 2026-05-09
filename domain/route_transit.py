@@ -90,6 +90,11 @@ DEST_NORTH_QUAYS = (
     r"\bpraias\b",
     r"\bsapec\b",
 )
+DEST_ALSTOM = (
+    r"\balstom\b",
+    r"\babb\s*alstom\b",
+    r"\babb\s*-?\s*alstom\b",
+)
 DEST_SECIL = (r"\bsecil\b",)
 DEST_FUNDEADOURO_NORTE = ORIGIN_FUNDEADOURO_NORTE
 DEST_FUNDEADOURO_SUL = ORIGIN_FUNDEADOURO_SUL
@@ -199,6 +204,30 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
         source_document="Notas_Pilotagem.txt",
         source_id="ROUTE_BARRA_CANAL_NORTE_TIME",
         specificity=18,
+    ),
+    RouteTransitFact(
+        metric="time",
+        origin_patterns=ORIGIN_BARRA,
+        destination_patterns=DEST_ALSTOM,
+        answer=(
+            "Da entrada da Barra para o Cais ALSTOM, marca a manobra 1 hora e "
+            "30 minutos antes da preia-mar para chegar ao cais no reponto de preia-mar."
+        ),
+        source_document="IT-038_Alstom.txt",
+        source_id="ROUTE_BARRA_ALSTOM_REPONTO_TIME",
+        specificity=34,
+    ),
+    RouteTransitFact(
+        metric="time",
+        origin_patterns=ORIGIN_FUNDEADOURO_NORTE,
+        destination_patterns=DEST_ALSTOM,
+        answer=(
+            "Do Fundeadouro Norte para o Cais ALSTOM, marca 45 minutos antes da "
+            "preia-mar para chegar ao cais no reponto de preia-mar."
+        ),
+        source_document="IT-038_Alstom.txt",
+        source_id="ROUTE_FUNDEADOURO_NORTE_ALSTOM_REPONTO_TIME",
+        specificity=34,
     ),
     RouteTransitFact(
         metric="time",

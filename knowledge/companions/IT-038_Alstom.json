@@ -17,7 +17,13 @@
     "7,0 — ((116 — 110) × 0,1) = 7,0 — 0,6 = 6,4 metros.",
     "Não. O LOA máximo aceite no Cais ALSTOM é 120 metros.",
     "5 + 1,0 = 6,0 metros.",
-    "Com vento igual ou inferior a 15 nós."
+    "Para validação operacional conservadora do Cais ALSTOM, apenas com vento inferior a 15 nós.",
+    "Navios no Cais ALSTOM só atracam por estibordo.",
+    "Manobras ALSTOM só no reponto de preia-mar.",
+    "Entrada desde a Barra para ALSTOM: marcar 1 hora e 30 minutos antes da preia-mar.",
+    "Mudança/entrada desde o Fundeadouro Norte para ALSTOM: marcar 45 minutos antes da preia-mar.",
+    "Só um navio por reponto no Cais ALSTOM.",
+    "Manobras ALSTOM apenas de dia."
   ],
   "faq": [
     {
@@ -82,7 +88,7 @@
     },
     {
       "question": "Com que condições de vento se pode transitar no Canal ABB-ALSTOM?",
-      "answer": "Com vento igual ou inferior a 15 nós.",
+      "answer": "Para validação operacional conservadora do Cais ALSTOM, apenas com vento inferior a 15 nós. Vento igual ou superior a 15 nós bloqueia a manobra, incluindo rajadas nesse limite.",
       "keywords": [
         "abb",
         "alstom",
@@ -94,8 +100,63 @@
       ]
     },
     {
+      "question": "Por que bordo atracam os navios no Cais ALSTOM?",
+      "answer": "Só atracam por estibordo.",
+      "keywords": [
+        "alstom",
+        "atracam",
+        "bordo",
+        "estibordo"
+      ]
+    },
+    {
+      "question": "Em que reponto se manobra no Cais ALSTOM?",
+      "answer": "Só no reponto de preia-mar. Não usar baixa-mar como reponto operacional para este cais.",
+      "keywords": [
+        "alstom",
+        "manobra",
+        "preia-mar",
+        "reponto"
+      ]
+    },
+    {
+      "question": "Com que antecedência se marca uma entrada da Barra para o Cais ALSTOM?",
+      "answer": "Marca-se 1 hora e 30 minutos antes da preia-mar, para chegar ao cais no reponto de preia-mar.",
+      "keywords": [
+        "alstom",
+        "antecedencia",
+        "barra",
+        "entrada",
+        "preia-mar",
+        "reponto"
+      ]
+    },
+    {
+      "question": "Com que antecedência se marca uma mudança do Fundeadouro Norte para o Cais ALSTOM?",
+      "answer": "Marca-se 45 minutos antes da preia-mar, para chegar ao cais no reponto de preia-mar.",
+      "keywords": [
+        "alstom",
+        "antecedencia",
+        "fundeadouro norte",
+        "mudanca",
+        "preia-mar",
+        "reponto"
+      ]
+    },
+    {
+      "question": "Podem ser feitas duas manobras ALSTOM no mesmo reponto?",
+      "answer": "Não. Só um navio por reponto.",
+      "keywords": [
+        "alstom",
+        "duas",
+        "manobras",
+        "mesmo",
+        "reponto"
+      ]
+    },
+    {
       "question": "Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?",
-      "answer": "Não. Navios com LOA superior a 90 metros só podem entrar durante o período diurno. Podem sair de noite.",
+      "answer": "Não. As manobras ALSTOM devem ser feitas apenas de dia.",
       "keywords": [
         "alstom",
         "cais",
@@ -109,7 +170,7 @@
     },
     {
       "question": "Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?",
-      "answer": "Sim. A restrição de entrada diurna aplica-se apenas a navios com LOA superior a 90 metros.",
+      "answer": "Não. A regra operacional obrigatória é manobrar apenas de dia.",
       "keywords": [
         "alstom",
         "cais",
