@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import heapq
 import re
 import unicodedata
 from zoneinfo import ZoneInfo
@@ -413,9 +414,43 @@ def _best_route_plan(
             preference_score = 10
         candidates.append((preference_score, -distance, -index, route, legs))
     if not candidates:
-        return None
+        return _best_graph_route_plan(origin, destination)
     _, _, _, route, legs = sorted(candidates, key=lambda item: (item[0], item[1], item[2]), reverse=True)[0]
     return route, legs
+
+
+def _best_graph_route_plan(origin: str, destination: str) -> tuple[RoutePlan, tuple[RouteLeg, ...]] | None:
+    graph: dict[str, list[RouteLeg]] = {}
+    for route in SETUBAL_ROUTE_PLANS:
+        for leg in route.legs:
+            graph.setdefault(leg.origin, []).append(leg)
+            reverse = _reverse_leg(leg)
+            graph.setdefault(reverse.origin, []).append(reverse)
+    if origin not in graph or destination not in graph:
+        return None
+
+    queue: list[tuple[float, int, str, tuple[RouteLeg, ...]]] = [(0.0, 0, origin, ())]
+    best_distance: dict[str, float] = {origin: 0.0}
+    counter = 0
+    while queue:
+        distance, _order, node, path = heapq.heappop(queue)
+        if node == destination:
+            route = RoutePlan(
+                "canal_sul_norte_via_joao_farto",
+                "Canal Sul / Canal Norte via Bóia João Farto",
+                path,
+            )
+            return route, path
+        if distance > best_distance.get(node, float("inf")) + 1e-9:
+            continue
+        for leg in graph.get(node, []):
+            new_distance = distance + leg.distance_nm
+            if new_distance + 1e-9 >= best_distance.get(leg.destination, float("inf")):
+                continue
+            best_distance[leg.destination] = new_distance
+            counter += 1
+            heapq.heappush(queue, (new_distance, counter, leg.destination, path + (leg,)))
+    return None
 
 
 def _extract_route_points(clean_question: str) -> tuple[str, str] | None:
@@ -486,8 +521,7 @@ def _format_route_plan_answer(
             f"- {WAYPOINT_LABELS.get(leg.origin, leg.origin)} -> "
             f"{WAYPOINT_LABELS.get(leg.destination, leg.destination)}: "
             f"rumo {_heading_label(leg.inbound_heading)}, "
-            f"{_decimal_comma(leg.distance_nm)} NM "
-            f"(rumo inverso {_heading_label(leg.outbound_heading)})"
+            f"{_decimal_comma(leg.distance_nm)} NM"
         )
         for leg in legs
     ]
@@ -502,9 +536,6 @@ def _format_route_plan_answer(
     ]
     if eta_text:
         answer_parts.append(eta_text)
-    answer_parts.append(
-        "Para a saída no sentido contrário, usar os rumos inversos: rumo de entrada + 180° (mod 360)."
-    )
     answer = "\n".join(answer_parts)
     return {
         "answer": answer,

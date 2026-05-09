@@ -139,6 +139,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Canal Sul ate Boia 14CS" in html
     assert "ETA Boia 12CS - Lisnave" in html
     assert "Rumos inversos Lisnave - Pilar 2" in html
+    assert "Ligacao Lisnave - TMS1 via Joao Farto" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html

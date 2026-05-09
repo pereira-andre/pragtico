@@ -65,6 +65,7 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("Bóia 3CC -> TMS 1: rumo 105°", answer["answer"])
         self.assertIn("Bóia 5CC -> TMS 2: rumo 120°", answer["answer"])
         self.assertIn("SAPEC -> Cais ALSTOM: rumo 120°", answer["answer"])
+        self.assertNotIn("rumo inverso", answer["answer"])
 
     def test_tms_references_are_on_north_channel_before_autoeuropa(self) -> None:
         answer = route_transit_answer("Da entrada da barra ao TMS2 pelo canal norte, quanto falta?")
@@ -95,6 +96,23 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("10,5 milhas náuticas", answer["answer"])
         self.assertIn("LISNAVE / docas / Hidrolift -> Bóia 14CS / fim do Canal Sul: rumo 210°", answer["answer"])
         self.assertIn("Outão -> Pilar 2 / entrada da Barra: rumo 220°", answer["answer"])
+        self.assertNotIn("rumo inverso", answer["answer"])
+
+    def test_cross_channel_route_uses_joao_farto_between_lisnave_and_tms1(self) -> None:
+        answer = route_transit_answer(
+            "Vou mudar um navio da LISNAVE para o TMS1. Se for a 5 kts quanto tempo levo de um cais ao outro?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Canal Sul / Canal Norte via Bóia João Farto", answer["answer"])
+        self.assertIn("7,9 milhas náuticas", answer["answer"])
+        self.assertIn("LISNAVE / docas / Hidrolift -> Bóia 14CS", answer["answer"])
+        self.assertIn("Bóia 4CS -> Bóia João Farto", answer["answer"])
+        self.assertIn("Bóia João Farto -> Bóia 1CC", answer["answer"])
+        self.assertIn("Bóia 3CC -> TMS 1", answer["answer"])
+        self.assertIn("A 5,0 kt, duração estimada: 1 h 35 min.", answer["answer"])
+        self.assertNotIn("rumo inverso", answer["answer"])
 
     def test_setubal_route_graph_covers_full_north_and_south_channel_totals(self) -> None:
         north = route_transit_answer("Da posição de embarque até ao fim do canal norte, qual a distância?")
