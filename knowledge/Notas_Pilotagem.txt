@@ -361,6 +361,20 @@ DISTÂNCIAS ENTRE TERMINAIS — REFERÊNCIA PARA MUDANÇAS DE CAIS:
 SAPEC até ao Estaleiro LISNAVE/Mitrena: 10,5 milhas náuticas.
 TMS 2 / Centro da Cidade até ao Estaleiro LISNAVE/Mitrena: 9,0 milhas náuticas.
 
+DISTÂNCIAS POR SEGMENTO A PARTIR DO TMS 1:
+
+Estas distâncias servem como referência de percurso por segmento. Podem ser
+somadas entre si quando se pretenda estimar uma rota composta e quando essa soma
+fizer sentido operacional ao longo do canal navegável.
+
+TMS 1 até ao Cais ALSTOM: 3,5 milhas náuticas.
+TMS 1 até ao SAPEC: 2,2 milhas náuticas.
+TMS 1 até às Praias do Sado: 1,6 milhas náuticas.
+TMS 1 até à Autoeuropa / Ro-Ro: 1,0 milha náutica.
+TMS 1 até à Bóia João Farto: 1,6 milhas náuticas.
+TMS 1 até ao Outão: 3,0 milhas náuticas.
+TMS 1 até fora da Barra / Pilar 2: 6,0 milhas náuticas.
+
 TABELA RESUMO DE DISTÂNCIAS A PARTIR DO PILAR NÚMERO 2:
 
 Pilar 2 → Fundeadouro Norte:    5,0 NM

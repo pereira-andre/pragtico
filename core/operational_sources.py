@@ -1618,6 +1618,9 @@ def answer_direct_operational_query(
     fog_underway_answer = _answer_fog_underway_procedure_direct(question, clean_question)
     if fog_underway_answer:
         return _attach_operational_diagnostic(fog_underway_answer, question)
+    route_answer = route_transit_answer(question, clean_question)
+    if route_answer:
+        return _attach_operational_diagnostic(route_answer, question)
     navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
     if navigation_lights_answer:
         return _attach_operational_diagnostic(navigation_lights_answer, question)
@@ -1639,9 +1642,6 @@ def answer_direct_operational_query(
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return _attach_operational_diagnostic(tug_guidance_answer, question)
-    route_answer = route_transit_answer(question, clean_question)
-    if route_answer:
-        return _attach_operational_diagnostic(route_answer, question)
     if plan.requires_llm_synthesis:
         return None
 

@@ -14,7 +14,7 @@ def _normalize(value: str | None) -> str:
 TIME_QUERY_RE = re.compile(
     r"\b(quanto tempo|tempo|demora|demoram|leva|levo|levam|transito|viagem|percurso)\b"
 )
-DISTANCE_QUERY_RE = re.compile(r"\b(distancia|distancias|milha|milhas|mn)\b")
+DISTANCE_QUERY_RE = re.compile(r"\b(distancia|distancias|milha|milhas|mn|nm)\b")
 ROUTE_LINK_RE = re.compile(r"\b(ate|a|ao|aos|para)\b")
 
 ORIGIN_BARRA = (
@@ -38,6 +38,14 @@ ORIGIN_FUNDEADOURO_SUL = (
     r"\btroia\b",
 )
 ORIGIN_CANAL_SUL = (r"\bcanal\s+sul\b",)
+ORIGIN_TMS1 = (
+    r"\btms\s*1\b",
+    r"\btms1\b",
+    r"\bterminal\s+multiusos\s+1\b",
+    r"\bterminal\s+multiusos\s+zona\s+1\b",
+    r"\bcais\s+das\s+fontainhas\b",
+    r"\bfontainhas\b",
+)
 
 DEST_LISNAVE = (
     r"\blisnave\b",
@@ -72,6 +80,31 @@ DEST_TMS2 = (
     r"\bterminal\s+multiusos\s+2\b",
     r"\bterminal\s+multiusos\s+zona\s+2\b",
     r"\bterminal\s+de\s+contentores\b",
+)
+DEST_SAPEC = (
+    r"\bsapec\b",
+    r"\bsapec\s+solidos\b",
+    r"\bsapec\s+liquidos\b",
+)
+DEST_PRAIAS = (
+    r"\bpraias\s+do\s+sado\b",
+    r"\bpraias\b",
+    r"\bpirites\s+alentejanas\b",
+)
+DEST_JOAO_FARTO = (
+    r"\bboia\s+joao\s+farto\b",
+    r"\bjoao\s+farto\b",
+)
+DEST_OUTAO = (
+    r"\boutao\b",
+    r"\bsecil\s+outao\b",
+)
+DEST_FORA_BARRA = (
+    r"\bfora\s+da\s+barra\b",
+    r"\bentrada\s+da\s+barra\b",
+    r"\bpilar\s*2\b",
+    r"\bpilar\s*n\s*2\b",
+    r"\bboia\s*2\b",
 )
 DEST_NORTH_QUAYS = (
     r"\bcais\s+(?:a\s+)?norte\b",
@@ -112,6 +145,24 @@ class RouteTransitFact:
     reverse_answer: str = ""
 
 
+def _segment_distance_answer(origin: str, destination: str, distance: str) -> str:
+    unit = "milha náutica" if distance == "1,0" else "milhas náuticas"
+    return (
+        f"Do {origin} até {destination} são {distance} {unit}. "
+        "É uma distância de referência por segmento e pode ser somada a outros segmentos "
+        "quando o percurso operacional fizer sentido."
+    )
+
+
+def _segment_distance_reverse(origin: str, reverse_origin_phrase: str, distance: str) -> str:
+    unit = "milha náutica" if distance == "1,0" else "milhas náuticas"
+    return (
+        f"{reverse_origin_phrase} até ao {origin} são {distance} {unit}. "
+        "É uma distância de referência por segmento e pode ser somada a outros segmentos "
+        "quando o percurso operacional fizer sentido."
+    )
+
+
 ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
     RouteTransitFact(
         metric="distance",
@@ -146,6 +197,76 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
             "Do TMS 2 até ao Pilar 2 / entrada da Barra são cerca de 6,5 milhas "
             "náuticas pelo Canal Norte."
         ),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_ALSTOM,
+        answer=_segment_distance_answer("TMS 1", "ao Cais ALSTOM", "3,5"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_ALSTOM_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Do Cais ALSTOM", "3,5"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_SAPEC,
+        answer=_segment_distance_answer("TMS 1", "ao SAPEC", "2,2"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_SAPEC_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Do SAPEC", "2,2"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_PRAIAS,
+        answer=_segment_distance_answer("TMS 1", "às Praias do Sado", "1,6"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_PRAIAS_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Das Praias do Sado", "1,6"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_AUTOEUROPA,
+        answer=_segment_distance_answer("TMS 1", "à Autoeuropa", "1,0"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_AUTOEUROPA_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Da Autoeuropa", "1,0"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_JOAO_FARTO,
+        answer=_segment_distance_answer("TMS 1", "à Bóia João Farto", "1,6"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_JOAO_FARTO_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Da Bóia João Farto", "1,6"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_OUTAO,
+        answer=_segment_distance_answer("TMS 1", "ao Outão", "3,0"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_OUTAO_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "Do Outão", "3,0"),
+    ),
+    RouteTransitFact(
+        metric="distance",
+        origin_patterns=ORIGIN_TMS1,
+        destination_patterns=DEST_FORA_BARRA,
+        answer=_segment_distance_answer("TMS 1", "fora da Barra / Pilar 2", "6,0"),
+        source_document="Notas_Pilotagem.txt",
+        source_id="ROUTE_TMS1_FORA_BARRA_DISTANCE",
+        specificity=42,
+        reverse_answer=_segment_distance_reverse("TMS 1", "De fora da Barra / Pilar 2", "6,0"),
     ),
     RouteTransitFact(
         metric="time",

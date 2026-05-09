@@ -129,6 +129,8 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico SECIL sem herdar Lisnave" in html
     assert "Entrada Secil E 19:25 validada contra reponto" in html
     assert "ALSTOM desde a Barra para preia-mar" in html
+    assert "Distancia TMS 1 - ALSTOM" in html
+    assert "Distancia TMS 1 - fora da Barra" in html
     assert "D31/D32/D33 Lisnave com proa a sul" in html
     assert "Notes on Shiphandling incorporado" in html
     assert "Lista de Luzes Setubal incorporada" in html
