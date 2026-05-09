@@ -89,6 +89,44 @@ def test_colreg_direct_interprets_dredging_safe_side() -> None:
     assert "bordo por onde se pode passar" in payload["answer"]
 
 
+def test_colreg_direct_prioritizes_crossing_risk_over_buoy_lights() -> None:
+    payload = answer_direct_operational_query(
+        "Vou de saída no canal norte e estou a passar a boia do João Farto. "
+        "Apresenta-se um navio pelo meu bombordo, como devo manobrar?"
+    )
+
+    assert payload is not None
+    assert payload["answer_origin"] == "colreg_interpretation"
+    assert "Regra 17" in payload["answer"]
+    assert "mantém rumo e velocidade" in payload["answer"]
+    assert "Regras 15 e 16" in payload["answer"]
+    assert "Regra 9" in payload["answer"]
+    assert "5 sons curtos" in payload["answer"]
+    assert "IALA A" not in payload["answer"]
+
+
+def test_colreg_direct_treats_risk_of_collision_as_crossing_not_emergency() -> None:
+    payload = answer_direct_operational_query(
+        "Um navio apresenta-se pelo meu bombordo em rumo de colisão, como devo manobrar?"
+    )
+
+    assert payload is not None
+    assert payload["answer_origin"] == "colreg_interpretation"
+    assert "stand-on" in payload["answer"]
+    assert "evita guinar para bombordo" in payload["answer"]
+    assert "largar ferro imediatamente" not in payload["answer"].lower()
+
+
+def test_actual_collision_still_uses_emergency_response() -> None:
+    payload = answer_direct_operational_query(
+        "O navio colidiu com outro navio no canal, o que faço?"
+    )
+
+    assert payload is not None
+    assert payload["answer_origin"] == "operational_emergency_response"
+    assert "Emergencia operacional" in payload["answer"]
+
+
 def test_colreg_slash_commands_parse_and_answer() -> None:
     catalog = parse_slash_command("/colreg-lista", "piloto")
     rule = parse_slash_command("/colreg 24", "piloto")

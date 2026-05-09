@@ -7,6 +7,8 @@ from dataclasses import dataclass
 COLREG_SOURCE_DOCUMENT = "RIEAM_COLREG_Regras_Estrada.txt"
 COLREG_INTERPRETATION_RE = re.compile(
     r"\b(colreg|rieam|abalroamento|roda\s+a\s+roda|proa\s+com\s+proa|rumos?\s+cruzad|"
+    r"rumo\s+de\s+colis[aã]o|rota\s+de\s+colis[aã]o|risco\s+de\s+(?:colis[aã]o|abalroamento)|"
+    r"navio\s+(?:pelo|por)\s+(?:meu\s+)?(?:bombordo|estibordo)|apresenta-se\s+um\s+navio|"
     r"alcanc\w+|ultrapass\w+|canal\s+estreito|esquema\s+de\s+separacao|separação\s+de\s+tr[aá]fego|"
     r"sinais?\s+(?:sonor|de\s+manobra|de\s+nevoeiro|de\s+perigo)|sons?\s+(?:curtos?|prolongados?)|"
     r"apito|sino|tanta|tant[aã]|nevoeiro|visibilidade\s+reduzida|barco\s+de\s+piloto|"
@@ -233,6 +235,52 @@ def answer_colreg_interpretation_direct(question: str) -> dict | None:
     explicit_rule = parse_colreg_rule_number(question)
     if explicit_rule is not None and re.search(r"\b(colreg|rieam|regra\s*)\b", question or "", flags=re.IGNORECASE):
         return _colreg_payload(format_colreg_rule(explicit_rule))
+
+    own_port_crossing = (
+        "bombordo" in clean
+        and (
+            "rumo de colisao" in clean
+            or "rota de colisao" in clean
+            or "risco de colisao" in clean
+            or "risco de abalroamento" in clean
+            or "apresenta se" in clean
+            or "apresenta um navio" in clean
+        )
+        and any(token in clean for token in ("navio", "barco", "embarcacao"))
+    )
+    if own_port_crossing:
+        answer = (
+            "Pelo RIEAM/COLREG, assumindo dois navios de propulsão mecânica à vista em rumos cruzados e com risco de abalroamento:\n"
+            "- se o outro navio se apresenta pelo teu bombordo, tu és o navio com prioridade/stand-on: mantém rumo e velocidade inicialmente (Regra 17);\n"
+            "- o outro navio tem-te por estibordo, portanto é o navio sem prioridade/give-way: deve manobrar cedo e francamente para se manter afastado, evitando cortar-te a proa (Regras 15 e 16);\n"
+            "- no Canal Norte/canal estreito acresce a Regra 9: mantém-te tão perto quanto seja seguro do limite exterior de estibordo do canal; um navio que cruza não deve dificultar quem só consegue navegar em segurança no canal;\n"
+            "- acompanha marcação/CPA e intenção do outro navio. Se houver dúvida/perigo sobre a manobra dele, usa pelo menos 5 sons curtos e coordena com VTS/Setúbal Port Control se necessário (Regra 34);\n"
+            "- se ficar evidente que o outro não está a manobrar, podes agir para evitar o abalroamento; se já não puder ser evitado só pela ação do outro, deves agir pelo melhor meio disponível (Regra 17);\n"
+            "- nessa ação, se as circunstâncias permitirem, evita guinar para bombordo para um navio que está pelo teu bombordo; considera reduzir, parar/inverter máquina ou guinar para estibordo se houver água, espaço e segurança."
+        )
+        return _colreg_payload(answer)
+
+    own_starboard_crossing = (
+        "estibordo" in clean
+        and (
+            "rumo de colisao" in clean
+            or "rota de colisao" in clean
+            or "risco de colisao" in clean
+            or "risco de abalroamento" in clean
+            or "apresenta se" in clean
+        )
+        and any(token in clean for token in ("navio", "barco", "embarcacao"))
+    )
+    if own_starboard_crossing:
+        answer = (
+            "Pelo RIEAM/COLREG, assumindo dois navios de propulsão mecânica à vista em rumos cruzados e com risco de abalroamento:\n"
+            "- se o outro navio se apresenta pelo teu estibordo, tu és o navio sem prioridade/give-way (Regra 15);\n"
+            "- deves manobrar cedo e francamente para te manteres bem afastado, evitando cortar-lhe a proa (Regra 16);\n"
+            "- a manobra deve ser clara e suficientemente ampla, evitando pequenas alterações sucessivas (Regra 8);\n"
+            "- em canal estreito, mantém-te tão perto quanto seguro do limite exterior de estibordo e não dificultes navio que só possa navegar em segurança no canal (Regra 9);\n"
+            "- se houver dúvida/perigo sobre intenções, usa pelo menos 5 sons curtos e coordena com VTS/Setúbal Port Control se necessário (Regra 34)."
+        )
+        return _colreg_payload(answer)
 
     if "canal estreito" in clean and any(token in clean for token in ("ultrapass", "alcanc")):
         answer = (

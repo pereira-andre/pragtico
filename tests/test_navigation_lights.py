@@ -8,8 +8,9 @@ def test_loads_setubal_navigation_lights_dataset() -> None:
 
     assert payload["iala_region"] == "A"
     assert "IALA A" in payload["iala_note"]
-    assert payload["entry_count"] == 102
+    assert payload["entry_count"] == 101
     assert any(entry["name"] == "Boia N.º 1CN" for entry in payload["entries"])
+    assert not any(entry["name"] == "Pinheiro da Cruz" for entry in payload["entries"])
 
 
 def test_builds_exact_source_for_1cn_characteristic() -> None:
@@ -35,3 +36,9 @@ def test_builds_iala_note_without_specific_aid() -> None:
     assert "vermelhas" in snippet
     assert "estibordo" in snippet
     assert "verdes" in snippet
+
+
+def test_pinheiro_da_cruz_is_not_part_of_setubal_navigation_lights() -> None:
+    source = build_navigation_lights_source("Qual e a luz de Pinheiro da Cruz?", "knowledge")
+
+    assert source is None

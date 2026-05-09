@@ -2,12 +2,12 @@
   "document": "Lista_Luzes_Setubal.pdf",
   "title": "Setúbal - Balizagem e Lista de Luzes",
   "source": "Instituto Hidrográfico, PN35 - Ajudas à Navegação - Lista de Luzes, março 2026.",
-  "scope": "Porto de Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz conforme excerto fornecido.",
+  "scope": "Porto de Setúbal, Canal Norte e Canal Sul conforme excerto fornecido.",
   "datum": "WGS84",
   "iala_region": "A",
   "iala_note": "Em Setúbal usa-se o sistema IALA A: no sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.",
   "warning": "Fonte de apoio operacional. Para navegação oficial confirmar sempre a publicação PN35, avisos aos navegantes e cartas em vigor.",
-  "entry_count": 102,
+  "entry_count": 101,
   "entries": [
     {
       "area": "SETÚBAL",
@@ -2345,30 +2345,6 @@
         "d 2157 3",
         "cais zero",
         "399 74"
-      ]
-    },
-    {
-      "area": "PINHEIRO DA CRUZ",
-      "national_number": "399.8",
-      "international_number": "D-2158",
-      "name": "Pinheiro da Cruz",
-      "position": {
-        "latitude": "38º15,48'N",
-        "longitude": "8º46,32'W",
-        "datum": "WGS84"
-      },
-      "characteristic": "Fl W 3s",
-      "altitude_m": "67",
-      "nominal_range_m": "9",
-      "details": "Coluna com Lt 1s; Ec 2s; faixas brancas; e vermelhas",
-      "aliases": [
-        "Pinheiro da Cruz",
-        "399.8",
-        "D-2158",
-        "PINHEIRO DA CRUZ",
-        "pinheiro da cruz",
-        "399 8",
-        "d 2158"
       ]
     }
   ]

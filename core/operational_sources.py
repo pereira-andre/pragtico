@@ -1479,7 +1479,6 @@ def _answer_navigation_lights_direct(question: str, clean_question: str) -> dict
             "IALA A" in line
             or line.startswith("Fonte:")
             or line.startswith("- SETÚBAL")
-            or line.startswith("- PINHEIRO")
         ):
             answer_lines.append(line)
             seen_lines.add(line)

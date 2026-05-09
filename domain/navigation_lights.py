@@ -24,7 +24,6 @@ AREA_QUERY = {
     "SETÚBAL - CANAL NORTE": re.compile(r"\bcanal\s+norte\b|\bcn\b", flags=re.IGNORECASE),
     "SETÚBAL - CANAL SUL": re.compile(r"\bcanal\s+sul\b|\bcs\b", flags=re.IGNORECASE),
     "SETÚBAL": re.compile(r"\bbarra\b|\bset[uú]bal\b", flags=re.IGNORECASE),
-    "PINHEIRO DA CRUZ": re.compile(r"\bpinheiro\s+da\s+cruz\b", flags=re.IGNORECASE),
 }
 
 
