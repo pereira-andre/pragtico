@@ -23,6 +23,7 @@ from core.rule_catalog import _active_knowledge_dir
 from integrations.tide_service import LISBON_TZ
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
+from domain.colreg_rules import answer_colreg_interpretation_direct
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
 from domain.navigation_basics import answer_navigation_basics_direct, build_navigation_basics_source
@@ -1621,15 +1622,6 @@ def answer_direct_operational_query(
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
         return _attach_operational_diagnostic(route_answer, question)
-    navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
-    if navigation_lights_answer:
-        return _attach_operational_diagnostic(navigation_lights_answer, question)
-    navigation_basics_answer = answer_navigation_basics_direct(question)
-    if navigation_basics_answer:
-        return _attach_operational_diagnostic(navigation_basics_answer, question)
-    unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
-    if unclear_answer:
-        return _attach_operational_diagnostic(unclear_answer, question)
     safety_answer = _answer_safety_hard_limit(question, clean_question)
     if safety_answer:
         return _attach_operational_diagnostic(safety_answer, question)
@@ -1642,6 +1634,18 @@ def answer_direct_operational_query(
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return _attach_operational_diagnostic(tug_guidance_answer, question)
+    colreg_answer = answer_colreg_interpretation_direct(question)
+    if colreg_answer:
+        return _attach_operational_diagnostic(colreg_answer, question)
+    navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
+    if navigation_lights_answer:
+        return _attach_operational_diagnostic(navigation_lights_answer, question)
+    navigation_basics_answer = answer_navigation_basics_direct(question)
+    if navigation_basics_answer:
+        return _attach_operational_diagnostic(navigation_basics_answer, question)
+    unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
+    if unclear_answer:
+        return _attach_operational_diagnostic(unclear_answer, question)
     if plan.requires_llm_synthesis:
         return None
 

@@ -117,6 +117,8 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Perda de maquina: ferro e VTS" in html
     assert "Emergencia: perda de bow" in html
     assert "Nevoeiro súbito em navegação: COLREG" in html
+    assert "COLREG ultrapassagem canal estreito" in html
+    assert "COLREG dragagem bordo livre" in html
     assert "4.º rebocador: costado ou standby" in html
     assert "Autoeuropa Ro-Ro com meteorologia atual" in html
     assert "Diagnostico Lisnave 300 m" in html
