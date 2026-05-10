@@ -7188,6 +7188,49 @@ button:hover {
   color: var(--text-strong);
   font-size: 0.95rem;
 }
+.admin-bot-context-policy {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(10, 108, 102, 0.22);
+  border-radius: 14px;
+  background: rgba(10, 108, 102, 0.05);
+}
+.admin-bot-context-policy-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-bot-context-policy-head h3 {
+  margin: 2px 0 0;
+}
+.admin-bot-context-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-bot-context-policy-card {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.admin-bot-context-policy-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.admin-bot-context-policy-card code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+  font-size: 0.78rem;
+}
 .admin-bot-pipeline-diagram {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7522,6 +7565,12 @@ button:hover {
   }
   .admin-bot-decision-lanes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-bot-context-policy-head {
+    display: grid;
+  }
+  .admin-bot-context-policy-grid {
+    grid-template-columns: 1fr;
   }
   .admin-bot-toggle-grid,
   .admin-bot-setting-grid,

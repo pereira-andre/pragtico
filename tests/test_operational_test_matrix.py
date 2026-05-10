@@ -7,6 +7,8 @@ from flask import Flask, session
 from jinja2 import DictLoader, Environment
 
 from core import services
+from core.chat_planner import build_chat_execution_plan
+from core.chat_reasoning import build_conversation_reasoning_state
 from core.operational_sources import answer_direct_operational_query
 from core.operational_test_suite import (
     _critical_berth_profile_text,
@@ -129,6 +131,8 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico SECIL com reponto" in html
     assert "Diagnostico ALSTOM regras obrigatorias" in html
     assert "Diagnostico SECIL sem herdar Lisnave" in html
+    assert "Follow-up SAPEC carga não IMO" in html
+    assert "Mudança de caso sem herança indevida" in html
     assert "Entrada Secil E 19:25 validada contra reponto" in html
     assert "ALSTOM desde a Barra para preia-mar" in html
     assert "Distancia TMS 1 - ALSTOM" in html
@@ -154,6 +158,21 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html
     assert "/validar-manobra mudança" in html
+
+
+def test_operational_test_matrix_runs_context_follow_up_case(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+    item = next(
+        case
+        for case in critical_bot_test_matrix()
+        if case["id"] == "conversation-context-sapec-non-imo-follow-up"
+    )
+    plan = build_chat_execution_plan(item["question"])
+    state = build_conversation_reasoning_state(item["question"], item["history"], plan)
+
+    assert state is not None
+    text = state["summary"]
+    assert not _missing_expected_tokens(text, item["expected_tokens"])
 
 
 def test_direct_operational_matrix_cases_pass(monkeypatch) -> None:

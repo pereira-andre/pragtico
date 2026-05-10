@@ -21,6 +21,8 @@ from blueprints.port_calls import (
     _vessel_catalog_txt,
 )
 from core import services
+from core.chat_planner import build_chat_execution_plan
+from core.chat_reasoning import build_conversation_reasoning_state
 from core.form_helpers import (
     ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
@@ -228,6 +230,47 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "source": "core/chat_context_scope.py + core/operational_diagnostics.py",
         "expected_tokens": ("Local: SECIL", "Doca/cais: SECIL E/Este", "Hora referida: 19:25"),
         "forbidden_tokens": ("Local: LISNAVE", "6 rebocador", "nevoeiro"),
+    },
+    {
+        "id": "conversation-context-sapec-non-imo-follow-up",
+        "group": "Contexto conversacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "conversation_reasoning",
+        "label": "Follow-up SAPEC carga não IMO",
+        "question": "E carga não IMO",
+        "history": [
+            {
+                "role": "user",
+                "content": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos?",
+            },
+            {
+                "role": "assistant",
+                "content": "Depende se a carga é IMO ou não IMO e da altura de água.",
+            },
+            {"role": "user", "content": "E carga não IMO"},
+        ],
+        "expected_summary": "A ficha deve assumir continuidade SAPEC quando o follow-up curto não conflita.",
+        "source": "core/chat_context_scope.py + core/chat_reasoning.py",
+        "expected_tokens": (
+            "Ficha de contexto provável",
+            "Premissa de continuidade",
+            "SAPEC / TPS-TGL",
+            "Calado: 9,2 m.",
+            "Carga: não IMO.",
+        ),
+    },
+    {
+        "id": "conversation-context-new-case-asks-confirmation",
+        "group": "Contexto conversacional",
+        "risk": "Alto",
+        "mode": "Manual guiado",
+        "runner": "manual",
+        "label": "Mudança de caso sem herança indevida",
+        "question": "Após falar da Lisnave, perguntar: Marquei entrada para Secil E às 19:25. Está correto?",
+        "expected_summary": "Deve tratar Secil E como novo caso, sem herdar rebocadores, nevoeiro ou LOA da Lisnave.",
+        "source": "core/chat_context_scope.py + /new",
+        "expected_tokens": (),
     },
     {
         "id": "secil-e-entry-1925-reponto",
@@ -3632,6 +3675,16 @@ class OperationalFlowSuite:
                     )
                     text = format_operational_diagnostic(diagnostic)
                     origin_ok = bool(diagnostic.get("present"))
+                elif runner == "conversation_reasoning":
+                    plan = build_chat_execution_plan(str(item.get("question") or ""))
+                    state = build_conversation_reasoning_state(
+                        str(item.get("question") or ""),
+                        list(item.get("history") or []),
+                        plan,
+                    )
+                    text = str((state or {}).get("summary") or "")
+                    origin = "conversation_reasoning"
+                    origin_ok = bool(state)
                 elif runner == "knowledge_json":
                     text = _critical_json_source_text(str(item.get("source_path") or ""))
                     origin_ok = True

@@ -990,7 +990,9 @@ def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dic
     answer = (
         f"{conclusion}\n\n"
         "Atenção: o critério principal aqui não é apenas ser dia/noite. "
-        "A IT-009 diz que a Secil E atraca no reponto em marés vivas, e as notas práticas indicam a antecedência de marcação para entradas.\n\n"
+        "A IT-009 diz que a Secil E atraca no reponto em marés vivas, e as notas práticas indicam a antecedência "
+        "de marcação para entradas: 30-45 min antes se vier de fora da Barra/Fundeadouro Norte, ou 45 min a 1 h "
+        "se vier de Tróia/outro cais.\n\n"
         f"{tide_note}\n\n"
         "Antes de fechar, confirmar ainda LOA de referência 140 m, calado de referência 8,0 m, origem da entrada e validação do Piloto Coordenador."
     )
