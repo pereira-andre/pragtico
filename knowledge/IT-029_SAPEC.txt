@@ -199,9 +199,13 @@ no TPS?
 Resposta: 10,0 metros de referência (calculado para PM mínimo de 2,4 m).
 Calados ligeiramente superiores podem ser admitidos caso a caso.
 
-Pergunta: Qual o calado praticável no TPS com altura de água de 1,8 m para carga
-não IMO?
-Resposta: 7,6 + 1,8 = 9,4 metros.
+Pergunta: Exemplo — qual o calado praticável no TPS com altura de água de 1,8 m
+para carga não IMO?
+Resposta: É apenas um exemplo de aplicação da fórmula. Para carga não IMO, usa-se
+7,6 m de base + altura de água no momento. Com 1,8 m de água: 7,6 + 1,8 = 9,4 m
+de calado praticável. Para validar uma manobra concreta, comparar esse valor com
+o calado real do navio e com a maré/hora da manobra; no TGL/TPS mantém-se ainda
+o limite absoluto de 10,0 m para carga não IMO.
 
 Pergunta: Com baixa-mar de 0,3 m, a partir de que calado é obrigatório usar
 carochas no TPS?

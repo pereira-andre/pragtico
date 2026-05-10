@@ -294,6 +294,29 @@ def _has_conflicting_measurements(question: str, candidate_question: object) -> 
     return False
 
 
+def _candidate_uses_unasked_example_measurement(question: str, candidate_question: object) -> bool:
+    asked = _measurement_mentions(question)
+    candidate = _measurement_mentions(candidate_question)
+    if not candidate:
+        return False
+    candidate_text = _normalize_text(candidate_question)
+    if not any(
+        phrase in candidate_text
+        for phrase in (
+            "exemplo",
+            "altura de agua",
+            "baixa mar",
+            "preia mar",
+            "navio com",
+        )
+    ):
+        return False
+    for unit, candidate_values in candidate.items():
+        if candidate_values and not asked.get(unit):
+            return True
+    return False
+
+
 def _clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
@@ -997,6 +1020,8 @@ def find_best_companion_faq(question: str, companion: dict) -> dict | None:
         if _faq_intent_conflicts(question, question_tokens, item):
             continue
         if _has_conflicting_measurements(question, item.get("question", "")):
+            continue
+        if _candidate_uses_unasked_example_measurement(question, item.get("question", "")):
             continue
         overlap_score = len(question_tokens & faq_tokens) / max(len(question_tokens), 1)
         keyword_score = len(question_tokens & keyword_tokens) / max(len(question_tokens), 1) if keyword_tokens else 0.0

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from core.chat_runtime import _contextual_lookup_question
+from core.chat_planner import build_chat_execution_plan
+from core.chat_runtime import _allow_companion_shortcut_for_question, _contextual_lookup_question
 
 
 class ChatQueryRewriteTests(unittest.TestCase):
@@ -22,6 +23,21 @@ class ChatQueryRewriteTests(unittest.TestCase):
         rewritten = _contextual_lookup_question("E a Secil E?", history)
 
         self.assertEqual(rewritten, "O que diz a documentação sobre Secil E?")
+
+    def test_short_follow_up_does_not_use_companion_shortcut(self) -> None:
+        plan = build_chat_execution_plan("E carga não IMO")
+
+        self.assertFalse(_allow_companion_shortcut_for_question("E carga não IMO", plan))
+
+    def test_standalone_question_can_use_companion_shortcut(self) -> None:
+        plan = build_chat_execution_plan("Qual o calado máximo no TGL com carga não IMO?")
+
+        self.assertTrue(
+            _allow_companion_shortcut_for_question(
+                "Qual o calado máximo no TGL com carga não IMO?",
+                plan,
+            )
+        )
 
 
 if __name__ == "__main__":

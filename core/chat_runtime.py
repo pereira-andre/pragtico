@@ -726,6 +726,19 @@ def _starts_like_follow_up(question: str) -> bool:
     return bool(re.match(r"^(?:e|entao|então|mas|agora)\b", clean))
 
 
+def _allow_companion_shortcut_for_question(
+    question: str,
+    execution_plan,
+    *,
+    is_revision_attempt: bool = False,
+) -> bool:
+    if is_revision_attempt:
+        return False
+    if getattr(execution_plan, "requires_llm_synthesis", False):
+        return False
+    return not _starts_like_follow_up(question)
+
+
 def _last_user_question_with_reusable_intent(history: list[dict]) -> str:
     for entry in reversed(history):
         if (entry.get("role") or "").strip().lower() != "user":
@@ -1219,7 +1232,10 @@ def playground_answer(
         supplemental_sources.extend(targeted_document_context["companion_sources"])
         supplemental_sources.extend(targeted_document_context["document_sources"])
 
-        allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+        allow_companion_shortcut = _allow_companion_shortcut_for_question(
+            clean_question,
+            execution_plan,
+        )
         answer: dict | None = None
         global_companion_match: dict | None = None
         if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
@@ -1838,7 +1854,11 @@ def handle_chat_turn(
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
-            allow_companion_shortcut = not execution_plan.requires_llm_synthesis and not is_revision_attempt
+            allow_companion_shortcut = _allow_companion_shortcut_for_question(
+                clean_question,
+                execution_plan,
+                is_revision_attempt=is_revision_attempt,
+            )
             if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
                 lookup_question,
                 targeted_document_context["companion_answer"],
