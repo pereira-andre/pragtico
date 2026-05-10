@@ -82,3 +82,40 @@ def test_conversation_reasoning_drops_stale_history_for_explicit_new_berth() -> 
     assert "LISNAVE" not in summary
     assert "6 rebocadores" not in summary
     assert "nevoeiro" not in summary.lower()
+
+
+def test_conversation_reasoning_builds_probable_case_for_short_follow_up() -> None:
+    question = "E carga não IMO"
+    plan = ChatExecutionPlan(
+        question=question,
+        normalized_question=normalize_planner_text(question),
+        primary_intent="general",
+    )
+
+    state = build_conversation_reasoning_state(
+        question,
+        history=[
+            {
+                "role": "user",
+                "content": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos?",
+            },
+            {
+                "role": "assistant",
+                "content": "Depende se a carga é IMO ou não IMO e da altura de água.",
+            },
+            {
+                "role": "user",
+                "content": question,
+            },
+        ],
+        plan=plan,
+    )
+
+    assert state is not None
+    assert state["contextual_follow_up"] is True
+    summary = state["summary"]
+    assert "Premissa de continuidade" in summary
+    assert "SAPEC / TPS-TGL" in summary
+    assert "Calado: 9,2 m." in summary
+    assert "Carga: não IMO." in summary
+    assert "mencionar em frase curta" in summary

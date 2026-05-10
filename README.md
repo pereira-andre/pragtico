@@ -88,6 +88,25 @@ No WhatsApp, o modo SOS usa:
 `/new` inicia uma nova conversa para o mesmo numero WhatsApp, mantendo o
 historico anterior guardado mas fora do contexto usado nas respostas seguintes.
 
+#### Gestao de contexto conversacional
+
+O WhatsApp e uma conversa longa por numero, por isso o bot nao deve enviar o
+historico inteiro ao modelo nem ignorar completamente o que foi dito antes. O
+runtime combina tres camadas:
+
+- historico recente filtrado por `core/chat_context_scope.py`;
+- ficha de contexto provavel em `core/chat_reasoning.py`, com cais/terminal,
+  operacao, dimensoes, carga, hora e outros factos extraidos;
+- fontes RAG/live especificas para a pergunta atual.
+
+Quando a mensagem e curta e parece continuidade, por exemplo "E carga nao IMO",
+o bot usa a ficha do ultimo caso operacional se nao houver conflito explicito.
+Nesses casos a resposta deve indicar a premissa de forma curta, por exemplo
+"Assumo que continuamos a falar da SAPEC Liquidos". Se a mensagem nomear um novo
+cais, terminal, canal ou percurso, o historico antigo e afastado para evitar
+misturar casos. O comando `/new` continua disponivel quando o utilizador quer
+fechar o contexto anterior e comecar uma conversa limpa no WhatsApp.
+
 #### Planeamento de percursos e ETA
 
 Para perguntas de navegacao interna, o bot tem uma camada deterministica em
