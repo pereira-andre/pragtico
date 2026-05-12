@@ -607,7 +607,7 @@ def _route_summary_answer(question: str, clean_question: str) -> dict | None:
             "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, "
             "conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca de 20 minutos. "
             "Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, "
-            "conta com cerca de 1 hora."
+            "conta com cerca de 1 hora e 30 minutos."
         )
         return _route_summary_payload(question, answer, "ROUTE_FUNDEADOURO_NORTE_MULTI_TIME")
 
@@ -921,7 +921,7 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
         destination_patterns=DEST_SOUTH_QUAYS,
         answer=(
             "Do Fundeadouro Norte para os cais a sul (Tanquisado, Eco-Oil, "
-            "LISNAVE, Termitrena ou Teporset), conta com cerca de 1 hora."
+            "LISNAVE, Termitrena ou Teporset), conta com cerca de 1 hora e 30 minutos."
         ),
         source_document="Notas_Pilotagem.txt",
         source_id="ROUTE_FUNDEADOURO_NORTE_CAIS_SUL_TIME",
@@ -1045,17 +1045,17 @@ def _subtract_minutes_label(hour: int, minute: int, delta_minutes: int) -> str:
 
 
 def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str) -> dict | None:
-    if not (_matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and _matches_any(clean_question, DEST_LISNAVE)):
+    if not (_matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and _matches_any(clean_question, DEST_SOUTH_QUAYS)):
         return None
     if "reponto" not in clean_question:
         return None
     parsed = _reponto_time_from_question(question)
     reponto_label = parsed[2] if parsed else "do reponto pretendido"
-    depart_label = _subtract_minutes_label(parsed[0], parsed[1], 60) if parsed else "cerca de 1 hora antes"
+    depart_label = _subtract_minutes_label(parsed[0], parsed[1], 90) if parsed else "cerca de 1 hora e 30 minutos antes"
     answer = (
-        "Percurso/duracao: do Fundeadouro Norte para a LISNAVE/Mitrena conta com cerca de 1 hora.\n"
+        "Percurso/duracao: do Fundeadouro Norte para os cais a sul (LISNAVE/Mitrena, Tanquisado, Eco-Oil, Termitrena ou Teporset) conta com cerca de 1 hora e 30 minutos.\n"
         f"Para chegar ao reponto das {reponto_label}, a largada deve ser por volta das {depart_label}.\n"
-        "A fase critica no cais/doca é a referência: a LISNAVE deve ser trabalhada próximo do reponto de maré, porque os cais ficam perpendiculares à corrente.\n"
+        "A fase critica no cais/doca é a referência: estes cais do Canal Sul devem ser trabalhados próximo do reponto de maré, porque ficam condicionados pela corrente.\n"
         "Confirmar ainda o cais/doca concreto, calado, vento, rebocadores e validação do Piloto Coordenador."
     )
     return {
@@ -1063,7 +1063,7 @@ def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str
         "sources": [
             {
                 "document": "Marcar_manobra_repontos_mare.txt",
-                "source_id": "ROUTE_FUNDEADOURO_NORTE_LISNAVE_REPONTO_LEAD_TIME",
+                "source_id": "ROUTE_FUNDEADOURO_NORTE_CAIS_SUL_REPONTO_LEAD_TIME",
                 "retrieval_mode": "route_transit_summary",
                 "snippet": answer,
                 "question": question,

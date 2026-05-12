@@ -133,7 +133,7 @@ class RouteTransitAnswerTests(unittest.TestCase):
         cases = [
             (
                 "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
-                ("15 a 25 minutos", "SECIL", "20 minutos", "cais a sul", "1 hora"),
+                ("15 a 25 minutos", "SECIL", "20 minutos", "cais a sul", "1 hora e 30 minutos"),
             ),
             (
                 "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
@@ -175,7 +175,7 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("entrada da Barra", answer["answer"])
         self.assertNotIn("Calado máximo", answer["answer"])
 
-    def test_fundeadouro_norte_to_lisnave_reponto_lead_time_is_one_hour(self) -> None:
+    def test_fundeadouro_norte_to_lisnave_reponto_lead_time_is_one_hour_and_half(self) -> None:
         answer = route_transit_answer(
             "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?"
         )
@@ -183,10 +183,24 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIsNotNone(answer)
         self.assertEqual("operational_route_transit", answer["answer_origin"])
         self.assertIn("Percurso/duracao", answer["answer"])
-        self.assertIn("cerca de 1 hora", answer["answer"])
+        self.assertIn("cerca de 1 hora e 30 minutos", answer["answer"])
         self.assertIn("20:03", answer["answer"])
-        self.assertIn("19:03", answer["answer"])
+        self.assertIn("18:33", answer["answer"])
         self.assertIn("fase critica", answer["answer"])
+
+    def test_fundeadouro_norte_to_south_quays_reponto_lead_time_is_one_hour_and_half(self) -> None:
+        for destination in ("Tanquisado", "Eco-Oil", "Teporset"):
+            with self.subTest(destination=destination):
+                answer = route_transit_answer(
+                    f"Navio do Fundeadouro Norte para {destination} deve sair quando para chegar ao reponto das 20:03?"
+                )
+
+                self.assertIsNotNone(answer)
+                self.assertEqual("operational_route_transit", answer["answer_origin"])
+                self.assertIn("cerca de 1 hora e 30 minutos", answer["answer"])
+                self.assertIn("20:03", answer["answer"])
+                self.assertIn("18:33", answer["answer"])
+                self.assertIn("cais a sul", answer["answer"])
 
 
 if __name__ == "__main__":

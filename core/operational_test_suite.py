@@ -5,8 +5,12 @@ from __future__ import annotations
 import json
 import os
 import time
+import csv
 from copy import deepcopy
 from datetime import datetime, timedelta
+from io import StringIO
+from pathlib import Path
+from textwrap import wrap
 from typing import Any, Callable
 
 from blueprints.port_calls import (
@@ -43,6 +47,7 @@ from storage.port_call_helpers import _decorate_port_call
 
 
 TEST_VESSEL_PREFIX = "TESTE QA"
+RAILWAY_BOT_TEST_FIXTURE = Path(__file__).resolve().parents[1] / "resources" / "qa" / "railway_bot_tests_150.json"
 QUERY_SLASH_COMMANDS = {
     "local_warnings",
     "wave",
@@ -177,7 +182,7 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "question": "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?",
         "expected_summary": "A ficha deve validar duracao origem-destino e hora de chegada ao ponto critico.",
         "source": "core/operational_diagnostics.py + knowledge/Notas_Pilotagem.txt",
-        "expected_tokens": ("Percurso/duracao", "cerca de 1 hora", "fase critica no cais/doca"),
+        "expected_tokens": ("Percurso/duracao", "cerca de 1 hora e 30 minutos", "fase critica no cais/doca"),
     },
     {
         "id": "diagnostic-secil-reponto",
@@ -1246,6 +1251,284 @@ def cleanup_operational_test_records() -> dict:
     }
 
 
+def _railway_bot_test_records() -> list[dict]:
+    if not RAILWAY_BOT_TEST_FIXTURE.exists():
+        return []
+    try:
+        payload = json.loads(RAILWAY_BOT_TEST_FIXTURE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    records = payload.get("records") if isinstance(payload, dict) else []
+    if not isinstance(records, list):
+        return []
+    normalized: list[dict] = []
+    for index, record in enumerate(records, start=1):
+        if not isinstance(record, dict):
+            continue
+        expected = [str(item) for item in record.get("expected_substrings") or [] if str(item or "").strip()]
+        forbidden = [str(item) for item in record.get("forbidden_substrings") or [] if str(item or "").strip()]
+        missing = [str(item) for item in record.get("missing_expected") or [] if str(item or "").strip()]
+        forbidden_present = [str(item) for item in record.get("forbidden_present") or [] if str(item or "").strip()]
+        warnings = [str(item) for item in record.get("warnings") or [] if str(item or "").strip()]
+        verdict = str(record.get("verdict") or "review").strip().lower()
+        normalized.append(
+            {
+                **record,
+                "number": record.get("number") or index,
+                "suite": record.get("suite") or "Railway",
+                "group": record.get("group") or "Sem grupo",
+                "risk": record.get("risk") or "",
+                "question": record.get("question") or "",
+                "expected_substrings": expected,
+                "forbidden_substrings": forbidden,
+                "expected_summary": " · ".join(expected) if expected else "--",
+                "forbidden_summary": " · ".join(forbidden) if forbidden else "--",
+                "missing_expected": missing,
+                "forbidden_present": forbidden_present,
+                "warnings": warnings,
+                "verdict": verdict,
+                "state_badge": {
+                    "pass": "online",
+                    "passed": "online",
+                    "fail": "offline",
+                    "failed": "offline",
+                    "review": "degraded",
+                    "warning": "degraded",
+                }.get(verdict, "degraded"),
+                "verification_summary": _railway_verification_summary(verdict, missing, forbidden_present, warnings),
+                "answer_origin": record.get("answer_origin") or "--",
+                "answer_excerpt": record.get("answer_excerpt") or " ".join(str(record.get("answer") or "").split())[:420],
+            }
+        )
+    return normalized
+
+
+def _railway_verification_summary(
+    verdict: str,
+    missing: list[str],
+    forbidden_present: list[str],
+    warnings: list[str],
+) -> str:
+    if missing:
+        return "Faltam: " + "; ".join(missing[:3])
+    if forbidden_present:
+        return "Proibidos presentes: " + "; ".join(forbidden_present[:3])
+    if warnings:
+        return "Avisos: " + "; ".join(warnings[:3])
+    if verdict in {"pass", "passed"}:
+        return "Critérios verificados"
+    return "Requer revisão"
+
+
+def _railway_bot_test_groups(records: list[dict]) -> list[dict]:
+    grouped: dict[str, list[dict]] = {}
+    for record in records:
+        grouped.setdefault(record["suite"], []).append(record)
+    return [
+        {
+            "name": suite,
+            "count": len(items),
+            "passed_count": sum(1 for item in items if item["verdict"] in {"pass", "passed"}),
+            "failed_count": sum(1 for item in items if item["verdict"] in {"fail", "failed"}),
+            "review_count": sum(1 for item in items if item["verdict"] not in {"pass", "passed", "fail", "failed"}),
+            "items": items,
+        }
+        for suite, items in grouped.items()
+    ]
+
+
+def railway_bot_test_log_inventory() -> dict:
+    """Return the 150 Railway bot test records used for page inspection and export."""
+    records = _railway_bot_test_records()
+    passed_count = sum(1 for item in records if item["verdict"] in {"pass", "passed"})
+    failed_count = sum(1 for item in records if item["verdict"] in {"fail", "failed"})
+    review_count = len(records) - passed_count - failed_count
+    return {
+        "count": len(records),
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "review_count": review_count,
+        "fixture_path": str(RAILWAY_BOT_TEST_FIXTURE),
+        "groups": _railway_bot_test_groups(records),
+        "records": records,
+        "error": "" if records else "Fixture dos 150 testes Railway não encontrada ou inválida.",
+    }
+
+
+def _railway_bot_test_export_payload() -> dict:
+    inventory = railway_bot_test_log_inventory()
+    return {
+        "description": "150 perguntas executadas contra Railway para validar o bot PRAGtico.",
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "summary": {
+            "total": inventory["count"],
+            "passed": inventory["passed_count"],
+            "review": inventory["review_count"],
+            "failed": inventory["failed_count"],
+        },
+        "records": inventory["records"],
+    }
+
+
+def _railway_bot_test_export_text(payload: dict) -> str:
+    summary = payload.get("summary") or {}
+    lines = [
+        "PRAGtico - 150 testes Railway",
+        f"Total: {summary.get('total', 0)}",
+        f"Corretos: {summary.get('passed', 0)}",
+        f"Duvidas: {summary.get('review', 0)}",
+        f"Falhas/bugs: {summary.get('failed', 0)}",
+        "",
+    ]
+    for item in payload.get("records") or []:
+        lines.extend(
+            [
+                f"#{item.get('number')} [{item.get('verdict')}] {item.get('suite')} / {item.get('group')}",
+                f"Pergunta: {item.get('question')}",
+                f"Origem resposta: {item.get('answer_origin')}",
+                f"Esperado: {item.get('expected_summary')}",
+                f"Verificacao: {item.get('verification_summary')}",
+                "Resposta:",
+                str(item.get("answer") or "").strip(),
+                "",
+            ]
+        )
+    return "\n".join(lines).strip() + "\n"
+
+
+def _pdf_safe_text(value: str) -> str:
+    encoded = str(value or "").encode("cp1252", "replace").decode("cp1252")
+    return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _render_text_pdf(title: str, body: str) -> bytes:
+    page_width = 595
+    page_height = 842
+    margin = 48
+    font_size = 9
+    line_height = 13
+    usable_width = page_width - (margin * 2)
+    max_chars = max(42, int(usable_width / (font_size * 0.62)))
+    raw_lines = [title, "", *str(body or "").splitlines()]
+    wrapped_lines: list[str] = []
+    for raw_line in raw_lines:
+        clean = str(raw_line or "").replace("\t", "  ")
+        if not clean:
+            wrapped_lines.append("")
+            continue
+        wrapped_lines.extend(
+            wrap(
+                clean,
+                width=max_chars,
+                replace_whitespace=False,
+                drop_whitespace=False,
+                break_long_words=True,
+                break_on_hyphens=False,
+            )
+            or [""]
+        )
+    max_lines_per_page = max(1, int((page_height - (margin * 2)) / line_height))
+    pages = [
+        wrapped_lines[index:index + max_lines_per_page]
+        for index in range(0, len(wrapped_lines), max_lines_per_page)
+    ] or [["Sem conteúdo."]]
+
+    objects: dict[int, bytes] = {}
+    font_id = 3
+    next_id = 4
+    page_ids: list[int] = []
+    for page_lines in pages:
+        page_id = next_id
+        content_id = next_id + 1
+        next_id += 2
+        page_ids.append(page_id)
+        stream_lines = ["BT", f"/F1 {font_size} Tf"]
+        y = page_height - margin
+        for line in page_lines:
+            stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
+            y -= line_height
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines).encode("cp1252", "replace")
+        objects[content_id] = (
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
+        )
+        objects[page_id] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets: dict[int, int] = {}
+    for object_id in range(1, next_id):
+        offsets[object_id] = len(pdf)
+        pdf.extend(f"{object_id} 0 obj\n".encode("ascii"))
+        pdf.extend(objects[object_id])
+        pdf.extend(b"\nendobj\n")
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {next_id}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for object_id in range(1, next_id):
+        pdf.extend(f"{offsets[object_id]:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {next_id} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
+
+
+def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
+    """Export the 150 Railway bot tests in a debug-friendly format."""
+    export_format = str(export_format or "").strip().lower()
+    if export_format not in {"json", "csv", "pdf"}:
+        raise ValueError("Formato de exportação inválido.")
+    payload = _railway_bot_test_export_payload()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    if export_format == "json":
+        return (
+            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+            "application/json; charset=utf-8",
+            f"pragtico_railway_150_testes_{timestamp}.json",
+        )
+    if export_format == "csv":
+        output = StringIO()
+        fieldnames = [
+            "number",
+            "suite",
+            "group",
+            "risk",
+            "verdict",
+            "question",
+            "answer_origin",
+            "expected_summary",
+            "verification_summary",
+            "latency_ms",
+            "conversation_id",
+            "message_id",
+            "answer",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for item in payload.get("records") or []:
+            writer.writerow(item)
+        return (
+            output.getvalue().encode("utf-8-sig"),
+            "text/csv; charset=utf-8",
+            f"pragtico_railway_150_testes_{timestamp}.csv",
+        )
+    pdf = _render_text_pdf(
+        "PRAGtico - 150 testes Railway",
+        _railway_bot_test_export_text(payload),
+    )
+    return pdf, "application/pdf", f"pragtico_railway_150_testes_{timestamp}.pdf"
+
+
 def operational_test_inventory() -> dict:
     """Return current retained test records so the admin page can show cleanup state."""
     matrix = critical_bot_test_matrix()
@@ -1257,6 +1540,7 @@ def operational_test_inventory() -> dict:
         "bot_matrix_count": len(matrix),
         "bot_matrix_automatic_count": automatic_count,
         "bot_matrix_manual_count": manual_count,
+        "railway_log": railway_bot_test_log_inventory(),
         "expected_module_count": 9,
     }
     try:

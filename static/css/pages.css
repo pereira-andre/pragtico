@@ -3423,6 +3423,17 @@
   min-width: 1180px;
 }
 
+.operational-tests-railway-table {
+  min-width: 1680px;
+}
+
+.operational-tests-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
 .operational-tests-table td {
   font-size: 0.86rem;
 }

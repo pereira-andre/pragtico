@@ -20,6 +20,7 @@ from core.operational_test_suite import (
     critical_maneuver_checklist_text,
     critical_slash_validation_text,
     operational_test_inventory,
+    railway_bot_test_export_bytes,
 )
 from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
 
@@ -93,6 +94,8 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert inventory["bot_matrix_automatic_count"] > inventory["bot_matrix_manual_count"]
     assert any(item["id"] == "ecooil-checklist" for item in inventory["bot_matrix"])
     assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
+    assert inventory["railway_log"]["count"] == 150
+    assert inventory["railway_log"]["passed_count"] == 150
 
 
 def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
@@ -115,6 +118,11 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     )
 
     assert "Matriz crítica" in html
+    assert "150 perguntas de bug hunting" in html
+    assert "Download JSON" in html
+    assert "Download CSV" in html
+    assert "Download PDF" in html
+    assert "operational-tests-matrix-group\" open" not in html
     assert "Eco-Oil na checklist" in html
     assert "Perda de maquina: ferro e VTS" in html
     assert "Emergencia: perda de bow" in html
@@ -158,6 +166,24 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html
     assert "/validar-manobra mudança" in html
+
+
+def test_railway_bot_test_exports_include_debug_payload(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+
+    json_payload, json_mimetype, json_filename = railway_bot_test_export_bytes("json")
+    csv_payload, csv_mimetype, csv_filename = railway_bot_test_export_bytes("csv")
+    pdf_payload, pdf_mimetype, pdf_filename = railway_bot_test_export_bytes("pdf")
+
+    assert json_mimetype.startswith("application/json")
+    assert json_filename.endswith(".json")
+    assert b'"total": 150' in json_payload
+    assert csv_mimetype.startswith("text/csv")
+    assert csv_filename.endswith(".csv")
+    assert b"question" in csv_payload
+    assert pdf_mimetype == "application/pdf"
+    assert pdf_filename.endswith(".pdf")
+    assert pdf_payload.startswith(b"%PDF-1.4")
 
 
 def test_operational_test_matrix_runs_context_follow_up_case(monkeypatch) -> None:
