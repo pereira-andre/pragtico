@@ -12,7 +12,7 @@
   "summary": "Lista operacional de ajudas à navegação de Setúbal, extraída da PN35 do Instituto Hidrográfico (março 2026), com posição WGS84, característica luminosa, alcance, descrição e observações quando presentes. Inclui nota explícita de que Setúbal usa IALA A.",
   "key_points": [
     "Setúbal usa o sistema IALA A: entrando do mar para o porto, bombordo é vermelho/cilíndrico e estibordo é verde/cónico.",
-    "A lista estruturada inclui 102 ajudas à navegação nas zonas Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz.",
+    "A lista estruturada inclui 101 ajudas à navegação nas zonas Setúbal, Canal Norte e Canal Sul.",
     "Cada registo mantém N.º nacional, N.º internacional quando existe, nome, posição WGS84, característica abreviada, alcance e detalhes extraídos.",
     "Para navegação oficial devem ser confirmados a PN35, avisos aos navegantes e cartas em vigor."
   ],

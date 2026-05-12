@@ -42,19 +42,39 @@ VISIBILIDADE REDUZIDA
 
 LUZES E MARCAS
 - Regras 20 a 31: definem quando e como mostrar farois/luzes e baloes/marcas.
+- Regra 20 - Aplicacao: luzes obrigatorias do por ao nascer do sol; em visibilidade reduzida tambem devem ser mostradas de dia quando existam. Marcas/baloes sao para uso diurno. Nao mostrar luzes que confundam, prejudiquem a visibilidade dos farois regulamentares ou impeçam vigia eficaz.
+- Regra 21 - Sectores principais: farol de mastro branco mostra 225 graus; farois de borda mostram 112,5 graus cada (verde a estibordo, vermelho a bombordo); farol de popa branco mostra 135 graus; farol de reboque amarelo tem caracteristicas de farol de popa; farol todo-horizonte mostra 360 graus.
+- Regra 22 - Alcances minimos: navios >= 50 m usam mastro 6 M e borda/popa/reboque/todo-horizonte 3 M; navios 12-50 m usam mastro 5 M (3 M se <20 m) e restantes 2 M; navios <12 m usam mastro 2 M, borda 1 M, popa/reboque/todo-horizonte 2 M.
 - Regra 23 - Navio de propulsao mecanica a navegar: farol de mastro a vante, segundo farol de mastro se aplicavel, farois de borda e farol de popa. Navios menores tem simplificacoes.
+- Regra 23 - Casos especiais: navio de maquina <7 m e velocidade maxima <=7 nos pode mostrar luz branca todo-horizonte e, se possivel, farois de borda; aerobarco/colchao de ar sem casco mergulhado mostra tambem luz amarela de relampagos todo-horizonte.
 - Regra 24 - Reboque/empurrar: reboque a popa mostra farois de mastro verticais adicionais; se o comprimento de reboque exceder 200 m, usa tres farois de mastro verticais e balao biconico de dia. Reboque de braco dado/empurrar segue combinacoes proprias.
+- Regra 24 - Medicao e excecao: comprimento de reboque mede-se da popa do rebocador ate ao extremo posterior do ultimo rebocado; empurrador e empurrado rigidamente ligados formam unidade composta; se o rebocado nao puder mostrar luzes, deve ser iluminado ou indicado por todos os meios possiveis.
+- Regra 25 - Vela/remos: navio a vela em marcha mostra borda e popa; pode acrescentar vermelho sobre verde todo-horizonte no topo; se usar maquina, deve mostrar cone com vertice para baixo de dia.
+- Regra 26 - Pesca: arrasto mostra verde sobre branco; outras artes de pesca mostram vermelho sobre branco. Se tem seguimento, acrescenta borda e popa. Se a arte se estende mais de 150 m, indicar a direcao da arte com luz branca todo-horizonte ou cone com vertice para cima.
 - Regra 27 - Navio desgovernado ou com capacidade de manobra reduzida: usa combinacoes de luzes/marcas que indicam a sua condicao especial.
+- Regra 27 - Dragagem/trabalhos submarinos: vermelho-vermelho ou duas bolas indicam bordo obstruido; verde-verde ou dois bicones indicam bordo livre para passar. Operacoes de mergulhadores podem usar replica rigida da bandeira A. Caca-minas mostra tres verdes ou tres bolas; e perigoso aproximar a menos de 1000 m pela popa ou 500 m pelos bordos.
 - Regra 28 - Navio condicionado pelo calado: pode mostrar sinais proprios e deve navegar com especial prudencia.
 - Regra 29 - Barcos de pilotos: sinais proprios de servico de pilotagem.
 - Regra 30 - Fundeados/encalhados: luzes, baloes e sinais proprios, conforme comprimento e situacao.
+- Regra 30 - Detalhes: fundeado >=50 m mostra duas luzes brancas todo-horizonte (proa e popa mais baixa); fundeado <50 m pode mostrar uma unica branca todo-horizonte; fundeado >=100 m deve iluminar o navio com luzes de trabalho/equivalentes; encalhado mostra ainda dois vermelhos verticais e tres bolas de dia.
 
 SINAIS SONOROS E LUMINOSOS
+- Regra 32 - Definicoes: som curto dura cerca de 1 segundo; som prolongado dura 4 a 6 segundos.
+- Regra 33 - Equipamento: navios >=12 m devem ter apito e sino; navios >=100 m tambem tantã/gongo; navios <12 m devem ter meio eficaz de produzir sinais sonoros.
 - Regra 34 - Navios a vista: um som curto significa "estou guinando para estibordo"; dois sons curtos, "estou guinando para bombordo"; tres sons curtos, "maquinas a trabalhar a re". Pode complementar com sinais luminosos equivalentes.
+- Regra 34 - Ultrapassagem em canal estreito: dois prolongados + um curto = tenciono ultrapassar pelo estibordo do navio alcancado; dois prolongados + dois curtos = pelo bombordo; acordo do alcancado = um prolongado + um curto + um prolongado + um curto.
 - Regra 34 - Duvida/perigo de intencao: se nao compreende as intencoes ou manobra do outro navio, emitir pelo menos cinco sons curtos; pode complementar com pelo menos cinco relampagos curtos.
 - Regra 34 - Canal/curva: perto de curva ou zona com obstaculo que encubra navios, emitir um som prolongado; quem ouvir do outro lado responde com um som prolongado.
 - Regra 35 - Visibilidade reduzida: navio de propulsao mecanica com seguimento emite um som prolongado a intervalos maximos de 2 min; pairando, dois sons prolongados; rebocador, navio a vela, pesca, desgovernado, capacidade de manobra reduzida ou condicionado pelo calado, um som prolongado seguido de dois curtos; rebocado, um prolongado seguido de tres curtos; fundeado/encalhado usa sino/tanta conforme comprimento.
+- Regra 35 - Fundeados e pilotos: fundeado toca sino rapido cerca de 5 s a cada minuto; se >=100 m, sino a vante e tantã/gongo a re; encalhado acrescenta tres toques de sino antes e depois dos toques rapidos; barco de pilotos em servico pode emitir quatro sons curtos como identificacao.
+- Regra 36 - Chamar atencao: pode usar sinais sonoros/luminosos que nao se confundam com sinais regulamentares; projector pode ser dirigido ao perigo sem perturbar outros navios.
 - Regra 37 - Sinais de perigo: usar sinais reconhecidos quando ha perigo ou necessidade de auxilio.
+
+ANEXOS DO REGULAMENTO - PONTOS OPERACIONAIS
+- Anexo I - Faróis e balões: define alturas, espacamentos verticais/horizontais, sectores e intensidade. Em termos praticos, confirmar que farois de mastro ficam acima/desimpedidos, farois de borda nao ficam demasiado baixos e baloes pretos tem dimensoes/espacamento adequados ao navio.
+- Anexo II - Pesca proxima: arrastoes podem mostrar sinais adicionais para lancar redes, alar redes ou redes presas; arrastoes em parelha podem usar projector para vante na direcao do par; pesca ao cerco pode mostrar dois amarelos verticais alternados quando condicionada pelas artes.
+- Anexo III - Sinalizacao sonora: alcance de apito varia muito com meteo, vento e ruido ambiente; em vento forte ou ruido elevado o alcance pode reduzir bastante. Apitos direcionais devem privilegiar proa; se houver varios apitos a mais de 100 m, nao devem ser acionados simultaneamente salvo sistema combinado regulamentar.
+- Anexo IV - Perigo: sinais de perigo incluem SOS, Mayday, sinal NC, foguetes/fachos vermelhos, fumo laranja, som continuo por aparelho de nevoeiro, tiros/explosivos a intervalos, movimentos lentos dos bracos e radiobalizas. E proibido usar sinais de perigo sem perigo real ou sinais confundiveis com eles.
 
 RESUMO PRATICO PARA RESPOSTAS
 - Antes de decidir manobra: vigia, velocidade segura e avaliacao de risco.
@@ -67,6 +87,9 @@ RESUMO PRATICO PARA RESPOSTAS
 - Visibilidade reduzida: velocidade segura, maquinas prontas, radar bem usado, evitar guinadas proibidas e reduzir/para se necessario.
 - Canal estreito: manter o lado de estibordo e nao dificultar quem so pode navegar com seguranca no canal.
 - Esquema de separacao: corredor certo, direcao geral, cruzar perpendicularmente se inevitavel.
+- Ultrapassagem em canal estreito: pedir acordo com sinais Regra 34 antes de executar se o alcancado tiver de manobrar.
+- Dragagem/trabalhos submarinos: vermelho-vermelho marca obstrucao; verde-verde marca bordo livre.
+- Sinais de perigo: usar apenas com perigo real/necessidade de assistencia; nao confundir com sinais de RAM/desgovernado.
 
 PERGUNTAS EXEMPLO
 Pergunta: Dois navios de maquina estao roda a roda. O que manda o RIEAM?
@@ -83,3 +106,12 @@ Resposta: Pela Regra 19, reduzir a velocidade ao minimo necessario para governar
 
 Pergunta: Se um navio for apanhado de surpresa no meio do nevoeiro a navegar, que procedimentos deve adoptar?
 Resposta: Aplicar Regra 19 e as regras gerais de vigia, velocidade segura, risco e manobra. Reduzir para velocidade de seguranca, ter maquinas prontas, reforcar vigia, usar radar/ECDIS/AIS/VHF, emitir sinais de nevoeiro da Regra 35 e avaliar posicao, fundo, trafego, corrente/vento, distancia ao cais/canal/fundeadouro e altura do dia. Se estiver junto do cais de destino e houver margem real, pode tentar atracar com extrema cautela; se nao, procurar fundeadouro/posicao de espera; se vier de entrada antes do canal, abortar antes de entrar e aguardar.
+
+Pergunta: Quero ultrapassar num canal estreito. Que sinais uso?
+Resposta: Aplicam-se as Regras 9 e 34. Se a ultrapassagem exigir que o navio alcancado manobre, o navio que pretende ultrapassar deve pedir acordo: dois sons prolongados + um curto para ultrapassar pelo estibordo do alcancado; dois prolongados + dois curtos para ultrapassar pelo bombordo. Se concordar, o alcancado responde com um prolongado + um curto + um prolongado + um curto. Se houver duvida, usar pelo menos cinco sons curtos.
+
+Pergunta: Como identificar uma draga ou navio em trabalhos submarinos pelo bordo livre?
+Resposta: Pela Regra 27, vermelho-vermelho ou duas bolas indicam o bordo obstruido; verde-verde ou dois bicones indicam o bordo pelo qual outro navio pode passar. O navio tambem pode mostrar vermelho-branco-vermelho ou bola-losango-bola de capacidade de manobra reduzida.
+
+Pergunta: Quais sao alguns sinais de perigo do COLREG?
+Resposta: Pela Regra 37 e Anexo IV: SOS, Mayday, sinal NC, foguetes ou fachos vermelhos, fumo laranja, som continuo de aparelho de nevoeiro, movimentos lentos dos bracos e radiobaliza de localizacao de sinistros. So devem ser usados em perigo real ou necessidade de assistencia.

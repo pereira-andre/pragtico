@@ -13,6 +13,7 @@ from flask import session
 
 from core import services
 from core.chat_planner import ChatExecutionPlan, build_chat_execution_plan
+from core.chat_context_scope import scoped_history_for_question
 from core.chat_reasoning import (
     build_compound_message_analysis_source,
     build_conversation_reasoning_state,
@@ -44,6 +45,11 @@ from core.helpers import (
     refine_pending_operational_action,
     refresh_knowledge_state,
     save_pending_chat_action,
+)
+from core.operational_diagnostics import (
+    build_operational_diagnostic,
+    format_operational_diagnostic,
+    looks_like_operational_diagnostic_request,
 )
 from domain.chat_actions import (
     build_action_reply_template,
@@ -433,6 +439,95 @@ def _compact_review_match(match: dict | None) -> dict | None:
     }
 
 
+def _build_answer_diagnostic(
+    question: str,
+    *,
+    history: list[dict] | None = None,
+    answer: dict | None = None,
+) -> dict:
+    existing = (answer or {}).get("operational_diagnostic")
+    if isinstance(existing, dict) and existing.get("present"):
+        return existing
+    try:
+        return build_operational_diagnostic(
+            question,
+            history=history or [],
+            answer=answer,
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
+    except Exception:
+        logger.exception("Falha ao construir diagnostico operacional da resposta.")
+        return {"present": False}
+
+
+_DIAGNOSTIC_SKIP_MESSAGE_KINDS = {
+    "answer_diagnostic",
+    "answer_diagnostic_denied",
+    "answer_retry_without_context",
+    "feedback_correction_ack",
+    "feedback_correction_prompt",
+    "welcome",
+}
+
+
+def _assistant_message_is_diagnostic_target(message: dict) -> bool:
+    if (message or {}).get("role") != "assistant":
+        return False
+    metadata = (message or {}).get("channel_metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if str(metadata.get("message_kind") or "").strip() in _DIAGNOSTIC_SKIP_MESSAGE_KINDS:
+        return False
+    content = str((message or {}).get("content") or "")
+    if "Comando não reconhecido" in content and "Comandos disponíveis" in content:
+        return False
+    return bool(content.strip())
+
+
+def _build_latest_answer_diagnostic_from_history(messages: list[dict]) -> dict:
+    for target_index in range(len(messages) - 1, -1, -1):
+        target = messages[target_index]
+        if not _assistant_message_is_diagnostic_target(target):
+            continue
+        previous_user = next(
+            (
+                item
+                for item in reversed(messages[:target_index])
+                if item.get("role") == "user" and str(item.get("content") or "").strip()
+            ),
+            None,
+        )
+        if not previous_user:
+            break
+        question = str(previous_user.get("content") or "").strip()
+        diagnostic = build_operational_diagnostic(
+            question,
+            history=messages[:target_index],
+            answer={"answer": str(target.get("content") or "")},
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
+        return diagnostic
+    return {"present": False}
+
+
+def _build_diagnostic_command_answer(messages: list[dict], *, role: str, channel: str) -> dict:
+    if channel == "web" and str(role or "").strip().lower() != "admin":
+        return {
+            "answer": "Comando de diagnóstico disponível apenas para admin no site.",
+            "sources": [],
+            "answer_origin": "operational_diagnostic_denied",
+            "channel_metadata": {"message_kind": "answer_diagnostic_denied"},
+        }
+    diagnostic = _build_latest_answer_diagnostic_from_history(messages)
+    return {
+        "answer": format_operational_diagnostic(diagnostic),
+        "sources": [],
+        "answer_origin": "operational_diagnostic",
+        "operational_diagnostic": diagnostic if diagnostic.get("present") else {},
+        "channel_metadata": {"message_kind": "answer_diagnostic"},
+    }
+
+
 def _build_playground_trace(
     *,
     execution_plan: ChatExecutionPlan | None,
@@ -448,6 +543,7 @@ def _build_playground_trace(
     review_correction_match: dict | None = None,
     retrieval_validation: dict | None = None,
     direct_answer_used: bool = False,
+    operational_diagnostic: dict | None = None,
 ) -> dict:
     target_record = (targeted_document_context or {}).get("record") or {}
     document_sources = (targeted_document_context or {}).get("document_sources") or []
@@ -484,6 +580,7 @@ def _build_playground_trace(
         "review_guard": _compact_review_match(review_guard_match),
         "review_correction": _compact_review_match(review_correction_match),
         "retrieval_validation": retrieval_validation or {},
+        "operational_diagnostic": operational_diagnostic or {},
         "used_llm": answer_origin == "llm",
         "used_direct_answer": direct_answer_used,
         "used_shortcut": answer_origin in {
@@ -627,6 +724,19 @@ def _looks_like_entity_follow_up(question: str) -> bool:
 def _starts_like_follow_up(question: str) -> bool:
     clean = _normalize_lookup_text(question)
     return bool(re.match(r"^(?:e|entao|então|mas|agora)\b", clean))
+
+
+def _allow_companion_shortcut_for_question(
+    question: str,
+    execution_plan,
+    *,
+    is_revision_attempt: bool = False,
+) -> bool:
+    if is_revision_attempt:
+        return False
+    if getattr(execution_plan, "requires_llm_synthesis", False):
+        return False
+    return not _starts_like_follow_up(question)
 
 
 def _last_user_question_with_reusable_intent(history: list[dict]) -> str:
@@ -1078,6 +1188,9 @@ def playground_answer(
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
+            diagnostic = _build_answer_diagnostic(clean_question, answer=direct_answer)
+            if diagnostic.get("present"):
+                direct_answer["operational_diagnostic"] = diagnostic
             direct_answer["trace"] = _build_playground_trace(
                 execution_plan=execution_plan,
                 answer_origin=direct_answer.get("answer_origin", "direct_operational"),
@@ -1087,6 +1200,7 @@ def playground_answer(
                 review_guard_match=review_guard_match,
                 review_correction_match=review_correction_match,
                 direct_answer_used=True,
+                operational_diagnostic=diagnostic,
             )
             return direct_answer
 
@@ -1118,7 +1232,10 @@ def playground_answer(
         supplemental_sources.extend(targeted_document_context["companion_sources"])
         supplemental_sources.extend(targeted_document_context["document_sources"])
 
-        allow_companion_shortcut = not execution_plan.requires_llm_synthesis
+        allow_companion_shortcut = _allow_companion_shortcut_for_question(
+            clean_question,
+            execution_plan,
+        )
         answer: dict | None = None
         global_companion_match: dict | None = None
         if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
@@ -1189,6 +1306,7 @@ def playground_answer(
                             reviewed_answers=synthesis_reviewed_answers,
                             review_guard_match=review_guard_match,
                             review_correction_match=review_correction_match,
+                            operational_diagnostic=_build_answer_diagnostic(clean_question, answer=answer),
                         )
                         return answer
                     answer = services.rag.answer(
@@ -1208,6 +1326,9 @@ def playground_answer(
             answer or {"answer": "Sem resposta.", "sources": [], "answer_origin": "empty"},
             clean_question,
         )
+        diagnostic = _build_answer_diagnostic(clean_question, history=runtime_history, answer=answer)
+        if diagnostic.get("present"):
+            answer["operational_diagnostic"] = diagnostic
         answer["trace"] = _build_playground_trace(
             execution_plan=execution_plan,
             answer_origin=answer.get("answer_origin", ""),
@@ -1221,6 +1342,7 @@ def playground_answer(
             review_guard_match=review_guard_match,
             review_correction_match=review_correction_match,
             retrieval_validation=answer.get("retrieval_validation"),
+            operational_diagnostic=diagnostic,
         )
         return answer
 
@@ -1294,13 +1416,16 @@ def handle_chat_turn(
         )
 
         answer = None
+        if looks_like_operational_diagnostic_request(clean_question):
+            answer = _build_diagnostic_command_answer(history, role=role, channel=channel)
+
         pending_event_report = load_pending_event_report(
             channel=channel,
             username=username,
             conversation_id=conversation["id"],
             channel_user_id=channel_user_id,
         )
-        if pending_event_report and not looks_like_slash_command(clean_question):
+        if answer is None and pending_event_report and not looks_like_slash_command(clean_question):
             if is_cancel_reply(clean_question):
                 clear_pending_event_report(
                     channel=channel,
@@ -1697,7 +1822,13 @@ def handle_chat_turn(
                     answer = None
 
         if answer is None:
-            runtime_history = history + [user_message]
+            direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
+            if direct_answer:
+                answer = direct_answer
+
+        if answer is None:
+            context_history = scoped_history_for_question(lookup_question, history, max_messages=10)
+            runtime_history = context_history + [user_message]
             conversation_state = build_conversation_reasoning_state(
                 lookup_question,
                 runtime_history,
@@ -1705,7 +1836,7 @@ def handle_chat_turn(
             )
             targeted_document_context = _build_targeted_document_context(
                 lookup_question,
-                history,
+                context_history,
                 trusted_answers,
                 reviewed_answers,
             )
@@ -1728,7 +1859,11 @@ def handle_chat_turn(
             supplemental_sources.extend(targeted_document_context["companion_sources"])
             supplemental_sources.extend(targeted_document_context["document_sources"])
             global_companion_match = None
-            allow_companion_shortcut = not execution_plan.requires_llm_synthesis and not is_revision_attempt
+            allow_companion_shortcut = _allow_companion_shortcut_for_question(
+                clean_question,
+                execution_plan,
+                is_revision_attempt=is_revision_attempt,
+            )
             if berth_profile_answer and allow_companion_shortcut and _should_prefer_berth_profile_answer(
                 lookup_question,
                 targeted_document_context["companion_answer"],
@@ -1820,6 +1955,15 @@ def handle_chat_turn(
             )
 
         answer = add_contextual_response_emojis(answer, clean_question)
+        diagnostic_question = lookup_question if is_revision_attempt else clean_question
+        diagnostic_history = scoped_history_for_question(diagnostic_question, history, max_messages=10) + [user_message]
+        diagnostic = _build_answer_diagnostic(
+            diagnostic_question,
+            history=diagnostic_history,
+            answer=answer,
+        )
+        if diagnostic.get("present"):
+            answer["operational_diagnostic"] = diagnostic
 
         persisted_pre_response_messages: list[dict] = []
         for item in pre_response_messages or []:
@@ -1846,6 +1990,10 @@ def handle_chat_turn(
                 }
             )
 
+        assistant_channel_metadata = dict(answer.get("channel_metadata") or {})
+        if answer.get("operational_diagnostic"):
+            assistant_channel_metadata["operational_diagnostic"] = answer.get("operational_diagnostic")
+
         assistant_message = services.store.append_chat_message(
             username=username,
             conversation_id=conversation["id"],
@@ -1855,6 +2003,7 @@ def handle_chat_turn(
             channel=channel,
             channel_user_id=channel_user_id,
             external_reply_to_id=inbound_message_id,
+            channel_metadata=assistant_channel_metadata,
         )
         return {
             **answer,

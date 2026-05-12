@@ -45,6 +45,20 @@ FOG_UNDERWAY_RE = re.compile(
     r"nevoeiro|nevoa|névoa|neblina|fog|mist|visibilidade\s+reduzida)\b",
     flags=re.IGNORECASE,
 )
+SOURCE_COVERAGE_RE = re.compile(
+    r"\b(fonte|documento|base|cobre|cobrem|inclui|incluem|cont[eé]m|incorporad\w*)\b",
+    flags=re.IGNORECASE,
+)
+PROSPECTIVE_COLLISION_RE = re.compile(
+    r"\b(rumo|rota|risco|perigo)\s+de\s+(?:colis[aã]o|abalroamento)\b"
+    r"|\brisco\s+de\s+abalroamento\b",
+    flags=re.IGNORECASE,
+)
+ACTUAL_COLLISION_RE = re.compile(
+    r"\b(colidiu|colidi|colidiram|colis[aã]o\s+(?:ocorreu|consumada|efetiva|real)|"
+    r"abalroou|abalroei|abalroaram|batemos|bateu|bateram)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _normalize_text(value: str | None) -> str:
@@ -89,7 +103,15 @@ def looks_like_operational_safety_question(question: str) -> bool:
 
 def looks_like_emergency_response_question(question: str) -> bool:
     text = question or ""
+    if SOURCE_COVERAGE_RE.search(text) and re.search(
+        r"\b(colreg|rieam|anti[-\s]?colis[aã]o|abalroamento)\b",
+        text,
+        re.IGNORECASE,
+    ):
+        return False
     if not EMERGENCY_RESPONSE_RE.search(text):
+        return False
+    if PROSPECTIVE_COLLISION_RE.search(text) and not ACTUAL_COLLISION_RE.search(text):
         return False
     if EMERGENCY_STANDALONE_RE.search(text):
         return True
@@ -100,6 +122,8 @@ def looks_like_emergency_response_question(question: str) -> bool:
 
 
 def looks_like_fog_underway_procedure_question(question: str) -> bool:
+    if SOURCE_COVERAGE_RE.search(question or "") and re.search(r"\b(colreg|rieam)\b", question or "", re.IGNORECASE):
+        return False
     return bool(FOG_UNDERWAY_RE.search(question or ""))
 
 

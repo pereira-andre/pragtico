@@ -14,7 +14,7 @@
   "key_points": [
     "9,5 metros.",
     "10,0 metros de referência (calculado para PM mínimo de 2,4 m).",
-    "7,6 + 1,8 = 9,4 metros.",
+    "Exemplo: com carga não IMO e altura de água de 1,8 m, o calado praticável é 7,6 + 1,8 = 9,4 m; comparar sempre com o calado real do navio e a maré/hora da manobra.",
     "8,8 + 0,3 = 9,1 metros.",
     "Inferior a 5 nós, para evitar squat elevado.",
     "10,0 metros."
@@ -48,8 +48,9 @@
       ]
     },
     {
-      "question": "Qual o calado praticável no TPS com altura de água de 1,8 m para carga não IMO?",
-      "answer": "7,6 + 1,8 = 9,4 metros.",
+      "question": "Exemplo — qual o calado praticável no TPS com altura de água de 1,8 m para carga não IMO?",
+      "answer": "É apenas um exemplo de aplicação da fórmula. Para carga não IMO, usa-se 7,6 m de base + altura de água no momento. Com 1,8 m de água: 7,6 + 1,8 = 9,4 m de calado praticável. Para validar uma manobra concreta, comparar esse valor com o calado real do navio e com a maré/hora da manobra; no TGL/TPS mantém-se ainda o limite absoluto de 10,0 m para carga não IMO.",
+      "source_text": "Exemplo de cálculo de calado praticável para carga não IMO: 7,6 m + altura de água. Com 1,8 m de água, 7,6 + 1,8 = 9,4 m. Este valor não é uma maré atual nem uma autorização por si só; a validação exige comparar com o calado real do navio e a maré/hora da manobra, respeitando o limite absoluto de 10,0 m.",
       "keywords": [
         "agua",
         "altura",

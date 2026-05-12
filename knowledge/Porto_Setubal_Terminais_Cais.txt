@@ -115,6 +115,8 @@ TERMINAIS E INSTALACOES COBERTOS PELO CONHECIMENTO OPERACIONAL
 11. Cais ALSTOM / ABB-ALSTOM
     Fonte: IT-038.
     Instalacao industrial com acesso pelo Canal ABB-ALSTOM.
+    Regras obrigatorias: atracacao apenas por estibordo; manobras so no reponto
+    de preia-mar; vento inferior a 15 kt; um navio por reponto; apenas de dia.
 
 12. TEPORSET
     Fonte: IT-062.

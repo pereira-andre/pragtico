@@ -347,6 +347,27 @@
     if (cleanRole === "admin") {
       suggestions.push(
         {
+          command: "/porque",
+          label: "Diagnóstico",
+          description: "Mostra a ficha operacional da última resposta.",
+          keywords: "diagnostico porque decisao regras resposta",
+          template: "/porque",
+        },
+        {
+          command: "/diagnostico",
+          label: "Diagnóstico",
+          description: "Alias para ver a ficha operacional da última resposta.",
+          keywords: "diagnostico decisao regras resposta",
+          template: "/diagnostico",
+        },
+        {
+          command: "/debug",
+          label: "Debug",
+          description: "Mostra o diagnóstico técnico da última resposta.",
+          keywords: "debug diagnostico decisao regras resposta",
+          template: "/debug",
+        },
+        {
           command: "/apagar-registo-manobra",
           label: "Apagar registo",
           description: "Apaga o registo executado de uma manobra.",

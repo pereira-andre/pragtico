@@ -20,11 +20,14 @@ LIGHT_CODE_RE = re.compile(
     flags=re.IGNORECASE,
 )
 IALA_QUERY_RE = re.compile(r"\biala\b|\bsistema\s+de\s+balizagem\b", flags=re.IGNORECASE)
+SOURCE_COVERAGE_RE = re.compile(
+    r"\b(fonte|fontes|documento|base|cobre|cobrem|inclui|incluem|conhecimento|indexavel|indexável|incorporad\w*)\b",
+    flags=re.IGNORECASE,
+)
 AREA_QUERY = {
     "SETÚBAL - CANAL NORTE": re.compile(r"\bcanal\s+norte\b|\bcn\b", flags=re.IGNORECASE),
     "SETÚBAL - CANAL SUL": re.compile(r"\bcanal\s+sul\b|\bcs\b", flags=re.IGNORECASE),
     "SETÚBAL": re.compile(r"\bbarra\b|\bset[uú]bal\b", flags=re.IGNORECASE),
-    "PINHEIRO DA CRUZ": re.compile(r"\bpinheiro\s+da\s+cruz\b", flags=re.IGNORECASE),
 }
 
 
@@ -57,6 +60,8 @@ def load_navigation_lights(knowledge_dir: str | Path) -> dict[str, Any]:
 
 def looks_like_navigation_lights_query(question: str) -> bool:
     clean = str(question or "")
+    if SOURCE_COVERAGE_RE.search(clean) and LIGHT_QUERY_RE.search(clean):
+        return True
     if IALA_QUERY_RE.search(clean):
         return True
     if LIGHT_CODE_RE.search(clean):
@@ -206,6 +211,21 @@ def build_navigation_lights_source(question: str, knowledge_dir: str | Path) -> 
         payload.get("iala_note") or "Setúbal usa o sistema IALA A.",
         f"Fonte: {payload.get('source') or 'Lista de Luzes'}.",
     ]
+    if SOURCE_COVERAGE_RE.search(question or ""):
+        selected = []
+        for entry in payload.get("entries") or []:
+            haystack = _normalize(" ".join(
+                str(entry.get(key) or "")
+                for key in ("name", "national_number", "international_number", "area")
+            ))
+            if (
+                re.search(r"\b1cn\b", haystack)
+                or re.search(r"\b2cs\b", haystack)
+                or "doca pesca" in haystack
+            ):
+                selected.append(entry)
+        if selected:
+            entries = selected[:6]
     if entries:
         lines.append("Registos relevantes:")
         for entry in entries:

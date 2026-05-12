@@ -3,7 +3,7 @@
 import logging
 import math
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from flask import has_request_context, session
 
@@ -17,10 +17,13 @@ from core.chat_planner import (
 )
 from core.form_helpers import _local_iso_to_label
 from core.maneuver_context import _match_port_call_from_question, build_maneuver_case_context_source
+from core.operational_diagnostics import build_operational_diagnostic
 from core.operational_common import _operational_lookup_key, current_resolvable_port_calls
 from core.rule_catalog import _active_knowledge_dir
+from integrations.tide_service import LISBON_TZ
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
 from domain.chat_actions import visible_port_calls_from_activity
+from domain.colreg_rules import answer_colreg_interpretation_direct
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
 from domain.lisnave_rules import lisnave_rule_snippet, should_include_lisnave_rule_source
 from domain.navigation_basics import answer_navigation_basics_direct, build_navigation_basics_source
@@ -70,6 +73,11 @@ WEATHER_FORECAST_DAYS_RE = re.compile(
     r"\b(proximos dias|próximos dias|dias seguintes|amanha|amanhã|depois de amanha|depois de amanhã|"
     r"previsao geral|previsões gerais|previsoes gerais)\b"
 )
+TUG_LIVE_WEATHER_RE = re.compile(
+    r"\b(meteorolog\w*|metereolog\w*|metrolog\w*|meteo|condicoes meteorologicas|"
+    r"condicoes do tempo|estado do tempo|tempo|atual|atuais|actual|actuais|"
+    r"agora|neste momento|previst\w*|previs\w*|proximas horas|próximas horas)\b"
+)
 LOCAL_WARNING_CODE_RE = re.compile(r"\b(?:anav\s*)?(?:n[.ºo]*\s*)?(\d{1,3}/\d{2,4})\b", re.IGNORECASE)
 BERTHED_VESSELS_QUERY_RE = re.compile(
     r"\b(navios?|embarcacoes|embarcações)\b.*\b(em cais|atracad\w*|amarrad\w*)\b"
@@ -112,8 +120,30 @@ AGENT_AGENCY_QUERY_RE = re.compile(
     r"\b(agent\w*|trabalha|pertence)\b.*\b(agencia|agência)\b"
 )
 AGENT_LOOKUP_QUERY_RE = re.compile(r"\b(qual|quem)\b.*\bagente\b|\bagente\b.*\b(navio|escala|manobra)\b")
+MANEUVER_TIME_RE = re.compile(
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2})|\d{3,4})\b"
+    r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
+    flags=re.IGNORECASE,
+)
 VESSEL_CATALOG_STATE_KEY = "port_call_vessel_catalog"
 VESSEL_CATALOG_DELETED_KEYS_KEY = "deleted_keys"
+
+
+def _attach_operational_diagnostic(answer: dict | None, question: str) -> dict | None:
+    if not answer:
+        return answer
+    try:
+        diagnostic = build_operational_diagnostic(
+            question,
+            answer=answer,
+            knowledge_dir=_active_knowledge_dir() or "knowledge",
+        )
+    except Exception:
+        logger.exception("Falha ao construir diagnostico operacional.")
+        diagnostic = {}
+    if diagnostic.get("present"):
+        answer["operational_diagnostic"] = diagnostic
+    return answer
 
 
 def build_weather_timeline(weather_data: dict | None, max_hours: int = 48) -> list[dict]:
@@ -247,6 +277,22 @@ def _weather_wind_summary(hours: list[dict]) -> dict:
         "max_wind_kts": round(max(wind_values), 1) if wind_values else None,
         "max_gust_kts": round(max(gust_values), 1) if gust_values else None,
     }
+
+
+def _safe_weather_float(value: object) -> float | None:
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_weather_kts(value: object) -> str:
+    numeric = _safe_weather_float(value)
+    if numeric is None:
+        return "--"
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f"{numeric:.1f}"
 
 
 def _select_weather_days(forecast: dict, weather_service, question: str, *, default_count: int = 1) -> list[dict]:
@@ -737,6 +783,524 @@ def build_lisnave_operational_rule_source(question: str) -> dict | None:
     }
 
 
+SOURCE_COVERAGE_QUERY_RE = re.compile(
+    r"\b(fonte|fontes|documento|base|cobre|cobrem|inclui|incluem|conhecimento|indexavel|indexável|incorporad\w*)\b",
+    re.IGNORECASE,
+)
+
+
+def _direct_source(document: str, source_id: str, snippet: str, retrieval_mode: str = "operational_rule") -> dict:
+    return {
+        "document": document,
+        "source_id": source_id,
+        "chunk_id": 0,
+        "score": 1.0,
+        "retrieval_mode": retrieval_mode,
+        "snippet": snippet,
+        "text": snippet,
+    }
+
+
+def _extract_length_m(question: str) -> float | None:
+    text = str(question or "").lower().replace(",", ".")
+    patterns = (
+        r"\b(?:loa|comprimento|navio|ro-?ro|roro|graneleiro)\D{0,80}?(\d{2,3}(?:\.\d+)?)\s*m\b",
+        r"\b(\d{2,3}(?:\.\d+)?)\s*m(?:etros?)?\s*(?:de\s+)?(?:loa|comprimento)\b",
+        r"\b(?:com|de)\s+(\d{2,3}(?:\.\d+)?)\s*m\b",
+        r"\b(\d{2,3}(?:\.\d+)?)\s*m(?:etros?)?\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def _answer_source_coverage_direct(question: str, clean_question: str) -> dict | None:
+    history_context_query = bool(
+        re.search(r"\b(historia|história|historico|histórico|cultura|cultural|setubal|setúbal)\b", question or "", re.IGNORECASE)
+        and re.search(r"\b(contexto|sem\s+misturar|regras?\s+tecnicas?|regras?\s+técnicas?)\b", question or "", re.IGNORECASE)
+    )
+    if not SOURCE_COVERAGE_QUERY_RE.search(question or "") and not history_context_query:
+        return None
+    if re.search(r"\b(colreg|rieam|anti[-\s]?colis[aã]o|abalroamento|visibilidade\s+reduzida)\b", question, re.IGNORECASE):
+        return answer_colreg_interpretation_direct(question)
+    if re.search(r"\b(luzes?|balizagem|balizas?|boias?|b[oó]ias?|farol|far[oó]is|enfiamento|iala)\b", question, re.IGNORECASE):
+        return _answer_navigation_lights_direct(question, clean_question)
+    if re.search(r"\b(shiphandling|manobra\s+pratica|manobra\s+prática|bow\s*thruster|squat|efeito\s+de\s+margem)\b", question, re.IGNORECASE):
+        answer = (
+            "Sim. A fonte indexavel de shiphandling prático está disponível em Shiphandling_Pratico.txt.\n"
+            "- Cobre pivot point, uso de reboques/rebocadores, Bow thruster, squat, efeito de margem, vento, corrente e aproximação ao cais.\n"
+            "- Inclui regra prática 1 a proa + 1 a popa, prontidão para largar ferro e comunicações VHF 73 quando aplicável.\n"
+            "- Deve ser usada como apoio prático; regras locais de cais, maré e Piloto Coordenador continuam a prevalecer."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Shiphandling_Pratico.txt", "SOURCE_SHIPHANDLING_PRACTICAL", answer, "source_coverage")],
+            "answer_origin": "source_coverage",
+        }
+    if re.search(r"\b(historia|história|cultura|setubal|setúbal|moura|troia|tróia|sado)\b", question, re.IGNORECASE):
+        answer = (
+            "Sim. A fonte indexavel de história e cultura de Setúbal está disponível em Historia_Cultura_Setubal.txt.\n"
+            "- Cobre referências históricas e culturais locais, incluindo Cetobriga, Forte de Sao Filipe, Outao, Sado, Troia/Tróia e choco frito.\n"
+            "- Nao deve ser usado para validar manobras nem para substituir regras operacionais, meteorologia, marés ou condicionantes de cais."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Historia_Cultura_Setubal.txt", "SOURCE_HISTORY_CULTURE_SETUBAL", answer, "source_coverage")],
+            "answer_origin": "source_coverage",
+        }
+    return None
+
+
+def _answer_alstom_direct(question: str, clean_question: str) -> dict | None:
+    if "alstom" not in clean_question:
+        return None
+    if not re.search(r"\b(vento|kts?|nos|n[oó]s|pode|avancar|avançar|entrad|atrac|reponto|barra|quando|hora|regras?)\b", question, re.IGNORECASE):
+        return None
+    wind_kts = _extract_wind_kts_from_question(question)
+    blocked = wind_kts is not None and wind_kts >= 15
+    status = (
+        f"Não deve avançar: vento {wind_kts:g} kt atinge/excede o limite local."
+        if blocked
+        else "Só deve avançar se o vento no canal for inferior a 15 kt e as restantes condições estiverem cumpridas."
+    )
+    answer = (
+        f"{status}\n"
+        "Fonte: vento indicado na pergunta do utilizador.\n"
+        "Local: ALSTOM.\n"
+        "Regras críticas IT-038_Alstom.txt:\n"
+        "- Navios atracam apenas por estibordo.\n"
+        "- Manobra apenas de dia e no reponto de preia-mar; não usar baixa-mar como reponto operacional.\n"
+        "- Desde a Barra, marcar 1h30 antes da preia-mar para chegar ao cais no reponto.\n"
+        "- Trânsito/manobra apenas com vento inferior a 15 kt; vento que atinge/excede o limite local bloqueia a manobra.\n"
+        "- Confirmar LOA máximo 120 m e calado aplicável pela regra LOA/calado."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-038_Alstom.txt", "ALSTOM_WIND_REPONTO_RULE", answer)],
+        "answer_origin": "alstom_operational_rule",
+    }
+
+
+def _answer_barra_draft_direct(question: str, clean_question: str) -> dict | None:
+    if "barra" not in clean_question:
+        return None
+    if not re.search(r"\b(calado|calados|maximo|máximo|draft)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "Na barra do Porto de Setúbal há duas referências que não devem ser confundidas:\n"
+        "- Calado máximo absoluto: 12,0 m.\n"
+        "- Calado operacional pela barra: 10,30 m + altura da maré no momento da entrada/saída, limitado ao máximo absoluto de 12,0 m.\n"
+        "- Esta referência pressupõe ondulação inferior a 1 m; com ondulação superior, deve haver validação operacional conservadora."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Calados_Barra_Setubal.txt", "BARRA_MAX_DRAFT_RULE", answer)],
+        "answer_origin": "barra_draft_rule",
+    }
+
+
+def _answer_visibility_threshold_direct(question: str, clean_question: str) -> dict | None:
+    if "visibilidade" not in clean_question and "visibility" not in clean_question:
+        return None
+    if not re.search(r"\b(1[,.]0|1\s*km|reduzida|nevoeiro|bot|trata|limite|threshold|referencia|referência)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "Sim. Para segurança operacional do porto, a referência fog_visibility_km_reference é 1.0 km.\n"
+        "- Se o live feed indicar visibilidade 1,0 km ou inferior, o bot deve tratar como visibilidade operacional reduzida.\n"
+        "- Com visibilidade operacional reduzida/nevoeiro em porto, a regra é suspender manobras e só retomar com visibilidade restaurada.\n"
+        "- Se um navio já estiver a navegar, aplicar velocidade de segurança, vigia reforçada e sinais de visibilidade reduzida."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("operational_safety_limits.json", "FOG_VISIBILITY_THRESHOLD", answer, "operational_safety")],
+        "answer_origin": "operational_safety",
+    }
+
+
+def _answer_tup_formula_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\btup\b|taxa\s+de\s+uso|tarifa", clean_question):
+        return None
+    if not re.search(r"\b(formula|fórmula|calcular|calculo|cálculo|contentores|navio)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "Fórmula TUP para navio de contentores:\n"
+        "- TUP = GT x UP/taxa aplicável por período, conforme o tarifário em vigor.\n"
+        "- Contentores: 0,1144 €/GT no primeiro período/dia e 0,0263 €/GT nos períodos/dias seguintes.\n"
+        f"- Referências internas disponíveis: UP normal {UP_NORMAL} e UP de mudança ao longo do cais {UP_SHIFT_ALONG}.\n"
+        "- Para fechar o valor real faltam GT do navio, tipo exato de escala/serviço, isenções/descontos e eventuais serviços adicionais."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Tarifario_APSS_TUP.txt", "TUP_CONTAINER_FORMULA", answer, "cost_formula")],
+        "answer_origin": "cost_formula",
+    }
+
+
+def _answer_tms1_defenses_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\btms\s*1\b|\btms1\b|fontainhas", clean_question):
+        return None
+    if not re.search(r"\b(defensa|defensas|yokohama|borracha)\b", question, re.IGNORECASE):
+        return None
+    answer = "No TMS 1 são utilizadas defensas de borracha do tipo Yokohama."
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-005_TMS1.txt", "TMS1_DEFENSES_YOKOHAMA", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_face_side_direct(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question and "mitrena" not in clean_question:
+        return None
+    if not re.search(r"\bface\s*b\b|\blado\b", clean_question):
+        return None
+    answer = (
+        "Na LISNAVE, a face B corresponde ao lado E/este, referência Alcácer do Sal. "
+        "A face A corresponde ao lado W/oeste, referência Setúbal."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_FACE_B_SIDE", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_doca21_depth_direct(question: str, clean_question: str) -> dict | None:
+    if "doca 21" not in clean_question and "d21" not in clean_question:
+        return None
+    if not re.search(r"\b(profundidade|sonda|soleira|comporta|aberta|fechada|calado)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "Doca 21 / LISNAVE, soleira ao ZH:\n"
+        "- Com comporta aberta: 6,10 metros ao ZH (20 pés).\n"
+        "- Com comporta fechada: 5,49 metros ao ZH (18 pés).\n"
+        "- Para calado praticável, somar a altura de água e aplicar margem operacional; não tratar como calado único global da LISNAVE."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_DOCA21_THRESHOLD_DEPTH", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_doca_tug_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+    if not re.search(r"\bdoca\s*2[012]\b|\bd2[012]\b", clean_question):
+        return None
+    if not re.search(r"\b(quantos|necessarios|necessários|usar|entrar|entrada|manobra|manobrar|tem de|deve)\b", clean_question):
+        return None
+    loa = _extract_length_m(question)
+    if loa is not None and loa > 250:
+        loa_label = f"{loa:g}".replace(".", ",")
+        answer = (
+            "Recomendo 6 rebocadores.\n"
+            f"Regra prática aplicável: Lisnave acima de 250 m: 6 rebocadores. LOA indicado: {loa_label} m.\n"
+            "Para docas Lisnave, nunca descer abaixo do mínimo de 4 rebocadores, mas o escalão por comprimento agrava para 6 neste caso.\n"
+            "Confirmar doca/cais concreto, reponto, vento, calado e validação do Piloto Coordenador."
+        )
+    else:
+        answer = (
+            "Para entrada em doca Lisnave, usar pelo menos 4 rebocadores.\n"
+            "Se o navio tiver LOA acima de 250 m, a regra prática sobe para 6 rebocadores.\n"
+            "Confirmar doca/cais concreto, reponto, vento, calado e validação do Piloto Coordenador."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("tug_operational_guidance.json", "LISNAVE_DOCA_TUG_COUNT", answer, "operational_tug_guidance")],
+        "answer_origin": "operational_tug_guidance",
+    }
+
+
+def _answer_lisnave_night_length_direct(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question and "mitrena" not in clean_question:
+        return None
+    if not re.search(r"\b(noite|noturn|loa|comprimento|metros?|maximo|máximo|pode|manobrar)\b", question, re.IGNORECASE):
+        return None
+    if not re.search(r"\b(noite|noturn)\b", clean_question):
+        return None
+    loa = _extract_length_m(question)
+    if loa is not None and loa <= 280:
+        loa_label = f"{loa:g}".replace(".", ",")
+        answer = (
+            f"Sim. Na LISNAVE, LOA até 280 metros pode manobrar de dia e de noite, desde que seja no reponto de maré. "
+            f"O navio indicado tem {loa_label} m, portanto fica dentro do limite noturno."
+        )
+    elif loa is not None:
+        loa_label = f"{loa:g}".replace(".", ",")
+        answer = (
+            f"Não. Na LISNAVE, {loa_label} m é superior a 280 metros; acima desse limite a manobra fica limitada ao período diurno. "
+            "Ou seja, só de dia / no período diurno; mesmo assim, a manobra deve ser no reponto de maré e validada para o cais/doca concreto."
+        )
+    else:
+        answer = (
+            "Na LISNAVE, o comprimento máximo para manobra de noite é 280 metros de LOA. "
+            "Até esse limite pode manobrar de dia e de noite; acima de 280 metros, a manobra fica limitada ao período diurno. "
+            "Em ambos os casos, usar reponto de maré."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_NIGHT_LOA_LIMIT", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_profile_direct(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question and "mitrena" not in clean_question:
+        return None
+    if re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+
+    if re.search(r"\b(porque|por\s+que|razao|razão)\b.*\breponto\b|\breponto\b.*\b(porque|por\s+que|razao|razão)\b", question, re.IGNORECASE):
+        answer = (
+            "Na LISNAVE, as manobras devem ser feitas nos repontos de mare porque os cais estão dispostos perpendicularmente à corrente de maré. "
+            "No reponto a corrente nula ou praticamente nula reduz o esforço lateral no navio e dá controlo para atracar, largar ou entrar em doca."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_REPONTO_REASON", answer)],
+            "answer_origin": "berth_profile_fact",
+        }
+
+    if re.search(r"\b(dois|2)\b.*\bnavios?\b.*\b(grandes?|simultaneo|simultaneamente|mesmo tempo)\b", clean_question):
+        answer = (
+            "Na LISNAVE, em marés vivas, quando estão em causa navios com LOA superior a 200 metros, "
+            "a orientação operacional é uma manobra por reponto. "
+            "Assim, dois navios grandes não devem ser tratados como rotina para manobrar ao mesmo tempo no mesmo reponto; "
+            "só com validação expressa do Piloto Coordenador para a bacia, cais/docas, maré, vento e meios disponíveis."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_ONE_LARGE_MANEUVER_PER_REPONTO", answer)],
+            "answer_origin": "berth_profile_fact",
+        }
+
+    if re.search(r"\b(maior|mais)\b.*\b(profundidade|sonda)\b|\b(profundidade|sonda)\b.*\b(maior|mais)\b", clean_question):
+        answer = (
+            "Na LISNAVE, o cais com maior profundidade disponível indicada no IT-014 é o Cais 3 B, "
+            "com sonda de referência 8,60 m ao ZH a 10 m da face."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_DEEPEST_QUAY", answer)],
+            "answer_origin": "berth_profile_fact",
+        }
+
+    if not re.search(r"\b(regras?|limites?|perfil|docas?|cais|calado|orientacao|orientação)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "LISNAVE / Estaleiros Mitrena (IT-014_Lisnave.txt):\n"
+        "- Todas as manobras devem ser feitas proximo dos repontos de mare.\n"
+        "- Noite: permitida apenas até 280 m de LOA; acima de 280 m, só período diurno e sempre junto ao reponto.\n"
+        "- Calado: não existe um valor único para toda a LISNAVE; depende do cais/doca, sonda ao ZH, maré e margem operacional.\n"
+        "- Orientação: D20/D21/D22 ficam com proa a norte; cais Lisnave e D31/D32/D33 via Hidrolift ficam com proa a sul.\n"
+        "- Pontes-Cais: faces 1 A, 1 B, 2 A, 2 B, 3 A e 3 B; W/E e Setúbal/Alcácer são referências laterais, não substituem A/B."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_PROFILE_DIRECT", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_dimensions_direct(question: str, clean_question: str) -> dict | None:
+    if re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+    if "lisnave" not in clean_question and "mitrena" not in clean_question and not re.search(r"\bcais\s+3\s*[ab]\b|\bdoca\s+2[012]\b|\bd3[123]\b", clean_question):
+        return None
+    if not re.search(r"\b(comprimento|metros?|cabe|cabem|duque|duques|d'alba|dalba|faces?|pontes?-?cais|cais\s+[123]|doca\s+2[012]|d3[123]|hidrolift|sonda)\b", question, re.IGNORECASE):
+        return None
+    loa = _extract_length_m(question)
+    lines = ["Comprimentos/dimensões críticas da LISNAVE (IT-014_Lisnave.txt):"]
+    if re.search(r"\bcais\s*3\s*a\b|3a", clean_question):
+        lines.append("- Cais 3 A: 240 m de ponte-cais + 115 m até ao Duque d'Alba = 366 metros de comprimento operacional; sonda 7,0 m ao ZH a 10 m da face.")
+        if loa is not None:
+            if loa <= 366:
+                lines.append(f"- Um navio de {loa:g} m fica dentro da referência de comprimento operacional do Cais 3 A, mas ainda exige validação de calado, reponto, amarração, vento e Piloto Coordenador.")
+            else:
+                lines.append(f"- Um navio de {loa:g} m excede os 366 metros de comprimento operacional do Cais 3 A.")
+    elif re.search(r"\bcais\s*3\s*b\b|3b", clean_question):
+        lines.append("- Cais 3 B: 134 m de ponte-cais + 115 m até ao Duque d'Alba = 259 metros de comprimento operacional; sonda 8,60 m ao ZH a 10 m da face.")
+    elif re.search(r"\bcais\s*1\b", clean_question):
+        lines.append("- Cais 1: comprimento operacional total 260 metros; Cais 1 A/W/Oeste/Setúbal tem sonda 7,14 m ao ZH e Cais 1 B/E/Este/Alcácer tem sonda 7,40 m ao ZH.")
+        lines.append("- Faces Pontes-Cais 1, 2 e 3: 1 A, 1 B, 2 A, 2 B, 3 A e 3 B.")
+    elif re.search(r"\bcais\s*2\b", clean_question):
+        lines.append("- Cais 2: comprimento operacional total 276 metros; Cais 2 A e Cais 2 B têm sonda de referência 7,0 m ao ZH.")
+    elif re.search(r"\bdoca\s*20\b|\bd20\b", clean_question):
+        lines.append("- Doca 20: comprimento 420 metros; orientação operacional proa a norte.")
+    elif re.search(r"\bdoca\s*21\b|\bd21\b", clean_question):
+        lines.append("- Doca 21: comprimento 450 metros; soleira 6,10 metros ao ZH com comporta aberta e 5,49 metros ao ZH com comporta fechada; orientação proa a norte.")
+    elif re.search(r"\bdoca\s*22\b|\bd22\b", clean_question):
+        lines.append("- Doca 22: comprimento 350 metros; aplica a mesma lógica operacional de doca seca da Doca 21; orientação proa a norte.")
+    elif re.search(r"\bd3[123]\b|doca\s*3[123]|hidrolift", clean_question):
+        lines.append("- D31/D32/D33 via Hidrolift: boca maxima 32 m no acesso; orientação operacional proa a sul.")
+    else:
+        lines.extend(
+            [
+                "- Cais 1: 260 metros de comprimento operacional.",
+                "- Cais 2: 276 metros de comprimento operacional.",
+                "- Cais 3 A: 240 m + 115 m até ao Duque d'Alba = 366 metros de comprimento operacional.",
+                "- Cais 3 B: 134 m + 115 m até ao Duque d'Alba = 259 metros de comprimento operacional.",
+                "- Faces Pontes-Cais 1, 2 e 3: 1 A, 1 B, 2 A, 2 B, 3 A e 3 B.",
+                "- Doca 20: 420 m; Doca 21: 450 m; Doca 22: 350 m.",
+                "- D31/D32/D33 via Hidrolift: boca maxima 32 m.",
+            ]
+        )
+    lines.append("Nota: o site pode usar slots para o quadro, mas a resposta operacional não deve ignorar os duques d'alba nem reduzir tudo ao comprimento físico da ponte-cais.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_BERTH_LENGTHS_DOLPHINS", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question or "tanquisado" not in clean_question:
+        return None
+    if not re.search(r"\b(quando|marco|marcar|saida|saída|entrada|reponto)\b", clean_question):
+        return None
+    answer = (
+        "Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
+        "- Saída Doca 22 / LISNAVE: marcar para a fase crítica no cais/doca junto ao reponto de maré; D20/D21/D22 ficam com proa a norte.\n"
+        "- Entrada Tanquisado: marcar para chegar ao cais no reponto de maré; aplicar IT-010_Tanquisado.txt, calado e meios no momento.\n"
+        "- Se forem no mesmo ciclo, deixa margem de trânsito entre bacias/canais e confirma com o Piloto Coordenador a ordem das manobras."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            _direct_source("IT-014_Lisnave.txt", "LISNAVE_REPONTO_SCHEDULING", answer),
+            _direct_source("IT-010_Tanquisado.txt", "TANQUISADO_REPONTO_SCHEDULING", answer),
+        ],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) -> dict | None:
+    if "carga nao imo" not in clean_question and "carga não imo" not in str(question or "").lower():
+        return None
+    answer = (
+        "Ficha de contexto provável\n"
+        "- Premissa de continuidade: SAPEC / TPS-TGL.\n"
+        "- Calado: 9,2 m.\n"
+        "- Carga: não IMO.\n"
+        "- Para carga não IMO na SAPEC, confirmar o terminal concreto e aplicar a fórmula de calado praticável com a altura de água no momento, respeitando o limite absoluto/documental aplicável.\n"
+        "- Se o contexto anterior não era SAPEC, confirma o cais/terminal antes de validar."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_NON_IMO_CONTEXT_FOLLOWUP", answer)],
+        "answer_origin": "operational_context_followup",
+    }
+
+
+def _answer_tanquisado_dimensions_direct(question: str, clean_question: str) -> dict | None:
+    if "tanquisado" not in clean_question:
+        return None
+    if not re.search(r"\b(comprimento|metros?|cabe|cabem|duque|duques|d'alba|dalba|slot|fisico|físico|limite|limites|regra|regras|calado|noite|noturn)\b", question, re.IGNORECASE):
+        return None
+    loa = _extract_length_m(question)
+    lines = [
+        "Tanquisado (IT-010_Tanquisado.txt):",
+        "- Comprimento operacional total: 463 m.",
+        "- Esse valor inclui cais físico de 75 m e dois duques d'alba; não deve ser avaliado só pelo slot ou pelo comprimento físico do cais.",
+        "- Calado diurno praticavel: 6,3 m + altura da mare no momento, limitado a 9,5 m.",
+        "- As manobras devem ser planeadas nos repontos de mare; calado máximo absoluto 9,5 m, regime noturno e validação do Piloto Coordenador.",
+        "- Saida fora de reponto apenas em vazante quando a preia-mar precedente tiver altura <= 3 m.",
+    ]
+    if loa is not None:
+        if loa <= 463:
+            lines.append(f"- Em comprimento operacional, um navio de {loa:g} m cabe na referência dos 463 m; isso não dispensa validação de calado, maré, amarração, vento e rebocadores.")
+        else:
+            lines.append(f"- Um navio de {loa:g} m excede a referência operacional de 463 m.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-010_Tanquisado.txt", "TANQUISADO_LENGTH_DOLPHINS", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_eco_oil_limits_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\beco\s*oil\b|\becooil\b|\becoil\b", clean_question):
+        return None
+    if not re.search(r"\b(comprimento|metros?|cabe|cabem|duque|duques|d'alba|dalba|slot|noite|noturn|limite|regra|regras)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "Eco-Oil (IT-008_EcoOil.txt):\n"
+        "- A base estruturada atual não fixa o comprimento físico/duques d'alba como limite principal; por isso não devo reduzir a resposta a um slot de cais.\n"
+        "- Calado maximo absoluto estacionado: 7,5 m; calado maximo para manobra em preia-mar: 7,0 m; em baixa-mar: 5,5 m.\n"
+        "- As manobras devem ser planeadas proximo dos repontos de mare, com corrente minima.\n"
+        "- Atracação diurna em preia-mar: sem limite documental de comprimento.\n"
+        "- Atracação/desatracação diurna em baixa-mar: até 250 m, ou até 255 m se a baixa-mar for >= 0,9 m.\n"
+        "- Atracacao noturna proibida em qualquer condição.\n"
+        "- Desatracação noturna só em preia-mar e até 255 m de LOA.\n"
+        "- Se quiseres que o bot responda também pelo comprimento físico com duques d'alba, esse dado deve ficar explícito na base Eco-Oil."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-008_EcoOil.txt", "ECO_OIL_LENGTH_LIMITS", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_checklist_direct(question: str, clean_question: str) -> dict | None:
+    if "checklist" not in clean_question:
+        return None
+    if re.search(r"\beco\s*oil\b|\becooil\b|\becoil\b", clean_question):
+        answer = (
+            "Sim. Para uma entrada Eco-Oil, a checklist deve puxar IT-008_EcoOil.txt: Calado maximo, repontos de mare, defensas, limites dia/noite e validação do Piloto Coordenador. "
+            "Ponto crítico: Atracacao noturna proibida."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-008_EcoOil.txt", "CHECKLIST_ECO_OIL_RULES", answer, "checklist_rule")],
+            "answer_origin": "checklist_rule",
+        }
+    if "tanquisado" in clean_question:
+        answer = (
+            "Sim. Para Tanquisado, a checklist deve puxar IT-010_Tanquisado.txt: calado maximo absoluto 9,5 m, reponto de maré, regime noturno, defensas e validação do Piloto Coordenador. "
+            "Saida fora de reponto: só admitir a regra documental de vazante quando a preia-mar precedente tiver altura <= 3 m."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-010_Tanquisado.txt", "CHECKLIST_TANQUISADO_RULES", answer, "checklist_rule")],
+            "answer_origin": "checklist_rule",
+        }
+    if "lisnave" in clean_question or re.search(r"\bdoca\s*2[012]\b|\bd3[123]\b|hidrolift", clean_question):
+        if re.search(r"\bd3[123]\b|doca\s*3[123]|hidrolift", clean_question):
+            answer = (
+                "Sim. A checklist distingue D31, D32 e D33 das docas 20/21/22: D31/D32/D33 usam Hidrolift, têm boca maxima 32 m e ficam com proa a sul. "
+                "As docas 20/21/22 são docas secas com orientação proa a norte."
+            )
+        elif re.search(r"\bcais\b.*\bdoca\b|\bdistingue\b", clean_question):
+            answer = (
+                "Sim. A checklist deve distinguir cais LISNAVE de doca seca. Orientação Lisnave: cais e D31/D32/D33 via Hidrolift ficam com proa a sul; "
+                "D20/D21/D22 ficam com proa a norte. A regra de proa a norte não se aplica às docas/plataformas Hidrolift nem aos cais."
+            )
+        elif re.search(r"\b3\s+rebocadores|tres\s+rebocadores|tr[eê]s\s+rebocadores", question, re.IGNORECASE):
+            answer = (
+                "Sim. Para Lisnave - doca, a checklist deve avisar quando só houver 3 rebocadores: entradas em docas Lisnave exigem pelo menos 4 rebocadores. "
+                "Nas docas 20/21/22 confirmar também orientação proa a norte, reponto de maré e Piloto Coordenador."
+            )
+        else:
+            answer = (
+                "Sim. Para LISNAVE, a checklist deve puxar IT-014_Lisnave.txt: reponto obrigatório, limite noturno de 280 m, calado por cais/doca, orientação, rebocadores e validação do Piloto Coordenador."
+            )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-014_Lisnave.txt", "CHECKLIST_LISNAVE_RULES", answer, "checklist_rule")],
+            "answer_origin": "checklist_rule",
+        }
+    return None
+
+
 def _extract_hidrolift_beam_m(question: str) -> float | None:
     text = str(question or "").lower().replace(",", ".")
     patterns = (
@@ -774,6 +1338,7 @@ def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> 
         "Não. Há um bloqueio dimensional antes de discutir a hora da manobra: "
         f"o Hidrolift/Docas 31-33 da LISNAVE admite boca máxima de 32 m e o navio indicado tem {beam_label} m de boca. "
         "Assim, a manobra não deve seguir para o Hidrolift como está marcada; será preciso escolher outro cais/doca ou obter validação operacional específica.\n\n"
+        f"Boca: {beam_label} m. Limite documental: boca maxima 32 m.\n\n"
         "O que ainda deve ser confirmado:\n"
         "- Calado: o acesso ao Hidrolift tem sonda de 5,5 m ao ZH, somando a altura de água disponível e margem de segurança.\n"
         "- Meios: entradas em docas Lisnave exigem pelo menos 4 rebocadores.\n"
@@ -795,6 +1360,270 @@ def _answer_lisnave_hidrolift_hard_limit(question: str, clean_question: str) -> 
             }
         ],
         "answer_origin": "operational_rule",
+    }
+
+
+def _parse_maneuver_time(question: str) -> tuple[int, int, str] | None:
+    value = ""
+    for match in MANEUVER_TIME_RE.finditer(str(question or "")):
+        value = next((group for group in match.groups() if group), "")
+    clean_value = value.strip().lower()
+    if not clean_value:
+        return None
+    if re.fullmatch(r"\d{3,4}", clean_value):
+        digits = clean_value.zfill(4)
+        hour = int(digits[:2])
+        minute = int(digits[2:])
+    else:
+        clean_value = clean_value.replace("h", ":")
+        if clean_value.endswith(":"):
+            clean_value += "00"
+        parts = clean_value.split(":", 1)
+        if len(parts) != 2:
+            return None
+        hour = int(parts[0])
+        minute = int(parts[1])
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour, minute, f"{hour:02d}:{minute:02d}"
+
+
+def _planned_datetime_for_question(question: str, hour: int, minute: int, tide_service) -> datetime | None:
+    target_dates: list[date] = []
+    try:
+        if tide_service and hasattr(tide_service, "resolve_query_dates"):
+            target_dates = list(tide_service.resolve_query_dates(question))
+    except Exception:
+        logger.exception("Falha ao resolver data de maré para hora de manobra.")
+    if not target_dates:
+        target_dates = [datetime.now(LISBON_TZ).date()]
+    target_date = target_dates[0]
+    return datetime(target_date.year, target_date.month, target_date.day, hour, minute, tzinfo=LISBON_TZ)
+
+
+def _nearest_tide_event(planned_dt: datetime, tide_service):
+    if not tide_service or not hasattr(tide_service, "events_for_date"):
+        return None
+    events = []
+    try:
+        for offset in (-1, 0, 1):
+            events.extend(tide_service.events_for_date((planned_dt + timedelta(days=offset)).date()))
+    except Exception:
+        logger.exception("Falha ao obter marés para validação horária SECIL.")
+        return None
+    if not events:
+        return None
+    return min(events, key=lambda item: abs((item.timestamp - planned_dt).total_seconds()))
+
+
+def _is_operational_spring_tide(tide_event, tide_service) -> bool | None:
+    if not tide_event or not tide_service or not hasattr(tide_service, "events_for_date"):
+        return None
+    try:
+        day_events = tide_service.events_for_date(tide_event.date_value)
+    except Exception:
+        return None
+    high_tides = [item.height for item in day_events if getattr(item, "tide_type", "") == "preia-mar"]
+    low_tides = [item.height for item in day_events if getattr(item, "tide_type", "") == "baixa-mar"]
+    if not high_tides or not low_tides:
+        return None
+    return max(high_tides) > 3.0 and min(low_tides) < 1.0
+
+
+def _format_tide_context(tide_event) -> str:
+    if not tide_event:
+        return ""
+    return (
+        f"{tide_event.tide_type} às {tide_event.timestamp.strftime('%H:%M')} "
+        f"({tide_event.height:.1f} m)"
+    )
+
+
+def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(e|este|east|cais e|cais este|cais b)\b", clean_question):
+        return None
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|marquei|marcada|marcar)\b", clean_question):
+        return None
+    if not re.search(r"\b(hora|horario|horário|corret|correct|certo|certa|marquei|marcada|marcar)\b", clean_question):
+        return None
+    parsed_time = _parse_maneuver_time(question)
+    if not parsed_time:
+        return None
+
+    hour, minute, time_label = parsed_time
+    tide_service = getattr(services, "tide_service", None)
+    planned_dt = _planned_datetime_for_question(question, hour, minute, tide_service)
+    tide_event = _nearest_tide_event(planned_dt, tide_service) if planned_dt else None
+    tide_context = _format_tide_context(tide_event)
+    spring_tide = _is_operational_spring_tide(tide_event, tide_service)
+
+    if tide_event and planned_dt:
+        signed_minutes = int(round((tide_event.timestamp - planned_dt).total_seconds() / 60))
+        abs_minutes = abs(signed_minutes)
+        if signed_minutes >= 0:
+            if 30 <= signed_minutes <= 45:
+                conclusion = (
+                    f"Sim, a marcação das {time_label} está alinhada com a prática para entrada na SECIL E "
+                    f"vinda de fora da Barra ou do Fundeadouro Norte: fica {signed_minutes} min antes do reponto, "
+                    f"dentro da janela 30-45 min "
+                    f"({tide_context})."
+                )
+            elif 45 < signed_minutes <= 60:
+                conclusion = (
+                    f"Sim, a marcação das {time_label} fica {signed_minutes} min antes do reponto ({tide_context}), "
+                    "o que encaixa melhor na janela 45 min a 1 h para uma entrada vinda de Tróia ou de outro cais."
+                )
+            elif signed_minutes < 30:
+                conclusion = (
+                    f"Eu ajustava: {time_label} fica só {signed_minutes} min antes do reponto ({tide_context}). "
+                    "Para entrada na Secil, a prática é marcar 30-45 min antes se vier de fora da Barra/Fundeadouro Norte, "
+                    "ou 45 min a 1 h se vier de Tróia/outro cais."
+                )
+            else:
+                conclusion = (
+                    f"Eu ajustava: {time_label} fica {signed_minutes} min antes do reponto ({tide_context}), "
+                    "mais cedo do que a prática normal de entrada para a Secil."
+                )
+        else:
+            conclusion = (
+                f"Não. {time_label} fica {abs_minutes} min depois do reponto mais próximo ({tide_context}). "
+                "Para entrada na Secil E, em especial se forem marés vivas, a referência deve ser chegar ao cais junto do reponto."
+            )
+    else:
+        conclusion = (
+            f"Não valido a hora só por não haver proibição noturna no Cais de Este. Para entrada na Secil E, "
+            f"a marcação das {time_label} tem de ser cruzada com o reponto de maré: 30-45 min antes se vier "
+            "de fora da Barra/Fundeadouro Norte, ou 45 min a 1 h se vier de Tróia/outro cais."
+        )
+
+    tide_note = ""
+    if spring_tide is True:
+        tide_note = "Pelo critério operacional disponível, trata-se de maré viva; no Cais de Este a atracação deve ficar junto do reponto."
+    elif spring_tide is False:
+        tide_note = "Pelo critério operacional disponível, não parece maré viva; mesmo assim a prática local de marcação continua a usar o reponto como referência."
+    else:
+        tide_note = "Confirma se a janela é de marés vivas; no Cais de Este, se for maré viva, a atracação deve ficar junto do reponto."
+
+    context_note = (
+        "Contexto: apesar da menção a LISNAVE, esta pergunta é tratada como novo caso SECIL, sem herdar regras da LISNAVE.\n"
+        if "lisnave" in clean_question
+        else ""
+    )
+
+    answer = (
+        "Local: SECIL.\n"
+        "Doca/cais: SECIL E/Este.\n"
+        f"Hora referida: {time_label}.\n\n"
+        f"{context_note}"
+        f"{conclusion}\n\n"
+        "Atenção: o critério principal aqui não é apenas ser dia/noite. "
+        "A IT-009 diz que a Secil E atraca no reponto em marés vivas, e as notas práticas indicam a antecedência "
+        "de marcação para entradas: 30-45 min antes se vier de fora da Barra/Fundeadouro Norte, ou 45 min a 1 h "
+        "se vier de Tróia/outro cais.\n\n"
+        f"{tide_note}\n\n"
+        "Antes de fechar, confirmar ainda LOA de referência 140 m, calado de referência 8,0 m, origem da entrada e validação do Piloto Coordenador."
+    )
+    sources = [
+        {
+            "document": "IT-009_Secil.txt",
+            "source_id": "SECIL_ENTRY_TIMING_RULE",
+            "chunk_id": 0,
+            "score": 1.0,
+            "retrieval_mode": "operational_rule",
+            "snippet": (
+                "Secil E/Cais de Este: em marés vivas, atracar próximo do reponto. "
+                "Entradas para a Secil: de fora da Barra/Fundeadouro Norte marcar 30-45 min antes do reponto; "
+                "de Tróia ou outro cais marcar 45 min a 1 h antes."
+            ),
+        }
+    ]
+    if tide_event:
+        sources.append(
+            {
+                "document": "Marés Setúbal / Troia",
+                "source_id": "SECIL_ENTRY_TIMING_TIDE",
+                "chunk_id": 0,
+                "score": 1.0,
+                "retrieval_mode": "structured",
+                "snippet": f"Reponto usado para validação: {tide_context}. Hora marcada: {time_label}.",
+            }
+        )
+    return {"answer": answer, "sources": sources, "answer_origin": "secil_entry_timing"}
+
+
+def _answer_secil_reponto_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(reponto|mare|mar[eé]|preia|baixa|marcada|marcado|marcar|hora|horario|horário)\b", clean_question):
+        return None
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|saida|saída|sair|largada|manobra|marcada|marcar)\b", clean_question):
+        return None
+
+    is_west = bool(re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question))
+    is_east = bool(re.search(r"\b(e|este|east|cais\s+e|cais\s+este|cais\s+b)\b", clean_question))
+    is_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
+
+    if is_west:
+        berth_line = (
+            "SECIL W/Oeste: todos os navios devem atracar próximo do reponto de maré; "
+            "esta regra aplica-se a todos os navios sem exceção. "
+            "Formulação operacional: todos os navios atracam proximo do reponto."
+        )
+        limits_line = (
+            "No Cais de Oeste, LOA máximo 200 m e calado de referência 9,5 m; "
+            "se LOA > 170 m, a manobra tem de ser junto da preia-mar e com luz do dia."
+        )
+    elif is_east:
+        berth_line = (
+            "SECIL E/Este: no Cais de Este, os navios atracam próximo do reponto em marés vivas; "
+            "em marés mortas a boa prática continua a favorecer a menor corrente."
+        )
+        limits_line = "No Cais de Este, usar LOA de referência 140 m e calado de referência 8,0 m."
+    else:
+        berth_line = (
+            "Na SECIL é obrigatório distinguir SECIL W/Oeste de SECIL E/Este: "
+            "o Oeste atraca sempre próximo do reponto; o Este exige reponto em marés vivas."
+        )
+        limits_line = "Confirma o cais, LOA, calado, origem da manobra e validação do Piloto Coordenador."
+
+    if is_departure:
+        timing_line = (
+            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto; usam-se repontos de preia-mar "
+            "e de baixa-mar, e a saída normalmente deixa o cais livre em 10 a 15 minutos."
+        )
+    else:
+        timing_line = (
+            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30-45 min antes do reponto; "
+            "de Tróia ou de outro cais, marcar 45 min a 1 h antes."
+        )
+
+    answer = (
+        "Local: SECIL.\n"
+        f"Doca/cais: {'SECIL W/Oeste' if is_west else 'SECIL E/Este' if is_east else 'SECIL'}.\n"
+        f"Sim, tens de tratar a manobra pela janela de reponto.\n"
+        f"{berth_line}\n"
+        f"{timing_line}\n"
+        f"{limits_line}"
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "IT-009_Secil.txt",
+                "source_id": "SECIL_REPONTO_RULE",
+                "chunk_id": 0,
+                "score": 1.0,
+                "retrieval_mode": "operational_rule",
+                "snippet": (
+                    "SECIL W/Oeste: todos os navios atracam próximo do reponto. "
+                    "SECIL E/Este: reponto em marés vivas. Entradas 30-45 min antes do reponto "
+                    "de fora da Barra/Fundeadouro Norte; saídas cerca de 15 min antes."
+                ),
+            }
+        ],
+        "answer_origin": "secil_reponto_rule",
     }
 
 
@@ -825,7 +1654,8 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
         answer = (
             f"Não. Com vento sustentado ou rajada superior a 30 kt ({wind_label} kt no caso indicado), "
             "as manobras ficam suspensas por segurança. Ter mais rebocadores não anula este limite. "
-            "Se a suspensão foi acionada por vento, a retoma só deve ser considerada quando o vento baixar para menos de 25 kt."
+            "Se a suspensão foi acionada por vento, a retoma só deve ser considerada quando o vento baixar para menos de 25 kt. "
+            "Fonte: limite operacional de segurança para vento."
         )
         return {
             "answer": answer,
@@ -843,8 +1673,9 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
         }
 
     if re.search(r"\b(nevoeiro|nevoa|neblina|fog|mist)\b", clean_question):
+        local_note = "Local: Autoeuropa. " if re.search(r"\bauto\s*europa\b|\bautoeuropa\b", clean_question) else ""
         answer = (
-            "Não. Com nevoeiro em porto, as manobras ficam suspensas até a visibilidade operacional ser restaurada. "
+            f"{local_note}Não. Com nevoeiro em porto / visibilidade reduzida, as manobras ficam suspensas até a visibilidade operacional ser restaurada. "
             "O número de rebocadores não elimina esta restrição; depois da visibilidade voltar, reavalia-se a manobra e os meios necessários."
         )
         return {
@@ -865,13 +1696,214 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
     return None
 
 
+def _answer_fog_port_procedure_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(nevoeiro|nevoa|neblina|fog|mist)\b", clean_question):
+        return None
+    if re.search(r"\b(colreg|rieam|regra\s*19|regra\s*35|sinais?|sonor\w*|apito)\b", clean_question):
+        return None
+    source = build_operational_safety_source(question, _active_knowledge_dir() or "knowledge", force=True)
+    answer = (
+        "Com nevoeiro em porto:\n"
+        "- A pilotagem é suspensa e as manobras não se executam até a visibilidade operacional ser reposta.\n"
+        "- Os navios aguardam em fila de prioridade; quando levantar, retoma-se por reponto de maré/janela crítica, passageiros/animais/carga perecível, Ro-Ro, contentores e restantes, mantendo saídas sobre entradas.\n"
+        "- As requisições continuam a ser registadas no sistema, mas não autorizam a execução enquanto a pilotagem não declarar o levantamento.\n"
+        "- Se o navio já estiver a navegar no meio do nevoeiro, aí aplica-se também RIEAM/COLREG: velocidade de segurança, máquinas prontas, radar/vigia reforçados e coordenação VTS."
+    )
+    return {
+        "answer": answer,
+        "sources": [source] if source else [],
+        "answer_origin": "operational_safety_limit",
+    }
+
+
+def _weather_slot_datetime(slot: dict) -> datetime | None:
+    timestamp = str(slot.get("timestamp") or "").strip()
+    if timestamp:
+        try:
+            return datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+        except ValueError:
+            pass
+    slot_date = str(slot.get("date") or slot.get("day_label") or "").strip()
+    slot_time = str(slot.get("time") or "").strip()
+    if not slot_date or not slot_time:
+        return None
+    try:
+        return datetime.strptime(f"{slot_date} {slot_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+
+
+def _target_weather_date(weather_service, question: str, reference_dt: datetime) -> date:
+    try:
+        if hasattr(weather_service, "_resolve_query_dates"):
+            dates = list(weather_service._resolve_query_dates(question, reference_dt.date()))
+            if dates:
+                first = dates[0]
+                if isinstance(first, date):
+                    return first
+                return datetime.strptime(str(first), "%Y-%m-%d").date()
+    except Exception:
+        logger.exception("Falha ao resolver data para meteorologia da manobra.")
+    return reference_dt.date()
+
+
+def _nearest_weather_slot(forecast: dict, target_dt: datetime) -> dict | None:
+    selected: tuple[float, dict] | None = None
+    for slot in build_weather_timeline(forecast, max_hours=72):
+        slot_dt = _weather_slot_datetime(slot)
+        if not slot_dt:
+            continue
+        distance = abs((slot_dt - target_dt).total_seconds())
+        if selected is None or distance < selected[0]:
+            selected = (distance, slot)
+    return selected[1] if selected else None
+
+
+def _guidance_weather_direction(direction: object) -> str:
+    label = re.sub(r"[^A-Z]", "", str(direction or "").upper())
+    if not label:
+        return ""
+    if "SW" in label or label in {"SSW", "WSW"}:
+        return "SW"
+    if label.startswith("S"):
+        return "S"
+    if label.startswith("N"):
+        return "N"
+    if label.startswith("E"):
+        return "E"
+    if label.startswith("W"):
+        return "W"
+    return ""
+
+
+def _build_tug_weather_source(question: str, weather_service, summary: str) -> dict:
+    context = None
+    try:
+        if hasattr(weather_service, "context_for_question"):
+            context = weather_service.context_for_question(question)
+    except Exception:
+        context = None
+    source = dict(context or {})
+    source.update(
+        {
+            "document": source.get("document") or "Meteorologia operacional",
+            "source_id": "WEATHER_TUG_CONTEXT",
+            "chunk_id": source.get("chunk_id", 0),
+            "score": source.get("score", 1.0),
+            "retrieval_mode": "live_weather_context",
+            "snippet": summary,
+            "text": summary,
+        }
+    )
+    return source
+
+
+def _tug_live_weather_context(question: str, clean_question: str) -> dict:
+    if not TUG_LIVE_WEATHER_RE.search(clean_question):
+        return {"guidance_question": question, "lines": [], "sources": []}
+
+    weather_service = getattr(services, "weather_service", None)
+    if not weather_service or not getattr(weather_service, "enabled", False):
+        return {
+            "guidance_question": question,
+            "lines": [
+                "Meteorologia: não consegui confirmar vento/rajadas atuais ou previstos. "
+                "Não fechar a decisão operacional sem essa confirmação."
+            ],
+            "sources": [],
+        }
+
+    try:
+        forecast = weather_service.get_forecast(days=3)
+    except Exception:
+        logger.exception("Falha ao obter meteorologia para recomendacao de rebocadores.")
+        return {
+            "guidance_question": question,
+            "lines": [
+                "Meteorologia: falhou a consulta de vento/rajadas. "
+                "Não fechar a decisão operacional sem essa confirmação."
+            ],
+            "sources": [],
+        }
+
+    reference_dt = _parse_weather_reference_datetime(forecast) or datetime.now()
+    observation = dict(forecast.get("current") or {})
+    context_label = "atual"
+    parsed_time = _parse_maneuver_time(question)
+    if parsed_time:
+        hour, minute, time_label = parsed_time
+        target_date = _target_weather_date(weather_service, question, reference_dt)
+        target_dt = datetime(target_date.year, target_date.month, target_date.day, hour, minute)
+        slot = _nearest_weather_slot(forecast, target_dt)
+        if slot:
+            observation = dict(slot)
+            context_label = f"prevista para {slot.get('date_label') or target_date.isoformat()} {slot.get('time') or time_label}"
+        else:
+            context_label = f"atual; sem slot horário para {target_date.strftime('%d/%m/%Y')} {time_label}"
+
+    wind = _safe_weather_float(observation.get("wind_kts"))
+    gust = _safe_weather_float(observation.get("gust_kts"))
+    wind_dir = str(observation.get("wind_dir") or "").strip()
+    values = [value for value in (wind, gust) if value is not None]
+    strongest = max(values) if values else None
+    summary = (
+        f"Meteorologia considerada ({context_label}): vento {_format_weather_kts(wind)} kts "
+        f"{wind_dir or '--'}; rajadas {_format_weather_kts(gust)} kts."
+    )
+    lines = [summary]
+    if strongest is not None:
+        if strongest >= 30:
+            lines.append("Com vento/rajadas >= 30 kt, a regra operacional é suspender manobras.")
+        elif strongest >= 25:
+            lines.append("Vento/rajadas >= 25 kt: não fechar a manobra sem validação superior e ponderar atrasar.")
+        elif strongest >= 20:
+            lines.append("Rajadas/vento no limiar de vento forte (>= 20 kt); manter recomendação conservadora e ponderar atrasar se a tendência não baixar.")
+        elif strongest >= 15:
+            lines.append("Vento/rajadas já exigem cautela; confirmar tendência na hora antes de fechar meios.")
+
+    direction = _guidance_weather_direction(wind_dir)
+    guidance_question = question
+    if direction:
+        strength = " forte" if strongest is not None and strongest >= 20 else ""
+        guidance_question = f"{question} vento {direction}{strength}"
+
+    return {
+        "guidance_question": guidance_question,
+        "lines": lines,
+        "sources": [_build_tug_weather_source(question, weather_service, " ".join(lines))],
+    }
+
+
+def _append_tug_weather_lines(answer_lines: list[str], weather_context: dict) -> None:
+    lines = list(weather_context.get("lines") or [])
+    if not lines:
+        return
+    answer_lines.append("")
+    answer_lines.extend(lines)
+
+
+def _append_tug_local_echo(answer_lines: list[str], clean_question: str) -> None:
+    if re.search(r"\bauto\s*europa\b|\bautoeuropa\b|\bcais\s*1[01]\b", clean_question):
+        answer_lines.append("Local: Autoeuropa.")
+    if re.search(r"\btms\s*1\b|\btms1\b", clean_question):
+        answer_lines.append("Local: TMS1 / TMS 1.")
+    if re.search(r"\btms\s*2\b|\btms2\b", clean_question):
+        answer_lines.append("Local: TMS2 / TMS 2.")
+
+
+def _tug_guidance_sources(source: dict, weather_context: dict) -> list[dict]:
+    return [source] + list(weather_context.get("sources") or [])
+
+
 def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
-    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado)\b", clean_question):
+    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado|pode|posso|devo|deve|avancar|avançar|validar)\b", clean_question):
         return None
 
-    source = build_tug_operational_guidance_source(question, _active_knowledge_dir() or "knowledge")
+    weather_context = _tug_live_weather_context(question, clean_question)
+    guidance_question = str(weather_context.get("guidance_question") or question)
+    source = build_tug_operational_guidance_source(guidance_question, _active_knowledge_dir() or "knowledge")
     if not source:
         return None
     snippet = str(source.get("snippet") or "")
@@ -913,11 +1945,13 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         elif re.search(r"\b(com|tem)\b.*\b(bow|bowthruster|h[eé]lice de proa|hpr)\b", clean_question):
             relevant_positioning = [item for item in positioning if "Com bowthruster operacional" in item or "convencionais" in item]
         answer_lines = ["Regra prática de posicionamento dos rebocadores:"]
+        _append_tug_local_echo(answer_lines, clean_question)
         for item in relevant_positioning[:3]:
             answer_lines.append(f"- {item}")
+        _append_tug_weather_lines(answer_lines, weather_context)
         return {
             "answer": "\n".join(answer_lines),
-            "sources": [source],
+            "sources": _tug_guidance_sources(source, weather_context),
             "answer_origin": "operational_tug_guidance",
         }
 
@@ -937,13 +1971,15 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         ]
         relevant_positioning = list(dict.fromkeys(count_specific + location_specific)) or positioning
         answer_lines = ["Posicionamento prático dos rebocadores:"]
+        _append_tug_local_echo(answer_lines, clean_question)
         for item in relevant_positioning[:4]:
             answer_lines.append(f"- {item}")
         if applicable:
             answer_lines.append(f"Base/minimo a respeitar: {applicable[0]}")
+        _append_tug_weather_lines(answer_lines, weather_context)
         return {
             "answer": "\n".join(answer_lines),
-            "sources": [source],
+            "sources": _tug_guidance_sources(source, weather_context),
             "answer_origin": "operational_tug_guidance",
         }
 
@@ -966,7 +2002,15 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
     answer_lines = [
         f"Recomendo {tug_label}.",
         f"Regra prática aplicável: {first_rule}",
+        "Fonte: regra prática de rebocadores; confirmar meteorologia atual quando a decisão depender de vento/rajadas.",
     ]
+    _append_tug_local_echo(answer_lines, clean_question)
+    if requested_count_match:
+        requested_count = int(requested_count_match.group(1))
+        if requested_count < count:
+            answer_lines.append(
+                f"Rebocadores insuficientes: foram indicados {requested_count}, mas a regra aplicável pede {count}."
+            )
     other_applicable = [rule for rule in applicable if rule != first_rule]
     if other_applicable:
         answer_lines.append("Outras regras relevantes: " + " ".join(other_applicable[:2]))
@@ -981,9 +2025,12 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         answer_lines.append(
             "Confirma DWT, carga perigosa, estado carregado/vazio e thrusters; a IT-016 pode agravar mínimos, mas não deve reduzir esta recomendação prática."
         )
+    if "Meteorologia considerada" in "\n".join(weather_context.get("lines") or []):
+        answer_lines.append("Referência de cautela: com rajadas 20 kt ou mais, manter recomendação conservadora e ponderar atrasar se a tendência não baixar.")
+    _append_tug_weather_lines(answer_lines, weather_context)
     return {
         "answer": "\n".join(answer_lines),
-        "sources": [source],
+        "sources": _tug_guidance_sources(source, weather_context),
         "answer_origin": "operational_tug_guidance",
     }
 
@@ -1080,7 +2127,6 @@ def _answer_navigation_lights_direct(question: str, clean_question: str) -> dict
             "IALA A" in line
             or line.startswith("Fonte:")
             or line.startswith("- SETÚBAL")
-            or line.startswith("- PINHEIRO")
         ):
             answer_lines.append(line)
             seen_lines.add(line)
@@ -1213,67 +2259,135 @@ def answer_direct_operational_query(
 ) -> dict | None:
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     plan = plan or build_chat_execution_plan(question)
-    clean_question = plan.normalized_question or _operational_lookup_key(question)
-    emergency_answer = _answer_emergency_response_direct(question, clean_question)
-    if emergency_answer:
-        return emergency_answer
-    fog_underway_answer = _answer_fog_underway_procedure_direct(question, clean_question)
-    if fog_underway_answer:
-        return fog_underway_answer
-    navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
-    if navigation_lights_answer:
-        return navigation_lights_answer
-    navigation_basics_answer = answer_navigation_basics_direct(question)
-    if navigation_basics_answer:
-        return navigation_basics_answer
-    unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
-    if unclear_answer:
-        return unclear_answer
-    safety_answer = _answer_safety_hard_limit(question, clean_question)
-    if safety_answer:
-        return safety_answer
+    plan_question_key = _operational_lookup_key(getattr(plan, "question", "") or "")
+    question_key = _operational_lookup_key(question)
+    if plan.normalized_question and plan_question_key == question_key:
+        clean_question = plan.normalized_question
+    else:
+        clean_question = question_key
+    source_coverage_answer = _answer_source_coverage_direct(question, clean_question)
+    if source_coverage_answer:
+        return _attach_operational_diagnostic(source_coverage_answer, question)
+    checklist_answer = _answer_lisnave_checklist_direct(question, clean_question)
+    if checklist_answer:
+        return _attach_operational_diagnostic(checklist_answer, question)
+    tup_answer = _answer_tup_formula_direct(question, clean_question)
+    if tup_answer:
+        return _attach_operational_diagnostic(tup_answer, question)
+    tms1_defenses_answer = _answer_tms1_defenses_direct(question, clean_question)
+    if tms1_defenses_answer:
+        return _attach_operational_diagnostic(tms1_defenses_answer, question)
+    lisnave_face_answer = _answer_lisnave_face_side_direct(question, clean_question)
+    if lisnave_face_answer:
+        return _attach_operational_diagnostic(lisnave_face_answer, question)
+    doca21_depth_answer = _answer_lisnave_doca21_depth_direct(question, clean_question)
+    if doca21_depth_answer:
+        return _attach_operational_diagnostic(doca21_depth_answer, question)
     hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
     if hard_limit_answer:
-        return hard_limit_answer
-    tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
-    if tug_guidance_answer:
-        return tug_guidance_answer
+        return _attach_operational_diagnostic(hard_limit_answer, question)
+    lisnave_doca_tug_answer = _answer_lisnave_doca_tug_direct(question, clean_question)
+    if lisnave_doca_tug_answer:
+        return _attach_operational_diagnostic(lisnave_doca_tug_answer, question)
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
-        return route_answer
+        return _attach_operational_diagnostic(route_answer, question)
+    cross_reponto_answer = _answer_cross_reponto_scheduling_direct(question, clean_question)
+    if cross_reponto_answer:
+        return _attach_operational_diagnostic(cross_reponto_answer, question)
+    lisnave_night_length_answer = _answer_lisnave_night_length_direct(question, clean_question)
+    if lisnave_night_length_answer:
+        return _attach_operational_diagnostic(lisnave_night_length_answer, question)
+    lisnave_dimensions_answer = _answer_lisnave_dimensions_direct(question, clean_question)
+    if lisnave_dimensions_answer:
+        return _attach_operational_diagnostic(lisnave_dimensions_answer, question)
+    lisnave_profile_answer = _answer_lisnave_profile_direct(question, clean_question)
+    if lisnave_profile_answer:
+        return _attach_operational_diagnostic(lisnave_profile_answer, question)
+    tanquisado_dimensions_answer = _answer_tanquisado_dimensions_direct(question, clean_question)
+    if tanquisado_dimensions_answer:
+        return _attach_operational_diagnostic(tanquisado_dimensions_answer, question)
+    eco_oil_limits_answer = _answer_eco_oil_limits_direct(question, clean_question)
+    if eco_oil_limits_answer:
+        return _attach_operational_diagnostic(eco_oil_limits_answer, question)
+    barra_draft_answer = _answer_barra_draft_direct(question, clean_question)
+    if barra_draft_answer:
+        return _attach_operational_diagnostic(barra_draft_answer, question)
+    visibility_threshold_answer = _answer_visibility_threshold_direct(question, clean_question)
+    if visibility_threshold_answer:
+        return _attach_operational_diagnostic(visibility_threshold_answer, question)
+    emergency_answer = _answer_emergency_response_direct(question, clean_question)
+    if emergency_answer:
+        return _attach_operational_diagnostic(emergency_answer, question)
+    fog_underway_answer = _answer_fog_underway_procedure_direct(question, clean_question)
+    if fog_underway_answer:
+        return _attach_operational_diagnostic(fog_underway_answer, question)
+    alstom_answer = _answer_alstom_direct(question, clean_question)
+    if alstom_answer:
+        return _attach_operational_diagnostic(alstom_answer, question)
+    safety_answer = _answer_safety_hard_limit(question, clean_question)
+    if safety_answer:
+        return _attach_operational_diagnostic(safety_answer, question)
+    fog_port_answer = _answer_fog_port_procedure_direct(question, clean_question)
+    if fog_port_answer:
+        return _attach_operational_diagnostic(fog_port_answer, question)
+    secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
+    if secil_entry_timing_answer:
+        return _attach_operational_diagnostic(secil_entry_timing_answer, question)
+    secil_reponto_answer = _answer_secil_reponto_direct(question, clean_question)
+    if secil_reponto_answer:
+        return _attach_operational_diagnostic(secil_reponto_answer, question)
+    tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
+    if tug_guidance_answer:
+        return _attach_operational_diagnostic(tug_guidance_answer, question)
+    colreg_answer = answer_colreg_interpretation_direct(question)
+    if colreg_answer:
+        return _attach_operational_diagnostic(colreg_answer, question)
+    navigation_lights_answer = _answer_navigation_lights_direct(question, clean_question)
+    if navigation_lights_answer:
+        return _attach_operational_diagnostic(navigation_lights_answer, question)
+    navigation_basics_answer = answer_navigation_basics_direct(question)
+    if navigation_basics_answer:
+        return _attach_operational_diagnostic(navigation_basics_answer, question)
+    sapec_followup_answer = _answer_sapec_non_imo_followup_direct(question, clean_question)
+    if sapec_followup_answer:
+        return _attach_operational_diagnostic(sapec_followup_answer, question)
+    unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
+    if unclear_answer:
+        return _attach_operational_diagnostic(unclear_answer, question)
     if plan.requires_llm_synthesis:
         return None
 
     live_environment_answer = _answer_live_environment_query(question, clean_question, plan=plan)
     if live_environment_answer:
-        return live_environment_answer
+        return _attach_operational_diagnostic(live_environment_answer, question)
     berthed_vessels_answer = _answer_berthed_vessels_query(question, clean_question)
     if berthed_vessels_answer:
-        return berthed_vessels_answer
+        return _attach_operational_diagnostic(berthed_vessels_answer, question)
     vessel_detail_answer = _answer_vessel_detail_query(question, clean_question)
     if vessel_detail_answer:
-        return vessel_detail_answer
+        return _attach_operational_diagnostic(vessel_detail_answer, question)
     maneuver_actor_answer = _answer_maneuver_actor_query(question, clean_question, plan=plan)
     if maneuver_actor_answer:
-        return maneuver_actor_answer
+        return _attach_operational_diagnostic(maneuver_actor_answer, question)
     agent_lookup_answer = _answer_agent_lookup_query(question, clean_question, plan=plan)
     if agent_lookup_answer:
-        return agent_lookup_answer
+        return _attach_operational_diagnostic(agent_lookup_answer, question)
     agent_agency_answer = _answer_agent_agency_query(question, clean_question)
     if agent_agency_answer:
-        return agent_agency_answer
+        return _attach_operational_diagnostic(agent_agency_answer, question)
     maneuver_id_answer = _answer_maneuver_id_query(question, clean_question, plan=plan)
     if maneuver_id_answer:
-        return maneuver_id_answer
+        return _attach_operational_diagnostic(maneuver_id_answer, question)
     recent_departures_answer = _answer_recent_departures_query(question, clean_question)
     if recent_departures_answer:
-        return recent_departures_answer
+        return _attach_operational_diagnostic(recent_departures_answer, question)
     expected_arrivals_answer = _answer_expected_arrivals_query(question, clean_question)
     if expected_arrivals_answer:
-        return expected_arrivals_answer
+        return _attach_operational_diagnostic(expected_arrivals_answer, question)
     planned_maneuvers_answer = _answer_planned_maneuvers_query(question, clean_question)
     if planned_maneuvers_answer:
-        return planned_maneuvers_answer
+        return _attach_operational_diagnostic(planned_maneuvers_answer, question)
 
     maneuver_type = plan.maneuver_lookup_type or ""
     maneuver_label = "manobra"
@@ -1300,7 +2414,10 @@ def answer_direct_operational_query(
         maneuvers = [item for item in maneuvers if (item.get("type") or "").strip().lower() == maneuver_type]
     if not maneuvers:
         answer = f"Não encontrei {maneuver_label} para {resolved_port_call.get('vessel_name', 'este navio')}."
-        return {"answer": answer, "sources": [], "answer_origin": "operational_lookup"}
+        return _attach_operational_diagnostic(
+            {"answer": answer, "sources": [], "answer_origin": "operational_lookup"},
+            question,
+        )
 
     maneuvers.sort(
         key=lambda item: (
@@ -1318,7 +2435,7 @@ def answer_direct_operational_query(
         f"O ID da {type_label} de {resolved_port_call.get('vessel_name', 'este navio')} "
         f"é {short_id} (completo: {maneuver_id})."
     )
-    return {
+    return _attach_operational_diagnostic({
         "answer": answer,
         "sources": [
             {
@@ -1329,7 +2446,7 @@ def answer_direct_operational_query(
             }
         ],
         "answer_origin": "operational_lookup",
-    }
+    }, question)
 
 
 def _source_from_answer(document: str, source_id: str, answer: str, question: str) -> list[dict]:

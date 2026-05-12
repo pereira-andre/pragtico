@@ -1,7 +1,7 @@
 DOCUMENTO: SETÚBAL - BALIZAGEM E LISTA DE LUZES
 ENTIDADE EMISSORA: Instituto Hidrográfico
 FONTE: PN35 - Ajudas à Navegação - Lista de Luzes, março 2026
-ÂMBITO: Porto de Setúbal, Canal Norte, Canal Sul e Pinheiro da Cruz
+ÂMBITO: Porto de Setúbal, Canal Norte e Canal Sul
 DATUM: WGS84
 SISTEMA IALA: Setúbal usa o sistema IALA A. No sentido convencional de entrada do mar para o porto, as marcas laterais de bombordo são vermelhas/cilíndricas e as de estibordo são verdes/cónicas.
 AVISO: Conhecimento de apoio operacional. Para navegação oficial confirmar PN35, avisos aos navegantes e cartas em vigor.
@@ -10,7 +10,6 @@ RESUMO POR ZONA:
 - SETÚBAL: 18 ajudas à navegação registadas.
 - SETÚBAL - CANAL NORTE: 30 ajudas à navegação registadas.
 - SETÚBAL - CANAL SUL: 53 ajudas à navegação registadas.
-- PINHEIRO DA CRUZ: 1 ajudas à navegação registadas.
 
 REGISTOS E CARACTERÍSTICAS:
 
@@ -120,6 +119,3 @@ SETÚBAL - CANAL SUL
 - N.º nacional 399.72 | N.º internacional D-2157.1 | Cais Dois | posição 38º28,19'N 8º47,47'W (WGS84) | característica Q(3) W 5s | altitude 8 m | alcance 6 M | detalhes: Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 2,8s; Duque D’Alba. 3
 - N.º nacional 399.73 | N.º internacional D-2157.2 | Cais Um | posição 38º28,21'N 8º47,58'W (WGS84) | característica Q(5) W 8s | altitude 8 m | alcance 6 M | detalhes: Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 0,8s; Duque D’Alba. 3 Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 3,8s
 - N.º nacional 399.74 | N.º internacional D-2157.3 | Cais Zero | posição 38º28,20'N 8º47,85'W (WGS84) | característica Q(3) W 5s | altitude 8 m | alcance 6 M | detalhes: Poste cinzento Lt 0,2s; Ec 0,8s; Lt 0,2s; Ec 0,8s; Dolphin.; Lt 0,2s; Ec 2,8s; Duque D’Alba. 3
-
-PINHEIRO DA CRUZ
-- N.º nacional 399.8 | N.º internacional D-2158 | Pinheiro da Cruz | posição 38º15,48'N 8º46,32'W (WGS84) | característica Fl W 3s | altitude 67 m | alcance 9 M | detalhes: Coluna com Lt 1s; Ec 2s; faixas brancas; e vermelhas

@@ -1270,6 +1270,20 @@ def build_tuning_map_snapshot(
             description="Casos reais que afinam comparação, contexto e padrões práticos do assistente.",
             components=[
                 _build_tuning_component(
+                    label="Contexto provável",
+                    state="online",
+                    source_name="core/chat_context_scope.py + core/chat_reasoning.py",
+                    runtime_hook="scoped_history_for_question -> build_conversation_reasoning_state",
+                    detail="Camada que filtra histórico longo do WhatsApp e prepara uma ficha de caso para follow-ups curtos.",
+                    facts=[
+                        "Não envia a conversa inteira ao motor de resposta.",
+                        "Extrai local, operação, dimensões, carga, hora, meteo e percurso.",
+                        "Em caso de dúvida, obriga a assumir a premissa ou pedir confirmação.",
+                    ],
+                    action_url="/admin/tests",
+                    action_label="Ver testes",
+                ),
+                _build_tuning_component(
                     label="Casebooks de manobra",
                     state=_component_state(bool(maneuver_case_total), partial=True),
                     source_name="maneuver_cases",
@@ -1515,10 +1529,21 @@ def build_pipeline_snapshot(
                 "state": "online",
                 "state_label": _component_state_label("online"),
                 "metric": "linguagem natural + slash commands",
-                "detail": "O bot tenta perceber intenção, terminal, documento e se a pergunta depende do dia atual.",
+                "detail": "O bot tenta perceber intenção, terminal, documento, follow-up curto e se a pergunta depende do dia atual.",
                 "facts": [
                     "Percebe datas naturais para marés: hoje, amanhã, ontem e datas explícitas.",
-                    "Distingue perguntas documentais, operacionais, live e de memória supervisionada.",
+                    "Distingue perguntas documentais, operacionais, live, memória supervisionada e continuidade de caso.",
+                ],
+            },
+            {
+                "label": "Ficha de contexto provável",
+                "state": "online",
+                "state_label": _component_state_label("online"),
+                "metric": "histórico filtrado + factos extraídos",
+                "detail": "Para mensagens como “E carga não IMO”, prepara o último caso provável sem misturar casos incompatíveis.",
+                "facts": [
+                    "Usa histórico recente filtrado em vez da conversa inteira.",
+                    "Quando depende da continuidade, a resposta deve assumir a premissa em frase curta.",
                 ],
             },
             {
@@ -1800,13 +1825,13 @@ def build_bot_monitor_snapshot(
         {
             "id": "planner",
             "label": "Planner",
-            "detail": "Classifica pergunta: live direto, RAG, síntese técnica ou ação.",
+            "detail": "Classifica pergunta: live direto, RAG, síntese técnica, follow-up curto ou ação.",
             "state": "online",
         },
         {
             "id": "context",
             "label": "Contexto",
-            "detail": "Seleciona documentos, companions, berth profiles, live e casebooks relevantes.",
+            "detail": "Seleciona histórico filtrado, ficha provável, documentos, perfis, live e casebooks relevantes.",
             "state": rag_state,
         },
         {

@@ -21,6 +21,10 @@ def test_admin_bot_page_uses_clean_control_layout() -> None:
     assert "admin-bot-control-grid" in template
     assert "admin-bot-decision-map" in template
     assert '<a href="#casebooks">Governança detalhada</a>' in template
+    assert '<a href="#contexto">Contexto</a>' in template
+    assert "Como evita misturar casos no WhatsApp" in template
+    assert "core/chat_reasoning.py" in template
+    assert "/new · /porque · /debug" in template
     assert "Teste rápido" in template
     assert "Contexto disponível para resposta" in template
     assert "Definições e calibração do bot" in template

@@ -5,8 +5,12 @@ from __future__ import annotations
 import json
 import os
 import time
+import csv
 from copy import deepcopy
 from datetime import datetime, timedelta
+from io import StringIO
+from pathlib import Path
+from textwrap import wrap
 from typing import Any, Callable
 
 from blueprints.port_calls import (
@@ -21,12 +25,15 @@ from blueprints.port_calls import (
     _vessel_catalog_txt,
 )
 from core import services
+from core.chat_planner import build_chat_execution_plan
+from core.chat_reasoning import build_conversation_reasoning_state
 from core.form_helpers import (
     ensure_maneuver_hour_capacity_for_approval,
     ensure_portal_berth_is_available,
     ensure_portal_berth_is_physically_available,
 )
 from core.maneuver_context import answer_slash_validation, build_scale_context
+from core.operational_diagnostics import build_operational_diagnostic, format_operational_diagnostic
 from core.operational_actions import answer_slash_query, finalize_operational_proposal
 from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 from core.portal_notifications import latest_maneuver_by_type
@@ -40,6 +47,7 @@ from storage.port_call_helpers import _decorate_port_call
 
 
 TEST_VESSEL_PREFIX = "TESTE QA"
+RAILWAY_BOT_TEST_FIXTURE = Path(__file__).resolve().parents[1] / "resources" / "qa" / "railway_bot_tests_150.json"
 QUERY_SLASH_COMMANDS = {
     "local_warnings",
     "wave",
@@ -72,6 +80,25 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": ("Recomendo 4 rebocadores grandes", "mais de 220 m", "vento Norte forte"),
     },
     {
+        "id": "autoeuropa-roro-live-weather-tugs",
+        "group": "Rebocadores e vento",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Autoeuropa Ro-Ro com meteorologia atual",
+        "question": "Tenho um navio para sair da Autoeuropa. É um roro com 200 m e tem bowthruster. Quantos reboques devo pedir face às condições meteorológicas atuais?",
+        "expected_summary": "Cruza a regra de rebocadores com vento/rajadas atuais e não responde só com posicionamento.",
+        "source": "knowledge/tug_operational_guidance.json + meteorologia live",
+        "expected_origin": "operational_tug_guidance",
+        "expected_tokens": (
+            "Recomendo 2 rebocadores",
+            "Ro-Ro com vento Sul a sair: 2 rebocadores",
+            "Meteorologia considerada",
+            "rajadas 20",
+            "ponderar atrasar",
+        ),
+    },
+    {
         "id": "bulk-tms2-north-strong",
         "group": "Rebocadores e vento",
         "risk": "Critico",
@@ -96,6 +123,377 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "source": "knowledge/tug_operational_guidance.json",
         "expected_origin": "operational_tug_guidance",
         "expected_tokens": ("Recomendo 3 rebocadores", "acima de 100 m ate 150 m", "Quatro rebocadores sao excessivos"),
+    },
+    {
+        "id": "diagnostic-lisnave-300-six-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Lisnave 300 m",
+        "question": "Um navio na LISNAVE de 300 m manobra com quantos rebocadores normalmente?",
+        "expected_summary": "A ficha deve aplicar o patamar especifico antes de qualquer minimo generico.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Minimo critico identificado: 6 rebocador", "Lisnave acima de 250 m: 6 rebocadores"),
+    },
+    {
+        "id": "diagnostic-hidrolift-beam-limit",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Hidrolift boca 45 m",
+        "question": "Tenho um navio para entrar no hidrolift no preia-mar das 20:03. O navio tem 45 m de boca, pode manobrar?",
+        "expected_summary": "A ficha bloqueia pela boca antes de discutir a hora.",
+        "source": "core/operational_diagnostics.py + IT-014",
+        "expected_tokens": ("Bloqueio dimensional", "boca maxima 32 m", "Boca: 45 m"),
+    },
+    {
+        "id": "diagnostic-ecooil-two-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Eco-Oil com 2 rebocadores",
+        "question": "Entrada para Eco-Oil com 2 rebocadores pode avancar?",
+        "expected_summary": "A ficha deve chamar o minimo pratico local de 3 rebocadores.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Eco-Oil: usar sempre no minimo 3 rebocadores", "Rebocadores insuficientes"),
+    },
+    {
+        "id": "diagnostic-tanquisado-two-tugs",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico Tanquisado com 2 rebocadores",
+        "question": "Entrada para Tanquisado com 2 rebocadores pode avancar?",
+        "expected_summary": "A ficha deve chamar o minimo pratico local de 3 rebocadores.",
+        "source": "core/operational_diagnostics.py + knowledge/tug_operational_guidance.json",
+        "expected_tokens": ("Tanquisado: usar sempre no minimo 3 rebocadores", "Rebocadores insuficientes"),
+    },
+    {
+        "id": "diagnostic-route-reponto-lead-time",
+        "group": "Diagnostico operacional",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico percurso e reponto",
+        "question": "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?",
+        "expected_summary": "A ficha deve validar duracao origem-destino e hora de chegada ao ponto critico.",
+        "source": "core/operational_diagnostics.py + knowledge/Notas_Pilotagem.txt",
+        "expected_tokens": ("Percurso/duracao", "cerca de 1 hora e 30 minutos", "fase critica no cais/doca"),
+    },
+    {
+        "id": "diagnostic-secil-reponto",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico SECIL com reponto",
+        "question": "Entrada para a SECIL W marcada para as 13:30, tenho de ir ao reponto?",
+        "expected_summary": "A ficha deve tratar a SECIL como local critico de reponto e distinguir Oeste/Este.",
+        "source": "core/operational_diagnostics.py + IT-009_Secil.txt",
+        "expected_tokens": ("Local: SECIL", "SECIL W/Oeste", "todos os navios atracam proximo do reponto"),
+    },
+    {
+        "id": "diagnostic-alstom-mandatory-rules",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico ALSTOM regras obrigatorias",
+        "question": "Entrada para a Alstom desde a Barra com vento 15 kts pode avançar?",
+        "expected_summary": "A ficha deve aplicar estibordo, preia-mar, limite de vento, dia e uma manobra por reponto.",
+        "source": "core/operational_diagnostics.py + IT-038_Alstom.txt",
+        "expected_tokens": (
+            "Local: ALSTOM",
+            "atracam apenas por estibordo",
+            "reponto de preia-mar",
+            "1h30",
+            "inferior a 15 kt",
+            "atinge/excede o limite local",
+        ),
+    },
+    {
+        "id": "diagnostic-secil-isolates-old-lisnave-context",
+        "group": "Diagnostico operacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "operational_diagnostic",
+        "label": "Diagnostico SECIL sem herdar Lisnave",
+        "question": "Marquei manobra de entrada para a Secil E as 1925. Está correto?",
+        "history": [
+            {
+                "role": "user",
+                "content": "Um navio na LISNAVE de 300 m manobra com quantos rebocadores normalmente?",
+            },
+            {"role": "assistant", "content": "Recomendo 6 rebocadores grandes."},
+            {"role": "user", "content": "Com nevoeiro em porto posso avancar?"},
+        ],
+        "expected_summary": "A ficha deve tratar a SECIL E como novo caso e nao herdar Lisnave, nevoeiro ou rebocadores antigos.",
+        "source": "core/chat_context_scope.py + core/operational_diagnostics.py",
+        "expected_tokens": ("Local: SECIL", "Doca/cais: SECIL E/Este", "Hora referida: 19:25"),
+        "forbidden_tokens": ("Local: LISNAVE", "6 rebocador", "nevoeiro"),
+    },
+    {
+        "id": "conversation-context-sapec-non-imo-follow-up",
+        "group": "Contexto conversacional",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "conversation_reasoning",
+        "label": "Follow-up SAPEC carga não IMO",
+        "question": "E carga não IMO",
+        "history": [
+            {
+                "role": "user",
+                "content": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos?",
+            },
+            {
+                "role": "assistant",
+                "content": "Depende se a carga é IMO ou não IMO e da altura de água.",
+            },
+            {"role": "user", "content": "E carga não IMO"},
+        ],
+        "expected_summary": "A ficha deve assumir continuidade SAPEC quando o follow-up curto não conflita.",
+        "source": "core/chat_context_scope.py + core/chat_reasoning.py",
+        "expected_tokens": (
+            "Ficha de contexto provável",
+            "Premissa de continuidade",
+            "SAPEC / TPS-TGL",
+            "Calado: 9,2 m.",
+            "Carga: não IMO.",
+        ),
+    },
+    {
+        "id": "conversation-context-new-case-asks-confirmation",
+        "group": "Contexto conversacional",
+        "risk": "Alto",
+        "mode": "Manual guiado",
+        "runner": "manual",
+        "label": "Mudança de caso sem herança indevida",
+        "question": "Após falar da Lisnave, perguntar: Marquei entrada para Secil E às 19:25. Está correto?",
+        "expected_summary": "Deve tratar Secil E como novo caso, sem herdar rebocadores, nevoeiro ou LOA da Lisnave.",
+        "source": "core/chat_context_scope.py + /new",
+        "expected_tokens": (),
+    },
+    {
+        "id": "secil-e-entry-1925-reponto",
+        "group": "SECIL e reponto",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Entrada Secil E 19:25 validada contra reponto",
+        "question": "Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?",
+        "expected_summary": "A resposta deve validar a hora pelo reponto/antecedencia e nao apenas por inexistir proibicao noturna.",
+        "source": "IT-009_Secil.txt + marés live quando disponíveis",
+        "expected_origin": "secil_entry_timing",
+        "expected_tokens": ("Secil E", "30-45 min", "não é apenas ser dia/noite"),
+        "forbidden_tokens": ("não há proibição", "horário das 19:25 é, portanto, permitido"),
+    },
+    {
+        "id": "alstom-barra-preia-mar-lead-time",
+        "group": "Percursos e repontos",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "ALSTOM desde a Barra para preia-mar",
+        "question": "Quanto tempo da Barra para o Cais Alstom para apanhar o reponto de preia-mar?",
+        "expected_summary": "Usa a antecedencia operacional obrigatoria da ALSTOM, nao uma duracao generica do Canal Norte.",
+        "source": "IT-038_Alstom.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Cais ALSTOM", "1 hora e 30 minutos antes da preia-mar", "reponto de preia-mar"),
+    },
+    {
+        "id": "distance-tms1-alstom",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - ALSTOM",
+        "question": "Qual a distância do TMS 1 até à Alstom?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> ALSTOM.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "Cais ALSTOM", "3,5 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-sapec",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - SAPEC",
+        "question": "Qual a distância do TMS 1 até à SAPEC?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> SAPEC.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "SAPEC", "2,2 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-praias",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - Praias do Sado",
+        "question": "Qual a distância do TMS 1 até às Praias do Sado?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> Praias do Sado.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "Praias do Sado", "1,6 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-autoeuropa",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - Autoeuropa",
+        "question": "Qual a distância do TMS 1 até à Autoeuropa em NM?",
+        "expected_summary": "Aceita NM como unidade de distancia e usa a referencia direta.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "Autoeuropa", "1,0 milha náutica", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-joao-farto",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - Boia Joao Farto",
+        "question": "Qual a distância do TMS 1 até à bóia João Farto?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> Boia Joao Farto.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "Bóia João Farto", "1,6 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-outao",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - Outao",
+        "question": "Qual a distância do TMS 1 até ao Outão?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> Outao.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "Outão", "3,0 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "distance-tms1-fora-barra",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Distancia TMS 1 - fora da Barra",
+        "question": "Qual a distância do TMS 1 até fora da Barra?",
+        "expected_summary": "Usa a referencia direta de segmento TMS 1 -> fora da Barra/Pilar 2.",
+        "source": "knowledge/Notas_Pilotagem.txt",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("TMS 1", "fora da Barra", "6,0 milhas náuticas", "pode ser somada"),
+    },
+    {
+        "id": "route-plan-joao-farto-alstom",
+        "group": "Percursos e distancias",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Planeamento Canal Norte Joao Farto - ALSTOM",
+        "question": "Estou na Bóia João Farto para a Alstom, quanto falta?",
+        "expected_summary": "Calcula a distancia restante por pernadas e mostra rumos de entrada/saida.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Canal Norte", "5,0 milhas náuticas", "Bóia João Farto -> Bóia 1CC", "rumo 040°"),
+        "forbidden_tokens": ("rumo inverso",),
+    },
+    {
+        "id": "route-plan-full-north-channel",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Canal Norte completo desde embarque",
+        "question": "Da posição de embarque até ao fim do canal norte, qual a distância?",
+        "expected_summary": "Soma todas as pernadas desde a pilot station ate ao fim do Canal Norte.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Pilot station", "Canal Norte", "10,3 milhas náuticas", "SAPEC -> Cais ALSTOM"),
+    },
+    {
+        "id": "route-plan-tms2-north-channel-position",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Referencia TMS2 no Canal Norte",
+        "question": "Da entrada da barra ao TMS2 pelo canal norte, quanto falta?",
+        "expected_summary": "Situa TMS1/TMS2 no Canal Norte antes da Autoeuropa, como referencia operacional.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Canal Norte", "6,5 milhas náuticas", "TMS 1 -> Bóia 5CC", "Bóia 5CC -> TMS 2"),
+    },
+    {
+        "id": "route-plan-full-south-channel",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Canal Sul ate Boia 14CS",
+        "question": "Da entrada da barra até ao fim do canal sul, quais as milhas?",
+        "expected_summary": "Soma o Canal Sul desde o Pilar 2 ate a Boia 14CS.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Pilar 2", "Bóia 14CS", "10,0 milhas náuticas", "Bóia 12CS -> Bóia 14CS"),
+    },
+    {
+        "id": "route-plan-south-lisnave-eta",
+        "group": "Percursos e distancias",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "ETA Boia 12CS - Lisnave",
+        "question": "Da Bóia 12 CS para a Lisnave a 6 nós, saída às 10:00, qual ETA?",
+        "expected_summary": "Calcula distancia, pernadas restantes e ETA com velocidade indicada.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("Canal Sul para LISNAVE", "1,0 milha náutica", "A 6,0 kt", "ETA ao destino: 10:10"),
+    },
+    {
+        "id": "route-plan-south-reverse-headings",
+        "group": "Percursos e distancias",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Rumos inversos Lisnave - Pilar 2",
+        "question": "Da Lisnave para o Pilar 2, quais os rumos de saída?",
+        "expected_summary": "Aplica +180 graus aos rumos de entrada para sair no sentido inverso.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": ("10,5 milhas náuticas", "rumo 210°", "rumo 245°", "rumo 220°"),
+        "forbidden_tokens": ("rumo inverso",),
+    },
+    {
+        "id": "route-plan-cross-channel-lisnave-tms1",
+        "group": "Percursos e distancias",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "Ligacao Lisnave - TMS1 via Joao Farto",
+        "question": "Vou mudar um navio da LISNAVE para o TMS1. Se for a 5 kts quanto tempo levo de um cais ao outro?",
+        "expected_summary": "Liga Canal Sul e Canal Norte pela Boia Joao Farto e calcula tempo a velocidade indicada.",
+        "source": "knowledge/setubal_route_planning.json",
+        "expected_origin": "operational_route_transit",
+        "expected_tokens": (
+            "Canal Sul / Canal Norte via Bóia João Farto",
+            "7,9 milhas náuticas",
+            "Bóia 4CS -> Bóia João Farto",
+            "Bóia João Farto -> Bóia 1CC",
+            "A 5,0 kt, duração estimada: 1 h 35 min.",
+        ),
+        "forbidden_tokens": ("rumo inverso",),
     },
     {
         "id": "tanquisado-east-side-push",
@@ -249,6 +647,32 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "source": "knowledge/operational_safety_limits.json",
         "expected_origin": "operational_safety_limit",
         "expected_tokens": ("31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"),
+    },
+    {
+        "id": "colreg-narrow-channel-overtaking",
+        "group": "RIEAM/COLREG",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "COLREG ultrapassagem canal estreito",
+        "question": "Pelo COLREG, quero ultrapassar num canal estreito. Que sinais uso?",
+        "expected_summary": "Interpreta Regra 9 e Regra 34 com sinais de ultrapassagem e acordo.",
+        "source": "knowledge/RIEAM_COLREG_Regras_Estrada.txt",
+        "expected_origin": "colreg_interpretation",
+        "expected_tokens": ("Regra 9", "Regra 34", "2 sons prolongados + 1 curto", "5 sons curtos"),
+    },
+    {
+        "id": "colreg-dredging-safe-side",
+        "group": "RIEAM/COLREG",
+        "risk": "Alto",
+        "mode": "Automatico",
+        "runner": "direct_operational",
+        "label": "COLREG dragagem bordo livre",
+        "question": "No RIEAM, uma draga com vermelho vermelho e verde verde indica o quê?",
+        "expected_summary": "Interpreta Regra 27: vermelho marca obstrucao e verde marca bordo livre.",
+        "source": "knowledge/RIEAM_COLREG_Regras_Estrada.txt",
+        "expected_origin": "colreg_interpretation",
+        "expected_tokens": ("Regra 27", "bordo obstruído", "bordo por onde se pode passar"),
     },
     {
         "id": "visibility-one-km-threshold",
@@ -432,6 +856,9 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
             "ve o outro por estibordo",
             "Regra 19",
             "visibilidade reduzida",
+            "Regra 34 - Ultrapassagem em canal estreito",
+            "Regra 27 - Dragagem/trabalhos submarinos",
+            "Anexo IV - Perigo",
         ),
     },
     {
@@ -824,6 +1251,284 @@ def cleanup_operational_test_records() -> dict:
     }
 
 
+def _railway_bot_test_records() -> list[dict]:
+    if not RAILWAY_BOT_TEST_FIXTURE.exists():
+        return []
+    try:
+        payload = json.loads(RAILWAY_BOT_TEST_FIXTURE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    records = payload.get("records") if isinstance(payload, dict) else []
+    if not isinstance(records, list):
+        return []
+    normalized: list[dict] = []
+    for index, record in enumerate(records, start=1):
+        if not isinstance(record, dict):
+            continue
+        expected = [str(item) for item in record.get("expected_substrings") or [] if str(item or "").strip()]
+        forbidden = [str(item) for item in record.get("forbidden_substrings") or [] if str(item or "").strip()]
+        missing = [str(item) for item in record.get("missing_expected") or [] if str(item or "").strip()]
+        forbidden_present = [str(item) for item in record.get("forbidden_present") or [] if str(item or "").strip()]
+        warnings = [str(item) for item in record.get("warnings") or [] if str(item or "").strip()]
+        verdict = str(record.get("verdict") or "review").strip().lower()
+        normalized.append(
+            {
+                **record,
+                "number": record.get("number") or index,
+                "suite": record.get("suite") or "Railway",
+                "group": record.get("group") or "Sem grupo",
+                "risk": record.get("risk") or "",
+                "question": record.get("question") or "",
+                "expected_substrings": expected,
+                "forbidden_substrings": forbidden,
+                "expected_summary": " · ".join(expected) if expected else "--",
+                "forbidden_summary": " · ".join(forbidden) if forbidden else "--",
+                "missing_expected": missing,
+                "forbidden_present": forbidden_present,
+                "warnings": warnings,
+                "verdict": verdict,
+                "state_badge": {
+                    "pass": "online",
+                    "passed": "online",
+                    "fail": "offline",
+                    "failed": "offline",
+                    "review": "degraded",
+                    "warning": "degraded",
+                }.get(verdict, "degraded"),
+                "verification_summary": _railway_verification_summary(verdict, missing, forbidden_present, warnings),
+                "answer_origin": record.get("answer_origin") or "--",
+                "answer_excerpt": record.get("answer_excerpt") or " ".join(str(record.get("answer") or "").split())[:420],
+            }
+        )
+    return normalized
+
+
+def _railway_verification_summary(
+    verdict: str,
+    missing: list[str],
+    forbidden_present: list[str],
+    warnings: list[str],
+) -> str:
+    if missing:
+        return "Faltam: " + "; ".join(missing[:3])
+    if forbidden_present:
+        return "Proibidos presentes: " + "; ".join(forbidden_present[:3])
+    if warnings:
+        return "Avisos: " + "; ".join(warnings[:3])
+    if verdict in {"pass", "passed"}:
+        return "Critérios verificados"
+    return "Requer revisão"
+
+
+def _railway_bot_test_groups(records: list[dict]) -> list[dict]:
+    grouped: dict[str, list[dict]] = {}
+    for record in records:
+        grouped.setdefault(record["suite"], []).append(record)
+    return [
+        {
+            "name": suite,
+            "count": len(items),
+            "passed_count": sum(1 for item in items if item["verdict"] in {"pass", "passed"}),
+            "failed_count": sum(1 for item in items if item["verdict"] in {"fail", "failed"}),
+            "review_count": sum(1 for item in items if item["verdict"] not in {"pass", "passed", "fail", "failed"}),
+            "items": items,
+        }
+        for suite, items in grouped.items()
+    ]
+
+
+def railway_bot_test_log_inventory() -> dict:
+    """Return the 150 Railway bot test records used for page inspection and export."""
+    records = _railway_bot_test_records()
+    passed_count = sum(1 for item in records if item["verdict"] in {"pass", "passed"})
+    failed_count = sum(1 for item in records if item["verdict"] in {"fail", "failed"})
+    review_count = len(records) - passed_count - failed_count
+    return {
+        "count": len(records),
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "review_count": review_count,
+        "fixture_path": str(RAILWAY_BOT_TEST_FIXTURE),
+        "groups": _railway_bot_test_groups(records),
+        "records": records,
+        "error": "" if records else "Fixture dos 150 testes Railway não encontrada ou inválida.",
+    }
+
+
+def _railway_bot_test_export_payload() -> dict:
+    inventory = railway_bot_test_log_inventory()
+    return {
+        "description": "150 perguntas executadas contra Railway para validar o bot PRAGtico.",
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "summary": {
+            "total": inventory["count"],
+            "passed": inventory["passed_count"],
+            "review": inventory["review_count"],
+            "failed": inventory["failed_count"],
+        },
+        "records": inventory["records"],
+    }
+
+
+def _railway_bot_test_export_text(payload: dict) -> str:
+    summary = payload.get("summary") or {}
+    lines = [
+        "PRAGtico - 150 testes Railway",
+        f"Total: {summary.get('total', 0)}",
+        f"Corretos: {summary.get('passed', 0)}",
+        f"Duvidas: {summary.get('review', 0)}",
+        f"Falhas/bugs: {summary.get('failed', 0)}",
+        "",
+    ]
+    for item in payload.get("records") or []:
+        lines.extend(
+            [
+                f"#{item.get('number')} [{item.get('verdict')}] {item.get('suite')} / {item.get('group')}",
+                f"Pergunta: {item.get('question')}",
+                f"Origem resposta: {item.get('answer_origin')}",
+                f"Esperado: {item.get('expected_summary')}",
+                f"Verificacao: {item.get('verification_summary')}",
+                "Resposta:",
+                str(item.get("answer") or "").strip(),
+                "",
+            ]
+        )
+    return "\n".join(lines).strip() + "\n"
+
+
+def _pdf_safe_text(value: str) -> str:
+    encoded = str(value or "").encode("cp1252", "replace").decode("cp1252")
+    return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _render_text_pdf(title: str, body: str) -> bytes:
+    page_width = 595
+    page_height = 842
+    margin = 48
+    font_size = 9
+    line_height = 13
+    usable_width = page_width - (margin * 2)
+    max_chars = max(42, int(usable_width / (font_size * 0.62)))
+    raw_lines = [title, "", *str(body or "").splitlines()]
+    wrapped_lines: list[str] = []
+    for raw_line in raw_lines:
+        clean = str(raw_line or "").replace("\t", "  ")
+        if not clean:
+            wrapped_lines.append("")
+            continue
+        wrapped_lines.extend(
+            wrap(
+                clean,
+                width=max_chars,
+                replace_whitespace=False,
+                drop_whitespace=False,
+                break_long_words=True,
+                break_on_hyphens=False,
+            )
+            or [""]
+        )
+    max_lines_per_page = max(1, int((page_height - (margin * 2)) / line_height))
+    pages = [
+        wrapped_lines[index:index + max_lines_per_page]
+        for index in range(0, len(wrapped_lines), max_lines_per_page)
+    ] or [["Sem conteúdo."]]
+
+    objects: dict[int, bytes] = {}
+    font_id = 3
+    next_id = 4
+    page_ids: list[int] = []
+    for page_lines in pages:
+        page_id = next_id
+        content_id = next_id + 1
+        next_id += 2
+        page_ids.append(page_id)
+        stream_lines = ["BT", f"/F1 {font_size} Tf"]
+        y = page_height - margin
+        for line in page_lines:
+            stream_lines.append(f"1 0 0 1 {margin} {y} Tm ({_pdf_safe_text(line)}) Tj")
+            y -= line_height
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines).encode("cp1252", "replace")
+        objects[content_id] = (
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream"
+        )
+        objects[page_id] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+
+    objects[font_id] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[2] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets: dict[int, int] = {}
+    for object_id in range(1, next_id):
+        offsets[object_id] = len(pdf)
+        pdf.extend(f"{object_id} 0 obj\n".encode("ascii"))
+        pdf.extend(objects[object_id])
+        pdf.extend(b"\nendobj\n")
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {next_id}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for object_id in range(1, next_id):
+        pdf.extend(f"{offsets[object_id]:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {next_id} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
+
+
+def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
+    """Export the 150 Railway bot tests in a debug-friendly format."""
+    export_format = str(export_format or "").strip().lower()
+    if export_format not in {"json", "csv", "pdf"}:
+        raise ValueError("Formato de exportação inválido.")
+    payload = _railway_bot_test_export_payload()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    if export_format == "json":
+        return (
+            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+            "application/json; charset=utf-8",
+            f"pragtico_railway_150_testes_{timestamp}.json",
+        )
+    if export_format == "csv":
+        output = StringIO()
+        fieldnames = [
+            "number",
+            "suite",
+            "group",
+            "risk",
+            "verdict",
+            "question",
+            "answer_origin",
+            "expected_summary",
+            "verification_summary",
+            "latency_ms",
+            "conversation_id",
+            "message_id",
+            "answer",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for item in payload.get("records") or []:
+            writer.writerow(item)
+        return (
+            output.getvalue().encode("utf-8-sig"),
+            "text/csv; charset=utf-8",
+            f"pragtico_railway_150_testes_{timestamp}.csv",
+        )
+    pdf = _render_text_pdf(
+        "PRAGtico - 150 testes Railway",
+        _railway_bot_test_export_text(payload),
+    )
+    return pdf, "application/pdf", f"pragtico_railway_150_testes_{timestamp}.pdf"
+
+
 def operational_test_inventory() -> dict:
     """Return current retained test records so the admin page can show cleanup state."""
     matrix = critical_bot_test_matrix()
@@ -835,6 +1540,7 @@ def operational_test_inventory() -> dict:
         "bot_matrix_count": len(matrix),
         "bot_matrix_automatic_count": automatic_count,
         "bot_matrix_manual_count": manual_count,
+        "railway_log": railway_bot_test_log_inventory(),
         "expected_module_count": 9,
     }
     try:
@@ -857,6 +1563,11 @@ def operational_test_inventory() -> dict:
 def _missing_expected_tokens(text: str, expected_tokens: tuple[str, ...] | list[str]) -> list[str]:
     folded = str(text or "").casefold()
     return [str(token) for token in expected_tokens if str(token or "").strip() and str(token).casefold() not in folded]
+
+
+def _present_forbidden_tokens(text: str, forbidden_tokens: tuple[str, ...] | list[str]) -> list[str]:
+    folded = str(text or "").casefold()
+    return [str(token) for token in forbidden_tokens if str(token or "").strip() and str(token).casefold() in folded]
 
 
 def _critical_knowledge_dir() -> str:
@@ -3240,6 +3951,24 @@ class OperationalFlowSuite:
                     text = str(payload.get("answer") or "")
                     origin = str(payload.get("answer_origin") or "")
                     origin_ok = not item.get("expected_origin") or origin == item.get("expected_origin")
+                elif runner == "operational_diagnostic":
+                    diagnostic = build_operational_diagnostic(
+                        item.get("question", ""),
+                        history=item.get("history") or [],
+                        knowledge_dir=_active_knowledge_dir() or "knowledge",
+                    )
+                    text = format_operational_diagnostic(diagnostic)
+                    origin_ok = bool(diagnostic.get("present"))
+                elif runner == "conversation_reasoning":
+                    plan = build_chat_execution_plan(str(item.get("question") or ""))
+                    state = build_conversation_reasoning_state(
+                        str(item.get("question") or ""),
+                        list(item.get("history") or []),
+                        plan,
+                    )
+                    text = str((state or {}).get("summary") or "")
+                    origin = "conversation_reasoning"
+                    origin_ok = bool(state)
                 elif runner == "knowledge_json":
                     text = _critical_json_source_text(str(item.get("source_path") or ""))
                     origin_ok = True
@@ -3270,6 +3999,7 @@ class OperationalFlowSuite:
                 continue
 
             missing = _missing_expected_tokens(text, expected_tokens)
+            forbidden = _present_forbidden_tokens(text, item.get("forbidden_tokens") or ())
             expected_parts = [str(item.get("expected_summary") or "Termos criticos presentes.")]
             if item.get("expected_origin"):
                 expected_parts.append(f"origem {item['expected_origin']}")
@@ -3278,9 +4008,10 @@ class OperationalFlowSuite:
                 label,
                 str(item.get("source") or runner or "--"),
                 " ".join(expected_parts),
-                origin_ok and bool(text.strip()) and not missing,
+                origin_ok and bool(text.strip()) and not missing and not forbidden,
                 (
                     f"origem={origin or '--'} · falta={', '.join(missing) if missing else 'nada'} · "
+                    f"proibido={', '.join(forbidden) if forbidden else 'nada'} · "
                     f"{text[:260] or '--'}"
                 ),
             )

@@ -361,6 +361,20 @@ DISTÂNCIAS ENTRE TERMINAIS — REFERÊNCIA PARA MUDANÇAS DE CAIS:
 SAPEC até ao Estaleiro LISNAVE/Mitrena: 10,5 milhas náuticas.
 TMS 2 / Centro da Cidade até ao Estaleiro LISNAVE/Mitrena: 9,0 milhas náuticas.
 
+DISTÂNCIAS POR SEGMENTO A PARTIR DO TMS 1:
+
+Estas distâncias servem como referência de percurso por segmento. Podem ser
+somadas entre si quando se pretenda estimar uma rota composta e quando essa soma
+fizer sentido operacional ao longo do canal navegável.
+
+TMS 1 até ao Cais ALSTOM: 3,5 milhas náuticas.
+TMS 1 até ao SAPEC: 2,2 milhas náuticas.
+TMS 1 até às Praias do Sado: 1,6 milhas náuticas.
+TMS 1 até à Autoeuropa / Ro-Ro: 1,0 milha náutica.
+TMS 1 até à Bóia João Farto: 1,6 milhas náuticas.
+TMS 1 até ao Outão: 3,0 milhas náuticas.
+TMS 1 até fora da Barra / Pilar 2: 6,0 milhas náuticas.
+
 TABELA RESUMO DE DISTÂNCIAS A PARTIR DO PILAR NÚMERO 2:
 
 Pilar 2 → Fundeadouro Norte:    5,0 NM
@@ -610,6 +624,54 @@ MARCOS VISUAIS DE REFERÊNCIA ÚTEIS:
 visual clássica para posicionamento no Canal Norte.
 Para os terminais TMS 2 e Auto Europa: manter o navio a norte do enfiamento
 SAPEC (116,5°), usando as bóias verdes como referência de posicionamento lateral.
+
+================================================================================
+PLANEAMENTO INTERNO — DISTÂNCIAS E RUMOS POR PERNADA
+================================================================================
+
+Referência: a pilot station é a posição de embarque 1 NM fora da Barra; o Pilar 2
+é a entrada da Barra. Cada linha abaixo representa a pernada do waypoint indicado
+para o waypoint seguinte. Os rumos são verdadeiros (000° a 359°). Para a saída
+no sentido inverso, usar o rumo recíproco: rumo de entrada + 180° (mod 360).
+TMS 1 e TMS 2 entram como referências de posicionamento no Canal Norte para dar
+uma ideia operacional de distâncias e canais; não devem ser tratados como
+coordenadas hidrográficas exatas.
+
+Canal Norte:
+- Pilot station -> Pilar 2: rumo 040°, distância 1,0 NM; saída 220°.
+- Pilar 2 -> Outão: rumo 040°, distância 2,8 NM; saída 220°.
+- Outão -> Bóia João Farto: rumo 040°, distância 1,5 NM; saída 220°.
+- Bóia João Farto -> Bóia 1CC: rumo 040°, distância 0,6 NM; saída 220°.
+- Bóia 1CC -> Bóia 3CC: rumo 074°, distância 0,7 NM; saída 254°.
+- Bóia 3CC -> TMS 1: rumo 105°, distância 0,3 NM; saída 285°.
+- TMS 1 -> Bóia 5CC: rumo 105°, distância 0,2 NM; saída 285°.
+- Bóia 5CC -> TMS 2: rumo 120°, distância 0,4 NM; saída 300°.
+- TMS 2 -> Autoeuropa: rumo 120°, distância 0,4 NM; saída 300°.
+- Autoeuropa -> Praias do Sado: rumo 115°, distância 0,7 NM; saída 295°.
+- Praias do Sado -> SAPEC: rumo 130°, distância 0,6 NM; saída 310°.
+- SAPEC -> ALSTOM: rumo 120°, distância 1,1 NM; saída 300°.
+
+Referência de posicionamento: TMS 1 fica entre a Bóia 3CC e a Bóia 5CC; TMS 2
+fica entre a Bóia 5CC e a Autoeuropa. Totais de referência: Pilot station ->
+TMS 1 = 6,9 NM; Pilot station -> TMS 2 = 7,5 NM; Pilot station -> ALSTOM pelo
+Canal Norte = 10,3 NM. A partir do Pilar 2: TMS 1 = 5,9 NM e TMS 2 = 6,5 NM.
+
+Canal Sul:
+- Pilot station -> Pilar 2: rumo 040°, distância 1,0 NM; saída 220°.
+- Pilar 2 -> Outão: rumo 040°, distância 2,8 NM; saída 220°.
+- Outão -> Bóia João Farto: rumo 055°, distância 1,4 NM; saída 235°.
+- Bóia João Farto -> Bóia 4CS: rumo 110°, distância 1,0 NM; saída 290°.
+- Bóia 4CS -> Bóia 6CS: rumo 125°, distância 2,3 NM; saída 305°.
+- Bóia 6CS -> Bóia 12CS: rumo 110°, distância 2,0 NM; saída 290°.
+- Bóia 12CS -> Bóia 14CS: rumo 065°, distância 0,5 NM; saída 245°.
+
+A partir da Bóia 14CS:
+- Bóia 14CS -> Tanquisado / Eco-Oil: rumo 311°, distância 0,6 NM; saída 131°.
+- Bóia 14CS -> LISNAVE / docas / Hidrolift: rumo 030°, distância 0,5 NM; saída 210°.
+- Bóia 14CS -> Teporset: rumo 060°, distância 1,0 NM; saída 240°.
+
+Totais de referência: Pilot station -> Bóia 14CS = 11,0 NM; Pilar 2 -> Bóia
+14CS = 10,0 NM; Pilar 2 -> LISNAVE/docas/Hidrolift = 10,5 NM.
 
 ================================================================================
 SECÇÃO DE PERGUNTAS E RESPOSTAS — RECUPERAÇÃO SEMÂNTICA

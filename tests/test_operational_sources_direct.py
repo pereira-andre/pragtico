@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from copy import deepcopy
+from datetime import date, datetime
 import unittest
+from zoneinfo import ZoneInfo
 
 from flask import Flask
 
 from core import services
+from core.chat_planner import build_chat_execution_plan
 from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 
 
@@ -88,6 +92,9 @@ class FakeWeatherService:
         ],
     }
 
+    def __init__(self) -> None:
+        self.forecast = deepcopy(self.forecast)
+
     def get_forecast(self, days: int = 3) -> dict:
         return self.forecast
 
@@ -109,10 +116,41 @@ class FakeWeatherService:
         return []
 
 
+class FakeTideEvent:
+    def __init__(self, year: int, month: int, day: int, hour: int, minute: int, height: float) -> None:
+        self.timestamp = datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Europe/Lisbon"))
+        self.height = height
+
+    @property
+    def date_value(self) -> date:
+        return self.timestamp.date()
+
+    @property
+    def tide_type(self) -> str:
+        return "preia-mar" if self.height >= 2.0 else "baixa-mar"
+
+
+class FakeTideService:
+    def __init__(self) -> None:
+        self.events = [
+            FakeTideEvent(2026, 5, 8, 1, 29, 1.2),
+            FakeTideEvent(2026, 5, 8, 7, 42, 2.5),
+            FakeTideEvent(2026, 5, 8, 13, 30, 1.4),
+            FakeTideEvent(2026, 5, 8, 20, 3, 2.7),
+        ]
+
+    def resolve_query_dates(self, question: str) -> list[date]:
+        return [date(2026, 5, 8)]
+
+    def events_for_date(self, target_date: date) -> list[FakeTideEvent]:
+        return [item for item in self.events if item.date_value == target_date]
+
+
 class OperationalSourcesDirectTests(unittest.TestCase):
     def setUp(self) -> None:
         self.previous_store = services.store
         self.previous_weather_service = services.weather_service
+        self.previous_tide_service = services.tide_service
         self.app = Flask(__name__)
         self.app.secret_key = "test"
         self.activity = {
@@ -178,10 +216,12 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         }
         services.store = FakeStore(self.activity)
         services.weather_service = FakeWeatherService()
+        services.tide_service = FakeTideService()
 
     def tearDown(self) -> None:
         services.store = self.previous_store
         services.weather_service = self.previous_weather_service
+        services.tide_service = self.previous_tide_service
 
     def _answer(self, question: str) -> str:
         with self.app.test_request_context("/"):
@@ -258,6 +298,38 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertNotIn("Não. Com nevoeiro em porto", payload["answer"])
         self.assertEqual(["fog_underway_procedure"], [source.get("retrieval_mode") for source in sources])
 
+    def test_generic_fog_question_uses_port_suspension_priority_and_requests(self) -> None:
+        payload = answer_direct_operational_query("O que fazer quando há nevoeiro?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_safety_limit", payload["answer_origin"])
+        self.assertIn("pilotagem é suspensa", payload["answer"])
+        self.assertIn("fila de prioridade", payload["answer"])
+        self.assertIn("requisições continuam", payload["answer"])
+        self.assertNotEqual("colreg_interpretation", payload["answer_origin"])
+
+    def test_colreg_source_coverage_question_is_not_misrouted_to_fog_procedure(self) -> None:
+        payload = answer_direct_operational_query("A fonte RIEAM/COLREG cobre nevoeiro e ultrapassagem?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("colreg_interpretation", payload["answer_origin"])
+        self.assertIn("Regra 19", payload["answer"])
+        self.assertIn("Regra 34", payload["answer"])
+        self.assertIn("Ultrapassagem em canal estreito", payload["answer"])
+        self.assertNotIn("Nevoeiro súbito com o navio já a navegar", payload["answer"])
+
+    def test_colreg_source_with_visibility_words_is_not_misrouted_to_safety_threshold(self) -> None:
+        payload = answer_direct_operational_query(
+            "A base cobre RIEAM/COLREG para anti-colisão e visibilidade reduzida?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("colreg_interpretation", payload["answer_origin"])
+        self.assertIn("Regra 5", payload["answer"])
+        self.assertIn("Regra 19", payload["answer"])
+        self.assertIn("anti-colisão", payload["answer"])
+        self.assertNotIn("fog_visibility_km_reference", payload["answer"])
+
     def test_parted_mooring_lines_emergency_prepares_lines_and_tugs(self) -> None:
         answer = self._answer("Se partirem cabos na manobra, qual e a resposta imediata?")
 
@@ -327,7 +399,50 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertEqual("operational_rule", payload["answer_origin"])
         self.assertIn("Não.", payload["answer"])
         self.assertIn("boca máxima de 32 m", payload["answer"])
+        self.assertIn("Boca: 45 m", payload["answer"])
         self.assertIn("45 m de boca", payload["answer"])
+
+    def test_secil_e_entry_timing_compares_marked_hour_with_reponto(self) -> None:
+        payload = answer_direct_operational_query(
+            "Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_entry_timing", payload["answer_origin"])
+        self.assertIn("19:25", payload["answer"])
+        self.assertIn("38 min antes do reponto", payload["answer"])
+        self.assertIn("20:03", payload["answer"])
+        self.assertIn("30-45 min", payload["answer"])
+        self.assertIn("Atenção: o critério principal aqui não é apenas ser dia/noite", payload["answer"])
+        self.assertNotIn("não há proibição", payload["answer"].lower())
+
+    def test_secil_w_reponto_question_gets_direct_rule_not_llm_fallback(self) -> None:
+        payload = answer_direct_operational_query(
+            "Entrada para SECIL W marcada para 13:30, tenho de ir ao reponto?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_reponto_rule", payload["answer_origin"])
+        self.assertIn("SECIL W/Oeste", payload["answer"])
+        self.assertIn("todos os navios devem atracar próximo do reponto", payload["answer"])
+        self.assertIn("30-45 min antes do reponto", payload["answer"])
+        self.assertNotIn("não está previsto o recurso ao reponto", payload["answer"].lower())
+
+    def test_roro_autoeuropa_can_exit_wording_uses_live_weather_and_tugs(self) -> None:
+        services.weather_service.forecast["current"].update({"wind_kts": 13, "gust_kts": 20, "wind_dir": "S"})
+
+        payload = answer_direct_operational_query(
+            "Um roro vai sair agora da Autoeuropa. Tem 200 m e já pus 2 reboques. Pode sair com a meteorologia atual?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 2 rebocadores", payload["answer"])
+        self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Autoeuropa", payload["answer"])
+        self.assertIn("Meteorologia considerada", payload["answer"])
+        self.assertIn("rajadas 20", payload["answer"])
+        self.assertIn("ponderar atrasar", payload["answer"])
 
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {
@@ -472,6 +587,144 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("WAY FORWARD", answer)
         self.assertIn("Entrar 15:00", answer)
         self.assertIn("manobra 768AB23C", answer)
+
+    def test_tug_question_with_current_weather_uses_wind_before_recommending(self) -> None:
+        services.weather_service.forecast["current"]["wind_kts"] = 13
+        services.weather_service.forecast["current"]["gust_kts"] = 20
+        services.weather_service.forecast["current"]["wind_dir"] = "S"
+
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(
+                "Tenho um navio para sair da Autoeuropa. É um roro com 200 m e tem bowthruster. "
+                "Quantos reboques devo pedir face às condições meteorológicas atuais?"
+            )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 2 rebocadores", payload["answer"])
+        self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Autoeuropa", payload["answer"])
+        self.assertIn("Meteorologia considerada", payload["answer"])
+        self.assertIn("rajadas 20 kts", payload["answer"])
+        self.assertIn("ponderar atrasar", payload["answer"])
+
+    def test_alstom_wind_limit_blocks_at_15_knots_with_local_rules(self) -> None:
+        answer = self._answer("Entrada para a Alstom desde a Barra com vento 15 kts pode avançar?")
+
+        self.assertIn("Local: ALSTOM", answer)
+        self.assertIn("atracam apenas por estibordo", answer)
+        self.assertIn("reponto de preia-mar", answer)
+        self.assertIn("1h30", answer)
+        self.assertIn("inferior a 15 kt", answer)
+        self.assertIn("atinge/excede o limite local", answer)
+
+    def test_lisnave_cais_3a_length_uses_dolphin_operational_total(self) -> None:
+        answer = self._answer("Navio de 360 m cabe no Cais 3 A da Lisnave?")
+
+        self.assertIn("Cais 3 A", answer)
+        self.assertIn("240 m", answer)
+        self.assertIn("115 m", answer)
+        self.assertIn("Duque d'Alba", answer)
+        self.assertIn("366 metros de comprimento operacional", answer)
+        self.assertIn("360 m fica dentro", answer)
+
+    def test_lisnave_cais_3a_over_length_rejects_against_operational_total(self) -> None:
+        answer = self._answer("E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?")
+
+        self.assertIn("Cais 3 A", answer)
+        self.assertIn("390 m excede", answer)
+        self.assertIn("366 metros de comprimento operacional", answer)
+
+    def test_tanquisado_length_uses_operational_total_not_physical_slot(self) -> None:
+        answer = self._answer("Qual é o comprimento operacional do Tanquisado com duques d'alba?")
+
+        self.assertIn("IT-010_Tanquisado.txt", answer)
+        self.assertIn("Comprimento operacional total: 463 m", answer)
+        self.assertIn("cais físico de 75 m", answer)
+        self.assertIn("dois duques d'alba", answer)
+        self.assertIn("não deve ser avaliado só pelo slot", answer)
+
+    def test_doca21_depth_answer_includes_open_and_closed_gate_values(self) -> None:
+        answer = self._answer("Qual é a profundidade disponível na entrada da Doca 21 com a comporta aberta?")
+
+        self.assertIn("6,10 metros", answer)
+        self.assertIn("5,49 metros", answer)
+        self.assertIn("comporta aberta", answer)
+        self.assertIn("comporta fechada", answer)
+
+    def test_tanquisado_two_tugs_is_explicitly_insufficient(self) -> None:
+        answer = self._answer("Entrada para Tanquisado com 2 rebocadores pode avancar?")
+
+        self.assertIn("Recomendo 3 rebocadores", answer)
+        self.assertIn("Rebocadores insuficientes", answer)
+        self.assertIn("foram indicados 2", answer)
+
+    def test_doca21_large_vessel_tug_question_inferrs_lisnave_from_doca(self) -> None:
+        answer = self._answer("Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21?")
+
+        self.assertIn("Recomendo 6 rebocadores", answer)
+        self.assertIn("Lisnave acima de 250 m", answer)
+        self.assertIn("LOA indicado: 300 m", answer)
+
+    def test_direct_answer_uses_current_followup_question_when_plan_is_contextualized(self) -> None:
+        previous_plan = build_chat_execution_plan("Qual é o comprimento operacional do Cais 3 A na Lisnave?")
+
+        tug_payload = answer_direct_operational_query(
+            "Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21?",
+            plan=previous_plan,
+        )
+        length_payload = answer_direct_operational_query(
+            "E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?",
+            plan=previous_plan,
+        )
+
+        self.assertIsNotNone(tug_payload)
+        self.assertIn("Recomendo 6 rebocadores", tug_payload["answer"])
+        self.assertIn("Lisnave acima de 250 m", tug_payload["answer"])
+        self.assertIsNotNone(length_payload)
+        self.assertIn("390 m excede", length_payload["answer"])
+
+    def test_barra_draft_tup_and_visibility_threshold_have_direct_answers(self) -> None:
+        barra = self._answer("Qual é o calado máximo na barra do Porto de Setúbal?")
+        tup = self._answer("Qual é a fórmula da TUP para um navio de contentores?")
+        visibility = self._answer("Se o live feed indicar 1,0 km de visibilidade, o bot trata como visibilidade reduzida?")
+
+        self.assertIn("10,30 m + altura da maré", barra)
+        self.assertIn("12,0 m", barra)
+        self.assertIn("ondulação inferior a 1 m", barra)
+        self.assertIn("TUP = GT x UP", tup)
+        self.assertIn("contentores", tup)
+        self.assertIn("fog_visibility_km_reference", visibility)
+        self.assertIn("1.0 km", visibility)
+        self.assertIn("visibilidade operacional reduzida", visibility)
+
+    def test_checklist_answers_pull_terminal_specific_sources(self) -> None:
+        eco = self._answer("A checklist puxa regras Eco-Oil para uma entrada?")
+        tanq = self._answer("A checklist puxa regras Tanquisado para uma saida?")
+        lisnave = self._answer("A checklist da manobra avisa se uma doca Lisnave estiver com 3 rebocadores?")
+
+        self.assertIn("IT-008_EcoOil.txt", eco)
+        self.assertIn("Atracacao noturna proibida", eco)
+        self.assertIn("IT-010_Tanquisado.txt", tanq)
+        self.assertIn("calado maximo absoluto", tanq)
+        self.assertIn("Saida fora de reponto", tanq)
+        self.assertIn("preia-mar precedente", tanq)
+        self.assertIn("Lisnave - doca", lisnave)
+        self.assertIn("3 rebocadores", lisnave)
+        self.assertIn("4 rebocadores", lisnave)
+        self.assertIn("proa a norte", lisnave)
+
+    def test_navigation_lights_source_coverage_does_not_route_to_colreg_fishing(self) -> None:
+        payload = answer_direct_operational_query(
+            "A fonte de luzes tem registos indexáveis da Boia 1CN, Boia 2CS e Doca Pesca?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("navigation_lights", payload["answer_origin"])
+        self.assertIn("Doca Pesca", payload["answer"])
+        self.assertIn("Boia N.º 1CN", payload["answer"])
+        self.assertIn("Boia N.º 2CS", payload["answer"])
+        self.assertNotIn("Regra 26 - Pesca", payload["answer"])
 
 
 if __name__ == "__main__":

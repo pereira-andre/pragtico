@@ -232,6 +232,16 @@ def _document_code(document: str) -> str:
     return match.group(1).upper() if match else str(document or "").strip()
 
 
+def _document_label(document: str) -> str:
+    clean = str(document or "").strip()
+    if not clean:
+        return ""
+    code = _document_code(clean)
+    if code and code != clean:
+        return f"{clean} / {code}"
+    return clean
+
+
 def _safe_float(raw_value: Any) -> float | None:
     if raw_value in {None, ""}:
         return None
@@ -386,7 +396,7 @@ def build_berth_profile_answer(question: str, profile_match: dict[str, Any] | No
         return ""
 
     name = str(profile.get("name") or "").strip()
-    document = _document_code(profile.get("document") or "")
+    document = _document_label(profile.get("document") or "")
     header = f"{name} ({document})" if document else name
     if not header:
         return ""

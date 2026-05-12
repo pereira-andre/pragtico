@@ -92,6 +92,10 @@ UNIT_QUERY_RE = re.compile(
     r"manilha(?:s)?|jarda(?:s)?|yards?|km/h|kts?|n[oó]s)\b",
     flags=re.IGNORECASE,
 )
+SOURCE_COVERAGE_RE = re.compile(
+    r"\b(fonte|fontes|documento|base|cobre|cobrem|inclui|incluem|conhecimento|indexavel|indexável|incorporad\w*)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _unit_alias_pattern(alias: str) -> str:
@@ -249,6 +253,12 @@ def _answer_beaufort(question: str) -> dict | None:
 
 def looks_like_navigation_basics_query(question: str) -> bool:
     text = str(question or "")
+    if SOURCE_COVERAGE_RE.search(text) and re.search(
+        r"\b(navegacao|navegação|unidades|milha|milhas|manilha|manilhas|jarda|jardas|beaufort|nos|n[oó]s)\b",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return True
     if BEAUFORT_QUERY_RE.search(text):
         return True
     if UNIT_QUERY_RE.search(text) and NUMBER_UNIT_RE.search(text):
@@ -259,6 +269,18 @@ def looks_like_navigation_basics_query(question: str) -> bool:
 def answer_navigation_basics_direct(question: str) -> dict | None:
     if not looks_like_navigation_basics_query(question):
         return None
+    if SOURCE_COVERAGE_RE.search(question or ""):
+        answer = (
+            "Sim. A fonte indexavel de noções básicas de navegação está carregada em Nocoes_Basicas_Navegacao_Unidades.txt.\n"
+            "- Conversões: 1 milha náutica = 1852 m = 1,852 km; 1 no = 1 milha nautica por hora; 1 nó = 1 milha náutica/h = 1,852 km/h.\n"
+            "- Unidades práticas: 1 jarda = 0,9144 m; 1 manilha = 27,5 m.\n"
+            "- Beaufort: a escala 0-12 está disponível; Beaufort 6: 22-27 kt, vento fresco."
+        )
+        return {
+            "answer": answer,
+            "sources": [build_navigation_basics_source(question) or _navigation_basics_fallback_source()],
+            "answer_origin": "navigation_basics",
+        }
     return _answer_beaufort(question) or _answer_unit_conversion(question)
 
 

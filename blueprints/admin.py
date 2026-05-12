@@ -66,6 +66,7 @@ from core.knowledge_runtime import (
 from core.operational_test_suite import (
     cleanup_operational_test_records,
     operational_test_inventory,
+    railway_bot_test_export_bytes,
     run_operational_flow_suite,
 )
 from core.chat_feedback import sync_feedback_correction_eval_case
@@ -2387,6 +2388,23 @@ def admin_operational_tests():
     )
 
 
+@bp.route("/admin/tests/export.<export_format>")
+@login_required
+@role_required("admin")
+def export_operational_tests(export_format: str):
+    """Exportar os 150 ensaios Railway para depuração."""
+    try:
+        payload, mimetype, filename = railway_bot_test_export_bytes(export_format)
+    except ValueError:
+        abort(404)
+    return send_file(
+        BytesIO(payload),
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @bp.route("/admin/bot")
 @login_required
 @role_required("admin")
@@ -2584,6 +2602,7 @@ def admin_bot_playground():
             "answer": result.get("answer", ""),
             "sources": result.get("sources", []),
             "answer_origin": result.get("answer_origin", ""),
+            "operational_diagnostic": result.get("operational_diagnostic", {}),
             "trace": result.get("trace", {}),
         }
     )

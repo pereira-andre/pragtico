@@ -320,8 +320,12 @@ class SlashActionTargetTests(unittest.TestCase):
             "aprovar",
             "registar-manobra",
             "reportar-evento",
+            "porque",
+            "diagnostico",
+            "debug",
         ):
             self.assertIn(f"/{alias}", help_text)
+        self.assertNotIn("/debug", build_slash_help("piloto"))
 
         parsed = parse_slash_command("/comando-que-nao-existe", "admin")
 

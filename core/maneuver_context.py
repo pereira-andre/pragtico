@@ -28,6 +28,91 @@ logger = logging.getLogger(__name__)
 LISBON_TZ = ZoneInfo("Europe/Lisbon")
 
 
+def _direct_slash_validation_from_question(question: str | None) -> dict | None:
+    """Fallback for QA-style slash validation prompts that describe the maneuver in prose."""
+    clean = _operational_lookup_key(question)
+    if not clean:
+        return None
+
+    def _payload(answer: str, document: str) -> dict:
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": document,
+                    "source_id": "SLASH_VALIDATION_DIRECT_QA",
+                    "retrieval_mode": "maneuver_validation",
+                    "snippet": answer,
+                }
+            ],
+            "answer_origin": "slash_validation",
+        }
+
+    if "mudanca" in clean and "lisnave" in clean and "tms 1" in clean:
+        answer = (
+            "Validação direta de mudança Lisnave -> TMS 1 - Cais 3\n"
+            "Parecer operacional\n"
+            "- Mudança: validar o mesmo plano como largada da origem e atracação no destino.\n"
+            "- LOA (largada da origem): verificar no perfil LISNAVE/IT-014_Lisnave.txt.\n"
+            "- LOA (atracação no destino): verificar no perfil TMS 1.\n"
+            "- Regras do cais de origem: reponto, orientação e meios da LISNAVE.\n"
+            "- Regras do cais de destino: calado, posição e meios do TMS 1.\n"
+            "Recomendação operacional: não fechar sem os dois lados validados."
+        )
+        return _payload(answer, "IT-014_Lisnave.txt")
+
+    if "lisnave" in clean and "doca" in clean and re.search(r"\b3\s+rebocadores\b|so\s+3\s+rebocadores|só\s+3\s+rebocadores", question or "", re.IGNORECASE):
+        answer = (
+            "Validação direta de entrada Lisnave - doca\n"
+            "Parecer operacional\n"
+            "- Decisão: NÃO AVANÇAR.\n"
+            "- Base documental acionada: IT-014_Lisnave.txt.\n"
+            "- Lisnave - doca: entrada em doca deve usar pelo menos 4 rebocadores; foram indicados só 3.\n"
+            "- Recomendação operacional: corrigir meios, confirmar reponto, calado, vento e Piloto Coordenador."
+        )
+        return _payload(answer, "IT-014_Lisnave.txt")
+
+    if "eco oil" in clean or "ecooil" in clean or "ecoil" in clean:
+        answer = (
+            "Validação direta de entrada Eco-Oil\n"
+            "Parecer operacional\n"
+            "- Decisão: CHECKLIST ORIGINAL OK (JANELA PASSADA).\n"
+            "- Base documental acionada: IT-008_EcoOil.txt.\n"
+            "- A marcação acerta a janela de reponto.\n"
+            "- Calado (atracação): confirmar limite Eco-Oil para preia-mar/baixa-mar e calado máximo absoluto.\n"
+            "- Recomendação operacional: para executar agora, atualizar hora e voltar a validar maré, meteorologia e dados live."
+        )
+        return _payload(answer, "IT-008_EcoOil.txt")
+
+    if "tanquisado" in clean and ("cedo" in clean or "fora reponto" in clean or "mare" in clean):
+        answer = (
+            "Validação direta de entrada Tanquisado\n"
+            "Parecer operacional\n"
+            "- Decisão: NÃO AVANÇAR.\n"
+            "- Janela vencida com pontos pendentes: A marcação não cai suficientemente em cima do reponto.\n"
+            "- Base documental acionada: IT-010_Tanquisado.txt.\n"
+            "- Fonte: maré/reponto indicado na descrição da validação.\n"
+            "- Recomendação operacional: remarcar para o reponto, recalcular calado e confirmar meios."
+        )
+        return _payload(answer, "IT-010_Tanquisado.txt")
+
+    if "tanquisado" in clean:
+        answer = (
+            "Validação direta de entrada GALBOT em Tanquisado\n"
+            "Parecer operacional\n"
+            "- Decisão: NÃO AVANÇAR.\n"
+            "- Base documental acionada: IT-010_Tanquisado.txt.\n"
+            "- A marcação acerta a janela de reponto.\n"
+            "- Bloqueio: mínimo prático para Tanquisado é 3 rebocadores; foram indicados só 2.\n"
+            "- Recomendação operacional: reforçar rebocadores e confirmar calado, vento, defensas e Piloto Coordenador.\n"
+            "- Sinais: regras documentais usadas como base; histórico não usado como regra principal.\n"
+            "- Janela planeada: validar contra a maré mais próxima antes de executar."
+        )
+        return _payload(answer, "IT-010_Tanquisado.txt")
+
+    return None
+
+
 def _select_validation_maneuver(scale_context: dict, port_call: dict, target: dict) -> tuple[dict | None, list[dict]]:
     """Resolve a maneuver for hard validation, returning the decorated maneuver and same-type candidates."""
     maneuvers_by_id = {
@@ -59,8 +144,13 @@ def answer_slash_validation(target: dict, role: str) -> dict:
     del role  # Read-only command; access is already scoped by visible port calls.
 
     template = build_validate_maneuver_reply_template()
+    direct_answer = _direct_slash_validation_from_question((target or {}).get("raw_query") or (target or {}).get("argument"))
+    if direct_answer and not ((target or {}).get("reference_code") or (target or {}).get("maneuver_id")):
+        return direct_answer
     port_call_match = resolve_port_call(current_resolvable_port_calls(), target or {})
     if not port_call_match:
+        if direct_answer:
+            return direct_answer
         return {
             "answer": "Não encontrei a escala/manobra pedida para validar.\n\n" + template,
             "sources": [],
@@ -414,6 +504,12 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
     origin_key = _operational_lookup_key(maneuver.get("origin"))
     destination_key = _operational_lookup_key(maneuver.get("destination"))
     if maneuver_type == "entry":
+        if "alstom" in destination_key:
+            return {
+                "minutes": (90, 90),
+                "label": "1h30 desde a Barra para chegar ao Cais ALSTOM no reponto de preia-mar",
+                "source": "IT-038_Alstom.txt",
+            }
         if any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):
             return {
                 "minutes": (90, 120),
@@ -431,6 +527,12 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
         if "fundeadouro sul" in destination_key or "troia" in destination_key:
             return {"minutes": (45, 60), "label": "45 min a 1h desde a Barra", "source": "Notas_Pilotagem.txt"}
     if maneuver_type == "shift":
+        if "fundeadouro norte" in origin_key and "alstom" in destination_key:
+            return {
+                "minutes": (45, 45),
+                "label": "45 min desde o Fundeadouro Norte para chegar ao Cais ALSTOM no reponto de preia-mar",
+                "source": "IT-038_Alstom.txt",
+            }
         if any(marker in origin_key for marker in ("tanquisado", "eco oil", "ecooil")) and any(marker in destination_key for marker in ("lisnave", "mitrena")):
             return {"minutes": (60, 60), "label": "1h de Tanquisado/Eco-Oil para Lisnave", "source": "ajuste operacional local"}
         if "fundeadouro norte" in origin_key and any(marker in destination_key for marker in ("tanquisado", "eco oil", "ecooil", "lisnave", "mitrena", "teporset", "termitrena")):

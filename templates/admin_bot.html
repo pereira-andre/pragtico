@@ -52,6 +52,7 @@
     <a href="#monitor">Estado live</a>
     <a href="#playground">Teste rápido</a>
     <a href="#processo">Fluxo</a>
+    <a href="#contexto">Contexto</a>
     <a href="#sources">Fontes</a>
     <a href="#quality">Qualidade</a>
     <a href="#toolbox">Definições</a>
@@ -115,7 +116,7 @@
       <div>
         <p class="eyebrow">Teste rápido</p>
         <h2>Experimentar uma pergunta</h2>
-        <p class="admin-bot-section-copy">Usa o pipeline real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom e raciocínio antes de mexer nas definições.</p>
+        <p class="admin-bot-section-copy">Usa o circuito real para testar uma resposta sem guardar histórico de conversa. Serve para validar fontes, tom, ficha operacional e regras críticas antes de mexer nas definições.</p>
       </div>
       <span class="muted small-note">Sem histórico.</span>
     </div>
@@ -138,7 +139,7 @@
           <ul id="bot-playground-sources"></ul>
         </details>
         <details class="admin-bot-playground-trace" id="bot-playground-trace-wrapper" hidden open>
-          <summary>Trace da decisão</summary>
+          <summary>Diagnóstico da decisão</summary>
           <div class="admin-bot-trace-grid" id="bot-playground-trace"></div>
         </details>
       </article>
@@ -151,7 +152,7 @@
       <div>
         <p class="eyebrow">Processo</p>
         <h2>Fluxo de decisão do assistente</h2>
-        <p class="admin-bot-section-copy">Mostra a sequência simplificada que transforma uma pergunta numa resposta útil: interpretar, procurar contexto, verificar segurança operacional e devolver a conclusão.</p>
+        <p class="admin-bot-section-copy">Mostra a sequência simplificada que transforma uma pergunta numa resposta útil: interpretar o caso, preparar a ficha operacional, procurar contexto, verificar segurança operacional e devolver a conclusão. No WhatsApp, <code>/porque</code> e <code>/debug</code> mostram a ficha e regras usadas na resposta anterior.</p>
       </div>
     </div>
     <div class="admin-bot-process-flow">
@@ -214,18 +215,18 @@
           </div>
           <div class="admin-bot-decision-lane">
             <span>02</span>
-            <strong>Contexto</strong>
-            <small>Regras, documentos e feedback validado.</small>
+            <strong>Contexto provável</strong>
+            <small>Histórico filtrado, ficha operacional e fontes relevantes.</small>
           </div>
           <div class="admin-bot-decision-lane">
             <span>03</span>
-            <strong>Verificações</strong>
-            <small>Casos críticos, qualidade e exceções.</small>
+            <strong>Regras e live</strong>
+            <small>Regras críticas, marés, meteo e exceções.</small>
           </div>
           <div class="admin-bot-decision-lane">
             <span>04</span>
             <strong>Resposta</strong>
-            <small>Conclusão curta, rastreável e operacional.</small>
+            <small>Conclusão curta, premissas claras e diagnóstico.</small>
           </div>
         </div>
       </article>
@@ -243,6 +244,35 @@
           <small>{{ card.detail }}</small>
         </article>
       {% endfor %}
+    </div>
+    <div class="admin-bot-context-policy" id="contexto">
+      <div class="admin-bot-context-policy-head">
+        <div>
+          <p class="eyebrow">Contexto conversacional</p>
+          <h3>Como evita misturar casos no WhatsApp</h3>
+        </div>
+        <span class="admin-status-badge is-online">Ativo</span>
+      </div>
+      <div class="admin-bot-context-policy-grid">
+        <article class="admin-bot-context-policy-card">
+          <span class="admin-bot-process-index">1</span>
+          <strong>Histórico filtrado</strong>
+          <p>O runtime não envia a conversa inteira: seleciona só mensagens recentes que continuam compatíveis com o caso atual.</p>
+          <code>core/chat_context_scope.py</code>
+        </article>
+        <article class="admin-bot-context-policy-card">
+          <span class="admin-bot-process-index">2</span>
+          <strong>Ficha provável</strong>
+          <p>Em follow-ups curtos extrai local, operação, LOA, calado, carga, hora e vento do último caso provável.</p>
+          <code>core/chat_reasoning.py</code>
+        </article>
+        <article class="admin-bot-context-policy-card">
+          <span class="admin-bot-process-index">3</span>
+          <strong>Premissa explícita</strong>
+          <p>Se a resposta depender dessa continuidade, deve começar por assumir o caso; se houver dúvida real, pede confirmação.</p>
+          <code>/new · /porque · /debug</code>
+        </article>
+      </div>
     </div>
     <div class="admin-bot-pipeline-diagram">
       {% for step in pipeline.steps %}
@@ -1051,6 +1081,24 @@
       traceWrapper.hidden = true;
       return;
     }
+    const diagnostic = trace.operational_diagnostic || {};
+    if (diagnostic.present) {
+      appendTraceCard("Ficha operacional", [
+        diagnostic.summary || "Ficha preparada.",
+        ...((diagnostic.case_lines || []).slice(0, 5)),
+      ]);
+      if ((diagnostic.critical_rules || []).length) {
+        appendTraceCard("Regras críticas", (diagnostic.critical_rules || [])
+          .slice(0, 5)
+          .map((item) => item.detail || item.title || ""));
+      }
+      if ((diagnostic.warnings || []).length || (diagnostic.missing_fields || []).length) {
+        appendTraceCard("Alertas e faltas", [
+          ...((diagnostic.warnings || []).slice(0, 3)),
+          ...((diagnostic.missing_fields || []).slice(0, 3)),
+        ]);
+      }
+    }
     const plan = trace.execution_plan || {};
     const liveFacets = (plan.live_facets || []).join(", ") || "nenhum";
     const sourceModes = (trace.source_mode_counts || [])
@@ -1065,7 +1113,7 @@
       `Origem: ${trace.answer_origin || "n/d"}`,
       `Resposta direta: ${boolLabel(trace.used_direct_answer)}`,
       `Atalho estruturado: ${boolLabel(trace.used_shortcut)}`,
-      `Motor generativo usado: ${boolLabel(trace.used_llm)}`,
+      `Síntese textual usada: ${boolLabel(trace.used_llm)}`,
     ]);
     appendTraceCard("Conhecimento", [
       `Documento alvo: ${trace.target_document || "sem alvo"}`,
@@ -1082,7 +1130,7 @@
     ]);
     const retrievalValidation = trace.retrieval_validation || {};
     if (Object.keys(retrievalValidation).length) {
-      appendTraceCard("RAG documental", [
+      appendTraceCard("Validação documental", [
         `Pode responder: ${boolLabel(retrievalValidation.can_answer)}`,
         `Entidade correta: ${retrievalValidation.entity_match === null ? "n/a" : boolLabel(retrievalValidation.entity_match)}`,
         `Qualidade: ${retrievalValidation.source_quality || "n/d"}`,

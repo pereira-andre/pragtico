@@ -21,6 +21,9 @@
     "Regra 15: em rumos cruzados, o navio que vê o outro por estibordo afasta-se e evita cortar a proa.",
     "Regra 19: em visibilidade reduzida, velocidade segura, máquinas prontas, radar bem usado e extrema precaução.",
     "Regra 35: em visibilidade reduzida, emitir os sinais sonoros adequados ao estado do navio.",
+    "Regra 34: em canal estreito, ultrapassagem que exija manobra do alcançado pede sinais específicos e acordo antes de executar.",
+    "Regra 27: em dragagem/trabalhos submarinos, vermelho-vermelho marca bordo obstruído e verde-verde marca bordo livre.",
+    "Regra 37 e Anexo IV: sinais de perigo incluem SOS, Mayday, NC, foguetes/fachos vermelhos, fumo laranja e radiobalizas; só usar com perigo real.",
     "Se o nevoeiro apanhar o navio já a navegar em porto, avaliar posição, altura do dia, fundo, tráfego, corrente/vento e escolher entre atracar com cautela, seguir para fundeadouro/espera ou abortar antes do canal."
   ],
   "faq": [
@@ -88,6 +91,45 @@
         "sinais de nevoeiro",
         "fundeadouro",
         "abortar entrada"
+      ]
+    },
+    {
+      "question": "Quero ultrapassar num canal estreito. Que sinais uso?",
+      "answer": "Aplicam-se as Regras 9 e 34. Se a ultrapassagem exigir que o navio alcançado manobre, o navio que pretende ultrapassar deve pedir acordo: dois sons prolongados + um curto para ultrapassar pelo estibordo do alcançado; dois prolongados + dois curtos para ultrapassar pelo bombordo. Se concordar, o alcançado responde com um prolongado + um curto + um prolongado + um curto. Se houver dúvida, usar pelo menos cinco sons curtos.",
+      "keywords": [
+        "canal estreito",
+        "ultrapassar",
+        "alcancado",
+        "regra 9",
+        "regra 34",
+        "sons prolongados"
+      ]
+    },
+    {
+      "question": "Como identificar uma draga ou navio em trabalhos submarinos pelo bordo livre?",
+      "answer": "Pela Regra 27, vermelho-vermelho ou duas bolas indicam o bordo obstruído; verde-verde ou dois bicones indicam o bordo pelo qual outro navio pode passar. O navio também pode mostrar vermelho-branco-vermelho ou bola-losango-bola de capacidade de manobra reduzida.",
+      "keywords": [
+        "dragagem",
+        "trabalhos submarinos",
+        "bordo obstruido",
+        "bordo livre",
+        "verde",
+        "vermelho",
+        "regra 27"
+      ]
+    },
+    {
+      "question": "Quais são alguns sinais de perigo do COLREG?",
+      "answer": "Pela Regra 37 e Anexo IV: SOS, Mayday, sinal NC, foguetes ou fachos vermelhos, fumo laranja, som contínuo de aparelho de nevoeiro, movimentos lentos dos braços e radiobaliza de localização de sinistros. Só devem ser usados em perigo real ou necessidade de assistência.",
+      "keywords": [
+        "perigo",
+        "mayday",
+        "sos",
+        "NC",
+        "facho vermelho",
+        "fumo laranja",
+        "regra 37",
+        "anexo iv"
       ]
     }
   ]

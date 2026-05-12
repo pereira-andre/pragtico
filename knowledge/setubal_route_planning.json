@@ -1,0 +1,67 @@
+{
+  "document": "Planeamento interno de distancias e rumos do Porto de Setubal",
+  "datum": "Rumos verdadeiros 000-359 graus; distancias em milhas nauticas.",
+  "rule": "Cada linha representa a pernada do waypoint indicado para o waypoint seguinte. Para a saida no sentido inverso, somar 180 graus ao rumo de entrada e aplicar modulo 360. TMS 1 e TMS 2 entram como referencias de posicionamento no Canal Norte para orientar distancias e canais, nao como coordenadas hidrográficas exatas.",
+  "waypoints": {
+    "pilot_station": {
+      "label": "Pilot station / posicao de embarque",
+      "notes": "Posicao de embarque 1 NM fora da barra."
+    },
+    "pilar_2": {
+      "label": "Pilar 2 / entrada da Barra",
+      "notes": "Referencia da entrada/barra."
+    },
+    "boia_14cs": {
+      "label": "Boia 14CS / fim do Canal Sul",
+      "notes": "Ponto de decisao para Tanquisado/Eco-Oil, LISNAVE/docas/Hidrolift e Teporset."
+    },
+    "tms1": {
+      "label": "TMS 1",
+      "notes": "Referencia no Canal Norte entre a Boia 3CC e a Boia 5CC, antes do TMS 2 e da Autoeuropa."
+    },
+    "tms2": {
+      "label": "TMS 2",
+      "notes": "Referencia no Canal Norte entre a Boia 5CC e a Autoeuropa."
+    }
+  },
+  "routes": {
+    "canal_norte": [
+      {"from": "pilot_station", "to": "pilar_2", "heading_in": 40, "heading_out": 220, "distance_nm": 1.0},
+      {"from": "pilar_2", "to": "outao", "heading_in": 40, "heading_out": 220, "distance_nm": 2.8},
+      {"from": "outao", "to": "joao_farto", "heading_in": 40, "heading_out": 220, "distance_nm": 1.5},
+      {"from": "joao_farto", "to": "boia_1cc", "heading_in": 40, "heading_out": 220, "distance_nm": 0.6},
+      {"from": "boia_1cc", "to": "boia_3cc", "heading_in": 74, "heading_out": 254, "distance_nm": 0.7},
+      {"from": "boia_3cc", "to": "tms1", "heading_in": 105, "heading_out": 285, "distance_nm": 0.3},
+      {"from": "tms1", "to": "boia_5cc", "heading_in": 105, "heading_out": 285, "distance_nm": 0.2},
+      {"from": "boia_5cc", "to": "tms2", "heading_in": 120, "heading_out": 300, "distance_nm": 0.4},
+      {"from": "tms2", "to": "auto_europa", "heading_in": 120, "heading_out": 300, "distance_nm": 0.4},
+      {"from": "auto_europa", "to": "praias_sado", "heading_in": 115, "heading_out": 295, "distance_nm": 0.7},
+      {"from": "praias_sado", "to": "sapec", "heading_in": 130, "heading_out": 310, "distance_nm": 0.6},
+      {"from": "sapec", "to": "alstom", "heading_in": 120, "heading_out": 300, "distance_nm": 1.1}
+    ],
+    "canal_sul_common": [
+      {"from": "pilot_station", "to": "pilar_2", "heading_in": 40, "heading_out": 220, "distance_nm": 1.0},
+      {"from": "pilar_2", "to": "outao", "heading_in": 40, "heading_out": 220, "distance_nm": 2.8},
+      {"from": "outao", "to": "joao_farto", "heading_in": 55, "heading_out": 235, "distance_nm": 1.4},
+      {"from": "joao_farto", "to": "boia_4cs", "heading_in": 110, "heading_out": 290, "distance_nm": 1.0},
+      {"from": "boia_4cs", "to": "boia_6cs", "heading_in": 125, "heading_out": 305, "distance_nm": 2.3},
+      {"from": "boia_6cs", "to": "boia_12cs", "heading_in": 110, "heading_out": 290, "distance_nm": 2.0},
+      {"from": "boia_12cs", "to": "boia_14cs", "heading_in": 65, "heading_out": 245, "distance_nm": 0.5}
+    ],
+    "canal_sul_branches_from_boia_14cs": [
+      {"from": "boia_14cs", "to": "tanquisado_ecooil", "heading_in": 311, "heading_out": 131, "distance_nm": 0.6},
+      {"from": "boia_14cs", "to": "lisnave_docas_hidrolift", "heading_in": 30, "heading_out": 210, "distance_nm": 0.5},
+      {"from": "boia_14cs", "to": "teporset", "heading_in": 60, "heading_out": 240, "distance_nm": 1.0}
+    ]
+  },
+  "totals": {
+    "pilot_station_to_tms1_canal_norte_nm": 6.9,
+    "pilot_station_to_tms2_canal_norte_nm": 7.5,
+    "pilot_station_to_alstom_canal_norte_nm": 10.3,
+    "pilar_2_to_tms1_canal_norte_nm": 5.9,
+    "pilar_2_to_tms2_canal_norte_nm": 6.5,
+    "pilot_station_to_boia_14cs_canal_sul_nm": 11.0,
+    "pilar_2_to_boia_14cs_canal_sul_nm": 10.0,
+    "pilar_2_to_lisnave_canal_sul_nm": 10.5
+  }
+}

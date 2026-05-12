@@ -720,18 +720,18 @@ def _extract_positional_slash_target(body: str) -> Dict[str, str]:
         positional_target["maneuver_type"] = maneuver_type
     if len(identifier_tokens) == 1:
         identifier = identifier_tokens[0]
-        if _looks_like_scale_reference(identifier):
-            positional_target["reference_code"] = identifier
-        elif _looks_like_maneuver_id_token(identifier):
+        if _looks_like_maneuver_id_token(identifier):
             positional_target["maneuver_id"] = _normalize_maneuver_id(identifier)
         else:
             positional_target["reference_code"] = identifier
     elif len(identifier_tokens) > 1:
-        reference_token = next((token for token in identifier_tokens if _looks_like_scale_reference(token)), identifier_tokens[-1])
-        positional_target["reference_code"] = reference_token
-        remaining_tokens = [token for token in identifier_tokens if token != reference_token]
-        if remaining_tokens:
-            maneuver_token = next((token for token in remaining_tokens if _looks_like_maneuver_id_token(token)), remaining_tokens[0])
+        reference_token = next((token for token in identifier_tokens if _looks_like_scale_reference(token)), "")
+        maneuver_token = next((token for token in identifier_tokens if _looks_like_maneuver_id_token(token)), "")
+        if reference_token:
+            positional_target["reference_code"] = reference_token
+        elif maneuver_token and len(identifier_tokens) == 2:
+            positional_target["reference_code"] = next(token for token in identifier_tokens if token != maneuver_token)
+        if maneuver_token:
             positional_target["maneuver_id"] = _normalize_maneuver_id(maneuver_token)
     return positional_target
 
@@ -829,11 +829,15 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         "vessel_name": " ".join(str(extracted_fields.get("vessel_name") or "").split()),
         "maneuver_type": _extract_slash_maneuver_type(body)
         or _normalize_maneuver_type_label(extracted_fields.get("maneuver_type") or command_aliases.get("maneuver_type", "")),
+        "raw_query": raw,
+        "argument": body,
     }
     if not target["maneuver_id"] and positional_target.get("maneuver_id"):
         target["maneuver_id"] = positional_target["maneuver_id"]
     if not target["reference_code"] and positional_target.get("reference_code"):
         target["reference_code"] = positional_target["reference_code"]
+    if not target["vessel_name"] and positional_target.get("vessel_name"):
+        target["vessel_name"] = positional_target["vessel_name"]
     if not target["maneuver_type"] and positional_target.get("maneuver_type"):
         target["maneuver_type"] = positional_target["maneuver_type"]
     for target_only_field in ("reference_code", "maneuver_id", "maneuver_type"):
@@ -846,6 +850,14 @@ def parse_slash_command(question: str, role: str) -> Optional[Dict]:
         has_explicit_target = bool(target["maneuver_id"]) or bool(
             (target["reference_code"] or target["vessel_name"]) and target["maneuver_type"]
         )
+        has_direct_validation_description = bool(
+            target["maneuver_type"]
+            and re.search(r"\b(tanquisado|eco[-\s]*oil|ecooil|ecoil|lisnave|mitrena|tms\s*1|tms1)\b", body, re.IGNORECASE)
+        )
+        if has_direct_validation_description:
+            target["reference_code"] = ""
+            target["vessel_name"] = ""
+            return {"intent": "validate", "target": target}
         if not has_explicit_target:
             return {"intent": "template", "answer": template}
         return {"intent": "validate", "target": target}

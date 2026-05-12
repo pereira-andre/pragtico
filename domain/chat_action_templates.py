@@ -325,8 +325,28 @@ def build_slash_help(role: str) -> str:
                 "  apaga o registo executado; usa ID da manobra ou Ref + Tipo; se houver mais do que uma, o ID é obrigatório",
             ]
         )
+    if clean_role == "admin":
+        lines.extend(
+            [
+                "",
+                "Diagnóstico admin:",
+                "/porque",
+                "  mostra a ficha operacional e regras usadas na última resposta",
+                "/diagnostico",
+                "  alias de /porque",
+                "/debug",
+                "  alias de /porque",
+            ]
+        )
     lines.extend(
         [
+            "",
+            "Contexto WhatsApp:",
+            "/start",
+            "  mostra uma mensagem curta de boas-vindas",
+            "/new",
+            "  inicia uma nova conversa e fecha o contexto anterior",
+            "  aliases: /nova, /nova-conversa, /reset-contexto",
             "",
             "Emergência WhatsApp:",
             "SOS",

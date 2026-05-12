@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Iterable
 import re
 
+from core.chat_context_scope import scoped_history_for_question
 from core.chat_planner import ChatExecutionPlan, normalize_planner_text
 
 VESSEL_TYPE_LABELS = {
@@ -73,12 +74,18 @@ WIND_PATTERNS = (
 PROPELLER_RE = re.compile(r"\bpasso\s+(direito|esquerdo)\b", flags=re.IGNORECASE)
 BERTHING_SIDE_RE = re.compile(r"\b(?:por|a|ao)\s+(estibordo|bombordo)\b", flags=re.IGNORECASE)
 TIME_RE = re.compile(
-    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2}))\b"
+    r"\b(?:as|às|para as|para às|para|pelas)\s*(\d{1,2}(?::\d{2}|h\d{0,2})|\d{3,4})\b"
     r"|\b(\d{1,2}(?::\d{2}|h\d{2}))\b",
     flags=re.IGNORECASE,
 )
 DATE_RE = re.compile(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
 RELATIVE_DATE_RE = re.compile(r"\b(hoje|amanh[ãa]|depois de amanh[ãa])\b", flags=re.IGNORECASE)
+CARGO_NON_IMO_RE = re.compile(r"\bcarga\s+(?:nao|não)\s+imo\b|\b(?:nao|não)\s+imo\b", flags=re.IGNORECASE)
+CARGO_IMO_RE = re.compile(r"\bcarga\s+imo\b|\bimo\b", flags=re.IGNORECASE)
+CONTEXTUAL_FOLLOW_UP_RE = re.compile(
+    r"^\s*(?:e|entao|então|mas|agora|nesse caso|neste caso|com isso|com base nisso)\b",
+    flags=re.IGNORECASE,
+)
 FACILITY_PATTERNS = (
     (re.compile(r"\beco\s*-?\s*oil\b|\becooil\b|\becoil\b", flags=re.IGNORECASE), "Terminal ECO-OIL"),
     (re.compile(r"\btanquisado\b", flags=re.IGNORECASE), "Terminal da TANQUISADO"),
@@ -157,7 +164,11 @@ def _clean_numeric(value: str) -> str:
 
 
 def _clean_time(value: str) -> str:
-    clean_value = str(value or "").strip().lower().replace("h", ":")
+    clean_value = str(value or "").strip().lower()
+    if re.fullmatch(r"\d{3,4}", clean_value):
+        digits = clean_value.zfill(4)
+        return f"{digits[:2]}:{digits[2:]}"
+    clean_value = clean_value.replace("h", ":")
     if clean_value.endswith(":"):
         clean_value += "00"
     return clean_value
@@ -187,6 +198,11 @@ def _extract_message_facts(content: str) -> list[str]:
         if token in clean:
             facts.append(f"Tipo de navio: {label}.")
             break
+
+    if CARGO_NON_IMO_RE.search(content or ""):
+        facts.append("Carga: não IMO.")
+    elif CARGO_IMO_RE.search(content or ""):
+        facts.append("Carga: IMO/perigosa.")
 
     for pattern, label in WIND_PATTERNS:
         if pattern.search(content or ""):
@@ -259,17 +275,81 @@ def _iter_recent_messages(history: list[dict], limit: int = 6) -> Iterable[dict]
     return meaningful[-limit:]
 
 
+def _looks_like_contextual_follow_up(question: str) -> bool:
+    clean = normalize_planner_text(question)
+    if not clean:
+        return False
+    if CONTEXTUAL_FOLLOW_UP_RE.search(question or ""):
+        return True
+    tokens = clean.split()
+    return 1 <= len(tokens) <= 5 and any(
+        token in clean
+        for token in (
+            "imo",
+            "carga",
+            "calado",
+            "mare",
+            "vento",
+            "rebocador",
+            "reboque",
+            "entrada",
+            "saida",
+        )
+    )
+
+
+def _latest_user_case_facts(history: list[dict]) -> tuple[list[str], str]:
+    for entry in reversed(history):
+        if str(entry.get("role") or "").strip().lower() != "user":
+            continue
+        content = str(entry.get("content") or "").strip()
+        if not content:
+            continue
+        facts = _extract_message_facts(content)
+        if facts:
+            return facts, content
+    return [], ""
+
+
+def _case_label_from_facts(facts: list[str]) -> str:
+    priority_prefixes = (
+        "Cais/terminal referido:",
+        "Operação pretendida:",
+        "Tipo de navio:",
+        "LOA / comprimento:",
+        "Calado:",
+        "Boca:",
+        "Carga:",
+        "Hora planeada/referida:",
+        "Data referida:",
+        "Data relativa referida:",
+    )
+    selected: list[str] = []
+    for prefix in priority_prefixes:
+        selected.extend(fact for fact in facts if fact.startswith(prefix))
+    selected = list(dict.fromkeys(selected))
+    return " ".join(selected[:5]).strip()
+
+
 def build_conversation_reasoning_state(
     question: str,
     history: list[dict],
     plan: ChatExecutionPlan,
 ) -> dict | None:
-    if not (plan.needs_history_state or plan.requires_live_reasoning or plan.requires_llm_synthesis):
+    contextual_follow_up = _looks_like_contextual_follow_up(question)
+    if not (
+        plan.needs_history_state
+        or plan.requires_live_reasoning
+        or plan.requires_llm_synthesis
+        or contextual_follow_up
+    ):
         return None
 
     fact_lines: list[str] = []
     prior_recommendation = ""
-    recent_messages = list(_iter_recent_messages(history))
+    scoped_history = scoped_history_for_question(question, history, max_messages=8)
+    recent_messages = list(_iter_recent_messages(scoped_history))
+    latest_case_facts, latest_case_message = _latest_user_case_facts(scoped_history)
     for entry in recent_messages:
         role = str(entry.get("role") or "").strip().lower()
         content = str(entry.get("content") or "").strip()
@@ -284,7 +364,7 @@ def build_conversation_reasoning_state(
         fact_lines.extend(current_facts)
     fact_lines = list(dict.fromkeys(item for item in fact_lines if item))
 
-    if not fact_lines and not prior_recommendation:
+    if not fact_lines and not prior_recommendation and not latest_case_facts:
         return None
 
     focus_parts: list[str] = []
@@ -297,9 +377,26 @@ def build_conversation_reasoning_state(
     if not focus_parts:
         focus_parts.append("responder à avaliação operacional pedida e não apenas descrever dados")
 
-    summary_parts = []
+    likely_case_label = _case_label_from_facts(latest_case_facts)
+    current_case_label = _case_label_from_facts(current_facts)
+    summary_parts = ["Ficha de contexto provável para resposta operacional."]
+    if contextual_follow_up and likely_case_label:
+        summary_parts.append(
+            "Premissa de continuidade: a mensagem atual parece continuação curta; "
+            f"assumir o último caso operacional se não houver conflito explícito. Caso provável: {likely_case_label}"
+        )
+        if latest_case_message:
+            summary_parts.append(f"Última pergunta de caso: {latest_case_message[:240]}")
+        summary_parts.append(
+            "Aviso de resposta: se a conclusão depender desta premissa, mencionar em frase curta "
+            "que se assume a continuação do mesmo caso; se houver dúvida, pedir confirmação do cais/caso."
+        )
+    elif current_case_label:
+        summary_parts.append(f"Caso identificado na mensagem atual: {current_case_label}")
+    elif likely_case_label:
+        summary_parts.append(f"Contexto recente disponível, usar apenas se for relevante: {likely_case_label}")
     if fact_lines:
-        summary_parts.append("Fatos extraídos do histórico e da pergunta: " + " ".join(fact_lines[:6]))
+        summary_parts.append("Factos extraídos do histórico e da pergunta: " + " ".join(fact_lines[:8]))
     if prior_recommendation:
         summary_parts.append(f"Recomendação anterior do assistente: {prior_recommendation}")
     summary_parts.append("Foco atual: " + "; ".join(focus_parts) + ".")
@@ -317,6 +414,8 @@ def build_conversation_reasoning_state(
     return {
         "summary": summary,
         "facts": fact_lines,
+        "likely_case": latest_case_facts,
+        "contextual_follow_up": contextual_follow_up,
         "prior_recommendation": prior_recommendation,
         "focus": focus_parts,
         "source": source,
