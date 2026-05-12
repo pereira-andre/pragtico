@@ -20,6 +20,11 @@ TIME_QUERY_RE = re.compile(
 DISTANCE_QUERY_RE = re.compile(r"\b(distancia|distancias|milha|milhas|mn|nm|quanto falta|falta|faltam)\b")
 ROUTE_DETAIL_QUERY_RE = re.compile(r"\b(rumo|rumos|proa|pernada|pernadas|wpt|waypoint|waypoints)\b")
 ROUTE_LINK_RE = re.compile(r"\b(ate|a|ao|aos|para|desde|de|do|da)\b")
+ROUTE_ORDER_QUERY_RE = re.compile(
+    r"\b(ordem|sequencia|sequência)\b.*\b(cais|terminais|canal|canais)\b"
+    r"|\b(cais|terminais|canal|canais)\b.*\b(ordem|sequencia|sequência)\b",
+    flags=re.IGNORECASE,
+)
 SPEED_RE = re.compile(r"\b(\d{1,2}(?:[,.]\d+)?)\s*(?:kt|kts|nos|n[oó]s)\b")
 START_TIME_RE = re.compile(
     r"\b(?:as|às|pelas|sair|saio|saida|saída|largada|partida)"
@@ -552,6 +557,92 @@ def _format_route_plan_answer(
     }
 
 
+def _route_order_answer(question: str, clean_question: str) -> dict | None:
+    if not ROUTE_ORDER_QUERY_RE.search(clean_question):
+        return None
+    if not re.search(r"\b(canal\s+norte|canal\s+sul|canais|cais)\b", clean_question):
+        return None
+
+    answer = (
+        "Ordem prática dos cais/terminais por canal:\n"
+        "- Entrada pelo Canal Norte: TMS 1 -> TMS 2 -> Autoeuropa/Ro-Ro (Cais 10/11) -> "
+        "Praias do Sado -> SAPEC -> ALSTOM.\n"
+        "- Saída pelo Canal Norte: inverter a sequência do terminal de origem até à Barra.\n"
+        "- Entrada pelo Canal Sul: a partir da Bóia 14CS/fim do Canal Sul, confirmar o ramal final: "
+        "Tanquisado/Eco-Oil, LISNAVE/Mitrena, Termitrena ou Teporset.\n"
+        "- Saída pelo Canal Sul: inverter o ramal final até à Bóia 14CS e depois seguir para João Farto, Outão e Barra.\n"
+        "A SECIL/Outão fica antes da divisão operacional dos canais principais; trata-a como destino próprio."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Notas_Pilotagem.txt",
+                "source_id": "ROUTE_ORDER_NORTH_SOUTH",
+                "retrieval_mode": "route_order_fact",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
+def _route_summary_answer(question: str, clean_question: str) -> dict | None:
+    if _query_metric(clean_question) != "time":
+        return None
+
+    has_north_quays = bool(re.search(r"\bcais\s+(?:a\s+)?norte\b|\bcais\s+do\s+norte\b", clean_question))
+    has_south_quays = bool(re.search(r"\bcais\s+(?:a\s+)?sul\b|\bcais\s+do\s+sul\b", clean_question))
+    has_secil = "secil" in clean_question
+    if _matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and has_north_quays and has_south_quays and has_secil:
+        answer = (
+            "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, "
+            "conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca de 20 minutos. "
+            "Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, "
+            "conta com cerca de 1 hora."
+        )
+        return _route_summary_payload(question, answer, "ROUTE_FUNDEADOURO_NORTE_MULTI_TIME")
+
+    if _matches_any(clean_question, ORIGIN_CANAL_SUL) and has_south_quays and has_north_quays and has_secil:
+        answer = (
+            "Do Canal Sul para cais do sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, "
+            "conta com cerca de 30 minutos a 1 hora. Do Canal Sul para cais a norte, isto é, de TMS 1 "
+            "até SAPEC Líquidos, conta com cerca de 1 hora a 1 hora e 20 minutos. Do Canal Sul para a "
+            "SECIL, cerca de 40 minutos."
+        )
+        return _route_summary_payload(question, answer, "ROUTE_CANAL_SUL_MULTI_TIME")
+
+    mentions_barra = _matches_any(clean_question, ORIGIN_BARRA)
+    mentions_sapec_or_praias = bool(re.search(r"\bsapec\b|\bpraias\s+do\s+sado\b|\bpraias\b", clean_question))
+    mentions_fundeadouros = bool(re.search(r"\bfundeadouros?\b|\bfund\s+norte\b|\bfund\s+troia\b", clean_question))
+    if mentions_barra and has_secil and mentions_sapec_or_praias and mentions_fundeadouros:
+        answer = (
+            "Da entrada da Barra, a SECIL demora cerca de 30 minutos; Praias do Sado e SAPEC demoram "
+            "cerca de 1 hora e 20 minutos; o Fundeadouro Norte demora cerca de 45 minutos; e o "
+            "Fundeadouro Sul demora cerca de 45 minutos a 1 hora, conforme a posição."
+        )
+        return _route_summary_payload(question, answer, "ROUTE_BARRA_SECIL_SAPEC_FUNDEADOUROS_TIME")
+
+    return None
+
+
+def _route_summary_payload(question: str, answer: str, source_id: str) -> dict:
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Notas_Pilotagem.txt",
+                "source_id": source_id,
+                "retrieval_mode": "route_transit_summary",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
 def _setubal_route_plan_answer(question: str, clean_question: str) -> dict | None:
     wants_route_plan = bool(
         DISTANCE_QUERY_RE.search(clean_question)
@@ -910,6 +1001,12 @@ def _looks_like_route_question(clean_question: str) -> bool:
 
 def route_transit_answer(question: str, clean_question: str | None = None) -> dict | None:
     clean = clean_question or _normalize(question)
+    route_order = _route_order_answer(question, clean)
+    if route_order:
+        return route_order
+    route_summary = _route_summary_answer(question, clean)
+    if route_summary:
+        return route_summary
     if _route_plan_should_precede_fact(clean):
         route_plan = _setubal_route_plan_answer(question, clean)
         if route_plan:

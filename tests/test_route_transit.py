@@ -128,6 +128,42 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("10,0 milhas náuticas", south["answer"])
         self.assertIn("Bóia 12CS -> Bóia 14CS", south["answer"])
 
+    def test_common_multi_destination_time_summaries_do_not_drop_destinations(self) -> None:
+        cases = [
+            (
+                "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
+                ("15 a 25 minutos", "SECIL", "20 minutos", "cais a sul", "1 hora"),
+            ),
+            (
+                "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
+                ("cais do sul", "30 minutos a 1 hora", "cais a norte", "1 hora a 1 hora e 20 minutos", "SECIL", "40 minutos"),
+            ),
+            (
+                "Quanto tempo leva desde a entrada da Barra até à SECIL, Praias do Sado, SAPEC e fundeadouros?",
+                ("SECIL", "30 minutos", "Praias do Sado", "SAPEC", "1 hora e 20 minutos", "Fundeadouro Norte", "45 minutos", "Fundeadouro Sul"),
+            ),
+        ]
+
+        for question, tokens in cases:
+            with self.subTest(question=question):
+                answer = route_transit_answer(question)
+
+                self.assertIsNotNone(answer)
+                self.assertEqual("operational_route_transit", answer["answer_origin"])
+                for token in tokens:
+                    self.assertIn(token, answer["answer"])
+
+    def test_route_order_question_is_not_confused_with_canal_norte_tug_rules(self) -> None:
+        answer = route_transit_answer("Qual a ordem dos cais de entrada pelo Canal Norte e pelo Canal Sul?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Entrada pelo Canal Norte", answer["answer"])
+        self.assertIn("TMS 1 -> TMS 2 -> Autoeuropa", answer["answer"])
+        self.assertIn("Entrada pelo Canal Sul", answer["answer"])
+        self.assertIn("Tanquisado/Eco-Oil", answer["answer"])
+        self.assertNotIn("dois rebocadores à popa", answer["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

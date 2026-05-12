@@ -45,6 +45,10 @@ FOG_UNDERWAY_RE = re.compile(
     r"nevoeiro|nevoa|névoa|neblina|fog|mist|visibilidade\s+reduzida)\b",
     flags=re.IGNORECASE,
 )
+SOURCE_COVERAGE_RE = re.compile(
+    r"\b(fonte|documento|base|cobre|cobrem|inclui|incluem|cont[eé]m|incorporad\w*)\b",
+    flags=re.IGNORECASE,
+)
 PROSPECTIVE_COLLISION_RE = re.compile(
     r"\b(rumo|rota|risco|perigo)\s+de\s+(?:colis[aã]o|abalroamento)\b"
     r"|\brisco\s+de\s+abalroamento\b",
@@ -112,6 +116,8 @@ def looks_like_emergency_response_question(question: str) -> bool:
 
 
 def looks_like_fog_underway_procedure_question(question: str) -> bool:
+    if SOURCE_COVERAGE_RE.search(question or "") and re.search(r"\b(colreg|rieam)\b", question or "", re.IGNORECASE):
+        return False
     return bool(FOG_UNDERWAY_RE.search(question or ""))
 
 

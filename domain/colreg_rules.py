@@ -17,6 +17,10 @@ COLREG_INTERPRETATION_RE = re.compile(
     r"pesca|arrasto|vela)\b",
     flags=re.IGNORECASE,
 )
+COLREG_SOURCE_COVERAGE_RE = re.compile(
+    r"\b(fonte|documento|base|cobre|cobrem|inclui|incluem|cont[eé]m|incorporad\w*)\b",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -231,6 +235,25 @@ def answer_colreg_interpretation_direct(question: str) -> dict | None:
     clean = _normalize_colreg_text(question)
     if not clean or not COLREG_INTERPRETATION_RE.search(question or ""):
         return None
+
+    if COLREG_SOURCE_COVERAGE_RE.search(question or "") and re.search(r"\b(colreg|rieam)\b", question or "", flags=re.IGNORECASE):
+        answer = (
+            "Sim. A fonte RIEAM/COLREG cobre as regras centrais de governo, anti-colisão, sinais e visibilidade reduzida:\n"
+            "- Regra 5 - Vigia.\n"
+            "- Regra 6 - Velocidade de segurança.\n"
+            "- Regra 7 - Risco de abalroamento.\n"
+            "- Regra 8 - Manobra para evitar abalroamento.\n"
+            "- Regra 9 - Canais estreitos.\n"
+            "- Regra 13 - Navio que alcança / ultrapassagem.\n"
+            "- Regra 14 - Roda a roda, com guinar para estibordo.\n"
+            "- Regra 15 - Rumos cruzados, quando se vê o outro por estibordo.\n"
+            "- Regra 19 - Conduta em visibilidade reduzida.\n"
+            "- Regra 34 - Ultrapassagem em canal estreito e sinais de manobra.\n"
+            "- Regra 35 - Sinais sonoros em visibilidade reduzida.\n"
+            "- Regra 27 - Dragagem/trabalhos submarinos e capacidade de manobra reduzida.\n"
+            "- Regra 37 e Anexo IV - Sinais de perigo."
+        )
+        return _colreg_payload(answer)
 
     explicit_rule = parse_colreg_rule_number(question)
     if explicit_rule is not None and re.search(r"\b(colreg|rieam|regra\s*)\b", question or "", flags=re.IGNORECASE):

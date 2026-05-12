@@ -297,6 +297,26 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertNotIn("Não. Com nevoeiro em porto", payload["answer"])
         self.assertEqual(["fog_underway_procedure"], [source.get("retrieval_mode") for source in sources])
 
+    def test_generic_fog_question_uses_port_suspension_priority_and_requests(self) -> None:
+        payload = answer_direct_operational_query("O que fazer quando há nevoeiro?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_safety_limit", payload["answer_origin"])
+        self.assertIn("pilotagem é suspensa", payload["answer"])
+        self.assertIn("fila de prioridade", payload["answer"])
+        self.assertIn("requisições continuam", payload["answer"])
+        self.assertNotEqual("colreg_interpretation", payload["answer_origin"])
+
+    def test_colreg_source_coverage_question_is_not_misrouted_to_fog_procedure(self) -> None:
+        payload = answer_direct_operational_query("A fonte RIEAM/COLREG cobre nevoeiro e ultrapassagem?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("colreg_interpretation", payload["answer_origin"])
+        self.assertIn("Regra 19", payload["answer"])
+        self.assertIn("Regra 34", payload["answer"])
+        self.assertIn("Ultrapassagem em canal estreito", payload["answer"])
+        self.assertNotIn("Nevoeiro súbito com o navio já a navegar", payload["answer"])
+
     def test_parted_mooring_lines_emergency_prepares_lines_and_tugs(self) -> None:
         answer = self._answer("Se partirem cabos na manobra, qual e a resposta imediata?")
 
@@ -381,6 +401,33 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("30-45 min", payload["answer"])
         self.assertIn("Atenção: o critério principal aqui não é apenas ser dia/noite", payload["answer"])
         self.assertNotIn("não há proibição", payload["answer"].lower())
+
+    def test_secil_w_reponto_question_gets_direct_rule_not_llm_fallback(self) -> None:
+        payload = answer_direct_operational_query(
+            "Entrada para SECIL W marcada para 13:30, tenho de ir ao reponto?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_reponto_rule", payload["answer_origin"])
+        self.assertIn("SECIL W/Oeste", payload["answer"])
+        self.assertIn("todos os navios devem atracar próximo do reponto", payload["answer"])
+        self.assertIn("30-45 min antes do reponto", payload["answer"])
+        self.assertNotIn("não está previsto o recurso ao reponto", payload["answer"].lower())
+
+    def test_roro_autoeuropa_can_exit_wording_uses_live_weather_and_tugs(self) -> None:
+        services.weather_service.forecast["current"].update({"wind_kts": 13, "gust_kts": 20, "wind_dir": "S"})
+
+        payload = answer_direct_operational_query(
+            "Um roro vai sair agora da Autoeuropa. Tem 200 m e já pus 2 reboques. Pode sair com a meteorologia atual?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 2 rebocadores", payload["answer"])
+        self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Meteorologia considerada", payload["answer"])
+        self.assertIn("rajadas 20", payload["answer"])
+        self.assertIn("ponderar atrasar", payload["answer"])
 
     def test_vessel_detail_answer_falls_back_to_catalog_by_call_sign(self) -> None:
         services.store.runtime_state["port_call_vessel_catalog"] = {
