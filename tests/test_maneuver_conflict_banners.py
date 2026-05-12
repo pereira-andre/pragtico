@@ -26,6 +26,14 @@ class MultiSlotConflictStore:
         return {
             "in_port": [
                 {
+                    "id": "short-c4",
+                    "reference_code": "PTSET26SHORTC4",
+                    "vessel_name": "SHORT C4",
+                    "berth_label": "TMS 1 - Cais 4",
+                    "vessel_loa_m": "120",
+                    "maneuver_history": [],
+                },
+                {
                     "id": "short-c6",
                     "reference_code": "PTSET26SHORTC6",
                     "vessel_name": "SHORT C6",

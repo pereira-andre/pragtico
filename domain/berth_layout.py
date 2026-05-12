@@ -69,6 +69,8 @@ TMS2_TOTAL_LENGTH_M = 723.0
 TMS2_SLOT_LENGTHS_M = {label: TMS2_TOTAL_LENGTH_M / len(TMS2_SLOT_LABELS) for label in TMS2_SLOT_LABELS}
 AUTOEUROPA_SLOT_LABELS = ["Cais 10 / Autoeuropa", "Cais 11 / Autoeuropa"]
 AUTOEUROPA_EXCLUSIVE_LOA_M = 230.0
+AUTOEUROPA_TOTAL_LENGTH_M = AUTOEUROPA_EXCLUSIVE_LOA_M * len(AUTOEUROPA_SLOT_LABELS)
+SHARED_BERTH_CLEARANCE_M = 30.0
 
 TERMINAL_OPTIONS = [
     "Secil",
@@ -301,38 +303,19 @@ def _capacity_conflict(target_berth: str, reason: str) -> Dict:
     }
 
 
-def _contiguous_span_from_start(
-    labels: list[str],
-    lengths: dict[str, float],
-    start_label: str,
-    loa_m: float | None,
-) -> list[str]:
-    if start_label not in labels:
-        return []
-    if loa_m is None:
-        return [start_label]
-    start_index = labels.index(start_label)
-    total = 0.0
-    span: list[str] = []
-    for label in labels[start_index:]:
-        span.append(label)
-        total += lengths.get(label, 0.0)
-        if total >= loa_m:
-            return span
-    return span
-
-
-def _shortest_contiguous_span_including(
+def _preferred_contiguous_span_including(
     labels: list[str],
     lengths: dict[str, float],
     anchor_label: str,
     loa_m: float | None,
+    blocked_labels: set[str] | None = None,
 ) -> list[str]:
     if anchor_label not in labels:
         return []
     if loa_m is None:
         return [anchor_label]
     anchor_index = labels.index(anchor_label)
+    blocked = set(blocked_labels or set())
     candidates: list[list[str]] = []
     for start in range(anchor_index + 1):
         total = 0.0
@@ -348,33 +331,127 @@ def _shortest_contiguous_span_including(
                 break
     if not candidates:
         return labels[:]
-    candidates.sort(key=lambda span: (len(span), labels.index(span[0])))
+
+    def preference(span: list[str]) -> tuple[int, int, int]:
+        if set(span) & blocked:
+            blocked_rank = 1
+        else:
+            blocked_rank = 0
+        if span[0] == anchor_label:
+            direction_rank = 0
+        elif span[-1] == anchor_label:
+            direction_rank = 1
+        else:
+            direction_rank = 2
+        return (blocked_rank, direction_rank, len(span))
+
+    candidates.sort(key=preference)
     return candidates[0]
 
 
-def _berth_span_labels(canonical: str, loa_m: float | None) -> list[str]:
+def _berth_span_labels(
+    canonical: str,
+    loa_m: float | None,
+    blocked_labels: set[str] | None = None,
+) -> list[str]:
     if canonical in TMS1_SLOT_LABELS:
         if canonical == "TMS 1 - Cais 8":
             return [canonical]
-        return _contiguous_span_from_start(TMS1_SLOT_LABELS, TMS1_SLOT_LENGTHS_M, canonical, loa_m)
+        return _preferred_contiguous_span_including(
+            TMS1_SLOT_LABELS[:-1],
+            TMS1_SLOT_LENGTHS_M,
+            canonical,
+            loa_m,
+            blocked_labels,
+        )
     if canonical in TMS2_SLOT_LABELS:
-        return _shortest_contiguous_span_including(TMS2_SLOT_LABELS, TMS2_SLOT_LENGTHS_M, canonical, loa_m)
+        return _preferred_contiguous_span_including(
+            TMS2_SLOT_LABELS,
+            TMS2_SLOT_LENGTHS_M,
+            canonical,
+            loa_m,
+            blocked_labels,
+        )
     if canonical in AUTOEUROPA_SLOT_LABELS and loa_m is not None and loa_m >= AUTOEUROPA_EXCLUSIVE_LOA_M:
         return AUTOEUROPA_SLOT_LABELS[:]
     return [canonical] if canonical else []
 
 
-def _tms2_required_length_m(lengths: list[float]) -> float:
-    if not lengths:
+def _required_length_with_clearances(lengths: list[float]) -> float:
+    valid_lengths = [length for length in lengths if length > 0]
+    if not valid_lengths:
         return 0.0
-    ordered = sorted(lengths, reverse=True)
-    total = ordered[0] * 1.1
-    previous = ordered[0]
-    for current in ordered[1:]:
-        total += max(previous * 0.1, current * 0.1) + current
-        previous = current
-    total += ordered[-1] * 0.1
-    return total
+    return sum(valid_lengths) + SHARED_BERTH_CLEARANCE_M * max(len(valid_lengths) - 1, 0)
+
+
+def _tms1_ranges_touch(left_start: int, left_end: int, right_start: int, right_end: int) -> bool:
+    if left_start > right_start:
+        left_start, left_end, right_start, right_end = right_start, right_end, left_start, left_end
+    if left_end >= right_start:
+        return True
+    if left_end + 1 != right_start:
+        return False
+    left_label = TMS1_SLOT_LABELS[left_end]
+    right_label = TMS1_SLOT_LABELS[right_start]
+    return not (left_label == "TMS 1 - Cais 7" and right_label == "TMS 1 - Cais 8")
+
+
+def _tms1_shared_clearance_conflict(
+    target_canonical: str,
+    target_span: list[str],
+    target_loa: float | None,
+    tms1_occupants: list[tuple[Dict, str]],
+) -> Dict | None:
+    if not target_span:
+        return None
+    placements: list[dict] = [
+        {
+            "item": None,
+            "start": min(TMS1_SLOT_LABELS.index(label) for label in target_span),
+            "end": max(TMS1_SLOT_LABELS.index(label) for label in target_span),
+            "length": target_loa if target_loa is not None else TMS1_SLOT_LENGTHS_M[target_canonical],
+            "target": True,
+        }
+    ]
+    for item, item_canonical in tms1_occupants:
+        item_span = _berth_span_labels(item_canonical, _item_loa_m(item))
+        if not item_span:
+            continue
+        placements.append(
+            {
+                "item": item,
+                "start": min(TMS1_SLOT_LABELS.index(label) for label in item_span),
+                "end": max(TMS1_SLOT_LABELS.index(label) for label in item_span),
+                "length": _item_loa_m(item) or TMS1_SLOT_LENGTHS_M[item_canonical],
+                "target": False,
+            }
+        )
+
+    group = [placements[0]]
+    group_start = placements[0]["start"]
+    group_end = placements[0]["end"]
+    changed = True
+    while changed:
+        changed = False
+        for placement in placements[1:]:
+            if placement in group:
+                continue
+            if _tms1_ranges_touch(group_start, group_end, placement["start"], placement["end"]):
+                group.append(placement)
+                group_start = min(group_start, placement["start"])
+                group_end = max(group_end, placement["end"])
+                changed = True
+    if len(group) <= 1:
+        return None
+
+    available = sum(TMS1_SLOT_LENGTHS_M[TMS1_SLOT_LABELS[index]] for index in range(group_start, group_end + 1))
+    required = _required_length_with_clearances([placement["length"] for placement in group])
+    if required <= available:
+        return None
+    for placement in group:
+        if placement["item"]:
+            return placement["item"]
+    return _capacity_conflict(target_canonical, "folga mínima de 30 m entre navios no TMS 1")
 
 
 def _occupied_slot_labels_for_item(item: Dict, berth_options: Iterable[str] | None = None) -> list[str]:
@@ -678,23 +755,33 @@ def find_occupied_berth_conflict(
                 return item
         if len(autoeuropa_occupants) >= len(AUTOEUROPA_SLOT_LABELS):
             return autoeuropa_occupants[0]
+        autoeuropa_lengths = [capacity_loa]
+        autoeuropa_lengths.extend(_item_loa_m(item) or AUTOEUROPA_EXCLUSIVE_LOA_M for item in autoeuropa_occupants)
+        if len(autoeuropa_lengths) > 1 and _required_length_with_clearances(autoeuropa_lengths) > AUTOEUROPA_TOTAL_LENGTH_M:
+            return autoeuropa_occupants[0] if autoeuropa_occupants else _capacity_conflict(target_canonical, "folga mínima de 30 m na Autoeuropa")
         return None
 
     if target_canonical in TMS1_SLOT_LABELS:
         if target_canonical == "TMS 1 - Cais 8" and target_loa is not None and target_loa > TMS1_CAIS8_MAX_LOA_M:
             return _capacity_conflict(target_canonical, "limite físico do TMS 1 - Cais 8")
-        target_span = _berth_span_labels(target_canonical, target_loa)
-        if target_loa is not None and sum(TMS1_SLOT_LENGTHS_M.get(label, 0.0) for label in target_span) < target_loa:
-            return _capacity_conflict(target_canonical, "comprimento disponível no TMS 1")
         tms1_occupants = [
             (item, item_canonical)
             for item, item_canonical in active_items
             if item_canonical in TMS1_SLOT_LABELS
         ]
+        occupied_tms1_labels = set()
+        for item, item_canonical in tms1_occupants:
+            occupied_tms1_labels.update(_berth_span_labels(item_canonical, _item_loa_m(item)))
+        target_span = _berth_span_labels(target_canonical, target_loa, occupied_tms1_labels)
+        if target_loa is not None and sum(TMS1_SLOT_LENGTHS_M.get(label, 0.0) for label in target_span) < target_loa:
+            return _capacity_conflict(target_canonical, "comprimento disponível no TMS 1")
         target_span_set = set(target_span)
         for item, item_canonical in tms1_occupants:
             if target_span_set & set(_berth_span_labels(item_canonical, _item_loa_m(item))):
                 return item
+        clearance_conflict = _tms1_shared_clearance_conflict(target_canonical, target_span, target_loa, tms1_occupants)
+        if clearance_conflict:
+            return clearance_conflict
         large_occupants = [
             item
             for item, _item_canonical in tms1_occupants
@@ -705,21 +792,24 @@ def find_occupied_berth_conflict(
         return None
 
     if target_canonical in TMS2_SLOT_LABELS:
-        target_span = _berth_span_labels(target_canonical, target_loa)
-        if target_loa is not None and sum(TMS2_SLOT_LENGTHS_M.get(label, 0.0) for label in target_span) < target_loa:
-            return _capacity_conflict(target_canonical, "comprimento disponível no TMS 2")
         tms2_occupants = [
             (item, item_canonical)
             for item, item_canonical in active_items
             if item_canonical in TMS2_SLOT_LABELS
         ]
+        occupied_tms2_labels = set()
+        for item, item_canonical in tms2_occupants:
+            occupied_tms2_labels.update(_berth_span_labels(item_canonical, _item_loa_m(item)))
+        target_span = _berth_span_labels(target_canonical, target_loa, occupied_tms2_labels)
+        if target_loa is not None and sum(TMS2_SLOT_LENGTHS_M.get(label, 0.0) for label in target_span) < target_loa:
+            return _capacity_conflict(target_canonical, "comprimento disponível no TMS 2")
         target_span_set = set(target_span)
         for item, item_canonical in tms2_occupants:
             if target_span_set & set(_berth_span_labels(item_canonical, _item_loa_m(item))):
                 return item
         lengths = [target_loa if target_loa is not None else TMS2_SLOT_LENGTHS_M[target_canonical]]
         lengths.extend(_item_loa_m(item) or TMS2_SLOT_LENGTHS_M[item_canonical] for item, item_canonical in tms2_occupants)
-        if _tms2_required_length_m(lengths) > TMS2_TOTAL_LENGTH_M:
+        if _required_length_with_clearances(lengths) > TMS2_TOTAL_LENGTH_M:
             return tms2_occupants[0][0] if tms2_occupants else _capacity_conflict(target_canonical, "comprimento útil do TMS 2")
         return None
 

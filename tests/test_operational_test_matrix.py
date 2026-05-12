@@ -109,7 +109,8 @@ def test_berth_capacity_matrix_is_executable(monkeypatch) -> None:
 
     assert len(matrix) >= 20
     assert all(result["state"] == "passed" for result in results.values())
-    assert results["tms1-target-230-c5-spans-c6"]["observed"].startswith("Conflito")
+    assert results["tms1-target-230-c5-spans-c6"]["observed"] == "Sem conflito"
+    assert results["tms1-right-and-left-occupied-blocked"]["observed"].startswith("Conflito")
     assert results["tms2-three-230-blocked"]["observed"].startswith("Conflito")
     assert "Slots ocupados: 2" in results["occupancy-autoeuropa-large"]["observed"]
 
@@ -142,7 +143,8 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Autoeuropa permite 2 navios abaixo de 230 m" in html
     assert "TMS 1 não permite 3 navios grandes" in html
     assert "TMS 2 ocupa posições adjacentes por LOA" in html
-    assert "TMS 1 valida o LOA do navio novo" in html
+    assert "TMS 1 usa a esquerda se a direita está ocupada" in html
+    assert "TMS 1 bloqueia se direita e esquerda estão ocupadas" in html
     assert "TMS 2 bloqueia três navios de 230 m" in html
     assert "Ocupação conta Autoeuropa >=230 m como 2 slots" in html
     assert "operational-tests-matrix-group\" open" not in html
