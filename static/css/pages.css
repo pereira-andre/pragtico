@@ -3427,6 +3427,10 @@
   min-width: 1680px;
 }
 
+.operational-tests-capacity-table {
+  min-width: 1280px;
+}
+
 .operational-tests-downloads {
   display: flex;
   flex-wrap: wrap;

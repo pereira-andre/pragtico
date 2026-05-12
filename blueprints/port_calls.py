@@ -251,6 +251,7 @@ def _ensure_maneuver_destination_can_be_approved(
         current_port_call_id=port_call.get("id", ""),
         label=label,
         target_planned_at=maneuver.get("planned_at"),
+        target_vessel_loa_m=port_call.get("vessel_loa_m"),
     )
 
 
@@ -1842,7 +1843,12 @@ def edit_port_call(port_call_id: str):
         if current.get("status") == "scheduled":
             validate_not_past_datetime(eta, "ETA")
         berth = (
-            ensure_portal_berth_is_available(form_data["berth"], current_port_call_id=port_call_id, label="Cais")
+            ensure_portal_berth_is_available(
+                form_data["berth"],
+                current_port_call_id=port_call_id,
+                label="Cais",
+                target_vessel_loa_m=form_data.get("vessel_loa_m"),
+            )
             if current.get("status") == "in_port"
             else normalize_portal_berth(form_data["berth"], "Cais")
         )

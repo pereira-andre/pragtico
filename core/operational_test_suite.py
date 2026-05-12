@@ -1529,6 +1529,66 @@ def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
     return pdf, "application/pdf", f"pragtico_railway_150_testes_{timestamp}.pdf"
 
 
+def berth_capacity_test_matrix() -> list[dict]:
+    """Return berth-capacity rules that must remain visible in admin QA."""
+    return [
+        {
+            "id": "autoeuropa-two-small",
+            "group": "Autoeuropa",
+            "risk": "Critico",
+            "label": "Autoeuropa permite 2 navios abaixo de 230 m",
+            "case": "Cais 10 ocupado por 180 m; Cais 11 recebe outro 180 m.",
+            "expected": "Sem conflito: Cais 10 e Cais 11 podem estar ambos ocupados quando nenhum navio chega a 230 m.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+        {
+            "id": "autoeuropa-large-exclusive",
+            "group": "Autoeuropa",
+            "risk": "Critico",
+            "label": "Autoeuropa bloqueia exclusividade a partir de 230 m",
+            "case": "Um Ro-Ro de 230 m ou mais em Cais 10/11; tentar aprovar outro navio na Autoeuropa.",
+            "expected": "Conflito: navio com LOA >= 230 m fica sozinho no terminal.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+        {
+            "id": "tms1-large-spans-two-cais",
+            "group": "TMS 1",
+            "risk": "Critico",
+            "label": "TMS 1 ocupa mais do que um cais por LOA",
+            "case": "Navio de 230 m no Cais 4; tentar usar o Cais 5.",
+            "expected": "Conflito: o navio longo ocupa Cais 4 + Cais 5.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+        {
+            "id": "tms1-no-three-large",
+            "group": "TMS 1",
+            "risk": "Critico",
+            "label": "TMS 1 não permite 3 navios grandes",
+            "case": "230 m + 230 m no TMS 1; tentar 210 m no Cais 8.",
+            "expected": "Conflito: a regra crítica impede 230 + 230 + 210 no Cais 8.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+        {
+            "id": "tms1-cais8-limit",
+            "group": "TMS 1",
+            "risk": "Critico",
+            "label": "Cais 8 aceita só um navio até 230 m",
+            "case": "Tentar aprovar navio de 240 m no TMS 1 - Cais 8.",
+            "expected": "Conflito por capacidade física do Cais 8.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+        {
+            "id": "tms2-large-spans-two-positions",
+            "group": "TMS 2",
+            "risk": "Critico",
+            "label": "TMS 2 ocupa posições adjacentes por LOA",
+            "case": "Navio de 300 m na Posição A; tentar usar a Posição B.",
+            "expected": "Conflito: o navio longo ocupa A + B; a Posição C continua avaliável se houver comprimento.",
+            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
+        },
+    ]
+
+
 def operational_test_inventory() -> dict:
     """Return current retained test records so the admin page can show cleanup state."""
     matrix = critical_bot_test_matrix()
@@ -1541,6 +1601,8 @@ def operational_test_inventory() -> dict:
         "bot_matrix_automatic_count": automatic_count,
         "bot_matrix_manual_count": manual_count,
         "railway_log": railway_bot_test_log_inventory(),
+        "berth_capacity_tests": berth_capacity_test_matrix(),
+        "berth_capacity_test_count": len(berth_capacity_test_matrix()),
         "expected_module_count": 9,
     }
     try:
@@ -2260,6 +2322,7 @@ class OperationalFlowSuite:
             maneuver.get("destination", ""),
             current_port_call_id=current["id"],
             target_planned_at=maneuver.get("planned_at"),
+            target_vessel_loa_m=current.get("vessel_loa_m"),
         )
         return services.store.approve_port_call(
             current["id"],
@@ -2286,6 +2349,7 @@ class OperationalFlowSuite:
             maneuver.get("destination", ""),
             current_port_call_id=current["id"],
             target_planned_at=maneuver.get("planned_at"),
+            target_vessel_loa_m=current.get("vessel_loa_m"),
             label="Cais destino",
         )
         return services.store.approve_shift_plan(
