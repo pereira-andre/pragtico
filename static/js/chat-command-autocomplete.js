@@ -71,6 +71,20 @@
         template: "/it 015",
       },
       {
+        command: "/colreg-lista",
+        label: "COLREG lista",
+        description: "Lista as regras RIEAM/COLREG disponíveis.",
+        keywords: "colreg rieam lista regras navegacao",
+        template: "/colreg-lista",
+      },
+      {
+        command: "/colreg 19",
+        label: "COLREG",
+        description: "Consulta uma regra RIEAM/COLREG específica.",
+        keywords: "colreg rieam regra navegacao nevoeiro luzes",
+        template: "/colreg 19",
+      },
+      {
         command: "/planeamento",
         label: "Planeamento",
         description: "Lista todas as manobras no planeamento.",
@@ -388,6 +402,43 @@
         }
       );
     }
+
+    function commandToken(value) {
+      return normalize(value).replace(/^\//, "").split(/\s+/)[0];
+    }
+
+    function replaceTemplateCommand(template, aliasCommand) {
+      const cleanTemplate = String(template || aliasCommand);
+      return cleanTemplate.replace(/^\/[^\s\n]*/, aliasCommand);
+    }
+
+    function aliasFrom(baseCommand, aliasCommand, label) {
+      const baseToken = commandToken(baseCommand);
+      const base = suggestions.find((item) => commandToken(item.command) === baseToken);
+      if (!base) return;
+      suggestions.push(Object.assign({}, base, {
+        command: aliasCommand,
+        label: label || base.label,
+        keywords: [base.keywords, aliasCommand.replace(/^\//, "")].filter(Boolean).join(" "),
+        template: replaceTemplateCommand(base.template, aliasCommand),
+      }));
+    }
+
+    aliasFrom("/ondulacao", "/ondulação", "Ondulação");
+    aliasFrom("/ondulacao", "/leitura-costeira", "Leitura costeira");
+    aliasFrom("/validar-manobra", "/verificar-manobra", "Verificar manobra");
+    aliasFrom("/validar-manobra", "/verificar", "Verificar");
+    aliasFrom("/validar-manobra", "/validar", "Validar");
+    aliasFrom("/validar-manobra", "/checklist-manobra", "Checklist manobra");
+    aliasFrom("/reportar-evento", "/reportar_evento", "Reportar evento");
+    aliasFrom("/registar-escala", "/nova-escala", "Nova escala");
+    aliasFrom("/apagar-manobra", "/cancelar-manobra", "Cancelar manobra");
+    aliasFrom("/abortar", "/abortar-manobra", "Abortar manobra");
+    aliasFrom("/colreg-lista", "/colregs", "COLREG lista");
+    aliasFrom("/colreg-lista", "/rieam-lista", "RIEAM lista");
+    aliasFrom("/colreg", "/rieam", "RIEAM");
+    aliasFrom("/colreg", "/regra-colreg", "Regra COLREG");
+    aliasFrom("/colreg", "/regra-rieam", "Regra RIEAM");
 
     return suggestions;
   }
