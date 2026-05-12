@@ -55,6 +55,7 @@ OPERATIONAL_SOURCE_MODES = {
     "operational_scales",
     "operational_archive",
     "operational_action",
+    "operational_qa_memory",
 }
 LIVE_FEED_QUESTION_RE = re.compile(
     r"\b("
@@ -158,6 +159,8 @@ def _should_decorate_llm_response(payload: dict[str, Any], question: str) -> boo
     if str(payload.get("answer_origin") or "") != "llm":
         return False
     modes = _source_modes(payload)
+    if "operational_qa_memory" in modes:
+        return True
     if modes & LIVE_SOURCE_MODES:
         return True
     return bool(modes & OPERATIONAL_SOURCE_MODES) and bool(LIVE_FEED_QUESTION_RE.search(question or ""))

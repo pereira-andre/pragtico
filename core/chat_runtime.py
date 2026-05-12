@@ -76,6 +76,7 @@ from domain.operational_memory import (
     build_feedback_memory_sources,
     filter_feedback_for_synthesis,
 )
+from domain.operational_qa_memory import build_qa_memory_sources
 from domain.port_entities import detect_port_entities, entity_names_from_matches, specific_entities
 from integrations.rag_engine import chunk_text, lexical_score
 from storage.utils import normalize_feedback_correction
@@ -348,6 +349,7 @@ def _build_supplemental_sources(
     if conversation_state and conversation_state.get("source"):
         supplemental_sources.append(conversation_state["source"])
     supplemental_sources.extend(_build_approved_casebook_sources(question))
+    supplemental_sources.extend(build_qa_memory_sources(question))
     supplemental_sources.extend(
         build_feedback_memory_sources(question, trusted_answers, reviewed_answers)
     )
