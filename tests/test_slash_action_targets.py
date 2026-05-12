@@ -320,6 +320,7 @@ class SlashActionTargetTests(unittest.TestCase):
             "aprovar",
             "registar-manobra",
             "reportar-evento",
+            "it",
             "porque",
             "diagnostico",
             "debug",

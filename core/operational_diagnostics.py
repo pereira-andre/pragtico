@@ -370,11 +370,11 @@ def build_operational_diagnostic(
         _add_unique_rule(
             critical_rules,
             "ALSTOM",
-            "Vento tem de ser inferior a 15 kt; com vento >= 15 kt não validar a manobra.",
+            "Vento tem de ser inferior a 15 kt; com vento >= 15 kt nao validar a manobra.",
             "critical",
         )
         if case.get("wind_kts") is not None and case["wind_kts"] >= 15:
-            warnings.append(f"ALSTOM: vento {_display_number(case['wind_kts'])} kt atinge/excede o limite local < 15 kt.")
+            warnings.append(f"ALSTOM: vento {_display_number(case['wind_kts'])} kt atinge/excede o limite pratico < 15 kt.")
 
     if case.get("wind_kts") and case["wind_kts"] > 30:
         warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: manobras suspensas acima de 30 kt.")

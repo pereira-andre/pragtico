@@ -11,19 +11,39 @@
     "REGRAS APLICÁVEIS A MANOBRAS — CAIS ALSTOM"
   ],
   "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Cais da ALSTOM, no Porto de Setúbal.",
+  "rule_summary": {
+    "scope": "Aplica-se ao estacionamento e à execução de manobras no Cais da ALSTOM, incluindo o trânsito no Canal ABB-ALSTOM. A atualização prática operacional em vigor prevalece sobre a redação documental antiga quando houver conflito.",
+    "critical_points": [
+      "Comprimento físico do cais: 91 m.",
+      "Calado permitido: 7,0 m; comprimento aconselhável para esse calado: 110 m.",
+      "É aceitável LOA até 120 m com redução proporcional do calado até 6,0 m; LOA superior a 120 m não deve ser aceite.",
+      "Regra prática atual: trânsito/manobra apenas com vento inferior a 15 nós; vento igual ou superior a 15 nós bloqueia a manobra, incluindo rajadas nesse limite.",
+      "Trânsito no canal: considerar 5 m + altura de água.",
+      "Regra prática atual: navios no Cais ALSTOM só atracam por estibordo.",
+      "Regra prática atual: manobras ALSTOM só no reponto de preia-mar.",
+      "Entrada desde a Barra: marcar 1 hora e 30 minutos antes da preia-mar; mudança/entrada desde o Fundeadouro Norte: marcar 45 minutos antes da preia-mar.",
+      "Regra prática atual: só um navio por reponto.",
+      "Regra prática atual: manobras ALSTOM apenas de dia."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT.",
+    "notes": [
+      "Não usar a exceção documental antiga de saída noturna para validar uma manobra ALSTOM sem validação operacional explícita."
+    ]
+  },
   "key_points": [
     "91 metros.",
     "7,0 metros (LOA ≤ 110 m → calado máximo 7,0 m).",
     "7,0 — ((116 — 110) × 0,1) = 7,0 — 0,6 = 6,4 metros.",
     "Não. O LOA máximo aceite no Cais ALSTOM é 120 metros.",
     "5 + 1,0 = 6,0 metros.",
-    "Para validação operacional conservadora do Cais ALSTOM, apenas com vento inferior a 15 nós.",
+    "Regra prática atual: apenas com vento inferior a 15 nós; vento igual ou superior a 15 nós bloqueia a manobra.",
     "Navios no Cais ALSTOM só atracam por estibordo.",
     "Manobras ALSTOM só no reponto de preia-mar.",
     "Entrada desde a Barra para ALSTOM: marcar 1 hora e 30 minutos antes da preia-mar.",
     "Mudança/entrada desde o Fundeadouro Norte para ALSTOM: marcar 45 minutos antes da preia-mar.",
     "Só um navio por reponto no Cais ALSTOM.",
-    "Manobras ALSTOM apenas de dia."
+    "Manobras ALSTOM apenas de dia.",
+    "O Piloto Coordenador valida as requisições de manobra."
   ],
   "faq": [
     {
@@ -88,7 +108,7 @@
     },
     {
       "question": "Com que condições de vento se pode transitar no Canal ABB-ALSTOM?",
-      "answer": "Para validação operacional conservadora do Cais ALSTOM, apenas com vento inferior a 15 nós. Vento igual ou superior a 15 nós bloqueia a manobra, incluindo rajadas nesse limite.",
+      "answer": "Pela regra prática atual, apenas com vento inferior a 15 nós. Vento igual ou superior a 15 nós bloqueia a manobra, incluindo rajadas nesse limite.",
       "keywords": [
         "abb",
         "alstom",
@@ -145,7 +165,7 @@
     },
     {
       "question": "Podem ser feitas duas manobras ALSTOM no mesmo reponto?",
-      "answer": "Não. Só um navio por reponto.",
+      "answer": "Não. Só deve haver um navio por reponto.",
       "keywords": [
         "alstom",
         "duas",
@@ -156,7 +176,7 @@
     },
     {
       "question": "Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?",
-      "answer": "Não. As manobras ALSTOM devem ser feitas apenas de dia.",
+      "answer": "Não. Pela regra prática atual, as manobras ALSTOM devem ser feitas apenas de dia.",
       "keywords": [
         "alstom",
         "cais",
@@ -170,7 +190,7 @@
     },
     {
       "question": "Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?",
-      "answer": "Não. A regra operacional obrigatória é manobrar apenas de dia.",
+      "answer": "Não. Pela regra prática atual, as manobras ALSTOM devem ser feitas apenas de dia, independentemente do LOA.",
       "keywords": [
         "alstom",
         "cais",

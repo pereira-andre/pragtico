@@ -85,6 +85,13 @@
         template: "/regra 015",
       },
       {
+        command: "/it 015",
+        label: "IT",
+        description: "Consulta uma instrução de trabalho por código.",
+        keywords: "it regra regras instrucao instrucoes codigo",
+        template: "/it 015",
+      },
+      {
         command: "/validar-manobra",
         label: "Validar manobra",
         description: "Valida uma manobra com checklist e histórico.",

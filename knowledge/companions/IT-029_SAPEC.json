@@ -10,14 +10,35 @@
     "029",
     "REGRAS APLICÁVEIS A MANOBRAS — CAIS DA SAPEC (TPS e TGL)"
   ],
-  "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras nos dois terminais da SAPEC no Porto de Setúbal:",
+  "summary": "Este documento descreve as regras aplicáveis ao estacionamento e à execução das manobras nos dois terminais da SAPEC no Porto de Setúbal: TPS, Terminal de Granéis Sólidos, e TGL, Terminal de Granéis Líquidos.",
+  "rule_summary": {
+    "scope": "Aplica-se aos cais SAPEC TPS (Terminal de Granéis Sólidos) e TGL (Terminal de Granéis Líquidos). Os dois terminais pertencem ao mesmo operador, mas as verificações devem distinguir terminal, tipo de carga e calado.",
+    "critical_points": [
+      "TPS: comprimento físico do cais 112 m; duque d'Alba a 70 m; comprimento máximo de navio aconselhável 200 m.",
+      "TPS, carga IMO/navio tanque: calado máximo 9,5 m; fórmula de calado praticável 7,1 m + altura de água no momento; mínimo garantido a qualquer hora 7,2 m.",
+      "TPS, carga não IMO/outros navios: calado máximo de referência 10,0 m, calculado para preia-mar mínima anual de 2,4 m; fórmula de calado praticável 7,6 m + altura de água no momento; mínimo garantido a qualquer hora 7,7 m.",
+      "TPS, carochas/defensas afastadoras: navios com calado superior a 8,8 m + altura da baixa-mar durante a permanência devem atracar às carochas.",
+      "TPS, canal de acesso: recomenda-se velocidade inferior a 5 nós para evitar squat elevado.",
+      "TGL: estrutura de duques d'alba; 70 m entre os duques extremos e 35 m entre os duques do meio; comprimento máximo de navio aconselhável 200 m.",
+      "TGL, carga IMO/perigosa: calado máximo 9,5 m e fórmula 7,1 m + altura de água no momento.",
+      "TGL, carga não IMO: calado máximo 10,0 m e fórmula 7,6 m + altura de água no momento.",
+      "TPS e TGL usam as mesmas fórmulas base de calado praticável: 7,6 m + água para não IMO e 7,1 m + água para IMO; a manobra deve comparar o resultado com o calado real, tipo de carga e maré/hora prevista."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT.",
+    "notes": [
+      "Para carga não IMO no TPS, o IT admite que calados ligeiramente superiores a 10,0 m possam ser analisados caso a caso, mas isso não é autorização automática.",
+      "Evitar responder só com um número: em SAPEC é crítico indicar terminal, tipo de carga, fórmula aplicável e validação operacional."
+    ]
+  },
   "key_points": [
-    "9,5 metros.",
-    "10,0 metros de referência (calculado para PM mínimo de 2,4 m).",
-    "Exemplo: com carga não IMO e altura de água de 1,8 m, o calado praticável é 7,6 + 1,8 = 9,4 m; comparar sempre com o calado real do navio e a maré/hora da manobra.",
-    "8,8 + 0,3 = 9,1 metros.",
-    "Inferior a 5 nós, para evitar squat elevado.",
-    "10,0 metros."
+    "TPS: cais físico 112 m, duque d'Alba a 70 m e LOA aconselhável 200 m.",
+    "TPS carga IMO/navio tanque: calado máximo 9,5 m; fórmula 7,1 m + altura de água.",
+    "TPS carga não IMO/outros navios: calado máximo de referência 10,0 m; fórmula 7,6 m + altura de água.",
+    "TPS: usar carochas quando o calado for superior a 8,8 m + altura da baixa-mar durante a permanência.",
+    "TPS: velocidade recomendada no canal de acesso inferior a 5 nós para evitar squat.",
+    "TGL: 70 m entre duques d'alba extremos, 35 m entre os do meio e LOA aconselhável 200 m.",
+    "TGL carga IMO: calado máximo 9,5 m; TGL carga não IMO: calado máximo 10,0 m.",
+    "Piloto Coordenador valida as requisições de manobra."
   ],
   "faq": [
     {

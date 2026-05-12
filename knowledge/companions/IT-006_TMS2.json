@@ -11,13 +11,27 @@
     "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL MULTIUSOS, ZONA 2 (TMS2)"
   ],
   "summary": "Este documento descreve as regras que se aplicam ao estacionamento e às manobras de navios no Terminal Multiusos — Zona 2 (também designado TMS2) do Porto de Setúbal.",
+  "rule_summary": {
+    "scope": "Aplica-se ao estacionamento e às manobras no Terminal Multiusos — Zona 2 (TMS2), delimitado pelos cabeços 40 a 63.",
+    "critical_points": [
+      "O TMS2 tem comprimento total de 723 m.",
+      "O IT-006 descreve o TMS2 como um espaço contínuo, sem cais numerados; no portal é representado por posições A, B, C e D de 180,75 m de referência cada.",
+      "Os navios devem atracar com intervalos de 10% do comprimento de cada navio para cada lado.",
+      "Quando há vários navios, a compatibilidade deve ser avaliada pelo espaço total ocupado e pelos intervalos individuais de 10%.",
+      "O calado máximo no TMS2 é 12 m, aplicado de forma uniforme ao terminal."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT.",
+    "notes": [
+      "Nota do portal: a regra de capacidade usada no registo mantém quatro posições A/B/C/D e conserva 30 m mínimos entre navios para cruzar cabos e evitar contacto, mas isso é uma regra operacional do portal, não substitui a redação formal do IT-006."
+    ]
+  },
   "key_points": [
     "O TMS2 abrange os cabeços 40 a 63.",
     "723 metros.",
     "Modelo operacional do portal: TMS2 dividido em Posição A, Posição B, Posição C e Posição D, com 723 / 4 = 180,75 m por posição de referência.",
     "12 metros, aplicável de forma uniforme a todo o terminal.",
-    "Regra operacional de ocupação: quando há mais do que um navio no TMS2, manter pelo menos 30 metros de separação entre navios para cruzar cabos e evitar contacto.",
-    "É necessário calcular o espaço total ocupado.",
+    "Regra formal do IT-006: intervalos de 10% do comprimento de cada navio para cada lado.",
+    "Nota do portal: para registo/ocupação, manter 30 m mínimos entre navios quando partilham o TMS2.",
     "O Piloto Coordenador."
   ],
   "faq": [
@@ -66,7 +80,7 @@
     },
     {
       "question": "Qual a separação mínima entre navios no TMS2?",
-      "answer": "Usa-se a regra operacional de pelo menos 30 metros de separação entre navios quando partilham o TMS2. A conta deve somar os LOA dos navios mais 30 m entre cada par adjacente e confirmar se cabe no comprimento total de referência de 723 m.",
+      "answer": "A regra formal do IT-006 é intervalo de 10% do comprimento de cada navio para cada lado. No portal, para efeitos de registo/ocupação, mantém-se ainda uma separação mínima operacional de 30 m entre navios para cruzar cabos e evitar contacto.",
       "keywords": [
         "entre",
         "minima",
@@ -77,7 +91,7 @@
     },
     {
       "question": "Um navio de 200 metros pode atracar no TMS2 se já houver um navio de 150 metros atracado?",
-      "answer": "Em termos de comprimento, sim: 150 m + 30 m de separação + 200 m = 380 m, abaixo dos 723 m do TMS2. Ainda assim, deve confirmar calado, posição no cais, amarração e validação operacional antes de fechar a manobra.",
+      "answer": "Em termos de comprimento, sim, desde que se respeitem os intervalos do IT-006 e a regra operacional do portal. Pelo IT, o navio de 150 m precisa de 15 m de intervalo por lado e o de 200 m precisa de 20 m por lado; no portal deve manter-se também pelo menos 30 m entre navios. A soma fica abaixo dos 723 m, mas ainda é necessário confirmar calado, posição no cais, amarração e validação operacional.",
       "keywords": [
         "atracar",
         "houver",
@@ -102,7 +116,7 @@
     },
     {
       "question": "Qual a diferença entre o TMS1 e o TMS2?",
-      "answer": "O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m), Cais 8 isolado e capacidade máxima de três navios grandes quando se inclui o Cais 8. O TMS2 abrange os cabeços 40 a 63, tem um espaço contínuo de 723 metros, é representado no portal por quatro posições A/B/C/D de 180,75 m de referência cada, tem calado máximo uniforme de 12 metros e separação operacional mínima de 30 metros entre navios.",
+      "answer": "O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m), Cais 8 isolado e capacidade máxima de três navios grandes quando se inclui o Cais 8. O TMS2 abrange os cabeços 40 a 63, tem um espaço contínuo de 723 metros, é representado no portal por quatro posições A/B/C/D de 180,75 m de referência cada, tem calado máximo uniforme de 12 metros e regra formal de intervalos de 10% do comprimento de cada navio para cada lado.",
       "keywords": [
         "diferenca",
         "entre",

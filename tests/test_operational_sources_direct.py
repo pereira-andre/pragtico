@@ -620,7 +620,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("rajadas 20 kts", payload["answer"])
         self.assertIn("ponderar atrasar", payload["answer"])
 
-    def test_alstom_wind_limit_blocks_at_15_knots_with_local_rules(self) -> None:
+    def test_alstom_wind_limit_blocks_at_15_knots_with_practical_rules(self) -> None:
         answer = self._answer("Entrada para a Alstom desde a Barra com vento 15 kts pode avançar?")
 
         self.assertIn("Local: ALSTOM", answer)
@@ -628,7 +628,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("reponto de preia-mar", answer)
         self.assertIn("1h30", answer)
         self.assertIn("inferior a 15 kt", answer)
-        self.assertIn("atinge/excede o limite local", answer)
+        self.assertIn("atinge/excede o limite prático", answer)
 
     def test_lisnave_cais_3a_length_uses_dolphin_operational_total(self) -> None:
         answer = self._answer("Navio de 360 m cabe no Cais 3 A da Lisnave?")

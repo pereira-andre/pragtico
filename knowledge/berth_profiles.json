@@ -50,7 +50,8 @@
       "category": "terminal de graneis liquidos com cais e duques d'alba",
       "overview": "Terminal composto por cais central e dois duques d'alba, com operacao fortemente dependente de repontos de mare, calado praticavel e regras especificas para noite.",
       "dimensions": [
-        "Comprimento operacional total: 463 m, incluindo cais fisico de 75 m e dois duques d'alba.",
+        "Comprimento total incluindo dois duques d'alba: 463 m.",
+        "Comprimento do cais fisico: 75 m; distancia do cais ao primeiro duque d'alba: 63 m; distancia entre duques d'alba: 100 m.",
         "Sonda ao ZH: 10 m."
       ],
       "vessel_limits": [
@@ -127,8 +128,8 @@
       "category": "dois terminais: TPS solidos e TGL liquidos",
       "overview": "O IT-029 cobre dois terminais SAPEC: TPS para graneis solidos e TGL para graneis liquidos. As regras devem ser lidas por terminal e por tipo de carga, sobretudo IMO vs nao IMO.",
       "dimensions": [
-        "TPS: cais fisico com duque d'alba; o IT usa regras de calado e carochas como pontos criticos.",
-        "TGL: estrutura de duques d'alba; distancia entre duques extremos: 70 m."
+        "TPS: comprimento fisico do cais 112 m; duque d'Alba a 70 m; LOA aconselhavel 200 m.",
+        "TGL: estrutura de duques d'alba com 70 m entre extremos e 35 m no meio; LOA aconselhavel 200 m."
       ],
       "vessel_limits": [
         "TPS e TGL distinguem carga IMO/perigosa de outras cargas.",
@@ -162,7 +163,7 @@
       "document": "IT-038_Alstom.txt",
       "aliases": ["alstom", "abb-alstom", "abb alstom", "cais alstom", "cais da alstom"],
       "category": "instalacao industrial com canal interior",
-      "overview": "Cais industrial com acesso pelo Canal ABB-ALSTOM. A regra principal combina LOA, calado, vento no canal, reponto obrigatorio de preia-mar, bordo de atracacao e periodo diurno.",
+      "overview": "Cais industrial com acesso pelo Canal ABB-ALSTOM. A regra pratica operacional atual combina LOA, calado, vento no canal, reponto obrigatorio de preia-mar, bordo de atracacao e periodo diurno.",
       "dimensions": [
         "Comprimento fisico do cais: 91 m.",
         "LOA ate 110 m: calado maximo 7,0 m.",
@@ -210,8 +211,8 @@
       "category": "terminal com cais de oeste e cais de este",
       "overview": "Terminal composto por Cais de Oeste/Cais A e Cais de Este/Cais B. As regras variam por cais, LOA, calado, preia-mar e periodo diurno.",
       "dimensions": [
-        "Cais de Oeste: LOA maximo 200 m; calado maximo de referencia 9,5 m.",
-        "Cais de Este com duques d'alba: comprimento 121 m; comprimento de referencia para navios 140 m; calado de referencia 8,0 m."
+        "Cais de Oeste: comprimento fisico 105 m; LOA maximo 200 m; calado maximo de referencia 9,5 m.",
+        "Cais de Este: comprimento fisico 60 m; comprimento com duques d'alba 121 m; comprimento de navio de referencia 140 m; calado de referencia 8,0 m."
       ],
       "vessel_limits": [
         "Cais de Oeste: navios com LOA > 170 m so devem ser movimentados com luz do dia e junto da preia-mar.",
@@ -236,6 +237,42 @@
       ],
       "tug_guidance": [
         "Aplicar IT-016; ajustar por LOA, calado, vento/corrente e se o navio esta carregado ou vazio."
+      ],
+      "validation": "Piloto Coordenador"
+    },
+    {
+      "id": "uralada",
+      "name": "Terminal URALADA",
+      "document": "IT-013_Uralada.txt",
+      "aliases": ["uralada", "terminal uralada", "cais uralada", "cais da uralada"],
+      "category": "terminal pequeno com cais e duques d'alba",
+      "overview": "Terminal URALADA com limites curtos de comprimento, calado e DWT, e atracacoes junto da preia-mar apenas de dia.",
+      "dimensions": [
+        "Distancia entre duques d'alba e o cais: 30 m.",
+        "Comprimento dos duques d'alba: 5 m; comprimento do cais: 40 m."
+      ],
+      "vessel_limits": [
+        "Comprimento maximo aconselhavel: 100 m.",
+        "Deadweight maximo: 5.000 t."
+      ],
+      "draft_rules": [
+        "Calado maximo permitido: 5,5 m.",
+        "Calado possivel = 4,5 m + altura da baixa-mar, limitado a 5,5 m."
+      ],
+      "maneuver_rules": [
+        "Atracacoes proximo da preia-mar.",
+        "Atracacoes apenas de dia."
+      ],
+      "night_rules": [
+        "Atracacao noturna nao permitida pelo IT-013."
+      ],
+      "restrictions": [
+        "Preia-mar e periodo diurno.",
+        "Calado maximo 5,5 m.",
+        "DWT maximo 5.000 t."
+      ],
+      "tug_guidance": [
+        "Aplicar IT-016 quando aplicavel; confirmar LOA, DWT, calado e condicoes locais."
       ],
       "validation": "Piloto Coordenador"
     },
@@ -370,26 +407,29 @@
         "Modelo operacional do portal: posicoes A, B, C e D; cada posicao corresponde a 723 / 4 = 180,75 m de referencia."
       ],
       "vessel_limits": [
-        "Pode receber mais do que um navio se a soma dos comprimentos e intervalos regulamentares couber nos 723 m."
+        "Pode receber mais do que um navio se a soma dos comprimentos e dos intervalos regulamentares de 10% por navio couber nos 723 m.",
+        "Nota do portal: para registo/ocupacao, conservar tambem 30 m minimos entre navios quando partilham o TMS2."
       ],
       "berth_capacity_rules": {
         "total_length_m": 723,
         "slot_labels": ["TMS 2 - Posição A", "TMS 2 - Posição B", "TMS 2 - Posição C", "TMS 2 - Posição D"],
         "allocation_order": "direita_primeiro_esquerda_se_necessario",
+        "it_side_clearance_ratio": 0.1,
         "shared_clearance_m": 30
       },
       "draft_rules": [
         "Calado maximo admitido: 12 m, aplicado de forma uniforme ao terminal."
       ],
       "maneuver_rules": [
-        "Quando ha mais do que um navio no TMS2, reservar pelo menos 30 m de separacao entre navios para cruzar cabos e evitar contacto.",
-        "Para varios navios, calcular espaco total ocupado e confirmar compatibilidade."
+        "IT-006: navios atracam com intervalos de 10% do comprimento de cada navio para cada lado.",
+        "Portal: quando ha mais do que um navio no TMS2, reservar pelo menos 30 m de separacao entre navios para cruzar cabos e evitar contacto."
       ],
       "night_rules": [
         "O resumo do IT-006 nao isola uma proibicao noturna geral; validar pelas restantes condicionantes."
       ],
       "restrictions": [
-        "Regra de separacao minima de 30 m entre navios quando partilham o TMS2.",
+        "Regra formal do IT-006: intervalo de 10% do comprimento de cada navio para cada lado.",
+        "Regra operacional do portal: 30 m minimos entre navios quando partilham o TMS2.",
         "Calado maximo 12 m."
       ],
       "tug_guidance": [

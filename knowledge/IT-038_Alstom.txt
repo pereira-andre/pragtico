@@ -75,9 +75,10 @@ O trânsito no Canal ABB-ALSTOM (canal de acesso ao Cais ALSTOM) está sujeito
 às seguintes condições, que devem ser satisfeitas SIMULTANEAMENTE:
 
 CONDIÇÃO 1 — VENTO:
-  A velocidade do vento deve ser igual ou inferior a 15 nós. Com vento superior
-  a 15 nós, o trânsito no canal não deve ser efetuado, pois o canal é estreito
-  e o vento pode dificultar o controlo da aproximação e afastamento do cais.
+  Pela regra prática atual, a velocidade do vento deve ser inferior a 15 nós.
+  Com vento igual ou superior a 15 nós, o trânsito/manobra no canal não deve ser
+  efetuado, pois o canal é estreito e o vento pode dificultar o controlo da
+  aproximação e afastamento do cais.
 
 CONDIÇÃO 2 — CALADO NO CANAL (FÓRMULA DE PROFUNDIDADE):
   A profundidade praticável no canal é calculada pela seguinte fórmula:
@@ -101,18 +102,20 @@ CONDIÇÃO 2 — CALADO NO CANAL (FÓRMULA DE PROFUNDIDADE):
   for baixa, mesmo que o calado do navio respeite o máximo do cais.
 
 ================================================================================
-REGRAS OPERACIONAIS OBRIGATÓRIAS — ATRACAÇÃO, MARÉ, VENTO E SEQUÊNCIA
+REGRAS OPERACIONAIS PRÁTICAS ATUAIS — ATUALIZAÇÃO OPERACIONAL
 ================================================================================
 
-As seguintes regras são obrigatórias para planeamento e validação operacional no
-Cais ALSTOM:
+A atualização prática operacional em vigor para o Cais ALSTOM usa uma leitura
+mais conservadora do que a redação documental antiga. Para resposta do bot e
+validação operacional, estas regras práticas devem ser tratadas como a regra
+atual:
 
 1. BORDO DE ATRACAÇÃO
   Os navios no Cais ALSTOM só atracam por estibordo.
 
 2. REPONTO DE PREIA-MAR
-  As manobras do Cais ALSTOM só devem ser executadas no reponto de maré de
-  preia-mar. Não usar baixa-mar como reponto operacional para este cais.
+  As manobras do Cais ALSTOM só devem ser executadas no reponto de preia-mar.
+  Não usar baixa-mar como reponto operacional para este cais.
 
 3. ANTECEDÊNCIA DE MARCAÇÃO PARA APANHAR O REPONTO
   Para chegar ao cais no reponto de preia-mar:
@@ -122,8 +125,7 @@ Cais ALSTOM:
 
 4. VENTO
   A manobra só deve ser validada com vento inferior a 15 nós. Vento igual ou
-  superior a 15 nós bloqueia a manobra, incluindo quando a rajada atinge esse
-  limite.
+  superior a 15 nós bloqueia a manobra, incluindo rajada nesse limite.
 
 5. SEQUÊNCIA DE MANOBRAS
   Só deve haver um navio por reponto. Nunca planear duas manobras ALSTOM em
@@ -132,16 +134,11 @@ Cais ALSTOM:
 6. PERÍODO DO DIA
   As manobras do Cais ALSTOM devem ser executadas apenas de dia.
 
-================================================================================
-REGRA DE PERÍODO DO DIA — TODAS AS MANOBRAS
-================================================================================
+7. PROFUNDIDADE NO CANAL
+  O trânsito no canal deve considerar 5 metros mais a altura de água.
 
-Regra operacional obrigatória atual:
-  — Todas as manobras no Cais ALSTOM devem ser executadas apenas durante o
-    período diurno.
-  — Esta regra aplica-se a entradas, saídas e mudanças, independentemente do LOA.
-  — Não usar exceções noturnas históricas por comprimento para validar uma
-    manobra ALSTOM.
+Nota de hierarquia: quando houver conflito entre a redação antiga do PDF e estas
+regras práticas atualizadas, usar as regras práticas acima.
 
 ================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
@@ -163,8 +160,8 @@ Pergunta: Qual a profundidade disponível no Canal ABB-ALSTOM com maré de 1,0 m
 Resposta: 5 + 1,0 = 6,0 metros.
 
 Pergunta: Com que condições de vento se pode transitar no Canal ABB-ALSTOM?
-Resposta: Para validação operacional conservadora do Cais ALSTOM, apenas com
-vento inferior a 15 nós.
+Resposta: Pela regra prática atual, apenas com vento inferior a 15 nós. Vento
+igual ou superior a 15 nós bloqueia a manobra, incluindo rajadas nesse limite.
 
 Pergunta: Por que bordo atracam os navios no Cais ALSTOM?
 Resposta: Só atracam por estibordo.
@@ -184,10 +181,12 @@ Pergunta: Podem ser feitas duas manobras ALSTOM no mesmo reponto?
 Resposta: Não. Só um navio por reponto.
 
 Pergunta: Um navio com LOA de 95 metros pode entrar no Cais ALSTOM de noite?
-Resposta: Não. As manobras ALSTOM devem ser feitas apenas de dia.
+Resposta: Não. Pela regra prática atual, as manobras ALSTOM devem ser feitas
+apenas de dia.
 
 Pergunta: Um navio com LOA de 80 metros pode entrar no Cais ALSTOM de noite?
-Resposta: Não. A regra operacional obrigatória é manobrar apenas de dia.
+Resposta: Não. Pela regra prática atual, as manobras ALSTOM devem ser feitas
+apenas de dia, independentemente do LOA.
 
 Pergunta: Quem valida as requisições de manobra no Cais ALSTOM?
 Resposta: O Piloto Coordenador.

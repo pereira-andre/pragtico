@@ -1,0 +1,74 @@
+{
+  "document": "IT-013_Uralada.txt",
+  "title": "IT-013 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL URALADA",
+  "aliases": [
+    "IT-013_Uralada.txt",
+    "IT-013_Uralada",
+    "IT-013 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL URALADA",
+    "IT-013",
+    "IT-13",
+    "013",
+    "URALADA",
+    "Terminal URALADA"
+  ],
+  "summary": "Este documento descreve as regras aplicáveis ao estacionamento e à execução de manobras no Terminal da URALADA.",
+  "rule_summary": {
+    "scope": "Aplica-se ao estacionamento e à execução de manobras no Terminal da URALADA.",
+    "critical_points": [
+      "Distância entre os Duques d'Alba e o cais: 30 m.",
+      "Comprimento dos Duques d'Alba: 5 m; comprimento do cais: 40 m.",
+      "Calado máximo permitido: 5,5 m.",
+      "Comprimento máximo aconselhável de navio: 100 m.",
+      "Atracações próximo da preia-mar e só de dia.",
+      "Deadweight máximo: 5.000 t.",
+      "Calado possível = 4,5 m + altura da baixa-mar, limitado a 5,5 m."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT."
+  },
+  "key_points": [
+    "Distância entre Duques d'Alba e cais: 30 m.",
+    "Comprimento dos Duques d'Alba: 5 m; comprimento do cais: 40 m.",
+    "Calado máximo permitido: 5,5 m.",
+    "Comprimento máximo aconselhável: 100 m.",
+    "Atracações próximo da preia-mar e só de dia.",
+    "DWT máximo: 5.000 t.",
+    "Calado possível: 4,5 m + altura da baixa-mar, até 5,5 m."
+  ],
+  "faq": [
+    {
+      "question": "Qual o comprimento do cais da URALADA?",
+      "answer": "40 metros. Os duques d'Alba têm 5 metros e ficam a 30 metros do cais.",
+      "keywords": ["comprimento", "cais", "uralada", "duques"]
+    },
+    {
+      "question": "Qual o calado máximo no Terminal URALADA?",
+      "answer": "5,5 metros.",
+      "keywords": ["calado", "maximo", "uralada"]
+    },
+    {
+      "question": "Como se calcula o calado possível na URALADA?",
+      "answer": "Somando 4,5 metros à altura da baixa-mar, até ao máximo de 5,5 metros.",
+      "keywords": ["calado", "calcula", "baixa-mar", "uralada"]
+    },
+    {
+      "question": "Qual o comprimento máximo aconselhável de navio na URALADA?",
+      "answer": "100 metros.",
+      "keywords": ["comprimento", "maximo", "aconselhavel", "navio", "uralada"]
+    },
+    {
+      "question": "Qual o DWT máximo na URALADA?",
+      "answer": "5.000 toneladas.",
+      "keywords": ["dwt", "deadweight", "maximo", "uralada"]
+    },
+    {
+      "question": "Quando se atraca na URALADA?",
+      "answer": "Próximo da preia-mar e só de dia.",
+      "keywords": ["atracar", "preia-mar", "dia", "uralada"]
+    },
+    {
+      "question": "Quem valida as requisições de manobra na URALADA?",
+      "answer": "O Piloto Coordenador.",
+      "keywords": ["quem", "valida", "requisicoes", "manobra", "uralada"]
+    }
+  ]
+}

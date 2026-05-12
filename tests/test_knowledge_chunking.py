@@ -57,6 +57,7 @@ class PortEntityTests(unittest.TestCase):
             "Atracar na EcoOil": "Eco-Oil",
             "ir para a ECOIL": "Eco-Oil",
             "Terminal ABB-ALSTOM": "Alstom",
+            "Terminal Uralada": "Uralada",
             "Estaleiros Mitrena": "Lisnave",
             "Docas da Lisnave": "Lisnave",
             "cais das Praias do Sado": "Praias do Sado",

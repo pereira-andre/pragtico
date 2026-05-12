@@ -118,6 +118,14 @@ PORT_ENTITIES: List[Dict] = [
         "must_not_mix_with": ["SAPEC solidos", "SAPEC liquidos"],
     },
     {
+        "name": "Uralada",
+        "type": "terminal",
+        "channel": "Porto de Setubal",
+        "entry_order": 170,
+        "aliases": ["Uralada", "Terminal Uralada", "Cais Uralada", "Cais da Uralada", "URALADA"],
+        "must_not_mix_with": ["SAPEC solidos", "SAPEC liquidos", "Alstom"],
+    },
+    {
         "name": "Lisnave",
         "type": "shipyard",
         "channel": "Canal Sul",

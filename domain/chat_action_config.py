@@ -336,6 +336,7 @@ SLASH_COMMAND_ALIASES = {
     "rieam": "colreg_rule",
     "regra-colreg": "colreg_rule",
     "regra-rieam": "colreg_rule",
+    "it": "rule",
     "regra": "rule",
     "regras": "rule",
 }

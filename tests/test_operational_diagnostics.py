@@ -95,4 +95,4 @@ def test_alstom_diagnostic_includes_mandatory_rules_and_wind_block() -> None:
     assert "reponto de preia-mar" in rendered
     assert "1h30" in rendered
     assert "inferior a 15 kt" in rendered
-    assert "atinge/excede o limite local" in rendered
+    assert "atinge/excede o limite pratico" in rendered

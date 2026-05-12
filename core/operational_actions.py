@@ -28,7 +28,7 @@ from core.operational_common import (
     current_visible_port_calls,
 )
 from core.operational_sources import _build_tide_lookup_answer
-from core.rule_catalog import available_rule_code_titles, build_rule_catalog_text
+from core.rule_catalog import available_rule_code_titles, build_rule_catalog_text, build_rule_summary_text, rule_document_for_code
 from core.validators import normalize_thruster_state, validate_not_past_datetime
 from domain.chat_actions import (
     ACTION_SPECS,
@@ -472,21 +472,11 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
                 "sources": [],
                 "answer_origin": "slash_rule",
             }
-        if not services.rag.can_generate():
-            return {
-                "answer": f"Pedido da regra {title} recebido, mas o provider está indisponível neste ambiente.",
-                "sources": [],
-                "answer_origin": "slash_rule",
-            }
-        answer = services.rag.answer(
-            question=f"Resume a regra {title} e destaca os pontos operacionais mais importantes.",
-            role=role,
-            history=[],
-            supplemental_sources=[],
-            trusted_answers=[],
-        )
-        answer["answer_origin"] = "slash_rule"
-        return answer
+        return {
+            "answer": build_rule_summary_text(code),
+            "sources": [{"document": rule_document_for_code(code), "retrieval_mode": "slash_rule"}],
+            "answer_origin": "slash_rule",
+        }
     if command in {"consult_scale", "consult_scale_cost"}:
         port_call = _resolve_port_call_for_slash_argument(clean_argument)
         if not port_call:

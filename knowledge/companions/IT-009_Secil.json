@@ -11,13 +11,29 @@
     "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL SECIL"
   ],
   "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da SECIL, no Porto de Setúbal.",
+  "rule_summary": {
+    "scope": "Aplica-se ao estacionamento e à execução das manobras no Terminal da SECIL, distinguindo Cais de Oeste/Cais A e Cais de Este/Cais B.",
+    "critical_points": [
+      "Cais de Oeste: comprimento físico 105 m; comprimento máximo de navio 200 m; calado máximo de referência 9,5 m.",
+      "Cais de Oeste: os navios devem atracar próximo do reponto de maré.",
+      "Cais de Oeste: navios com LOA superior a 170 m só são movimentados junto da preia-mar e com luz do dia.",
+      "Cais de Este: comprimento físico 60 m; comprimento com duques d'Alba 121 m; comprimento de navio de referência 140 m.",
+      "Cais de Este: calado máximo de referência 8,0 m.",
+      "Cais de Este: os navios atracam próximo do reponto quando em marés vivas."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT.",
+    "notes": [
+      "Notas locais de marcação de manobra podem ajudar no horário, mas não substituem os limites documentais de LOA, calado, maré, luz do dia e cais concreto."
+    ]
+  },
   "key_points": [
+    "Cais de Oeste: comprimento físico 105 m; LOA máximo 200 m; calado máximo de referência 9,5 m.",
     "200 metros (LOA máximo).",
     "9,5 metros.",
     "Não. Navios com LOA superior a 170 metros só podem ser movimentados no Cais de Oeste com luz do dia e junto da preia-mar. A manobra noturna está proibida para navios com LOA > 1...",
     "Não. Navios com LOA superior a 170 metros só podem ser movimentados junto da preia-mar. A baixa-mar não é permitida para estes navios neste cais.",
     "O documento não proíbe explicitamente a manobra noturna para navios com LOA igual ou inferior a 170 metros no Cais de Oeste.",
-    "121 metros.",
+    "Cais de Este: comprimento físico 60 m; com duques d'Alba 121 m; navio de referência 140 m; calado máximo de referência 8,0 m.",
     "Prática local de marcação Secil: entradas de fora da Barra ou do Fundeadouro Norte normalmente 30 a 45 minutos antes do reponto; de Tróia ou de outro cais, 45 minutos a 1 hora antes.",
     "Saídas da Secil: marcar cerca de 15 minutos antes do reponto; usam-se preia-mar e baixa-mar, e a saída é normalmente rápida, deixando o cais livre em 10 a 15 minutos.",
     "Estas margens de marcação são prática operacional e não substituem as restrições documentais de LOA, calado, luz do dia e validação pelo Piloto Coordenador."

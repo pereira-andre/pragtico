@@ -11,8 +11,23 @@
     "REGRAS APLICÁVEIS A MANOBRAS — TERMINAL DA TANQUISADO"
   ],
   "summary": "Este documento descreve as regras que se aplicam ao estacionamento e à execução das manobras no Terminal da TANQUISADO, no Porto de Setúbal.",
+  "rule_summary": {
+    "scope": "Aplica-se ao estacionamento e à execução das manobras no Terminal da TANQUISADO.",
+    "critical_points": [
+      "Comprimento total incluindo dois duques d'Alba: 463 m.",
+      "Distância do cais ao primeiro duque d'Alba: 63 m; distância entre duques d'Alba: 100 m; comprimento do cais físico: 75 m.",
+      "Sonda ao ZH: 10 m; calado máximo permitido: 9,5 m.",
+      "Calado diurno/canal: 6,3 m + altura da maré no momento, limitado a 9,5 m.",
+      "Atracações efetuadas nos repontos de maré e durante o dia, exceto navios com comprimento inferior a 110 m, que podem atracar de noite.",
+      "Navios com comprimento superior a 110 m só podem atracar de noite nos dias em que as duas preia-mares sejam exclusivamente noturnas, com calado 4,8 m + água e teto de 8,0 m.",
+      "Saídas efetuam-se nos repontos de maré ou em vazante quando a preia-mar precedente tiver altura igual ou inferior a 3 m.",
+      "Saídas de noite condicionadas a 4,8 m + altura de água.",
+      "Especial atenção a navios de bordo livre baixo e frágil por causa das defensas."
+    ],
+    "validation": "O Piloto Coordenador valida as requisições de manobra; o Piloto nomeado executa a manobra em conformidade com a IT."
+  },
   "key_points": [
-    "463 metros, incluindo o cais (75 m) e os dois duques d'alba.",
+    "463 metros, incluindo o cais físico de 75 m e os dois duques d'Alba; 63 m do cais ao primeiro duque e 100 m entre duques.",
     "9,5 metros. Nunca pode ser excedido independentemente da maré.",
     "10 metros.",
     "Somar 6,3 metros à altura da maré no momento, com teto de 9,5 m.",

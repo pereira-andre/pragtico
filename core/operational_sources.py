@@ -866,7 +866,7 @@ def _answer_alstom_direct(question: str, clean_question: str) -> dict | None:
     wind_kts = _extract_wind_kts_from_question(question)
     blocked = wind_kts is not None and wind_kts >= 15
     status = (
-        f"Não deve avançar: vento {wind_kts:g} kt atinge/excede o limite local."
+        f"Não deve avançar: vento {wind_kts:g} kt atinge/excede o limite prático da ALSTOM."
         if blocked
         else "Só deve avançar se o vento no canal for inferior a 15 kt e as restantes condições estiverem cumpridas."
     )
@@ -878,7 +878,7 @@ def _answer_alstom_direct(question: str, clean_question: str) -> dict | None:
         "- Navios atracam apenas por estibordo.\n"
         "- Manobra apenas de dia e no reponto de preia-mar; não usar baixa-mar como reponto operacional.\n"
         "- Desde a Barra, marcar 1h30 antes da preia-mar para chegar ao cais no reponto.\n"
-        "- Trânsito/manobra apenas com vento inferior a 15 kt; vento que atinge/excede o limite local bloqueia a manobra.\n"
+        "- Trânsito/manobra apenas com vento inferior a 15 kt; vento que atinge/excede o limite prático bloqueia a manobra.\n"
         "- Confirmar LOA máximo 120 m e calado aplicável pela regra LOA/calado."
     )
     return {

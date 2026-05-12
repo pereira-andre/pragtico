@@ -304,6 +304,24 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
                 ["Não encontrei a regra 999", "Regras/instruções disponíveis por código"],
                 [],
             ),
+            (
+                "/regra 029",
+                "slash_rule",
+                ["IT-029", "TPS", "TGL", "9,5 m", "10,0 m", "carochas", "Piloto Coordenador"],
+                ["Não encontrei"],
+            ),
+            (
+                "/it 029",
+                "slash_rule",
+                ["IT-029", "TPS", "TGL", "7,1 m + altura de água", "7,6 m + altura de água"],
+                ["Não encontrei"],
+            ),
+            (
+                "/regra 013",
+                "slash_rule",
+                ["IT-013", "URALADA", "5,5 m", "5.000 t", "preia-mar", "só de dia"],
+                ["Não encontrei"],
+            ),
         ]
 
         with self.app.test_request_context("/api/chat"):

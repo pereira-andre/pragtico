@@ -232,7 +232,7 @@ def build_slash_help(role: str) -> str:
         "/regras",
         "  lista os códigos de regras/instruções disponíveis",
         "/regra 015",
-        "  consulta uma regra/instrução por código",
+        "  consulta uma regra/instrução por código; alias: /it",
         "/consultar-navio IMO ou nome",
         "  mostra a ficha do navio conhecida no portal",
         "/reportar-evento TAG. LOCAL. DESCRIPTION",

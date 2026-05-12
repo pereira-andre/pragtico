@@ -1,0 +1,64 @@
+DOCUMENTO: IT-013 — REGRAS APLICÁVEIS A MANOBRAS — TERMINAL URALADA
+ENTIDADE EMISSORA: APSS — Administração dos Portos de Setúbal e Sesimbra, S.A.
+REVISÃO EM VIGOR: Revisão 02, datada de 23 de janeiro de 2012.
+
+================================================================================
+ÂMBITO E CAMPO DE APLICAÇÃO
+================================================================================
+
+A presente Instrução de Trabalho descreve as regras aplicáveis ao estacionamento
+e execução das manobras no Terminal da URALADA.
+
+================================================================================
+RESPONSABILIDADES
+================================================================================
+
+Compete ao Piloto Coordenador validar as requisições de manobra de acordo com as
+regras descritas nesta Instrução de Trabalho e ao Piloto nomeado para a manobra
+cumpri-las na execução do respetivo ato de pilotagem.
+
+================================================================================
+TERMINAL URALADA — DIMENSÕES E LIMITES
+================================================================================
+
+Distância entre os Duques d'Alba e o cais: 30 m.
+Comprimento dos Duques d'Alba: 5 m.
+Comprimento do cais: 40 m.
+
+Calado máximo permitido: 5,5 m.
+Comprimento máximo aconselhável: 100 m.
+Deadweight máximo: 5.000 t.
+
+Atracações próximo da preia-mar e só de dia.
+
+O calado possível determina-se somando 4,5 m à altura da baixa-mar, até ao máximo
+de 5,5 m.
+
+================================================================================
+RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
+================================================================================
+
+Pergunta: Qual o comprimento do cais da URALADA?
+Resposta: 40 metros. Os duques d'Alba têm 5 metros e ficam a 30 metros do cais.
+
+Pergunta: Qual o calado máximo no Terminal URALADA?
+Resposta: 5,5 metros.
+
+Pergunta: Como se calcula o calado possível na URALADA?
+Resposta: 4,5 metros + altura da baixa-mar, limitado ao máximo de 5,5 metros.
+
+Pergunta: Qual o comprimento máximo aconselhável de navio na URALADA?
+Resposta: 100 metros.
+
+Pergunta: Qual o DWT máximo na URALADA?
+Resposta: 5.000 toneladas.
+
+Pergunta: Quando se atraca na URALADA?
+Resposta: Próximo da preia-mar e só de dia.
+
+Pergunta: Quem valida as requisições de manobra na URALADA?
+Resposta: O Piloto Coordenador.
+
+================================================================================
+FIM DO DOCUMENTO IT-013 — TERMINAL URALADA
+================================================================================

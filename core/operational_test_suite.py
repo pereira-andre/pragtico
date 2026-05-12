@@ -213,7 +213,7 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
             "reponto de preia-mar",
             "1h30",
             "inferior a 15 kt",
-            "atinge/excede o limite local",
+            "atinge/excede o limite pratico",
         ),
     },
     {
