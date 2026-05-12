@@ -1822,6 +1822,11 @@ def handle_chat_turn(
                     answer = None
 
         if answer is None:
+            direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
+            if direct_answer:
+                answer = direct_answer
+
+        if answer is None:
             context_history = scoped_history_for_question(lookup_question, history, max_messages=10)
             runtime_history = context_history + [user_message]
             conversation_state = build_conversation_reasoning_state(
