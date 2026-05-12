@@ -91,6 +91,7 @@ def _direct_slash_validation_from_question(question: str | None) -> dict | None:
             "- Decisão: NÃO AVANÇAR.\n"
             "- Janela vencida com pontos pendentes: A marcação não cai suficientemente em cima do reponto.\n"
             "- Base documental acionada: IT-010_Tanquisado.txt.\n"
+            "- Fonte: maré/reponto indicado na descrição da validação.\n"
             "- Recomendação operacional: remarcar para o reponto, recalcular calado e confirmar meios."
         )
         return _payload(answer, "IT-010_Tanquisado.txt")

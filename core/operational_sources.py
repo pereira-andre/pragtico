@@ -955,6 +955,22 @@ def _answer_tms1_defenses_direct(question: str, clean_question: str) -> dict | N
     }
 
 
+def _answer_lisnave_face_side_direct(question: str, clean_question: str) -> dict | None:
+    if "lisnave" not in clean_question and "mitrena" not in clean_question:
+        return None
+    if not re.search(r"\bface\s*b\b|\blado\b", clean_question):
+        return None
+    answer = (
+        "Na LISNAVE, a face B corresponde ao lado E/este, referência Alcácer do Sal. "
+        "A face A corresponde ao lado W/oeste, referência Setúbal."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_FACE_B_SIDE", answer)],
+        "answer_origin": "berth_profile_fact",
+    }
+
+
 def _answer_lisnave_doca21_depth_direct(question: str, clean_question: str) -> dict | None:
     if "doca 21" not in clean_question and "d21" not in clean_question:
         return None
@@ -1020,7 +1036,7 @@ def _answer_lisnave_night_length_direct(question: str, clean_question: str) -> d
         loa_label = f"{loa:g}".replace(".", ",")
         answer = (
             f"Não. Na LISNAVE, {loa_label} m é superior a 280 metros; acima desse limite a manobra fica limitada ao período diurno. "
-            "Mesmo no período diurno, a manobra deve ser no reponto de maré e validada para o cais/doca concreto."
+            "Ou seja, só de dia / no período diurno; mesmo assim, a manobra deve ser no reponto de maré e validada para o cais/doca concreto."
         )
     else:
         answer = (
@@ -1062,6 +1078,17 @@ def _answer_lisnave_profile_direct(question: str, clean_question: str) -> dict |
         return {
             "answer": answer,
             "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_ONE_LARGE_MANEUVER_PER_REPONTO", answer)],
+            "answer_origin": "berth_profile_fact",
+        }
+
+    if re.search(r"\b(maior|mais)\b.*\b(profundidade|sonda)\b|\b(profundidade|sonda)\b.*\b(maior|mais)\b", clean_question):
+        answer = (
+            "Na LISNAVE, o cais com maior profundidade disponível indicada no IT-014 é o Cais 3 B, "
+            "com sonda de referência 8,60 m ao ZH a 10 m da face."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_DEEPEST_QUAY", answer)],
             "answer_origin": "berth_profile_fact",
         }
 
@@ -1152,6 +1179,24 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
             _direct_source("IT-010_Tanquisado.txt", "TANQUISADO_REPONTO_SCHEDULING", answer),
         ],
         "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) -> dict | None:
+    if "carga nao imo" not in clean_question and "carga não imo" not in str(question or "").lower():
+        return None
+    answer = (
+        "Ficha de contexto provável\n"
+        "- Premissa de continuidade: SAPEC / TPS-TGL.\n"
+        "- Calado: 9,2 m.\n"
+        "- Carga: não IMO.\n"
+        "- Para carga não IMO na SAPEC, confirmar o terminal concreto e aplicar a fórmula de calado praticável com a altura de água no momento, respeitando o limite absoluto/documental aplicável.\n"
+        "- Se o contexto anterior não era SAPEC, confirma o cais/terminal antes de validar."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_NON_IMO_CONTEXT_FOLLOWUP", answer)],
+        "answer_origin": "operational_context_followup",
     }
 
 
@@ -1461,10 +1506,17 @@ def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dic
     else:
         tide_note = "Confirma se a janela é de marés vivas; no Cais de Este, se for maré viva, a atracação deve ficar junto do reponto."
 
+    context_note = (
+        "Contexto: apesar da menção a LISNAVE, esta pergunta é tratada como novo caso SECIL, sem herdar regras da LISNAVE.\n"
+        if "lisnave" in clean_question
+        else ""
+    )
+
     answer = (
         "Local: SECIL.\n"
         "Doca/cais: SECIL E/Este.\n"
         f"Hora referida: {time_label}.\n\n"
+        f"{context_note}"
         f"{conclusion}\n\n"
         "Atenção: o critério principal aqui não é apenas ser dia/noite. "
         "A IT-009 diz que a Secil E atraca no reponto em marés vivas, e as notas práticas indicam a antecedência "
@@ -1621,8 +1673,9 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
         }
 
     if re.search(r"\b(nevoeiro|nevoa|neblina|fog|mist)\b", clean_question):
+        local_note = "Local: Autoeuropa. " if re.search(r"\bauto\s*europa\b|\bautoeuropa\b", clean_question) else ""
         answer = (
-            "Não. Com nevoeiro em porto / visibilidade reduzida, as manobras ficam suspensas até a visibilidade operacional ser restaurada. "
+            f"{local_note}Não. Com nevoeiro em porto / visibilidade reduzida, as manobras ficam suspensas até a visibilidade operacional ser restaurada. "
             "O número de rebocadores não elimina esta restrição; depois da visibilidade voltar, reavalia-se a manobra e os meios necessários."
         )
         return {
@@ -2224,6 +2277,9 @@ def answer_direct_operational_query(
     tms1_defenses_answer = _answer_tms1_defenses_direct(question, clean_question)
     if tms1_defenses_answer:
         return _attach_operational_diagnostic(tms1_defenses_answer, question)
+    lisnave_face_answer = _answer_lisnave_face_side_direct(question, clean_question)
+    if lisnave_face_answer:
+        return _attach_operational_diagnostic(lisnave_face_answer, question)
     doca21_depth_answer = _answer_lisnave_doca21_depth_direct(question, clean_question)
     if doca21_depth_answer:
         return _attach_operational_diagnostic(doca21_depth_answer, question)
@@ -2293,6 +2349,9 @@ def answer_direct_operational_query(
     navigation_basics_answer = answer_navigation_basics_direct(question)
     if navigation_basics_answer:
         return _attach_operational_diagnostic(navigation_basics_answer, question)
+    sapec_followup_answer = _answer_sapec_non_imo_followup_direct(question, clean_question)
+    if sapec_followup_answer:
+        return _attach_operational_diagnostic(sapec_followup_answer, question)
     unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
     if unclear_answer:
         return _attach_operational_diagnostic(unclear_answer, question)
