@@ -70,6 +70,7 @@ def occupied_portal_berth_conflict(
     *,
     current_port_call_id: str = "",
     target_planned_at: str | None = None,
+    target_vessel_loa_m: object = None,
     release_states: tuple[str, ...] | None = None,
 ) -> dict | None:
     """Return the conflicting in-port vessel occupying a quay berth, ignoring anchorages."""
@@ -79,6 +80,7 @@ def occupied_portal_berth_conflict(
         port_activity.get("in_port", []) or [],
         current_port_call_id=current_port_call_id,
         target_planned_at=target_planned_at,
+        target_vessel_loa_m=target_vessel_loa_m,
         release_states=release_states,
         berth_options=services.BERTH_OPTIONS,
     )
@@ -90,6 +92,7 @@ def ensure_portal_berth_is_available(
     current_port_call_id: str = "",
     label: str = "Cais",
     target_planned_at: str | None = None,
+    target_vessel_loa_m: object = None,
 ) -> str:
     """Validate a canonical berth and raise when the quay is already occupied by another in-port vessel."""
     canonical = normalize_portal_berth(berth, label=label)
@@ -97,6 +100,7 @@ def ensure_portal_berth_is_available(
         canonical,
         current_port_call_id=current_port_call_id,
         target_planned_at=target_planned_at,
+        target_vessel_loa_m=target_vessel_loa_m,
     )
     if conflict:
         conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"

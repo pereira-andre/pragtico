@@ -1253,6 +1253,7 @@ def _build_maneuver_analysis_checklist(
                 canonical_destination,
                 in_port_items,
                 current_port_call_id=port_call.get("id", ""),
+                target_vessel_loa_m=port_call.get("vessel_loa_m"),
                 berth_options=services.BERTH_OPTIONS,
             )
             if conflict:

@@ -1289,6 +1289,7 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
             current_port_call_id=port_call_id,
             label=label,
             target_planned_at=maneuver.get("planned_at"),
+            target_vessel_loa_m=refreshed_port_call.get("vessel_loa_m"),
         )
 
     if action == "create_port_call":
@@ -1329,7 +1330,12 @@ def execute_pending_operational_action(proposal: dict, username: str, role: str)
         normalized_berth = None
         if berth_value not in {None, ""}:
             if (current_port_call or {}).get("status") == "in_port":
-                normalized_berth = ensure_portal_berth_is_available(berth_value, current_port_call_id=port_call_id, label="Cais")
+                normalized_berth = ensure_portal_berth_is_available(
+                    berth_value,
+                    current_port_call_id=port_call_id,
+                    label="Cais",
+                    target_vessel_loa_m=fields.get("vessel_loa_m") or (current_port_call or {}).get("vessel_loa_m"),
+                )
             else:
                 normalized_berth = normalize_portal_berth(berth_value, "Cais")
         result = services.store.edit_port_call(

@@ -162,6 +162,49 @@
     </div>
   </section>
 
+  <section class="panel section-panel operational-tests-berth-capacity">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Capacidade de cais</p>
+        <h2>TMS 1, TMS 2 e Autoeuropa</h2>
+      </div>
+      <span class="admin-status-badge is-online">{{ inventory.berth_capacity_test_count }} caso(s)</span>
+    </div>
+    <p class="admin-status-note">Casos finais que fixam a regra de LOA versus comprimento/slots antes de aprovar manobras para TMS 1, TMS 2 e Autoeuropa.</p>
+    <details class="planning-optional-box operational-tests-scenario operational-tests-matrix-group">
+      <summary>
+        <span>Testes de ocupação por comprimento</span>
+        <span class="admin-status-badge is-online">{{ inventory.berth_capacity_test_count }} coberto(s)</span>
+      </summary>
+      <div class="document-window-table">
+        <table class="planned-table operational-tests-table operational-tests-capacity-table">
+          <thead>
+            <tr>
+              <th>Risco</th>
+              <th>Grupo</th>
+              <th>Caso</th>
+              <th>Ensaio</th>
+              <th>Esperado</th>
+              <th>Fonte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in inventory.berth_capacity_tests %}
+              <tr>
+                <td><span class="admin-status-badge is-offline">{{ item.risk }}</span></td>
+                <td>{{ item.group }}</td>
+                <td>{{ item.label }}</td>
+                <td>{{ item.case }}</td>
+                <td>{{ item.expected }}</td>
+                <td><code>{{ item.source }}</code></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
   <section class="panel section-panel operational-tests-controls">
     <div class="section-head">
       <div>
