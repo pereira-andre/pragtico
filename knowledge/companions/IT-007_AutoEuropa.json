@@ -17,6 +17,7 @@
     "10,0 metros.",
     "172 metros (comprimento de referência para o módulo navio-rampa).",
     "A manobra pode ser feita com enchente ou com vazante.",
+    "Regra operacional de ocupação: navio com 230 m ou mais fica sozinho na Autoeuropa; abaixo de 230 m podem estar dois navios, um no Cais 10 e outro no Cais 11.",
     "Não. Depende das condições de maré (evitar meias-marés vivas), da capacidade do navio e do uso ou não de rebocadores. O navio deve ainda ser capaz de se manter atracado em segur..."
   ],
   "faq": [
@@ -107,6 +108,19 @@
         "europa",
         "tem",
         "terminal"
+      ]
+    },
+    {
+      "question": "Podem estar dois navios na Autoeuropa ao mesmo tempo?",
+      "answer": "Sim, desde que ambos tenham LOA inferior a 230 m e fiquem um no Cais 10 e outro no Cais 11. Se algum navio tiver 230 m ou mais, deve ficar sozinho na Autoeuropa. Nesta regra operacional não se aplica folga adicional de 30 m.",
+      "keywords": [
+        "autoeuropa",
+        "auto europa",
+        "dois navios",
+        "230",
+        "cais 10",
+        "cais 11",
+        "ocupacao"
       ]
     },
     {

@@ -15,7 +15,7 @@
     "O TMS2 abrange os cabeços 40 a 63.",
     "723 metros.",
     "12 metros, aplicável de forma uniforme a todo o terminal.",
-    "Cada navio deve ter um intervalo de 10% do seu próprio comprimento para cada lado.",
+    "Regra operacional de ocupação: quando há mais do que um navio no TMS2, manter pelo menos 30 metros de separação entre navios para cruzar cabos e evitar contacto.",
     "É necessário calcular o espaço total ocupado.",
     "O Piloto Coordenador."
   ],
@@ -50,7 +50,7 @@
     },
     {
       "question": "Qual a separação mínima entre navios no TMS2?",
-      "answer": "Cada navio deve ter um intervalo de 10% do seu próprio comprimento para cada lado. Por exemplo, um navio de 150 metros necessita de 15 metros livres de cada bordo.",
+      "answer": "Usa-se a regra operacional de pelo menos 30 metros de separação entre navios quando partilham o TMS2. A conta deve somar os LOA dos navios mais 30 m entre cada par adjacente e confirmar se cabe no comprimento total de referência de 723 m.",
       "keywords": [
         "entre",
         "minima",
@@ -61,7 +61,7 @@
     },
     {
       "question": "Um navio de 200 metros pode atracar no TMS2 se já houver um navio de 150 metros atracado?",
-      "answer": "É necessário calcular o espaço total ocupado. O navio de 150 metros ocupa 180 metros (15 + 150 + 15). O navio de 200 metros ocupa 240 metros (20 + 200 + 20). No entanto, as margens de separação entre os dois navios podem ser partilhadas: a margem de ré de um e a margem de vante do outro devem satisfazer individualmente os 10% de cada navio. O espaço total necessário para os dois navios juntos seria de pelo menos 15 + 150 + 20 + 200 + 20 = 405 metros, o que é inferior a 723 metros, sendo portanto possível em termos de comprimento disponível, desde que se respeitem os intervalos individuais de cada navio.",
+      "answer": "Em termos de comprimento, sim: 150 m + 30 m de separação + 200 m = 380 m, abaixo dos 723 m do TMS2. Ainda assim, deve confirmar calado, posição no cais, amarração e validação operacional antes de fechar a manobra.",
       "keywords": [
         "atracar",
         "houver",
@@ -86,7 +86,7 @@
     },
     {
       "question": "Qual a diferença entre o TMS1 e o TMS2?",
-      "answer": "O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m) e regras de resguardo fixo de 30 metros. O TMS2 abrange os cabeços 40 a 63, tem um único espaço contínuo de 723 metros, calado máximo uniforme de 12 metros e regra de separação de 10% do comprimento do navio para cada lado.",
+      "answer": "O TMS1 abrange os cabeços 1 a 39, tem cais numerados (4 a 8), calados operacionais variáveis por zona (8,8 m, 9,8 m e 10,0 m), Cais 8 isolado e regra de ocupação que impede três navios grandes ao mesmo tempo. O TMS2 abrange os cabeços 40 a 63, tem um espaço contínuo de 723 metros, calado máximo uniforme de 12 metros e separação operacional mínima de 30 metros entre navios.",
       "keywords": [
         "diferenca",
         "entre",

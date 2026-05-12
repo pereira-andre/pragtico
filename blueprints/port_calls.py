@@ -2205,6 +2205,7 @@ def mark_shift_completed(port_call_id: str):
             current.get("shift_destination_berth") or current.get("berth", ""),
             current_port_call_id=port_call_id,
             label="Cais destino",
+            target_vessel_loa_m=current.get("vessel_loa_m"),
         )
         port_call = services.store.mark_shift_completed(
             port_call_id=port_call_id,
@@ -2235,6 +2236,7 @@ def mark_port_call_arrived(port_call_id: str):
             request.form.get("berth", "").strip() or current.get("berth", ""),
             current_port_call_id=port_call_id,
             label="Cais",
+            target_vessel_loa_m=current.get("vessel_loa_m"),
         )
         port_call = services.store.mark_port_call_arrived(
             port_call_id=port_call_id,
@@ -2296,6 +2298,7 @@ def attach_entry_report(port_call_id: str):
                 target.get("destination") or current.get("berth", ""),
                 current_port_call_id=port_call_id,
                 label="Cais",
+                target_vessel_loa_m=current.get("vessel_loa_m"),
             )
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
@@ -2361,6 +2364,7 @@ def attach_shift_report(port_call_id: str):
                 target.get("destination") or current.get("shift_destination_berth") or current.get("berth", ""),
                 current_port_call_id=port_call_id,
                 label="Cais destino",
+                target_vessel_loa_m=current.get("vessel_loa_m"),
             )
         maneuver_started_at = parse_local_datetime_input(request.form.get("maneuver_started_local", "").strip(), "Início da manobra")
         maneuver_finished_at = parse_local_datetime_input(request.form.get("maneuver_finished_local", "").strip(), "Fim da manobra")
