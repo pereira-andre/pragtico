@@ -80,9 +80,9 @@ TUG_LIVE_WEATHER_RE = re.compile(
 )
 LOCAL_WARNING_CODE_RE = re.compile(r"\b(?:anav\s*)?(?:n[.ºo]*\s*)?(\d{1,3}/\d{2,4})\b", re.IGNORECASE)
 BERTHED_VESSELS_QUERY_RE = re.compile(
-    r"\b(navios?|embarcacoes|embarcações)\b.*\b(em cais|atracad\w*|amarrad\w*)\b"
+    r"\b(navios?|embarcacoes|embarcações)\b.*\b(em porto|no porto|em cais|atracad\w*|amarrad\w*)\b"
     r"|"
-    r"\b(em cais|atracad\w*|amarrad\w*)\b.*\b(navios?|embarcacoes|embarcações)\b"
+    r"\b(em porto|no porto|em cais|atracad\w*|amarrad\w*)\b.*\b(navios?|embarcacoes|embarcações)\b"
 )
 PLANNED_MANEUVER_SUBJECT_RE = re.compile(
     r"\b(navios?|manobras?|entradas?|saidas?|saídas|partidas?|mudancas?|mudanças)\b"
@@ -97,6 +97,15 @@ VESSEL_DETAIL_QUERY_RE = re.compile(
     r"|"
     r"\b(navio|embarcacao|embarcação|imo|indicativo|call sign)\b"
     r".*\b(dados|detalhes|informacao|informação|caracteristicas|características|ficha|perfil)\b"
+    r"|"
+    r"\b(?:qual|quais|diz|mostra|indica)\b.*\b(imo|indicativo|call sign|loa|comprimento|calado)\b.*\b(navio|escala|em porto|atracado)\b"
+    r"|"
+    r"\b(imo|indicativo|call sign|loa|comprimento|calado)\b.*\b(?:do|da|de)\b.*\b(navio|escala)\b"
+)
+LARGEST_BERTHED_VESSEL_QUERY_RE = re.compile(
+    r"\b(navio|navios)\b.*\b(mais\s+comprid[oa]|maior\s+comprimento|maior\s+loa|loa\s+maior)\b.*\b(em\s+porto|atracad[oa]s?|cais|quadro)?\b"
+    r"|"
+    r"\b(mais\s+comprid[oa]|maior\s+comprimento|maior\s+loa|loa\s+maior)\b.*\b(navio|navios)\b"
 )
 OPERATIONAL_FRAGMENT_TERMS_RE = re.compile(
     r"\b(navio|embarcacao|embarcação|reboques?|rebocadores?|fundear|fundeadouro|ferro|"
@@ -258,6 +267,17 @@ def _format_measure(value: object, suffix: str = "") -> str:
     if not clean:
         return "--"
     return f"{clean}{suffix}" if suffix and clean != "--" else clean
+
+
+def _float_measure(value: object) -> float | None:
+    clean = str(value if value is not None else "").strip().replace(",", ".")
+    match = re.search(r"-?\d+(?:\.\d+)?", clean)
+    if not match:
+        return None
+    try:
+        return float(match.group(0))
+    except ValueError:
+        return None
 
 
 def _format_weather_slot(hour: dict) -> str:
@@ -2714,6 +2734,9 @@ def answer_direct_operational_query(
     live_environment_answer = _answer_live_environment_query(question, clean_question, plan=plan)
     if live_environment_answer:
         return _attach_operational_diagnostic(live_environment_answer, question)
+    largest_berthed_answer = _answer_largest_berthed_vessel_query(question, clean_question)
+    if largest_berthed_answer:
+        return _attach_operational_diagnostic(largest_berthed_answer, question)
     berthed_vessels_answer = _answer_berthed_vessels_query(question, clean_question)
     if berthed_vessels_answer:
         return _attach_operational_diagnostic(berthed_vessels_answer, question)
@@ -2879,6 +2902,9 @@ def _answer_berthed_vessels_query(question: str, clean_question: str) -> dict | 
             )
         lines.append(
             f"- {item.get('vessel_name', '--')} · {item.get('berth_label') or item.get('berth') or '--'} "
+            f"· IMO {item.get('vessel_imo') or item.get('ship_imo_label') or '--'} "
+            f"· LOA {_format_measure(item.get('ship_loa_label') or item.get('vessel_loa_m'), ' m')} "
+            f"· calado máx. {_format_measure(item.get('ship_max_draft_label') or item.get('vessel_max_draft_m'), ' m')} "
             f"· escala {item.get('reference_code') or '--'} · agente {_agent_display(item)}{suffix}"
         )
     if len(berthed) > 8:
@@ -2887,6 +2913,72 @@ def _answer_berthed_vessels_query(question: str, clean_question: str) -> dict | 
     return {
         "answer": answer,
         "sources": _source_from_answer("Navios em cais do portal", "OPS_BERTHED_VESSELS", answer, question),
+        "answer_origin": "operational_live",
+    }
+
+
+def _answer_largest_berthed_vessel_query(question: str, clean_question: str) -> dict | None:
+    if not LARGEST_BERTHED_VESSEL_QUERY_RE.search(clean_question):
+        return None
+    port_activity = _visible_activity(window_days=30)
+    berthed = [
+        item for item in port_activity.get("in_port", []) or []
+        if not is_anchorage_berth(item.get("berth_label") or item.get("berth"))
+    ]
+    if not berthed:
+        answer = "Não há navios atracados em cais neste momento, por isso não consigo identificar o mais comprido em porto."
+        return {
+            "answer": answer,
+            "sources": _source_from_answer("Navios em cais do portal", "OPS_LARGEST_BERTHED_VESSEL", answer, question),
+            "answer_origin": "operational_live",
+        }
+
+    ranked: list[tuple[float, dict]] = []
+    missing_loa: list[dict] = []
+    for item in berthed:
+        loa = _float_measure(item.get("ship_loa_label") or item.get("vessel_loa_m"))
+        if loa is None:
+            missing_loa.append(item)
+        else:
+            ranked.append((loa, item))
+    if not ranked:
+        names = ", ".join(item.get("vessel_name") or "--" for item in berthed[:6])
+        answer = (
+            f"Há {len(berthed)} navio(s) em porto, mas nenhum tem LOA/comprimento preenchido no quadro visível. "
+            f"Navios encontrados: {names}. Para responder com rigor, é preciso preencher/confirmar o LOA na ficha do navio."
+        )
+        return {
+            "answer": answer,
+            "sources": _source_from_answer("Navios em cais do portal", "OPS_LARGEST_BERTHED_VESSEL", answer, question),
+            "answer_origin": "operational_live",
+        }
+
+    ranked.sort(key=lambda entry: entry[0], reverse=True)
+    loa, item = ranked[0]
+    planned_rows = _planned_rows_for_port_call(port_activity, item.get("id", ""))
+    next_maneuver = next((row for row in planned_rows if row.get("situation_class") in {"pending", "approved"}), None)
+    visible_maneuver = next_maneuver or (planned_rows[-1] if planned_rows else None)
+    answer = (
+        f"O navio mais comprido em porto é o {item.get('vessel_name') or '--'}, com LOA {loa:g} m."
+        f"\n- Cais: {item.get('berth_label') or item.get('berth') or '--'}."
+        f"\n- IMO: {item.get('vessel_imo') or item.get('ship_imo_label') or '--'}."
+        f"\n- Calado máximo registado: {_format_measure(item.get('ship_max_draft_label') or item.get('vessel_max_draft_m'), ' m')}."
+        f"\n- Escala: {item.get('reference_code') or '--'}."
+    )
+    if visible_maneuver:
+        maneuver_prefix = "Próxima" if next_maneuver else "Última"
+        answer += (
+            f"\n- {maneuver_prefix} manobra visível: {visible_maneuver.get('maneuver_label') or 'Manobra'} "
+            f"{visible_maneuver.get('planned_label') or visible_maneuver.get('actual_label') or _local_iso_to_label(visible_maneuver.get('date_value')) or '--'} "
+            f"(ID {visible_maneuver.get('maneuver_id') or '--'})."
+        )
+    if len(berthed) == 1:
+        answer += "\nComo é o único navio em cais, também é o maior por comparação; ainda assim mostro o LOA para a resposta ser verificável."
+    if missing_loa:
+        answer += f"\nNota: {len(missing_loa)} navio(s) em cais não têm LOA preenchido, por isso não entraram na ordenação."
+    return {
+        "answer": answer,
+        "sources": _source_from_answer("Navios em cais do portal", "OPS_LARGEST_BERTHED_VESSEL", answer, question),
         "answer_origin": "operational_live",
     }
 

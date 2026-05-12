@@ -239,6 +239,23 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         answer = self._answer("Quem aprovou a manobra do ELBTOWER para sair dia 22 de abril?")
 
         self.assertIn("Piloto Validador", answer)
+
+    def test_berthed_vessels_include_imo_loa_and_draft(self) -> None:
+        answer = self._answer("Quais os navios em porto?")
+
+        self.assertIn("ELBTOWER", answer)
+        self.assertIn("IMO 9876543", answer)
+        self.assertIn("LOA 120 m", answer)
+        self.assertIn("calado máx. 7.5 m", answer)
+
+    def test_largest_berthed_vessel_uses_loa_and_keeps_identifiers(self) -> None:
+        answer = self._answer("Qual o navio mais comprido em porto?")
+
+        self.assertIn("ELBTOWER", answer)
+        self.assertIn("LOA 120 m", answer)
+        self.assertIn("IMO: 9876543", answer)
+        self.assertIn("Calado máximo registado: 7.5 m", answer)
+        self.assertIn("único navio", answer)
         self.assertIn("dep-12345678", answer)
 
     def test_agent_agency_answer_uses_profile_organization(self) -> None:

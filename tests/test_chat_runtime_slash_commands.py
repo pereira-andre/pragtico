@@ -257,6 +257,21 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertIn("calado praticável = 7,1 m + altura de água", result["answer"])
         self.assertIn("não é uma autorização automática", result["answer"])
 
+    def test_rule_command_uses_complete_deterministic_it_summary(self) -> None:
+        services.store = FakeStore()
+
+        with self.app.test_request_context("/api/chat"):
+            result = handle_chat_turn(username="admin@porto.pt", role="admin", question="/regra 029")
+
+        self.assertEqual(result["answer_origin"], "slash_rule")
+        self.assertTrue(result["answer"].startswith("📘 "))
+        self.assertIn("IT-029", result["answer"])
+        self.assertIn("calado máximo no TGL com carga não IMO", result["answer"])
+        self.assertIn("10,0 metros", result["answer"])
+        self.assertIn("calado máximo para um navio tanque com carga IMO no TPS", result["answer"])
+        self.assertIn("9,5 metros", result["answer"])
+        self.assertIn("Calado: confirmar calado real", result["answer"])
+
     def test_navigation_light_question_uses_direct_light_source(self) -> None:
         services.store = FakeStore()
 
