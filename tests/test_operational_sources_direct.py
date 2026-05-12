@@ -261,6 +261,16 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("dep-12345678", answer)
         self.assertIn("Navex Setúbal", answer)
 
+    def test_tms1_large_vessel_capacity_answer_uses_rule_not_live_berthed_list(self) -> None:
+        answer = self._answer("Quantos navios grandes podem estar atracados no TMS 1 ao mesmo tempo?")
+
+        self.assertIn("máximo 2 navios grandes", answer)
+        self.assertIn("230 m + 230 m + 210 m", answer)
+        self.assertIn("Cais 8 é isolado", answer)
+        self.assertIn("regra de capacidade", answer)
+        self.assertNotIn("ELBTOWER", answer)
+        self.assertNotIn("Navios atracados em cais", answer)
+
     def test_loss_of_engine_emergency_prioritizes_anchor_and_vts_channel(self) -> None:
         answer = self._answer(
             "O navio ficou sem máquina e ainda não tem rebocadores perto. O que aconselhas de imediato?"

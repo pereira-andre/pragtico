@@ -22,6 +22,7 @@ from core.operational_common import _operational_lookup_key, current_resolvable_
 from core.rule_catalog import _active_knowledge_dir
 from integrations.tide_service import LISBON_TZ
 from domain.berth_layout import is_anchorage_berth, slot_berth_options
+from domain.berth_profiles import load_berth_profiles
 from domain.chat_actions import visible_port_calls_from_activity
 from domain.colreg_rules import answer_colreg_interpretation_direct
 from domain.cost_engine import UP_NORMAL, UP_SHIFT_ALONG
@@ -952,6 +953,61 @@ def _answer_tms1_defenses_direct(question: str, clean_question: str) -> dict | N
         "answer": answer,
         "sources": [_direct_source("IT-005_TMS1.txt", "TMS1_DEFENSES_YOKOHAMA", answer)],
         "answer_origin": "berth_profile_fact",
+    }
+
+
+def _berth_profile_by_id(profile_id: str) -> dict:
+    try:
+        profiles = load_berth_profiles(_active_knowledge_dir() or "knowledge")
+    except Exception:
+        logger.exception("Falha ao carregar perfis de cais para resposta direta.")
+        return {}
+    for profile in profiles:
+        if str(profile.get("id") or "").strip().lower() == profile_id:
+            return profile
+    return {}
+
+
+def _format_rule_number(value: object, default: int | float) -> str:
+    raw_value = default if value is None or value == "" else value
+    try:
+        number = float(str(raw_value).replace(",", "."))
+    except (TypeError, ValueError):
+        number = float(default)
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:g}".replace(".", ",")
+
+
+def _answer_tms1_large_vessel_capacity_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\btms\s*1\b|\btms1\b|fontainhas", clean_question):
+        return None
+    if not re.search(r"\bnavios?\b.*\bgrandes?\b|\bgrandes?\b.*\bnavios?\b", clean_question):
+        return None
+    if not re.search(r"\b(quantos?|maxim[oa]s?|limite|podem?|cabem|atracad\w*|amarrad\w*|ao mesmo tempo|simultaneamente)\b", clean_question):
+        return None
+
+    profile = _berth_profile_by_id("tms1")
+    rules = profile.get("berth_capacity_rules") if isinstance(profile, dict) else {}
+    rules = rules if isinstance(rules, dict) else {}
+    max_large = _format_rule_number(rules.get("max_large_vessels_alongside"), 2)
+    large_loa = _format_rule_number(rules.get("large_vessel_loa_m"), 200)
+    clearance = _format_rule_number(rules.get("shared_clearance_m"), 30)
+    large_rule = str(rules.get("large_vessel_rule") or "").strip()
+
+    answer = (
+        f"No TMS 1, a regra operacional é no máximo {max_large} navios grandes ao cais ao mesmo tempo.\n"
+        f"- Para esta regra, o perfil do cais considera navio grande a partir de cerca de {large_loa} m de LOA.\n"
+        "- O caso crítico que tem de ser bloqueado é 230 m + 230 m + 210 m no Cais 8: não aceitar três grandes, mesmo que a soma simples pareça caber.\n"
+        f"- Quando navios partilham a frente do TMS 1, manter pelo menos {clearance} m de separação para cruzar cabos e evitar contacto.\n"
+        "- O Cais 8 é isolado; não serve como continuação do Cais 7.\n\n"
+        "Isto é uma regra de capacidade do TMS 1, não a lista de navios atualmente em porto."
+    )
+    snippet = large_rule or answer
+    return {
+        "answer": answer,
+        "sources": [_direct_source("berth_profiles.json", "TMS1_LARGE_VESSEL_CAPACITY", snippet, "berth_capacity_rule")],
+        "answer_origin": "berth_capacity_rule",
     }
 
 
@@ -2277,6 +2333,9 @@ def answer_direct_operational_query(
     tms1_defenses_answer = _answer_tms1_defenses_direct(question, clean_question)
     if tms1_defenses_answer:
         return _attach_operational_diagnostic(tms1_defenses_answer, question)
+    tms1_large_capacity_answer = _answer_tms1_large_vessel_capacity_direct(question, clean_question)
+    if tms1_large_capacity_answer:
+        return _attach_operational_diagnostic(tms1_large_capacity_answer, question)
     lisnave_face_answer = _answer_lisnave_face_side_direct(question, clean_question)
     if lisnave_face_answer:
         return _attach_operational_diagnostic(lisnave_face_answer, question)
