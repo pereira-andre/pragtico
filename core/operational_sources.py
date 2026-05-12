@@ -990,7 +990,10 @@ def _answer_tms1_large_vessel_capacity_direct(question: str, clean_question: str
     profile = _berth_profile_by_id("tms1")
     rules = profile.get("berth_capacity_rules") if isinstance(profile, dict) else {}
     rules = rules if isinstance(rules, dict) else {}
-    max_large = _format_rule_number(rules.get("max_large_vessels_alongside"), 2)
+    max_large = _format_rule_number(rules.get("max_large_vessels_alongside"), 3)
+    main_front_max = _format_rule_number(rules.get("main_front_max_large_vessels"), 2)
+    main_front_reference = _format_rule_number(rules.get("main_front_large_vessel_reference_loa_m"), 230)
+    cais8_max = _format_rule_number(rules.get("cais8_max_loa_m"), 230)
     large_loa = _format_rule_number(rules.get("large_vessel_loa_m"), 200)
     clearance = _format_rule_number(rules.get("shared_clearance_m"), 30)
     large_rule = str(rules.get("large_vessel_rule") or "").strip()
@@ -998,9 +1001,10 @@ def _answer_tms1_large_vessel_capacity_direct(question: str, clean_question: str
     answer = (
         f"No TMS 1, a regra operacional é no máximo {max_large} navios grandes ao cais ao mesmo tempo.\n"
         f"- Para esta regra, o perfil do cais considera navio grande a partir de cerca de {large_loa} m de LOA.\n"
-        "- O caso crítico que tem de ser bloqueado é 230 m + 230 m + 210 m no Cais 8: não aceitar três grandes, mesmo que a soma simples pareça caber.\n"
-        f"- Quando navios partilham a frente do TMS 1, manter pelo menos {clearance} m de separação para cruzar cabos e evitar contacto.\n"
-        "- O Cais 8 é isolado; não serve como continuação do Cais 7.\n\n"
+        f"- Distribuição máxima: {main_front_max} navios grandes na frente principal do TMS 1 mais 1 navio no Cais 8.\n"
+        f"- Medidas máximas de referência: até {main_front_reference} m por navio grande na frente principal, e até {cais8_max} m no Cais 8.\n"
+        f"- Quando navios partilham a frente principal do TMS 1, manter pelo menos {clearance} m de separação para cruzar cabos e evitar contacto.\n"
+        "- O Cais 8 faz parte do TMS 1, mas é isolado: não serve como continuação do Cais 7.\n\n"
         "Isto é uma regra de capacidade do TMS 1, não a lista de navios atualmente em porto."
     )
     snippet = large_rule or answer

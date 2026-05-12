@@ -141,7 +141,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Download PDF" in html
     assert "TMS 1, TMS 2 e Autoeuropa" in html
     assert "Autoeuropa permite 2 navios abaixo de 230 m" in html
-    assert "TMS 1 não permite 3 navios grandes" in html
+    assert "TMS 1 permite 3 navios grandes incluindo Cais 8" in html
     assert "TMS 2 ocupa posições adjacentes por LOA" in html
     assert "TMS 1 usa a esquerda se a direita está ocupada" in html
     assert "TMS 1 bloqueia se direita e esquerda estão ocupadas" in html

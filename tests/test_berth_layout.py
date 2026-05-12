@@ -422,7 +422,7 @@ class BerthLayoutTests(unittest.TestCase):
             occupant,
         )
 
-    def test_tms1_blocks_three_large_vessels_including_cais8(self) -> None:
+    def test_tms1_allows_third_large_vessel_on_isolated_cais8(self) -> None:
         occupants = [
             {
                 "id": "tms1-c4",
@@ -438,13 +438,12 @@ class BerthLayoutTests(unittest.TestCase):
             },
         ]
 
-        self.assertEqual(
+        self.assertIsNone(
             find_occupied_berth_conflict(
                 "TMS 1 - Cais 8",
                 occupants,
-                target_vessel_loa_m="210",
-            ),
-            occupants[0],
+                target_vessel_loa_m="230",
+            )
         )
 
     def test_tms1_two_large_vessels_still_allow_small_cais8_if_free(self) -> None:

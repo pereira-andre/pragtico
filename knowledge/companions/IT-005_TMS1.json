@@ -18,7 +18,7 @@
     "10,0 metros, praticável em qualquer maré.",
     "10,0 metros, praticável em qualquer maré.",
     "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1.",
-    "Regra operacional de ocupação: manter pelo menos 30 m entre navios que partilham o TMS1 e não aceitar três navios grandes ao mesmo tempo; o caso 230 m + 230 m + 210 m no Cais 8 deve ser bloqueado.",
+    "Regra operacional de ocupação: o TMS1 pode ter no máximo três navios grandes ao mesmo tempo quando se inclui o Cais 8: dois na frente principal e um no Cais 8. Manter pelo menos 30 m entre navios que partilham a frente principal.",
     "No TMS 1 são utilizadas defensas de borracha do tipo Yokohama."
   ],
   "faq": [
@@ -139,7 +139,7 @@
     },
     {
       "question": "O TMS1 pode ter três navios grandes ao cais?",
-      "answer": "Não. Para a regra operacional de ocupação, o TMS1 não deve aceitar três navios grandes ao mesmo tempo. O caso crítico 230 m + 230 m + 210 m no Cais 8 deve ser bloqueado, mesmo que a soma simples dos comprimentos pareça caber.",
+      "answer": "Sim, no máximo três navios grandes, porque o Cais 8 faz parte do TMS1. A leitura operacional é: até dois navios grandes na frente principal do TMS1 e mais um navio no Cais 8. Como referência máxima, usar 230 m para cada navio grande no arranjo simples, incluindo o Cais 8 até 230 m. O Cais 8 é isolado: não serve de continuação do Cais 7.",
       "keywords": [
         "tms1",
         "tres navios grandes",
@@ -153,7 +153,7 @@
     },
     {
       "question": "Como se aplica o comprimento de navios aos cais do TMS1?",
-      "answer": "O cais atribuído é o ponto de referência, mas um navio que exceda o comprimento desse cais pode ocupar cais adjacentes. A regra prática é tentar primeiro o lado direito, usar o lado esquerdo se a direita estiver ocupada ou não chegar, nunca usar o Cais 8 como continuação do Cais 7, e manter 30 m de separação entre navios que partilham a frente de cais.",
+      "answer": "O cais atribuído é o ponto de referência, mas um navio que exceda o comprimento desse cais pode ocupar cais adjacentes. A regra prática é tentar primeiro o lado direito, usar o lado esquerdo se a direita estiver ocupada ou não chegar, nunca usar o Cais 8 como continuação do Cais 7, e manter 30 m de separação entre navios que partilham a frente principal. O Cais 8 pertence ao TMS1, mas é uma posição isolada para um navio até 230 m.",
       "keywords": [
         "tms1",
         "comprimento",

@@ -311,7 +311,7 @@
       ],
       "vessel_limits": [
         "A compatibilidade depende da zona/cabecos usados, nao apenas do nome TMS1.",
-        "Nao permitir tres navios grandes ao cais no TMS1; exemplo critico bloqueado: 230 m + 230 m + 210 m no Cais 8."
+        "O TMS1 pode ter no maximo tres navios grandes ao cais quando se inclui o Cais 8: ate dois na frente principal do TMS1 e um no Cais 8."
       ],
       "berth_capacity_rules": {
         "slot_lengths_m": {
@@ -327,8 +327,11 @@
         "cais8_max_loa_m": 230,
         "shared_clearance_m": 30,
         "large_vessel_loa_m": 200,
-        "max_large_vessels_alongside": 2,
-        "large_vessel_rule": "Nao permitir tres navios grandes ao cais no TMS1; exemplo bloqueado: 230 m + 230 m + 210 m no Cais 8."
+        "max_large_vessels_alongside": 3,
+        "main_front_max_large_vessels": 2,
+        "main_front_large_vessel_reference_loa_m": 230,
+        "cais8_max_large_vessels": 1,
+        "large_vessel_rule": "Maximo tres navios grandes no TMS1: dois na frente principal e um no Cais 8; Cais 8 faz parte do TMS1, mas e isolado e nao serve de prolongamento ao Cais 7."
       },
       "draft_rules": [
         "Cabecos 1 a 10: 8,8 m.",
