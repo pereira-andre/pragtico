@@ -474,17 +474,26 @@
       if (!shouldOpen(textarea.value)) return [];
       const query = normalize(currentQuery().split("\n")[0]);
       const token = query.startsWith("/") ? query.slice(1) : query;
-      return suggestions.filter((item) => {
+      if (!token) return suggestions.slice(0, 8);
+      return suggestions.map((item, index) => {
         const command = normalize(item.command).replace(/^\//, "");
+        const commandName = command.split(/\s+/)[0];
         const label = normalize(item.label);
         const description = normalize(item.description);
         const keywords = normalize(item.keywords);
-        return !token
-          || command.startsWith(token)
-          || label.includes(token)
-          || description.includes(token)
-          || keywords.includes(token);
-      }).slice(0, 8);
+        let rank = 99;
+        if (commandName === token) rank = 0;
+        else if (command.startsWith(token)) rank = 1;
+        else if (commandName.includes(token)) rank = 2;
+        else if (label.includes(token)) rank = 3;
+        else if (description.includes(token)) rank = 4;
+        else if (keywords.includes(token)) rank = 5;
+        return { item, index, rank };
+      })
+        .filter((match) => match.rank < 99)
+        .sort((a, b) => a.rank - b.rank || a.index - b.index)
+        .slice(0, 8)
+        .map((match) => match.item);
     }
 
     function render() {
