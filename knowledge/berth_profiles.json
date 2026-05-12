@@ -310,8 +310,26 @@
         "Defensas: no TMS 1 sao utilizadas defensas de borracha do tipo Yokohama."
       ],
       "vessel_limits": [
-        "A compatibilidade depende da zona/cabecos usados, nao apenas do nome TMS1."
+        "A compatibilidade depende da zona/cabecos usados, nao apenas do nome TMS1.",
+        "Nao permitir tres navios grandes ao cais no TMS1; exemplo critico bloqueado: 230 m + 230 m + 210 m no Cais 8."
       ],
+      "berth_capacity_rules": {
+        "slot_lengths_m": {
+          "TMS 1 - Cais 3": 175,
+          "TMS 1 - Cais 4": 175,
+          "TMS 1 - Cais 5": 175,
+          "TMS 1 - Cais 6": 175,
+          "TMS 1 - Cais 7": 80,
+          "TMS 1 - Cais 8": 230
+        },
+        "allocation_order": "direita_primeiro_esquerda_se_necessario",
+        "isolated_slots": ["TMS 1 - Cais 8"],
+        "cais8_max_loa_m": 230,
+        "shared_clearance_m": 30,
+        "large_vessel_loa_m": 200,
+        "max_large_vessels_alongside": 2,
+        "large_vessel_rule": "Nao permitir tres navios grandes ao cais no TMS1; exemplo bloqueado: 230 m + 230 m + 210 m no Cais 8."
+      },
       "draft_rules": [
         "Cabecos 1 a 10: 8,8 m.",
         "Cabecos 10 a 20: 9,8 m.",
@@ -350,18 +368,24 @@
       "vessel_limits": [
         "Pode receber mais do que um navio se a soma dos comprimentos e intervalos regulamentares couber nos 723 m."
       ],
+      "berth_capacity_rules": {
+        "total_length_m": 723,
+        "slot_labels": ["TMS 2 - Posição A", "TMS 2 - Posição B", "TMS 2 - Posição C"],
+        "allocation_order": "direita_primeiro_esquerda_se_necessario",
+        "shared_clearance_m": 30
+      },
       "draft_rules": [
         "Calado maximo admitido: 12 m, aplicado de forma uniforme ao terminal."
       ],
       "maneuver_rules": [
-        "Cada navio precisa de intervalo minimo de 10% do seu proprio comprimento para cada lado.",
+        "Quando ha mais do que um navio no TMS2, reservar pelo menos 30 m de separacao entre navios para cruzar cabos e evitar contacto.",
         "Para varios navios, calcular espaco total ocupado e confirmar compatibilidade."
       ],
       "night_rules": [
         "O resumo do IT-006 nao isola uma proibicao noturna geral; validar pelas restantes condicionantes."
       ],
       "restrictions": [
-        "Regra de separacao de 10% do comprimento para cada lado.",
+        "Regra de separacao minima de 30 m entre navios quando partilham o TMS2.",
         "Calado maximo 12 m."
       ],
       "tug_guidance": [
@@ -383,8 +407,15 @@
       "vessel_limits": [
         "Cais 10: o IT-007 nao fixa LOA maximo de navio; fixa comprimento do cais e calado permitido.",
         "Cais 11 / rampa: comprimento de referencia 172 m para o modulo navio-rampa.",
-        "Na rampa, a dimensao aceitavel depende da capacidade do navio para se manter atracado em seguranca com um so cabo de lancante a boia de amarracao."
+        "Na rampa, a dimensao aceitavel depende da capacidade do navio para se manter atracado em seguranca com um so cabo de lancante a boia de amarracao.",
+        "Regra operacional de ocupacao: navio com LOA igual ou superior a 230 m fica sozinho na Autoeuropa; abaixo de 230 m podem estar dois navios, um por cais."
       ],
+      "berth_capacity_rules": {
+        "slot_labels": ["Cais 10 / Autoeuropa", "Cais 11 / Autoeuropa"],
+        "exclusive_loa_m": 230,
+        "max_vessels_below_exclusive_loa": 2,
+        "shared_clearance_m": 0
+      },
       "draft_rules": [
         "Cais 10: calado permitido 10,0 m.",
         "Cais 11 / rampa: calado permitido 10,0 m."

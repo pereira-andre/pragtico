@@ -1532,7 +1532,7 @@ def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
 
 def berth_capacity_test_matrix() -> list[dict]:
     """Return berth-capacity rules that must remain visible in admin QA."""
-    source = "domain/berth_layout.py + tests/test_berth_layout.py"
+    source = "knowledge/berth_profiles.json + knowledge/companions + domain/berth_layout.py + tests/test_berth_layout.py"
 
     def vessel(identifier: str, name: str, berth: str, loa_m: str | None = None) -> dict:
         payload = {"id": identifier, "vessel_name": name, "berth_label": berth}
@@ -1626,16 +1626,15 @@ def berth_capacity_test_matrix() -> list[dict]:
             expected_conflict_id="auto-unknown",
         ),
         case(
-            "autoeuropa-two-220-clearance-blocked",
+            "autoeuropa-two-229-allowed",
             "Autoeuropa",
-            "Autoeuropa aplica folga mínima de 30 m entre dois navios",
-            "Cais 10 ocupado por 220 m; tentar aprovar 220 m no Cais 11.",
-            "Conflito: dois navios de 220 m precisam de 470 m com folga, acima da referência 2 x 230 m.",
-            occupants=[vessel("auto-10", "Ro-Ro 220 C10", "Cais 10 / Autoeuropa", "220")],
+            "Autoeuropa não aplica folga extra abaixo de 230 m",
+            "Cais 10 ocupado por 229 m; tentar aprovar 229 m no Cais 11.",
+            "Sem conflito: a regra operacional da Autoeuropa permite dois navios abaixo de 230 m, sem folga adicional de 30 m.",
+            occupants=[vessel("auto-10", "Ro-Ro 229 C10", "Cais 10 / Autoeuropa", "229")],
             target_berth="Cais 11 / Autoeuropa",
-            target_loa_m="220",
-            expected_conflict=True,
-            expected_conflict_id="auto-10",
+            target_loa_m="229",
+            expected_conflict=False,
         ),
         case(
             "tms1-230-c4-spans-c5",

@@ -239,27 +239,26 @@ class BerthLayoutTests(unittest.TestCase):
             occupant,
         )
 
-    def test_autoeuropa_shared_vessels_need_30m_clearance(self) -> None:
+    def test_autoeuropa_allows_two_vessels_below_230_without_clearance_rule(self) -> None:
         occupant = {
             "id": "auto-10",
             "vessel_name": "Small RoRo",
             "berth_label": "Cais 10 / Autoeuropa",
-            "vessel_loa_m": "220",
+            "vessel_loa_m": "229",
         }
 
-        self.assertEqual(
+        self.assertIsNone(
             find_occupied_berth_conflict(
                 "Cais 11 / Autoeuropa",
                 [occupant],
-                target_vessel_loa_m="220",
-            ),
-            occupant,
+                target_vessel_loa_m="229",
+            )
         )
         self.assertIsNone(
             find_occupied_berth_conflict(
                 "Cais 11 / Autoeuropa",
-                [{**occupant, "vessel_loa_m": "210"}],
-                target_vessel_loa_m="210",
+                [{**occupant, "vessel_loa_m": "220"}],
+                target_vessel_loa_m="220",
             )
         )
 
