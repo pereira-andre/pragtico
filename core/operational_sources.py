@@ -807,6 +807,7 @@ def _extract_length_m(question: str) -> float | None:
         r"\b(?:loa|comprimento|navio|ro-?ro|roro|graneleiro)\D{0,80}?(\d{2,3}(?:\.\d+)?)\s*m\b",
         r"\b(\d{2,3}(?:\.\d+)?)\s*m(?:etros?)?\s*(?:de\s+)?(?:loa|comprimento)\b",
         r"\b(?:com|de)\s+(\d{2,3}(?:\.\d+)?)\s*m\b",
+        r"\b(\d{2,3}(?:\.\d+)?)\s*m(?:etros?)?\b",
     )
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -822,6 +823,8 @@ def _extract_length_m(question: str) -> float | None:
 def _answer_source_coverage_direct(question: str, clean_question: str) -> dict | None:
     if not SOURCE_COVERAGE_QUERY_RE.search(question or ""):
         return None
+    if re.search(r"\b(colreg|rieam|anti[-\s]?colis[aã]o|abalroamento|visibilidade\s+reduzida)\b", question, re.IGNORECASE):
+        return answer_colreg_interpretation_direct(question)
     if re.search(r"\b(luzes?|balizagem|balizas?|boias?|b[oó]ias?|farol|far[oó]is|enfiamento|iala)\b", question, re.IGNORECASE):
         return _answer_navigation_lights_direct(question, clean_question)
     if re.search(r"\b(shiphandling|manobra\s+pratica|manobra\s+prática|bow\s*thruster|squat|efeito\s+de\s+margem)\b", question, re.IGNORECASE):
@@ -863,6 +866,7 @@ def _answer_alstom_direct(question: str, clean_question: str) -> dict | None:
     )
     answer = (
         f"{status}\n"
+        "Fonte: vento indicado na pergunta do utilizador.\n"
         "Local: ALSTOM.\n"
         "Regras críticas IT-038_Alstom.txt:\n"
         "- Navios atracam apenas por estibordo.\n"
@@ -904,7 +908,8 @@ def _answer_visibility_threshold_direct(question: str, clean_question: str) -> d
     answer = (
         "Sim. Para segurança operacional do porto, a referência fog_visibility_km_reference é 1.0 km.\n"
         "- Se o live feed indicar visibilidade 1,0 km ou inferior, o bot deve tratar como visibilidade operacional reduzida.\n"
-        "- Com visibilidade operacional reduzida/nevoeiro em porto, a regra é suspender manobras e só retomar com visibilidade restaurada."
+        "- Com visibilidade operacional reduzida/nevoeiro em porto, a regra é suspender manobras e só retomar com visibilidade restaurada.\n"
+        "- Se um navio já estiver a navegar, aplicar velocidade de segurança, vigia reforçada e sinais de visibilidade reduzida."
     )
     return {
         "answer": answer,
@@ -959,6 +964,35 @@ def _answer_lisnave_doca21_depth_direct(question: str, clean_question: str) -> d
         "answer": answer,
         "sources": [_direct_source("IT-014_Lisnave.txt", "LISNAVE_DOCA21_THRESHOLD_DEPTH", answer)],
         "answer_origin": "berth_profile_fact",
+    }
+
+
+def _answer_lisnave_doca_tug_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+    if not re.search(r"\bdoca\s*2[012]\b|\bd2[012]\b", clean_question):
+        return None
+    if not re.search(r"\b(quantos|necessarios|necessários|usar|entrar|entrada|manobra|manobrar|tem de|deve)\b", clean_question):
+        return None
+    loa = _extract_length_m(question)
+    if loa is not None and loa > 250:
+        loa_label = f"{loa:g}".replace(".", ",")
+        answer = (
+            "Recomendo 6 rebocadores.\n"
+            f"Regra prática aplicável: Lisnave acima de 250 m: 6 rebocadores. LOA indicado: {loa_label} m.\n"
+            "Para docas Lisnave, nunca descer abaixo do mínimo de 4 rebocadores, mas o escalão por comprimento agrava para 6 neste caso.\n"
+            "Confirmar doca/cais concreto, reponto, vento, calado e validação do Piloto Coordenador."
+        )
+    else:
+        answer = (
+            "Para entrada em doca Lisnave, usar pelo menos 4 rebocadores.\n"
+            "Se o navio tiver LOA acima de 250 m, a regra prática sobe para 6 rebocadores.\n"
+            "Confirmar doca/cais concreto, reponto, vento, calado e validação do Piloto Coordenador."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("tug_operational_guidance.json", "LISNAVE_DOCA_TUG_COUNT", answer, "operational_tug_guidance")],
+        "answer_origin": "operational_tug_guidance",
     }
 
 
@@ -1713,6 +1747,11 @@ def _append_tug_weather_lines(answer_lines: list[str], weather_context: dict) ->
     answer_lines.extend(lines)
 
 
+def _append_tug_local_echo(answer_lines: list[str], clean_question: str) -> None:
+    if re.search(r"\bauto\s*europa\b|\bautoeuropa\b|\bcais\s*1[01]\b", clean_question):
+        answer_lines.append("Local: Autoeuropa.")
+
+
 def _tug_guidance_sources(source: dict, weather_context: dict) -> list[dict]:
     return [source] + list(weather_context.get("sources") or [])
 
@@ -1767,6 +1806,7 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         elif re.search(r"\b(com|tem)\b.*\b(bow|bowthruster|h[eé]lice de proa|hpr)\b", clean_question):
             relevant_positioning = [item for item in positioning if "Com bowthruster operacional" in item or "convencionais" in item]
         answer_lines = ["Regra prática de posicionamento dos rebocadores:"]
+        _append_tug_local_echo(answer_lines, clean_question)
         for item in relevant_positioning[:3]:
             answer_lines.append(f"- {item}")
         _append_tug_weather_lines(answer_lines, weather_context)
@@ -1792,6 +1832,7 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         ]
         relevant_positioning = list(dict.fromkeys(count_specific + location_specific)) or positioning
         answer_lines = ["Posicionamento prático dos rebocadores:"]
+        _append_tug_local_echo(answer_lines, clean_question)
         for item in relevant_positioning[:4]:
             answer_lines.append(f"- {item}")
         if applicable:
@@ -1823,6 +1864,7 @@ def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | No
         f"Recomendo {tug_label}.",
         f"Regra prática aplicável: {first_rule}",
     ]
+    _append_tug_local_echo(answer_lines, clean_question)
     if requested_count_match:
         requested_count = int(requested_count_match.group(1))
         if requested_count < count:
@@ -2091,6 +2133,12 @@ def answer_direct_operational_query(
     doca21_depth_answer = _answer_lisnave_doca21_depth_direct(question, clean_question)
     if doca21_depth_answer:
         return _attach_operational_diagnostic(doca21_depth_answer, question)
+    hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
+    if hard_limit_answer:
+        return _attach_operational_diagnostic(hard_limit_answer, question)
+    lisnave_doca_tug_answer = _answer_lisnave_doca_tug_direct(question, clean_question)
+    if lisnave_doca_tug_answer:
+        return _attach_operational_diagnostic(lisnave_doca_tug_answer, question)
     lisnave_night_length_answer = _answer_lisnave_night_length_direct(question, clean_question)
     if lisnave_night_length_answer:
         return _attach_operational_diagnostic(lisnave_night_length_answer, question)
@@ -2127,9 +2175,6 @@ def answer_direct_operational_query(
     fog_port_answer = _answer_fog_port_procedure_direct(question, clean_question)
     if fog_port_answer:
         return _attach_operational_diagnostic(fog_port_answer, question)
-    hard_limit_answer = _answer_lisnave_hidrolift_hard_limit(question, clean_question)
-    if hard_limit_answer:
-        return _attach_operational_diagnostic(hard_limit_answer, question)
     secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
     if secil_entry_timing_answer:
         return _attach_operational_diagnostic(secil_entry_timing_answer, question)

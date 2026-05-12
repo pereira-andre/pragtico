@@ -11,6 +11,7 @@ class RouteTransitAnswerTests(unittest.TestCase):
 
         self.assertIsNotNone(answer)
         self.assertIn("6,5 milhas náuticas", answer["answer"])
+        self.assertIn("TMS2", answer["answer"])
         self.assertIn("TMS 2", answer["answer"])
 
     def test_reverse_lisnave_to_pilar_2_uses_reverse_wording(self) -> None:

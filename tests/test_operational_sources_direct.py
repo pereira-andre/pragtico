@@ -317,6 +317,18 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Ultrapassagem em canal estreito", payload["answer"])
         self.assertNotIn("Nevoeiro súbito com o navio já a navegar", payload["answer"])
 
+    def test_colreg_source_with_visibility_words_is_not_misrouted_to_safety_threshold(self) -> None:
+        payload = answer_direct_operational_query(
+            "A base cobre RIEAM/COLREG para anti-colisão e visibilidade reduzida?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("colreg_interpretation", payload["answer_origin"])
+        self.assertIn("Regra 5", payload["answer"])
+        self.assertIn("Regra 19", payload["answer"])
+        self.assertIn("anti-colisão", payload["answer"])
+        self.assertNotIn("fog_visibility_km_reference", payload["answer"])
+
     def test_parted_mooring_lines_emergency_prepares_lines_and_tugs(self) -> None:
         answer = self._answer("Se partirem cabos na manobra, qual e a resposta imediata?")
 
@@ -386,6 +398,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertEqual("operational_rule", payload["answer_origin"])
         self.assertIn("Não.", payload["answer"])
         self.assertIn("boca máxima de 32 m", payload["answer"])
+        self.assertIn("Boca: 45 m", payload["answer"])
         self.assertIn("45 m de boca", payload["answer"])
 
     def test_secil_e_entry_timing_compares_marked_hour_with_reponto(self) -> None:
@@ -425,6 +438,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertEqual("operational_tug_guidance", payload["answer_origin"])
         self.assertIn("Recomendo 2 rebocadores", payload["answer"])
         self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Autoeuropa", payload["answer"])
         self.assertIn("Meteorologia considerada", payload["answer"])
         self.assertIn("rajadas 20", payload["answer"])
         self.assertIn("ponderar atrasar", payload["answer"])
@@ -588,6 +602,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertEqual("operational_tug_guidance", payload["answer_origin"])
         self.assertIn("Recomendo 2 rebocadores", payload["answer"])
         self.assertIn("Ro-Ro com vento Sul a sair: 2 rebocadores", payload["answer"])
+        self.assertIn("Autoeuropa", payload["answer"])
         self.assertIn("Meteorologia considerada", payload["answer"])
         self.assertIn("rajadas 20 kts", payload["answer"])
         self.assertIn("ponderar atrasar", payload["answer"])
@@ -612,6 +627,13 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("366 metros de comprimento operacional", answer)
         self.assertIn("360 m fica dentro", answer)
 
+    def test_lisnave_cais_3a_over_length_rejects_against_operational_total(self) -> None:
+        answer = self._answer("E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?")
+
+        self.assertIn("Cais 3 A", answer)
+        self.assertIn("390 m excede", answer)
+        self.assertIn("366 metros de comprimento operacional", answer)
+
     def test_tanquisado_length_uses_operational_total_not_physical_slot(self) -> None:
         answer = self._answer("Qual é o comprimento operacional do Tanquisado com duques d'alba?")
 
@@ -635,6 +657,13 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Recomendo 3 rebocadores", answer)
         self.assertIn("Rebocadores insuficientes", answer)
         self.assertIn("foram indicados 2", answer)
+
+    def test_doca21_large_vessel_tug_question_inferrs_lisnave_from_doca(self) -> None:
+        answer = self._answer("Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21?")
+
+        self.assertIn("Recomendo 6 rebocadores", answer)
+        self.assertIn("Lisnave acima de 250 m", answer)
+        self.assertIn("LOA indicado: 300 m", answer)
 
     def test_barra_draft_tup_and_visibility_threshold_have_direct_answers(self) -> None:
         barra = self._answer("Qual é o calado máximo na barra do Porto de Setúbal?")

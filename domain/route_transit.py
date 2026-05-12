@@ -694,14 +694,14 @@ ROUTE_TRANSIT_FACTS: tuple[RouteTransitFact, ...] = (
         origin_patterns=ORIGIN_BARRA,
         destination_patterns=DEST_TMS2,
         answer=(
-            "Do Pilar 2 / entrada da Barra até ao TMS 2 são cerca de 6,5 milhas "
+            "Do Pilar 2 / entrada da Barra até ao TMS2 / TMS 2 são cerca de 6,5 milhas "
             "náuticas pelo Canal Norte."
         ),
         source_document="Notas_Pilotagem.txt",
         source_id="ROUTE_BARRA_TMS2_DISTANCE",
         specificity=32,
         reverse_answer=(
-            "Do TMS 2 até ao Pilar 2 / entrada da Barra são cerca de 6,5 milhas "
+            "Do TMS2 / TMS 2 até ao Pilar 2 / entrada da Barra são cerca de 6,5 milhas "
             "náuticas pelo Canal Norte."
         ),
     ),
