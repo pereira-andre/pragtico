@@ -378,7 +378,7 @@ Faixas principais:
 Suite completa:
 
 ```bash
-python3 -m pytest --ignore=REPORT_UAb
+python3 -m pytest
 ```
 
 Testes focados:

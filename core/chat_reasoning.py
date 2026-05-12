@@ -388,8 +388,9 @@ def build_conversation_reasoning_state(
         if latest_case_message:
             summary_parts.append(f"Última pergunta de caso: {latest_case_message[:240]}")
         summary_parts.append(
-            "Aviso de resposta: se a conclusão depender desta premissa, mencionar em frase curta "
-            "que se assume a continuação do mesmo caso; se houver dúvida, pedir confirmação do cais/caso."
+            "Aviso de resposta: se a conclusão depender desta premissa, declarar claramente "
+            "que se assume a continuação do mesmo caso e responder com fundamento operacional, não só com um valor isolado; "
+            "se houver dúvida, pedir confirmação do cais/caso."
         )
     elif current_case_label:
         summary_parts.append(f"Caso identificado na mensagem atual: {current_case_label}")

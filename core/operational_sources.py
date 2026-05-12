@@ -1182,21 +1182,291 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
     }
 
 
-def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) -> dict | None:
-    if "carga nao imo" not in clean_question and "carga não imo" not in str(question or "").lower():
+FUNDEADOURO_NORTE_SOUTH_QUAY_RE = re.compile(
+    r"\bfundeadouro\s+norte\b|\bfund\s+norte\b",
+)
+SOUTH_QUAY_REPONTO_DEST_RE = re.compile(
+    r"\b(lisnave|mitrena|tanquisado|eco\s*oil|ecooil|ecoil|teporset|tepor\s*set|termitrena|cais\s+(?:a\s+)?sul|cais\s+do\s+sul)\b",
+)
+SOUTH_QUAY_REPONTO_SCHEDULING_RE = re.compile(
+    r"\b(quando|hora|horas|marco|marcar|agendar|agenda|piloto|largada|sair|saida|saída|"
+    r"chegar|chegada|reponto|preia|mare|mar[eé])\b",
+)
+
+
+def _south_quay_reponto_target_label(clean_question: str) -> str:
+    if re.search(r"\btanquisado\b", clean_question):
+        return "ao Tanquisado"
+    if re.search(r"\beco\s*oil\b|\becooil\b|\becoil\b", clean_question):
+        return "à Eco-Oil"
+    if re.search(r"\bteporset\b|\btepor\s*set\b", clean_question):
+        return "ao Teporset"
+    if re.search(r"\btermitrena\b", clean_question):
+        return "à Termitrena"
+    if re.search(r"\blisnave\b|\bmitrena\b", clean_question):
+        return "à LISNAVE/Mitrena"
+    return "aos cais a sul"
+
+
+def _next_tide_event_for_question(question: str, *, high_water_only: bool = False):
+    tide_service = getattr(services, "tide_service", None)
+    if not tide_service or not hasattr(tide_service, "events_for_date"):
         return None
-    answer = (
-        "Ficha de contexto provável\n"
-        "- Premissa de continuidade: SAPEC / TPS-TGL.\n"
-        "- Calado: 9,2 m.\n"
-        "- Carga: não IMO.\n"
-        "- Para carga não IMO na SAPEC, confirmar o terminal concreto e aplicar a fórmula de calado praticável com a altura de água no momento, respeitando o limite absoluto/documental aplicável.\n"
-        "- Se o contexto anterior não era SAPEC, confirma o cais/terminal antes de validar."
+    now = datetime.now(LISBON_TZ)
+    dates: list[date] = []
+    try:
+        if hasattr(tide_service, "resolve_query_dates"):
+            dates.extend(tide_service.resolve_query_dates(question))
+    except Exception:
+        logger.exception("Falha ao resolver data para proximo evento de mare.")
+    for candidate in (now.date(), now.date() + timedelta(days=1)):
+        if candidate not in dates:
+            dates.append(candidate)
+
+    events = []
+    try:
+        for target_date in dates:
+            events.extend(tide_service.events_for_date(target_date))
+    except Exception:
+        logger.exception("Falha ao obter eventos de mare para marcacao por reponto.")
+        return None
+    if high_water_only:
+        events = [
+            event
+            for event in events
+            if str(getattr(event, "tide_type", "")).strip().lower() == "preia-mar"
+        ]
+    future_events = [
+        event
+        for event in events
+        if getattr(event, "timestamp", now) >= now - timedelta(minutes=1)
+    ]
+    if not future_events:
+        return None
+    return min(future_events, key=lambda event: getattr(event, "timestamp", now))
+
+
+def _answer_fundeadouro_norte_south_quay_reponto_scheduling_direct(question: str, clean_question: str) -> dict | None:
+    if not FUNDEADOURO_NORTE_SOUTH_QUAY_RE.search(clean_question):
+        return None
+    if not SOUTH_QUAY_REPONTO_DEST_RE.search(clean_question):
+        return None
+    if not SOUTH_QUAY_REPONTO_SCHEDULING_RE.search(clean_question):
+        return None
+    if not re.search(r"\b(reponto|preia|mare|mar[eé]|chegar|chegada|marco|marcar|piloto|largada)\b", clean_question):
+        return None
+
+    target_quay = _south_quay_reponto_target_label(clean_question)
+    parsed_time = _parse_maneuver_time(question)
+    target_dt = None
+    target_label = "reponto/preia-mar alvo"
+    tide_context = ""
+    high_water_only = bool(re.search(r"\bpreia\b|\bpreia\s*mar\b|\bpreia-mar\b", clean_question))
+    if parsed_time:
+        hour, minute, parsed_label = parsed_time
+        tide_service = getattr(services, "tide_service", None)
+        target_dt = _planned_datetime_for_question(question, hour, minute, tide_service)
+        target_label = parsed_label
+    else:
+        tide_event = _next_tide_event_for_question(question, high_water_only=high_water_only)
+        if tide_event:
+            target_dt = getattr(tide_event, "timestamp", None)
+            target_label = target_dt.strftime("%H:%M") if target_dt else "reponto/preia-mar alvo"
+            tide_context = (
+                f"Próxima {'preia-mar' if high_water_only else 'maré/reponto'} considerada: "
+                f"{target_dt.strftime('%d/%m/%Y %H:%M')}"
+            )
+            height = getattr(tide_event, "height", None)
+            if height is not None:
+                tide_context += f" ({height:.1f} m)"
+            tide_context += "."
+
+    mark_label = "1 hora e 30 minutos antes"
+    if target_dt:
+        mark_label = (target_dt - timedelta(minutes=90)).strftime("%H:%M")
+
+    lines = [
+        f"Para chegar do Fundeadouro Norte {target_quay} no reponto, não marques o piloto para a hora do reponto.",
+        "A referência prática é marcar piloto/largada 1 hora e 30 minutos antes, porque o navio tem de chegar à fase crítica junto ao cais no reponto.",
+    ]
+    if tide_context:
+        lines.append(tide_context)
+    if target_dt:
+        lines.append(f"Se o alvo é o reponto/preia-mar das {target_label}, marca o piloto por volta das {mark_label}.")
+    else:
+        lines.append(f"Sem hora de maré concreta, a regra fica: piloto/largada {mark_label} do reponto pretendido.")
+    lines.extend(
+        [
+            "A mesma antecedência do Fundeadouro Norte aplica-se aos cais a sul: Tanquisado, Eco-Oil, LISNAVE/Mitrena, Termitrena e Teporset.",
+            "Depois confirmar cais/doca concreto, calado, vento, rebocadores e validação do Piloto Coordenador.",
+        ]
     )
+    answer = "\n".join(lines)
     return {
         "answer": answer,
-        "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_NON_IMO_CONTEXT_FOLLOWUP", answer)],
-        "answer_origin": "operational_context_followup",
+        "sources": [
+            _direct_source(
+                "Marcar_manobra_repontos_mare.txt",
+                "FUNDEADOURO_NORTE_CAIS_SUL_PREIA_MAR_LEAD_TIME",
+                answer,
+                retrieval_mode="operational_rule",
+            ),
+            _direct_source(
+                "Notas_Pilotagem.txt",
+                "ROUTE_FUNDEADOURO_NORTE_CAIS_SUL_TIME",
+                "Do Fundeadouro Norte para os cais a sul conta com cerca de 1 hora e 30 minutos.",
+                retrieval_mode="route_transit_fact",
+            ),
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
+def _format_meters_pt(value: float) -> str:
+    return f"{value:.1f}".replace(".", ",")
+
+
+def _extract_draft_m(question: str) -> float | None:
+    text = str(question or "").lower().replace(",", ".")
+    patterns = (
+        r"\b(?:calado|draft)\D{0,60}?(\d{1,2}(?:\.\d+)?)\s*m\b",
+        r"\b(\d{1,2}(?:\.\d+)?)\s*m(?:etros?)?\s*(?:de\s+)?(?:calado|draft)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def _sapec_terminal_label(clean_question: str) -> str:
+    if re.search(r"\btgl\b|liquidos|graneis\s+liquidos|gran[eé]is\s+l[ií]quidos", clean_question):
+        return "SAPEC Líquidos / TGL"
+    if re.search(r"\btps\b|solidos|sólidos|graneis\s+solidos|gran[eé]is\s+s[oó]lidos", clean_question):
+        return "SAPEC Sólidos / TPS"
+    return "SAPEC / TPS-TGL"
+
+
+def _sapec_cargo_kind(question: str, clean_question: str) -> str:
+    original = str(question or "").lower()
+    if re.search(r"\b(?:carga\s+)?(?:nao|não|non)\s*-?\s*imo\b", original) or re.search(r"\b(?:carga\s+)?nao\s+imo\b", clean_question):
+        return "non_imo"
+    if re.search(
+        r"\bcarga\s+imo\b|\btem\s+carga\s+imo\b|\bcom\s+carga\s+imo\b|"
+        r"\bcarga\s+perigosa\b|\bperigos[ao]s?\b|"
+        r"\bseguimento:\s*(?:e\s+)?(?:e|é|tem\s+carga|carga)?\s*imo\b",
+        original,
+        flags=re.IGNORECASE,
+    ):
+        return "imo"
+    return ""
+
+
+def _sapec_cargo_rules(cargo_kind: str) -> dict:
+    if cargo_kind == "imo":
+        return {
+            "label": "IMO/perigosa",
+            "base": 7.1,
+            "limit": 9.5,
+            "formula": "7,1 m + altura de água",
+        }
+    return {
+        "label": "não IMO",
+        "base": 7.6,
+        "limit": 10.0,
+        "formula": "7,6 m + altura de água",
+    }
+
+
+def _answer_sapec_draft_cargo_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\bsapec\b|\btps\b|\btgl\b", clean_question):
+        return None
+    draft = _extract_draft_m(question)
+    cargo_kind = _sapec_cargo_kind(question, clean_question)
+    if draft is None and not cargo_kind:
+        return None
+    if not re.search(r"\b(calado|draft|carga|imo|pode|atracar|seguimento|maximo|máximo)\b", question, re.IGNORECASE):
+        return None
+
+    terminal = _sapec_terminal_label(clean_question)
+    terminal_note = ""
+    if terminal == "SAPEC / TPS-TGL":
+        terminal_note = " Confirma ainda se estamos no TPS/Sólidos ou no TGL/Líquidos; a fórmula é igual por categoria de carga, mas a manobra e a amarração devem ser validadas por terminal."
+
+    if not cargo_kind:
+        draft_label = _format_meters_pt(draft) if draft is not None else "o calado indicado"
+        answer = (
+            f"Assumo que a pergunta é sobre {terminal}, com calado {draft_label} m.\n"
+            "Falta confirmar se a carga é IMO/perigosa ou não IMO, porque o IT-029 separa as duas regras:\n"
+            "- Carga IMO: calado máximo 9,5 m e fórmula de calado praticável 7,1 m + altura de água.\n"
+            "- Carga não IMO: calado máximo 10,0 m e fórmula 7,6 m + altura de água.\n"
+            "Sem o tipo de carga e a altura de água prevista à hora da manobra, não fechava a autorização; apenas dá para dizer qual regra aplicar."
+            f"{terminal_note}"
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_DRAFT_CARGO_RULE", answer)],
+            "answer_origin": "sapec_draft_rule",
+        }
+
+    rules = _sapec_cargo_rules(cargo_kind)
+    cargo_label = rules["label"]
+    base = rules["base"]
+    limit = rules["limit"]
+    formula = rules["formula"]
+    limit_label = _format_meters_pt(limit)
+    base_label = _format_meters_pt(base)
+
+    if draft is None:
+        answer = (
+            f"Para {terminal} com carga {cargo_label}, o IT-029 não deve ser resumido só a um número.\n"
+            f"A referência é: calado máximo {limit_label} m e calado praticável = {formula} no momento da manobra.\n"
+            "Portanto, para validar um caso concreto tens de cruzar o calado real do navio com a altura de água prevista e manter a validação operacional do Piloto Coordenador."
+            f"{terminal_note}"
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_DRAFT_CARGO_RULE", answer)],
+            "answer_origin": "sapec_draft_rule",
+        }
+
+    draft_label = _format_meters_pt(draft)
+    required_water = max(0.0, draft - base)
+    required_water_label = _format_meters_pt(required_water)
+    margin = limit - draft
+    margin_label = _format_meters_pt(abs(margin))
+    if margin >= 0:
+        conclusion = (
+            f"Conclusão: com {draft_label} m de calado e carga {cargo_label}, o navio não fica excluído pelo limite documental de {limit_label} m. "
+            "Mesmo assim, não é uma autorização automática."
+        )
+        margin_line = f"- Margem face ao limite de carga {cargo_label}: {margin_label} m abaixo dos {limit_label} m."
+    else:
+        conclusion = (
+            f"Conclusão: com {draft_label} m de calado e carga {cargo_label}, o navio excede o limite documental de {limit_label} m. "
+            "Eu não validaria a atracação em condições normais."
+        )
+        margin_line = f"- Excesso face ao limite de carga {cargo_label}: {margin_label} m acima dos {limit_label} m."
+
+    lines = [
+        f"Assumo que continuamos no mesmo caso: {terminal}, navio com {draft_label} m de calado e carga {cargo_label}.",
+        conclusion,
+        f"- Regra IT-029: para carga {cargo_label}, calado praticável = {formula}, com referência máxima {limit_label} m.",
+        f"- Cálculo da altura de água mínima: {draft_label} - {base_label} = cerca de {required_water_label} m de altura de água à hora da manobra.",
+        margin_line,
+        "Antes de fechar a decisão, confirma a maré/hora concreta, terminal TPS/TGL, vento/corrente, defensas/amarração e validação do Piloto Coordenador.",
+    ]
+    if terminal_note:
+        lines.append(terminal_note.strip())
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_DRAFT_CARGO_RULE", answer)],
+        "answer_origin": "sapec_draft_rule",
     }
 
 
@@ -1549,6 +1819,83 @@ def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dic
                 "retrieval_mode": "structured",
                 "snippet": f"Reponto usado para validação: {tide_context}. Hora marcada: {time_label}.",
             }
+        )
+    return {"answer": answer, "sources": sources, "answer_origin": "secil_entry_timing"}
+
+
+def _format_tide_event_context(tide_event) -> str:
+    if not tide_event:
+        return ""
+    timestamp = getattr(tide_event, "timestamp", None)
+    if not timestamp:
+        return ""
+    tide_type = str(getattr(tide_event, "tide_type", "") or "reponto").strip() or "reponto"
+    height = getattr(tide_event, "height", None)
+    height_text = f" ({height:.1f} m)" if height is not None else ""
+    return f"{tide_type} de {timestamp.strftime('%d/%m/%Y %H:%M')}{height_text}"
+
+
+def _time_window_before(target_dt: datetime, earliest_minutes: int, latest_minutes: int) -> str:
+    start = target_dt - timedelta(minutes=earliest_minutes)
+    end = target_dt - timedelta(minutes=latest_minutes)
+    return f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+
+
+def _answer_secil_next_tide_entry_scheduling_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question):
+        return None
+    if not re.search(r"\b(proxima|próxima|proximo|próximo|mare|mar[eé]|reponto|preia|baixa)\b", clean_question):
+        return None
+    if _parse_maneuver_time(question):
+        return None
+
+    high_water_only = bool(re.search(r"\bpreia\b|\bpreia\s*mar\b|\bpreia-mar\b", clean_question))
+    tide_event = _next_tide_event_for_question(question, high_water_only=high_water_only)
+    tide_context = _format_tide_event_context(tide_event)
+    target_dt = getattr(tide_event, "timestamp", None) if tide_event else None
+
+    lines = [
+        "Assumo que continuamos a falar de uma entrada para a SECIL.",
+        "Não uses 15 min antes do reponto para esta pergunta: 15 min é referência prática de saída, não de entrada.",
+    ]
+    if target_dt:
+        lines.append(f"Próximo reponto considerado: {tide_context}.")
+        lines.append(
+            "Para entrada vinda de fora da Barra ou do Fundeadouro Norte, marca 30-45 min antes: "
+            f"{_time_window_before(target_dt, 45, 30)}."
+        )
+        lines.append(
+            "Para entrada vinda de Tróia ou de outro cais, marca 45 min a 1 h antes: "
+            f"{_time_window_before(target_dt, 60, 45)}."
+        )
+    else:
+        lines.append("Não encontrei uma próxima maré futura no feed; aplica a regra pela hora do reponto pretendido.")
+        lines.append("Entrada vinda de fora da Barra ou Fundeadouro Norte: marcar 30-45 min antes do reponto.")
+        lines.append("Entrada vinda de Tróia ou de outro cais: marcar 45 min a 1 h antes do reponto.")
+    lines.extend(
+        [
+            "Falta confirmar se é SECIL W/Oeste ou SECIL E/Este, a origem real, LOA e calado.",
+            "Atenção: no Cais Oeste, navio com LOA > 170 m tem de ser junto da preia-mar e com luz do dia; no Cais Este, confirmar se a restrição de reponto por marés vivas se aplica.",
+        ]
+    )
+    answer = "\n".join(lines)
+    sources = [
+        _direct_source(
+            "IT-009_Secil.txt",
+            "SECIL_ENTRY_NEXT_TIDE_SCHEDULING",
+            "Entradas para a SECIL: fora da Barra/Fundeadouro Norte 30-45 min antes do reponto; Tróia/outro cais 45 min a 1 h antes; saídas cerca de 15 min antes.",
+        )
+    ]
+    if tide_context:
+        sources.append(
+            _direct_source(
+                "Marés Setúbal / Troia",
+                "SECIL_ENTRY_NEXT_TIDE_EVENT",
+                f"Reponto considerado: {tide_context}.",
+                retrieval_mode="structured",
+            )
         )
     return {"answer": answer, "sources": sources, "answer_origin": "secil_entry_timing"}
 
@@ -2289,6 +2636,9 @@ def answer_direct_operational_query(
     lisnave_doca_tug_answer = _answer_lisnave_doca_tug_direct(question, clean_question)
     if lisnave_doca_tug_answer:
         return _attach_operational_diagnostic(lisnave_doca_tug_answer, question)
+    fn_south_reponto_answer = _answer_fundeadouro_norte_south_quay_reponto_scheduling_direct(question, clean_question)
+    if fn_south_reponto_answer:
+        return _attach_operational_diagnostic(fn_south_reponto_answer, question)
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
         return _attach_operational_diagnostic(route_answer, question)
@@ -2331,6 +2681,9 @@ def answer_direct_operational_query(
     fog_port_answer = _answer_fog_port_procedure_direct(question, clean_question)
     if fog_port_answer:
         return _attach_operational_diagnostic(fog_port_answer, question)
+    secil_next_tide_answer = _answer_secil_next_tide_entry_scheduling_direct(question, clean_question)
+    if secil_next_tide_answer:
+        return _attach_operational_diagnostic(secil_next_tide_answer, question)
     secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
     if secil_entry_timing_answer:
         return _attach_operational_diagnostic(secil_entry_timing_answer, question)
@@ -2349,7 +2702,7 @@ def answer_direct_operational_query(
     navigation_basics_answer = answer_navigation_basics_direct(question)
     if navigation_basics_answer:
         return _attach_operational_diagnostic(navigation_basics_answer, question)
-    sapec_followup_answer = _answer_sapec_non_imo_followup_direct(question, clean_question)
+    sapec_followup_answer = _answer_sapec_draft_cargo_direct(question, clean_question)
     if sapec_followup_answer:
         return _attach_operational_diagnostic(sapec_followup_answer, question)
     unclear_answer = _answer_unclear_operational_fragment(question, clean_question)
@@ -2825,6 +3178,11 @@ def _looks_like_expected_arrivals_query(clean_question: str) -> bool:
     if not clean_question:
         return False
     if _looks_like_route_duration_query(clean_question):
+        return False
+    if (
+        re.search(r"\b(reponto|preia|mare|mar[eé])\b", clean_question)
+        and re.search(r"\b(marcar|marco|agendar|piloto|largada|manobra|fundeadouro|lisnave|tanquisado|eco\s*oil|ecooil|ecoil|teporset|tepor\s*set|termitrena)\b", clean_question)
+    ):
         return False
     arrival_terms = {"chegada", "chegadas", "chegar", "chega", "entrada", "entradas", "previstos", "prevista", "previstas", "esperado", "esperados", "esperadas", "eta"}
     tokens = set(clean_question.split())

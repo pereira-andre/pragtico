@@ -118,4 +118,5 @@ def test_conversation_reasoning_builds_probable_case_for_short_follow_up() -> No
     assert "SAPEC / TPS-TGL" in summary
     assert "Calado: 9,2 m." in summary
     assert "Carga: não IMO." in summary
-    assert "mencionar em frase curta" in summary
+    assert "fundamento operacional" in summary
+    assert "valor isolado" in summary

@@ -2392,7 +2392,7 @@ def admin_operational_tests():
 @login_required
 @role_required("admin")
 def export_operational_tests(export_format: str):
-    """Exportar os 150 ensaios Railway para depuração."""
+    """Exportar o banco QA do bot para depuração."""
     try:
         payload, mimetype, filename = railway_bot_test_export_bytes(export_format)
     except ValueError:

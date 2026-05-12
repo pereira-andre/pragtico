@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import unittest
 from zoneinfo import ZoneInfo
 
@@ -536,6 +536,116 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("entrada ENTRY-12", answer)
         self.assertNotIn("ETA Sem hora", answer)
 
+    def test_fundeadouro_norte_lisnave_next_high_water_scheduling_does_not_list_arrivals(self) -> None:
+        class DynamicTideEvent:
+            def __init__(self, timestamp: datetime, height: float) -> None:
+                self.timestamp = timestamp
+                self.height = height
+
+            @property
+            def date_value(self) -> date:
+                return self.timestamp.date()
+
+            @property
+            def tide_type(self) -> str:
+                return "preia-mar"
+
+        class DynamicTideService:
+            def __init__(self) -> None:
+                now = datetime.now(ZoneInfo("Europe/Lisbon")).replace(second=0, microsecond=0)
+                self.target = now + timedelta(hours=2, minutes=10)
+                self.event = DynamicTideEvent(self.target, 2.7)
+
+            def resolve_query_dates(self, question: str) -> list[date]:
+                return [self.target.date()]
+
+            def events_for_date(self, target_date: date) -> list[DynamicTideEvent]:
+                return [self.event] if target_date == self.target.date() else []
+
+        tide_service = DynamicTideService()
+        services.tide_service = tide_service
+        self.activity["arrivals"] = [
+            {
+                "id": "pc-arrival",
+                "reference_code": "PTSET26ARKLAF927D",
+                "vessel_name": "ARKLOW GLOBE",
+                "eta_label": "30 Apr 15:00",
+                "last_port": "Lisboa",
+                "berth_label": "SAPEC Sólidos",
+                "agent_label": "Administrador",
+            }
+        ]
+
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(
+                "Então de forma a chegar à hora da próxima preia mar, a que horas devo marcar piloto "
+                "para o navio ir do fundeadouro Norte para a LISNAVE?"
+            )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_route_transit", payload["answer_origin"])
+        answer = payload["answer"]
+        self.assertIn("1 hora e 30 minutos antes", answer)
+        self.assertIn((tide_service.target - timedelta(minutes=90)).strftime("%H:%M"), answer)
+        self.assertIn(tide_service.target.strftime("%H:%M"), answer)
+        self.assertIn("não marques o piloto para a hora do reponto", answer)
+        self.assertIn("Tanquisado, Eco-Oil, LISNAVE/Mitrena, Termitrena e Teporset", answer)
+        self.assertNotIn("Chegadas previstas", answer)
+        self.assertNotIn("ARKLOW GLOBE", answer)
+
+    def test_fundeadouro_norte_south_quay_scheduling_uses_mentioned_destination(self) -> None:
+        answer = self._answer(
+            "Para chegar ao reponto da Eco-Oil vindo do Fundeadouro Norte, quando marco piloto?"
+        )
+
+        self.assertIn("Fundeadouro Norte à Eco-Oil no reponto", answer)
+        self.assertIn("1 hora e 30 minutos antes", answer)
+        self.assertIn("Tanquisado, Eco-Oil, LISNAVE/Mitrena, Termitrena e Teporset", answer)
+        self.assertNotIn("Fundeadouro Norte à LISNAVE/Mitrena no reponto", answer)
+
+    def test_secil_entry_followup_next_tide_uses_entry_windows_not_departure_window(self) -> None:
+        class DynamicTideEvent:
+            def __init__(self, timestamp: datetime, height: float) -> None:
+                self.timestamp = timestamp
+                self.height = height
+
+            @property
+            def date_value(self) -> date:
+                return self.timestamp.date()
+
+            @property
+            def tide_type(self) -> str:
+                return "baixa-mar"
+
+        class DynamicTideService:
+            def __init__(self) -> None:
+                now = datetime.now(ZoneInfo("Europe/Lisbon")).replace(second=0, microsecond=0)
+                self.target = now + timedelta(hours=1, minutes=40)
+                self.event = DynamicTideEvent(self.target, 1.1)
+
+            def resolve_query_dates(self, question: str) -> list[date]:
+                return [self.target.date()]
+
+            def events_for_date(self, target_date: date) -> list[DynamicTideEvent]:
+                return [self.event] if target_date == self.target.date() else []
+
+        tide_service = DynamicTideService()
+        services.tide_service = tide_service
+
+        answer = self._answer(
+            "Um navio vai entrar para a Secil, a que hora marco a manobra? "
+            "Seguimento: De acordo com a próxima maré a que horas devo marcar a sua entrada?"
+        )
+
+        self.assertIn("Assumo que continuamos a falar de uma entrada para a SECIL", answer)
+        self.assertIn("Não uses 15 min antes do reponto", answer)
+        self.assertIn("30-45 min antes", answer)
+        self.assertIn("45 min a 1 h antes", answer)
+        self.assertIn((tide_service.target - timedelta(minutes=45)).strftime("%H:%M"), answer)
+        self.assertIn((tide_service.target - timedelta(minutes=30)).strftime("%H:%M"), answer)
+        self.assertIn((tide_service.target - timedelta(minutes=60)).strftime("%H:%M"), answer)
+        self.assertIn("Próximo reponto considerado", answer)
+
     def test_vessels_in_planning_question_returns_planned_maneuvers(self) -> None:
         self.activity["planned_maneuvers"] = [
             {
@@ -725,6 +835,40 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Boia N.º 1CN", payload["answer"])
         self.assertIn("Boia N.º 2CS", payload["answer"])
         self.assertNotIn("Regra 26 - Pesca", payload["answer"])
+
+    def test_sapec_imo_followup_is_explained_not_single_number(self) -> None:
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(
+                "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos? Seguimento: tem carga IMO"
+            )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("sapec_draft_rule", payload["answer_origin"])
+        answer = payload["answer"]
+        self.assertIn("SAPEC Líquidos / TGL", answer)
+        self.assertIn("9,2 m de calado", answer)
+        self.assertIn("carga IMO/perigosa", answer)
+        self.assertIn("calado praticável = 7,1 m + altura de água", answer)
+        self.assertIn("referência máxima 9,5 m", answer)
+        self.assertIn("cerca de 2,1 m de altura de água", answer)
+        self.assertIn("0,3 m abaixo", answer)
+        self.assertIn("não é uma autorização automática", answer)
+        self.assertNotEqual("A resposta direta: 9,5 metros.", answer.strip())
+
+    def test_sapec_non_imo_followup_keeps_context_and_formula(self) -> None:
+        with self.app.test_request_context("/"):
+            payload = answer_direct_operational_query(
+                "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos? Seguimento: E carga não IMO"
+            )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("sapec_draft_rule", payload["answer_origin"])
+        answer = payload["answer"]
+        self.assertIn("SAPEC Líquidos / TGL", answer)
+        self.assertIn("carga não IMO", answer)
+        self.assertIn("calado praticável = 7,6 m + altura de água", answer)
+        self.assertIn("referência máxima 10,0 m", answer)
+        self.assertIn("cerca de 1,6 m de altura de água", answer)
 
 
 if __name__ == "__main__":

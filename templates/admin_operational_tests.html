@@ -6,7 +6,7 @@
       <div>
         <p class="eyebrow">Validação operacional</p>
         <h1>Testes operacionais</h1>
-        <p class="lead">Execução admin controlada para validar escalas, manobras, comandos slash, live feed e os 150 ensaios Railway com resultados visíveis por módulo.</p>
+        <p class="lead">Execução admin controlada para validar escalas, manobras, comandos slash, live feed e o banco QA do bot com resultados visíveis por área.</p>
       </div>
       <div class="admin-status-hero-tools">
         {% if result %}
@@ -41,9 +41,9 @@
         <small>{{ result.finished_at_label if result else "sem execução nesta vista" }}</small>
       </article>
       <article class="hero-stat">
-        <span>Railway</span>
+        <span>Banco QA</span>
         <strong>{{ inventory.railway_log.count }}</strong>
-        <small>{{ inventory.railway_log.passed_count }} OK · {{ inventory.railway_log.review_count }} dúvida(s) · {{ inventory.railway_log.failed_count }} falha(s)</small>
+        <small>{{ inventory.railway_log.railway_count }} Railway · {{ inventory.railway_log.complementary_count }} extra · {{ inventory.railway_log.passed_count }} OK</small>
       </article>
     </div>
   </section>
@@ -102,14 +102,14 @@
   <section class="panel section-panel operational-tests-railway">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Railway</p>
-        <h2>150 perguntas de bug hunting</h2>
+        <p class="eyebrow">Banco QA do bot</p>
+        <h2>Railway + perguntas complementares</h2>
       </div>
       <span class="admin-status-badge is-{{ 'online' if inventory.railway_log.failed_count == 0 and inventory.railway_log.review_count == 0 else 'degraded' }}">
         {{ inventory.railway_log.passed_count }}/{{ inventory.railway_log.count }} OK
       </span>
     </div>
-    <p class="admin-status-note">Ensaios executados contra Railway e guardados para comparação rápida. Cada linha mostra pergunta, origem da resposta, critérios e verificação.</p>
+    <p class="admin-status-note">Banco de perguntas para depuração do bot: 150 ensaios executados contra Railway mais perguntas complementares organizadas por COLREG/RIEAM, nevoeiro, marés/meteorologia, cais críticos/rebocadores e cultura geral de Setúbal.</p>
     <div class="operational-tests-downloads">
       <a class="mini-button secondary-button" href="{{ url_for('admin.export_operational_tests', export_format='json') }}">Download JSON</a>
       <a class="mini-button secondary-button" href="{{ url_for('admin.export_operational_tests', export_format='csv') }}">Download CSV</a>

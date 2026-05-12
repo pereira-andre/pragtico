@@ -24,6 +24,45 @@ class ChatQueryRewriteTests(unittest.TestCase):
 
         self.assertEqual(rewritten, "O que diz a documentação sobre Secil E?")
 
+    def test_rewrites_secil_tide_entry_follow_up_with_previous_context(self) -> None:
+        history = [
+            {
+                "role": "user",
+                "content": "Um navio vai entrar para a Secil, a que hora marco a manobra?",
+            }
+        ]
+
+        rewritten = _contextual_lookup_question(
+            "De acordo com a próxima maré a que horas devo marcar a sua entrada?",
+            history,
+        )
+
+        self.assertEqual(
+            rewritten,
+            (
+                "Um navio vai entrar para a Secil, a que hora marco a manobra? "
+                "Seguimento: De acordo com a próxima maré a que horas devo marcar a sua entrada?"
+            ),
+        )
+
+    def test_rewrites_sapec_cargo_follow_up_with_previous_calado_context(self) -> None:
+        history = [
+            {
+                "role": "user",
+                "content": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos?",
+            }
+        ]
+
+        rewritten = _contextual_lookup_question("tem carga IMO", history)
+
+        self.assertEqual(
+            rewritten,
+            (
+                "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos? "
+                "Seguimento: tem carga IMO"
+            ),
+        )
+
     def test_short_follow_up_does_not_use_companion_shortcut(self) -> None:
         plan = build_chat_execution_plan("E carga não IMO")
 
