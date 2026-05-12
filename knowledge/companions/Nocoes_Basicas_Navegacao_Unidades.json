@@ -16,6 +16,8 @@
     "1 milha nautica = 1852 m = 1,852 km.",
     "1 km = 0,5399568 milhas nauticas.",
     "1 no = 1 milha nautica por hora = 1,852 km/h.",
+    "Tempo em horas = distancia em milhas nauticas / velocidade em nos.",
+    "A 6 nos, 1 milha nautica demora 10 minutos; 0,5 milhas nauticas demoram 5 minutos; 2,0 milhas nauticas demoram 20 minutos.",
     "1 jarda = 0,9144 m.",
     "1 manilha = 27,5 m.",
     "Em navegacao, milha deve ser interpretada como milha nautica salvo indicacao contraria.",
@@ -37,6 +39,11 @@
       "question": "100 jardas sao quantos metros?",
       "answer": "100 jardas = 91,44 m, usando 1 jarda = 0,9144 m.",
       "keywords": ["jardas", "metros", "conversao"]
+    },
+    {
+      "question": "A 6 nos, quanto tempo demora 1 milha nautica?",
+      "answer": "Cerca de 10 minutos, porque 1 no corresponde a 1 milha nautica por hora.",
+      "keywords": ["6 nos", "milha nautica", "tempo", "eta"]
     },
     {
       "question": "Forca 6 Beaufort equivale a quantos nos?",

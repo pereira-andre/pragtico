@@ -11,6 +11,8 @@ from typing import Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 QA_MEMORY_PATH = REPO_ROOT / "resources" / "qa" / "pragtico_test_questions_archive_20260512.json"
+QA_MEMORY_CURATED_PATH = REPO_ROOT / "resources" / "qa" / "curated_operational_qa_memory_20260512.json"
+DEFAULT_QA_MEMORY_PATHS = (QA_MEMORY_PATH, QA_MEMORY_CURATED_PATH)
 QA_MEMORY_AUDIT_PATH = REPO_ROOT / "resources" / "qa" / "qa_memory_knowledge_audit_20260512.json"
 MAX_SNIPPET_CHARS = 2400
 MIN_MATCH_SCORE = 0.42
@@ -55,7 +57,7 @@ STOPWORDS = {
 }
 VOLATILE_QUERY_RE = re.compile(
     r"\b("
-    r"agora|neste momento|em porto|porto agora|quadro|navios?\s+em\s+porto|"
+    r"agora|neste momento|porto agora|em\s+porto\s+(?:agora|neste momento)|quadro|navios?\s+em\s+porto|"
     r"manobras?\s+(?:planeadas|previstas)|planeamento\s+(?:atual|de hoje)|"
     r"chegadas?\s+previstas|sa[ií]das?\s+(?:recentes|previstas)|arquivo\s+de\s+manobras|"
     r"hoje|amanh[ãa]|meteorologia(?:\s+atual)?|condi[cç][oõ]es\s+meteorol[oó]gicas\s+atuais|"
@@ -74,6 +76,7 @@ class QAMemoryRecord:
     source: str
     expected: tuple[str, ...]
     forbidden: tuple[str, ...]
+    guidance: str
     validated_answer: str
     answer_origin: str
     tokens: frozenset[str]
@@ -141,6 +144,10 @@ def _as_text_tuple(value: object) -> tuple[str, ...]:
 
 
 def _iter_raw_records(payload: dict) -> Iterable[tuple[str, dict]]:
+    for record in payload.get("records") or []:
+        yield "curated_records", record
+    for record in payload.get("refinements") or []:
+        yield "curated_refinements", record
     for record in (payload.get("railway_150") or {}).get("records") or []:
         yield "railway_150", record
     for record in payload.get("complementary_questions") or []:
@@ -156,8 +163,9 @@ def _iter_raw_records(payload: dict) -> Iterable[tuple[str, dict]]:
 
 
 def _record_quality(record: QAMemoryRecord) -> tuple[int, int, int]:
+    curated_priority = 1 if "curated" in record.source else 0
     return (
-        1 if record.validated_answer else 0,
+        curated_priority,
         len(record.expected),
         1 if record.risk.strip().lower() == "critico" else 0,
     )
@@ -205,42 +213,45 @@ def load_knowledge_audit_corpus(base_dir: str | None = None) -> tuple[dict, ...]
 
 @lru_cache(maxsize=1)
 def load_qa_memory_records(path: str | None = None) -> tuple[QAMemoryRecord, ...]:
-    source_path = Path(path) if path else QA_MEMORY_PATH
-    if not source_path.exists():
-        return ()
-    try:
-        payload = json.loads(source_path.read_text(encoding="utf-8"))
-    except Exception:
-        return ()
-
+    source_paths = (Path(path),) if path else tuple(source_path for source_path in DEFAULT_QA_MEMORY_PATHS if source_path.exists())
     records_by_question: dict[str, QAMemoryRecord] = {}
-    for source, raw in _iter_raw_records(payload):
-        question = _clean_text(raw.get("question"), max_chars=360)
-        question_key = _normalize(question)
-        if not question or not question_key:
+    for source_path in source_paths:
+        if not source_path.exists():
             continue
-        expected = _as_text_tuple(raw.get("expected_substrings")) or _as_text_tuple(raw.get("expected_tokens"))
-        expected = expected or _as_text_tuple(raw.get("expected_summary"))
-        forbidden = _as_text_tuple(raw.get("forbidden_substrings")) or _as_text_tuple(raw.get("forbidden_tokens"))
-        forbidden = forbidden or _as_text_tuple(raw.get("forbidden_summary"))
-        verdict = str(raw.get("verdict") or "").strip().lower()
-        answer = ""
-        if verdict in {"", "pass"} and not raw.get("manual_review"):
-            answer = _clean_text(raw.get("answer_excerpt") or raw.get("answer"), max_chars=850)
-        record = QAMemoryRecord(
-            question=question,
-            group=_clean_text(raw.get("group") or raw.get("suite") or raw.get("document"), max_chars=120),
-            risk=_clean_text(raw.get("risk"), max_chars=40),
-            source=source,
-            expected=expected,
-            forbidden=forbidden,
-            validated_answer=answer,
-            answer_origin=_clean_text(raw.get("answer_origin") or raw.get("expected_origin"), max_chars=80),
-            tokens=_tokens(" ".join([question, " ".join(expected)])),
-        )
-        previous = records_by_question.get(question_key)
-        if previous is None or _record_quality(record) > _record_quality(previous):
-            records_by_question[question_key] = record
+        try:
+            payload = json.loads(source_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        for source, raw in _iter_raw_records(payload):
+            question = _clean_text(raw.get("question"), max_chars=360)
+            question_key = _normalize(question)
+            if not question or not question_key:
+                continue
+            expected = _as_text_tuple(raw.get("expected_substrings")) or _as_text_tuple(raw.get("expected_tokens"))
+            expected = expected or _as_text_tuple(raw.get("expected_summary"))
+            forbidden = _as_text_tuple(raw.get("forbidden_substrings")) or _as_text_tuple(raw.get("forbidden_tokens"))
+            forbidden = forbidden or _as_text_tuple(raw.get("forbidden_summary"))
+            verdict = str(raw.get("verdict") or "").strip().lower()
+            answer = ""
+            if verdict in {"", "pass"} and not raw.get("manual_review"):
+                answer = _clean_text(raw.get("answer_excerpt") or raw.get("answer"), max_chars=850)
+            source_label = source if source_path == QA_MEMORY_PATH else f"{source_path.stem}:{source}"
+            record = QAMemoryRecord(
+                question=question,
+                group=_clean_text(raw.get("group") or raw.get("suite") or raw.get("document"), max_chars=120),
+                risk=_clean_text(raw.get("risk"), max_chars=40),
+                source=source_label,
+                expected=expected,
+                forbidden=forbidden,
+                guidance=_clean_text(raw.get("answer_guidance") or raw.get("guidance"), max_chars=320),
+                validated_answer=answer,
+                answer_origin=_clean_text(raw.get("answer_origin") or raw.get("expected_origin"), max_chars=80),
+                tokens=_tokens(" ".join([question, " ".join(expected)])),
+            )
+            previous = records_by_question.get(question_key)
+            if previous is None or _record_quality(record) > _record_quality(previous):
+                records_by_question[question_key] = record
 
     return tuple(records_by_question.values())
 
@@ -454,6 +465,8 @@ def _format_case_lines(record: QAMemoryRecord, *, index: int, score: float) -> l
         lines.append("- Pontos/factos que a resposta deve preservar: " + " | ".join(record.expected[:8]))
     if record.forbidden:
         lines.append("- Pontos a evitar: " + " | ".join(record.forbidden[:6]))
+    if record.guidance:
+        lines.append(f"- Tratamento recomendado: {record.guidance}")
     if record.answer_origin:
         lines.append(f"- Origem esperada/validada no teste: {record.answer_origin}")
     return lines

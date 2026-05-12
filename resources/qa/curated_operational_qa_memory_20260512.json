@@ -1,0 +1,673 @@
+{
+  "description": "Perguntas QA curadas manualmente para complementar o arquivo bruto recolhido do bot. Estes registos não são respostas prontas: guardam factos esperados, riscos e orientação de resposta para ajudar o RAG sem copiar texto.",
+  "generated_at": "2026-05-12",
+  "refinements": [
+    {
+      "id": "refine-fn-lisnave-2003",
+      "group": "Marés, Repontos e Meteorologia",
+      "risk": "Critico",
+      "question": "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?",
+      "expected_substrings": ["Fundeadouro Norte", "LISNAVE", "1 hora e 30 minutos antes", "não marcar para a hora exata do reponto"],
+      "forbidden_substrings": ["cerca de 1 hora", "19:03", "marcar o piloto para o reponto"],
+      "answer_guidance": "Responder com a regra corrigida: o alvo é chegar no reponto, portanto a marcação/largada deve considerar 1h30 de antecedência desde o Fundeadouro Norte.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "refine-fn-south-times",
+      "group": "Percursos e distancias",
+      "risk": "Critico",
+      "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
+      "expected_substrings": ["cais a norte", "15 a 25 minutos", "SECIL", "20 minutos", "cais a sul", "1 hora e 30 minutos"],
+      "forbidden_substrings": ["cais a sul cerca de 1 hora"],
+      "answer_guidance": "Separar norte, SECIL e sul. O ponto crítico é não voltar a dizer 1h para os cais a sul.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "refine-sapec-nao-imo-followup",
+      "group": "Contexto conversacional",
+      "risk": "Critico",
+      "question": "E carga não IMO",
+      "expected_substrings": ["carga não IMO", "10,0 metros", "7,6 m + altura de água", "comparar com o calado real", "não responder só com um número"],
+      "forbidden_substrings": ["A resposta direta: 10,0 metros"],
+      "answer_guidance": "Tratar como follow-up SAPEC/TGL/TPS. Manter contexto, explicar limite e fórmula, e fechar com a verificação necessária.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "refine-secil-e-1925",
+      "group": "SECIL",
+      "risk": "Critico",
+      "question": "Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?",
+      "expected_substrings": ["SECIL E", "Cais de Este", "reponto em marés vivas", "calado máximo de referência 8,0 m"],
+      "forbidden_substrings": ["sim, está correta", "sem validar a maré"],
+      "answer_guidance": "Não decidir só pela hora escrita. Pedir ou usar a maré aplicável, distinguir Este/Oeste e explicar a regra do reponto.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "refine-lisnave-cais-3a-390",
+      "group": "LISNAVE comprimentos",
+      "risk": "Critico",
+      "question": "E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?",
+      "expected_substrings": ["Cais 3 A", "366 m", "240 m de ponte-cais", "115 m até ao Duque d'Alba", "não ler só o comprimento físico"],
+      "forbidden_substrings": ["240 m logo não cabe"],
+      "answer_guidance": "Explicar o comprimento operacional com duque d'Alba. Se o LOA exceder 366 m, não aceitar como simples; pedir validação operacional.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "refine-tanquisado-470",
+      "group": "Tanquisado",
+      "risk": "Critico",
+      "question": "Um navio de 470 m cabe no Tanquisado?",
+      "expected_substrings": ["Tanquisado", "463 m", "cais físico de 75 m", "dois duques d'Alba", "não cabe em condições normais"],
+      "forbidden_substrings": ["cabe", "sem restrições"],
+      "answer_guidance": "Responder de forma fundamentada: o comprimento operacional total é 463 m incluindo duques; 470 m ultrapassa esse valor.",
+      "expected_origin": "knowledge_curated"
+    }
+  ],
+  "records": [
+    {
+      "id": "route-pilot-to-pilar2",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "A posição de embarque dos pilotos fica a que distância da entrada da Barra?",
+      "expected_substrings": ["1 milha náutica", "Pilot station", "Pilar 2", "posição de embarque"],
+      "answer_guidance": "Responder curto mas fundamentado: identificar a referência de entrada como Pilar 2.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilar2-tms1",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da entrada da Barra ao TMS 1 pelo Canal Norte, qual é a distância?",
+      "expected_substrings": ["Pilar 2", "TMS 1", "Canal Norte", "5,9 NM"],
+      "answer_guidance": "Distinguir posição de embarque de Pilar 2; se vier de fora da Barra/pilot station, acrescenta 1 NM.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilot-tms1",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "De fora da Barra, na pilot station, até ao TMS 1 são quantas milhas?",
+      "expected_substrings": ["Pilot station", "TMS 1", "Canal Norte", "6,9 NM"],
+      "answer_guidance": "Usar a posição de embarque como ponto inicial, não o Pilar 2.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilar2-tms2",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da entrada da Barra ao TMS 2 pelo Canal Norte, quanto falta?",
+      "expected_substrings": ["Pilar 2", "TMS 2", "Canal Norte", "6,5 NM"],
+      "answer_guidance": "Pode listar as pernadas principais se for útil, mas a conclusão deve trazer 6,5 NM.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilot-tms2",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da pilot station até ao TMS 2 pelo Canal Norte são quantas milhas náuticas?",
+      "expected_substrings": ["Pilot station", "TMS 2", "7,5 NM", "Canal Norte"],
+      "answer_guidance": "Não confundir com a distância desde o Pilar 2.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilot-alstom",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da posição de embarque até à ALSTOM pelo Canal Norte são quantas milhas?",
+      "expected_substrings": ["Pilot station", "ALSTOM", "Canal Norte", "10,3 NM"],
+      "answer_guidance": "Responder com a distância total e indicar que é referência de planeamento.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilar2-boia14cs",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da entrada da Barra até à Bóia 14CS pelo Canal Sul são quantas milhas?",
+      "expected_substrings": ["Pilar 2", "Bóia 14CS", "Canal Sul", "10,0 NM"],
+      "answer_guidance": "Indicar que a Bóia 14CS é ponto de decisão para Tanquisado/Eco-Oil, LISNAVE e Teporset.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-pilar2-lisnave",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da entrada da Barra à LISNAVE pelo Canal Sul completo, qual é a distância?",
+      "expected_substrings": ["Pilar 2", "LISNAVE", "Canal Sul", "10,5 NM", "atalho", "10,0 NM"],
+      "answer_guidance": "Dar a distância normal e mencionar o atalho/corta-mato como referência distinta.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-boia14-lisnave",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da Bóia 14CS até à LISNAVE, que rumo e distância uso?",
+      "expected_substrings": ["Bóia 14CS", "LISNAVE", "rumo 030", "0,5 NM"],
+      "answer_guidance": "Responder com rumo de entrada e distância; se falar de saída, usar o recíproco.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-boia14-tanquisado",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Da Bóia 14CS para Tanquisado/Eco-Oil, qual é o rumo e a distância?",
+      "expected_substrings": ["Bóia 14CS", "Tanquisado", "Eco-Oil", "rumo 311", "0,6 NM"],
+      "answer_guidance": "Deixar claro que é o ramal final a partir do fim do Canal Sul.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-boia12-lisnave-6kt",
+      "group": "Percursos e distancias",
+      "risk": "Critico",
+      "question": "Da Bóia 12CS para a LISNAVE a 6 nós, quanto tempo de navegação dá?",
+      "expected_substrings": ["Bóia 12CS", "Bóia 14CS", "0,5 NM", "LISNAVE", "0,5 NM", "1 milha náutica", "6 nós", "10 minutos"],
+      "answer_guidance": "Somar as duas pernadas de 0,5 NM; a 6 nós, 1 NM demora cerca de 10 minutos.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-boia6-boia12-6kt",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "A 6 nós, quanto demora a pernada da Bóia 6CS para a Bóia 12CS?",
+      "expected_substrings": ["Bóia 6CS", "Bóia 12CS", "2,0 NM", "6 nós", "20 minutos"],
+      "answer_guidance": "Usar a regra simples de tempo: 1 NM a 6 nós equivale a cerca de 10 minutos.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-canals-order",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "Qual é a ordem prática dos terminais na entrada pelo Canal Norte?",
+      "expected_substrings": ["TMS 1", "TMS 2", "Autoeuropa", "Praias do Sado", "SAPEC", "ALSTOM"],
+      "answer_guidance": "Responder como sequência de entrada; para saída, explicar que se inverte a sequência.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "route-south-branches",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "question": "No fim do Canal Sul, a Bóia 14CS separa que destinos?",
+      "expected_substrings": ["Bóia 14CS", "Tanquisado", "Eco-Oil", "LISNAVE", "Teporset"],
+      "answer_guidance": "Explicar que a Bóia 14CS é a referência de decisão do ramal final.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-max-big",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Quantos navios grandes podem estar atracados no TMS 1 ao mesmo tempo?",
+      "expected_substrings": ["máximo três navios grandes", "dois na frente principal", "um no Cais 8", "Cais 8 faz parte do TMS1", "Cais 8 é isolado"],
+      "answer_guidance": "Responder como regra de capacidade, não como lista de navios em porto.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-lengths",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Quais são os comprimentos dos cais do TMS 1?",
+      "expected_substrings": ["Cais 4 175 m", "Cais 5 175 m", "Cais 6 175 m", "Cais 7 80 m", "Cais 8 215 m", "não tem Cais 3"],
+      "answer_guidance": "Dar a lista completa e mencionar que o Cais 8 é isolado.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-cais8-not-extension",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Se um navio não couber no Cais 7 do TMS 1, posso usar o Cais 8 como continuação?",
+      "expected_substrings": ["não", "Cais 8", "isolado", "não serve de continuação do Cais 7", "usar o lado esquerdo se necessário"],
+      "answer_guidance": "Explicar que o Cais 8 é diagonal/isolado e não prolonga a frente principal.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-cais7-overflow",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Um navio de 150 m atribuído ao Cais 7 do TMS 1 ocupa só o Cais 7?",
+      "expected_substrings": ["Cais 7", "80 m", "excede o comprimento", "ocupar cais adjacentes", "não usar o Cais 8 como continuação"],
+      "answer_guidance": "Responder pela lógica de ocupação: o cais atribuído é referência, mas o comprimento ocupa adjacentes da frente principal.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-clearance",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Quando dois navios partilham a frente principal do TMS 1, que folga mínima devo guardar?",
+      "expected_substrings": ["30 m", "separação", "frente principal", "cruzar cabos", "evitar contacto"],
+      "answer_guidance": "Não aplicar esta folga ao Cais 8 como continuação; a regra é para partilha da frente principal.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms1-large-definition",
+      "group": "Capacidade de cais",
+      "risk": "Alto",
+      "question": "Para a regra de capacidade do TMS 1, a partir de que LOA considero navio grande?",
+      "expected_substrings": ["large_vessel_loa_m", "200", "navio grande", "TMS1"],
+      "answer_guidance": "Tratar como regra operacional do portal; não confundir com limite documental de calado.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms2-total-length",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Qual é o comprimento total do TMS 2 e como o portal o divide?",
+      "expected_substrings": ["723 m", "Posição A", "Posição B", "Posição C", "Posição D", "180,75 m"],
+      "answer_guidance": "Distinguir o IT, que descreve espaço contínuo, do modelo do portal por quatro posições.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms2-clearance",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "No TMS 2, quando há vários navios, que intervalo tenho de considerar?",
+      "expected_substrings": ["10% do comprimento de cada navio", "30 m", "TMS2", "723 m"],
+      "answer_guidance": "Explicar que há regra formal do IT e regra operacional do portal para ocupação.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tms2-200-150",
+      "group": "Capacidade de cais",
+      "risk": "Alto",
+      "question": "Um navio de 200 m pode ficar no TMS 2 se já lá estiver um de 150 m?",
+      "expected_substrings": ["200 m", "150 m", "10% do comprimento", "30 m", "723 m", "confirmar calado"],
+      "answer_guidance": "Fazer a avaliação de comprimento como compatível em princípio, mas fechar com validações restantes.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "autoeuropa-two-small",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Podem estar dois navios na Autoeuropa se ambos tiverem menos de 230 m?",
+      "expected_substrings": ["sim", "LOA inferior a 230 m", "Cais 10", "Cais 11", "não se aplica folga adicional de 30 m"],
+      "answer_guidance": "Responder diretamente e distinguir da regra dos navios com 230 m ou mais.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "autoeuropa-230-alone",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "question": "Um ro-ro de 230 m na Autoeuropa pode partilhar o terminal com outro navio?",
+      "expected_substrings": ["230 m ou mais", "fica sozinho", "Autoeuropa", "Cais 10", "Cais 11"],
+      "forbidden_substrings": ["podem estar dois"],
+      "answer_guidance": "Usar a regra operacional exata: igual ou superior a 230 m fica sozinho.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tanquisado-length-details",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Qual é o comprimento operacional do Tanquisado e o que entra nessa conta?",
+      "expected_substrings": ["463 m", "cais físico de 75 m", "dois duques d'Alba", "63 m", "100 m"],
+      "answer_guidance": "Explicar que o comprimento não é só o cais físico; inclui os duques d'Alba.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tanquisado-draft-day",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Como calculo o calado praticável diurno no Tanquisado?",
+      "expected_substrings": ["6,3 metros + altura da maré", "teto de 9,5 m", "calado máximo", "validar hora da manobra"],
+      "answer_guidance": "Responder com fórmula e teto absoluto; não autorizar só por cálculo sem validar hora/maré.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tanquisado-night-150",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Um navio de 150 m pode atracar de noite no Tanquisado?",
+      "expected_substrings": ["apenas nos dias", "duas preia-mares", "período noturno", "4,8 m + altura de água", "teto máximo de 8,0 m"],
+      "answer_guidance": "Não responder só sim/não; explicar a condição especial para LOA superior a 110 m.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "ecooil-night-berth",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "É possível atracar de noite no Eco-Oil?",
+      "expected_substrings": ["não", "atracação noturna", "proibida", "qualquer condição"],
+      "answer_guidance": "Responder diretamente e não abrir exceções inventadas.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "ecooil-night-departure",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "E sair de noite do Eco-Oil, pode?",
+      "expected_substrings": ["sim", "apenas na preia-mar", "até 255 metros", "baixa-mar noturna não há desatracação"],
+      "answer_guidance": "Manter o contraste: atracar de noite não, desatracar de noite só na condição documentada.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "sapec-92-imo",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Um navio com 9,2 m de calado e carga IMO pode atracar na SAPEC Líquidos?",
+      "expected_substrings": ["SAPEC Líquidos", "TGL", "carga IMO", "9,5 m", "7,1 m + altura de água", "comparar com o calado real"],
+      "answer_guidance": "Responder fundamentado. 9,2 m está abaixo do limite IMO, mas a manobra concreta exige maré/hora e fórmula.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "sapec-92-nonimo",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Na SAPEC Líquidos, se o mesmo navio de 9,2 m não tiver carga IMO, muda o limite?",
+      "expected_substrings": ["carga não IMO", "10,0 m", "7,6 m + altura de água", "TGL", "validar maré/hora"],
+      "answer_guidance": "Tratar como follow-up e explicar a diferença entre IMO e não IMO.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "sapec-tps-carochas",
+      "group": "Terminais criticos",
+      "risk": "Alto",
+      "question": "Com baixa-mar de 0,3 m, a partir de que calado uso carochas no TPS?",
+      "expected_substrings": ["8,8 + 0,3", "9,1 m", "carochas", "TPS"],
+      "answer_guidance": "Mostrar a conta simples e explicar que é defensas afastadoras.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "secil-west-180-night",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "question": "Um navio de 180 m pode atracar de noite no Cais Oeste da SECIL?",
+      "expected_substrings": ["não", "LOA superior a 170 m", "luz do dia", "junto da preia-mar", "Cais de Oeste"],
+      "answer_guidance": "Distinguir Cais Oeste de Cais Este e indicar a regra LOA > 170 m.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "secil-west-150-night",
+      "group": "Terminais criticos",
+      "risk": "Alto",
+      "question": "Um navio de 150 m no Cais Oeste da SECIL pode manobrar de noite?",
+      "expected_substrings": ["LOA igual ou inferior a 170 metros", "documento não proíbe explicitamente", "próximo do reponto", "validar restantes condicionantes"],
+      "answer_guidance": "Evitar dizer que todo o Cais Oeste é sempre proibido de noite; a proibição explícita é para LOA > 170 m.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "secil-entry-lead",
+      "group": "Marés, Repontos e Meteorologia",
+      "risk": "Alto",
+      "question": "Com que antecedência marco uma entrada para a SECIL vinda de fora da Barra?",
+      "expected_substrings": ["30 a 45 minutos", "antes do reponto", "fora da Barra", "validar cais, LOA e calado"],
+      "answer_guidance": "Não usar 15 minutos para entrada; 15 minutos é regra prática de saída.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "secil-departure-lead",
+      "group": "Marés, Repontos e Meteorologia",
+      "risk": "Alto",
+      "question": "A saída da SECIL marca-se quanto tempo antes do reponto?",
+      "expected_substrings": ["15 minutos antes do reponto", "preia-mar", "baixa-mar", "10 a 15 minutos"],
+      "answer_guidance": "Explicar que saída é rápida e distinta da antecedência de entrada.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-night-300",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "question": "Um navio de 300 m pode entrar na LISNAVE de noite?",
+      "expected_substrings": ["não", "superior a 280 metros", "apenas de dia", "reponto de maré"],
+      "answer_guidance": "Responder direto e fundamentar com o limite noturno por LOA.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-night-250",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "question": "Um navio de 250 m pode manobrar na LISNAVE de noite?",
+      "expected_substrings": ["sim", "até 280 metros", "qualquer reponto", "dia ou noite"],
+      "answer_guidance": "Mesmo quando é permitido, manter a condição de reponto.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-hidrolift-beam",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "question": "Um navio de 45 m de boca pode ir para o Hidrolift da LISNAVE?",
+      "expected_substrings": ["Hidrolift", "boca máxima admissível de 32 m", "Plataformas 31, 32 e 33", "não cabe"],
+      "answer_guidance": "Responder sem rodeios: 45 m excede a boca máxima do Hidrolift.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-calado-global",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "question": "Qual é o calado máximo da LISNAVE?",
+      "expected_substrings": ["não há um calado máximo único", "depende do destino exato", "sonda ao ZH", "altura de maré", "margens operacionais"],
+      "answer_guidance": "Nunca dar um número global; listar as referências principais se necessário.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-cais3b-depth",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "question": "Qual é o cais da LISNAVE com maior profundidade disponível?",
+      "expected_substrings": ["Cais 3 B", "8,60 metros", "10 metros da face"],
+      "answer_guidance": "Responder com a sonda ao ZH e não confundir com comprimento.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-dock21-sill",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "question": "Qual a profundidade da Doca 21 com a comporta aberta e fechada?",
+      "expected_substrings": ["6,10 metros", "comporta aberta", "5,49 metros", "comporta fechada"],
+      "answer_guidance": "Dizer que estes valores são na soleira/entrada da doca.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-tugs-130",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "question": "Um navio de 130 m para um cais da LISNAVE precisa de quantos rebocadores?",
+      "expected_substrings": ["100 m < LOA <= 150 m", "3 rebocadores", "cais", "não confundir com doca"],
+      "answer_guidance": "Distinguir cais de eclusa/Hidrolift/docas. Para cais, 130 m cai na regra de 3 rebocadores.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-tugs-180",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "E se o navio tiver 180 m para a LISNAVE, quantos rebocadores devo prever?",
+      "expected_substrings": ["150 m < LOA <= 199 m", "4 rebocadores", "LISNAVE"],
+      "answer_guidance": "Responder com a tabela prática de LOA e pedir confirmação de destino concreto.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-tugs-230",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "Um navio de 230 m para a LISNAVE leva quantos rebocadores?",
+      "expected_substrings": ["200 m <= LOA <= 250 m", "5 rebocadores", "LISNAVE"],
+      "answer_guidance": "Dar a conclusão e explicar que a regra pode ser agravada por destino, vento ou condição.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "lisnave-tugs-270",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "Um navio com 270 m para a LISNAVE precisa de quantos rebocadores?",
+      "expected_substrings": ["LOA > 250 m", "6 rebocadores", "máximo operacional"],
+      "answer_guidance": "Não baixar por ter bowthruster sem validação; 270 m passa para 6.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "tanquisado-min-tugs",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "Entrada para Tanquisado com 2 rebocadores pode avançar?",
+      "expected_substrings": ["não", "Tanquisado", "mínimo 3 rebocadores", "independentemente de bowthruster"],
+      "answer_guidance": "Ser direto: 2 é insuficiente pela regra prática conservadora.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "ecooil-min-tugs",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "Entrada para Eco-Oil com 2 rebocadores pode avançar?",
+      "expected_substrings": ["não", "Eco-Oil", "mínimo 3 rebocadores", "independentemente de bowthruster"],
+      "answer_guidance": "Ser direto e explicar que Eco-Oil e Tanquisado têm margem operacional própria.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "roro-230-n-strong",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "RORO de 230 m com vento Norte forte a entrar, quantos rebocadores?",
+      "expected_substrings": ["roro", "mais de 220 m", "vento Norte forte", "4 rebocadores grandes"],
+      "answer_guidance": "Não ficar só na matriz base de 3; aplicar override de vento Norte forte para Ro-Ro grande.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "bulk-190-tms2-n-depart",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "question": "Um graneleiro de 190 m a sair do TMS2 com vento Norte forte leva quantos rebocadores?",
+      "expected_substrings": ["graneleiro", "vento Norte forte", "saída", "4 rebocadores grandes", "TMS2"],
+      "answer_guidance": "Aplicar o override para graneleiros/reefers/estilha/contentores grandes a sair com Norte forte.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "no-bow-110-draft8",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "question": "Navio sem bowthruster de 110 m e calado 8 m precisa de que rebocador?",
+      "expected_substrings": ["sem bowthruster", "LOA < 120 m", "calado >= 8 m", "1 rebocador grande", "35 t"],
+      "answer_guidance": "Não recomendar rebocador pequeno de 25 t neste caso.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "no-bow-140",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "question": "Um navio sem bowthruster de 140 m deve levar quantos rebocadores?",
+      "expected_substrings": ["sem bowthruster", "120 m <= LOA <= 150 m", "2 rebocadores", "grandes"],
+      "answer_guidance": "Explicar que sem bowthruster precisa de equilíbrio proa/popa.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "wind-31-suspend",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "question": "Se estiver 31 kt de vento, posso sair com 4 rebocadores?",
+      "expected_substrings": ["vento superior a 30 kt", "todas as manobras ficam suspensas", "independentemente do número de rebocadores", "retomar abaixo de 25 kt"],
+      "answer_guidance": "Conclusão primeiro: não. Rebocadores não anulam limite de suspensão.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "wind-26-assess",
+      "group": "Meteorologia e segurança",
+      "risk": "Alto",
+      "question": "Com 26 kt de vento a manobra está automaticamente autorizada se houver rebocadores?",
+      "expected_substrings": ["acima de 25 kt", "geralmente impraticáveis", "avaliar caso a caso", "não autorização automática"],
+      "answer_guidance": "Distinguir 20, 25 e 30 kt; 26 kt não é suspensão absoluta mas é zona crítica.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "fog-port-suspend",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "question": "Com nevoeiro em porto posso continuar a marcar manobras?",
+      "expected_substrings": ["nevoeiro em porto", "todas as manobras ficam suspensas", "visibilidade restaurada"],
+      "answer_guidance": "Conclusão operacional antes dos detalhes.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "fog-underway",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "question": "Fui apanhado por nevoeiro já a navegar no canal, o que faço?",
+      "expected_substrings": ["velocidade de segurança", "máquinas prontas", "vigia reforçada", "Regra 19", "sinais de nevoeiro", "VHF 73"],
+      "answer_guidance": "Não responder só 'suspende'. Separar movimentos novos suspensos de navio já em navegação.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "colreg-crossing-starboard",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "question": "Em rumos cruzados, se vejo o outro navio por estibordo, quem deve manobrar?",
+      "expected_substrings": ["rumos cruzados", "outro por estibordo", "manobrar", "evitar cruzar pela proa"],
+      "answer_guidance": "Responder com Regra 15 e boa prática; não transformar em prioridade local.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "colreg-fog-power-making-way",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "question": "Qual é o sinal sonoro de nevoeiro de navio de propulsão mecânica com seguimento?",
+      "expected_substrings": ["1 som prolongado", "intervalos máximos de 2 minutos", "Regra 35", "visibilidade reduzida"],
+      "answer_guidance": "Responder com o sinal e a condição: com seguimento em visibilidade reduzida.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "colreg-fog-power-stopped",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "question": "E se estiver pairando sem seguimento no nevoeiro, que sinal faço?",
+      "expected_substrings": ["2 sons prolongados", "intervalos máximos de 2 minutos", "sem seguimento", "Regra 35"],
+      "answer_guidance": "Tratar como follow-up da pergunta de nevoeiro.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "style-no-short-number-sapec",
+      "group": "Qualidade de resposta",
+      "risk": "Critico",
+      "question": "Se eu disser 'tem carga IMO' depois de perguntar por 9,2 m na SAPEC, podes responder só '9,5 metros'?",
+      "expected_substrings": ["não", "resposta fundamentada", "carga IMO", "9,5 m", "7,1 m + altura de água", "comparar com calado real"],
+      "forbidden_substrings": ["A resposta direta: 9,5 metros"],
+      "answer_guidance": "Este caso treina qualidade: nunca responder só com o número quando há cálculo operacional.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "style-review-answer",
+      "group": "Qualidade de resposta",
+      "risk": "Critico",
+      "question": "Quando eu digo 'revê a tua resposta' numa pergunta de maré, o que deve acontecer?",
+      "expected_substrings": ["reavaliar a regra", "corrigir se necessário", "não inventar dados", "explicar a diferença"],
+      "answer_guidance": "A memória deve incentivar autocorreção fundamentada, não repetição teimosa da resposta anterior.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "style-one-emoji",
+      "group": "Qualidade de resposta",
+      "risk": "Medio",
+      "question": "Como deve ser o tom das respostas operacionais do PRAGtico?",
+      "expected_substrings": ["cordial", "rigoroso", "amigável", "pelo menos 1 emoji", "fundamentação mínima"],
+      "answer_guidance": "Usar como sinal de estilo, não como conteúdo operacional.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "culture-outao",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "question": "O que há de especial no Outão?",
+      "expected_substrings": ["barra do Sado", "atalaia de 1390", "farol instalado em 1880", "Hospital Ortopédico"],
+      "answer_guidance": "Responder como cultura geral; avisar que não valida manobras.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "culture-forte-sao-filipe",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "question": "Porque é interessante o Forte de São Filipe?",
+      "expected_substrings": ["1582", "Filipe I/II", "planta em estrela", "seis baluartes", "baía do Sado"],
+      "answer_guidance": "Resposta curta, interessante e sem misturar com regras operacionais.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "culture-choco-frito",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Baixo",
+      "question": "Qual é o prato típico mais conhecido de Setúbal?",
+      "expected_substrings": ["choco frito", "peixe", "marisco", "Sado"],
+      "answer_guidance": "Tom leve; não deixar isto influenciar decisões operacionais.",
+      "expected_origin": "knowledge_curated"
+    },
+    {
+      "id": "culture-not-operational",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "question": "Posso usar a cultura geral de Setúbal para validar uma manobra?",
+      "expected_substrings": ["não", "contexto histórico e cultural", "instruções de trabalho", "fontes operacionais", "dados live"],
+      "answer_guidance": "Separar claramente conversa cultural de decisão operacional.",
+      "expected_origin": "knowledge_curated"
+    }
+  ]
+}

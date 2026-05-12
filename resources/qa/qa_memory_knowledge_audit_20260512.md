@@ -1,15 +1,15 @@
 # QA Memory Knowledge Audit
 
-- Generated at: `2026-05-12T22:34:53+00:00`
-- QA source: `resources/qa/pragtico_test_questions_archive_20260512.json`
+- Generated at: `2026-05-12T22:56:31+00:00`
+- QA sources: `resources/qa/pragtico_test_questions_archive_20260512.json`, `resources/qa/curated_operational_qa_memory_20260512.json`
 - Knowledge dir: `knowledge`
 - Runtime rule: Only records with status=supported are exposed to operational_qa_memory.
 
 ## Summary
 
-- Total reviewed: 223
-- Supported and active: 170
-- Needs review: 38
+- Total reviewed: 287
+- Supported and active: 242
+- Needs review: 30
 - Out of scope for static memory: 15
 
 ## Question Review
@@ -23,21 +23,21 @@
 | 5 | supported | Alto | Rebocadores e vento | Tenho 4 rebocadores na Tanquisado, onde meto o quarto reboque? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
 | 6 | supported | Alto | Noções básicas de navegação | 100 jardas são quantos metros? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Nocoes_Basicas_Navegacao_Unidades.txt |
 | 7 | supported | Medio | Evals/critical_document_companion_evals | Na LISNAVE, a face B fica de que lado? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
-| 8 | review | Critico | Tanquisado | Entrada para Tanquisado com 2 rebocadores pode avancar? | Alguns factos só têm suporte parcial na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
+| 8 | supported | Critico | Rebocadores | Entrada para Tanquisado com 2 rebocadores pode avançar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
 | 9 | review | Alto | Percursos e distancias | Qual a distância do TMS 1 até à Alstom? | Alguns factos só têm suporte parcial na knowledge atual. | Notas_Pilotagem.txt |
 | 10 | supported | Alto | Percursos e distancias | Da Lisnave para o Pilar 2, quais os rumos de saída? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
 | 11 | supported | Medio | Evals/critical_document_companion_evals | Qual é a distância da entrada da Barra até ao estaleiro da LISNAVE? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Notas_Pilotagem.json |
 | 12 | supported | Alto | Percursos e distancias | Da entrada da barra ao TMS2 pelo canal norte, quanto falta? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Notas_Pilotagem.json |
 | 13 | supported | Medio | Evals/critical_document_companion_evals | O Piloto Coordenador pode aceitar uma saída com 30 minutos de antecedência? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/RG-14_RegulamentoInterno.json |
 | 14 | supported | Alto | Fontes de conhecimento | Em Setubal usamos que sistema IALA? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Lista_Luzes_Setubal.txt |
-| 15 | review | Critico | Rotas | Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03? | Conflito conhecido: Fundeadouro Norte para cais a sul deve usar 1h30, não 1h. | Notas_Pilotagem.txt |
+| 15 | supported | Critico | Marés, Repontos e Meteorologia | Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
 | 16 | supported | Critico | Cais criticos | Que regras ha na Lisnave para docas e cais? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 17 | review | Critico | Limites de seguranca | Se estiver 31 kts de vento, posso sair com 4 rebocadores? | Alguns factos só têm suporte parcial na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
 | 18 | out_of_scope | Medio | Ondulacao | /ondulacao | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | Condicoes_Meteorologicas_Prioridades.txt |
 | 19 | supported | Critico | Cais criticos | Que regras tenho para a Eco-Oil? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
-| 20 | review | Critico | SECIL | Marquei manobra de entrada para a Secil E as 1925. Está correta a hora? | Há factos esperados sem suporte claro na knowledge atual. | companions/IT-009_Secil.json |
+| 20 | supported | Critico | SECIL | Marquei manobra de entrada para a Secil E as 1925. Está correta a hora? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Marcar_manobra_repontos_mare.txt |
 | 21 | supported | Medio | Evals/golden_operational_companion_evals | Um navio com 250 metros de LOA pode entrar no LISNAVE de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | AdmiraltyPilot_PortoSetubal.txt |
-| 22 | review | Critico | Contexto conversacional | E carga não IMO | Há factos esperados sem suporte claro na knowledge atual. | Setubal_Historia_Cultura.txt |
+| 22 | supported | Critico | Contexto conversacional | E carga não IMO | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-029_SAPEC.txt |
 | 23 | review | Alto | Fontes de conhecimento | A fonte de balizagem/luzes de Setubal esta indexavel no conhecimento? | Há factos esperados sem suporte claro na knowledge atual. | Lista_Luzes_Setubal.txt |
 | 24 | review | Critico | Diagnostico operacional | Tenho um navio para entrar no hidrolift no preia-mar das 20:03. O navio tem 45 m de boca, pode manobrar? | Há factos esperados sem suporte claro na knowledge atual. | companions/IT-014_Lisnave.json |
 | 25 | review | Alto | Percursos e distancias | Qual a distância do TMS 1 até fora da Barra? | Alguns factos só têm suporte parcial na knowledge atual. | Notas_Pilotagem.txt |
@@ -53,9 +53,9 @@
 | 35 | supported | Critico | Limites de seguranca | Se encalhar, qual e a resposta imediata? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
 | 36 | supported | Alto | Rebocadores e vento | Na Lisnave com 5 rebocadores e navio com popa a sul, onde meto os rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
 | 37 | supported | Critico | Limites de seguranca | O navio ficou sem maquina e ainda nao tem rebocadores perto. O que aconselhas de imediato? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
-| 38 | review | Alto | Conversas a testar manualmente | Qual a ordem dos cais de entrada pelo Canal Norte e pelo Canal Sul? | Há factos esperados sem suporte claro na knowledge atual. |  |
+| 38 | review | Alto | Conversas a testar manualmente | Qual a ordem dos cais de entrada pelo Canal Norte e pelo Canal Sul? | Alguns factos só têm suporte parcial na knowledge atual. | tug_operational_guidance.json |
 | 39 | supported | Critico | Limites de seguranca | Se colidir na manobra, qual e a resposta imediata? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
-| 40 | review | Critico | Eco-Oil | Entrada para Eco-Oil com 2 rebocadores pode avancar? | Alguns factos só têm suporte parcial na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
+| 40 | supported | Critico | Rebocadores | Entrada para Eco-Oil com 2 rebocadores pode avançar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
 | 41 | out_of_scope | Alto | Mares | /mares hoje | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | berth_profiles.json |
 | 42 | supported | Critico | Cais criticos | Quais os limites da Tanquisado? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 43 | supported | Critico | Percursos e distancias | Estou na Bóia João Farto para a Alstom, quanto falta? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
@@ -75,14 +75,14 @@
 | 57 | supported | Alto | Rebocadores e vento | Na Lisnave com 5 rebocadores e navio com proa a sul, onde meto os rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
 | 58 | supported | Critico | Limites de seguranca | Se o navio perder bow na manobra, o que faz? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
 | 59 | supported | Critico | Checklist | A checklist da manobra avisa se uma doca Lisnave estiver com 3 rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
-| 60 | review | Alto | Contexto conversacional | Após falar da Lisnave, perguntar: Marquei entrada para Secil E às 19:25. Está correto? | Há factos esperados sem suporte claro na knowledge atual. |  |
-| 61 | review | Alto | Conversas a testar manualmente | Quando marco uma saida da Doca 22 da Lisnave e uma entrada para Tanquisado? | Há factos esperados sem suporte claro na knowledge atual. |  |
+| 60 | review | Alto | Contexto conversacional | Após falar da Lisnave, perguntar: Marquei entrada para Secil E às 19:25. Está correto? | Alguns factos só têm suporte parcial na knowledge atual. | AdmiraltyPilot_PortoSetubal.txt |
+| 61 | review | Alto | Conversas a testar manualmente | Quando marco uma saida da Doca 22 da Lisnave e uma entrada para Tanquisado? | Alguns factos só têm suporte parcial na knowledge atual. | Notas_Pilotagem.txt |
 | 62 | supported | Critico | Checklist de manobras | A checklist puxa regras Eco-Oil para uma entrada? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 63 | out_of_scope | Alto | Meteorologia live | Face a meteorologia atual em Setubal, um Ro-Ro de 200 m pode sair da Autoeuropa com 2 rebocadores? | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | practice_maneuver_experience.json |
 | 64 | supported | Alto | Fontes de conhecimento | A fonte RIEAM/COLREG cobre as regras centrais de anti colisao? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
 | 65 | supported | Alto | Percursos e distancias | Da entrada da barra até ao fim do canal sul, quais as milhas? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
 | 66 | supported | Medio | Evals/golden_operational_companion_evals | Qual o tipo de defensas que o TMS 1 dispõe? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-005_TMS1.txt |
-| 67 | supported | Critico | COLREG | Se um navio for apanhado no meio do nevoeiro a navegar, que procedimentos deve adoptar segundo a COLREG? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
+| 67 | supported | Critico | Limites de seguranca | Se um navio for apanhado no meio do nevoeiro a navegar, que procedimentos deve adoptar segundo a COLREG? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
 | 68 | supported | Alto | Rebocadores e vento | A sair de Tanquisado com vento E forte, onde meto o reboque? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
 | 69 | out_of_scope | Critico | Comandos slash | /validar-manobra para entrada Eco-Oil marcada para chegar ao reponto | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | berth_profiles.json |
 | 70 | supported | Critico | ALSTOM | Quanto tempo da Barra para o Cais Alstom para apanhar o reponto de preia-mar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-038_Alstom.txt |
@@ -107,7 +107,7 @@
 | 89 | review | Critico | Rebocadores e vento | Um Graneleiro de 190m a sair do TMS2 com vento norte forte, quantos rebocadores leva? | Há factos esperados sem suporte claro na knowledge atual. | tug_operational_guidance.json |
 | 90 | supported | Critico | Limites de seguranca | Se partirem cabos na manobra, qual e a resposta imediata? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
 | 91 | out_of_scope | Critico | Comandos slash | /validar-manobra para entrada Tanquisado marcada cedo demais para a maré | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | Condicoes_Meteorologicas_Prioridades.txt |
-| 92 | supported | Medio | Evals/critical_document_companion_evals | Qual é o cais da LISNAVE com maior profundidade disponível? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 92 | supported | Alto | LISNAVE | Qual é o cais da LISNAVE com maior profundidade disponível? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-014_Lisnave.txt |
 | 93 | out_of_scope | Critico | Limites de seguranca | Um roro vai sair agora da Autoeuropa. Tem 200 m e ja pus 2 reboques. Pode sair? Ah, mas ficou nevoeiro! | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | practice_maneuver_experience.json |
 | 94 | supported | Critico | Percursos e distancias | Vou mudar um navio da LISNAVE para o TMS1. Se for a 5 kts quanto tempo levo de um cais ao outro? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
 | 95 | supported | Medio | Evals/golden_operational_companion_evals | Qual é o comprimento máximo para manobrar na LISNAVE à noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-014_Lisnave.txt |
@@ -118,7 +118,7 @@
 | 100 | supported | Medio | Evals/critical_document_companion_evals | Até onde vai a área de responsabilidade do VTS Portuário de Setúbal? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-041_EntradaSaida.json |
 | 101 | supported | Critico | LISNAVE comprimentos | Qual é o comprimento operacional do Cais 3 A na Lisnave? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 102 | supported | Critico | LISNAVE comprimentos | Navio de 360 m cabe no Cais 3 A da Lisnave? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
-| 103 | review | Critico | LISNAVE comprimentos | E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento? | Há factos esperados sem suporte claro na knowledge atual. | berth_profiles.json |
+| 103 | supported | Critico | LISNAVE comprimentos | E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 104 | supported | Critico | LISNAVE comprimentos | Qual é o comprimento operacional e a sonda do Cais 3 B da Lisnave? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 105 | supported | Critico | LISNAVE comprimentos | Na Lisnave, qual é o comprimento operacional do Cais 1 e as sondas do A e B? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-014_Lisnave.txt |
 | 106 | supported | Critico | LISNAVE comprimentos | Na Lisnave, o Cais 2 tem que comprimento operacional? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
@@ -131,7 +131,7 @@
 | 113 | supported | Critico | Checklist | A checklist distingue cais Lisnave de doca seca na orientação? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Notas_Pilotagem.json |
 | 114 | supported | Critico | Tanquisado | Qual é o comprimento operacional do Tanquisado com duques d'alba? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-010_Tanquisado.txt |
 | 115 | supported | Critico | Tanquisado | Um navio de 350 m cabe no Tanquisado em comprimento operacional? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
-| 116 | review | Critico | Tanquisado | Um navio de 470 m cabe no Tanquisado? | Há factos esperados sem suporte claro na knowledge atual. | berth_profiles.json |
+| 116 | supported | Critico | Tanquisado | Um navio de 470 m cabe no Tanquisado? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
 | 117 | supported | Critico | Eco-Oil | Entrada Eco-Oil em baixa-mar com navio de 260 metros pode? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
 | 118 | supported | Critico | Eco-Oil | Posso atracar de noite na Eco-Oil? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
 | 119 | supported | Critico | ALSTOM | Um navio de 95 metros pode entrar no Cais Alstom de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
@@ -143,8 +143,8 @@
 | 125 | review | Critico | Fontes | A fonte de shiphandling prático cobre bow thruster e squat? | Alguns factos só têm suporte parcial na knowledge atual. | companions/Notas_Pilotagem.json |
 | 126 | supported | Critico | Fontes | A fonte de história e cultura de Setúbal está indexável? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Setubal_Historia_Cultura.json |
 | 127 | supported | Critico | Rotas | Qual a distância do Pilar 2 até ao TMS2? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
-| 128 | review | Critico | Rotas | Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL? | Conflito conhecido: Fundeadouro Norte para cais a sul deve usar 1h30, não 1h. | Notas_Pilotagem.txt |
-| 129 | supported | Critico | Rotas | Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 128 | supported | Critico | Percursos e distancias | Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 129 | supported |  | Notas_Pilotagem.txt | Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Notas_Pilotagem.json |
 | 130 | out_of_scope | Critico | Autoeuropa | Um roro vai sair agora da Autoeuropa. Tem 200 m e já pus 2 reboques. Pode sair com a meteorologia atual? | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | practice_maneuver_experience.json |
 | 131 | supported | Critico | Lisnave rebocadores | Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
 | 132 | supported | Critico | Fontes | Depois disto confirma só: a base RIEAM/COLREG cobre ultrapassagem em canal estreito? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
@@ -178,7 +178,7 @@
 | 160 | supported | Alto | Marés, Repontos e Meteorologia | Tanquisado pode sair fora de reponto? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Condicoes_Meteorologicas_Prioridades.txt |
 | 161 | supported | Alto | Marés, Repontos e Meteorologia | Eco-Oil pode atracar de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-008_EcoOil.txt |
 | 162 | supported | Médio | Marés, Repontos e Meteorologia | Qual é o calado operacional na barra com maré? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-018_NormasEspeciais.json |
-| 163 | out_of_scope | Médio | Marés, Repontos e Meteorologia | Se peço meteorologia atual para rebocadores, a resposta deve decidir ou só listar vento? | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | Notas_Pilotagem.txt |
+| 163 | out_of_scope | Médio | Marés, Repontos e Meteorologia | Se peço meteorologia atual para rebocadores, a resposta deve decidir ou só listar vento? | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | Resposta_PRAGtico_Estilo.txt |
 | 164 | supported | Médio | Marés, Repontos e Meteorologia | Como interpreto marés vivas no planeamento operacional? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-009_Secil.txt |
 | 165 | out_of_scope | Médio | Marés, Repontos e Meteorologia | Mostra as marés de hoje em Setúbal/Troia. | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | IT-009_Secil.txt |
 | 166 | out_of_scope | Médio | Marés, Repontos e Meteorologia | Com ondulação forte fora da barra devo validar só pelo vento? | Caso volátil, live ou de comando; não deve treinar resposta factual estática. | Condicoes_Meteorologicas_Prioridades.txt |
@@ -239,3 +239,67 @@
 | 221 | supported |  | Condicoes_Meteorologicas_Prioridades.txt | Quando se considera maré viva no Porto de Setúbal? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Condicoes_Meteorologicas_Prioridades.json |
 | 222 | supported |  | Condicoes_Meteorologicas_Prioridades.txt | O que fazer quando há nevoeiro? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Condicoes_Meteorologicas_Prioridades.json |
 | 223 | supported |  | Condicoes_Meteorologicas_Prioridades.txt | Qual é o critério de prioridade entre manobras? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Condicoes_Meteorologicas_Prioridades.json |
+| 224 | supported | Alto | Percursos e distancias | A posição de embarque dos pilotos fica a que distância da entrada da Barra? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 225 | supported | Alto | Percursos e distancias | Da entrada da Barra ao TMS 1 pelo Canal Norte, qual é a distância? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 226 | supported | Alto | Percursos e distancias | De fora da Barra, na pilot station, até ao TMS 1 são quantas milhas? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 227 | supported | Alto | Percursos e distancias | Da entrada da Barra ao TMS 2 pelo Canal Norte, quanto falta? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 228 | supported | Alto | Percursos e distancias | Da pilot station até ao TMS 2 pelo Canal Norte são quantas milhas náuticas? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 229 | supported | Alto | Percursos e distancias | Da posição de embarque até à ALSTOM pelo Canal Norte são quantas milhas? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 230 | supported | Alto | Percursos e distancias | Da entrada da Barra até à Bóia 14CS pelo Canal Sul são quantas milhas? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 231 | supported | Alto | Percursos e distancias | Da entrada da Barra à LISNAVE pelo Canal Sul completo, qual é a distância? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Notas_Pilotagem.json |
+| 232 | supported | Alto | Percursos e distancias | Da Bóia 14CS até à LISNAVE, que rumo e distância uso? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 233 | supported | Alto | Percursos e distancias | Da Bóia 14CS para Tanquisado/Eco-Oil, qual é o rumo e a distância? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 234 | supported | Critico | Percursos e distancias | Da Bóia 12CS para a LISNAVE a 6 nós, quanto tempo de navegação dá? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 235 | supported | Alto | Percursos e distancias | A 6 nós, quanto demora a pernada da Bóia 6CS para a Bóia 12CS? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 236 | supported | Alto | Percursos e distancias | Qual é a ordem prática dos terminais na entrada pelo Canal Norte? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 237 | supported | Alto | Percursos e distancias | No fim do Canal Sul, a Bóia 14CS separa que destinos? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 238 | supported | Critico | Capacidade de cais | Quantos navios grandes podem estar atracados no TMS 1 ao mesmo tempo? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 239 | supported | Critico | Capacidade de cais | Quais são os comprimentos dos cais do TMS 1? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 240 | supported | Critico | Capacidade de cais | Se um navio não couber no Cais 7 do TMS 1, posso usar o Cais 8 como continuação? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-005_TMS1.json |
+| 241 | supported | Critico | Capacidade de cais | Um navio de 150 m atribuído ao Cais 7 do TMS 1 ocupa só o Cais 7? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-005_TMS1.json |
+| 242 | supported | Critico | Capacidade de cais | Quando dois navios partilham a frente principal do TMS 1, que folga mínima devo guardar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 243 | supported | Alto | Capacidade de cais | Para a regra de capacidade do TMS 1, a partir de que LOA considero navio grande? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 244 | supported | Critico | Capacidade de cais | Qual é o comprimento total do TMS 2 e como o portal o divide? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-006_TMS2.json |
+| 245 | supported | Critico | Capacidade de cais | No TMS 2, quando há vários navios, que intervalo tenho de considerar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-006_TMS2.json |
+| 246 | supported | Alto | Capacidade de cais | Um navio de 200 m pode ficar no TMS 2 se já lá estiver um de 150 m? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 247 | supported | Critico | Capacidade de cais | Podem estar dois navios na Autoeuropa se ambos tiverem menos de 230 m? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | AdmiraltyPilot_PortoSetubal.txt |
+| 248 | supported | Critico | Capacidade de cais | Um ro-ro de 230 m na Autoeuropa pode partilhar o terminal com outro navio? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-007_AutoEuropa.json |
+| 249 | supported | Critico | Terminais criticos | Qual é o comprimento operacional do Tanquisado e o que entra nessa conta? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 250 | supported | Critico | Terminais criticos | Como calculo o calado praticável diurno no Tanquisado? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-010_Tanquisado.txt |
+| 251 | supported | Critico | Terminais criticos | Um navio de 150 m pode atracar de noite no Tanquisado? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-010_Tanquisado.txt |
+| 252 | supported | Critico | Terminais criticos | É possível atracar de noite no Eco-Oil? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-008_EcoOil.txt |
+| 253 | supported | Critico | Terminais criticos | E sair de noite do Eco-Oil, pode? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 254 | supported | Critico | Terminais criticos | Um navio com 9,2 m de calado e carga IMO pode atracar na SAPEC Líquidos? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 255 | supported | Critico | Terminais criticos | Na SAPEC Líquidos, se o mesmo navio de 9,2 m não tiver carga IMO, muda o limite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 256 | supported | Alto | Terminais criticos | Com baixa-mar de 0,3 m, a partir de que calado uso carochas no TPS? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-029_SAPEC.txt |
+| 257 | supported | Critico | Terminais criticos | Um navio de 180 m pode atracar de noite no Cais Oeste da SECIL? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 258 | supported | Alto | Terminais criticos | Um navio de 150 m no Cais Oeste da SECIL pode manobrar de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-009_Secil.json |
+| 259 | supported | Alto | Marés, Repontos e Meteorologia | Com que antecedência marco uma entrada para a SECIL vinda de fora da Barra? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-009_Secil.json |
+| 260 | supported | Alto | Marés, Repontos e Meteorologia | A saída da SECIL marca-se quanto tempo antes do reponto? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Marcar_manobra_repontos_mare.txt |
+| 261 | supported | Critico | LISNAVE | Um navio de 300 m pode entrar na LISNAVE de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | AdmiraltyPilot_PortoSetubal.txt |
+| 262 | supported | Alto | LISNAVE | Um navio de 250 m pode manobrar na LISNAVE de noite? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-014_Lisnave.txt |
+| 263 | supported | Critico | LISNAVE | Um navio de 45 m de boca pode ir para o Hidrolift da LISNAVE? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | berth_profiles.json |
+| 264 | supported | Critico | LISNAVE | Qual é o calado máximo da LISNAVE? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/IT-014_Lisnave.json |
+| 265 | supported | Alto | LISNAVE | Qual a profundidade da Doca 21 com a comporta aberta e fechada? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | IT-014_Lisnave.txt |
+| 266 | supported | Alto | Rebocadores | Um navio de 130 m para um cais da LISNAVE precisa de quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
+| 267 | supported | Critico | Rebocadores | E se o navio tiver 180 m para a LISNAVE, quantos rebocadores devo prever? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
+| 268 | supported | Critico | Rebocadores | Um navio de 230 m para a LISNAVE leva quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
+| 269 | supported | Critico | Rebocadores | Um navio com 270 m para a LISNAVE precisa de quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | tug_operational_guidance.json |
+| 270 | supported | Critico | Rebocadores | RORO de 230 m com vento Norte forte a entrar, quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | AdmiraltyPilot_PortoSetubal.txt |
+| 271 | supported | Critico | Rebocadores | Um graneleiro de 190 m a sair do TMS2 com vento Norte forte leva quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | practice_maneuver_experience.json |
+| 272 | supported | Alto | Rebocadores | Navio sem bowthruster de 110 m e calado 8 m precisa de que rebocador? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 273 | supported | Alto | Rebocadores | Um navio sem bowthruster de 140 m deve levar quantos rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Notas_Pilotagem.txt |
+| 274 | supported | Critico | Meteorologia e segurança | Se estiver 31 kt de vento, posso sair com 4 rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 275 | supported | Alto | Meteorologia e segurança | Com 26 kt de vento a manobra está automaticamente autorizada se houver rebocadores? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 276 | supported | Critico | Meteorologia e segurança | Com nevoeiro em porto posso continuar a marcar manobras? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 277 | supported | Critico | Meteorologia e segurança | Fui apanhado por nevoeiro já a navegar no canal, o que faço? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 278 | supported | Alto | COLREG / RIEAM | Em rumos cruzados, se vejo o outro navio por estibordo, quem deve manobrar? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | RIEAM_COLREG_Regras_Estrada.txt |
+| 279 | supported | Alto | COLREG / RIEAM | Qual é o sinal sonoro de nevoeiro de navio de propulsão mecânica com seguimento? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 280 | supported | Alto | COLREG / RIEAM | E se estiver pairando sem seguimento no nevoeiro, que sinal faço? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | operational_safety_limits.json |
+| 281 | supported | Critico | Qualidade de resposta | Se eu disser 'tem carga IMO' depois de perguntar por 9,2 m na SAPEC, podes responder só '9,5 metros'? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Porto_Setubal_Terminais_Cais.txt |
+| 282 | supported | Critico | Qualidade de resposta | Quando eu digo 'revê a tua resposta' numa pergunta de maré, o que deve acontecer? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Resposta_PRAGtico_Estilo.txt |
+| 283 | supported | Medio | Qualidade de resposta | Como deve ser o tom das respostas operacionais do PRAGtico? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Resposta_PRAGtico_Estilo.txt |
+| 284 | supported | Medio | Cultura Geral de Setúbal | O que há de especial no Outão? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Setubal_Historia_Cultura.json |
+| 285 | supported | Medio | Cultura Geral de Setúbal | Porque é interessante o Forte de São Filipe? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Setubal_Historia_Cultura.json |
+| 286 | supported | Baixo | Cultura Geral de Setúbal | Qual é o prato típico mais conhecido de Setúbal? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | Setubal_Historia_Cultura.txt |
+| 287 | supported | Medio | Cultura Geral de Setúbal | Posso usar a cultura geral de Setúbal para validar uma manobra? | Todos os factos esperados têm suporte lexical forte na knowledge atual. | companions/Setubal_Historia_Cultura.json |

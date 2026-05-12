@@ -13,9 +13,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from domain.operational_qa_memory import (  # noqa: E402
+    DEFAULT_QA_MEMORY_PATHS,
     KNOWLEDGE_DIR,
     QA_MEMORY_AUDIT_PATH,
-    QA_MEMORY_PATH,
     audit_qa_memory_records,
     load_knowledge_audit_corpus,
     load_qa_memory_audit_report,
@@ -49,7 +49,11 @@ def build_payload() -> dict:
     counts = Counter(str(record.get("status") or "unknown") for record in records)
     return {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "qa_source": str(QA_MEMORY_PATH.relative_to(REPO_ROOT)),
+        "qa_sources": [
+            str(source_path.relative_to(REPO_ROOT))
+            for source_path in DEFAULT_QA_MEMORY_PATHS
+            if source_path.exists()
+        ],
         "knowledge_dir": str(KNOWLEDGE_DIR.relative_to(REPO_ROOT)),
         "runtime_rule": "Only records with status=supported are exposed to operational_qa_memory.",
         "summary": {
@@ -69,7 +73,8 @@ def write_markdown(payload: dict, path: Path) -> None:
         "# QA Memory Knowledge Audit",
         "",
         f"- Generated at: `{payload.get('generated_at')}`",
-        f"- QA source: `{payload.get('qa_source')}`",
+        "- QA sources: "
+        + ", ".join(f"`{source}`" for source in payload.get("qa_sources") or []),
         f"- Knowledge dir: `{payload.get('knowledge_dir')}`",
         f"- Runtime rule: {payload.get('runtime_rule')}",
         "",

@@ -50,15 +50,25 @@ def test_qa_memory_source_is_guidance_not_ready_answer() -> None:
     assert "Resposta validada anterior" not in source["snippet"]
 
 
-def test_qa_memory_audit_blocks_known_fundeadouro_norte_one_hour_regression() -> None:
+def test_qa_memory_refines_known_fundeadouro_norte_one_hour_regression() -> None:
     clear_qa_memory_caches()
     old_question = "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?"
     report = load_qa_memory_audit_report()
     record = next(item for item in report["records"] if item["question"] == old_question)
 
-    assert record["status"] == "review"
-    assert "1h30" in record["reason"]
-    assert all(match.question != old_question for match, _score in find_qa_memory_matches(old_question))
+    assert record["status"] == "supported"
+    matches = find_qa_memory_matches(old_question)
+    assert matches[0][0].question == old_question
+    assert "1 hora e 30 minutos antes" in " | ".join(matches[0][0].expected)
+    assert "19:03" not in " | ".join(matches[0][0].expected)
+
+
+def test_qa_memory_includes_curated_answer_guidance_for_operational_quality() -> None:
+    source = build_qa_memory_sources("Se eu disser tem carga IMO depois da SAPEC, podes responder só 9,5 metros?")[0]
+
+    assert "Tratamento recomendado" in source["snippet"]
+    assert "nunca responder só com o número" in source["snippet"]
+    assert "7,1 m + altura de água" in source["snippet"]
 
 
 def test_qa_memory_keeps_correct_fundeadouro_norte_lisnave_lead_time() -> None:

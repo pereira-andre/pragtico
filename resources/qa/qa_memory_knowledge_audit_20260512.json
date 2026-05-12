@@ -1,12 +1,15 @@
 {
-  "generated_at": "2026-05-12T22:34:53+00:00",
-  "qa_source": "resources/qa/pragtico_test_questions_archive_20260512.json",
+  "generated_at": "2026-05-12T22:56:31+00:00",
+  "qa_sources": [
+    "resources/qa/pragtico_test_questions_archive_20260512.json",
+    "resources/qa/curated_operational_qa_memory_20260512.json"
+  ],
   "knowledge_dir": "knowledge",
   "runtime_rule": "Only records with status=supported are exposed to operational_qa_memory.",
   "summary": {
-    "total": 223,
-    "supported": 170,
-    "review": 38,
+    "total": 287,
+    "supported": 242,
+    "review": 30,
     "out_of_scope": 15,
     "unknown": 0
   },
@@ -273,7 +276,7 @@
         {
           "expected": "91,44 metros",
           "status": "supported",
-          "score": 0.963,
+          "score": 0.953,
           "document": "companions/Nocoes_Basicas_Navegacao_Unidades.json",
           "evidence": "expected:44 91 metros | context:100 basicas jardas metros navegacao nocoes"
         },
@@ -320,20 +323,27 @@
       "forbidden": []
     },
     {
-      "question": "Entrada para Tanquisado com 2 rebocadores pode avancar?",
-      "group": "Tanquisado",
+      "question": "Entrada para Tanquisado com 2 rebocadores pode avançar?",
+      "group": "Rebocadores",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_tug_guidance",
-      "status": "review",
-      "reason": "Alguns factos só têm suporte parcial na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 3,
-      "supported_count": 2,
-      "partial_count": 1,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
       "unsupported_count": 0,
       "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:não | context:2 avancar entrada rebocadores tanquisado"
+        },
         {
           "expected": "Tanquisado",
           "status": "supported",
@@ -342,18 +352,18 @@
           "evidence": "exact:Tanquisado | context:2 avancar entrada rebocadores tanquisado"
         },
         {
-          "expected": "minimo 3 rebocadores",
+          "expected": "mínimo 3 rebocadores",
           "status": "supported",
           "score": 0.98,
           "document": "tug_operational_guidance.json",
-          "evidence": "exact:minimo 3 rebocadores | context:2 entrada rebocadores tanquisado"
+          "evidence": "exact:mínimo 3 rebocadores | context:2 entrada rebocadores tanquisado"
         },
         {
-          "expected": "Rebocadores insuficientes",
-          "status": "partial",
-          "score": 0.495,
-          "document": "Condicoes_Meteorologicas_Prioridades.txt",
-          "evidence": "expected:rebocadores | context:2 avancar entrada rebocadores tanquisado"
+          "expected": "independentemente de bowthruster",
+          "status": "supported",
+          "score": 0.98,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:independentemente de bowthruster | context:2 entrada rebocadores tanquisado"
         }
       ],
       "forbidden": []
@@ -617,49 +627,53 @@
     },
     {
       "question": "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?",
-      "group": "Rotas",
+      "group": "Marés, Repontos e Meteorologia",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_route_transit",
-      "status": "review",
-      "reason": "Conflito conhecido: Fundeadouro Norte para cais a sul deve usar 1h30, não 1h.",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
-      "known_conflict": true,
+      "known_conflict": false,
       "expected_count": 4,
       "supported_count": 4,
       "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
-          "expected": "Percurso/duracao",
+          "expected": "Fundeadouro Norte",
           "status": "supported",
-          "score": 0.876,
+          "score": 0.986,
           "document": "Notas_Pilotagem.txt",
-          "evidence": "expected:duracao percurso | context:03 20 chegar deve fundeadouro lisnave navio norte quando reponto"
+          "evidence": "exact:Fundeadouro Norte | context:03 20 chegar deve fundeadouro lisnave mares navio norte quando"
         },
         {
-          "expected": "cerca de 1 hora",
+          "expected": "LISNAVE",
           "status": "supported",
-          "score": 0.992,
+          "score": 0.986,
           "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:cerca de 1 hora | context:03 20 chegar deve fundeadouro lisnave navio norte quando reponto"
+          "evidence": "exact:LISNAVE | context:03 20 chegar deve fundeadouro lisnave mares navio norte quando"
         },
         {
-          "expected": "19:03",
+          "expected": "1 hora e 30 minutos antes",
           "status": "supported",
-          "score": 0.876,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "expected:03 19 | context:03 20 chegar deve fundeadouro lisnave navio norte quando reponto"
+          "score": 0.979,
+          "document": "Marcar_manobra_repontos_mare.txt",
+          "evidence": "exact:1 hora e 30 minutos antes | context:20 chegar deve fundeadouro lisnave navio norte quando reponto repontos"
         },
         {
-          "expected": "fase critica",
+          "expected": "não marcar para a hora exata do reponto",
           "status": "supported",
-          "score": 0.853,
-          "document": "Notes_on_Shiphandling_Practical.txt",
-          "evidence": "expected:critica fase | context:chegar deve lisnave navio norte quando sair"
+          "score": 0.744,
+          "document": "companions/Marcar_manobra_repontos_mare.json",
+          "evidence": "expected:hora marcar nao reponto | context:20 chegar deve fundeadouro lisnave navio norte quando reponto repontos"
         }
       ],
-      "forbidden": []
+      "forbidden": [
+        "cerca de 1 hora",
+        "19:03",
+        "marcar o piloto para o reponto"
+      ]
     },
     {
       "question": "Que regras ha na Lisnave para docas e cais?",
@@ -828,47 +842,50 @@
       "question": "Marquei manobra de entrada para a Secil E as 1925. Está correta a hora?",
       "group": "SECIL",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "secil_entry_timing",
-      "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
       "expected_count": 4,
-      "supported_count": 3,
-      "partial_count": 1,
+      "supported_count": 4,
+      "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
-          "expected": "Local: SECIL",
+          "expected": "SECIL E",
           "status": "supported",
-          "score": 0.866,
+          "score": 0.963,
+          "document": "Marcar_manobra_repontos_mare.txt",
+          "evidence": "exact:SECIL E | context:entrada esta hora manobra secil"
+        },
+        {
+          "expected": "Cais de Este",
+          "status": "supported",
+          "score": 0.963,
           "document": "companions/IT-009_Secil.json",
-          "evidence": "expected:local secil | context:entrada esta hora manobra secil"
+          "evidence": "exact:Cais de Este | context:entrada esta hora manobra secil"
         },
         {
-          "expected": "Doca/cais: SECIL E/Este",
+          "expected": "reponto em marés vivas",
           "status": "supported",
-          "score": 0.886,
-          "document": "companions/Notas_Pilotagem.json",
-          "evidence": "expected:cais doca este secil | context:entrada esta hora manobra secil"
+          "score": 0.95,
+          "document": "IT-009_Secil.txt",
+          "evidence": "exact:reponto em marés vivas | context:esta hora manobra secil"
         },
         {
-          "expected": "Hora referida: 19:25",
-          "status": "partial",
-          "score": 0.654,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "expected:19 25 hora | context:entrada esta hora manobra secil"
-        },
-        {
-          "expected": "30-45 min",
+          "expected": "calado máximo de referência 8,0 m",
           "status": "supported",
-          "score": 0.874,
-          "document": "companions/Marcar_manobra_repontos_mare.json",
-          "evidence": "expected:30 45 min | context:entrada esta hora manobra secil"
+          "score": 0.963,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:calado máximo de referência 8,0 m | context:entrada esta hora manobra secil"
         }
       ],
-      "forbidden": []
+      "forbidden": [
+        "sim, está correta",
+        "sem validar a maré"
+      ]
     },
     {
       "question": "Um navio com 250 metros de LOA pode entrar no LISNAVE de noite?",
@@ -920,54 +937,56 @@
       "question": "E carga não IMO",
       "group": "Contexto conversacional",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_context_followup",
-      "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
       "expected_count": 5,
-      "supported_count": 3,
-      "partial_count": 1,
-      "unsupported_count": 1,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
       "support": [
         {
-          "expected": "Ficha de contexto provável",
-          "status": "partial",
-          "score": 0.569,
-          "document": "Setubal_Historia_Cultura.txt",
-          "evidence": "expected:contexto ficha | context:contexto nao"
-        },
-        {
-          "expected": "Premissa de continuidade",
-          "status": "unsupported",
-          "score": 0.0,
-          "document": "",
-          "evidence": ""
-        },
-        {
-          "expected": "SAPEC / TPS-TGL",
-          "status": "supported",
-          "score": 0.96,
-          "document": "berth_profiles.json",
-          "evidence": "exact:SAPEC / TPS-TGL | context:carga imo nao"
-        },
-        {
-          "expected": "Calado: 9,2 m.",
-          "status": "supported",
-          "score": 0.877,
-          "document": "companions/IT-029_SAPEC.json",
-          "evidence": "expected:2 9 calado | context:carga imo nao"
-        },
-        {
-          "expected": "Carga: não IMO.",
+          "expected": "carga não IMO",
           "status": "supported",
           "score": 0.96,
           "document": "IT-029_SAPEC.txt",
-          "evidence": "exact:Carga: não IMO. | context:carga imo nao"
+          "evidence": "exact:carga não IMO | context:carga imo nao"
+        },
+        {
+          "expected": "10,0 metros",
+          "status": "supported",
+          "score": 0.96,
+          "document": "IT-011_Termitrena.txt",
+          "evidence": "exact:10,0 metros | context:carga contexto nao"
+        },
+        {
+          "expected": "7,6 m + altura de água",
+          "status": "supported",
+          "score": 0.96,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:7,6 m + altura de água | context:carga imo nao"
+        },
+        {
+          "expected": "comparar com o calado real",
+          "status": "supported",
+          "score": 0.96,
+          "document": "companions/IT-029_SAPEC.json",
+          "evidence": "exact:comparar com o calado real | context:carga imo nao"
+        },
+        {
+          "expected": "não responder só com um número",
+          "status": "supported",
+          "score": 0.96,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:não responder só com um número | context:carga imo nao"
         }
       ],
-      "forbidden": []
+      "forbidden": [
+        "A resposta direta: 10,0 metros"
+      ]
     },
     {
       "question": "A fonte de balizagem/luzes de Setubal esta indexavel no conhecimento?",
@@ -1614,28 +1633,26 @@
       "question": "Qual a ordem dos cais de entrada pelo Canal Norte e pelo Canal Sul?",
       "group": "Conversas a testar manualmente",
       "risk": "Alto",
-      "source": "page_export",
-      "answer_origin": "operational_route_transit",
+      "source": "critical_matrix",
+      "answer_origin": "",
       "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "reason": "Alguns factos só têm suporte parcial na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
       "expected_count": 1,
       "supported_count": 0,
-      "partial_count": 0,
-      "unsupported_count": 1,
+      "partial_count": 1,
+      "unsupported_count": 0,
       "support": [
         {
-          "expected": "--",
-          "status": "unsupported",
-          "score": 0.0,
-          "document": "",
-          "evidence": ""
+          "expected": "Tem de responder pela fonte de ordem dos cais, separando entrada/saida e Norte/Sul.",
+          "status": "partial",
+          "score": 0.648,
+          "document": "tug_operational_guidance.json",
+          "evidence": "expected:cais entrada norte pela responder saida sul | context:cais canal entrada norte pelo sul"
         }
       ],
-      "forbidden": [
-        "--"
-      ]
+      "forbidden": []
     },
     {
       "question": "Se colidir na manobra, qual e a resposta imediata?",
@@ -1677,20 +1694,27 @@
       "forbidden": []
     },
     {
-      "question": "Entrada para Eco-Oil com 2 rebocadores pode avancar?",
-      "group": "Eco-Oil",
+      "question": "Entrada para Eco-Oil com 2 rebocadores pode avançar?",
+      "group": "Rebocadores",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_tug_guidance",
-      "status": "review",
-      "reason": "Alguns factos só têm suporte parcial na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 3,
-      "supported_count": 2,
-      "partial_count": 1,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
       "unsupported_count": 0,
       "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:não | context:2 avancar eco entrada oil rebocadores"
+        },
         {
           "expected": "Eco-Oil",
           "status": "supported",
@@ -1699,18 +1723,18 @@
           "evidence": "exact:Eco-Oil | context:2 avancar eco entrada oil rebocadores"
         },
         {
-          "expected": "minimo 3 rebocadores",
+          "expected": "mínimo 3 rebocadores",
           "status": "supported",
           "score": 0.983,
           "document": "tug_operational_guidance.json",
-          "evidence": "exact:minimo 3 rebocadores | context:2 eco entrada oil rebocadores"
+          "evidence": "exact:mínimo 3 rebocadores | context:2 eco entrada oil rebocadores"
         },
         {
-          "expected": "Rebocadores insuficientes",
-          "status": "partial",
-          "score": 0.495,
-          "document": "Condicoes_Meteorologicas_Prioridades.txt",
-          "evidence": "expected:rebocadores | context:2 avancar eco entrada oil rebocadores"
+          "expected": "independentemente de bowthruster",
+          "status": "supported",
+          "score": 0.983,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:independentemente de bowthruster | context:2 eco entrada oil rebocadores"
         }
       ],
       "forbidden": []
@@ -2372,7 +2396,7 @@
         {
           "expected": "27,5 metros",
           "status": "supported",
-          "score": 0.963,
+          "score": 0.953,
           "document": "companions/Nocoes_Basicas_Navegacao_Unidades.json",
           "evidence": "expected:27 5 metros | context:1 basicas manilha metros navegacao nocoes"
         },
@@ -2574,55 +2598,51 @@
       "question": "Após falar da Lisnave, perguntar: Marquei entrada para Secil E às 19:25. Está correto?",
       "group": "Contexto conversacional",
       "risk": "Alto",
-      "source": "page_export",
-      "answer_origin": "secil_entry_timing",
+      "source": "critical_matrix",
+      "answer_origin": "",
       "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "reason": "Alguns factos só têm suporte parcial na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
       "expected_count": 1,
       "supported_count": 0,
-      "partial_count": 0,
-      "unsupported_count": 1,
+      "partial_count": 1,
+      "unsupported_count": 0,
       "support": [
         {
-          "expected": "--",
-          "status": "unsupported",
-          "score": 0.0,
-          "document": "",
-          "evidence": ""
+          "expected": "Deve tratar Secil E como novo caso, sem herdar rebocadores, nevoeiro ou LOA da Lisnave.",
+          "status": "partial",
+          "score": 0.716,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "expected:caso como deve lisnave loa nevoeiro novo rebocadores secil sem | context:25 apos entrada esta lisnave secil"
         }
       ],
-      "forbidden": [
-        "--"
-      ]
+      "forbidden": []
     },
     {
       "question": "Quando marco uma saida da Doca 22 da Lisnave e uma entrada para Tanquisado?",
       "group": "Conversas a testar manualmente",
       "risk": "Alto",
-      "source": "page_export",
-      "answer_origin": "berth_profile_fact",
+      "source": "critical_matrix",
+      "answer_origin": "",
       "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "reason": "Alguns factos só têm suporte parcial na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
       "expected_count": 1,
       "supported_count": 0,
-      "partial_count": 0,
-      "unsupported_count": 1,
+      "partial_count": 1,
+      "unsupported_count": 0,
       "support": [
         {
-          "expected": "--",
-          "status": "unsupported",
-          "score": 0.0,
-          "document": "",
-          "evidence": ""
+          "expected": "Deve combinar a matriz de marcacoes com as regras de cais, sem inventar mares.",
+          "status": "partial",
+          "score": 0.597,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "expected:cais combinar deve mares regras sem | context:22 doca entrada lisnave quando saida tanquisado"
         }
       ],
-      "forbidden": [
-        "--"
-      ]
+      "forbidden": []
     },
     {
       "question": "A checklist puxa regras Eco-Oil para uma entrada?",
@@ -2898,16 +2918,16 @@
     },
     {
       "question": "Se um navio for apanhado no meio do nevoeiro a navegar, que procedimentos deve adoptar segundo a COLREG?",
-      "group": "COLREG",
+      "group": "Limites de seguranca",
       "risk": "Critico",
-      "source": "railway_150",
+      "source": "critical_matrix",
       "answer_origin": "fog_underway_procedure",
       "status": "supported",
       "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 4,
-      "supported_count": 4,
+      "expected_count": 8,
+      "supported_count": 8,
       "partial_count": 0,
       "unsupported_count": 0,
       "support": [
@@ -2916,28 +2936,56 @@
           "status": "supported",
           "score": 1.0,
           "document": "RIEAM_COLREG_Regras_Estrada.txt",
-          "evidence": "exact:Regra 19 | context:adoptar apanhado colreg deve for meio navegar navio nevoeiro procedimentos"
+          "evidence": "exact:Regra 19 | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
         },
         {
           "expected": "Regra 35",
           "status": "supported",
           "score": 1.0,
           "document": "RIEAM_COLREG_Regras_Estrada.txt",
-          "evidence": "exact:Regra 35 | context:adoptar apanhado colreg deve for meio navegar navio nevoeiro procedimentos"
+          "evidence": "exact:Regra 35 | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
         },
         {
           "expected": "1 som prolongado",
           "status": "supported",
-          "score": 0.982,
+          "score": 0.985,
           "document": "operational_safety_limits.json",
-          "evidence": "exact:1 som prolongado | context:apanhado colreg deve for meio navegar navio nevoeiro procedimentos"
+          "evidence": "exact:1 som prolongado | context:apanhado colreg deve for limites meio navegar navio nevoeiro procedimentos"
+        },
+        {
+          "expected": "avaliar posição",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:avaliar posição | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
+        },
+        {
+          "expected": "cais de destino",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:cais de destino | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
+        },
+        {
+          "expected": "fundeadouro",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:fundeadouro | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
+        },
+        {
+          "expected": "abortar antes de entrar",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:abortar antes de entrar | context:adoptar apanhado colreg deve for limites meio navegar navio nevoeiro"
         },
         {
           "expected": "VHF 73",
           "status": "supported",
-          "score": 0.982,
+          "score": 0.985,
           "document": "operational_safety_limits.json",
-          "evidence": "exact:VHF 73 | context:apanhado colreg deve for meio navegar navio nevoeiro procedimentos"
+          "evidence": "exact:VHF 73 | context:apanhado colreg deve for limites meio navegar navio nevoeiro procedimentos"
         }
       ],
       "forbidden": []
@@ -3289,9 +3337,9 @@
         {
           "expected": "ETA ao destino: 10:10",
           "status": "partial",
-          "score": 0.605,
-          "document": "companions/AdmiraltyPilot_PortoSetubal.json",
-          "evidence": "expected:10 eta | context:10 12 6 boia eta lisnave saida"
+          "score": 0.608,
+          "document": "companions/Nocoes_Basicas_Navegacao_Unidades.json",
+          "evidence": "expected:10 eta | context:10 12 6 eta"
         }
       ],
       "forbidden": []
@@ -3989,32 +4037,39 @@
     },
     {
       "question": "Qual é o cais da LISNAVE com maior profundidade disponível?",
-      "group": "Evals/critical_document_companion_evals",
-      "risk": "Medio",
-      "source": "railway_150",
-      "answer_origin": "berth_profile_fact",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
       "status": "supported",
       "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 2,
-      "supported_count": 2,
+      "expected_count": 3,
+      "supported_count": 3,
       "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
           "expected": "Cais 3 B",
           "status": "supported",
-          "score": 0.967,
-          "document": "berth_profiles.json",
-          "evidence": "exact:Cais 3 B | context:cais disponivel document lisnave maior profundidade"
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:Cais 3 B | context:cais disponivel lisnave maior profundidade"
         },
         {
-          "expected": "8,60",
+          "expected": "8,60 metros",
           "status": "supported",
-          "score": 0.967,
-          "document": "berth_profiles.json",
-          "evidence": "exact:8,60 | context:cais disponivel document lisnave maior profundidade"
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:8,60 metros | context:cais disponivel lisnave maior profundidade"
+        },
+        {
+          "expected": "10 metros da face",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:10 metros da face | context:cais disponivel lisnave maior profundidade"
         }
       ],
       "forbidden": []
@@ -4457,33 +4512,56 @@
       "question": "E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?",
       "group": "LISNAVE comprimentos",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "berth_profile_fact",
-      "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 2,
-      "supported_count": 1,
-      "partial_count": 1,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
-          "expected": "390 m excede",
-          "status": "partial",
-          "score": 0.482,
+          "expected": "Cais 3 A",
+          "status": "supported",
+          "score": 0.989,
           "document": "berth_profiles.json",
-          "evidence": "expected:excede | context:3 cabe cais comprimento comprimentos lisnave navio tiver"
+          "evidence": "exact:Cais 3 A | context:3 cabe cais comprimento comprimentos lisnave navio tiver"
         },
         {
-          "expected": "366 metros",
+          "expected": "366 m",
           "status": "supported",
-          "score": 0.956,
-          "document": "IT-014_Lisnave.txt",
-          "evidence": "exact:366 metros | context:3 cais comprimento lisnave navio"
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:366 m | context:3 cabe cais comprimento comprimentos lisnave navio tiver"
+        },
+        {
+          "expected": "240 m de ponte-cais",
+          "status": "supported",
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:240 m de ponte-cais | context:3 cabe cais comprimento comprimentos lisnave navio tiver"
+        },
+        {
+          "expected": "115 m até ao Duque d'Alba",
+          "status": "supported",
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:115 m até ao Duque d'Alba | context:3 cabe cais comprimento comprimentos lisnave navio tiver"
+        },
+        {
+          "expected": "não ler só o comprimento físico",
+          "status": "supported",
+          "score": 0.872,
+          "document": "companions/IT-062_Teporset.json",
+          "evidence": "expected:comprimento fisico ler nao | context:cais comprimento navio"
         }
       ],
-      "forbidden": []
+      "forbidden": [
+        "240 m logo não cabe"
+      ]
     },
     {
       "question": "Qual é o comprimento operacional e a sonda do Cais 3 B da Lisnave?",
@@ -4978,23 +5056,23 @@
       "question": "Um navio de 470 m cabe no Tanquisado?",
       "group": "Tanquisado",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "berth_profile_fact",
-      "status": "review",
-      "reason": "Há factos esperados sem suporte claro na knowledge atual.",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 2,
-      "supported_count": 1,
-      "partial_count": 1,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
-          "expected": "470 m excede",
-          "status": "partial",
-          "score": 0.468,
-          "document": "berth_profiles.json",
-          "evidence": "expected:excede | context:cabe navio tanquisado"
+          "expected": "Tanquisado",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:Tanquisado | context:cabe navio tanquisado"
         },
         {
           "expected": "463 m",
@@ -5002,9 +5080,33 @@
           "score": 0.975,
           "document": "berth_profiles.json",
           "evidence": "exact:463 m | context:cabe navio tanquisado"
+        },
+        {
+          "expected": "cais físico de 75 m",
+          "status": "supported",
+          "score": 0.95,
+          "document": "companions/IT-010_Tanquisado.json",
+          "evidence": "exact:cais físico de 75 m | context:navio tanquisado"
+        },
+        {
+          "expected": "dois duques d'Alba",
+          "status": "supported",
+          "score": 0.975,
+          "document": "berth_profiles.json",
+          "evidence": "exact:dois duques d'Alba | context:cabe navio tanquisado"
+        },
+        {
+          "expected": "não cabe em condições normais",
+          "status": "supported",
+          "score": 0.874,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "expected:cabe condicoes nao normais | context:cabe navio tanquisado"
         }
       ],
-      "forbidden": []
+      "forbidden": [
+        "cabe",
+        "sem restrições"
+      ]
     },
     {
       "question": "Entrada Eco-Oil em baixa-mar com navio de 260 metros pode?",
@@ -5437,99 +5539,136 @@
     },
     {
       "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e a SECIL?",
-      "group": "Rotas",
+      "group": "Percursos e distancias",
       "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_route_transit",
-      "status": "review",
-      "reason": "Conflito conhecido: Fundeadouro Norte para cais a sul deve usar 1h30, não 1h.",
-      "volatile_or_command": false,
-      "known_conflict": true,
-      "expected_count": 5,
-      "supported_count": 5,
-      "partial_count": 0,
-      "unsupported_count": 0,
-      "support": [
-        {
-          "expected": "15 a 25 minutos",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:15 a 25 minutos | context:cais fundeadouro leva norte secil sul tempo"
-        },
-        {
-          "expected": "SECIL",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:SECIL | context:cais fundeadouro leva norte secil sul tempo"
-        },
-        {
-          "expected": "20 minutos",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:20 minutos | context:cais fundeadouro leva norte secil sul tempo"
-        },
-        {
-          "expected": "cais a sul",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:cais a sul | context:cais fundeadouro leva norte secil sul tempo"
-        },
-        {
-          "expected": "1 hora",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:1 hora | context:cais fundeadouro leva norte secil sul tempo"
-        }
-      ],
-      "forbidden": []
-    },
-    {
-      "question": "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
-      "group": "Rotas",
-      "risk": "Critico",
-      "source": "railway_150",
-      "answer_origin": "operational_route_transit",
+      "source": "curated_operational_qa_memory_20260512:curated_refinements",
+      "answer_origin": "knowledge_curated",
       "status": "supported",
       "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
       "volatile_or_command": false,
       "known_conflict": false,
-      "expected_count": 4,
-      "supported_count": 4,
+      "expected_count": 6,
+      "supported_count": 6,
       "partial_count": 0,
       "unsupported_count": 0,
       "support": [
         {
-          "expected": "30 minutos a 1 hora",
-          "status": "supported",
-          "score": 0.988,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:30 minutos a 1 hora | context:cais canal leva norte secil sul tempo"
-        },
-        {
           "expected": "cais a norte",
           "status": "supported",
-          "score": 0.988,
+          "score": 0.989,
           "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:cais a norte | context:cais canal leva norte secil sul tempo"
+          "evidence": "exact:cais a norte | context:cais distancias fundeadouro leva norte secil sul tempo"
         },
         {
-          "expected": "1 hora a 1 hora e 20 minutos",
+          "expected": "15 a 25 minutos",
           "status": "supported",
-          "score": 0.988,
+          "score": 0.989,
           "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:1 hora a 1 hora e 20 minutos | context:cais canal leva norte secil sul tempo"
+          "evidence": "exact:15 a 25 minutos | context:cais distancias fundeadouro leva norte secil sul tempo"
         },
         {
           "expected": "SECIL",
           "status": "supported",
-          "score": 0.988,
+          "score": 0.989,
           "document": "Notas_Pilotagem.txt",
-          "evidence": "exact:SECIL | context:cais canal leva norte secil sul tempo"
+          "evidence": "exact:SECIL | context:cais distancias fundeadouro leva norte secil sul tempo"
+        },
+        {
+          "expected": "20 minutos",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:20 minutos | context:cais distancias fundeadouro leva norte secil sul tempo"
+        },
+        {
+          "expected": "cais a sul",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:cais a sul | context:cais distancias fundeadouro leva norte secil sul tempo"
+        },
+        {
+          "expected": "1 hora e 30 minutos",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:1 hora e 30 minutos | context:cais distancias fundeadouro leva norte secil sul tempo"
+        }
+      ],
+      "forbidden": [
+        "cais a sul cerca de 1 hora"
+      ]
+    },
+    {
+      "question": "Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?",
+      "group": "Notas_Pilotagem.txt",
+      "risk": "",
+      "source": "knowledge_eval:knowledge/evals/golden_operational_companion_evals.json",
+      "answer_origin": "",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 8,
+      "supported_count": 8,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Canal Sul",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:Canal Sul | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "cais do sul",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:cais do sul | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "30 minutos",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:30 minutos | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "1 hora",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:1 hora | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "cais a norte",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:cais a norte | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "1 hora e 20 minutos",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:1 hora e 20 minutos | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "SECIL",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:SECIL | context:cais canal leva norte notas pilotagem secil sul tempo txt"
+        },
+        {
+          "expected": "40 minutos",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:40 minutos | context:cais canal leva norte notas pilotagem secil sul tempo txt"
         }
       ],
       "forbidden": []
@@ -6819,15 +6958,15 @@
       "known_conflict": false,
       "expected_count": 3,
       "supported_count": 2,
-      "partial_count": 0,
-      "unsupported_count": 1,
+      "partial_count": 1,
+      "unsupported_count": 0,
       "support": [
         {
           "expected": "Meteorologia considerada",
-          "status": "unsupported",
-          "score": 0.447,
-          "document": "Notas_Pilotagem.txt",
-          "evidence": "expected:considerada | context:atual deve mares rebocadores resposta vento"
+          "status": "partial",
+          "score": 0.462,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "expected:meteorologia | context:deve meteorologia rebocadores repontos resposta vento"
         },
         {
           "expected": "rebocadores",
@@ -6839,9 +6978,9 @@
         {
           "expected": "conclusão",
           "status": "supported",
-          "score": 0.945,
-          "document": "operational_safety_limits.json",
-          "evidence": "exact:conclusão | context:deve meteorologia rebocadores resposta vento"
+          "score": 0.955,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:conclusão | context:deve meteorologia rebocadores repontos resposta vento"
         }
       ],
       "forbidden": []
@@ -9457,6 +9596,3192 @@
           "score": 1.0,
           "document": "companions/Condicoes_Meteorologicas_Prioridades.json",
           "evidence": "exact:saídas sobre entradas | context:condicoes criterio entre manobras meteorologicas prioridade prioridades txt"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "A posição de embarque dos pilotos fica a que distância da entrada da Barra?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "1 milha náutica",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:1 milha náutica | context:barra distancia distancias embarque entrada fica pilotos posicao"
+        },
+        {
+          "expected": "Pilot station",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilot station | context:barra distancia distancias embarque entrada fica pilotos posicao"
+        },
+        {
+          "expected": "Pilar 2",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilar 2 | context:barra distancia distancias embarque entrada fica pilotos posicao"
+        },
+        {
+          "expected": "posição de embarque",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:posição de embarque | context:barra distancia distancias embarque entrada fica pilotos posicao"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da entrada da Barra ao TMS 1 pelo Canal Norte, qual é a distância?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilar 2",
+          "status": "supported",
+          "score": 0.99,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilar 2 | context:1 barra canal distancia distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "TMS 1",
+          "status": "supported",
+          "score": 0.99,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 1 | context:1 barra canal distancia distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "Canal Norte",
+          "status": "supported",
+          "score": 0.99,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Norte | context:1 barra canal distancia distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "5,9 NM",
+          "status": "supported",
+          "score": 0.99,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:5,9 NM | context:1 barra canal distancia distancias entrada norte pelo tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "De fora da Barra, na pilot station, até ao TMS 1 são quantas milhas?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilot station",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilot station | context:1 ate barra distancias fora milhas pilot station tms"
+        },
+        {
+          "expected": "TMS 1",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 1 | context:1 ate barra distancias fora milhas pilot station tms"
+        },
+        {
+          "expected": "Canal Norte",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Norte | context:1 ate barra distancias fora milhas pilot station tms"
+        },
+        {
+          "expected": "6,9 NM",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:6,9 NM | context:1 ate barra distancias fora milhas pilot station tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da entrada da Barra ao TMS 2 pelo Canal Norte, quanto falta?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilar 2",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilar 2 | context:2 barra canal distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "TMS 2",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 2 | context:2 barra canal distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "Canal Norte",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Norte | context:2 barra canal distancias entrada norte pelo tms"
+        },
+        {
+          "expected": "6,5 NM",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:6,5 NM | context:2 barra canal distancias entrada norte pelo tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da pilot station até ao TMS 2 pelo Canal Norte são quantas milhas náuticas?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilot station",
+          "status": "supported",
+          "score": 0.985,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilot station | context:2 ate canal distancias milhas nauticas norte pelo pilot station"
+        },
+        {
+          "expected": "TMS 2",
+          "status": "supported",
+          "score": 0.985,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 2 | context:2 ate canal distancias milhas nauticas norte pelo pilot station"
+        },
+        {
+          "expected": "7,5 NM",
+          "status": "supported",
+          "score": 0.985,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:7,5 NM | context:2 ate canal distancias milhas nauticas norte pelo pilot station"
+        },
+        {
+          "expected": "Canal Norte",
+          "status": "supported",
+          "score": 0.985,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Norte | context:2 ate canal distancias milhas nauticas norte pelo pilot station"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da posição de embarque até à ALSTOM pelo Canal Norte são quantas milhas?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilot station",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilot station | context:alstom ate canal distancias embarque milhas norte pelo posicao"
+        },
+        {
+          "expected": "ALSTOM",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:ALSTOM | context:alstom ate canal distancias embarque milhas norte pelo posicao"
+        },
+        {
+          "expected": "Canal Norte",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Norte | context:alstom ate canal distancias embarque milhas norte pelo posicao"
+        },
+        {
+          "expected": "10,3 NM",
+          "status": "supported",
+          "score": 0.982,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:10,3 NM | context:alstom ate canal distancias embarque milhas norte pelo posicao"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da entrada da Barra até à Bóia 14CS pelo Canal Sul são quantas milhas?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilar 2",
+          "status": "supported",
+          "score": 0.983,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Pilar 2 | context:14cs ate barra boia canal distancias entrada milhas pelo sul"
+        },
+        {
+          "expected": "Bóia 14CS",
+          "status": "supported",
+          "score": 0.983,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 14CS | context:14cs ate barra boia canal distancias entrada milhas pelo sul"
+        },
+        {
+          "expected": "Canal Sul",
+          "status": "supported",
+          "score": 0.983,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Canal Sul | context:14cs ate barra boia canal distancias entrada milhas pelo sul"
+        },
+        {
+          "expected": "10,0 NM",
+          "status": "supported",
+          "score": 0.983,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:10,0 NM | context:14cs ate barra boia canal distancias entrada milhas pelo sul"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da entrada da Barra à LISNAVE pelo Canal Sul completo, qual é a distância?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Pilar 2",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:Pilar 2 | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:LISNAVE | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        },
+        {
+          "expected": "Canal Sul",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:Canal Sul | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        },
+        {
+          "expected": "10,5 NM",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:10,5 NM | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        },
+        {
+          "expected": "atalho",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:atalho | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        },
+        {
+          "expected": "10,0 NM",
+          "status": "supported",
+          "score": 0.99,
+          "document": "companions/Notas_Pilotagem.json",
+          "evidence": "exact:10,0 NM | context:barra canal completo distancia distancias entrada lisnave pelo sul"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da Bóia 14CS até à LISNAVE, que rumo e distância uso?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Bóia 14CS",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 14CS | context:14cs ate boia distancia distancias lisnave rumo"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:LISNAVE | context:14cs ate boia distancia distancias lisnave rumo"
+        },
+        {
+          "expected": "rumo 030",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:rumo 030 | context:14cs ate boia distancia distancias lisnave rumo"
+        },
+        {
+          "expected": "0,5 NM",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:0,5 NM | context:14cs ate boia distancia distancias lisnave rumo"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da Bóia 14CS para Tanquisado/Eco-Oil, qual é o rumo e a distância?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Bóia 14CS",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 14CS | context:14cs boia distancia distancias eco oil rumo tanquisado"
+        },
+        {
+          "expected": "Tanquisado",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Tanquisado | context:14cs boia distancia distancias eco oil rumo tanquisado"
+        },
+        {
+          "expected": "Eco-Oil",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Eco-Oil | context:14cs boia distancia distancias eco oil rumo tanquisado"
+        },
+        {
+          "expected": "rumo 311",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:rumo 311 | context:14cs boia distancia distancias eco oil rumo tanquisado"
+        },
+        {
+          "expected": "0,6 NM",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:0,6 NM | context:14cs boia distancia distancias eco oil rumo tanquisado"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Da Bóia 12CS para a LISNAVE a 6 nós, quanto tempo de navegação dá?",
+      "group": "Percursos e distancias",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 7,
+      "supported_count": 7,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Bóia 12CS",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 12CS | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "Bóia 14CS",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 14CS | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "0,5 NM",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:0,5 NM | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:LISNAVE | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "1 milha náutica",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:1 milha náutica | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "6 nós",
+          "status": "supported",
+          "score": 0.975,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:6 nós | context:12cs 6 boia distancias lisnave tempo"
+        },
+        {
+          "expected": "10 minutos",
+          "status": "supported",
+          "score": 0.938,
+          "document": "Nocoes_Basicas_Navegacao_Unidades.txt",
+          "evidence": "exact:10 minutos | context:6 navegacao tempo"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "A 6 nós, quanto demora a pernada da Bóia 6CS para a Bóia 12CS?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Bóia 6CS",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 6CS | context:12cs 6 6cs boia demora distancias pernada"
+        },
+        {
+          "expected": "Bóia 12CS",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 12CS | context:12cs 6 6cs boia demora distancias pernada"
+        },
+        {
+          "expected": "2,0 NM",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:2,0 NM | context:12cs 6 6cs boia demora distancias pernada"
+        },
+        {
+          "expected": "6 nós",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:6 nós | context:12cs 6 6cs boia demora distancias pernada"
+        },
+        {
+          "expected": "20 minutos",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:20 minutos | context:12cs 6 6cs boia demora distancias pernada"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual é a ordem prática dos terminais na entrada pelo Canal Norte?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "TMS 1",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 1 | context:canal distancias entrada norte pelo pratica terminais"
+        },
+        {
+          "expected": "TMS 2",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TMS 2 | context:canal distancias entrada norte pelo pratica terminais"
+        },
+        {
+          "expected": "Autoeuropa",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Autoeuropa | context:canal distancias entrada norte pelo pratica terminais"
+        },
+        {
+          "expected": "Praias do Sado",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Praias do Sado | context:canal distancias entrada norte pelo pratica terminais"
+        },
+        {
+          "expected": "SAPEC",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:SAPEC | context:canal distancias entrada norte pelo pratica terminais"
+        },
+        {
+          "expected": "ALSTOM",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:ALSTOM | context:canal distancias entrada norte pelo pratica terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "No fim do Canal Sul, a Bóia 14CS separa que destinos?",
+      "group": "Percursos e distancias",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Bóia 14CS",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Bóia 14CS | context:14cs boia canal destinos distancias fim sul"
+        },
+        {
+          "expected": "Tanquisado",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Tanquisado | context:14cs boia canal destinos distancias fim sul"
+        },
+        {
+          "expected": "Eco-Oil",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Eco-Oil | context:14cs boia canal destinos distancias fim sul"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:LISNAVE | context:14cs boia canal destinos distancias fim sul"
+        },
+        {
+          "expected": "Teporset",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:Teporset | context:14cs boia canal destinos distancias fim sul"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Quantos navios grandes podem estar atracados no TMS 1 ao mesmo tempo?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "máximo três navios grandes",
+          "status": "supported",
+          "score": 0.991,
+          "document": "berth_profiles.json",
+          "evidence": "exact:máximo três navios grandes | context:1 cais capacidade estar grandes mesmo navios podem tempo tms"
+        },
+        {
+          "expected": "dois na frente principal",
+          "status": "supported",
+          "score": 0.991,
+          "document": "berth_profiles.json",
+          "evidence": "exact:dois na frente principal | context:1 cais capacidade estar grandes mesmo navios podem tempo tms"
+        },
+        {
+          "expected": "um no Cais 8",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-005_TMS1.txt",
+          "evidence": "exact:um no Cais 8 | context:1 atracados cais estar grandes mesmo navios podem tempo tms"
+        },
+        {
+          "expected": "Cais 8 faz parte do TMS1",
+          "status": "supported",
+          "score": 0.991,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 8 faz parte do TMS1 | context:1 cais capacidade estar grandes mesmo navios podem tempo tms"
+        },
+        {
+          "expected": "Cais 8 é isolado",
+          "status": "supported",
+          "score": 0.973,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:Cais 8 é isolado | context:1 cais capacidade grandes mesmo navios tempo tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Quais são os comprimentos dos cais do TMS 1?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Cais 4 175 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 4 175 m | context:1 cais capacidade comprimentos tms"
+        },
+        {
+          "expected": "Cais 5 175 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 5 175 m | context:1 cais capacidade comprimentos tms"
+        },
+        {
+          "expected": "Cais 6 175 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 6 175 m | context:1 cais capacidade comprimentos tms"
+        },
+        {
+          "expected": "Cais 7 80 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 7 80 m | context:1 cais capacidade comprimentos tms"
+        },
+        {
+          "expected": "Cais 8 215 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 8 215 m | context:1 cais capacidade comprimentos tms"
+        },
+        {
+          "expected": "não tem Cais 3",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:não tem Cais 3 | context:1 cais capacidade comprimentos tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Se um navio não couber no Cais 7 do TMS 1, posso usar o Cais 8 como continuação?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 0.992,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:não | context:1 7 8 cais capacidade como continuacao nao navio posso"
+        },
+        {
+          "expected": "Cais 8",
+          "status": "supported",
+          "score": 0.992,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:Cais 8 | context:1 7 8 cais capacidade como continuacao nao navio posso"
+        },
+        {
+          "expected": "isolado",
+          "status": "supported",
+          "score": 0.992,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:isolado | context:1 7 8 cais capacidade como continuacao nao navio posso"
+        },
+        {
+          "expected": "não serve de continuação do Cais 7",
+          "status": "supported",
+          "score": 0.992,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:não serve de continuação do Cais 7 | context:1 7 8 cais capacidade como continuacao nao navio posso"
+        },
+        {
+          "expected": "usar o lado esquerdo se necessário",
+          "status": "supported",
+          "score": 0.866,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "expected:esquerdo lado necessario usar | context:1 7 8 cais capacidade como nao navio tms usar"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 150 m atribuído ao Cais 7 do TMS 1 ocupa só o Cais 7?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Cais 7",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:Cais 7 | context:1 7 atribuido cais capacidade navio tms"
+        },
+        {
+          "expected": "80 m",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:80 m | context:1 150 7 cais capacidade navio tms"
+        },
+        {
+          "expected": "excede o comprimento",
+          "status": "supported",
+          "score": 0.873,
+          "document": "companions/IT-012_PraiasSado.json",
+          "evidence": "expected:comprimento excede | context:1 7 cais navio"
+        },
+        {
+          "expected": "ocupar cais adjacentes",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "exact:ocupar cais adjacentes | context:1 7 atribuido cais capacidade navio tms"
+        },
+        {
+          "expected": "não usar o Cais 8 como continuação",
+          "status": "supported",
+          "score": 0.94,
+          "document": "companions/IT-005_TMS1.json",
+          "evidence": "expected:8 cais como continuacao nao usar | context:1 7 atribuido cais capacidade navio tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Quando dois navios partilham a frente principal do TMS 1, que folga mínima devo guardar?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "30 m",
+          "status": "supported",
+          "score": 0.979,
+          "document": "berth_profiles.json",
+          "evidence": "exact:30 m | context:1 cais capacidade dois frente minima navios partilham principal quando"
+        },
+        {
+          "expected": "separação",
+          "status": "supported",
+          "score": 0.979,
+          "document": "berth_profiles.json",
+          "evidence": "exact:separação | context:1 cais capacidade dois frente minima navios partilham principal quando"
+        },
+        {
+          "expected": "frente principal",
+          "status": "supported",
+          "score": 0.979,
+          "document": "berth_profiles.json",
+          "evidence": "exact:frente principal | context:1 cais capacidade dois frente minima navios partilham principal quando"
+        },
+        {
+          "expected": "cruzar cabos",
+          "status": "supported",
+          "score": 0.979,
+          "document": "berth_profiles.json",
+          "evidence": "exact:cruzar cabos | context:1 cais capacidade dois frente minima navios partilham principal quando"
+        },
+        {
+          "expected": "evitar contacto",
+          "status": "supported",
+          "score": 0.979,
+          "document": "berth_profiles.json",
+          "evidence": "exact:evitar contacto | context:1 cais capacidade dois frente minima navios partilham principal quando"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Para a regra de capacidade do TMS 1, a partir de que LOA considero navio grande?",
+      "group": "Capacidade de cais",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "large_vessel_loa_m",
+          "status": "supported",
+          "score": 0.97,
+          "document": "berth_profiles.json",
+          "evidence": "exact:large_vessel_loa_m | context:1 cais capacidade loa navio regra tms"
+        },
+        {
+          "expected": "200",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:200 | context:1 cais grande loa navio partir regra tms"
+        },
+        {
+          "expected": "navio grande",
+          "status": "supported",
+          "score": 0.98,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:navio grande | context:1 cais grande loa navio partir regra tms"
+        },
+        {
+          "expected": "TMS1",
+          "status": "supported",
+          "score": 0.97,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:TMS1 | context:1 cais capacidade grande loa navio partir"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual é o comprimento total do TMS 2 e como o portal o divide?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "723 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:723 m | context:2 cais capacidade como comprimento divide portal tms total"
+        },
+        {
+          "expected": "Posição A",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:Posição A | context:2 cais capacidade como comprimento divide portal tms total"
+        },
+        {
+          "expected": "Posição B",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:Posição B | context:2 cais capacidade como comprimento divide portal tms total"
+        },
+        {
+          "expected": "Posição C",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:Posição C | context:2 cais capacidade como comprimento divide portal tms total"
+        },
+        {
+          "expected": "Posição D",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:Posição D | context:2 cais capacidade como comprimento divide portal tms total"
+        },
+        {
+          "expected": "180,75 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:180,75 m | context:2 cais capacidade como comprimento divide portal tms total"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "No TMS 2, quando há vários navios, que intervalo tenho de considerar?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "10% do comprimento de cada navio",
+          "status": "supported",
+          "score": 0.989,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:10% do comprimento de cada navio | context:2 cais capacidade intervalo navios quando tms varios"
+        },
+        {
+          "expected": "30 m",
+          "status": "supported",
+          "score": 0.989,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:30 m | context:2 cais capacidade intervalo navios quando tms varios"
+        },
+        {
+          "expected": "TMS2",
+          "status": "supported",
+          "score": 0.989,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:TMS2 | context:2 cais capacidade intervalo navios quando tms varios"
+        },
+        {
+          "expected": "723 m",
+          "status": "supported",
+          "score": 0.989,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:723 m | context:2 cais capacidade intervalo navios quando tms varios"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 200 m pode ficar no TMS 2 se já lá estiver um de 150 m?",
+      "group": "Capacidade de cais",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "200 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:200 m | context:150 2 200 cais capacidade estiver ficar navio tms"
+        },
+        {
+          "expected": "150 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:150 m | context:150 2 200 cais capacidade estiver ficar navio tms"
+        },
+        {
+          "expected": "10% do comprimento",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:10% do comprimento | context:150 2 200 cais capacidade navio tms"
+        },
+        {
+          "expected": "30 m",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:30 m | context:150 2 200 cais capacidade estiver ficar navio tms"
+        },
+        {
+          "expected": "723 m",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:723 m | context:150 2 200 cais capacidade navio tms"
+        },
+        {
+          "expected": "confirmar calado",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-006_TMS2.json",
+          "evidence": "exact:confirmar calado | context:150 2 200 cais capacidade navio tms"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Podem estar dois navios na Autoeuropa se ambos tiverem menos de 230 m?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "sim",
+          "status": "supported",
+          "score": 0.982,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:sim | context:230 ambos autoeuropa cais capacidade dois estar navios podem"
+        },
+        {
+          "expected": "LOA inferior a 230 m",
+          "status": "supported",
+          "score": 0.982,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:LOA inferior a 230 m | context:230 ambos autoeuropa cais capacidade dois estar navios podem"
+        },
+        {
+          "expected": "Cais 10",
+          "status": "supported",
+          "score": 0.982,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 10 | context:230 autoeuropa cais capacidade dois estar menos navios podem"
+        },
+        {
+          "expected": "Cais 11",
+          "status": "supported",
+          "score": 0.982,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais 11 | context:230 autoeuropa cais capacidade dois estar menos navios podem"
+        },
+        {
+          "expected": "não se aplica folga adicional de 30 m",
+          "status": "supported",
+          "score": 0.982,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:não se aplica folga adicional de 30 m | context:230 ambos autoeuropa cais capacidade dois estar navios podem"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um ro-ro de 230 m na Autoeuropa pode partilhar o terminal com outro navio?",
+      "group": "Capacidade de cais",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "230 m ou mais",
+          "status": "supported",
+          "score": 0.988,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:230 m ou mais | context:230 autoeuropa cais capacidade navio outro terminal"
+        },
+        {
+          "expected": "fica sozinho",
+          "status": "supported",
+          "score": 0.988,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:fica sozinho | context:230 autoeuropa cais capacidade navio outro terminal"
+        },
+        {
+          "expected": "Autoeuropa",
+          "status": "supported",
+          "score": 0.988,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:Autoeuropa | context:230 autoeuropa cais capacidade navio outro terminal"
+        },
+        {
+          "expected": "Cais 10",
+          "status": "supported",
+          "score": 0.988,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:Cais 10 | context:230 autoeuropa cais capacidade navio outro terminal"
+        },
+        {
+          "expected": "Cais 11",
+          "status": "supported",
+          "score": 0.988,
+          "document": "companions/IT-007_AutoEuropa.json",
+          "evidence": "exact:Cais 11 | context:230 autoeuropa cais capacidade navio outro terminal"
+        }
+      ],
+      "forbidden": [
+        "podem estar dois"
+      ]
+    },
+    {
+      "question": "Qual é o comprimento operacional do Tanquisado e o que entra nessa conta?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "463 m",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:463 m | context:comprimento conta criticos entra operacional tanquisado terminais"
+        },
+        {
+          "expected": "cais físico de 75 m",
+          "status": "supported",
+          "score": 0.938,
+          "document": "companions/IT-010_Tanquisado.json",
+          "evidence": "exact:cais físico de 75 m | context:comprimento operacional tanquisado"
+        },
+        {
+          "expected": "dois duques d'Alba",
+          "status": "supported",
+          "score": 0.963,
+          "document": "Porto_Setubal_Terminais_Cais.txt",
+          "evidence": "exact:dois duques d'Alba | context:conta entra operacional tanquisado terminais"
+        },
+        {
+          "expected": "63 m",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:63 m | context:comprimento conta criticos entra operacional tanquisado terminais"
+        },
+        {
+          "expected": "100 m",
+          "status": "supported",
+          "score": 0.95,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:100 m | context:comprimento entra operacional terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Como calculo o calado praticável diurno no Tanquisado?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "6,3 metros + altura da maré",
+          "status": "supported",
+          "score": 0.975,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:6,3 metros + altura da maré | context:calado calculo como diurno praticavel tanquisado"
+        },
+        {
+          "expected": "teto de 9,5 m",
+          "status": "supported",
+          "score": 0.975,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:teto de 9,5 m | context:calado calculo como diurno praticavel tanquisado"
+        },
+        {
+          "expected": "calado máximo",
+          "status": "supported",
+          "score": 0.988,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:calado máximo | context:calado calculo como criticos diurno tanquisado terminais"
+        },
+        {
+          "expected": "validar hora da manobra",
+          "status": "supported",
+          "score": 0.872,
+          "document": "IT-012_PraiasSado.txt",
+          "evidence": "expected:hora manobra validar | context:calado calculo como praticavel terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 150 m pode atracar de noite no Tanquisado?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "apenas nos dias",
+          "status": "supported",
+          "score": 0.971,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:apenas nos dias | context:150 atracar navio noite tanquisado"
+        },
+        {
+          "expected": "duas preia-mares",
+          "status": "supported",
+          "score": 0.971,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:duas preia-mares | context:150 atracar navio noite tanquisado"
+        },
+        {
+          "expected": "período noturno",
+          "status": "supported",
+          "score": 0.971,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:período noturno | context:atracar navio noite tanquisado terminais"
+        },
+        {
+          "expected": "4,8 m + altura de água",
+          "status": "supported",
+          "score": 0.971,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:4,8 m + altura de água | context:150 atracar navio noite tanquisado"
+        },
+        {
+          "expected": "teto máximo de 8,0 m",
+          "status": "supported",
+          "score": 0.971,
+          "document": "IT-010_Tanquisado.txt",
+          "evidence": "exact:teto máximo de 8,0 m | context:150 atracar navio noite tanquisado"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "É possível atracar de noite no Eco-Oil?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 0.986,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:não | context:atracar eco noite oil possivel terminais"
+        },
+        {
+          "expected": "atracação noturna",
+          "status": "supported",
+          "score": 0.986,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:atracação noturna | context:atracar eco noite oil possivel terminais"
+        },
+        {
+          "expected": "proibida",
+          "status": "supported",
+          "score": 0.986,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:proibida | context:atracar eco noite oil possivel terminais"
+        },
+        {
+          "expected": "qualquer condição",
+          "status": "supported",
+          "score": 0.986,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:qualquer condição | context:atracar eco noite oil possivel terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "E sair de noite do Eco-Oil, pode?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "sim",
+          "status": "supported",
+          "score": 0.983,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:sim | context:criticos eco oil sair terminais"
+        },
+        {
+          "expected": "apenas na preia-mar",
+          "status": "supported",
+          "score": 0.967,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:apenas na preia-mar | context:eco noite oil terminais"
+        },
+        {
+          "expected": "até 255 metros",
+          "status": "supported",
+          "score": 0.967,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:até 255 metros | context:eco noite oil terminais"
+        },
+        {
+          "expected": "baixa-mar noturna não há desatracação",
+          "status": "supported",
+          "score": 0.967,
+          "document": "IT-008_EcoOil.txt",
+          "evidence": "exact:baixa-mar noturna não há desatracação | context:eco noite oil terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio com 9,2 m de calado e carga IMO pode atracar na SAPEC Líquidos?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "SAPEC Líquidos",
+          "status": "supported",
+          "score": 0.991,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:SAPEC Líquidos | context:2 9 atracar calado criticos imo liquidos navio sapec terminais"
+        },
+        {
+          "expected": "TGL",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:TGL | context:2 9 atracar calado carga imo liquidos navio sapec terminais"
+        },
+        {
+          "expected": "carga IMO",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:carga IMO | context:2 9 atracar calado carga imo liquidos navio sapec terminais"
+        },
+        {
+          "expected": "9,5 m",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:9,5 m | context:2 9 atracar calado carga imo liquidos navio sapec terminais"
+        },
+        {
+          "expected": "7,1 m + altura de água",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:7,1 m + altura de água | context:2 9 atracar calado carga imo liquidos navio sapec terminais"
+        },
+        {
+          "expected": "comparar com o calado real",
+          "status": "supported",
+          "score": 0.991,
+          "document": "companions/IT-029_SAPEC.json",
+          "evidence": "exact:comparar com o calado real | context:2 9 atracar calado carga imo liquidos navio sapec terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Na SAPEC Líquidos, se o mesmo navio de 9,2 m não tiver carga IMO, muda o limite?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "carga não IMO",
+          "status": "supported",
+          "score": 0.986,
+          "document": "berth_profiles.json",
+          "evidence": "exact:carga não IMO | context:2 9 carga imo limite liquidos mesmo nao navio sapec"
+        },
+        {
+          "expected": "10,0 m",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:10,0 m | context:2 9 criticos imo limite liquidos mesmo nao navio sapec"
+        },
+        {
+          "expected": "7,6 m + altura de água",
+          "status": "supported",
+          "score": 0.986,
+          "document": "berth_profiles.json",
+          "evidence": "exact:7,6 m + altura de água | context:2 9 carga imo limite liquidos mesmo nao navio sapec"
+        },
+        {
+          "expected": "TGL",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:TGL | context:2 9 criticos imo limite liquidos mesmo nao navio sapec"
+        },
+        {
+          "expected": "validar maré/hora",
+          "status": "supported",
+          "score": 0.929,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:validar maré/hora | context:carga imo limite nao"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Com baixa-mar de 0,3 m, a partir de que calado uso carochas no TPS?",
+      "group": "Terminais criticos",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "8,8 + 0,3",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:8,8 + 0,3 | context:0 3 baixa calado carochas mar partir terminais tps uso"
+        },
+        {
+          "expected": "9,1 m",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:9,1 m | context:0 3 baixa calado carochas mar partir terminais tps uso"
+        },
+        {
+          "expected": "carochas",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:carochas | context:0 3 baixa calado carochas mar partir terminais tps uso"
+        },
+        {
+          "expected": "TPS",
+          "status": "supported",
+          "score": 0.991,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:TPS | context:0 3 baixa calado carochas mar partir terminais tps uso"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 180 m pode atracar de noite no Cais Oeste da SECIL?",
+      "group": "Terminais criticos",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:não | context:180 atracar cais criticos navio oeste secil terminais"
+        },
+        {
+          "expected": "LOA superior a 170 m",
+          "status": "supported",
+          "score": 0.978,
+          "document": "IT-009_Secil.txt",
+          "evidence": "exact:LOA superior a 170 m | context:180 atracar cais navio noite oeste secil"
+        },
+        {
+          "expected": "luz do dia",
+          "status": "supported",
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:luz do dia | context:180 atracar cais navio noite oeste secil terminais"
+        },
+        {
+          "expected": "junto da preia-mar",
+          "status": "supported",
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:junto da preia-mar | context:180 atracar cais navio noite oeste secil terminais"
+        },
+        {
+          "expected": "Cais de Oeste",
+          "status": "supported",
+          "score": 0.989,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Cais de Oeste | context:180 atracar cais navio noite oeste secil terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 150 m no Cais Oeste da SECIL pode manobrar de noite?",
+      "group": "Terminais criticos",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "LOA igual ou inferior a 170 metros",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:LOA igual ou inferior a 170 metros | context:150 cais manobrar navio noite oeste secil"
+        },
+        {
+          "expected": "documento não proíbe explicitamente",
+          "status": "supported",
+          "score": 0.978,
+          "document": "berth_profiles.json",
+          "evidence": "exact:documento não proíbe explicitamente | context:cais manobrar navio noite oeste secil terminais"
+        },
+        {
+          "expected": "próximo do reponto",
+          "status": "supported",
+          "score": 0.978,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:próximo do reponto | context:150 cais manobrar navio noite oeste secil"
+        },
+        {
+          "expected": "validar restantes condicionantes",
+          "status": "supported",
+          "score": 0.868,
+          "document": "berth_profiles.json",
+          "evidence": "expected:condicionantes restantes validar | context:cais manobrar navio noite oeste secil terminais"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Com que antecedência marco uma entrada para a SECIL vinda de fora da Barra?",
+      "group": "Marés, Repontos e Meteorologia",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "30 a 45 minutos",
+          "status": "supported",
+          "score": 0.98,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:30 a 45 minutos | context:antecedencia barra entrada fora mares repontos secil vinda"
+        },
+        {
+          "expected": "antes do reponto",
+          "status": "supported",
+          "score": 0.98,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:antes do reponto | context:antecedencia barra entrada fora mares repontos secil vinda"
+        },
+        {
+          "expected": "fora da Barra",
+          "status": "supported",
+          "score": 0.98,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "exact:fora da Barra | context:antecedencia barra entrada fora mares repontos secil vinda"
+        },
+        {
+          "expected": "validar cais, LOA e calado",
+          "status": "supported",
+          "score": 0.906,
+          "document": "companions/IT-009_Secil.json",
+          "evidence": "expected:cais calado loa validar | context:antecedencia barra entrada fora mares repontos secil vinda"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "A saída da SECIL marca-se quanto tempo antes do reponto?",
+      "group": "Marés, Repontos e Meteorologia",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "15 minutos antes do reponto",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Marcar_manobra_repontos_mare.txt",
+          "evidence": "exact:15 minutos antes do reponto | context:antes marca reponto repontos saida secil tempo"
+        },
+        {
+          "expected": "preia-mar",
+          "status": "supported",
+          "score": 0.978,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:preia-mar | context:antes marca mares reponto saida secil tempo"
+        },
+        {
+          "expected": "baixa-mar",
+          "status": "supported",
+          "score": 0.978,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:baixa-mar | context:antes marca mares reponto saida secil tempo"
+        },
+        {
+          "expected": "10 a 15 minutos",
+          "status": "supported",
+          "score": 0.978,
+          "document": "Marcar_manobra_repontos_mare.txt",
+          "evidence": "exact:10 a 15 minutos | context:antes marca reponto repontos saida secil tempo"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 300 m pode entrar na LISNAVE de noite?",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 1.0,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:não | context:300 entrar lisnave navio noite"
+        },
+        {
+          "expected": "superior a 280 metros",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:superior a 280 metros | context:300 entrar lisnave navio noite"
+        },
+        {
+          "expected": "apenas de dia",
+          "status": "supported",
+          "score": 0.96,
+          "document": "IT-038_Alstom.txt",
+          "evidence": "exact:apenas de dia | context:entrar navio noite"
+        },
+        {
+          "expected": "reponto de maré",
+          "status": "supported",
+          "score": 1.0,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:reponto de maré | context:300 entrar lisnave navio noite"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 250 m pode manobrar na LISNAVE de noite?",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "sim",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:sim | context:250 lisnave manobrar navio noite"
+        },
+        {
+          "expected": "até 280 metros",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:até 280 metros | context:250 lisnave manobrar navio noite"
+        },
+        {
+          "expected": "qualquer reponto",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:qualquer reponto | context:250 lisnave manobrar navio noite"
+        },
+        {
+          "expected": "dia ou noite",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-014_Lisnave.json",
+          "evidence": "exact:dia ou noite | context:250 lisnave manobrar navio noite"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 45 m de boca pode ir para o Hidrolift da LISNAVE?",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "Hidrolift",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:Hidrolift | context:45 boca hidrolift lisnave navio"
+        },
+        {
+          "expected": "boca máxima admissível de 32 m",
+          "status": "supported",
+          "score": 0.98,
+          "document": "companions/IT-014_Lisnave.json",
+          "evidence": "exact:boca máxima admissível de 32 m | context:boca hidrolift lisnave navio"
+        },
+        {
+          "expected": "Plataformas 31, 32 e 33",
+          "status": "supported",
+          "score": 0.98,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:Plataformas 31, 32 e 33 | context:boca hidrolift lisnave navio"
+        },
+        {
+          "expected": "não cabe",
+          "status": "supported",
+          "score": 0.887,
+          "document": "berth_profiles.json",
+          "evidence": "expected:cabe nao | context:45 boca hidrolift lisnave navio"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual é o calado máximo da LISNAVE?",
+      "group": "LISNAVE",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não há um calado máximo único",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-014_Lisnave.json",
+          "evidence": "exact:não há um calado máximo único | context:calado lisnave maximo"
+        },
+        {
+          "expected": "depende do destino exato",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/IT-014_Lisnave.json",
+          "evidence": "exact:depende do destino exato | context:calado lisnave maximo"
+        },
+        {
+          "expected": "sonda ao ZH",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:sonda ao ZH | context:calado lisnave maximo"
+        },
+        {
+          "expected": "altura de maré",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:altura de maré | context:calado lisnave maximo"
+        },
+        {
+          "expected": "margens operacionais",
+          "status": "supported",
+          "score": 1.0,
+          "document": "berth_profiles.json",
+          "evidence": "exact:margens operacionais | context:calado lisnave maximo"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual a profundidade da Doca 21 com a comporta aberta e fechada?",
+      "group": "LISNAVE",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "6,10 metros",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:6,10 metros | context:21 aberta comporta doca fechada lisnave profundidade"
+        },
+        {
+          "expected": "comporta aberta",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:comporta aberta | context:21 aberta comporta doca fechada lisnave profundidade"
+        },
+        {
+          "expected": "5,49 metros",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:5,49 metros | context:21 aberta comporta doca fechada lisnave profundidade"
+        },
+        {
+          "expected": "comporta fechada",
+          "status": "supported",
+          "score": 1.0,
+          "document": "IT-014_Lisnave.txt",
+          "evidence": "exact:comporta fechada | context:21 aberta comporta doca fechada lisnave profundidade"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 130 m para um cais da LISNAVE precisa de quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "100 m < LOA <= 150 m",
+          "status": "supported",
+          "score": 0.983,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:100 m < LOA <= 150 m | context:cais lisnave navio precisa rebocadores"
+        },
+        {
+          "expected": "3 rebocadores",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:3 rebocadores | context:130 cais lisnave navio precisa rebocadores"
+        },
+        {
+          "expected": "cais",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:cais | context:130 cais lisnave navio precisa rebocadores"
+        },
+        {
+          "expected": "não confundir com doca",
+          "status": "supported",
+          "score": 0.857,
+          "document": "berth_profiles.json",
+          "evidence": "expected:confundir doca nao | context:cais lisnave navio rebocadores"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "E se o navio tiver 180 m para a LISNAVE, quantos rebocadores devo prever?",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 3,
+      "supported_count": 3,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "150 m < LOA <= 199 m",
+          "status": "supported",
+          "score": 0.943,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:150 m < LOA <= 199 m | context:lisnave navio rebocadores"
+        },
+        {
+          "expected": "4 rebocadores",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:4 rebocadores | context:180 lisnave navio prever rebocadores tiver"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:LISNAVE | context:180 lisnave navio prever rebocadores tiver"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio de 230 m para a LISNAVE leva quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 3,
+      "supported_count": 3,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "200 m <= LOA <= 250 m",
+          "status": "supported",
+          "score": 0.96,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:200 m <= LOA <= 250 m | context:lisnave navio rebocadores"
+        },
+        {
+          "expected": "5 rebocadores",
+          "status": "supported",
+          "score": 0.96,
+          "document": "Notes_on_Shiphandling_Practical.txt",
+          "evidence": "exact:5 rebocadores | context:lisnave navio rebocadores"
+        },
+        {
+          "expected": "LISNAVE",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:LISNAVE | context:230 leva lisnave navio rebocadores"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio com 270 m para a LISNAVE precisa de quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 3,
+      "supported_count": 3,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "LOA > 250 m",
+          "status": "supported",
+          "score": 0.98,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:LOA > 250 m | context:lisnave navio precisa rebocadores"
+        },
+        {
+          "expected": "6 rebocadores",
+          "status": "supported",
+          "score": 0.98,
+          "document": "IT-018_NormasEspeciais.txt",
+          "evidence": "exact:6 rebocadores | context:lisnave navio precisa rebocadores"
+        },
+        {
+          "expected": "máximo operacional",
+          "status": "supported",
+          "score": 0.98,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:máximo operacional | context:lisnave navio precisa rebocadores"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "RORO de 230 m com vento Norte forte a entrar, quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "roro",
+          "status": "supported",
+          "score": 1.0,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:roro | context:230 entrar forte norte rebocadores roro vento"
+        },
+        {
+          "expected": "mais de 220 m",
+          "status": "supported",
+          "score": 0.986,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:mais de 220 m | context:entrar forte norte rebocadores roro vento"
+        },
+        {
+          "expected": "vento Norte forte",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:vento Norte forte | context:230 entrar forte norte rebocadores roro vento"
+        },
+        {
+          "expected": "4 rebocadores grandes",
+          "status": "supported",
+          "score": 0.986,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:4 rebocadores grandes | context:entrar forte norte rebocadores roro vento"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um graneleiro de 190 m a sair do TMS2 com vento Norte forte leva quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "graneleiro",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:graneleiro | context:190 forte graneleiro leva norte rebocadores sair tms2 vento"
+        },
+        {
+          "expected": "vento Norte forte",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:vento Norte forte | context:190 forte graneleiro leva norte rebocadores sair tms2 vento"
+        },
+        {
+          "expected": "saída",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:saída | context:190 forte graneleiro leva norte rebocadores sair tms2 vento"
+        },
+        {
+          "expected": "4 rebocadores grandes",
+          "status": "supported",
+          "score": 0.978,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:4 rebocadores grandes | context:forte graneleiro norte rebocadores sair tms2 vento"
+        },
+        {
+          "expected": "TMS2",
+          "status": "supported",
+          "score": 1.0,
+          "document": "practice_maneuver_experience.json",
+          "evidence": "exact:TMS2 | context:190 forte graneleiro leva norte rebocadores sair tms2 vento"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Navio sem bowthruster de 110 m e calado 8 m precisa de que rebocador?",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "sem bowthruster",
+          "status": "supported",
+          "score": 1.0,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:sem bowthruster | context:110 8 bowthruster calado navio precisa rebocador rebocadores sem"
+        },
+        {
+          "expected": "LOA < 120 m",
+          "status": "supported",
+          "score": 0.989,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:LOA < 120 m | context:8 bowthruster calado navio precisa rebocador rebocadores sem"
+        },
+        {
+          "expected": "calado >= 8 m",
+          "status": "supported",
+          "score": 0.989,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:calado >= 8 m | context:8 bowthruster calado navio precisa rebocador rebocadores sem"
+        },
+        {
+          "expected": "1 rebocador grande",
+          "status": "supported",
+          "score": 0.989,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:1 rebocador grande | context:8 bowthruster calado navio precisa rebocador rebocadores sem"
+        },
+        {
+          "expected": "35 t",
+          "status": "supported",
+          "score": 0.989,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:35 t | context:8 bowthruster calado navio precisa rebocador rebocadores sem"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Um navio sem bowthruster de 140 m deve levar quantos rebocadores?",
+      "group": "Rebocadores",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "sem bowthruster",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:sem bowthruster | context:140 bowthruster deve navio rebocadores sem"
+        },
+        {
+          "expected": "120 m <= LOA <= 150 m",
+          "status": "supported",
+          "score": 0.971,
+          "document": "tug_operational_guidance.json",
+          "evidence": "exact:120 m <= LOA <= 150 m | context:bowthruster deve navio rebocadores sem"
+        },
+        {
+          "expected": "2 rebocadores",
+          "status": "supported",
+          "score": 0.971,
+          "document": "Condicoes_Meteorologicas_Prioridades.txt",
+          "evidence": "exact:2 rebocadores | context:bowthruster deve navio rebocadores sem"
+        },
+        {
+          "expected": "grandes",
+          "status": "supported",
+          "score": 0.986,
+          "document": "Notas_Pilotagem.txt",
+          "evidence": "exact:grandes | context:140 bowthruster deve navio rebocadores sem"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Se estiver 31 kt de vento, posso sair com 4 rebocadores?",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "vento superior a 30 kt",
+          "status": "supported",
+          "score": 0.967,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:vento superior a 30 kt | context:4 estiver meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "todas as manobras ficam suspensas",
+          "status": "supported",
+          "score": 0.967,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:todas as manobras ficam suspensas | context:4 estiver meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "independentemente do número de rebocadores",
+          "status": "supported",
+          "score": 0.862,
+          "document": "operational_safety_limits.json",
+          "evidence": "expected:independentemente numero rebocadores | context:4 estiver meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "retomar abaixo de 25 kt",
+          "status": "supported",
+          "score": 0.865,
+          "document": "tug_operational_guidance.json",
+          "evidence": "expected:25 abaixo retomar | context:4 estiver rebocadores sair seguranca vento"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Com 26 kt de vento a manobra está automaticamente autorizada se houver rebocadores?",
+      "group": "Meteorologia e segurança",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "acima de 25 kt",
+          "status": "supported",
+          "score": 0.97,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:acima de 25 kt | context:esta houver manobra meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "geralmente impraticáveis",
+          "status": "supported",
+          "score": 0.97,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:geralmente impraticáveis | context:esta houver manobra meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "avaliar caso a caso",
+          "status": "supported",
+          "score": 0.97,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:avaliar caso a caso | context:esta houver manobra meteorologia rebocadores seguranca vento"
+        },
+        {
+          "expected": "não autorização automática",
+          "status": "supported",
+          "score": 0.866,
+          "document": "operational_safety_limits.json",
+          "evidence": "expected:automatica autorizacao nao | context:esta houver manobra meteorologia rebocadores seguranca vento"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Com nevoeiro em porto posso continuar a marcar manobras?",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 3,
+      "supported_count": 3,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "nevoeiro em porto",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:nevoeiro em porto | context:continuar manobras meteorologia nevoeiro porto seguranca"
+        },
+        {
+          "expected": "todas as manobras ficam suspensas",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:todas as manobras ficam suspensas | context:continuar manobras meteorologia nevoeiro porto seguranca"
+        },
+        {
+          "expected": "visibilidade restaurada",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:visibilidade restaurada | context:continuar manobras meteorologia nevoeiro porto seguranca"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Fui apanhado por nevoeiro já a navegar no canal, o que faço?",
+      "group": "Meteorologia e segurança",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "velocidade de segurança",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:velocidade de segurança | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        },
+        {
+          "expected": "máquinas prontas",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:máquinas prontas | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        },
+        {
+          "expected": "vigia reforçada",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:vigia reforçada | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        },
+        {
+          "expected": "Regra 19",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:Regra 19 | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        },
+        {
+          "expected": "sinais de nevoeiro",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:sinais de nevoeiro | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        },
+        {
+          "expected": "VHF 73",
+          "status": "supported",
+          "score": 0.975,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:VHF 73 | context:apanhado canal meteorologia navegar nevoeiro seguranca"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Em rumos cruzados, se vejo o outro navio por estibordo, quem deve manobrar?",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "rumos cruzados",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:rumos cruzados | context:colreg cruzados deve estibordo manobrar navio outro quem rieam rumos"
+        },
+        {
+          "expected": "outro por estibordo",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:outro por estibordo | context:colreg cruzados deve estibordo manobrar navio outro quem rieam rumos"
+        },
+        {
+          "expected": "manobrar",
+          "status": "supported",
+          "score": 1.0,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:manobrar | context:colreg cruzados deve estibordo manobrar navio outro quem rieam rumos"
+        },
+        {
+          "expected": "evitar cruzar pela proa",
+          "status": "supported",
+          "score": 0.893,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "expected:cruzar evitar pela proa | context:colreg cruzados deve estibordo manobrar navio outro quem rieam rumos"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual é o sinal sonoro de nevoeiro de navio de propulsão mecânica com seguimento?",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "1 som prolongado",
+          "status": "supported",
+          "score": 0.989,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:1 som prolongado | context:colreg mecanica navio nevoeiro propulsao rieam seguimento sinal"
+        },
+        {
+          "expected": "intervalos máximos de 2 minutos",
+          "status": "supported",
+          "score": 0.989,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:intervalos máximos de 2 minutos | context:colreg mecanica navio nevoeiro propulsao rieam seguimento sinal"
+        },
+        {
+          "expected": "Regra 35",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/RIEAM_COLREG_Regras_Estrada.json",
+          "evidence": "exact:Regra 35 | context:colreg mecanica navio nevoeiro propulsao rieam seguimento sinal sonoro"
+        },
+        {
+          "expected": "visibilidade reduzida",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/RIEAM_COLREG_Regras_Estrada.json",
+          "evidence": "exact:visibilidade reduzida | context:colreg mecanica navio nevoeiro propulsao rieam seguimento sinal sonoro"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "E se estiver pairando sem seguimento no nevoeiro, que sinal faço?",
+      "group": "COLREG / RIEAM",
+      "risk": "Alto",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "2 sons prolongados",
+          "status": "supported",
+          "score": 0.989,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:2 sons prolongados | context:colreg estiver nevoeiro pairando rieam seguimento sem sinal"
+        },
+        {
+          "expected": "intervalos máximos de 2 minutos",
+          "status": "supported",
+          "score": 0.989,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:intervalos máximos de 2 minutos | context:colreg estiver nevoeiro pairando rieam seguimento sem sinal"
+        },
+        {
+          "expected": "sem seguimento",
+          "status": "supported",
+          "score": 0.989,
+          "document": "operational_safety_limits.json",
+          "evidence": "exact:sem seguimento | context:colreg estiver nevoeiro pairando rieam seguimento sem sinal"
+        },
+        {
+          "expected": "Regra 35",
+          "status": "supported",
+          "score": 0.989,
+          "document": "RIEAM_COLREG_Regras_Estrada.txt",
+          "evidence": "exact:Regra 35 | context:colreg estiver nevoeiro pairando rieam seguimento sem sinal"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Se eu disser 'tem carga IMO' depois de perguntar por 9,2 m na SAPEC, podes responder só '9,5 metros'?",
+      "group": "Qualidade de resposta",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 6,
+      "supported_count": 6,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 0.964,
+          "document": "Porto_Setubal_Terminais_Cais.txt",
+          "evidence": "exact:não | context:2 5 9 carga depois metros responder resposta sapec"
+        },
+        {
+          "expected": "resposta fundamentada",
+          "status": "supported",
+          "score": 0.929,
+          "document": "companions/Resposta_PRAGtico_Estilo.json",
+          "evidence": "exact:resposta fundamentada | context:carga imo responder resposta"
+        },
+        {
+          "expected": "carga IMO",
+          "status": "supported",
+          "score": 0.957,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:carga IMO | context:2 5 9 carga imo metros resposta sapec"
+        },
+        {
+          "expected": "9,5 m",
+          "status": "supported",
+          "score": 0.957,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:9,5 m | context:2 5 9 carga imo metros resposta sapec"
+        },
+        {
+          "expected": "7,1 m + altura de água",
+          "status": "supported",
+          "score": 0.957,
+          "document": "IT-029_SAPEC.txt",
+          "evidence": "exact:7,1 m + altura de água | context:2 5 9 carga imo metros resposta sapec"
+        },
+        {
+          "expected": "comparar com calado real",
+          "status": "supported",
+          "score": 0.874,
+          "document": "companions/IT-029_SAPEC.json",
+          "evidence": "expected:calado comparar real | context:2 5 9 carga imo metros responder sapec"
+        }
+      ],
+      "forbidden": [
+        "A resposta direta: 9,5 metros"
+      ]
+    },
+    {
+      "question": "Quando eu digo 'revê a tua resposta' numa pergunta de maré, o que deve acontecer?",
+      "group": "Qualidade de resposta",
+      "risk": "Critico",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "reavaliar a regra",
+          "status": "supported",
+          "score": 0.973,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:reavaliar a regra | context:acontecer deve mare pergunta quando resposta reve tua"
+        },
+        {
+          "expected": "corrigir se necessário",
+          "status": "supported",
+          "score": 0.973,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:corrigir se necessário | context:acontecer deve mare pergunta quando resposta reve tua"
+        },
+        {
+          "expected": "não inventar dados",
+          "status": "supported",
+          "score": 0.973,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:não inventar dados | context:acontecer deve mare pergunta quando resposta reve tua"
+        },
+        {
+          "expected": "explicar a diferença",
+          "status": "supported",
+          "score": 0.973,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:explicar a diferença | context:acontecer deve mare pergunta quando resposta reve tua"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Como deve ser o tom das respostas operacionais do PRAGtico?",
+      "group": "Qualidade de resposta",
+      "risk": "Medio",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "cordial",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:cordial | context:como deve operacionais pragtico resposta respostas ser tom"
+        },
+        {
+          "expected": "rigoroso",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:rigoroso | context:como deve operacionais pragtico resposta respostas ser tom"
+        },
+        {
+          "expected": "amigável",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:amigável | context:como deve operacionais pragtico resposta respostas ser tom"
+        },
+        {
+          "expected": "pelo menos 1 emoji",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:pelo menos 1 emoji | context:como deve operacionais pragtico resposta respostas ser tom"
+        },
+        {
+          "expected": "fundamentação mínima",
+          "status": "supported",
+          "score": 0.989,
+          "document": "Resposta_PRAGtico_Estilo.txt",
+          "evidence": "exact:fundamentação mínima | context:como deve operacionais pragtico resposta respostas ser tom"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "O que há de especial no Outão?",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "barra do Sado",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:barra do Sado | context:cultura especial geral outao setubal"
+        },
+        {
+          "expected": "atalaia de 1390",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:atalaia de 1390 | context:cultura especial geral outao setubal"
+        },
+        {
+          "expected": "farol instalado em 1880",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:farol instalado em 1880 | context:cultura especial geral outao setubal"
+        },
+        {
+          "expected": "Hospital Ortopédico",
+          "status": "supported",
+          "score": 1.0,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:Hospital Ortopédico | context:cultura especial geral outao setubal"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Porque é interessante o Forte de São Filipe?",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "1582",
+          "status": "supported",
+          "score": 0.971,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:1582 | context:cultura filipe forte geral setubal"
+        },
+        {
+          "expected": "Filipe I/II",
+          "status": "supported",
+          "score": 0.971,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:Filipe I/II | context:cultura filipe forte geral setubal"
+        },
+        {
+          "expected": "planta em estrela",
+          "status": "supported",
+          "score": 0.971,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:planta em estrela | context:cultura filipe forte geral setubal"
+        },
+        {
+          "expected": "seis baluartes",
+          "status": "supported",
+          "score": 0.971,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:seis baluartes | context:cultura filipe forte geral setubal"
+        },
+        {
+          "expected": "baía do Sado",
+          "status": "supported",
+          "score": 0.971,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:baía do Sado | context:cultura filipe forte geral setubal"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Qual é o prato típico mais conhecido de Setúbal?",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Baixo",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 4,
+      "supported_count": 4,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "choco frito",
+          "status": "supported",
+          "score": 0.957,
+          "document": "Setubal_Historia_Cultura.txt",
+          "evidence": "exact:choco frito | context:cultura mais prato setubal"
+        },
+        {
+          "expected": "peixe",
+          "status": "supported",
+          "score": 0.957,
+          "document": "Setubal_Historia_Cultura.txt",
+          "evidence": "exact:peixe | context:cultura mais prato setubal"
+        },
+        {
+          "expected": "marisco",
+          "status": "supported",
+          "score": 0.957,
+          "document": "Setubal_Historia_Cultura.txt",
+          "evidence": "exact:marisco | context:cultura mais prato setubal"
+        },
+        {
+          "expected": "Sado",
+          "status": "supported",
+          "score": 0.957,
+          "document": "AdmiraltyPilot_PortoSetubal.txt",
+          "evidence": "exact:Sado | context:geral mais setubal tipico"
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "question": "Posso usar a cultura geral de Setúbal para validar uma manobra?",
+      "group": "Cultura Geral de Setúbal",
+      "risk": "Medio",
+      "source": "curated_operational_qa_memory_20260512:curated_records",
+      "answer_origin": "knowledge_curated",
+      "status": "supported",
+      "reason": "Todos os factos esperados têm suporte lexical forte na knowledge atual.",
+      "volatile_or_command": false,
+      "known_conflict": false,
+      "expected_count": 5,
+      "supported_count": 5,
+      "partial_count": 0,
+      "unsupported_count": 0,
+      "support": [
+        {
+          "expected": "não",
+          "status": "supported",
+          "score": 0.986,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:não | context:cultura geral manobra setubal usar validar"
+        },
+        {
+          "expected": "contexto histórico e cultural",
+          "status": "supported",
+          "score": 0.986,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:contexto histórico e cultural | context:cultura geral manobra setubal usar validar"
+        },
+        {
+          "expected": "instruções de trabalho",
+          "status": "supported",
+          "score": 0.986,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:instruções de trabalho | context:cultura geral manobra setubal usar validar"
+        },
+        {
+          "expected": "fontes operacionais",
+          "status": "supported",
+          "score": 0.986,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:fontes operacionais | context:cultura geral manobra setubal usar validar"
+        },
+        {
+          "expected": "dados live",
+          "status": "supported",
+          "score": 0.986,
+          "document": "companions/Setubal_Historia_Cultura.json",
+          "evidence": "exact:dados live | context:cultura geral manobra setubal usar validar"
         }
       ],
       "forbidden": []

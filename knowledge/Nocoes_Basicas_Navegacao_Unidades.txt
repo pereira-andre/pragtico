@@ -25,6 +25,12 @@ Velocidade:
 - 1 no = 1,852 km/h.
 - 1 km/h = 0,5399568 nos.
 
+Tempo estimado de percurso:
+- Tempo em horas = distancia em milhas nauticas / velocidade em nos.
+- A 6 nos, 1 milha nautica demora 10 minutos.
+- A 6 nos, 0,5 milhas nauticas demora 5 minutos.
+- A 6 nos, 2,0 milhas nauticas demoram 20 minutos.
+
 Notas de uso:
 - Em navegacao, "milha" deve ser interpretada como milha nautica, salvo indicacao contraria.
 - Para distancia de rota, resguardo e alcance de luzes, usar milhas nauticas, metros e cabos/manilhas quando fizer sentido.
@@ -74,6 +80,9 @@ Resposta: 100 jardas = 91,44 m.
 
 Pergunta: Forca 6 Beaufort equivale a quantos nos?
 Resposta: Beaufort 6 = 22-27 kt, equivalente a 39-49 km/h, descrito como vento fresco.
+
+Pergunta: A 6 nos, quanto tempo demora 1 milha nautica?
+Resposta: Cerca de 10 minutos, porque 1 no corresponde a 1 milha nautica por hora.
 
 Pergunta: O que significa "1 manilha na agua"?
 Resposta: Significa cerca de 27,5 m de amarra na agua. Em emergencia, a decisao de largar ferro depende sempre de agua, fundo, espaco, trafego, vento/corrente e instrucao operacional.
