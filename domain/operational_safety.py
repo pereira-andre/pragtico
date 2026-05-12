@@ -103,6 +103,12 @@ def looks_like_operational_safety_question(question: str) -> bool:
 
 def looks_like_emergency_response_question(question: str) -> bool:
     text = question or ""
+    if SOURCE_COVERAGE_RE.search(text) and re.search(
+        r"\b(colreg|rieam|anti[-\s]?colis[aã]o|abalroamento)\b",
+        text,
+        re.IGNORECASE,
+    ):
+        return False
     if not EMERGENCY_RESPONSE_RE.search(text):
         return False
     if PROSPECTIVE_COLLISION_RE.search(text) and not ACTUAL_COLLISION_RE.search(text):

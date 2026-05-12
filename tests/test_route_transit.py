@@ -164,6 +164,29 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("Tanquisado/Eco-Oil", answer["answer"])
         self.assertNotIn("dois rebocadores à popa", answer["answer"])
 
+    def test_pilot_station_distance_uses_pilot_wording_not_barra_draft(self) -> None:
+        answer = route_transit_answer("A que distância está a posição de embarque dos pilotos da entrada da barra?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("pilotos", answer["answer"])
+        self.assertIn("1 milha náutica", answer["answer"])
+        self.assertIn("entrada da Barra", answer["answer"])
+        self.assertNotIn("Calado máximo", answer["answer"])
+
+    def test_fundeadouro_norte_to_lisnave_reponto_lead_time_is_one_hour(self) -> None:
+        answer = route_transit_answer(
+            "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Percurso/duracao", answer["answer"])
+        self.assertIn("cerca de 1 hora", answer["answer"])
+        self.assertIn("20:03", answer["answer"])
+        self.assertIn("19:03", answer["answer"])
+        self.assertIn("fase critica", answer["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

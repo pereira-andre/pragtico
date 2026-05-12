@@ -999,8 +999,81 @@ def _looks_like_route_question(clean_question: str) -> bool:
     return bool(_query_metric(clean_question) and ROUTE_LINK_RE.search(clean_question))
 
 
+def _pilot_station_distance_answer(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(posicao\s+de\s+embarque|posicao\s+embarque|pilotos?|pilot\s+station)\b", clean_question):
+        return None
+    if not re.search(r"\b(entrada\s+da\s+barra|barra|pilar\s*2)\b", clean_question):
+        return None
+    answer = (
+        "A posição de embarque dos pilotos fica 1 milha náutica fora da entrada da Barra / Pilar 2. "
+        "Na malha de percurso, é o segmento Pilot station / posição de embarque -> Pilar 2 / entrada da Barra, rumo 040°, distância 1,0 NM."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "setubal_route_planning.json",
+                "source_id": "ROUTE_PILOT_STATION_BARRA_DISTANCE",
+                "retrieval_mode": "route_transit_fact",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
+def _reponto_time_from_question(question: str) -> tuple[int, int, str] | None:
+    for match in re.finditer(r"\b(\d{1,2})(?::|h)(\d{2})\b", question or "", flags=re.IGNORECASE):
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return hour, minute, f"{hour:02d}:{minute:02d}"
+    return None
+
+
+def _subtract_minutes_label(hour: int, minute: int, delta_minutes: int) -> str:
+    total = (hour * 60 + minute - delta_minutes) % (24 * 60)
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str) -> dict | None:
+    if not (_matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and _matches_any(clean_question, DEST_LISNAVE)):
+        return None
+    if "reponto" not in clean_question:
+        return None
+    parsed = _reponto_time_from_question(question)
+    reponto_label = parsed[2] if parsed else "do reponto pretendido"
+    depart_label = _subtract_minutes_label(parsed[0], parsed[1], 60) if parsed else "cerca de 1 hora antes"
+    answer = (
+        "Percurso/duracao: do Fundeadouro Norte para a LISNAVE/Mitrena conta com cerca de 1 hora.\n"
+        f"Para chegar ao reponto das {reponto_label}, a largada deve ser por volta das {depart_label}.\n"
+        "A fase critica é no cais/doca: a LISNAVE deve ser trabalhada próximo do reponto de maré, porque os cais ficam perpendiculares à corrente.\n"
+        "Confirmar ainda o cais/doca concreto, calado, vento, rebocadores e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Marcar_manobra_repontos_mare.txt",
+                "source_id": "ROUTE_FUNDEADOURO_NORTE_LISNAVE_REPONTO_LEAD_TIME",
+                "retrieval_mode": "route_transit_summary",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
 def route_transit_answer(question: str, clean_question: str | None = None) -> dict | None:
     clean = clean_question or _normalize(question)
+    pilot_distance = _pilot_station_distance_answer(question, clean)
+    if pilot_distance:
+        return pilot_distance
+    lisnave_reponto = _fundeadouro_norte_lisnave_reponto_answer(question, clean)
+    if lisnave_reponto:
+        return lisnave_reponto
     route_order = _route_order_answer(question, clean)
     if route_order:
         return route_order

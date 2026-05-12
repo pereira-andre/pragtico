@@ -592,6 +592,92 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("rajadas 20 kts", payload["answer"])
         self.assertIn("ponderar atrasar", payload["answer"])
 
+    def test_alstom_wind_limit_blocks_at_15_knots_with_local_rules(self) -> None:
+        answer = self._answer("Entrada para a Alstom desde a Barra com vento 15 kts pode avançar?")
+
+        self.assertIn("Local: ALSTOM", answer)
+        self.assertIn("atracam apenas por estibordo", answer)
+        self.assertIn("reponto de preia-mar", answer)
+        self.assertIn("1h30", answer)
+        self.assertIn("inferior a 15 kt", answer)
+        self.assertIn("atinge/excede o limite local", answer)
+
+    def test_lisnave_cais_3a_length_uses_dolphin_operational_total(self) -> None:
+        answer = self._answer("Navio de 360 m cabe no Cais 3 A da Lisnave?")
+
+        self.assertIn("Cais 3 A", answer)
+        self.assertIn("240 m", answer)
+        self.assertIn("115 m", answer)
+        self.assertIn("Duque d'Alba", answer)
+        self.assertIn("366 metros de comprimento operacional", answer)
+        self.assertIn("360 m fica dentro", answer)
+
+    def test_tanquisado_length_uses_operational_total_not_physical_slot(self) -> None:
+        answer = self._answer("Qual é o comprimento operacional do Tanquisado com duques d'alba?")
+
+        self.assertIn("IT-010_Tanquisado.txt", answer)
+        self.assertIn("Comprimento operacional total: 463 m", answer)
+        self.assertIn("cais físico de 75 m", answer)
+        self.assertIn("dois duques d'alba", answer)
+        self.assertIn("não deve ser avaliado só pelo slot", answer)
+
+    def test_doca21_depth_answer_includes_open_and_closed_gate_values(self) -> None:
+        answer = self._answer("Qual é a profundidade disponível na entrada da Doca 21 com a comporta aberta?")
+
+        self.assertIn("6,10 metros", answer)
+        self.assertIn("5,49 metros", answer)
+        self.assertIn("comporta aberta", answer)
+        self.assertIn("comporta fechada", answer)
+
+    def test_tanquisado_two_tugs_is_explicitly_insufficient(self) -> None:
+        answer = self._answer("Entrada para Tanquisado com 2 rebocadores pode avancar?")
+
+        self.assertIn("Recomendo 3 rebocadores", answer)
+        self.assertIn("Rebocadores insuficientes", answer)
+        self.assertIn("foram indicados 2", answer)
+
+    def test_barra_draft_tup_and_visibility_threshold_have_direct_answers(self) -> None:
+        barra = self._answer("Qual é o calado máximo na barra do Porto de Setúbal?")
+        tup = self._answer("Qual é a fórmula da TUP para um navio de contentores?")
+        visibility = self._answer("Se o live feed indicar 1,0 km de visibilidade, o bot trata como visibilidade reduzida?")
+
+        self.assertIn("10,30 m + altura da maré", barra)
+        self.assertIn("12,0 m", barra)
+        self.assertIn("ondulação inferior a 1 m", barra)
+        self.assertIn("TUP = GT x UP", tup)
+        self.assertIn("contentores", tup)
+        self.assertIn("fog_visibility_km_reference", visibility)
+        self.assertIn("1.0 km", visibility)
+        self.assertIn("visibilidade operacional reduzida", visibility)
+
+    def test_checklist_answers_pull_terminal_specific_sources(self) -> None:
+        eco = self._answer("A checklist puxa regras Eco-Oil para uma entrada?")
+        tanq = self._answer("A checklist puxa regras Tanquisado para uma saida?")
+        lisnave = self._answer("A checklist da manobra avisa se uma doca Lisnave estiver com 3 rebocadores?")
+
+        self.assertIn("IT-008_EcoOil.txt", eco)
+        self.assertIn("Atracacao noturna proibida", eco)
+        self.assertIn("IT-010_Tanquisado.txt", tanq)
+        self.assertIn("calado maximo absoluto", tanq)
+        self.assertIn("Saida fora de reponto", tanq)
+        self.assertIn("preia-mar precedente", tanq)
+        self.assertIn("Lisnave - doca", lisnave)
+        self.assertIn("3 rebocadores", lisnave)
+        self.assertIn("4 rebocadores", lisnave)
+        self.assertIn("proa a norte", lisnave)
+
+    def test_navigation_lights_source_coverage_does_not_route_to_colreg_fishing(self) -> None:
+        payload = answer_direct_operational_query(
+            "A fonte de luzes tem registos indexáveis da Boia 1CN, Boia 2CS e Doca Pesca?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("navigation_lights", payload["answer_origin"])
+        self.assertIn("Doca Pesca", payload["answer"])
+        self.assertIn("Boia N.º 1CN", payload["answer"])
+        self.assertIn("Boia N.º 2CS", payload["answer"])
+        self.assertNotIn("Regra 26 - Pesca", payload["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()
