@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import time
 import csv
 from copy import deepcopy
@@ -49,7 +48,6 @@ from storage.port_call_helpers import _decorate_port_call
 
 TEST_VESSEL_PREFIX = "TESTE QA"
 RAILWAY_BOT_TEST_FIXTURE = Path(__file__).resolve().parents[1] / "resources" / "qa" / "railway_bot_tests_150.json"
-COMPLEMENTARY_BOT_QA_SUITE = "Perguntas complementares: navegação, segurança e Setúbal"
 QUERY_SLASH_COMMANDS = {
     "local_warnings",
     "wave",
@@ -67,71 +65,6 @@ QUERY_SLASH_COMMANDS = {
     "consult_vessel",
     "rule",
 }
-
-BOT_COMPLEMENTARY_QA_TESTS: list[tuple[str, str, str, tuple[str, ...]]] = [
-    ("COLREG / RIEAM", "Alto", "Num canal estreito, posso ultrapassar outro navio por qualquer bordo?", ("Regra 9", "ultrapassagem", "acordo")),
-    ("COLREG / RIEAM", "Alto", "Dois navios de propulsão mecânica estão roda a roda. O que deve cada um fazer?", ("Regra 14", "guinar para estibordo", "bombordo com bombordo")),
-    ("COLREG / RIEAM", "Alto", "Em rumos cruzados, quem deve manobrar quando vejo o outro por estibordo?", ("Regra 15", "cede passagem", "estibordo")),
-    ("COLREG / RIEAM", "Alto", "O navio que mantém rumo e velocidade pode ficar sem fazer nada se o outro não manobrar?", ("Regra 17", "manter rumo e velocidade", "manobrar")),
-    ("COLREG / RIEAM", "Médio", "O que exige a Regra 5 sobre vigia?", ("vigia", "visual", "auditiva")),
-    ("COLREG / RIEAM", "Médio", "Como explicas velocidade de segurança pela Regra 6?", ("velocidade de segurança", "visibilidade", "tráfego")),
-    ("COLREG / RIEAM", "Médio", "Como avalio risco de abalroamento pela Regra 7?", ("risco de abalroamento", "marcação", "radar")),
-    ("COLREG / RIEAM", "Médio", "A manobra para evitar abalroamento deve ser pequena ou evidente?", ("Regra 8", "ampla", "tempo")),
-    ("COLREG / RIEAM", "Médio", "Que luzes mostra um navio de propulsão mecânica em andamento?", ("luz de mastro", "bordos", "alcançado")),
-    ("COLREG / RIEAM", "Médio", "Que sinal sonoro faz um navio com seguimento em visibilidade reduzida?", ("som prolongado", "2 minutos", "visibilidade reduzida")),
-    ("COLREG / RIEAM", "Médio", "Um navio a dragar no canal mostra que bordo livre para passar?", ("dragagem", "bordo livre", "luzes")),
-    ("COLREG / RIEAM", "Médio", "Se estou a ultrapassar, deixo de ser obrigado a manter-me afastado quando fico pelo través?", ("ultrapassagem", "manter-se afastado", "livre")),
-    ("Nevoeiro e Segurança", "Crítico", "Com nevoeiro no porto posso autorizar uma entrada?", ("nevoeiro", "suspensas", "visibilidade")),
-    ("Nevoeiro e Segurança", "Crítico", "O navio já está a navegar e entra nevoeiro súbito. O que faço primeiro?", ("velocidade de segurança", "máquinas prontas", "VTS")),
-    ("Nevoeiro e Segurança", "Alto", "Com visibilidade de 1 km devo tratar como visibilidade reduzida?", ("1.0 km", "visibilidade operacional reduzida", "cautela")),
-    ("Nevoeiro e Segurança", "Alto", "Em nevoeiro, AIS substitui vigia e radar?", ("não substitui", "vigia", "radar")),
-    ("Nevoeiro e Segurança", "Alto", "Que prioridade dou aos navios quando levanta o nevoeiro?", ("prioridade", "reponto", "passageiros")),
-    ("Nevoeiro e Segurança", "Alto", "Se ouço sinal de nevoeiro para vante e não vejo o alvo, devo manter velocidade?", ("reduzir", "mínimo", "precaução")),
-    ("Nevoeiro e Segurança", "Médio", "Que sinal faz um navio fundeado com nevoeiro?", ("fundeado", "sino", "nevoeiro")),
-    ("Nevoeiro e Segurança", "Médio", "Quando vento acima de 30 kt suspende manobras, quando posso retomar?", ("30 kt", "25 kt", "retomar")),
-    ("Nevoeiro e Segurança", "Médio", "Se ainda estou antes do canal e aparece nevoeiro forte, sigo ou aborto?", ("abortar", "antes de entrar", "fundeadouro")),
-    ("Nevoeiro e Segurança", "Médio", "Em emergência por perda de máquina no canal, qual é a primeira ação?", ("largar ferro", "VHF 73", "rebocadores")),
-    ("Marés, Repontos e Meteorologia", "Crítico", "De acordo com a próxima maré, a que horas marco uma entrada para a SECIL?", ("30-45 min", "45 min a 1 h", "não uses 15 min")),
-    ("Marés, Repontos e Meteorologia", "Crítico", "Do Fundeadouro Norte para a LISNAVE, para chegar à próxima preia-mar, quando marco piloto?", ("1 hora e 30 minutos antes", "Fundeadouro Norte", "LISNAVE")),
-    ("Marés, Repontos e Meteorologia", "Alto", "Da Barra para a ALSTOM, quando marco para apanhar o reponto de preia-mar?", ("ALSTOM", "1 hora e 30 minutos", "preia-mar")),
-    ("Marés, Repontos e Meteorologia", "Alto", "Entrada na SECIL W com navio de 180 m pode ser em baixa-mar?", ("SECIL W", "LOA > 170 m", "preia-mar")),
-    ("Marés, Repontos e Meteorologia", "Alto", "SECIL E precisa sempre de reponto?", ("SECIL E", "marés vivas", "reponto")),
-    ("Marés, Repontos e Meteorologia", "Alto", "Tanquisado pode sair fora de reponto?", ("vazante", "preia-mar precedente", "3 m")),
-    ("Marés, Repontos e Meteorologia", "Alto", "Eco-Oil pode atracar de noite?", ("Eco-Oil", "atracação noturna proibida", "preia-mar")),
-    ("Marés, Repontos e Meteorologia", "Médio", "Qual é o calado operacional na barra com maré?", ("10,30 m + altura da maré", "12,0 m", "ondulação")),
-    ("Marés, Repontos e Meteorologia", "Médio", "Se peço meteorologia atual para rebocadores, a resposta deve decidir ou só listar vento?", ("Meteorologia considerada", "rebocadores", "conclusão")),
-    ("Marés, Repontos e Meteorologia", "Médio", "Como interpreto marés vivas no planeamento operacional?", ("marés vivas", "corrente", "reponto")),
-    ("Marés, Repontos e Meteorologia", "Médio", "Mostra as marés de hoje em Setúbal/Troia.", ("baixa-mar", "preia-mar", "Setúbal / Troia")),
-    ("Marés, Repontos e Meteorologia", "Médio", "Com ondulação forte fora da barra devo validar só pelo vento?", ("ondulação", "barra", "não")),
-    ("Cais Críticos e Rebocadores", "Crítico", "Um navio de 300 m na LISNAVE usa quantos rebocadores normalmente?", ("6 rebocadores", "Lisnave acima de 250 m", "LOA")),
-    ("Cais Críticos e Rebocadores", "Crítico", "Entrada para Tanquisado com 2 rebocadores pode avançar?", ("Recomendo 3 rebocadores", "insuficientes", "Tanquisado")),
-    ("Cais Críticos e Rebocadores", "Crítico", "Entrada para Eco-Oil com 2 rebocadores pode avançar?", ("Eco-Oil", "3 rebocadores", "insuficientes")),
-    ("Cais Críticos e Rebocadores", "Crítico", "Uma doca LISNAVE com 3 rebocadores fica validada?", ("doca", "4 rebocadores", "não")),
-    ("Cais Críticos e Rebocadores", "Alto", "Autoeuropa com navio de 230 m permite outro navio no outro cais?", ("230 m", "sozinho", "Autoeuropa")),
-    ("Cais Críticos e Rebocadores", "Alto", "No TMS 1 posso ter 230 + 230 + Cais 8 com 210 m?", ("TMS 1", "não permite", "Cais 8")),
-    ("Cais Críticos e Rebocadores", "Alto", "Cais 8 aceita navio de 240 m?", ("Cais 8", "230 m", "não")),
-    ("Cais Críticos e Rebocadores", "Alto", "Navio de 360 m cabe no Cais 3 A da LISNAVE?", ("Cais 3 A", "366 metros", "Duque d'Alba")),
-    ("Cais Críticos e Rebocadores", "Alto", "Tanquisado deve ser avaliado só pelo cais físico de 75 m?", ("463 m", "duques d'alba", "não")),
-    ("Cais Críticos e Rebocadores", "Alto", "Navio com 45 m de boca pode entrar no Hidrolift?", ("Hidrolift", "32 m", "boca")),
-    ("Cultura Geral de Setúbal", "Médio", "O que é o Forte do Outão e porque é relevante na entrada de Setúbal?", ("Forte do Outão", "Sado", "barra")),
-    ("Cultura Geral de Setúbal", "Médio", "Fala-me do Forte de São Filipe em Setúbal.", ("Forte de São Filipe", "Setúbal", "Sado")),
-    ("Cultura Geral de Setúbal", "Médio", "Qual é a comida típica mais conhecida de Setúbal?", ("choco frito", "Setúbal", "gastronomia")),
-    ("Cultura Geral de Setúbal", "Médio", "O Moscatel de Setúbal é associado a que região?", ("Moscatel", "Setúbal", "Península")),
-    ("Cultura Geral de Setúbal", "Médio", "Porque é conhecido o estuário do Sado?", ("Sado", "golfinhos", "estuário")),
-    ("Cultura Geral de Setúbal", "Médio", "Que interesse tem a Serra da Arrábida para Setúbal?", ("Arrábida", "Setúbal", "paisagem")),
-    ("Cultura Geral de Setúbal", "Médio", "O que posso dizer de básico sobre Tróia?", ("Tróia", "Sado", "península")),
-    ("Cultura Geral de Setúbal", "Médio", "Quem foi Bocage e qual a ligação a Setúbal?", ("Bocage", "Setúbal", "poeta")),
-    ("Cultura Geral de Setúbal", "Médio", "Porque é conhecido o Mercado do Livramento?", ("Mercado do Livramento", "Setúbal", "peixe")),
-    ("Cultura Geral de Setúbal", "Médio", "Que importância tem o Convento de Jesus em Setúbal?", ("Convento de Jesus", "Setúbal", "património")),
-    ("Cultura Geral de Setúbal", "Médio", "Setúbal desenvolveu-se junto de que rio/estuário?", ("Setúbal", "Sado", "estuário")),
-    ("Cultura Geral de Setúbal", "Médio", "A indústria conserveira teve importância em Setúbal?", ("conserveira", "pesca", "Setúbal")),
-    ("Cultura Geral de Setúbal", "Médio", "Que produto regional está associado a Azeitão?", ("Azeitão", "queijo", "Setúbal")),
-    ("Cultura Geral de Setúbal", "Médio", "O que é a Reserva Natural do Estuário do Sado?", ("Reserva Natural", "Estuário do Sado", "aves")),
-    ("Cultura Geral de Setúbal", "Médio", "Diz uma curiosidade simples sobre a cidade de Setúbal.", ("Setúbal", "Sado", "Arrábida")),
-    ("Cultura Geral de Setúbal", "Médio", "Que relação existe entre Setúbal e a pesca?", ("pesca", "porto", "Setúbal")),
-    ("Cultura Geral de Setúbal", "Médio", "Que praias são referências na zona de Setúbal/Arrábida?", ("Arrábida", "praias", "Setúbal")),
-    ("Cultura Geral de Setúbal", "Médio", "Porque Setúbal é interessante para alguém que chega por mar?", ("Sado", "Arrábida", "porto")),
-]
 BOT_CRITICAL_TEST_MATRIX: list[dict] = [
     {
         "id": "roro-north-strong",
@@ -331,27 +264,6 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
             "Calado: 9,2 m.",
             "Carga: não IMO.",
         ),
-    },
-    {
-        "id": "sapec-imo-follow-up-explained",
-        "group": "Contexto conversacional",
-        "risk": "Critico",
-        "mode": "Automatico",
-        "runner": "direct_operational",
-        "label": "Follow-up SAPEC carga IMO fundamentado",
-        "question": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos? Seguimento: tem carga IMO",
-        "expected_summary": "O follow-up curto de carga IMO deve herdar SAPEC/calado e explicar limite, fórmula e validações.",
-        "source": "knowledge/IT-029_SAPEC.txt",
-        "expected_origin": "sapec_draft_rule",
-        "expected_tokens": (
-            "SAPEC Líquidos / TGL",
-            "carga IMO/perigosa",
-            "calado praticável = 7,1 m + altura de água",
-            "referência máxima 9,5 m",
-            "cerca de 2,1 m de altura de água",
-            "não é uma autorização automática",
-        ),
-        "forbidden_tokens": ("A resposta direta: 9,5 metros",),
     },
     {
         "id": "conversation-context-new-case-asks-confirmation",
@@ -1232,23 +1144,6 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_tokens": (),
     },
     {
-        "id": "fundeadouro-norte-lisnave-proxima-preia-marcacao",
-        "group": "Conversas a testar manualmente",
-        "risk": "Critico",
-        "mode": "Automatico",
-        "runner": "direct_operational",
-        "label": "Fundeadouro Norte para LISNAVE na próxima preia-mar",
-        "question": "Então de forma a chegar à hora da próxima preia mar, a que horas devo marcar piloto para o navio ir do fundeadouro Norte para a LISNAVE?",
-        "expected_summary": "Tem de marcar 1h30 antes da preia-mar/reponto alvo e nunca listar chegadas previstas.",
-        "source": "knowledge/Marcar_manobra_repontos_mare.txt + Notas_Pilotagem.txt",
-        "expected_origin": "operational_route_transit",
-        "expected_tokens": (
-            "1 hora e 30 minutos antes",
-            "não marques o piloto para a hora do reponto",
-            "Tanquisado, Eco-Oil, LISNAVE/Mitrena, Termitrena e Teporset",
-        ),
-    },
-    {
         "id": "reponto-matrix",
         "group": "Conversas a testar manualmente",
         "risk": "Alto",
@@ -1408,57 +1303,6 @@ def _railway_bot_test_records() -> list[dict]:
     return normalized
 
 
-def _bot_question_slug(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
-    return slug[:80] or "pergunta"
-
-
-def _complementary_bot_test_records(start_number: int) -> list[dict]:
-    records: list[dict] = []
-    for offset, (group, risk, question, expected) in enumerate(BOT_COMPLEMENTARY_QA_TESTS):
-        expected_list = [str(item) for item in expected if str(item or "").strip()]
-        number = start_number + offset
-        records.append(
-            {
-                "number": number,
-                "suite_id": "bot-complementary-qa",
-                "suite": COMPLEMENTARY_BOT_QA_SUITE,
-                "source_log": "core/operational_test_suite.py::BOT_COMPLEMENTARY_QA_TESTS",
-                "timestamp": "",
-                "log_index": offset + 1,
-                "id": f"bot-extra-{number}-{_bot_question_slug(question)}",
-                "group": group,
-                "risk": risk,
-                "question": question,
-                "expected_substrings": expected_list,
-                "forbidden_substrings": [],
-                "expected_summary": " · ".join(expected_list) if expected_list else "--",
-                "forbidden_summary": "--",
-                "missing_expected": [],
-                "forbidden_present": [],
-                "warnings": ["Pergunta complementar ainda não executada contra Railway."],
-                "verdict": "review",
-                "state_badge": "degraded",
-                "verification_summary": "Pergunta complementar para executar/rever",
-                "answer_origin": "--",
-                "answer_excerpt": "Pergunta complementar ainda não executada contra o bot.",
-                "answer": "",
-                "manual_review": True,
-                "status_code": "",
-                "latency_ms": "",
-                "conversation_id": "",
-                "message_id": "",
-            }
-        )
-    return records
-
-
-def _bot_question_bank_records() -> tuple[list[dict], int, int]:
-    railway_records = _railway_bot_test_records()
-    complementary_records = _complementary_bot_test_records(len(railway_records) + 1)
-    return railway_records + complementary_records, len(railway_records), len(complementary_records)
-
-
 def _railway_verification_summary(
     verdict: str,
     missing: list[str],
@@ -1494,34 +1338,30 @@ def _railway_bot_test_groups(records: list[dict]) -> list[dict]:
 
 
 def railway_bot_test_log_inventory() -> dict:
-    """Return the bot QA question bank used for page inspection and export."""
-    records, railway_count, complementary_count = _bot_question_bank_records()
+    """Return the 150 Railway bot test records used for page inspection and export."""
+    records = _railway_bot_test_records()
     passed_count = sum(1 for item in records if item["verdict"] in {"pass", "passed"})
     failed_count = sum(1 for item in records if item["verdict"] in {"fail", "failed"})
     review_count = len(records) - passed_count - failed_count
     return {
         "count": len(records),
-        "railway_count": railway_count,
-        "complementary_count": complementary_count,
         "passed_count": passed_count,
         "failed_count": failed_count,
         "review_count": review_count,
         "fixture_path": str(RAILWAY_BOT_TEST_FIXTURE),
         "groups": _railway_bot_test_groups(records),
         "records": records,
-        "error": "" if railway_count else "Fixture dos 150 testes Railway não encontrada ou inválida.",
+        "error": "" if records else "Fixture dos 150 testes Railway não encontrada ou inválida.",
     }
 
 
 def _railway_bot_test_export_payload() -> dict:
     inventory = railway_bot_test_log_inventory()
     return {
-        "description": "Banco QA do bot PRAGtico: 150 perguntas Railway e perguntas complementares por área.",
+        "description": "150 perguntas executadas contra Railway para validar o bot PRAGtico.",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "summary": {
             "total": inventory["count"],
-            "railway": inventory["railway_count"],
-            "complementary": inventory["complementary_count"],
             "passed": inventory["passed_count"],
             "review": inventory["review_count"],
             "failed": inventory["failed_count"],
@@ -1533,10 +1373,8 @@ def _railway_bot_test_export_payload() -> dict:
 def _railway_bot_test_export_text(payload: dict) -> str:
     summary = payload.get("summary") or {}
     lines = [
-        "PRAGtico - Banco QA do bot",
+        "PRAGtico - 150 testes Railway",
         f"Total: {summary.get('total', 0)}",
-        f"Railway executados: {summary.get('railway', 0)}",
-        f"Complementares: {summary.get('complementary', 0)}",
         f"Corretos: {summary.get('passed', 0)}",
         f"Duvidas: {summary.get('review', 0)}",
         f"Falhas/bugs: {summary.get('failed', 0)}",
@@ -1646,7 +1484,7 @@ def _render_text_pdf(title: str, body: str) -> bytes:
 
 
 def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
-    """Export the bot QA question bank in a debug-friendly format."""
+    """Export the 150 Railway bot tests in a debug-friendly format."""
     export_format = str(export_format or "").strip().lower()
     if export_format not in {"json", "csv", "pdf"}:
         raise ValueError("Formato de exportação inválido.")
@@ -1656,7 +1494,7 @@ def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
         return (
             json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
             "application/json; charset=utf-8",
-            f"pragtico_bot_qa_testes_{timestamp}.json",
+            f"pragtico_railway_150_testes_{timestamp}.json",
         )
     if export_format == "csv":
         output = StringIO()
@@ -1682,13 +1520,13 @@ def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
         return (
             output.getvalue().encode("utf-8-sig"),
             "text/csv; charset=utf-8",
-            f"pragtico_bot_qa_testes_{timestamp}.csv",
+            f"pragtico_railway_150_testes_{timestamp}.csv",
         )
     pdf = _render_text_pdf(
-        "PRAGtico - Banco QA do bot",
+        "PRAGtico - 150 testes Railway",
         _railway_bot_test_export_text(payload),
     )
-    return pdf, "application/pdf", f"pragtico_bot_qa_testes_{timestamp}.pdf"
+    return pdf, "application/pdf", f"pragtico_railway_150_testes_{timestamp}.pdf"
 
 
 def berth_capacity_test_matrix() -> list[dict]:

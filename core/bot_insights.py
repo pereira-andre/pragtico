@@ -1543,7 +1543,7 @@ def build_pipeline_snapshot(
                 "detail": "Para mensagens como “E carga não IMO”, prepara o último caso provável sem misturar casos incompatíveis.",
                 "facts": [
                     "Usa histórico recente filtrado em vez da conversa inteira.",
-                    "Quando depende da continuidade, a resposta deve assumir a premissa e explicar regra, cálculo e pendências críticas.",
+                    "Quando depende da continuidade, a resposta deve assumir a premissa em frase curta.",
                 ],
             },
             {

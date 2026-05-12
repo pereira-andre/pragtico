@@ -141,28 +141,6 @@ ROUTE_DESTINATION_RE = re.compile(
     r"praias|sapec|secil|fundeadouro|fundeadouros)\b"
 )
 ROUTE_ORIGIN_BARRA_RE = re.compile(r"\b(barra|entrada da barra|fora da barra|pilar\s*2|boia\s*2|bóia\s*2)\b")
-SECIL_ENTRY_CONTEXT_RE = re.compile(
-    r"\bsecil\b.*\b(entrada|entrar|atracar|marcar|marco|manobra)\b"
-    r"|"
-    r"\b(entrada|entrar|atracar|marcar|marco|manobra)\b.*\bsecil\b",
-)
-SECIL_TIDE_SCHEDULING_FOLLOW_UP_RE = re.compile(
-    r"\b(proxima|próxima|proximo|próximo|mare|mar[eé]|reponto|preia|baixa)\b"
-    r".*\b(entrada|entrar|marcar|marco|hora|horas|piloto|manobra)\b"
-    r"|"
-    r"\b(entrada|entrar|marcar|marco|hora|horas|piloto|manobra)\b"
-    r".*\b(proxima|próxima|proximo|próximo|mare|mar[eé]|reponto|preia|baixa)\b",
-)
-SAPEC_DRAFT_CONTEXT_RE = re.compile(
-    r"\b(sapec|tgl|tps)\b.*\b(calado|draft)\b"
-    r"|"
-    r"\b(calado|draft)\b.*\b(sapec|tgl|tps)\b",
-)
-SAPEC_CARGO_FOLLOW_UP_RE = re.compile(
-    r"^(?:e\s+)?(?:se\s+(?:for|fosse)\s+)?(?:tem\s+|com\s+|a\s+)?carga\s+(?:nao\s+imo|imo)\b"
-    r"|"
-    r"^(?:e\s+)?(?:nao\s+imo|imo)\b"
-)
 
 
 DOCUMENT_MATCH_STOPWORDS = {
@@ -722,48 +700,6 @@ def _last_user_route_duration_question(history: list[dict]) -> str:
     return ""
 
 
-def _last_user_secil_entry_question(history: list[dict]) -> str:
-    for entry in reversed(history):
-        if (entry.get("role") or "").strip().lower() != "user":
-            continue
-        content = str(entry.get("content") or "").strip()
-        if SECIL_ENTRY_CONTEXT_RE.search(_normalize_lookup_text(content)):
-            return content
-    return ""
-
-
-def _contextual_secil_entry_scheduling_question(question: str, history: list[dict]) -> str:
-    clean = _normalize_lookup_text(question)
-    if "secil" in clean or not SECIL_TIDE_SCHEDULING_FOLLOW_UP_RE.search(clean):
-        return question
-    previous_question = _last_user_secil_entry_question(history)
-    if not previous_question:
-        return question
-    return f"{previous_question} Seguimento: {question}"
-
-
-def _last_user_sapec_draft_question(history: list[dict]) -> str:
-    for entry in reversed(history):
-        if (entry.get("role") or "").strip().lower() != "user":
-            continue
-        content = str(entry.get("content") or "").strip()
-        if SAPEC_DRAFT_CONTEXT_RE.search(_normalize_lookup_text(content)):
-            return content
-    return ""
-
-
-def _contextual_sapec_cargo_question(question: str, history: list[dict]) -> str:
-    clean = _normalize_lookup_text(question)
-    if "sapec" in clean or "tgl" in clean or "tps" in clean:
-        return question
-    if not SAPEC_CARGO_FOLLOW_UP_RE.search(clean):
-        return question
-    previous_question = _last_user_sapec_draft_question(history)
-    if not previous_question:
-        return question
-    return f"{previous_question} Seguimento: {question}"
-
-
 def _strip_follow_up_lead_in(question: str) -> str:
     cleaned = re.sub(
         r"^\s*e\s+se\s+(?:fosse|for|fossemos|fôssemos|era)\s+",
@@ -840,15 +776,9 @@ def _contextual_entity_lookup_question(question: str, history: list[dict]) -> st
 
 
 def _contextual_lookup_question(question: str, history: list[dict]) -> str:
-    sapec_cargo_question = _contextual_sapec_cargo_question(question, history)
-    if sapec_cargo_question != question:
-        return sapec_cargo_question
     entity_question = _contextual_entity_lookup_question(question, history)
     if entity_question != question:
         return entity_question
-    secil_scheduling_question = _contextual_secil_entry_scheduling_question(question, history)
-    if secil_scheduling_question != question:
-        return secil_scheduling_question
     if not _looks_like_route_duration_follow_up(question):
         return question
     stripped_question = _strip_follow_up_lead_in(question)
@@ -1712,7 +1642,7 @@ def handle_chat_turn(
                     }
         elif answer is None:
             answer = answer_direct_operational_query(
-                lookup_question,
+                lookup_question if is_revision_attempt else clean_question,
                 plan=execution_plan,
             )
 
@@ -1892,7 +1822,7 @@ def handle_chat_turn(
                     answer = None
 
         if answer is None:
-            direct_answer = answer_direct_operational_query(lookup_question, plan=execution_plan)
+            direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
             if direct_answer:
                 answer = direct_answer
 

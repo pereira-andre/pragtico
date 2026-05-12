@@ -25,11 +25,10 @@ class FakeRag:
 class FakeStore:
     backend_name = "fake"
 
-    def __init__(self, *, fail_runtime_state: bool = False, history: list[dict] | None = None) -> None:
+    def __init__(self, *, fail_runtime_state: bool = False) -> None:
         self.fail_runtime_state = fail_runtime_state
         self.runtime_state: dict = {}
         self.messages: list[dict] = []
-        self.history = list(history or [])
         self.port_call = {
             "id": "pc1",
             "reference_code": "PTSET26GALB123",
@@ -87,7 +86,7 @@ class FakeStore:
         return {"id": conversation_id or "conv1", "username": username}
 
     def list_messages(self, username: str, conversation_id: str) -> list:
-        return list(self.history)
+        return []
 
     def append_chat_message(self, username: str, conversation_id: str, role: str, content: str, citations=None, **kwargs) -> dict:
         message = {
@@ -238,39 +237,6 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
         self.assertIn("fundear", result["answer"])
         self.assertNotIn("A resposta direta", result["answer"])
         self.assertNotIn("GGp", result["answer"])
-
-    def test_sapec_cargo_followup_uses_previous_calado_context(self) -> None:
-        services.store = FakeStore(
-            history=[
-                {
-                    "role": "user",
-                    "content": "Um navio com 9,2m de calado pode atracar na SAPEC Líquidos?",
-                }
-            ]
-        )
-
-        with self.app.test_request_context("/api/chat"):
-            result = handle_chat_turn(username="admin@porto.pt", role="admin", question="tem carga IMO")
-
-        self.assertEqual(result["answer_origin"], "sapec_draft_rule")
-        self.assertIn("SAPEC Líquidos / TGL", result["answer"])
-        self.assertIn("calado praticável = 7,1 m + altura de água", result["answer"])
-        self.assertIn("não é uma autorização automática", result["answer"])
-
-    def test_rule_command_uses_complete_deterministic_it_summary(self) -> None:
-        services.store = FakeStore()
-
-        with self.app.test_request_context("/api/chat"):
-            result = handle_chat_turn(username="admin@porto.pt", role="admin", question="/regra 029")
-
-        self.assertEqual(result["answer_origin"], "slash_rule")
-        self.assertTrue(result["answer"].startswith("📘 "))
-        self.assertIn("IT-029", result["answer"])
-        self.assertIn("calado máximo no TGL com carga não IMO", result["answer"])
-        self.assertIn("10,0 metros", result["answer"])
-        self.assertIn("calado máximo para um navio tanque com carga IMO no TPS", result["answer"])
-        self.assertIn("9,5 metros", result["answer"])
-        self.assertIn("Calado: confirmar calado real", result["answer"])
 
     def test_navigation_light_question_uses_direct_light_source(self) -> None:
         services.store = FakeStore()

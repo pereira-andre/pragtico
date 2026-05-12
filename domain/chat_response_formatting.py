@@ -13,39 +13,12 @@ LIVE_SLASH_ORIGIN_EMOJI = {
     "slash_local_warnings": "⚠️",
 }
 OPERATIONAL_ORIGIN_EMOJI = {
-    "slash_rule": "📘",
-    "slash_colreg": "🧭",
-    "colreg_interpretation": "🧭",
     "slash_template": "📋",
     "slash_proposal": "📋",
     "slash_validation": "📋",
-    "slash_help": "📋",
-    "slash_error": "⚠️",
-    "slash_rejected": "⚠️",
-    "slash_redirect": "📋",
-    "slash_consult_scale": "🚢",
-    "slash_consult_maneuver": "🗓️",
-    "slash_consult_vessel": "🚢",
     "operational_lookup": "📋",
     "operational_update": "📋",
     "operational_replace": "📋",
-    "operational_route_transit": "⚓",
-    "sapec_draft_rule": "⚓",
-    "operational_rule": "⚓",
-    "secil_entry_timing": "⚓",
-    "secil_reponto_rule": "⚓",
-    "operational_tug_guidance": "🛟",
-    "operational_safety_limit": "⚠️",
-    "operational_emergency_response": "🛟",
-    "fog_underway_procedure": "🌫️",
-    "fog_port_procedure": "🌫️",
-    "navigation_lights": "💡",
-    "navigation_basics": "🧭",
-    "operational_clarification": "❓",
-    "document_companion": "📘",
-    "document_companion_global": "📘",
-    "berth_profile": "⚓",
-    "llm": "",
     "pending_action_confirmed": "✅",
 }
 CONTEXT_LINE_EMOJIS = (
@@ -74,12 +47,6 @@ KNOWN_PREFIXES = {
     "📂",
     "🚢",
     "⚓",
-    "📘",
-    "🧭",
-    "🛟",
-    "🌫️",
-    "💡",
-    "❓",
 }
 LIVE_SOURCE_MODES = {"live_planner", "live_api", "structured"}
 OPERATIONAL_SOURCE_MODES = {
@@ -198,14 +165,6 @@ def _should_decorate_llm_response(payload: dict[str, Any], question: str) -> boo
 
 def _fallback_emoji_from_question(question: str) -> str:
     clean = str(question or "").lower()
-    if re.search(r"\b(colreg|rieam|abalroamento|rumos?|vigia|luzes?|nevoeiro)\b", clean):
-        return "🧭"
-    if re.search(r"\b(regra|it-|instru[cç][aã]o|documento)\b", clean):
-        return "📘"
-    if re.search(r"\b(rebocador|rebocadores|reboque|emerg[eê]ncia|blackout|ferro)\b", clean):
-        return "🛟"
-    if re.search(r"\b(cais|terminal|atracar|desatracar|calado|loa|comprimento|fundeadouro|sapec|secil|lisnave|tanquisado|eco|teporset|termitrena)\b", clean):
-        return "⚓"
     if re.search(r"\b(meteorologia|meteo|tempo|vento)\b", clean):
         return "🌦️"
     if re.search(r"\b(mar[eé]s|preia|baixa)\b", clean):
@@ -228,7 +187,7 @@ def _fallback_emoji_from_question(question: str) -> str:
 
 
 def add_contextual_response_emojis(payload: dict[str, Any], question: str = "") -> dict[str, Any]:
-    """Add one restrained, topic-aware emoji to each chat answer."""
+    """Add restrained UX emojis only to slash/live/operational feed responses."""
     text = _answer_text(payload)
     if not text:
         return payload
@@ -247,7 +206,7 @@ def add_contextual_response_emojis(payload: dict[str, Any], question: str = "") 
     if not emoji and should_decorate_live:
         emoji = _fallback_emoji_from_question(text)
     if not emoji:
-        emoji = _fallback_emoji_from_question(question or text)
+        return payload
 
     decorated = _decorate_context_lines(text)
     if decorated == text:

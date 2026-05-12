@@ -94,11 +94,8 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert inventory["bot_matrix_automatic_count"] > inventory["bot_matrix_manual_count"]
     assert any(item["id"] == "ecooil-checklist" for item in inventory["bot_matrix"])
     assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
-    assert inventory["railway_log"]["count"] == 212
-    assert inventory["railway_log"]["railway_count"] == 150
-    assert inventory["railway_log"]["complementary_count"] == 62
+    assert inventory["railway_log"]["count"] == 150
     assert inventory["railway_log"]["passed_count"] == 150
-    assert inventory["railway_log"]["review_count"] == 62
     assert inventory["berth_capacity_test_count"] == 6
 
 
@@ -122,10 +119,7 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     )
 
     assert "Matriz crítica" in html
-    assert "Railway + perguntas complementares" in html
-    assert "COLREG/RIEAM" in html
-    assert "Cultura Geral de Setúbal" in html
-    assert "Forte do Outão" in html
+    assert "150 perguntas de bug hunting" in html
     assert "Download JSON" in html
     assert "Download CSV" in html
     assert "Download PDF" in html
@@ -151,7 +145,6 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Diagnostico ALSTOM regras obrigatorias" in html
     assert "Diagnostico SECIL sem herdar Lisnave" in html
     assert "Follow-up SAPEC carga não IMO" in html
-    assert "Follow-up SAPEC carga IMO fundamentado" in html
     assert "Mudança de caso sem herança indevida" in html
     assert "Entrada Secil E 19:25 validada contra reponto" in html
     assert "ALSTOM desde a Barra para preia-mar" in html
@@ -189,9 +182,7 @@ def test_railway_bot_test_exports_include_debug_payload(monkeypatch) -> None:
 
     assert json_mimetype.startswith("application/json")
     assert json_filename.endswith(".json")
-    assert b'"total": 212' in json_payload
-    assert b'"railway": 150' in json_payload
-    assert b'"complementary": 62' in json_payload
+    assert b'"total": 150' in json_payload
     assert csv_mimetype.startswith("text/csv")
     assert csv_filename.endswith(".csv")
     assert b"question" in csv_payload
