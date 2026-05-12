@@ -39,6 +39,7 @@ from core.operational_sources import answer_direct_operational_query, build_oper
 from core.portal_notifications import latest_maneuver_by_type
 from core.rule_catalog import _active_knowledge_dir
 from domain.berth_profiles import find_best_berth_profile
+from domain.berth_layout import build_slot_occupancy, find_occupied_berth_conflict
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
 from domain.chat_actions import parse_slash_command
@@ -1531,62 +1532,370 @@ def railway_bot_test_export_bytes(export_format: str) -> tuple[bytes, str, str]:
 
 def berth_capacity_test_matrix() -> list[dict]:
     """Return berth-capacity rules that must remain visible in admin QA."""
+    source = "domain/berth_layout.py + tests/test_berth_layout.py"
+
+    def vessel(identifier: str, name: str, berth: str, loa_m: str | None = None) -> dict:
+        payload = {"id": identifier, "vessel_name": name, "berth_label": berth}
+        if loa_m is not None:
+            payload["vessel_loa_m"] = loa_m
+        return payload
+
+    def case(
+        identifier: str,
+        group: str,
+        label: str,
+        case_text: str,
+        expected: str,
+        *,
+        occupants: list[dict] | None = None,
+        target_berth: str = "",
+        target_loa_m: str = "",
+        expected_conflict: bool | None = None,
+        expected_conflict_id: str = "",
+        expected_occupied_slots: int | None = None,
+    ) -> dict:
+        initial_state = ", ".join(
+            f"{item.get('vessel_name')} em {item.get('berth_label')} ({item.get('vessel_loa_m', 'LOA desconhecido')} m)"
+            for item in occupants or []
+        ) or "Sem navios em porto no terminal testado."
+        target = f"{target_berth} · LOA {target_loa_m} m" if target_berth else "Contagem de ocupação"
+        return {
+            "id": identifier,
+            "group": group,
+            "risk": "Critico",
+            "label": label,
+            "case": case_text,
+            "initial_state": initial_state,
+            "target": target,
+            "expected": expected,
+            "source": source,
+            "occupants": occupants or [],
+            "target_berth": target_berth,
+            "target_loa_m": target_loa_m,
+            "expected_conflict": expected_conflict,
+            "expected_conflict_id": expected_conflict_id,
+            "expected_occupied_slots": expected_occupied_slots,
+        }
+
     return [
-        {
-            "id": "autoeuropa-two-small",
-            "group": "Autoeuropa",
-            "risk": "Critico",
-            "label": "Autoeuropa permite 2 navios abaixo de 230 m",
-            "case": "Cais 10 ocupado por 180 m; Cais 11 recebe outro 180 m.",
-            "expected": "Sem conflito: Cais 10 e Cais 11 podem estar ambos ocupados quando nenhum navio chega a 230 m.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
-        {
-            "id": "autoeuropa-large-exclusive",
-            "group": "Autoeuropa",
-            "risk": "Critico",
-            "label": "Autoeuropa bloqueia exclusividade a partir de 230 m",
-            "case": "Um Ro-Ro de 230 m ou mais em Cais 10/11; tentar aprovar outro navio na Autoeuropa.",
-            "expected": "Conflito: navio com LOA >= 230 m fica sozinho no terminal.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
-        {
-            "id": "tms1-large-spans-two-cais",
-            "group": "TMS 1",
-            "risk": "Critico",
-            "label": "TMS 1 ocupa mais do que um cais por LOA",
-            "case": "Navio de 230 m no Cais 4; tentar usar o Cais 5.",
-            "expected": "Conflito: o navio longo ocupa Cais 4 + Cais 5.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
-        {
-            "id": "tms1-no-three-large",
-            "group": "TMS 1",
-            "risk": "Critico",
-            "label": "TMS 1 não permite 3 navios grandes",
-            "case": "230 m + 230 m no TMS 1; tentar 210 m no Cais 8.",
-            "expected": "Conflito: a regra crítica impede 230 + 230 + 210 no Cais 8.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
-        {
-            "id": "tms1-cais8-limit",
-            "group": "TMS 1",
-            "risk": "Critico",
-            "label": "Cais 8 aceita só um navio até 230 m",
-            "case": "Tentar aprovar navio de 240 m no TMS 1 - Cais 8.",
-            "expected": "Conflito por capacidade física do Cais 8.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
-        {
-            "id": "tms2-large-spans-two-positions",
-            "group": "TMS 2",
-            "risk": "Critico",
-            "label": "TMS 2 ocupa posições adjacentes por LOA",
-            "case": "Navio de 300 m na Posição A; tentar usar a Posição B.",
-            "expected": "Conflito: o navio longo ocupa A + B; a Posição C continua avaliável se houver comprimento.",
-            "source": "domain/berth_layout.py + tests/test_berth_layout.py",
-        },
+        case(
+            "autoeuropa-two-small",
+            "Autoeuropa",
+            "Autoeuropa permite 2 navios abaixo de 230 m",
+            "Cais 10 ocupado por 180 m; Cais 11 recebe outro 180 m.",
+            "Sem conflito: Cais 10 e Cais 11 podem estar ambos ocupados quando nenhum navio chega a 230 m.",
+            occupants=[vessel("auto-10", "Ro-Ro 180 C10", "Cais 10 / Autoeuropa", "180")],
+            target_berth="Cais 11 / Autoeuropa",
+            target_loa_m="180",
+            expected_conflict=False,
+        ),
+        case(
+            "autoeuropa-target-230-exclusive",
+            "Autoeuropa",
+            "Autoeuropa bloqueia navio novo a partir de 230 m",
+            "Cais 10 ocupado por 180 m; tentar aprovar 230 m no Cais 11.",
+            "Conflito: o novo navio com LOA >= 230 m precisa da Autoeuropa livre.",
+            occupants=[vessel("auto-10", "Ro-Ro 180 C10", "Cais 10 / Autoeuropa", "180")],
+            target_berth="Cais 11 / Autoeuropa",
+            target_loa_m="230",
+            expected_conflict=True,
+            expected_conflict_id="auto-10",
+        ),
+        case(
+            "autoeuropa-existing-230-exclusive",
+            "Autoeuropa",
+            "Autoeuropa bloqueia quando o navio em porto tem 230 m",
+            "Cais 10 ocupado por 230 m; tentar aprovar 180 m no Cais 11.",
+            "Conflito: um Ro-Ro de 230 m ou mais fica sozinho no terminal.",
+            occupants=[vessel("auto-large", "Ro-Ro 230 C10", "Cais 10 / Autoeuropa", "230")],
+            target_berth="Cais 11 / Autoeuropa",
+            target_loa_m="180",
+            expected_conflict=True,
+            expected_conflict_id="auto-large",
+        ),
+        case(
+            "autoeuropa-unknown-loa-conservative",
+            "Autoeuropa",
+            "Autoeuropa fica conservadora sem LOA do ocupante",
+            "Cais 10 ocupado sem LOA registado; tentar aprovar 180 m no Cais 11.",
+            "Conflito: sem LOA do navio em porto, não se assume que há espaço para segundo navio.",
+            occupants=[vessel("auto-unknown", "Ro-Ro sem LOA", "Cais 10 / Autoeuropa")],
+            target_berth="Cais 11 / Autoeuropa",
+            target_loa_m="180",
+            expected_conflict=True,
+            expected_conflict_id="auto-unknown",
+        ),
+        case(
+            "tms1-230-c4-spans-c5",
+            "TMS 1",
+            "TMS 1 ocupa mais do que um cais por LOA",
+            "Navio de 230 m no Cais 4; tentar usar o Cais 5.",
+            "Conflito: o navio longo ocupa Cais 4 + Cais 5.",
+            occupants=[vessel("tms1-c4", "TMS1 230 C4", "TMS 1 - Cais 4", "230")],
+            target_berth="TMS 1 - Cais 5",
+            target_loa_m="100",
+            expected_conflict=True,
+            expected_conflict_id="tms1-c4",
+        ),
+        case(
+            "tms1-230-c4-allows-c6",
+            "TMS 1",
+            "TMS 1 liberta cais sem sobreposição física",
+            "Navio de 230 m no Cais 4; tentar usar Cais 6 com 120 m.",
+            "Sem conflito: Cais 6 fica fora do span Cais 4 + Cais 5.",
+            occupants=[vessel("tms1-c4", "TMS1 230 C4", "TMS 1 - Cais 4", "230")],
+            target_berth="TMS 1 - Cais 6",
+            target_loa_m="120",
+            expected_conflict=False,
+        ),
+        case(
+            "tms1-target-230-c5-spans-c6",
+            "TMS 1",
+            "TMS 1 valida o LOA do navio novo",
+            "Cais 6 ocupado por 120 m; tentar aprovar 230 m no Cais 5.",
+            "Conflito: o navio novo no Cais 5 precisa também do Cais 6.",
+            occupants=[vessel("tms1-c6", "TMS1 120 C6", "TMS 1 - Cais 6", "120")],
+            target_berth="TMS 1 - Cais 5",
+            target_loa_m="230",
+            expected_conflict=True,
+            expected_conflict_id="tms1-c6",
+        ),
+        case(
+            "tms1-target-120-c5-does-not-span-c6",
+            "TMS 1",
+            "TMS 1 aceita navio curto no cais atribuído",
+            "Cais 6 ocupado por 120 m; tentar aprovar 120 m no Cais 5.",
+            "Sem conflito: 120 m fica dentro do Cais 5.",
+            occupants=[vessel("tms1-c6", "TMS1 120 C6", "TMS 1 - Cais 6", "120")],
+            target_berth="TMS 1 - Cais 5",
+            target_loa_m="120",
+            expected_conflict=False,
+        ),
+        case(
+            "tms1-c7-100-spans-c8",
+            "TMS 1",
+            "TMS 1 Cais 7 transborda para Cais 8",
+            "Navio de 100 m no Cais 7; tentar usar Cais 8.",
+            "Conflito: Cais 7 só tem 80 m e usa parte do Cais 8.",
+            occupants=[vessel("tms1-c7", "TMS1 100 C7", "TMS 1 - Cais 7", "100")],
+            target_berth="TMS 1 - Cais 8",
+            target_loa_m="80",
+            expected_conflict=True,
+            expected_conflict_id="tms1-c7",
+        ),
+        case(
+            "tms1-c7-320-capacity",
+            "TMS 1",
+            "TMS 1 Cais 7 não excede Cais 7 + Cais 8",
+            "Tentar aprovar 320 m no Cais 7.",
+            "Conflito por capacidade: Cais 7 + Cais 8 somam 310 m.",
+            target_berth="TMS 1 - Cais 7",
+            target_loa_m="320",
+            expected_conflict=True,
+            expected_conflict_id="__berth_capacity__",
+        ),
+        case(
+            "tms1-cais8-limit",
+            "TMS 1",
+            "Cais 8 aceita só um navio até 230 m",
+            "Tentar aprovar navio de 240 m no TMS 1 - Cais 8.",
+            "Conflito por capacidade física do Cais 8.",
+            target_berth="TMS 1 - Cais 8",
+            target_loa_m="240",
+            expected_conflict=True,
+            expected_conflict_id="__berth_capacity__",
+        ),
+        case(
+            "tms1-no-three-large",
+            "TMS 1",
+            "TMS 1 não permite 3 navios grandes",
+            "230 m no Cais 3 e 230 m no Cais 5; tentar 210 m no Cais 8.",
+            "Conflito: a regra crítica impede 230 + 230 + 210 no Cais 8.",
+            occupants=[
+                vessel("tms1-c3", "TMS1 230 C3", "TMS 1 - Cais 3", "230"),
+                vessel("tms1-c5", "TMS1 230 C5", "TMS 1 - Cais 5", "230"),
+            ],
+            target_berth="TMS 1 - Cais 8",
+            target_loa_m="210",
+            expected_conflict=True,
+            expected_conflict_id="tms1-c3",
+        ),
+        case(
+            "tms1-two-large-allow-small-cais8",
+            "TMS 1",
+            "TMS 1 permite Cais 8 curto se livre",
+            "230 m no Cais 3 e 230 m no Cais 5; tentar 180 m no Cais 8.",
+            "Sem conflito: o limite de 3 grandes não se aplica a navio abaixo de 200 m.",
+            occupants=[
+                vessel("tms1-c3", "TMS1 230 C3", "TMS 1 - Cais 3", "230"),
+                vessel("tms1-c5", "TMS1 230 C5", "TMS 1 - Cais 5", "230"),
+            ],
+            target_berth="TMS 1 - Cais 8",
+            target_loa_m="180",
+            expected_conflict=False,
+        ),
+        case(
+            "tms2-230-single-position",
+            "TMS 2",
+            "TMS 2 aceita 230 m numa posição livre adjacente",
+            "Posição A ocupada por 230 m; tentar 230 m na Posição B.",
+            "Sem conflito: 230 m cabe numa posição de referência do TMS 2.",
+            occupants=[vessel("tms2-a", "TMS2 230 A", "TMS 2 - Posição A", "230")],
+            target_berth="TMS 2 - Posição B",
+            target_loa_m="230",
+            expected_conflict=False,
+        ),
+        case(
+            "tms2-300-a-spans-b",
+            "TMS 2",
+            "TMS 2 ocupa posições adjacentes por LOA",
+            "Navio de 300 m na Posição A; tentar usar a Posição B.",
+            "Conflito: o navio longo ocupa A + B.",
+            occupants=[vessel("tms2-a", "TMS2 300 A", "TMS 2 - Posição A", "300")],
+            target_berth="TMS 2 - Posição B",
+            target_loa_m="100",
+            expected_conflict=True,
+            expected_conflict_id="tms2-a",
+        ),
+        case(
+            "tms2-300-a-allows-c",
+            "TMS 2",
+            "TMS 2 deixa livre posição sem sobreposição",
+            "Navio de 300 m na Posição A; tentar usar a Posição C.",
+            "Sem conflito: A + B ficam ocupadas e C continua avaliável.",
+            occupants=[vessel("tms2-a", "TMS2 300 A", "TMS 2 - Posição A", "300")],
+            target_berth="TMS 2 - Posição C",
+            target_loa_m="100",
+            expected_conflict=False,
+        ),
+        case(
+            "tms2-500-b-spans-all",
+            "TMS 2",
+            "TMS 2 central com 500 m ocupa A, B e C",
+            "Navio de 500 m na Posição B; tentar usar a Posição A.",
+            "Conflito: para incluir B e acomodar 500 m, o span cobre as três posições.",
+            occupants=[vessel("tms2-b", "TMS2 500 B", "TMS 2 - Posição B", "500")],
+            target_berth="TMS 2 - Posição A",
+            target_loa_m="100",
+            expected_conflict=True,
+            expected_conflict_id="tms2-b",
+        ),
+        case(
+            "tms2-750-capacity",
+            "TMS 2",
+            "TMS 2 bloqueia LOA acima do comprimento total",
+            "Tentar aprovar 750 m no TMS 2.",
+            "Conflito por capacidade: o terminal tem 723 m úteis de referência.",
+            target_berth="TMS 2 - Posição B",
+            target_loa_m="750",
+            expected_conflict=True,
+            expected_conflict_id="__berth_capacity__",
+        ),
+        case(
+            "tms2-three-200-allowed",
+            "TMS 2",
+            "TMS 2 permite três navios de 200 m",
+            "Posições A e B com 200 m; tentar 200 m na Posição C.",
+            "Sem conflito: três navios de 200 m cabem no comprimento total com folgas.",
+            occupants=[
+                vessel("tms2-a", "TMS2 200 A", "TMS 2 - Posição A", "200"),
+                vessel("tms2-b", "TMS2 200 B", "TMS 2 - Posição B", "200"),
+            ],
+            target_berth="TMS 2 - Posição C",
+            target_loa_m="200",
+            expected_conflict=False,
+        ),
+        case(
+            "tms2-three-230-blocked",
+            "TMS 2",
+            "TMS 2 bloqueia três navios de 230 m",
+            "Posições A e B com 230 m; tentar 230 m na Posição C.",
+            "Conflito por comprimento total e folgas: três navios de 230 m não passam.",
+            occupants=[
+                vessel("tms2-a", "TMS2 230 A", "TMS 2 - Posição A", "230"),
+                vessel("tms2-b", "TMS2 230 B", "TMS 2 - Posição B", "230"),
+            ],
+            target_berth="TMS 2 - Posição C",
+            target_loa_m="230",
+            expected_conflict=True,
+            expected_conflict_id="tms2-a",
+        ),
+        case(
+            "occupancy-tms2-middle-500",
+            "Contagem de slots",
+            "Ocupação conta TMS 2 central de 500 m como 3 slots",
+            "Snapshot com navio de 500 m na Posição B.",
+            "A ocupação deve contar A + B + C como ocupados.",
+            occupants=[vessel("tms2-b", "TMS2 500 B", "TMS 2 - Posição B", "500")],
+            expected_occupied_slots=3,
+        ),
+        case(
+            "occupancy-tms1-c7-overflow",
+            "Contagem de slots",
+            "Ocupação conta Cais 7 de 100 m como Cais 7 + Cais 8",
+            "Snapshot com navio de 100 m no Cais 7.",
+            "A ocupação deve contar dois slots físicos no TMS 1.",
+            occupants=[vessel("tms1-c7", "TMS1 100 C7", "TMS 1 - Cais 7", "100")],
+            expected_occupied_slots=2,
+        ),
+        case(
+            "occupancy-autoeuropa-large",
+            "Contagem de slots",
+            "Ocupação conta Autoeuropa >=230 m como 2 slots",
+            "Snapshot com Ro-Ro de 230 m no Cais 10.",
+            "A ocupação deve contar Cais 10 + Cais 11.",
+            occupants=[vessel("auto-large", "Ro-Ro 230 C10", "Cais 10 / Autoeuropa", "230")],
+            expected_occupied_slots=2,
+        ),
     ]
+
+
+def _evaluate_berth_capacity_case(item: dict) -> dict:
+    occupants = deepcopy(item.get("occupants") or [])
+    errors: list[str] = []
+    observed: list[str] = []
+
+    if item.get("target_berth"):
+        conflict = find_occupied_berth_conflict(
+            item.get("target_berth"),
+            occupants,
+            target_vessel_loa_m=item.get("target_loa_m"),
+            berth_options=services.BERTH_OPTIONS,
+        )
+        expected_conflict = item.get("expected_conflict")
+        actual_conflict = conflict is not None
+        conflict_ref = ""
+        if conflict:
+            conflict_ref = conflict.get("id") or conflict.get("reference_code") or conflict.get("vessel_name") or "conflito"
+            observed.append(f"Conflito: {conflict_ref}")
+        else:
+            observed.append("Sem conflito")
+        if expected_conflict is not None and actual_conflict != expected_conflict:
+            errors.append(f"esperado conflito={expected_conflict}, obtido conflito={actual_conflict}")
+        expected_ref = item.get("expected_conflict_id")
+        if expected_ref and conflict:
+            actual_refs = {
+                str(conflict.get("id") or ""),
+                str(conflict.get("reference_code") or ""),
+                str(conflict.get("vessel_name") or ""),
+            }
+            if expected_ref not in actual_refs:
+                errors.append(f"conflito esperado {expected_ref}, obtido {conflict_ref}")
+        elif expected_ref and not conflict:
+            errors.append(f"conflito esperado {expected_ref}, mas não houve conflito")
+
+    expected_slots = item.get("expected_occupied_slots")
+    if expected_slots is not None:
+        occupancy = build_slot_occupancy(occupants, berth_options=services.BERTH_OPTIONS)
+        actual_slots = occupancy.get("occupied_slot_count")
+        observed.append(f"Slots ocupados: {actual_slots}")
+        if actual_slots != expected_slots:
+            errors.append(f"slots esperados {expected_slots}, obtidos {actual_slots}")
+
+    return {
+        "state": "failed" if errors else "passed",
+        "observed": "; ".join(observed + errors) or "Caso sem verificação.",
+    }
 
 
 def operational_test_inventory() -> dict:
@@ -2366,6 +2675,7 @@ class OperationalFlowSuite:
         berth = ensure_portal_berth_is_physically_available(
             maneuver.get("destination") or current.get("berth", ""),
             current_port_call_id=current["id"],
+            target_vessel_loa_m=current.get("vessel_loa_m"),
         )
         return services.store.mark_port_call_arrived(
             current["id"],
@@ -2392,6 +2702,7 @@ class OperationalFlowSuite:
             maneuver.get("destination") or current.get("shift_destination_berth", ""),
             current_port_call_id=current["id"],
             label="Cais destino",
+            target_vessel_loa_m=current.get("vessel_loa_m"),
         )
         return services.store.mark_shift_completed(
             current["id"],
@@ -2882,6 +3193,24 @@ class OperationalFlowSuite:
             approved_count == 4,
             f"{approved_count} aprovada(s) às 15:00.",
         )
+        self._finish_scenario(scenario)
+
+    def _scenario_berth_capacity_rules(self) -> None:
+        scenario = self._new_scenario(
+            "Regras operacionais",
+            "Capacidade de cais por LOA",
+            "Executa a matriz de TMS 1, TMS 2 e Autoeuropa para garantir que navios compridos ocupam todos os slots físicos necessários.",
+        )
+        for item in berth_capacity_test_matrix():
+            result = _evaluate_berth_capacity_case(item)
+            self._check_state(
+                scenario,
+                item.get("label", item.get("id", "Caso sem nome")),
+                item.get("group", "Capacidade de cais"),
+                item.get("expected", ""),
+                result["observed"],
+                state=result["state"],
+            )
         self._finish_scenario(scenario)
 
     def _scenario_anchorages_and_duplicates(self) -> None:
@@ -4231,6 +4560,7 @@ class OperationalFlowSuite:
             self._scenario_berth_release()
             self._scenario_abort_keeps_block()
             self._scenario_capacity_limit()
+            self._scenario_berth_capacity_rules()
             self._scenario_anchorages_and_duplicates()
             self._scenario_vessel_catalog_management()
             self._scenario_slash_commands()

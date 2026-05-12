@@ -14,8 +14,10 @@ from core.operational_test_suite import (
     _critical_berth_profile_text,
     _critical_json_source_text,
     _critical_text_source_text,
+    _evaluate_berth_capacity_case,
     _missing_expected_tokens,
     _present_forbidden_tokens,
+    berth_capacity_test_matrix,
     critical_bot_test_matrix,
     critical_maneuver_checklist_text,
     critical_slash_validation_text,
@@ -96,7 +98,20 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
     assert inventory["railway_log"]["count"] == 150
     assert inventory["railway_log"]["passed_count"] == 150
-    assert inventory["berth_capacity_test_count"] == 6
+    assert inventory["berth_capacity_test_count"] >= 20
+
+
+def test_berth_capacity_matrix_is_executable(monkeypatch) -> None:
+    _install_fake_store(monkeypatch)
+
+    matrix = berth_capacity_test_matrix()
+    results = {item["id"]: _evaluate_berth_capacity_case(item) for item in matrix}
+
+    assert len(matrix) >= 20
+    assert all(result["state"] == "passed" for result in results.values())
+    assert results["tms1-target-230-c5-spans-c6"]["observed"].startswith("Conflito")
+    assert results["tms2-three-230-blocked"]["observed"].startswith("Conflito")
+    assert "Slots ocupados: 2" in results["occupancy-autoeuropa-large"]["observed"]
 
 
 def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
@@ -127,6 +142,9 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Autoeuropa permite 2 navios abaixo de 230 m" in html
     assert "TMS 1 não permite 3 navios grandes" in html
     assert "TMS 2 ocupa posições adjacentes por LOA" in html
+    assert "TMS 1 valida o LOA do navio novo" in html
+    assert "TMS 2 bloqueia três navios de 230 m" in html
+    assert "Ocupação conta Autoeuropa >=230 m como 2 slots" in html
     assert "operational-tests-matrix-group\" open" not in html
     assert "Eco-Oil na checklist" in html
     assert "Perda de maquina: ferro e VTS" in html

@@ -103,6 +103,9 @@ def ensure_portal_berth_is_available(
         target_vessel_loa_m=target_vessel_loa_m,
     )
     if conflict:
+        if conflict.get("reference_code") == "capacidade":
+            reason = conflict.get("capacity_reason") or conflict.get("vessel_name") or "capacidade insuficiente"
+            raise ValueError(f"{label} {canonical} não tem capacidade para o LOA indicado: {reason}.")
         conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
         raise ValueError(f"{label} {canonical} já está ocupado por {conflict_name}.")
     return canonical
@@ -113,15 +116,23 @@ def ensure_portal_berth_is_physically_available(
     *,
     current_port_call_id: str = "",
     label: str = "Cais",
+    target_vessel_loa_m: object = None,
 ) -> str:
     """Require the quay to be free before physically completing an entry or berth shift."""
     canonical = normalize_portal_berth(berth, label=label)
     conflict = occupied_portal_berth_conflict(
         canonical,
         current_port_call_id=current_port_call_id,
+        target_vessel_loa_m=target_vessel_loa_m,
         release_states=("completed",),
     )
     if conflict:
+        if conflict.get("reference_code") == "capacidade":
+            reason = conflict.get("capacity_reason") or conflict.get("vessel_name") or "capacidade insuficiente"
+            raise ValueError(
+                f"{label} {canonical} não tem capacidade física para o LOA indicado: {reason}. "
+                "Revê o cais e as dimensões do navio antes de concluir."
+            )
         conflict_name = conflict.get("vessel_name") or conflict.get("reference_code") or "outro navio"
         raise ValueError(
             f"{label} {canonical} ainda está ocupado por {conflict_name}. "
