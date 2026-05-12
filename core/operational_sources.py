@@ -2117,7 +2117,12 @@ def answer_direct_operational_query(
 ) -> dict | None:
     """Answer deterministic operational lookup questions that should not rely on generic RAG wording."""
     plan = plan or build_chat_execution_plan(question)
-    clean_question = plan.normalized_question or _operational_lookup_key(question)
+    plan_question_key = _operational_lookup_key(getattr(plan, "question", "") or "")
+    question_key = _operational_lookup_key(question)
+    if plan.normalized_question and plan_question_key == question_key:
+        clean_question = plan.normalized_question
+    else:
+        clean_question = question_key
     source_coverage_answer = _answer_source_coverage_direct(question, clean_question)
     if source_coverage_answer:
         return _attach_operational_diagnostic(source_coverage_answer, question)

@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from flask import Flask
 
 from core import services
+from core.chat_planner import build_chat_execution_plan
 from core.operational_sources import answer_direct_operational_query, build_operational_chat_sources
 
 
@@ -664,6 +665,24 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Recomendo 6 rebocadores", answer)
         self.assertIn("Lisnave acima de 250 m", answer)
         self.assertIn("LOA indicado: 300 m", answer)
+
+    def test_direct_answer_uses_current_followup_question_when_plan_is_contextualized(self) -> None:
+        previous_plan = build_chat_execution_plan("Qual é o comprimento operacional do Cais 3 A na Lisnave?")
+
+        tug_payload = answer_direct_operational_query(
+            "Mas o navio tem 300 m quantos rebocadores tem de usar para entrar na doca 21?",
+            plan=previous_plan,
+        )
+        length_payload = answer_direct_operational_query(
+            "E se o navio tiver 390 m para o Cais 3 A da Lisnave, cabe em comprimento?",
+            plan=previous_plan,
+        )
+
+        self.assertIsNotNone(tug_payload)
+        self.assertIn("Recomendo 6 rebocadores", tug_payload["answer"])
+        self.assertIn("Lisnave acima de 250 m", tug_payload["answer"])
+        self.assertIsNotNone(length_payload)
+        self.assertIn("390 m excede", length_payload["answer"])
 
     def test_barra_draft_tup_and_visibility_threshold_have_direct_answers(self) -> None:
         barra = self._answer("Qual é o calado máximo na barra do Porto de Setúbal?")
