@@ -431,7 +431,7 @@ Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos): cerca de
 Fundeadouro Norte para SECIL: cerca de 20 minutos.
 
 Fundeadouro Norte para cais a sul (Tanquisado, Eco-Oil, LISNAVE, Termitrena
-ou Teporset): cerca de 1 hora.
+ou Teporset): cerca de 1 hora e 30 minutos.
 
 MUDANÇAS A PARTIR DO FUNDEADOURO SUL / TRÓIA:
 
@@ -750,7 +750,7 @@ Pergunta: Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a su
 Resposta: Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC
 Líquidos, conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca
 de 20 minutos. Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE,
-Termitrena ou Teporset, conta com cerca de 1 hora.
+Termitrena ou Teporset, conta com cerca de 1 hora e 30 minutos.
 
 Pergunta: Quanto tempo leva do Canal Sul para cais do sul, cais a norte e SECIL?
 Resposta: Do Canal Sul para cais do sul, isto é, Tanquisado, Eco-Oil, LISNAVE,

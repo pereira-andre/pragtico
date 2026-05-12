@@ -14,7 +14,7 @@
     "Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h desde a Barra.",
     "Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 min.",
     "Fundeadouro Norte demora cerca de 45 min; Fundeadouro Sul cerca de 45 min a 1h conforme a posição.",
-    "Do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 min; para SECIL 20 min; para cais a sul cerca de 1h.",
+    "Do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 min; para SECIL 20 min; para cais a sul cerca de 1h30.",
     "Do Fundeadouro Sul / Tróia para Autoeuropa/Ro-Ro (Cais 10/11) são cerca de 1h50 a 2h como mudança interna direta; não calcular via Barra.",
     "Entrada de fora da Barra para Lisnave, Tanquisado ou Eco-Oil: marcar 2h antes do reponto.",
     "Teporset/Termitrena com calado condicionante: forte recomendação operacional para usar a preia-mar / janela de maior água, por causa do baixo de cerca de 7 m entre os dois cais.",
@@ -47,7 +47,7 @@
     },
     {
       "question": "Quais são os tempos práticos de trânsito desde a Barra para marcar manobras?",
-      "answer": "Referência prática desde a entrada da Barra: Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h; Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1h conforme a posição. Para mudanças internas: do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 minutos; para SECIL 20 minutos; para cais a sul cerca de 1h. Do Fundeadouro Sul / Tróia para Autoeuropa/Ro-Ro (Cais 10/11) são cerca de 1h50 a 2h como mudança interna direta, sem calcular via Barra. Do Canal Sul para cais do sul são 30 minutos a 1h; para cais a norte 1h a 1h20; para SECIL 40 minutos.",
+      "answer": "Referência prática desde a entrada da Barra: Canal Sul para Tanquisado, Eco-Oil, Lisnave, Teporset ou Termitrena demora cerca de 1h30 a 2h; Canal Norte para TMS 1, TMS 2 e Autoeuropa/Ro-Ro demora cerca de 1h; Praias do Sado e SAPEC cerca de 1h20; SECIL cerca de 30 minutos; Fundeadouro Norte cerca de 45 minutos; Fundeadouro Sul cerca de 45 minutos a 1h conforme a posição. Para mudanças internas: do Fundeadouro Norte para cais a norte (TMS 1 até SAPEC Líquidos) são 15 a 25 minutos; para SECIL 20 minutos; para cais a sul cerca de 1h30. Do Fundeadouro Sul / Tróia para Autoeuropa/Ro-Ro (Cais 10/11) são cerca de 1h50 a 2h como mudança interna direta, sem calcular via Barra. Do Canal Sul para cais do sul são 30 minutos a 1h; para cais a norte 1h a 1h20; para SECIL 40 minutos.",
       "keywords": [
         "tempos",
         "transito",
@@ -79,7 +79,7 @@
     },
     {
       "question": "Quanto tempo leva do Fundeadouro Norte para os cais a norte, cais a sul e SECIL?",
-      "answer": "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca de 20 minutos. Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, conta com cerca de 1 hora.",
+      "answer": "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, conta com 15 a 25 minutos a navegar, até SAPEC. Para a SECIL, cerca de 20 minutos. Para os cais a sul, isto é, Tanquisado, Eco-Oil, LISNAVE, Termitrena ou Teporset, conta com cerca de 1 hora e 30 minutos.",
       "keywords": [
         "tempo",
         "leva",
@@ -102,7 +102,7 @@
         "teporset",
         "15 a 25 minutos",
         "20 minutos",
-        "1 hora"
+        "1 hora e 30 minutos"
       ]
     },
     {

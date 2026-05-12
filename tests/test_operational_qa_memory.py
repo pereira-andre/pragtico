@@ -4,12 +4,24 @@ from types import SimpleNamespace
 
 from core.chat_runtime import _build_supplemental_sources
 from domain.chat_response_formatting import add_contextual_response_emojis
-from domain.operational_qa_memory import build_qa_memory_sources, find_qa_memory_matches, load_qa_memory_records
+from domain.operational_qa_memory import (
+    build_qa_memory_sources,
+    find_qa_memory_matches,
+    load_qa_memory_audit_report,
+    load_qa_memory_records,
+    qa_memory_supported_questions,
+)
 from integrations.rag_engine import SimpleRAGEngine
 
 
-def test_qa_memory_matches_paraphrased_critical_tug_case() -> None:
+def clear_qa_memory_caches() -> None:
     load_qa_memory_records.cache_clear()
+    load_qa_memory_audit_report.cache_clear()
+    qa_memory_supported_questions.cache_clear()
+
+
+def test_qa_memory_matches_paraphrased_critical_tug_case() -> None:
+    clear_qa_memory_caches()
 
     matches = find_qa_memory_matches("RORO 230 metros com vento norte forte: quantos rebocadores?")
 
@@ -21,7 +33,7 @@ def test_qa_memory_matches_paraphrased_critical_tug_case() -> None:
 
 
 def test_qa_memory_avoids_noise_for_short_navigation_conversion() -> None:
-    load_qa_memory_records.cache_clear()
+    clear_qa_memory_caches()
 
     matches = find_qa_memory_matches("100 jardas sao quantos metros?")
 
@@ -35,6 +47,31 @@ def test_qa_memory_source_is_guidance_not_ready_answer() -> None:
     assert "Nunca copiar literalmente" in source["snippet"]
     assert "fundamentação mínima" in source["snippet"]
     assert "91,44 metros" in source["snippet"]
+    assert "Resposta validada anterior" not in source["snippet"]
+
+
+def test_qa_memory_audit_blocks_known_fundeadouro_norte_one_hour_regression() -> None:
+    clear_qa_memory_caches()
+    old_question = "Navio do Fundeadouro Norte para a Lisnave deve sair quando para chegar ao reponto das 20:03?"
+    report = load_qa_memory_audit_report()
+    record = next(item for item in report["records"] if item["question"] == old_question)
+
+    assert record["status"] == "review"
+    assert "1h30" in record["reason"]
+    assert all(match.question != old_question for match, _score in find_qa_memory_matches(old_question))
+
+
+def test_qa_memory_keeps_correct_fundeadouro_norte_lisnave_lead_time() -> None:
+    clear_qa_memory_caches()
+
+    matches = find_qa_memory_matches(
+        "Do Fundeadouro Norte para a LISNAVE, para chegar à próxima preia-mar, quando marco piloto?"
+    )
+
+    assert any(
+        "1 hora e 30 minutos antes" in " | ".join(record.expected)
+        for record, _score in matches
+    )
 
 
 def test_supplemental_sources_include_qa_memory_without_bypassing_direct_rules() -> None:
