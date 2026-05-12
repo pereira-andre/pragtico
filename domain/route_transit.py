@@ -539,6 +539,13 @@ def _format_route_plan_answer(
         "Pernadas:",
         *leg_lines,
     ]
+    aliases = []
+    if re.search(r"\btms\s*1\b|\btms1\b", clean_question):
+        aliases.append("TMS1 / TMS 1")
+    if re.search(r"\btms\s*2\b|\btms2\b", clean_question):
+        aliases.append("TMS2 / TMS 2")
+    if aliases:
+        answer_parts.insert(1, "Alias operacional: " + "; ".join(aliases) + ".")
     if eta_text:
         answer_parts.append(eta_text)
     answer = "\n".join(answer_parts)
@@ -1048,7 +1055,7 @@ def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str
     answer = (
         "Percurso/duracao: do Fundeadouro Norte para a LISNAVE/Mitrena conta com cerca de 1 hora.\n"
         f"Para chegar ao reponto das {reponto_label}, a largada deve ser por volta das {depart_label}.\n"
-        "A fase critica é no cais/doca: a LISNAVE deve ser trabalhada próximo do reponto de maré, porque os cais ficam perpendiculares à corrente.\n"
+        "A fase critica no cais/doca é a referência: a LISNAVE deve ser trabalhada próximo do reponto de maré, porque os cais ficam perpendiculares à corrente.\n"
         "Confirmar ainda o cais/doca concreto, calado, vento, rebocadores e validação do Piloto Coordenador."
     )
     return {

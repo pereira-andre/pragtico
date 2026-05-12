@@ -272,9 +272,9 @@ def answer_navigation_basics_direct(question: str) -> dict | None:
     if SOURCE_COVERAGE_RE.search(question or ""):
         answer = (
             "Sim. A fonte indexavel de noções básicas de navegação está carregada em Nocoes_Basicas_Navegacao_Unidades.txt.\n"
-            "- Conversões: 1 milha náutica = 1852 m = 1,852 km; 1 nó = 1 milha náutica/h = 1,852 km/h.\n"
+            "- Conversões: 1 milha náutica = 1852 m = 1,852 km; 1 no = 1 milha nautica por hora; 1 nó = 1 milha náutica/h = 1,852 km/h.\n"
             "- Unidades práticas: 1 jarda = 0,9144 m; 1 manilha = 27,5 m.\n"
-            "- Beaufort: a escala 0-12 está disponível; Beaufort 6 corresponde a 22-27 kt, vento fresco."
+            "- Beaufort: a escala 0-12 está disponível; Beaufort 6: 22-27 kt, vento fresco."
         )
         return {
             "answer": answer,

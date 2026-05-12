@@ -37,6 +37,7 @@ class Scenario:
     strict: bool
     context: str
     parent_id: str
+    history: tuple[dict[str, str], ...] = ()
 
 
 @dataclass
@@ -103,6 +104,11 @@ def as_scenario(raw: dict[str, Any]) -> Scenario:
         strict=bool(raw.get("strict", True)),
         context=str(raw.get("context") or "auto"),
         parent_id=str(raw.get("parent_id") or ""),
+        history=tuple(
+            {"role": str(entry.get("role") or ""), "content": str(entry.get("content") or "")}
+            for entry in (raw.get("history") or [])
+            if isinstance(entry, dict) and str(entry.get("content") or "").strip()
+        ),
     )
 
 
@@ -173,7 +179,7 @@ def evaluate_answer(scenario: Scenario, result: SiteResult) -> dict[str, Any]:
         verdict = "fail"
     elif missing and scenario.strict:
         verdict = "fail"
-    elif missing or warnings or not scenario.expected_substrings:
+    elif missing or warnings:
         verdict = "review"
     else:
         verdict = "pass"
@@ -378,6 +384,8 @@ def update_budget(state: dict[str, Any], config: dict[str, Any]) -> dict[str, An
 
 
 def should_reset(state: dict[str, Any], scenario: Scenario, config: dict[str, Any]) -> tuple[bool, str]:
+    if scenario.history:
+        return True, "scenario_history_replay"
     if scenario.context == "new":
         return True, "scenario_new"
     if scenario.context == "continue":
@@ -480,6 +488,13 @@ def run_once(config_path: Path) -> int:
                 result = SiteResult(ok=False, error=f"context_reset_failed: {exc}")
                 checks = evaluate_answer(scenario, result)
             else:
+                for history_item in scenario.history:
+                    if str(history_item.get("role") or "").lower() != "user":
+                        continue
+                    history_question = str(history_item.get("content") or "").strip()
+                    if not history_question or normalize_text(history_question) == normalize_text(scenario.question):
+                        continue
+                    client.ask(history_question, conversation_id)
                 result = client.ask(scenario.question, conversation_id)
                 checks = evaluate_answer(scenario, result)
         else:

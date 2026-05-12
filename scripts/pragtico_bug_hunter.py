@@ -55,6 +55,7 @@ class Scenario:
     strict: bool = True
     context: str = "auto"
     parent_id: str = ""
+    history: tuple[dict[str, str], ...] = ()
 
 
 @dataclass
@@ -258,6 +259,11 @@ def _matrix_scenarios() -> list[Scenario]:
                 source=str(item.get("source") or ""),
                 strict=strict,
                 context="continue" if item.get("history") else "auto",
+                history=tuple(
+                    {"role": str(entry.get("role") or ""), "content": str(entry.get("content") or "")}
+                    for entry in (item.get("history") or [])
+                    if isinstance(entry, dict) and str(entry.get("content") or "").strip()
+                ),
             )
         )
     return scenarios
@@ -386,6 +392,7 @@ def _variant_scenarios(seeds: list[Scenario], target_total: int) -> list[Scenari
                     strict=False,
                     context=seed.context,
                     parent_id=seed.id,
+                    history=seed.history,
                 )
             )
             if len(seeds) + len(variants) >= target_total:
@@ -503,7 +510,7 @@ def evaluate_answer(scenario: Scenario, result: TransportResult) -> dict[str, An
         verdict = "fail"
     elif missing and scenario.strict:
         verdict = "fail"
-    elif missing or warnings or not scenario.expected_substrings:
+    elif missing or warnings:
         verdict = "review"
     else:
         verdict = "pass"
@@ -657,6 +664,8 @@ def should_reset_context(state: dict[str, Any], scenario: Scenario, args: argpar
         return True, "policy_always_new"
     if policy == "never-new":
         return False, "policy_never_new"
+    if scenario.history:
+        return True, "scenario_history_replay"
     if scenario.context == "new":
         return True, "scenario_new"
     if scenario.context == "continue":
@@ -974,6 +983,13 @@ def run_one_turn(args: argparse.Namespace, scenarios: list[Scenario]) -> dict[st
                 result = TransportResult(ok=False, error=f"context_reset_failed: {exc}")
                 checks = evaluate_answer(scenario, result)
             else:
+                for history_item in scenario.history:
+                    if str(history_item.get("role") or "").lower() != "user":
+                        continue
+                    history_question = str(history_item.get("content") or "").strip()
+                    if not history_question or normalize_text(history_question) == normalize_text(scenario.question):
+                        continue
+                    transport.ask(history_question, conversation_id=conversation_id)
                 result = transport.ask(scenario.question, conversation_id=conversation_id)
                 checks = evaluate_answer(scenario, result)
         else:

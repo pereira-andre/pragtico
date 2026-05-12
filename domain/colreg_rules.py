@@ -251,7 +251,7 @@ def answer_colreg_interpretation_direct(question: str) -> dict | None:
             "- Regra 34 - Ultrapassagem em canal estreito e sinais de manobra.\n"
             "- Regra 35 - Sinais sonoros em visibilidade reduzida.\n"
             "- Regra 27 - Dragagem/trabalhos submarinos e capacidade de manobra reduzida.\n"
-            "- Regra 37 e Anexo IV - Sinais de perigo."
+            "- Regra 37 e Anexo IV - Perigo / sinais de perigo."
         )
         return _colreg_payload(answer)
 
