@@ -18,7 +18,9 @@
     "10,0 metros, praticável em qualquer maré.",
     "10,0 metros, praticável em qualquer maré.",
     "Sim, mas apenas na zona entre os cabeços 17 e 28, e desde que se utilizem os afastadores (carochas) existentes no TMS1.",
-    "Regra operacional de ocupação: o TMS1 pode ter no máximo três navios grandes ao mesmo tempo quando se inclui o Cais 8: dois na frente principal e um no Cais 8. Manter pelo menos 30 m entre navios que partilham a frente principal.",
+    "Regra operacional de ocupação: o TMS1 pode ter no máximo três navios grandes ao mesmo tempo quando se inclui o Cais 8: dois na frente principal contínua dos Cais 4 a 7 e um no Cais 8. Manter pelo menos 30 m entre navios que partilham a frente principal.",
+    "Comprimentos IT-005: Cais 4 175 m; Cais 5 175 m; Cais 6 175 m; Cais 7 80 m; Cais 8 215 m.",
+    "O TMS1 não tem Cais 3 no modelo operacional; os cais são 4 a 8.",
     "No TMS 1 são utilizadas defensas de borracha do tipo Yokohama."
   ],
   "faq": [
@@ -139,12 +141,11 @@
     },
     {
       "question": "O TMS1 pode ter três navios grandes ao cais?",
-      "answer": "Sim, no máximo três navios grandes, porque o Cais 8 faz parte do TMS1. A leitura operacional é: até dois navios grandes na frente principal do TMS1 e mais um navio no Cais 8. Como referência máxima, usar 230 m para cada navio grande no arranjo simples, incluindo o Cais 8 até 230 m. O Cais 8 é isolado: não serve de continuação do Cais 7.",
+      "answer": "Sim, no máximo três navios grandes, porque o Cais 8 faz parte do TMS1. A leitura operacional é: até dois navios grandes na frente principal contínua dos Cais 4 a 7 e mais um navio no Cais 8. Os comprimentos do IT-005 são: Cais 4 175 m, Cais 5 175 m, Cais 6 175 m, Cais 7 80 m e Cais 8 215 m. O Cais 8 é isolado: não serve de continuação do Cais 7. O TMS1 não tem Cais 3.",
       "keywords": [
         "tms1",
         "tres navios grandes",
-        "230",
-        "210",
+        "215",
         "cais 8",
         "ocupacao",
         "comprimento",
@@ -153,7 +154,7 @@
     },
     {
       "question": "Como se aplica o comprimento de navios aos cais do TMS1?",
-      "answer": "O cais atribuído é o ponto de referência, mas um navio que exceda o comprimento desse cais pode ocupar cais adjacentes. A regra prática é tentar primeiro o lado direito, usar o lado esquerdo se a direita estiver ocupada ou não chegar, nunca usar o Cais 8 como continuação do Cais 7, e manter 30 m de separação entre navios que partilham a frente principal. O Cais 8 pertence ao TMS1, mas é uma posição isolada para um navio até 230 m.",
+      "answer": "O cais atribuído é o ponto de referência, mas um navio que exceda o comprimento desse cais pode ocupar cais adjacentes dentro da frente contínua dos Cais 4 a 7. A regra prática é tentar primeiro o lado direito, usar o lado esquerdo se a direita estiver ocupada ou não chegar, nunca usar o Cais 8 como continuação do Cais 7, e manter 30 m de separação entre navios que partilham a frente principal. O Cais 8 pertence ao TMS1, mas é uma posição isolada para um navio até 215 m.",
       "keywords": [
         "tms1",
         "comprimento",
@@ -162,6 +163,20 @@
         "cais 8",
         "30 m",
         "separacao"
+      ]
+    },
+    {
+      "question": "Quais são os comprimentos dos cais do TMS1?",
+      "answer": "No IT-005, o TMS1 tem apenas os Cais 4 a 8. Comprimentos: Cais 4 175 m, Cais 5 175 m, Cais 6 175 m, Cais 7 80 m e Cais 8 215 m. O Cais 8 faz parte do TMS1, mas é isolado e não prolonga o Cais 7.",
+      "keywords": [
+        "tms1",
+        "comprimentos",
+        "cais 4",
+        "cais 5",
+        "cais 6",
+        "cais 7",
+        "cais 8",
+        "215"
       ]
     },
     {

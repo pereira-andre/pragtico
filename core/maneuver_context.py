@@ -50,7 +50,7 @@ def _direct_slash_validation_from_question(question: str | None) -> dict | None:
 
     if "mudanca" in clean and "lisnave" in clean and "tms 1" in clean:
         answer = (
-            "Validação direta de mudança Lisnave -> TMS 1 - Cais 3\n"
+            "Validação direta de mudança Lisnave -> TMS 1 - Cais 4\n"
             "Parecer operacional\n"
             "- Mudança: validar o mesmo plano como largada da origem e atracação no destino.\n"
             "- LOA (largada da origem): verificar no perfil LISNAVE/IT-014_Lisnave.txt.\n"
@@ -1508,7 +1508,7 @@ def _build_berth_profile_checklist_item(berth_label: str | None, *, maneuver_typ
             if len(rules) >= 4:
                 break
     if clean_label.startswith("TMS 2") and not any("posicoes" in _operational_lookup_key(rule) for rule in rules):
-        rules.append("TMS 2 tem tres posicoes operacionais: A, B e C")
+        rules.append("TMS 2 tem quatro posicoes operacionais: A, B, C e D")
     if not rules:
         return None
     normalized_rules = _operational_lookup_key(" ".join(rules))

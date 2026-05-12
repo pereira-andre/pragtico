@@ -160,6 +160,20 @@ de marés vivas, caso o navio esteja condicionado a atracar pelo bordo de estibo
 Pergunta: Qual a separação mínima entre navios na rampa do TMS1?
 Resposta: 30 metros em relação ao navio a jusante.
 
+Pergunta: Quais são os comprimentos dos cais do TMS1?
+Resposta: O TMS1 tem apenas os Cais 4 a 8. Comprimentos: Cais 4 com
+175 metros, Cais 5 com 175 metros, Cais 6 com 175 metros, Cais 7 com
+80 metros e Cais 8 com 215 metros.
+
+Pergunta: O TMS1 tem Cais 3?
+Resposta: Não. No IT-005 e no modelo operacional atual do portal, o TMS1
+tem cais numerados do 4 ao 8.
+
+Pergunta: Quantos navios grandes podem estar atracados no TMS1 ao mesmo tempo?
+Resposta: No máximo três: até dois navios grandes na frente principal contínua
+dos Cais 4 a 7 e mais um no Cais 8. O Cais 8 pertence ao TMS1, mas é isolado
+e não serve de continuação do Cais 7.
+
 Pergunta: Qual o tipo de defensas que o TMS 1 dispõe?
 Resposta: No TMS 1 são utilizadas defensas de borracha do tipo Yokohama.
 

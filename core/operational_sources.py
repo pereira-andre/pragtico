@@ -751,7 +751,7 @@ def build_berth_catalog_source(question: str) -> dict | None:
     lines = [
         "Catálogo canónico de cais/fundeadouros do portal:",
         f"- O catálogo operacional tem {berth_slot_count} slots de cais/berço/manobra, excluindo fundeadouros.",
-        "- TMS 2 conta como 3 posições operacionais: A, B e C.",
+        "- TMS 2 conta como 4 posições operacionais: A, B, C e D.",
         "- 'Lisnave' identifica o terminal/estaleiro; para registo operacional usa-se um cais ou doca específicos.",
         "- Aliases Lisnave reconhecidos pelo sistema: 'Doca 21' e 'Doca seca 21' -> 'Lisnave - Doca 21'; 'Cais 2 A', 'Lisnave 2A', 'Cais 2 W' e 'Cais 2 lado Setúbal' são interpretados como 'Lisnave - Cais 2 A'.",
         "- Na Lisnave, a designação operacional mantém sempre A/B. W/E e Setúbal/Alcácer são apenas referências laterais: A = W/oeste; B = E/este.",
@@ -992,19 +992,29 @@ def _answer_tms1_large_vessel_capacity_direct(question: str, clean_question: str
     rules = rules if isinstance(rules, dict) else {}
     max_large = _format_rule_number(rules.get("max_large_vessels_alongside"), 3)
     main_front_max = _format_rule_number(rules.get("main_front_max_large_vessels"), 2)
-    main_front_reference = _format_rule_number(rules.get("main_front_large_vessel_reference_loa_m"), 230)
-    cais8_max = _format_rule_number(rules.get("cais8_max_loa_m"), 230)
+    main_front_length = _format_rule_number(rules.get("main_front_available_length_m"), 605)
+    cais8_max = _format_rule_number(rules.get("cais8_max_loa_m"), 215)
     large_loa = _format_rule_number(rules.get("large_vessel_loa_m"), 200)
     clearance = _format_rule_number(rules.get("shared_clearance_m"), 30)
     large_rule = str(rules.get("large_vessel_rule") or "").strip()
+    slot_lengths = rules.get("slot_lengths_m") if isinstance(rules.get("slot_lengths_m"), dict) else {}
+    slot_summary_parts = []
+    for label in ("TMS 1 - Cais 4", "TMS 1 - Cais 5", "TMS 1 - Cais 6", "TMS 1 - Cais 7", "TMS 1 - Cais 8"):
+        value = slot_lengths.get(label)
+        if value is not None:
+            slot_summary_parts.append(f"{label.replace('TMS 1 - ', '')}: {_format_rule_number(value, 0)} m")
+    slot_summary = "; ".join(slot_summary_parts) if slot_summary_parts else "Cais 4 a 8 conforme IT-005"
 
     answer = (
         f"No TMS 1, a regra operacional é no máximo {max_large} navios grandes ao cais ao mesmo tempo.\n"
         f"- Para esta regra, o perfil do cais considera navio grande a partir de cerca de {large_loa} m de LOA.\n"
         f"- Distribuição máxima: {main_front_max} navios grandes na frente principal do TMS 1 mais 1 navio no Cais 8.\n"
-        f"- Medidas máximas de referência: até {main_front_reference} m por navio grande na frente principal, e até {cais8_max} m no Cais 8.\n"
+        f"- Comprimentos do IT-005: {slot_summary}.\n"
+        f"- Frente principal contínua: Cais 4 a 7, com {main_front_length} m no total; o navio pode ocupar cais adjacentes se o LOA exceder o cais atribuído.\n"
+        f"- Cais 8: máximo físico de {cais8_max} m.\n"
         f"- Quando navios partilham a frente principal do TMS 1, manter pelo menos {clearance} m de separação para cruzar cabos e evitar contacto.\n"
-        "- O Cais 8 faz parte do TMS 1, mas é isolado: não serve como continuação do Cais 7.\n\n"
+        "- O Cais 8 faz parte do TMS 1, mas é isolado: não serve como continuação do Cais 7.\n"
+        "- O TMS 1 já não tem Cais 3 no modelo operacional; os cais são 4, 5, 6, 7 e 8.\n\n"
         "Isto é uma regra de capacidade do TMS 1, não a lista de navios atualmente em porto."
     )
     snippet = large_rule or answer

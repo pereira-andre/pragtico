@@ -15,6 +15,7 @@ class BerthLayoutTests(unittest.TestCase):
         self.assertEqual(canonicalize_berth_label("sapec-solidos"), "SAPEC Sólidos")
         self.assertEqual(canonicalize_berth_label("Cais 7"), "TMS 1 - Cais 7")
         self.assertEqual(canonicalize_berth_label("TMS 2"), "TMS 2 - Posição A")
+        self.assertEqual(canonicalize_berth_label("TMS2 D"), "TMS 2 - Posição D")
 
     def test_dropdown_uses_tms2_slots_not_base_label(self) -> None:
         options = dropdown_berth_options()
@@ -23,6 +24,7 @@ class BerthLayoutTests(unittest.TestCase):
         self.assertIn("TMS 2 - Posição A", options)
         self.assertIn("TMS 2 - Posição B", options)
         self.assertIn("TMS 2 - Posição C", options)
+        self.assertIn("TMS 2 - Posição D", options)
 
     def test_occupancy_groups_legacy_labels_under_canonical_names(self) -> None:
         occupancy = build_slot_occupancy(
@@ -360,13 +362,13 @@ class BerthLayoutTests(unittest.TestCase):
         conflict = find_occupied_berth_conflict(
             "TMS 1 - Cais 7",
             [],
-            target_vessel_loa_m="790",
+            target_vessel_loa_m="610",
         )
 
         self.assertIsNotNone(conflict)
         self.assertEqual(conflict["reference_code"], "capacidade")
 
-    def test_tms1_prefers_right_but_uses_left_when_right_is_occupied(self) -> None:
+    def test_tms1_left_boundary_blocks_when_right_is_occupied(self) -> None:
         right_occupant = {
             "id": "tms1-c5",
             "vessel_name": "Right Occupant",
@@ -374,25 +376,10 @@ class BerthLayoutTests(unittest.TestCase):
             "vessel_loa_m": "100",
         }
 
-        self.assertIsNone(
-            find_occupied_berth_conflict(
-                "TMS 1 - Cais 4",
-                [right_occupant],
-                target_vessel_loa_m="230",
-            )
-        )
         self.assertEqual(
             find_occupied_berth_conflict(
                 "TMS 1 - Cais 4",
-                [
-                    right_occupant,
-                    {
-                        "id": "tms1-c3",
-                        "vessel_name": "Left Occupant",
-                        "berth_label": "TMS 1 - Cais 3",
-                        "vessel_loa_m": "100",
-                    },
-                ],
+                [right_occupant],
                 target_vessel_loa_m="230",
             ),
             right_occupant,
@@ -442,22 +429,22 @@ class BerthLayoutTests(unittest.TestCase):
             find_occupied_berth_conflict(
                 "TMS 1 - Cais 8",
                 occupants,
-                target_vessel_loa_m="230",
+                target_vessel_loa_m="215",
             )
         )
 
     def test_tms1_two_large_vessels_still_allow_small_cais8_if_free(self) -> None:
         occupants = [
             {
-                "id": "tms1-c3",
+                "id": "tms1-c4",
                 "vessel_name": "Large One",
-                "berth_label": "TMS 1 - Cais 3",
+                "berth_label": "TMS 1 - Cais 4",
                 "vessel_loa_m": "230",
             },
             {
-                "id": "tms1-c5",
+                "id": "tms1-c6",
                 "vessel_name": "Large Two",
-                "berth_label": "TMS 1 - Cais 5",
+                "berth_label": "TMS 1 - Cais 6",
                 "vessel_loa_m": "230",
             },
         ]
@@ -470,11 +457,18 @@ class BerthLayoutTests(unittest.TestCase):
             )
         )
 
-    def test_tms1_cais8_takes_only_one_vessel_up_to_230m(self) -> None:
+    def test_tms1_cais8_takes_only_one_vessel_up_to_215m(self) -> None:
+        self.assertIsNone(
+            find_occupied_berth_conflict(
+                "TMS 1 - Cais 8",
+                [],
+                target_vessel_loa_m="215",
+            )
+        )
         conflict = find_occupied_berth_conflict(
             "TMS 1 - Cais 8",
             [],
-            target_vessel_loa_m="240",
+            target_vessel_loa_m="216",
         )
 
         self.assertIsNotNone(conflict)
@@ -536,43 +530,50 @@ class BerthLayoutTests(unittest.TestCase):
             right_occupant,
         )
 
-    def test_tms2_allows_three_200m_but_blocks_three_230m_by_total_length(self) -> None:
-        two_200m = [
+    def test_tms2_allows_four_150m_but_blocks_four_170m_by_total_length(self) -> None:
+        three_150m = [
             {
                 "id": "tms2-a",
-                "vessel_name": "A 200",
+                "vessel_name": "A 150",
                 "berth_label": "TMS 2 - Posição A",
-                "vessel_loa_m": "200",
+                "vessel_loa_m": "150",
             },
             {
                 "id": "tms2-b",
-                "vessel_name": "B 200",
+                "vessel_name": "B 150",
                 "berth_label": "TMS 2 - Posição B",
-                "vessel_loa_m": "200",
+                "vessel_loa_m": "150",
+            },
+            {
+                "id": "tms2-c",
+                "vessel_name": "C 150",
+                "berth_label": "TMS 2 - Posição C",
+                "vessel_loa_m": "150",
             },
         ]
-        two_230m = [
-            {**two_200m[0], "vessel_name": "A 230", "vessel_loa_m": "230"},
-            {**two_200m[1], "vessel_name": "B 230", "vessel_loa_m": "230"},
+        three_170m = [
+            {**three_150m[0], "vessel_name": "A 170", "vessel_loa_m": "170"},
+            {**three_150m[1], "vessel_name": "B 170", "vessel_loa_m": "170"},
+            {**three_150m[2], "vessel_name": "C 170", "vessel_loa_m": "170"},
         ]
 
         self.assertIsNone(
             find_occupied_berth_conflict(
-                "TMS 2 - Posição C",
-                two_200m,
-                target_vessel_loa_m="200",
+                "TMS 2 - Posição D",
+                three_150m,
+                target_vessel_loa_m="150",
             )
         )
         self.assertEqual(
             find_occupied_berth_conflict(
-                "TMS 2 - Posição C",
-                two_230m,
-                target_vessel_loa_m="230",
+                "TMS 2 - Posição D",
+                three_170m,
+                target_vessel_loa_m="170",
             ),
-            two_230m[0],
+            three_170m[0],
         )
 
-    def test_tms2_mid_position_500m_occupies_all_three_positions(self) -> None:
+    def test_tms2_mid_position_500m_occupies_three_adjacent_positions(self) -> None:
         occupant = {
             "id": "tms2-b",
             "vessel_name": "Central Long TMS2",
@@ -580,9 +581,16 @@ class BerthLayoutTests(unittest.TestCase):
             "vessel_loa_m": "500",
         }
 
-        self.assertEqual(
+        self.assertIsNone(
             find_occupied_berth_conflict(
                 "TMS 2 - Posição A",
+                [occupant],
+                target_vessel_loa_m="100",
+            )
+        )
+        self.assertEqual(
+            find_occupied_berth_conflict(
+                "TMS 2 - Posição C",
                 [occupant],
                 target_vessel_loa_m="100",
             ),
@@ -590,7 +598,7 @@ class BerthLayoutTests(unittest.TestCase):
         )
         self.assertEqual(
             find_occupied_berth_conflict(
-                "TMS 2 - Posição C",
+                "TMS 2 - Posição D",
                 [occupant],
                 target_vessel_loa_m="100",
             ),

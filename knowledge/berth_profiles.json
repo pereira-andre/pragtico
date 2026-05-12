@@ -307,6 +307,7 @@
       "dimensions": [
         "Cabecos 1 a 39.",
         "Cais numerados 4, 5, 6, 7 e 8.",
+        "Comprimentos IT-005: Cais 4 175 m; Cais 5 175 m; Cais 6 175 m; Cais 7 80 m; Cais 8 215 m.",
         "Defensas: no TMS 1 sao utilizadas defensas de borracha do tipo Yokohama."
       ],
       "vessel_limits": [
@@ -315,23 +316,22 @@
       ],
       "berth_capacity_rules": {
         "slot_lengths_m": {
-          "TMS 1 - Cais 3": 175,
           "TMS 1 - Cais 4": 175,
           "TMS 1 - Cais 5": 175,
           "TMS 1 - Cais 6": 175,
           "TMS 1 - Cais 7": 80,
-          "TMS 1 - Cais 8": 230
+          "TMS 1 - Cais 8": 215
         },
         "allocation_order": "direita_primeiro_esquerda_se_necessario",
         "isolated_slots": ["TMS 1 - Cais 8"],
-        "cais8_max_loa_m": 230,
+        "cais8_max_loa_m": 215,
         "shared_clearance_m": 30,
         "large_vessel_loa_m": 200,
         "max_large_vessels_alongside": 3,
         "main_front_max_large_vessels": 2,
-        "main_front_large_vessel_reference_loa_m": 230,
+        "main_front_available_length_m": 605,
         "cais8_max_large_vessels": 1,
-        "large_vessel_rule": "Maximo tres navios grandes no TMS1: dois na frente principal e um no Cais 8; Cais 8 faz parte do TMS1, mas e isolado e nao serve de prolongamento ao Cais 7."
+        "large_vessel_rule": "Maximo tres navios grandes no TMS1: ate dois na frente principal continua dos Cais 4 a 7 e um no Cais 8. O Cais 8 faz parte do TMS1, tem 215 m, mas e isolado e nao serve de prolongamento ao Cais 7. O TMS1 nao tem Cais 3."
       },
       "draft_rules": [
         "Cabecos 1 a 10: 8,8 m.",
@@ -366,14 +366,15 @@
       "dimensions": [
         "Cabecos 40 a 63.",
         "Comprimento total: 723 m.",
-        "Sem subdivisao em cais numerados distintos."
+        "Sem subdivisao em cais numerados distintos no IT.",
+        "Modelo operacional do portal: posicoes A, B, C e D; cada posicao corresponde a 723 / 4 = 180,75 m de referencia."
       ],
       "vessel_limits": [
         "Pode receber mais do que um navio se a soma dos comprimentos e intervalos regulamentares couber nos 723 m."
       ],
       "berth_capacity_rules": {
         "total_length_m": 723,
-        "slot_labels": ["TMS 2 - Posição A", "TMS 2 - Posição B", "TMS 2 - Posição C"],
+        "slot_labels": ["TMS 2 - Posição A", "TMS 2 - Posição B", "TMS 2 - Posição C", "TMS 2 - Posição D"],
         "allocation_order": "direita_primeiro_esquerda_se_necessario",
         "shared_clearance_m": 30
       },

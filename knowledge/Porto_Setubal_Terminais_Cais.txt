@@ -15,7 +15,7 @@ IMPORTANTE:
   - Fundeadouros nao sao cais nem terminais. Sao zonas de fundeio.
   - O catalogo operacional do portal tem 36 slots de cais/berco/manobra,
     excluindo fundeadouros.
-  - TMS2 conta como tres posicoes operacionais para efeitos de demo: A, B e C.
+  - TMS2 conta como quatro posicoes operacionais para efeitos de demo: A, B, C e D.
   - "Quantos cais existem" depende do criterio de contagem: terminal, cais fisico,
     face operacional, rampa, doca seca, plataforma ou estrutura de duques d'alba.
   - Quando a pergunta pedir uma contagem, responder com o criterio usado e evitar
@@ -135,7 +135,7 @@ Intencao coberta: perguntas sobre quais terminais existem no Porto de Setubal.
 Factos de inventario: os grupos operacionais a considerar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B, C e D);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);
@@ -162,7 +162,7 @@ uma resposta, agrupar por nomes reconhecidos e evitar duplicar sinonimos. Usar
 os seguintes grupos:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B, C e D);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);
@@ -187,7 +187,7 @@ operacionais no catalogo do portal, distribuidos por varios cais e terminais. Os
 principais grupos a usar sao:
   - Cais Secil (cais W e E);
   - Terminal Multiusos 1 (TMS1 ou Cais das Fontainhas, com cais numerados 4 a 8);
-  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B e C);
+  - Terminal Multiusos 2 (TMS2 carga contentorizada, com posicoes A, B, C e D);
   - Terminal Autoeuropa (Cais 10 e Cais 11);
   - Cais das Praias do Sado (Pirites Alentejanas);
   - SAPEC (com cais para solidos e outro para liquidos);

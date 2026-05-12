@@ -35,6 +35,13 @@ Ao contrário do TMS1, o TMS2 não está subdividido em cais numerados distintos
 Trata-se de um único espaço contínuo de 723 metros, delimitado pelos cabeços
 40 a 63.
 
+Nota operacional do portal: para efeitos de registo e validação de ocupação,
+mantêm-se quatro posições internas de referência no TMS2 — Posição A, Posição B,
+Posição C e Posição D. Como o comprimento total é 723 metros, cada posição
+corresponde a 723 / 4 = 180,75 metros de referência. Esta divisão é uma
+representação do portal;
+o IT-006 continua a descrever o TMS2 como um cais contínuo.
+
 ================================================================================
 REGRA DE SEPARAÇÃO ENTRE NAVIOS — INTERVALO DE 10%
 ================================================================================
@@ -94,6 +101,11 @@ Resposta: O TMS2 abrange os cabeços 40 a 63.
 
 Pergunta: Qual é o comprimento total do TMS2?
 Resposta: 723 metros.
+
+Pergunta: Como o portal divide o TMS2 em posições?
+Resposta: O portal mantém quatro posições internas — TMS 2 - Posição A, Posição B,
+Posição C e Posição D. Para validação de comprimento, usa 723 / 4 = 180,75 metros
+por posição de referência, mantendo a leitura operacional de cais contínuo.
 
 Pergunta: Qual o calado máximo permitido no TMS2?
 Resposta: 12 metros, aplicável de forma uniforme a todo o terminal.

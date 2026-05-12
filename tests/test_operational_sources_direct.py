@@ -266,8 +266,9 @@ class OperationalSourcesDirectTests(unittest.TestCase):
 
         self.assertIn("máximo 3 navios grandes", answer)
         self.assertIn("2 navios grandes na frente principal", answer)
-        self.assertIn("até 230 m no Cais 8", answer)
+        self.assertIn("Cais 8: 215 m", answer)
         self.assertIn("Cais 8 faz parte do TMS 1", answer)
+        self.assertIn("Cais 4: 175 m", answer)
         self.assertIn("regra de capacidade", answer)
         self.assertNotIn("ELBTOWER", answer)
         self.assertNotIn("Navios atracados em cais", answer)

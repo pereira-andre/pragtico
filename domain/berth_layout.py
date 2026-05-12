@@ -14,7 +14,6 @@ BERTH_OPTIONS = [
     "Secil E",
     "Fundeadouro Norte",
     "Cais Palmeiras",
-    "TMS 1 - Cais 3",
     "TMS 1 - Cais 4",
     "TMS 1 - Cais 5",
     "TMS 1 - Cais 6",
@@ -53,22 +52,22 @@ TMS2_SLOT_LABELS = [
     "TMS 2 - Posição A",
     "TMS 2 - Posição B",
     "TMS 2 - Posição C",
+    "TMS 2 - Posição D",
 ]
 MULTI_SLOT_BERTHS = {
     TMS2_BASE_LABEL: TMS2_SLOT_LABELS,
 }
 TMS1_SLOT_LENGTHS_M = {
-    "TMS 1 - Cais 3": 175.0,
     "TMS 1 - Cais 4": 175.0,
     "TMS 1 - Cais 5": 175.0,
     "TMS 1 - Cais 6": 175.0,
     "TMS 1 - Cais 7": 80.0,
-    "TMS 1 - Cais 8": 230.0,
+    "TMS 1 - Cais 8": 215.0,
 }
 TMS1_SLOT_LABELS = list(TMS1_SLOT_LENGTHS_M)
 TMS1_LARGE_VESSEL_LOA_M = 200.0
 TMS1_MAX_LARGE_VESSELS = 3
-TMS1_CAIS8_MAX_LOA_M = 230.0
+TMS1_CAIS8_MAX_LOA_M = 215.0
 TMS2_TOTAL_LENGTH_M = 723.0
 TMS2_SLOT_LENGTHS_M = {label: TMS2_TOTAL_LENGTH_M / len(TMS2_SLOT_LABELS) for label in TMS2_SLOT_LABELS}
 AUTOEUROPA_SLOT_LABELS = ["Cais 10 / Autoeuropa", "Cais 11 / Autoeuropa"]
@@ -237,8 +236,8 @@ def _tms2_slot_label(label: str | None, berth_options: Iterable[str] | None = No
     )
     if not is_tms2:
         return ""
-    slot_match = re.search(r"(?:posicao|pos|slot|lugar)?\s*([abc])(?:\s|$)", key)
-    compact_slot_match = re.search(r"(?:tms2|terminalmultiusos2|terminalmultiusosdois)(?:posicao|pos|slot|lugar)?([abc])$", compact)
+    slot_match = re.search(r"(?:posicao|pos|slot|lugar)?\s*([abcd])(?:\s|$)", key)
+    compact_slot_match = re.search(r"(?:tms2|terminalmultiusos2|terminalmultiusosdois)(?:posicao|pos|slot|lugar)?([abcd])$", compact)
     slot = ""
     if compact_slot_match:
         slot = compact_slot_match.group(1)
@@ -246,7 +245,7 @@ def _tms2_slot_label(label: str | None, berth_options: Iterable[str] | None = No
         slot = slot_match.group(1)
     if not slot:
         return TMS2_SLOT_LABELS[0]
-    return TMS2_SLOT_LABELS[{"a": 0, "b": 1, "c": 2}[slot]]
+    return TMS2_SLOT_LABELS[{"a": 0, "b": 1, "c": 2, "d": 3}[slot]]
 
 
 def _expanded_berth_options(berth_options: Iterable[str] | None = None) -> List[str]:
