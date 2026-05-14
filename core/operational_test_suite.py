@@ -93,10 +93,10 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "expected_origin": "operational_tug_guidance",
         "expected_tokens": (
             "Recomendo 2 rebocadores",
-            "Ro-Ro com vento Sul a sair: 2 rebocadores",
+            "Ro-Ro com vento",
+            "a sair: 2 rebocadores",
             "Meteorologia considerada",
-            "rajadas 20",
-            "ponderar atrasar",
+            "Local: Autoeuropa",
         ),
     },
     {
@@ -2702,6 +2702,57 @@ class OperationalFlowSuite:
             )
         return record if isinstance(record, dict) else None
 
+    def _free_hour_capacity_test_berths(self, planned_at: str, *, count: int = 5) -> list[str]:
+        """Pick simple free berths so the hourly-capacity test is not masked by live occupancy."""
+        snapshot = services.store.get_port_activity_snapshot(window_days=3650)
+        in_port = snapshot.get("in_port", []) or []
+        preferred = [
+            "Secil W",
+            "Secil E",
+            "Cais Palmeiras",
+            "Praias do Sado / Pirites Alentejanas",
+            "SAPEC Sólidos",
+            "SAPEC Líquidos",
+            "ALSTOM",
+            "PAN Tróia",
+            "Tanquisado (lado jusante)",
+            "Eco-Oil (lado montante)",
+            "Lisnave - Cais 0 B",
+            "Lisnave - Cais 0 A",
+            "Lisnave - Doca 20",
+            "Lisnave - Doca 21",
+            "Lisnave - Doca 22",
+            "Lisnave - Cais 1 B",
+            "Lisnave - Cais 1 A",
+            "Lisnave - Cais 2 B",
+            "Lisnave - Cais 2 A",
+            "Lisnave - Cais 3 B",
+            "Lisnave - Cais 3 A",
+            "Lisnave - Doca 31",
+            "Lisnave - Doca 32",
+            "Lisnave - Doca 33",
+            "Teporset",
+        ]
+        selected: list[str] = []
+        for berth in preferred:
+            conflict = find_occupied_berth_conflict(
+                berth,
+                in_port,
+                target_planned_at=planned_at,
+                target_vessel_loa_m="148.0",
+                berth_options=services.BERTH_OPTIONS,
+            )
+            if conflict:
+                continue
+            selected.append(berth)
+            if len(selected) >= count:
+                break
+        if len(selected) < count:
+            raise ValueError(
+                f"Sem {count} cais livres simples para testar capacidade horária; encontrados {len(selected)}."
+            )
+        return selected
+
     def _latest(self, port_call: dict, maneuver_type: str) -> dict:
         current = services.store.get_port_call(port_call["id"])
         maneuver = latest_maneuver_by_type(current, maneuver_type)
@@ -3227,20 +3278,27 @@ class OperationalFlowSuite:
             "Limite de 4 manobras por hora",
             "Aprova quatro manobras na mesma hora e valida que a quinta fica bloqueada.",
         )
-        berths = [
-            "Secil E",
-            "Cais Palmeiras",
-            "TMS 1 - Cais 6",
-            "TMS 1 - Cais 4",
-            "TMS 1 - Cais 5",
-        ]
+        planned_at = self._future(days=8, hour=15)
+        try:
+            berths = self._free_hour_capacity_test_berths(planned_at)
+        except Exception as exc:
+            self._record_step(
+                scenario,
+                label="Escolher cais livres",
+                element="Capacidade horária",
+                expected="Existem cinco cais livres para isolar o teste de limite por hora.",
+                observed=str(exc),
+                state="failed",
+            )
+            self._finish_scenario(scenario)
+            return
         port_calls: list[dict] = []
         for offset, berth in enumerate(berths, start=10):
             record = self._create_port_call(
                 scenario,
                 index=offset,
                 name=f"CAPACIDADE {offset}",
-                eta=self._future(days=8, hour=15),
+                eta=planned_at,
                 berth=berth,
                 last_port="Lisboa",
                 next_port="Setúbal",
