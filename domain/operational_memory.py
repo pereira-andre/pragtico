@@ -70,8 +70,10 @@ def _review_memory_lines(items: Iterable[dict]) -> list[str]:
         correction_document = _clean_text(item.get("feedback_correction_document"), max_chars=180)
         if correction_document:
             lines.append(f"- Documento indicado pelo operador: {correction_document}")
-        if correction:
+        if correction and reusable:
             lines.append(f"- Correção sugerida pelo operador: {correction}")
+        elif correction:
+            lines.append("- Correção existe mas ainda não está promovida para memória reutilizável.")
         rejected_answer = _clean_text(item.get("answer"), max_chars=420)
         if rejected_answer:
             lines.append(f"- Resposta anterior a evitar repetir sem validação: {rejected_answer}")
@@ -152,7 +154,8 @@ def filter_feedback_for_synthesis(
     reviewed = [
         item
         for item in (reviewed_answers or [])
-        if (
+        if feedback_allows_memory_reuse(item)
+        and (
             float(item.get("similarity") or 0) >= REVIEW_MEMORY_MIN_SIMILARITY
             or _clean_text(item.get("feedback_correction"))
             or _clean_text(item.get("feedback_note"))

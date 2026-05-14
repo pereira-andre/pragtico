@@ -8,7 +8,7 @@
   ],
   "summary": "Notas operacionais sobre condições meteorológicas, maré, embarque de piloto, rebocadores em vento forte, nevoeiro e prioridades de manobra. Complementa o IT-018 e o P-19 com critérios práticos usados na pilotagem de Setúbal.",
   "key_points": [
-    "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica.",
+    "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica; acima de 25 nós as manobras ficam suspensas.",
     "Quando a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.",
     "Sempre que possível. Se as condições não permitirem, embarca no Outão. Se nem no Outão for possível, o navio aguarda ao largo até as condições melhorarem.",
     "Com a maré de enchente, a corrente actua a favor da aproximação da lancha, reduzindo o efeito combinado adverso de vento forte + corrente de vazante + ondulação.",
@@ -19,7 +19,7 @@
   "faq": [
     {
       "question": "A partir de que velocidade de vento as manobras ficam condicionadas?",
-      "answer": "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica. Acima de 25 nós as manobras são geralmente impraticáveis.",
+      "answer": "A partir de 20 nós o Piloto e o Comandante avaliam a viabilidade das manobras, especialmente para navios de grande superfície vélica. Acima de 25 nós as manobras ficam suspensas; aos 25 nós exatos a avaliação deve ser muito conservadora.",
       "keywords": [
         "condicionadas",
         "ficam",

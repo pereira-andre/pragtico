@@ -8,15 +8,22 @@
     "bons costumes de Setubal",
     "choco frito",
     "Forte de Sao Filipe",
-    "Outao"
+    "Outao",
+    "roazes do Sado",
+    "golfinhos do Sado",
+    "fauna do Sado",
+    "biodiversidade da Arrabida"
   ],
-  "summary": "Síntese de apoio cultural para o PRAGtico: história geral de Setúbal, Forte de São Filipe, Outão/Fortaleza de Sant'Iago, gastronomia local e bons costumes. Deve dar contexto humano ao bot, mas não servir de base para decisões operacionais.",
+  "summary": "Síntese de apoio cultural para o PRAGtico: história geral de Setúbal, Forte de São Filipe, Outão/Fortaleza de Sant'Iago, gastronomia local, biodiversidade do Sado/Arrábida e bons costumes. Deve dar contexto humano ao bot, mas não servir de base para decisões operacionais.",
   "key_points": [
     "Setúbal tem ocupação humana desde a pré-história e, na época romana, desenvolveu Cetóbriga, núcleo ligado à salga de peixe nas margens do Sado.",
     "A primeira carta foral de Setúbal foi concedida em 1249 por D. Paio Peres Correia, mestre da Ordem de Santiago.",
     "O Forte de São Filipe começou a ser construído em 1582, por ordem de Filipe I/II, e tem planta em estrela de seis pontas com seis baluartes.",
     "O Outão tem origem defensiva antiga, com atalaia de 1390, farol instalado em 1880 e transformação posterior em sanatório/hospital ortopédico.",
     "A gastronomia local é marcada pelo peixe, choco e marisco; o choco frito é um dos símbolos de Setúbal.",
+    "O estuário do Sado tem uma comunidade residente de roazes-corvineiros (Tursiops truncatus), além de aves de sapal, peixes, moluscos e crustáceos.",
+    "A Arrábida combina fauna terrestre e marinha: javali, raposa, texugo, geneta, coelho-bravo, morcegos, aves de rapina, peixes, invertebrados, macroalgas e plantas marinhas.",
+    "Orcas e tubarões-martelo devem ser tratados como ocorrências ocasionais no largo/costa, não como espécies residentes do Sado.",
     "Este documento não substitui instruções de trabalho, regras operacionais, limites de segurança nem fontes live."
   ],
   "faq": [
@@ -62,6 +69,34 @@
         "farol",
         "hospital",
         "sado"
+      ]
+    },
+    {
+      "question": "Porque é conhecido o estuário do Sado?",
+      "answer": "O estuário do Sado é conhecido pela paisagem de sapal e zonas húmidas, pela avifauna e pela comunidade residente de roazes-corvineiros, os golfinhos do Sado. É contexto natural/cultural e não base para decisões operacionais.",
+      "keywords": [
+        "sado",
+        "estuario",
+        "golfinhos",
+        "roazes",
+        "aves",
+        "sapal"
+      ]
+    },
+    {
+      "question": "Que animais e vida marinha existem na zona de Setúbal, Sado e Arrábida?",
+      "answer": "A zona junta roazes-corvineiros, aves de sapal como flamingos, garças e colhereiros, peixes, moluscos, crustáceos, macroalgas e plantas marinhas. Na Arrábida também há javalis, raposas, texugos, genetas, coelhos-bravos, morcegos e aves de rapina. Orcas e tubarões-martelo são referências ocasionais no largo/costa, não residentes do Sado.",
+      "keywords": [
+        "animais",
+        "fauna",
+        "arrabida",
+        "sado",
+        "roazes",
+        "golfinhos",
+        "orcas",
+        "tubaroes",
+        "algas",
+        "aves"
       ]
     },
     {

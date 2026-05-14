@@ -673,6 +673,18 @@ A partir da Bóia 14CS:
 Totais de referência: Pilot station -> Bóia 14CS = 11,0 NM; Pilar 2 -> Bóia
 14CS = 10,0 NM; Pilar 2 -> LISNAVE/docas/Hidrolift = 10,5 NM.
 
+ORDEM OPERACIONAL DOS CAIS POR CANAL:
+
+Canal Norte, entrada: Pilar 2/Outão, Bóia João Farto, Bóia 1CC / Bóia 3CC,
+TMS 1, Bóia 5CC, TMS 2, Autoeuropa / Ro-Ro, Praias do Sado, SAPEC e ALSTOM.
+À saída, usar a ordem inversa.
+
+Canal Sul, entrada: Pilar 2/Outão, Bóia João Farto, Bóia 4CS, Bóia 6CS,
+Bóia 12CS, Bóia 14CS e depois a zona Tanquisado / Eco-Oil / LISNAVE /
+Termitrena / Teporset conforme destino. Na LISNAVE, a leitura operacional de
+referência é: Cais 0 B/A, Docas 21/22, Cais 1 B/A, Cais 2 B/A, Cais 3 B/A e
+Hidrolift / Plataformas 31/32/33. À saída, usar a ordem inversa.
+
 ================================================================================
 SECÇÃO DE PERGUNTAS E RESPOSTAS — RECUPERAÇÃO SEMÂNTICA
 ================================================================================

@@ -195,7 +195,7 @@
     "eval_type": "direct_operational",
     "expected_answer_origin": "operational_safety_limit",
     "question": "Se não fosse nevoeiro e estivesse 31 kts de vento, já podia sair desde que tivesse 4 reboques?",
-    "expected_substrings": ["Não", "31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"]
+    "expected_substrings": ["Não", "31 kt", "vento superior a 25 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"]
   },
   {
     "document": "IT-015_Fundeadouros.txt",

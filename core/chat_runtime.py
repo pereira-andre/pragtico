@@ -58,6 +58,7 @@ from domain.chat_actions import (
     looks_like_slash_command,
     parse_slash_command,
 )
+from domain.answer_contract import answer_contract_trace, build_response_contract_source
 from domain.chat_response_formatting import add_contextual_response_emojis
 from domain.berth_layout import canonicalize_berth_label
 from domain.berth_profiles import (
@@ -344,7 +345,8 @@ def _build_supplemental_sources(
     trusted_answers: list[dict] | None = None,
     reviewed_answers: list[dict] | None = None,
 ) -> list[dict]:
-    supplemental_sources = build_operational_chat_sources(question, plan=plan)
+    supplemental_sources = [build_response_contract_source(question)]
+    supplemental_sources.extend(build_operational_chat_sources(question, plan=plan))
     supplemental_sources.extend(build_live_operational_sources(question, plan=plan))
     if conversation_state and conversation_state.get("source"):
         supplemental_sources.append(conversation_state["source"])
@@ -568,6 +570,7 @@ def _build_playground_trace(
         "answer_origin": answer_origin,
         "source_count": len(sources or []),
         "source_mode_counts": _source_mode_counts(sources),
+        "answer_contract": answer_contract_trace(),
         "target_document": str(target_record.get("name") or ""),
         "target_document_hit": bool(target_record),
         "document_target_chunks": len(document_sources),

@@ -48,6 +48,25 @@ OUTAO E FORTALEZA DE SANTIAGO DO OUTAO
 - Em 1900, a rainha D. Amelia ofereceu a fortaleza para instalacao de um sanatorio ligado a Assistencia Nacional aos Tuberculosos.
 - Mais tarde, com a diminuicao da tuberculose, o conjunto evoluiu para o Hospital Ortopedico de Sant'Iago do Outao.
 
+BIODIVERSIDADE DO SADO E DA ARRABIDA
+- O estuario do Sado e uma das zonas humidas importantes de Portugal, com sapais,
+  bancos de vasa, salinas, peixes, moluscos, crustaceos, aves aquáticas e uma
+  comunidade residente de roazes-corvineiros (Tursiops truncatus). Estes roazes
+  sao golfinhos costeiros/estuarinos e sao um simbolo natural da zona.
+- A avifauna do Sado inclui aves de sapal e zonas humidas, como flamingos,
+  garcas, colhereiros, corvos-marinhos, patos e limicolas migradoras. A resposta
+  do bot deve ser curta e curiosa, sem transformar isto em guia biologico.
+- A Arrabida e a zona marinha adjacente juntam fauna terrestre e marinha:
+  javali, raposa, texugo, geneta, coelho-bravo, morcegos, aves de rapina e
+  muitas aves costeiras. No mar, ha peixes, invertebrados, macroalgas e plantas
+  marinhas/ervas marinhas em zonas de elevado valor ecologico, como a area da
+  Pedra da Anicha.
+- Orcas e tubaroes-martelo podem ser mencionados apenas como ocorrencias ou
+  avistamentos ocasionais no largo/costa portuguesa, nao como especies
+  residentes do estuario do Sado. A resposta deve separar sempre residentes
+  caracteristicos (roazes, aves, fauna de sapal/Arrabida) de visitantes raros
+  ou ocasionais.
+
 GASTRONOMIA E BONS COSTUMES DA TERRA
 - Em Setubal, falar de comida e falar do mar: peixe fresco, choco, marisco, ostras e pratos de grelha/caldeirada fazem parte da identidade local.
 - O choco frito e provavelmente o prato mais emblematico da cidade. E comum falar dele como imagem de marca de Setubal; aparece muitas vezes servido com batata frita e salada, ou no pao.
@@ -69,10 +88,18 @@ Resposta: O Forte de Sao Filipe domina a cidade e a baia do Sado. Comecou a ser 
 Pergunta: O que ha de especial no Outao?
 Resposta: O Outao e um ponto estrategico da barra do Sado. A fortificacao vem de uma atalaia de 1390, foi muito reforcada com a guerra da polvora, teve farol instalado em 1880, passou por uso prisional e real, e acabou ligada a saude como sanatorio e depois Hospital Ortopedico de Sant'Iago do Outao.
 
+Pergunta: Porque e conhecido o estuario do Sado?
+Resposta: O estuario do Sado e conhecido pela paisagem de sapal e zonas humidas, pela avifauna e pela comunidade residente de roazes-corvineiros, os golfinhos do Sado. E contexto natural/cultural e nao base para decisoes operacionais.
+
+Pergunta: Que animais e vida marinha existem na zona de Setubal, Sado e Arrabida?
+Resposta: A zona junta roazes-corvineiros, aves de sapal como flamingos, garcas e colhereiros, peixes, moluscos, crustaceos, macroalgas e plantas marinhas. Na Arrabida tambem ha javalis, raposas, texugos, genetas, coelhos-bravos, morcegos e aves de rapina. Orcas e tubaroes-martelo devem ser tratados como ocorrencias ocasionais no largo/costa, nao residentes do Sado.
+
 FONTES BASE
 - Municipio de Setubal, "Historia, numa pagina": https://www.mun-setubal.pt/historia/
 - Visit Setubal, "Forte de Sao Filipe": https://visitsetubal.com/cultura-patrimonio/forte-de-sao-filipe/
 - Patrimonio Cultural, ficha "Castelo de Sao Filipe": https://imovel.patrimoniocultural.gov.pt/detalhes.php?code=69878
 - Municipio de Setubal, intervencao na encosta do Forte de Sao Filipe: https://www.mun-setubal.pt/intervencao-de-natureza-estrutural-para-evitar-derrocadas-na-encosta-do-forte-de-sao-filipe-fase-2/
 - Visit Setubal, "O mar a mesa": https://visitsetubal.com/eat-drink-generico2/o-mar-a-mesa/
+- ICNF, "Reserva Natural do Estuario do Sado": https://www.icnf.pt/api/file/doc/05c6375422dd5e62
+- ICNF, "Parque Marinho Prof. Luiz Saldanha / Arrabida": https://www.icnf.pt/api/file/doc/bb7600d4e2b008a8
 - Notas locais ja existentes no projeto: historia_outao.txt e historia_forte_sao_filipe.txt.

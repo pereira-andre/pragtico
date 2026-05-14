@@ -1714,15 +1714,63 @@ def _extract_wind_kts_from_question(question: str) -> float | None:
     return None
 
 
+def _asks_wind_operational_limit(clean_question: str) -> bool:
+    if "vento" not in clean_question:
+        return False
+    asks_limit = bool(
+        re.search(
+            r"\b(maxim\w*|admiss\w*|permitid\w*|limite|limites|"
+            r"condicionad\w*|suspens\w*|suspend\w*|impossivel|impraticavel)\b",
+            clean_question,
+        )
+        or re.search(r"\ba partir de que\b|\bate quanto\b|\bquanto vento\b", clean_question)
+    )
+    if not asks_limit:
+        return False
+    return bool(
+        re.search(
+            r"\b(manobr\w*|pilotagem|operacional|operacao|opera[cç][aã]o|porto|"
+            r"navio|entrada|saida|saída|sair|atracar|desatracar)\b",
+            clean_question,
+        )
+    )
+
+
 def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None:
-    if not re.search(r"\b(manobra|manobras|sair|saida|saída|atracar|entrar|navio|reboque|reboques|rebocador|rebocadores)\b", clean_question):
+    if _asks_wind_operational_limit(clean_question):
+        answer = (
+            "🌬️ O limite máximo prático para manobrar é 25 kt. "
+            "Acima de 20 kt a manobra já fica condicionada e deve ser avaliada caso a caso pelo Piloto e pelo Comandante, "
+            "com atenção ao tipo de navio, área vélica, direção do vento, rajadas, corrente, local e rebocadores disponíveis. "
+            "Aos 25 kt está-se no limite e a decisão deve ser muito conservadora; com vento sustentado ou rajada superior a 25 kt, "
+            "as manobras ficam suspensas por segurança. 30 kt fica muito para lá do limite praticável."
+        )
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": "operational_safety_limits.json",
+                    "source_id": "SAFE_WIND_LIMIT",
+                    "chunk_id": 1,
+                    "score": 1.0,
+                    "retrieval_mode": "operational_safety_limits",
+                    "snippet": (
+                        "Acima de 20 kt a manobra fica condicionada; 25 kt é o limite máximo prático; "
+                        "vento sustentado ou rajada superior a 25 kt suspende manobras."
+                    ),
+                }
+            ],
+            "answer_origin": "operational_safety_limit",
+        }
+
+    if not re.search(r"\b(manobr\w*|sair|saida|saída|atracar|entrar|navio|reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
 
     wind_kts = _extract_wind_kts_from_question(question)
-    if wind_kts is not None and wind_kts > 30:
+    if wind_kts is not None and wind_kts > 25:
         wind_label = f"{wind_kts:g}".replace(".", ",")
         answer = (
-            f"Não. Com vento sustentado ou rajada superior a 30 kt ({wind_label} kt no caso indicado), "
+            f"🌬️ Não. Com vento sustentado ou rajada superior a 25 kt ({wind_label} kt no caso indicado), "
             "as manobras ficam suspensas por segurança. Ter mais rebocadores não anula este limite. "
             "Se a suspensão foi acionada por vento, a retoma só deve ser considerada quando o vento baixar para menos de 25 kt. "
             "Fonte: limite operacional de segurança para vento."
@@ -1736,7 +1784,7 @@ def _answer_safety_hard_limit(question: str, clean_question: str) -> dict | None
                     "chunk_id": 1,
                     "score": 1.0,
                     "retrieval_mode": "operational_safety_limits",
-                    "snippet": "Com vento superior a 30 kt, todas as manobras ficam suspensas; retoma apenas abaixo de 25 kt.",
+                    "snippet": "Com vento superior a 25 kt, todas as manobras ficam suspensas; retoma apenas abaixo de 25 kt.",
                 }
             ],
             "answer_origin": "operational_safety_limit",
@@ -1922,10 +1970,10 @@ def _tug_live_weather_context(question: str, clean_question: str) -> dict:
     )
     lines = [summary]
     if strongest is not None:
-        if strongest >= 30:
-            lines.append("Com vento/rajadas >= 30 kt, a regra operacional é suspender manobras.")
+        if strongest > 25:
+            lines.append("Com vento/rajadas > 25 kt, a regra operacional é suspender manobras.")
         elif strongest >= 25:
-            lines.append("Vento/rajadas >= 25 kt: não fechar a manobra sem validação superior e ponderar atrasar.")
+            lines.append("Vento/rajadas nos 25 kt: avaliar caso a caso com critério conservador e ponderar atrasar.")
         elif strongest >= 20:
             lines.append("Rajadas/vento no limiar de vento forte (>= 20 kt); manter recomendação conservadora e ponderar atrasar se a tendência não baixar.")
         elif strongest >= 15:

@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
+from domain.qa_suite_taxonomy import classify_qa_record
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 QA_MEMORY_PATH = REPO_ROOT / "resources" / "qa" / "pragtico_test_questions_archive_20260512.json"
@@ -338,6 +340,7 @@ def _has_known_knowledge_conflict(record: QAMemoryRecord) -> bool:
 
 def audit_qa_memory_record(record: QAMemoryRecord, *, corpus: tuple[dict, ...] | None = None) -> dict:
     corpus = corpus if corpus is not None else load_knowledge_audit_corpus()
+    suite = classify_qa_record(record)
     context = " ".join([record.question, record.group])
     supports = [_best_knowledge_support(item, corpus, context=context) for item in record.expected]
     supported = [item for item in supports if item.status == "supported"]
@@ -376,6 +379,7 @@ def audit_qa_memory_record(record: QAMemoryRecord, *, corpus: tuple[dict, ...] |
         "risk": record.risk,
         "source": record.source,
         "answer_origin": record.answer_origin,
+        **suite,
         "status": status,
         "reason": reason,
         "volatile_or_command": volatile_or_command,
@@ -457,9 +461,14 @@ def _score_record(query: str, query_tokens: frozenset[str], record: QAMemoryReco
 
 
 def _format_case_lines(record: QAMemoryRecord, *, index: int, score: float) -> list[str]:
+    suite = classify_qa_record(record)
     lines = [
-        f"Caso QA {index} (semelhança {score:.3f}; origem {record.source}; grupo {record.group or '--'}; risco {record.risk or '--'}):",
+        (
+            f"Caso QA {index} (semelhança {score:.3f}; suíte {suite['suite_type']}; "
+            f"origem {record.source}; grupo {record.group or '--'}; risco {record.risk or '--'}):"
+        ),
         f"- Pergunta de teste: {record.question}",
+        f"- Política da suíte: {suite['runtime_policy']}",
     ]
     if record.expected:
         lines.append("- Pontos/factos que a resposta deve preservar: " + " | ".join(record.expected[:8]))

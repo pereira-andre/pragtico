@@ -547,7 +547,7 @@
       "group": "Meteorologia e segurança",
       "risk": "Critico",
       "question": "Se estiver 31 kt de vento, posso sair com 4 rebocadores?",
-      "expected_substrings": ["vento superior a 30 kt", "todas as manobras ficam suspensas", "independentemente do número de rebocadores", "retomar abaixo de 25 kt"],
+      "expected_substrings": ["vento superior a 25 kt", "todas as manobras ficam suspensas", "independentemente do número de rebocadores", "retomar abaixo de 25 kt"],
       "answer_guidance": "Conclusão primeiro: não. Rebocadores não anulam limite de suspensão.",
       "expected_origin": "knowledge_curated"
     },
@@ -556,8 +556,8 @@
       "group": "Meteorologia e segurança",
       "risk": "Alto",
       "question": "Com 26 kt de vento a manobra está automaticamente autorizada se houver rebocadores?",
-      "expected_substrings": ["acima de 25 kt", "geralmente impraticáveis", "avaliar caso a caso", "não autorização automática"],
-      "answer_guidance": "Distinguir 20, 25 e 30 kt; 26 kt não é suspensão absoluta mas é zona crítica.",
+      "expected_substrings": ["acima de 25 kt", "manobras ficam suspensas", "não autorização automática", "retomar abaixo de 25 kt"],
+      "answer_guidance": "Distinguir 20 e 25 kt; acima de 25 kt é suspensão operacional, não cenário autorizado por rebocadores.",
       "expected_origin": "knowledge_curated"
     },
     {

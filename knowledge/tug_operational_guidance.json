@@ -33,7 +33,7 @@
   ],
   "weather_rules": [
     "Quando ha nevoeiro em porto, todas as manobras ficam suspensas ate que a visibilidade seja restaurada. Em Setubal e comum dizer-se localmente que depois do nevoeiro vem vento SW forte, mas isto e conhecimento contextual e nao deve ser usado sozinho para dimensionar rebocadores.",
-    "Com vento sustentado ou rajada superior a 30 kt, todas as manobras ficam suspensas por seguranca; depois de suspensao por vento, retomar apenas quando estiver abaixo de 25 kt.",
+    "Com vento sustentado ou rajada superior a 25 kt, todas as manobras ficam suspensas por seguranca; aos 25 kt exatos avaliar caso a caso com criterio conservador. Depois de suspensao por vento, retomar apenas quando estiver abaixo de 25 kt.",
     "Vento SW forte e o vento mais perigoso: empurra os navios para o cais com forca, pode impedir a saida mesmo com rebocadores e pode gerar cerca de 1 m de ondulacao dentro do porto.",
     "Outra situacao perigosa: vento Norte forte ao atracar com mares vivas pela popa, sobretudo se o bordo de atracacao nao condiz com o passo do helice do navio. Exemplo: navio de passo direito a atracar por estibordo, ou o inverso.",
     "Vento W atua como vento S fraco e vento E atua como vento N fraco apenas no contexto TMS2/Autoeuropa, onde a orientacao aproximada 120/300 graus torna esses ventos quase paralelos mas ligeiramente atracantes ou desatracantes. Nao aplicar automaticamente esta equivalencia aos cais do Canal Sul, de Tanquisado ate Teporset."

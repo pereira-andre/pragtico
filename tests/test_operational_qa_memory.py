@@ -11,6 +11,7 @@ from domain.operational_qa_memory import (
     load_qa_memory_records,
     qa_memory_supported_questions,
 )
+from domain.qa_suite_taxonomy import classify_qa_record
 from integrations.rag_engine import SimpleRAGEngine
 
 
@@ -87,6 +88,7 @@ def test_qa_memory_keeps_correct_fundeadouro_norte_lisnave_lead_time() -> None:
 def test_supplemental_sources_include_qa_memory_without_bypassing_direct_rules() -> None:
     sources = _build_supplemental_sources("100 jardas sao quantos metros?")
 
+    assert sources[0].get("retrieval_mode") == "response_contract"
     assert any(source.get("retrieval_mode") == "operational_qa_memory" for source in sources)
 
 
@@ -135,3 +137,12 @@ def test_rag_prompt_treats_qa_memory_as_non_copy_training_signal() -> None:
     assert "operational_qa_memory" in engine.prompt
     assert "nunca como texto final pronto" in engine.prompt
     assert "pelo menos uma frase de fundamentação" in engine.prompt
+
+
+def test_qa_suite_classification_separates_operational_cases() -> None:
+    assert classify_qa_record({"question": "/it 029"})["suite_type"] == "command_flow"
+    assert classify_qa_record({"question": "O que diz a IT-029 da SAPEC?"})["suite_type"] == "document_rules"
+    assert classify_qa_record({"question": "mares hoje"})["suite_type"] == "live_data"
+    assert classify_qa_record({"question": "Fundeadouro Norte para LISNAVE no reponto"})["suite_type"] == "tide_transit"
+    assert classify_qa_record({"question": "Navio grande ocupa cais 7 e 6 no TMS 1?"})["suite_type"] == "berth_capacity"
+    assert classify_qa_record({"question": "Quantos rebocadores para RORO com vento norte?"})["suite_type"] == "tug_guidance"

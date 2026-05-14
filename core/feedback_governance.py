@@ -45,7 +45,8 @@ FEEDBACK_CRITICALITIES = {
     "critical": "Critica",
 }
 
-REUSE_BLOCKING_DESTINATIONS = {"triage", "source_update", "rule_update", "do_not_reuse"}
+MEMORY_REUSABLE_DESTINATIONS = {"memory"}
+REUSE_BLOCKING_DESTINATIONS = {"triage", "eval", "source_update", "rule_update", "do_not_reuse"}
 PROMOTABLE_DESTINATIONS = {"eval"}
 
 
@@ -126,10 +127,45 @@ def governance_labels(message: dict) -> dict[str, str]:
 
 def feedback_allows_memory_reuse(message: dict) -> bool:
     """Return whether this feedback may influence future answers as memory."""
+    status = _clean(message.get("feedback_status")).lower()
     destination = _choice(message.get("feedback_destination"), set(FEEDBACK_DESTINATIONS))
     if not destination:
-        return True  # legacy feedback before governance fields existed
-    return destination not in REUSE_BLOCKING_DESTINATIONS
+        return status == "approved"  # legacy positive feedback before governance fields existed
+    return destination in MEMORY_REUSABLE_DESTINATIONS and status in {"approved", "corrected"}
+
+
+def feedback_pipeline_stage(message: dict) -> dict[str, Any]:
+    """Explain where a feedback item belongs in the learning pipeline."""
+    status = _clean(message.get("feedback_status")).lower()
+    destination = _choice(message.get("feedback_destination"), set(FEEDBACK_DESTINATIONS))
+    governance = feedback_governance_state(message)
+    if feedback_allows_memory_reuse(message):
+        stage = "memory"
+        action = "Pode entrar na síntese como memória operacional validada."
+    elif governance["state"] == "ready_eval" or destination == "eval":
+        stage = "eval"
+        action = "Usar para regressão/teste; não reutilizar como memória de resposta."
+    elif destination in {"source_update", "rule_update"}:
+        stage = "source_action"
+        action = "Atualizar knowledge/regra estruturada antes de reutilizar."
+    elif status in {"corrected", "review"} or destination == "triage":
+        stage = "triage"
+        action = "Rever e classificar; não usar como fonte de verdade."
+    elif status == "ignored" or destination == "do_not_reuse":
+        stage = "blocked"
+        action = "Manter fora da aprendizagem e da síntese."
+    else:
+        stage = "raw"
+        action = "Aguardar classificação humana."
+
+    return {
+        "stage": stage,
+        "action": action,
+        "state": governance["state"],
+        "can_reuse_memory": feedback_allows_memory_reuse(message),
+        "can_promote_eval": governance["can_promote_eval"],
+        "destination": destination,
+    }
 
 
 def feedback_governance_state(message: dict) -> dict[str, Any]:

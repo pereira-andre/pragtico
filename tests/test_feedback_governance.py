@@ -4,6 +4,7 @@ from core.chat_feedback import sync_feedback_correction_eval_case
 from core.feedback_governance import (
     feedback_allows_memory_reuse,
     feedback_governance_state,
+    feedback_pipeline_stage,
     normalize_feedback_governance,
 )
 from domain.operational_memory import filter_feedback_for_synthesis
@@ -67,6 +68,38 @@ def test_triage_feedback_does_not_reuse_as_memory() -> None:
     assert not feedback_allows_memory_reuse(item)
     trusted, _reviewed = filter_feedback_for_synthesis([item], [])
     assert trusted == []
+
+
+def test_eval_feedback_promotes_to_regression_but_not_memory() -> None:
+    item = {
+        "feedback_status": "corrected",
+        "feedback_destination": "eval",
+        "feedback_correction": "Usa 4 rebocadores em vento norte forte para este caso.",
+        "feedback_error_type": "operational_rule_issue",
+        "feedback_scope": "tug_guidance",
+        "feedback_criticality": "high",
+        "feedback_correction_document": "IT-016_Rebocadores.txt",
+        "similarity": 0.99,
+    }
+
+    assert not feedback_allows_memory_reuse(item)
+    assert feedback_governance_state(item)["state"] == "ready_eval"
+    assert feedback_pipeline_stage(item)["stage"] == "eval"
+    trusted, reviewed = filter_feedback_for_synthesis([item], [item])
+    assert trusted == []
+    assert reviewed == []
+
+
+def test_memory_destination_feedback_can_reuse_after_correction() -> None:
+    item = {
+        "feedback_status": "corrected",
+        "feedback_destination": "memory",
+        "feedback_correction": "Para este cenário, usar 1h30 antes do reponto.",
+        "similarity": 0.99,
+    }
+
+    assert feedback_allows_memory_reuse(item)
+    assert feedback_pipeline_stage(item)["stage"] == "memory"
 
 
 def test_source_update_feedback_is_not_promoted_to_eval(monkeypatch) -> None:

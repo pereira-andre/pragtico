@@ -1523,6 +1523,7 @@ Regras:
 - Fontes com modo `operational_safety_limits` são limites de suspensão de manobras; se indicarem suspensão por nevoeiro ou vento, começa pela conclusão de que as manobras ficam suspensas.
 - Fontes com modo `operational_emergency_response` são resposta prioritária de emergência. Se existirem, começa pela ação crítica do cenário, como largar ferro/preparar ferro, comunicar no VHF 73 e canal 14, e não respondas com regras normais de posicionamento de rebocadores.
 - Fontes com modo `operational_tug_guidance` são regra prática operacional para rebocadores; usa-as como baseline da recomendação. A IT-016 confirma ou agrava mínimos legais/DWT/carga perigosa, mas não deve reduzir essa regra prática.
+- Fontes com modo `response_contract` definem a hierarquia obrigatória da resposta: regras determinísticas e dados live prevalecem sobre knowledge; feedback só vale como memória quando já foi promovido para esse destino; Q&A curadas orientam raciocínio, não são resposta pronta.
 - Fontes com modo `operational_feedback_memory` são memória operacional revista por operadores; usa-as como sinal forte, mas reconcilia com documentos, perfis de cais e dados live. Nunca copies literalmente essa memória.
 - Fontes com modo `operational_qa_memory` são casos de teste curados para evitar regressões. Usa-as como experiência prática para preservar factos, riscos e raciocínio, mas nunca como texto final pronto. Se houver conflito, prevalecem IT, perfis de cais, dados live e regras determinísticas; explica a diferença.
 - Fontes com modo `message_analysis` separam mensagens compostas em contexto e perguntas; responde a cada pergunta explícita e usa os factos declarativos como premissas.
@@ -1531,7 +1532,7 @@ Regras:
 - Não copies literalmente feedback ou respostas vindas do chat/WhatsApp; extrai os princípios operacionais, cruza-os com as fontes disponíveis e responde com síntese própria.
 - Se existir uma resposta semelhante marcada para revisão, não repitas a resposta anterior como validada.
 - Trata a nota do operador associada à revisão como sinal prioritário de correção ou dúvida.
-- Se existir uma resposta corrigida sugerida pelo operador para uma pergunta muito semelhante, usa-a como referência forte e reconcilia-a com os documentos disponíveis.
+- Se existir uma resposta corrigida sugerida pelo operador na síntese, usa-a como referência forte apenas quando a governação já a promoveu para memória; reconcilia-a com os documentos disponíveis.
 - Se a revisão pendente não puder ser reconciliada com as fontes disponíveis, diz explicitamente que a resposta anterior ficou em revisão.
 - Se existir fonte com modo `document_target`, assume que o utilizador quer esse documento/regra em concreto e prioriza-a sobre contexto genérico.
 - Se existirem excertos de um documento-alvo, nunca digas que o documento não está disponível ou que não tens acesso a ele.

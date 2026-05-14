@@ -61,9 +61,9 @@ deve ser convertida para nos ou km/h antes de comparar com limites locais.
 Leitura operacional simples:
 - Beaufort 4 ja pode ser relevante para aproximacao fina e trabalho de cabos.
 - Beaufort 5 exige atencao em navios leves ou com muita area velica.
-- Beaufort 6 exige avaliacao cuidada de viabilidade, meios e margem.
-- Beaufort 7 entra em zona critica e pode aproximar ou ultrapassar limites locais.
-- Beaufort 8 ou superior ultrapassa 30 kt; aplicar regra local de suspensao quando o vento sustentado ou rajada for superior a 30 kt.
+- Beaufort 6 exige avaliacao cuidada de viabilidade, meios e margem; a faixa 22-27 kt inclui o limite local de 25 kt.
+- Beaufort 7 ja fica acima do limite praticavel local; aplicar suspensao se vento sustentado ou rajada for superior a 25 kt.
+- Beaufort 8 ou superior fica muito para la do limite local praticavel.
 
 ================================================================================
 PERGUNTAS E RESPOSTAS DE REFERENCIA

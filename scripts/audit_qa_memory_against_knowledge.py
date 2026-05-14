@@ -47,6 +47,7 @@ def build_payload() -> dict:
 
     records = list(audit_qa_memory_records())
     counts = Counter(str(record.get("status") or "unknown") for record in records)
+    suite_counts = Counter(str(record.get("suite_type") or "unknown") for record in records)
     return {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "qa_sources": [
@@ -62,6 +63,7 @@ def build_payload() -> dict:
             "review": counts.get("review", 0),
             "out_of_scope": counts.get("out_of_scope", 0),
             "unknown": counts.get("unknown", 0),
+            "by_suite": dict(sorted(suite_counts.items())),
         },
         "records": records,
     }
@@ -85,11 +87,22 @@ def write_markdown(payload: dict, path: Path) -> None:
         f"- Needs review: {summary.get('review', 0)}",
         f"- Out of scope for static memory: {summary.get('out_of_scope', 0)}",
         "",
-        "## Question Review",
+        "## Suites",
         "",
-        "| # | Status | Risk | Group | Question | Reason | Evidence document |",
-        "|---:|---|---|---|---|---|---|",
+        "| Suite | Count |",
+        "|---|---:|",
     ]
+    for suite, count in sorted((summary.get("by_suite") or {}).items()):
+        lines.append(f"| `{_escape_cell(suite, max_chars=48)}` | {count} |")
+    lines.extend(
+        [
+            "",
+            "## Question Review",
+            "",
+            "| # | Status | Suite | Risk | Group | Question | Reason | Evidence document |",
+            "|---:|---|---|---|---|---|---|---|",
+        ]
+    )
     for index, record in enumerate(payload.get("records") or [], start=1):
         lines.append(
             "| "
@@ -97,6 +110,7 @@ def write_markdown(payload: dict, path: Path) -> None:
                 [
                     str(index),
                     _escape_cell(record.get("status"), max_chars=24),
+                    _escape_cell(record.get("suite_type"), max_chars=32),
                     _escape_cell(record.get("risk"), max_chars=24),
                     _escape_cell(record.get("group"), max_chars=64),
                     _escape_cell(record.get("question"), max_chars=220),

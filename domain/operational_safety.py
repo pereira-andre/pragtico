@@ -16,7 +16,7 @@ SAFETY_QUERY_RE = re.compile(
     flags=re.IGNORECASE,
 )
 MANEUVER_QUERY_RE = re.compile(
-    r"\b(manobra|manobras|navio|entrada|saida|saída|atracar|desatracar|"
+    r"\b(manobr\w*|navio|entrada|saida|saída|atracar|desatracar|"
     r"pilotagem|piloto|cais|doca|barra|reboque|rebocador|cabos?|amarra[cç][aã]o|"
     r"bow\s*thruster|bowthruster|h[eé]lice\s+de\s+proa)\b",
     flags=re.IGNORECASE,
@@ -147,7 +147,7 @@ def _condition_has_fog(condition: str, guidance: dict[str, Any]) -> bool:
 def evaluate_weather_safety(forecast: dict | None, guidance: dict[str, Any]) -> dict[str, Any]:
     current = (forecast or {}).get("current") or {}
     thresholds = guidance.get("thresholds") or {}
-    suspend_above = _safe_float(thresholds.get("wind_suspend_above_kts")) or 30.0
+    suspend_above = _safe_float(thresholds.get("wind_suspend_above_kts")) or 25.0
     resume_below = _safe_float(thresholds.get("wind_resume_below_kts")) or 25.0
     fog_visibility = _safe_float(thresholds.get("fog_visibility_km_reference")) or 1.0
 

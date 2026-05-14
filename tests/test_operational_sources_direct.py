@@ -320,6 +320,36 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("requisições continuam", payload["answer"])
         self.assertNotEqual("colreg_interpretation", payload["answer_origin"])
 
+    def test_wind_maximum_admissible_question_uses_safety_rule_not_weather(self) -> None:
+        payload = answer_direct_operational_query("Qual o vento máximo admissível para se manobrar?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_safety_limit", payload["answer_origin"])
+        self.assertIn("25 kt", payload["answer"])
+        self.assertIn("Acima de 20 kt", payload["answer"])
+        self.assertIn("superior a 25 kt", payload["answer"])
+        self.assertIn("manobras ficam suspensas", payload["answer"])
+        self.assertNotIn("Meteorologia para Setúbal", payload["answer"])
+
+    def test_wind_conditioning_threshold_question_uses_safety_rule(self) -> None:
+        payload = answer_direct_operational_query(
+            "A partir de que velocidade de vento as manobras ficam condicionadas?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_safety_limit", payload["answer_origin"])
+        self.assertIn("Acima de 20 kt", payload["answer"])
+        self.assertIn("25 kt", payload["answer"])
+
+    def test_numeric_wind_question_with_manobrar_uses_suspension_limit(self) -> None:
+        payload = answer_direct_operational_query("Posso manobrar com 26 kt de vento se tiver reboques?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_safety_limit", payload["answer_origin"])
+        self.assertIn("26 kt", payload["answer"])
+        self.assertIn("superior a 25 kt", payload["answer"])
+        self.assertIn("manobras ficam suspensas", payload["answer"])
+
     def test_colreg_source_coverage_question_is_not_misrouted_to_fog_procedure(self) -> None:
         payload = answer_direct_operational_query("A fonte RIEAM/COLREG cobre nevoeiro e ultrapassagem?")
 

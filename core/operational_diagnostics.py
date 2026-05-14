@@ -376,10 +376,10 @@ def build_operational_diagnostic(
         if case.get("wind_kts") is not None and case["wind_kts"] >= 15:
             warnings.append(f"ALSTOM: vento {_display_number(case['wind_kts'])} kt atinge/excede o limite pratico < 15 kt.")
 
-    if case.get("wind_kts") and case["wind_kts"] > 30:
-        warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: manobras suspensas acima de 30 kt.")
+    if case.get("wind_kts") and case["wind_kts"] > 25:
+        warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: manobras suspensas acima de 25 kt.")
     elif case.get("wind_kts") and case["wind_kts"] >= 25:
-        warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: zona de cautela; confirmar limite local antes de avançar.")
+        warnings.append(f"Vento {_display_number(case['wind_kts'])} kt: limite maximo pratico; validar caso a caso com criterio conservador.")
     if case.get("visibility"):
         warnings.append("Nevoeiro/visibilidade reduzida: a regra de segurança prevalece sobre reforço de rebocadores.")
 

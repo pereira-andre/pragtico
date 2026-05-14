@@ -644,7 +644,7 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "runner": "direct_operational",
         "label": "31 kt suspende mesmo com mais rebocadores",
         "question": "Se estiver 31 kts de vento, posso sair com 4 rebocadores?",
-        "expected_summary": "Suspende acima de 30 kt e so admite retoma abaixo de 25 kt.",
+        "expected_summary": "Suspende acima de 25 kt e so admite retoma abaixo de 25 kt.",
         "source": "knowledge/operational_safety_limits.json",
         "expected_origin": "operational_safety_limit",
         "expected_tokens": ("31 kt", "manobras ficam suspensas", "mais rebocadores não anula", "menos de 25 kt"),
