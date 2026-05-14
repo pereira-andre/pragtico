@@ -802,6 +802,24 @@ def _direct_source(document: str, source_id: str, snippet: str, retrieval_mode: 
     }
 
 
+def _answer_spring_tide_definition_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(mare\s+viva|mares\s+vivas|mar[eé]\s+viva|mar[eé]s\s+vivas)\b", question, re.IGNORECASE):
+        return None
+    if not re.search(r"\b(quando|considera|criterio|critério|define|definicao|definição|o que e|o que é)\b", clean_question):
+        return None
+    answer = (
+        "Considera-se maré viva operacional em Setúbal quando, no mesmo ciclo/dia de referência, "
+        "a baixa-mar é inferior a 1,0 m e a preia-mar é superior a 3,0 m.\n"
+        "- Critério prático: BM < 1,0 m e PM > 3,0 m.\n"
+        "- Isto não substitui a tabela de marés do dia; serve para classificar a amplitude antes de aplicar regras de cais, corrente, calado e reponto."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Condicoes_Meteorologicas_Prioridades.txt", "SPRING_TIDE_SETUBAL_DEFINITION", answer, "operational_tide_rule")],
+        "answer_origin": "operational_tide_rule",
+    }
+
+
 def _extract_length_m(question: str) -> float | None:
     text = str(question or "").lower().replace(",", ".")
     patterns = (
@@ -1078,6 +1096,19 @@ def _answer_operational_priority_direct(question: str, clean_question: str) -> d
     cargo_list_terms = re.search(r"\b(passageiros?|gado vivo|animais vivos|reefers?|perecivel|perecível|ro-?ro|roro|contentores?|outros)\b", question, re.IGNORECASE)
     if not priority_terms and not (cargo_list_terms and re.search(r"\bordem\b", clean_question)):
         return None
+    if re.search(r"\b(mesmo\s+cais|mesmo\s+destino|mesma\s+acostagem|destino\s+de\s+acostagem)\b", clean_question):
+        answer = (
+            "Quando dois navios disputam o mesmo cais/destino de acostagem, aplica-se primeiro a regra P-13: "
+            "tem prioridade o primeiro navio a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, "
+            "salvo impedimento técnico ou decisão operacional justificada.\n"
+            "- Esta é a referência de chegada em frente da barra para prioridade de acostagem.\n"
+            "- A ordem passageiros/gado/reefers/Ro-Ro/contentores e saídas > mudanças > entradas fica para planeamento geral, janelas concorrentes ou desempate operacional quando a regra do mesmo cais não resolver tudo."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("P-13_PlaneamentoGestao.txt", "P13_SAME_BERTH_PRIORITY_8NM", answer, "operational_priority")],
+            "answer_origin": "operational_priority",
+        }
     answer = (
         "A ordem operacional é esta:\n"
         "1. Manobras com reponto de maré ou janela crítica de profundidade.\n"
@@ -1362,6 +1393,15 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
 
 def _extract_draft_m_from_question(question: str) -> float | None:
     text = str(question or "").lower().replace(",", ".")
+    draft_list_match = re.search(r"\bcalados?\b(.{0,80})", text, flags=re.IGNORECASE)
+    if draft_list_match:
+        values = [
+            float(match.group(1))
+            for match in re.finditer(r"\b(\d{1,2}(?:\.\d+)?)\b", draft_list_match.group(1))
+            if float(match.group(1)) <= 25
+        ]
+        if values:
+            return max(values)
     patterns = (
         r"\b(?:calado|draft)\D{0,30}?(\d{1,2}(?:\.\d+)?)\s*m\b",
         r"\b(\d{1,2}(?:\.\d+)?)\s*m(?:etros?)?\s*(?:de\s+)?(?:calado|draft)\b",
@@ -1398,7 +1438,7 @@ def _time_range_before_label_from_question(question: str, min_minutes: int, max_
 
 
 def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict | None:
-    if not re.search(r"\b(reponto|preia|baixa|mare|marcar|marco|quando|hora|entrada|saida|saída|sair|atracar|desatracar)\b", clean_question):
+    if not re.search(r"\b(reponto|preia|baixa|mare|antecedencia|antecedência|marca\w*|marco|quando|hora|entrada|saida|saída|sair|atracar|desatracar)\b", clean_question):
         return None
     wind_kts = _extract_wind_kts_from_question(question)
     if wind_kts is not None and wind_kts > 25:
@@ -1407,8 +1447,10 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     draft = _extract_draft_m_from_question(question)
     high_draft = draft is not None and draft >= 9
     mentions_high_draft = high_draft or re.search(r"\b(grande\s+calado|calado\s+alto|calado\s+condicionante|proximo\s+do\s+maximo|próximo\s+do\s+máximo)\b", clean_question)
-    is_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
-    is_entry = bool(re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question)) or not is_departure
+    explicit_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
+    explicit_entry = bool(re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question))
+    is_departure = explicit_departure
+    is_entry = explicit_entry or not is_departure
 
     if re.search(r"\b(tms\s*1|tms1|tms\s*2|tms2)\b", clean_question) and mentions_high_draft:
         if is_departure:
@@ -1432,6 +1474,28 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         return {
             "answer": answer,
             "sources": [_direct_source("Marcar_manobra_repontos_mare.txt", "TMS_HIGH_DRAFT_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    if (
+        "lisnave" in clean_question
+        and re.search(r"\bfora\s+da\s+barra\b|\bbarra\b|\bentrada\s+da\s+barra\b", clean_question)
+        and is_entry
+        and re.search(r"\b(antecedencia|antecedência|marca\w*|marco|requisit\w*)\b", clean_question)
+    ):
+        reponto_label, mark_label = _time_minus_label_from_question(question, 120)
+        if mark_label.endswith("min antes"):
+            timing_line = "Sem hora concreta indicada, usa cerca de 2 horas antes do reponto pretendido."
+        else:
+            timing_line = f"Se o reponto de referência é {reponto_label}, a marcação deve ficar por volta das {mark_label}."
+        answer = (
+            "🌕 Para uma entrada de fora da Barra para a LISNAVE/Mitrena, marca 2 horas antes do reponto de maré pretendido.\n"
+            f"{timing_line}\n"
+            "Esta é uma regra de marcação para chegar ao estaleiro na fase crítica de corrente nula; depois confirma cais/doca concreta, calado, LOA, vento, rebocadores e validação do Piloto Coordenador."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Marcar_manobra_repontos_mare.txt / IT-014_Lisnave.txt", "LISNAVE_BARRA_ENTRY_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
             "answer_origin": "operational_tide_scheduling",
         }
 
@@ -1469,7 +1533,16 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         }
 
     if re.search(r"\b(teporset|tepor\s*set|termitrena)\b", clean_question):
-        if is_departure:
+        if not explicit_entry and not explicit_departure and re.search(r"\b(reponto|mare|preia|baixa|acertar)\b", clean_question):
+            answer = (
+                "🌕 Sim, para Teporset/Termitrena deves tratar a maré como condicionante quando o calado ou a janela de maior água forem críticos.\n"
+                "- Entrada de fora da Barra: marcar cerca de 2 h antes do reponto/preia-mar.\n"
+                "- Entrada do Fundeadouro Norte: marcar cerca de 1 h 30 min antes.\n"
+                "- Entrada de Tróia/Fundeadouro Sul: marcar cerca de 1 h antes.\n"
+                "- Saída: marcar cerca de 15 min antes do reponto; na Teporset, considerar que o reponto local acontece cerca de 15 min depois da hora nominal.\n"
+                "Confirmar sempre calado praticável, altura de água, vento, corrente, rebocadores e margem junto ao baixo entre Termitrena e Teporset."
+            )
+        elif is_departure:
             reponto_label, mark_label = _time_minus_label_from_question(question, 15)
             answer = (
                 "🌕 Para saída Teporset/Termitrena, marca cerca de 15 min antes do reponto.\n"
@@ -1538,7 +1611,7 @@ def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) ->
 def _answer_tanquisado_dimensions_direct(question: str, clean_question: str) -> dict | None:
     if "tanquisado" not in clean_question:
         return None
-    if not re.search(r"\b(comprimento|metros?|cabe|cabem|duque|duques|d'alba|dalba|slot|fisico|físico|limite|limites|regra|regras|calado|noite|noturn)\b", question, re.IGNORECASE):
+    if not re.search(r"\b(comprimento|metros?|cabe|cabem|duque|duques|d'alba|dalba|slot|fisico|físico|limite|limites|regra|regras|restri[cç][oõ]es?|calado|noite|noturn)\b", question, re.IGNORECASE):
         return None
     loa = _extract_length_m(question)
     lines = [
@@ -1911,14 +1984,15 @@ def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dic
 def _answer_secil_reponto_direct(question: str, clean_question: str) -> dict | None:
     if "secil" not in clean_question:
         return None
-    if not re.search(r"\b(reponto|mare|mar[eé]|preia|baixa|marcada|marcado|marcar|hora|horario|horário)\b", clean_question):
+    if not re.search(r"\b(reponto|mare|mar[eé]|preia|baixa|marcada|marcado|marca\w*|marco|hora|horario|horário)\b", clean_question):
         return None
-    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|saida|saída|sair|largada|manobra|marcada|marcar)\b", clean_question):
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|saida|saída|sair|largada|manobra|marcada|marca\w*|marco)\b", clean_question):
         return None
 
     is_west = bool(re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question))
     is_east = bool(re.search(r"\b(e|este|east|cais\s+e|cais\s+este|cais\s+b)\b", clean_question))
     is_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
+    is_entry = bool(re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question))
 
     if is_west:
         berth_line = (
@@ -1943,7 +2017,14 @@ def _answer_secil_reponto_direct(question: str, clean_question: str) -> dict | N
         )
         limits_line = "Confirma o cais, LOA, calado, origem da manobra e validação do Piloto Coordenador."
 
-    if is_departure:
+    if is_entry and is_departure:
+        timing_line = (
+            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30-45 min antes do reponto; "
+            "de Tróia ou de outro cais, marcar 45 min a 1 h antes.\n"
+            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto; usam-se repontos de preia-mar e de baixa-mar, "
+            "e a saída normalmente deixa o cais livre em 10 a 15 minutos."
+        )
+    elif is_departure:
         timing_line = (
             "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto; usam-se repontos de preia-mar "
             "e de baixa-mar, e a saída normalmente deixa o cais livre em 10 a 15 minutos."
@@ -2321,10 +2402,62 @@ def _answer_tanquisado_costado_wind_direct(question: str, clean_question: str) -
     }
 
 
+def _extract_dwt_range_from_question(question: str) -> tuple[float, float] | None:
+    text = str(question or "").lower()
+    match = re.search(
+        r"\bentre\s+(\d{1,3}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s+e\s+(\d{1,3}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*dwt\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        try:
+            first = float(match.group(1).replace(".", "").replace(",", "."))
+            second = float(match.group(2).replace(".", "").replace(",", "."))
+        except ValueError:
+            return None
+        return min(first, second), max(first, second)
+    match = re.search(r"\b(\d{1,3}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*dwt\b", text, flags=re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        value = float(match.group(1).replace(".", "").replace(",", "."))
+    except ValueError:
+        return None
+    return value, value
+
+
+def _answer_it016_dwt_tugs_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
+        return None
+    dwt_range = _extract_dwt_range_from_question(question)
+    if not dwt_range:
+        return None
+    if not (15001 <= dwt_range[0] and dwt_range[1] <= 25000):
+        return None
+    if not re.search(r"\b(atracar|atracacao|atracação|entrada|entrar)\b", clean_question):
+        return None
+    if not re.search(r"\b(carregado|carga|loaded)\b", clean_question):
+        return None
+    if not re.search(r"\bsem\b.*\b(bow\s*thruster|bowthruster|h[eé]lice\s+de\s+proa|hpr)\b", question, re.IGNORECASE):
+        return None
+    answer = (
+        "⚓ Pela IT-016, para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster, "
+        "a referência é GGp: 2 rebocadores grandes + 1 rebocador pequeno, ou seja, 3 rebocadores no total.\n"
+        "- Esta linha vale tanto para cargas perigosas como para outras cargas nessa faixa de DWT.\n"
+        "- G = rebocador grande, com bollard pull igual ou superior a 25 t; p = rebocador pequeno, inferior a 25 t.\n"
+        "- Confirmar sempre LOA, tipo de carga, estado real dos thrusters, vento/corrente, calado e indicação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-016_Rebocadores.txt", "IT016_DWT_15001_25000_AC_NO_BOW_GGP", answer, "operational_tug_guidance")],
+        "answer_origin": "operational_tug_guidance",
+    }
+
+
 def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
-    if not re.search(r"\b(qual|quais|quantos|numero|número|regra|regras|pratica|prática|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado|pode|posso|devo|deve|avancar|avançar|validar|cheg\w*|basta|bastam)\b", clean_question):
+    if not re.search(r"\b(qual|quais|quantos|qts|numero|número|regra|regras|pratica|prática|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado|pode|posso|devo|deve|avancar|avançar|validar|cheg\w*|basta|bastam)\b", clean_question):
         return None
 
     weather_context = _tug_live_weather_context(question, clean_question)
@@ -2691,6 +2824,9 @@ def answer_direct_operational_query(
         clean_question = plan.normalized_question
     else:
         clean_question = question_key
+    spring_tide_answer = _answer_spring_tide_definition_direct(question, clean_question)
+    if spring_tide_answer:
+        return _attach_operational_diagnostic(spring_tide_answer, question)
     source_coverage_answer = _answer_source_coverage_direct(question, clean_question)
     if source_coverage_answer:
         return _attach_operational_diagnostic(source_coverage_answer, question)
@@ -2727,15 +2863,15 @@ def answer_direct_operational_query(
     lisnave_doca_tug_answer = _answer_lisnave_doca_tug_direct(question, clean_question)
     if lisnave_doca_tug_answer:
         return _attach_operational_diagnostic(lisnave_doca_tug_answer, question)
+    tide_scheduling_answer = _answer_tide_scheduling_direct(question, clean_question)
+    if tide_scheduling_answer:
+        return _attach_operational_diagnostic(tide_scheduling_answer, question)
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
         return _attach_operational_diagnostic(route_answer, question)
     cross_reponto_answer = _answer_cross_reponto_scheduling_direct(question, clean_question)
     if cross_reponto_answer:
         return _attach_operational_diagnostic(cross_reponto_answer, question)
-    tide_scheduling_answer = _answer_tide_scheduling_direct(question, clean_question)
-    if tide_scheduling_answer:
-        return _attach_operational_diagnostic(tide_scheduling_answer, question)
     lisnave_night_length_answer = _answer_lisnave_night_length_direct(question, clean_question)
     if lisnave_night_length_answer:
         return _attach_operational_diagnostic(lisnave_night_length_answer, question)
@@ -2784,6 +2920,9 @@ def answer_direct_operational_query(
     tanquisado_costado_answer = _answer_tanquisado_costado_wind_direct(question, clean_question)
     if tanquisado_costado_answer:
         return _attach_operational_diagnostic(tanquisado_costado_answer, question)
+    it016_tug_answer = _answer_it016_dwt_tugs_direct(question, clean_question)
+    if it016_tug_answer:
+        return _attach_operational_diagnostic(it016_tug_answer, question)
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return _attach_operational_diagnostic(tug_guidance_answer, question)

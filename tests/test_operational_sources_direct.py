@@ -273,6 +273,55 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertNotIn("ELBTOWER", answer)
         self.assertNotIn("Navios atracados em cais", answer)
 
+    def test_spring_tide_definition_is_not_routed_to_live_tides(self) -> None:
+        payload = answer_direct_operational_query("Quando se considera maré viva no Porto de Setúbal?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_rule", payload["answer_origin"])
+        self.assertIn("baixa-mar é inferior a 1,0 m", payload["answer"])
+        self.assertIn("preia-mar é superior a 3,0 m", payload["answer"])
+        self.assertNotIn("Marés para", payload["answer"])
+
+    def test_same_berth_priority_uses_p13_before_general_priority(self) -> None:
+        payload = answer_direct_operational_query("Quando dois navios pretendem o mesmo cais, qual tem prioridade?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_priority", payload["answer_origin"])
+        self.assertIn("8 milhas náuticas", payload["answer"])
+        self.assertIn("Baliza número 2", payload["answer"])
+        self.assertIn("planeamento geral", payload["answer"])
+        self.assertNotIn("1. Manobras com reponto", payload["answer"])
+
+    def test_lisnave_barra_entry_antecedence_uses_reponto_scheduling(self) -> None:
+        payload = answer_direct_operational_query(
+            "Com quanto tempo de antecedência se marca uma entrada de fora da barra para a LISNAVE?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("2 horas antes do reponto de maré pretendido", payload["answer"])
+        self.assertNotIn("10,5 milhas náuticas", payload["answer"])
+
+    def test_tms_high_draft_plural_calados_uses_tide_scheduling(self) -> None:
+        payload = answer_direct_operational_query("Como marco TMS 1/TMS 2 com calados 9, 10,5 e 12 m?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("calado entre 9 m e 12 m", payload["answer"])
+        self.assertIn("1h a 1h30 antes da preia-mar", payload["answer"])
+        self.assertIn("calado praticável", payload["answer"])
+
+    def test_it016_dwt_loaded_no_bowthruster_returns_ggp_count(self) -> None:
+        payload = answer_direct_operational_query(
+            "Quantos rebocadores são necessários para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("2 rebocadores grandes", payload["answer"])
+        self.assertIn("1 rebocador pequeno", payload["answer"])
+        self.assertIn("GGp", payload["answer"])
+
     def test_loss_of_engine_emergency_prioritizes_anchor_and_vts_channel(self) -> None:
         answer = self._answer(
             "O navio ficou sem máquina e ainda não tem rebocadores perto. O que aconselhas de imediato?"

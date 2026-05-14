@@ -43,6 +43,8 @@ OPERATIONAL_ORIGIN_EMOJI = {
     "operational_route_transit": "🧭",
     "operational_safety": "⚠️",
     "operational_safety_limit": "⚠️",
+    "operational_tide_rule": "🌕",
+    "operational_tide_scheduling": "🌕",
     "operational_tug_guidance": "⚓",
     "secil_entry_timing": "🌕",
     "secil_reponto_rule": "🌕",

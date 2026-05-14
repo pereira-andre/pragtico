@@ -50,6 +50,15 @@ def test_rule_and_companion_deterministic_origins_receive_list_emoji() -> None:
         assert decorated["answer"].startswith("📋 ")
 
 
+def test_tide_deterministic_origins_receive_tide_emoji() -> None:
+    for origin in ("operational_tide_rule", "operational_tide_scheduling"):
+        payload = {"answer_origin": origin, "answer": "Marca 2 horas antes do reponto.", "sources": []}
+
+        decorated = add_contextual_response_emojis(payload, "Quando marco para o reponto?")
+
+        assert decorated["answer"].startswith("🌕 ")
+
+
 def test_local_culture_origin_uses_place_marker() -> None:
     payload = {"answer_origin": "local_culture", "answer": "O Outão é estratégico na barra do Sado.", "sources": []}
 

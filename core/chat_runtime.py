@@ -1193,6 +1193,7 @@ def playground_answer(
 
         direct_answer = answer_direct_operational_query(clean_question, plan=execution_plan)
         if direct_answer:
+            direct_answer = add_contextual_response_emojis(direct_answer, clean_question)
             diagnostic = _build_answer_diagnostic(clean_question, answer=direct_answer)
             if diagnostic.get("present"):
                 direct_answer["operational_diagnostic"] = diagnostic

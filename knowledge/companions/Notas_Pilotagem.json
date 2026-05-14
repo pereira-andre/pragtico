@@ -43,7 +43,7 @@
     "Ordem operacional do Canal Norte em entrada: Pilar 2/Outão, Bóia João Farto, Bóia 1CC/3CC, TMS1, Bóia 5CC, TMS2, Autoeuropa/Ro-Ro, Praias do Sado, SAPEC e ALSTOM; à saída é inversa.",
     "Ordem operacional do Canal Sul em entrada: Pilar 2/Outão, Bóia João Farto, Bóia 4CS, Bóia 6CS, Bóia 12CS, Bóia 14CS, depois Tanquisado/Eco-Oil/LISNAVE/Termitrena/Teporset conforme destino; à saída é inversa.",
     "Na LISNAVE, a ordem de referência é Cais 0 B/A, Docas 21/22, Cais 1 B/A, Cais 2 B/A, Cais 3 B/A e Hidrolift/Plataformas 31/32/33.",
-    "Pilotos desde a estação: cerca de 15 minutos para Outão, 30 minutos para fora da Barra e 15 minutos para fundeadouros.",
+    "Pilotos desde a estação: cerca de 15 minutos para Outão, 30 minutos para fora da Barra, 5 minutos para o Fundeadouro Norte e 15 minutos para o Fundeadouro Sul / Tróia.",
     "Navios para docas Lisnave usam pelo menos 4 rebocadores; só D20, D21 e D22 ficam com proa a norte.",
     "Navios nos cais Lisnave e nas docas 31/32/33 via Hidrolift ficam com proa a sul; navios pequenos para cais podem manobrar com 3 rebocadores."
   ],
@@ -306,7 +306,7 @@
     },
     {
       "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da Barra e nos fundeadouros?",
-      "answer": "Como referência prática da lancha de pilotos desde a estação: cerca de 15 minutos para embarcar perto do Outão; cerca de 30 minutos para embarcar fora da Barra na posição oficial; e cerca de 15 minutos para embarcar nos fundeadouros.",
+      "answer": "Como referência prática da lancha de pilotos desde a estação: cerca de 15 minutos para embarcar perto do Outão; cerca de 30 minutos para embarcar fora da Barra na posição oficial; cerca de 5 minutos para o Fundeadouro Norte; e cerca de 15 minutos para o Fundeadouro Sul / Tróia.",
       "keywords": [
         "pilotos",
         "lancha",

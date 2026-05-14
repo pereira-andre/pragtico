@@ -458,7 +458,8 @@ TEMPOS DE EMBARQUE DA LANCHA DE PILOTOS:
 Pilotos a sair da estação para embarque perto do Outão: cerca de 15 minutos.
 Pilotos a sair da estação para a posição oficial de embarque fora da Barra:
 cerca de 30 minutos.
-Pilotos a sair da estação para embarque nos fundeadouros: cerca de 15 minutos.
+Pilotos a sair da estação para embarque no Fundeadouro Norte: cerca de 5 minutos.
+Pilotos a sair da estação para embarque no Fundeadouro Sul / Tróia: cerca de 15 minutos.
 
 ================================================================================
 ABORDAGEM ESPECÍFICA A TERMINAIS — DICAS OPERACIONAIS
@@ -779,8 +780,9 @@ posição no fundeadouro, corrente e tráfego.
 
 Pergunta: Quanto tempo levam os pilotos a embarcar depois de saírem da estação?
 Resposta: Para embarque perto do Outão, cerca de 15 minutos. Para embarque fora
-da Barra na posição oficial, cerca de 30 minutos. Para embarque nos fundeadouros,
-cerca de 15 minutos.
+da Barra na posição oficial, cerca de 30 minutos. Para embarque no Fundeadouro
+Norte, cerca de 5 minutos. Para embarque no Fundeadouro Sul / Tróia, cerca de
+15 minutos.
 
 Pergunta: A que distância está a posição de embarque dos pilotos da entrada da barra?
 Resposta: A posição de embarque dos pilotos encontra-se a 1 milha náutica da

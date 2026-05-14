@@ -78,6 +78,42 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("TMS 1 -> Bóia 5CC", answer["answer"])
         self.assertIn("Bóia 5CC -> TMS 2", answer["answer"])
 
+    def test_pilot_wording_does_not_override_explicit_route_points(self) -> None:
+        answer = route_transit_answer("Como piloto, da entrada da barra ao TMS2 pelo canal norte, quanto falta?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Canal Norte", answer["answer"])
+        self.assertIn("6,5 milhas náuticas", answer["answer"])
+        self.assertIn("TMS 1 -> Bóia 5CC", answer["answer"])
+        self.assertIn("Bóia 5CC -> TMS 2", answer["answer"])
+        self.assertNotIn("posição de embarque dos pilotos fica 1 milha", answer["answer"])
+
+    def test_pilot_wording_does_not_override_tms1_to_barra_distance(self) -> None:
+        answer = route_transit_answer("Como piloto, qual a distância do TMS 1 até fora da Barra?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("TMS 1", answer["answer"])
+        self.assertIn("fora da Barra", answer["answer"])
+        self.assertIn("6,0 milhas náuticas", answer["answer"])
+        self.assertIn("pode ser somada", answer["answer"])
+
+    def test_pilot_launch_times_split_fundeadouro_norte_and_sul(self) -> None:
+        answer = route_transit_answer(
+            "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("Outão", answer["answer"])
+        self.assertIn("15 minutos", answer["answer"])
+        self.assertIn("Fora da Barra", answer["answer"])
+        self.assertIn("30 minutos", answer["answer"])
+        self.assertIn("Fundeadouro Norte", answer["answer"])
+        self.assertIn("5 minutos", answer["answer"])
+        self.assertIn("Fundeadouro Sul", answer["answer"])
+
     def test_setubal_route_graph_calculates_eta_from_speed_and_start_time(self) -> None:
         answer = route_transit_answer(
             "Da Bóia 12 CS para a Lisnave a 6 nós, saída às 10:00, qual ETA?"

@@ -98,7 +98,7 @@
   {
     "document": "Notas_Pilotagem.txt",
     "question": "Quanto tempo leva a lancha dos pilotos a embarcar no Outão, fora da barra e nos fundeadouros?",
-    "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "fundeadouros"]
+    "expected_substrings": ["15 minutos", "Outão", "30 minutos", "fora da Barra", "Fundeadouro Norte", "5 minutos", "Fundeadouro Sul"]
   },
   {
     "document": "regras_operacionais_lisnave",

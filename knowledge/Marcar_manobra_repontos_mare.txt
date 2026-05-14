@@ -45,7 +45,8 @@ Tempos práticos de trânsito desde a entrada da Barra:
 Tempos práticos de embarque da lancha de pilotos desde a estação:
   — Perto do Outão: cerca de 15 minutos.
   — Fora da Barra, na posição oficial de embarque: cerca de 30 minutos.
-  — Fundeadouros: cerca de 15 minutos.
+  — Fundeadouro Norte: cerca de 5 minutos.
+  — Fundeadouro Sul / Tróia: cerca de 15 minutos.
 
 ================================================================================
 SECÇÃO 1 — MARCAÇÕES PARA CAIS DO CANAL SUL

@@ -1019,7 +1019,7 @@ def _looks_like_route_question(clean_question: str) -> bool:
 
 
 def _pilot_station_distance_answer(question: str, clean_question: str) -> dict | None:
-    if not re.search(r"\b(posicao\s+de\s+embarque|posicao\s+embarque|pilotos?|pilot\s+station)\b", clean_question):
+    if not re.search(r"\b(posicao\s+de\s+embarque|posicao\s+embarque|pilot\s+station)\b", clean_question):
         return None
     if not re.search(r"\b(entrada\s+da\s+barra|barra|pilar\s*2)\b", clean_question):
         return None
@@ -1033,6 +1033,49 @@ def _pilot_station_distance_answer(question: str, clean_question: str) -> dict |
             {
                 "document": "setubal_route_planning.json",
                 "source_id": "ROUTE_PILOT_STATION_BARRA_DISTANCE",
+                "retrieval_mode": "route_transit_fact",
+                "snippet": answer,
+                "question": question,
+            }
+        ],
+        "answer_origin": "operational_route_transit",
+    }
+
+
+def _pilot_launch_time_answer(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\blancha\b", clean_question):
+        return None
+    if not re.search(r"\bpilotos?\b", clean_question):
+        return None
+    if not re.search(r"\b(tempo|demora|leva|embarcar|embarque|chegar)\b", clean_question):
+        return None
+
+    mentions_outao = bool(re.search(r"\boutao\b", clean_question))
+    mentions_barra = bool(re.search(r"\bfora\s+da\s+barra\b|\bbarra\b", clean_question))
+    mentions_fn = bool(re.search(r"\bfundeadouro\s+norte\b|\bfund\s+norte\b", clean_question))
+    mentions_fs = bool(re.search(r"\bfundeadouro\s+sul\b|\bfundeadouro\s+(?:de\s+)?troia\b|\bfund\s+troia\b", clean_question))
+    mentions_generic_anchorages = bool(re.search(r"\bfundeadouros?\b", clean_question)) and not (mentions_fn or mentions_fs)
+
+    if not (mentions_outao or mentions_barra or mentions_fn or mentions_fs or mentions_generic_anchorages):
+        return None
+
+    lines = ["Tempos práticos da lancha de pilotos desde a estação:"]
+    if mentions_outao:
+        lines.append("- Outão: cerca de 15 minutos.")
+    if mentions_barra:
+        lines.append("- Fora da Barra / posição oficial de embarque: cerca de 30 minutos.")
+    if mentions_fn or mentions_generic_anchorages:
+        lines.append("- Fundeadouro Norte: cerca de 5 minutos.")
+    if mentions_fs or mentions_generic_anchorages:
+        lines.append("- Fundeadouro Sul / Tróia: cerca de 15 minutos.")
+    lines.append("São tempos de referência; ajustar sempre a vento, ondulação, corrente e posição exata do navio.")
+    answer = "\n".join(lines)
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "document": "Notas_Pilotagem.txt",
+                "source_id": "PILOT_LAUNCH_BOARDING_TIMES",
                 "retrieval_mode": "route_transit_fact",
                 "snippet": answer,
                 "question": question,
@@ -1111,6 +1154,9 @@ def _south_quay_reponto_lead_time_answer(question: str, clean_question: str) -> 
 
 def route_transit_answer(question: str, clean_question: str | None = None) -> dict | None:
     clean = clean_question or _normalize(question)
+    launch_time = _pilot_launch_time_answer(question, clean)
+    if launch_time:
+        return launch_time
     pilot_distance = _pilot_station_distance_answer(question, clean)
     if pilot_distance:
         return pilot_distance

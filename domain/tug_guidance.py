@@ -14,7 +14,7 @@ from domain.port_entities import detect_port_entities
 TUG_GUIDANCE_FILENAME = "tug_operational_guidance.json"
 TUG_QUERY_RE = re.compile(r"\b(reboque|reboques|rebocador|rebocadores)\b", flags=re.IGNORECASE)
 TUG_DECISION_RE = re.compile(
-    r"\b(quantos|quantas|numero|n[uú]mero|onde|posicion\w*|meter|colocar|"
+    r"\b(quantos|quantas|qts|numero|n[uú]mero|onde|posicion\w*|meter|colocar|"
     r"precis\w*|necess[aá]ri\w*|recomend\w*|aconselh\w*|suger\w*|"
     r"suficient\w*|bast\w*|cheg\w*)\b",
     flags=re.IGNORECASE,
