@@ -130,10 +130,44 @@ class FakeStore:
         self.runtime_state.pop(key, None)
 
 
+class FakeWeatherService:
+    enabled = True
+
+    def get_forecast(self, days: int = 3) -> dict:
+        return {
+            "location": {"name": "Setúbal", "localtime": "2026-04-30 10:40"},
+            "current": {},
+            "forecast_days": [
+                {
+                    "date": "2026-04-30",
+                    "date_label": "30/04/2026",
+                    "sunrise": "06:40",
+                    "sunset": "20:23",
+                    "daylight_duration_label": "13h 43m",
+                    "night_duration_label": "10h 17m",
+                    "moonrise": "18:12",
+                    "moonset": "05:28",
+                    "moon_phase": "Full Moon",
+                    "moon_phase_icon": "🌕",
+                    "moon_phase_label": "Lua cheia",
+                    "moon_illumination": "98",
+                }
+            ],
+            "hourly_groups": [],
+        }
+
+    def context_for_question(self, question: str) -> dict:
+        return {"document": "Meteorologia teste", "retrieval_mode": "live_api", "snippet": "astro"}
+
+    def _resolve_query_dates(self, question, reference_date):
+        return ["2026-04-30"]
+
+
 class ChatRuntimeSlashCommandTests(unittest.TestCase):
     def setUp(self) -> None:
         self.previous_store = services.store
         self.previous_rag = services.rag
+        self.previous_weather_service = services.weather_service
         self.previous_retry_scheduler = services.reindex_retry_scheduler
         services.rag = FakeRag()
         services.reindex_retry_scheduler = None
@@ -143,6 +177,7 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
     def tearDown(self) -> None:
         services.store = self.previous_store
         services.rag = self.previous_rag
+        services.weather_service = self.previous_weather_service
         services.reindex_retry_scheduler = self.previous_retry_scheduler
 
     def test_edit_maneuver_command_returns_diagnostic_pending_action(self) -> None:
@@ -266,8 +301,21 @@ class ChatRuntimeSlashCommandTests(unittest.TestCase):
 
     def test_issue_9_slash_query_commands_return_expected_records(self) -> None:
         services.store = FakeStore()
+        services.weather_service = FakeWeatherService()
 
         cases = [
+            (
+                "/lua hoje",
+                "slash_moon",
+                ["Fase da lua em Setúbal", "Lua cheia", "98%"],
+                [],
+            ),
+            (
+                "/luz hoje",
+                "slash_daylight",
+                ["Período luminoso em Setúbal", "06:40", "20:23", "13h 43m"],
+                [],
+            ),
             (
                 "/consultar-escala PTSET26GALB123",
                 "slash_consult_scale",

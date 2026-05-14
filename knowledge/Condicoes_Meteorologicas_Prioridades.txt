@@ -184,12 +184,13 @@ seguinte ordem, da mais prioritária para a menos prioritária:
   calados elevados dependentes da preia-mar. Se perderem a janela, podem ter
   de aguardar várias horas, causando atrasos desproporcionados.
 
-2.ª PRIORIDADE — NAVIOS COM CARGA DE PASSAGEIROS, ANIMAIS VIVOS OU CARGA VIVA
-  E CARGA PERECÍVEL:
+2.ª PRIORIDADE — NAVIOS COM PASSAGEIROS, ANIMAIS VIVOS, REEFERS OU CARGA
+  PERECÍVEL:
   Navios de passageiros e navios que transportem animais vivos ou outras cargas
-  vivas (por exemplo gado) e carga perecível (alimentos, produtos frescos, etc.)
-  têm prioridade sobre cargas convencionais, devido à natureza sensível da carga
-  e ao impacto humano ou de bem-estar animal de atrasos.
+  vivas (por exemplo gado), reefers e carga perecível (alimentos, produtos
+  frescos, etc.) têm prioridade sobre cargas convencionais, devido à natureza
+  sensível da carga e ao impacto humano, comercial ou de bem-estar animal de
+  atrasos.
 
 3.ª PRIORIDADE — NAVIOS RO-RO:
   Roll-on Roll-off, incluindo ferry e navios de carga por rampa. Têm operações
@@ -202,11 +203,12 @@ seguinte ordem, da mais prioritária para a menos prioritária:
 5.ª PRIORIDADE — OUTROS NAVIOS:
   Graneleiros, navios tanque, carga geral e outros tipos não incluídos acima.
 
-REGRA GERAL — SAÍDAS PRIORITÁRIAS FACE A ENTRADAS:
-  Independentemente do tipo de navio, as SAÍDAS têm prioridade sobre as
-  ENTRADAS. Um navio que pretende sair de um cais tem precedência sobre um
-  navio que pretende entrar, porque a ocupação do cais e a operação portuária
-  dependem de que o navio existente saia primeiro.
+REGRA GERAL — ORDEM OPERACIONAL ENTRE TIPOS DE MANOBRA:
+  Dentro da mesma prioridade de navio e da mesma janela operacional, aplicar:
+  SAÍDAS > MUDANÇAS > ENTRADAS. Um navio que pretende sair de um cais tem
+  precedência sobre um navio que pretende mudar ou entrar; uma mudança tem
+  precedência sobre uma entrada quando liberta/organiza cais e não prejudica
+  uma janela crítica superior.
 
 ================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
@@ -239,8 +241,9 @@ executam até as condições serem repostas e a pilotagem declarar o levantament
 
 Pergunta: Qual o critério de prioridade entre manobras?
 Resposta: 1.º navios com reponto de maré ou janela crítica de maré/profundidade;
-2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores;
-5.º outros. Sempre com prioridade de saídas sobre entradas.
+2.º navios com passageiros/animais vivos/reefers/carga perecível; 3.º RoRo;
+4.º contentores; 5.º outros. Dentro da mesma prioridade operacional, aplicar
+saídas > mudanças > entradas.
 
 Pergunta: Um graneleiro e um ferry estão à espera de manobra. Qual sai primeiro?
 Resposta: O ferry (RoRo de passageiros), que é 2.ª prioridade face ao graneleiro
@@ -248,8 +251,10 @@ que é 5.ª prioridade.
 
 Pergunta: Dois navios estão à espera: um porta-contentores a entrar e um
 graneleiro a sair. Qual manobra primeiro?
-Resposta: O graneleiro a sair, porque as saídas têm prioridade sobre as entradas
-independentemente do tipo de navio.
+Resposta: Em princípio o graneleiro a sair, porque dentro de uma mesma janela
+operacional a ordem é saídas > mudanças > entradas. Se o porta-contentores tiver
+uma janela crítica de maré/profundidade mais apertada, essa janela tem de ser
+ponderada primeiro.
 
 ================================================================================
 FIM DO DOCUMENTO — CONDIÇÕES METEOROLÓGICAS, MARÉ E PRIORIDADES DE MANOBRA

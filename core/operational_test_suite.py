@@ -39,7 +39,7 @@ from core.operational_sources import answer_direct_operational_query, build_oper
 from core.portal_notifications import latest_maneuver_by_type
 from core.rule_catalog import _active_knowledge_dir
 from domain.berth_profiles import find_best_berth_profile
-from domain.berth_layout import build_slot_occupancy, find_occupied_berth_conflict
+from domain.berth_layout import build_slot_occupancy, find_occupied_berth_conflict, is_anchorage_berth
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
 from domain.chat_action_templates import build_slash_help
 from domain.chat_actions import parse_slash_command
@@ -54,6 +54,8 @@ QUERY_SLASH_COMMANDS = {
     "wave",
     "tides",
     "weather",
+    "moon",
+    "daylight",
     "planning",
     "planning_approved",
     "planning_pending",
@@ -1130,6 +1132,152 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
             "LOA (atracação no destino)",
             "Regras do cais de origem",
             "Regras do cais de destino",
+        ),
+    },
+    {
+        "id": "repontos-canal-sul-origens-criticas",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "Lisnave, Tanquisado e Eco-Oil por origem",
+        "question": "Quanto tempo antes marco entradas para Lisnave, Tanquisado ou Eco-Oil desde Barra, Fundeadouro Norte e Tróia?",
+        "expected_summary": "Fixa 2h Barra, 1h30 Fundeadouro Norte e 1h Tróia para chegar ao reponto.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "De fora da Barra para Lisnave / Tanquisado / Eco-Oil:",
+            "marcar 2h00 antes do reponto",
+            "Do Fundeadouro Norte para Lisnave / Tanquisado / Eco-Oil:",
+            "marcar 1h30 antes do reponto",
+            "Do Fundeadouro de Tróia para Lisnave / Tanquisado / Eco-Oil:",
+            "marcar 1h00 antes do reponto",
+        ),
+    },
+    {
+        "id": "repontos-teporset-termitrena-entrada-saida",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "Teporset/Termitrena entrada e saída",
+        "question": "Como marco Teporset/Termitrena com calado condicionante e como marco a saída?",
+        "expected_summary": "Entrada por origem para reponto/preia-mar e saída 15 min antes do reponto.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "Teporset / Termitrena com calado condicionante:",
+            "Entrada: 2h00 de fora da Barra, 1h30 do Fundeadouro Norte, 1h00 do",
+            "Saída: marcar 15 min antes do reponto",
+            "reponto local ocorre",
+        ),
+    },
+    {
+        "id": "repontos-lisnave-docas-saida",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "Lisnave Docas 21/22 saída",
+        "question": "Quando marco uma saída das Docas 21/22 da Lisnave?",
+        "expected_summary": "Docas secas 21/22 saem 2h antes da preia-mar.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "Saída das Docas 21 ou 22",
+            "Marcar 2h00 antes da preia-mar",
+            "docas secas do Estaleiro Lisnave",
+        ),
+    },
+    {
+        "id": "repontos-tanquisado-ecooil-lisnave-mudanca",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "Tanquisado/Eco-Oil para Lisnave",
+        "question": "Quando marco mudança de Tanquisado/Eco-Oil para Lisnave, incluindo Doca 21?",
+        "expected_summary": "Regra normal 1h antes do reponto; Doca 21/22 grande pode exigir 2h antes da preia-mar.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE",
+            "Antecedência de marcação normal: 1 hora antes do reponto",
+            "Doca 21 ou Doca 22",
+            "2 horas antes da preia-mar",
+        ),
+    },
+    {
+        "id": "repontos-secil-entrada-saida-origem",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "SECIL W/E entrada e saída",
+        "question": "Como marco entrada e saída da SECIL por origem?",
+        "expected_summary": "Entradas 30-45 min ou 45-60 min antes do reponto; saídas 15 min antes.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "ENTRADAS PARA A SECIL:",
+            "De fora da Barra: normalmente marcar 30 a 45 minutos antes do reponto",
+            "Do Fundeadouro de Tróia ou de outro cais: marcar 45 minutos a 1 hora antes",
+            "SAÍDAS DA SECIL:",
+            "Marcar cerca de 15 minutos antes do reponto",
+            "Usam-se tanto repontos de preia-mar como de baixa-mar",
+        ),
+    },
+    {
+        "id": "repontos-tms-high-draft-entry-departure",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "TMS1/TMS2 grande calado",
+        "question": "Como marco TMS 1/TMS 2 com calados 9, 10,5 e 12 m?",
+        "expected_summary": "Entrada 1h-1h30 antes da preia-mar; saída 30 min antes do reponto.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "CONDIÇÃO: Navios com calado entre 9 metros e 12 metros",
+            "Entrada: marcar entre 1 hora e 1 hora e 30 minutos antes da preia-mar",
+            "Saída: para navios de grande calado, marcar 30 minutos antes do reponto",
+        ),
+    },
+    {
+        "id": "repontos-sapec-tps-tgl-high-draft",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "SAPEC TPS/TGL calado e IMO",
+        "question": "Como marco SAPEC Sólidos e Líquidos com calado alto, IMO e não-IMO?",
+        "expected_summary": "TPS/TGL com preia-mar, saída 30 min antes do reponto, e TGL distingue 9,5 m IMO / 10,0 m não-IMO.",
+        "source": "knowledge/Marcar_manobra_repontos_mare.txt",
+        "source_path": "Marcar_manobra_repontos_mare.txt",
+        "expected_tokens": (
+            "Entrada TPS: marcar 1 hora e 30 minutos antes da preia-mar",
+            "Saída TPS com grande calado: marcar 30 minutos antes do reponto",
+            "Carga IMO: calado máximo de referência 9,5 m",
+            "Carga não-IMO: calado máximo de referência 10,0 m",
+            "fórmula de calado praticável",
+        ),
+    },
+    {
+        "id": "repontos-priority-order",
+        "group": "Repontos, Marés e Prioridades",
+        "risk": "Critico",
+        "mode": "Automatico",
+        "runner": "knowledge_text",
+        "label": "Prioridade de navios e manobras",
+        "question": "Que prioridade dou se várias manobras competirem pela mesma janela?",
+        "expected_summary": "Janelas críticas primeiro; depois passageiros/animais/reefers/perecível, Ro-Ro, contentores, outros; saídas > mudanças > entradas.",
+        "source": "knowledge/Condicoes_Meteorologicas_Prioridades.txt",
+        "source_path": "Condicoes_Meteorologicas_Prioridades.txt",
+        "expected_tokens": (
+            "1.ª PRIORIDADE — NAVIOS QUE PRECISAM DE REPONTO OU JANELA CRÍTICA DE MARÉ",
+            "passageiros/animais vivos/reefers/carga perecível",
+            "saídas > mudanças > entradas",
         ),
     },
     {
@@ -2703,7 +2851,10 @@ class OperationalFlowSuite:
         return record if isinstance(record, dict) else None
 
     def _free_hour_capacity_test_berths(self, planned_at: str, *, count: int = 5) -> list[str]:
-        """Pick simple free berths so the hourly-capacity test is not masked by live occupancy."""
+        """Pick non-blocking positions so the hourly-capacity test is not masked by live occupancy."""
+        anchorage_candidates = ["Fundeadouro Norte", "Fundeadouro Sul / Tróia"]
+        if all(is_anchorage_berth(berth) for berth in anchorage_candidates):
+            return [anchorage_candidates[index % len(anchorage_candidates)] for index in range(count)]
         snapshot = services.store.get_port_activity_snapshot(window_days=3650)
         in_port = snapshot.get("in_port", []) or []
         preferred = [
@@ -3745,6 +3896,8 @@ class OperationalFlowSuite:
         if command == "tides":
             return f"{head} hoje"
         if command == "weather":
+            return f"{head} hoje"
+        if command in {"moon", "daylight"}:
             return f"{head} hoje"
         if command in {"planning", "planning_approved", "planning_pending"}:
             return head

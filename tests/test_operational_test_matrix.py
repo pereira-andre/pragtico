@@ -96,6 +96,7 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert inventory["bot_matrix_automatic_count"] > inventory["bot_matrix_manual_count"]
     assert any(item["id"] == "ecooil-checklist" for item in inventory["bot_matrix"])
     assert any(group["name"] == "Checklist de manobras" for group in inventory["bot_matrix_groups"])
+    assert any(group["name"] == "Repontos, Marés e Prioridades" for group in inventory["bot_matrix_groups"])
     assert inventory["railway_log"]["count"] == 150
     assert inventory["railway_log"]["passed_count"] == 150
     assert inventory["berth_capacity_test_count"] >= 20
@@ -187,6 +188,12 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     assert "Unidades náuticas e Beaufort incorporadas" in html
     assert "Conversão km para milhas náuticas" in html
     assert "Beaufort força 6" in html
+    assert "Repontos, Marés e Prioridades" in html
+    assert "Lisnave, Tanquisado e Eco-Oil por origem" in html
+    assert "Teporset/Termitrena entrada e saída" in html
+    assert "TMS1/TMS2 grande calado" in html
+    assert "SAPEC TPS/TGL calado e IMO" in html
+    assert "Prioridade de navios e manobras" in html
     assert "/validar-manobra Tanquisado com 2 rebocadores" in html
     assert "/validar-manobra Tanquisado fora do reponto" in html
     assert "/validar-manobra doca Lisnave" in html

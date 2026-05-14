@@ -27,7 +27,7 @@ from core.operational_common import (
     current_resolvable_port_calls,
     current_visible_port_calls,
 )
-from core.operational_sources import _build_tide_lookup_answer
+from core.operational_sources import _build_tide_lookup_answer, _build_weather_lookup_answer
 from core.rule_catalog import available_rule_code_titles, build_rule_catalog_text, build_rule_summary_text, rule_document_for_code
 from core.validators import normalize_thruster_state, validate_not_past_datetime
 from domain.chat_actions import (
@@ -420,6 +420,18 @@ def answer_slash_query(command: str, argument: str, role: str) -> dict:
     if command == "tides":
         tide_answer, _sources = _build_tide_lookup_answer(clean_argument or "hoje")
         return {"answer": tide_answer or "Sem dados de maré.", "sources": [], "answer_origin": "slash_tides"}
+    if command == "moon":
+        question = f"fase da lua {clean_argument or 'hoje'}"
+        moon_answer, sources = _build_weather_lookup_answer(question, _operational_lookup_key(question))
+        return {"answer": moon_answer or "Sem dados de lua disponíveis.", "sources": sources, "answer_origin": "slash_moon"}
+    if command == "daylight":
+        question = f"período luminoso {clean_argument or 'hoje'}"
+        daylight_answer, sources = _build_weather_lookup_answer(question, _operational_lookup_key(question))
+        return {
+            "answer": daylight_answer or "Sem dados de luz do dia disponíveis.",
+            "sources": sources,
+            "answer_origin": "slash_daylight",
+        }
     if command == "weather":
         if not services.weather_service.enabled:
             return {"answer": "A meteorologia não está configurada neste ambiente.", "sources": [], "answer_origin": "slash_weather"}

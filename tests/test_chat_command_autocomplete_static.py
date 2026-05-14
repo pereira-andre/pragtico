@@ -25,6 +25,8 @@ def test_it_command_is_visible_in_initial_autocomplete_batch() -> None:
     assert "/it 015" in commands[:8]
     assert "/regras" in commands[:8]
     assert "/regra 015" in commands[:8]
+    assert "/lua hoje" in commands[:10]
+    assert "/luz hoje" in commands[:10]
 
 
 def test_every_registered_slash_alias_has_autocomplete_entry() -> None:
@@ -87,6 +89,8 @@ def test_command_token_matches_rank_before_keyword_matches() -> None:
 
         const cases = {
           "/it": "/it 015",
+          "/lua": "/lua hoje",
+          "/luz": "/luz hoje",
           "/regra": "/regra 015",
           "/rieam": "/rieam",
           "/verificar": "/verificar",

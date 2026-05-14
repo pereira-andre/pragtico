@@ -62,19 +62,22 @@ Teporset e Termitrena devem seguir as respetivas instruções de trabalho:
     com teto de 10,0 m; deve-se procurar atracar com cerca de 2 m de água
     acima do ZH para facilitar os lançantes exteriores.
 
-Recomendação operacional forte: entre a Termitrena e a Teporset existe um baixo
-de cerca de 7 m que pode "sugar" a proa dos navios de maior calado para o baixo,
-com risco de encalhe momentâneo. Por isso, para navios de maior calado nestes
-dois cais, privilegiar a preia-mar / janela de maior água, sem apresentar isto
-como uma regra formal de reponto.
+Regra prática crítica: entre a Termitrena e a Teporset existe um baixo de cerca
+de 7 m que pode "sugar" a proa dos navios de maior calado para o baixo, com
+risco de encalhe momentâneo. Por isso, para navios de maior calado nestes dois
+cais, usar a janela de reponto/preia-mar de forma conservadora. Em especial na
+Teporset, considerar que o reponto local acontece cerca de 15 minutos depois da
+hora nominal do reponto; a saída marcada 15 minutos antes do reponto nominal
+deixa aproximadamente 30 minutos úteis de margem operacional.
 
 A antecedência de marcação varia consoante o ponto de partida do navio:
 
 ENTRADAS DE FORA DA BARRA:
   Antecedência de marcação: 2 horas antes da janela de maré pretendida.
   Para Lisnave / Tanquisado / Eco-Oil, essa janela é normalmente o reponto.
-  Para Teporset / Termitrena com calado condicionante, usar a preia-mar ou
-  janela de maior água como referência.
+  Para Teporset / Termitrena com calado condicionante, usar o reponto/preia-mar
+  como referência; quando a origem não for indicada, assumir marcação de entrada
+  de fora da Barra 2h00 antes do reponto.
   Isto porque o navio tem de ser pilotado desde fora da barra, percorrer o
   canal de entrada, o Canal Sul, e chegar ao terminal — percurso que demora
   aproximadamente esse tempo.
@@ -101,11 +104,11 @@ RESUMO COMPARATIVO — ENTRADAS/MUDANÇAS PARA CAIS DO CANAL SUL:
     marcar 1h00 antes do reponto.
 
   De fora da Barra para Teporset / Termitrena com calado condicionante:
-    marcar 2h00 antes da preia-mar / janela de maior água.
+    marcar 2h00 antes do reponto/preia-mar.
   Do Fundeadouro Norte para Teporset / Termitrena:
-    marcar 1h30 antes da preia-mar / janela de maior água.
+    marcar 1h30 antes do reponto/preia-mar.
   Do Fundeadouro de Tróia para Teporset / Termitrena:
-    marcar 1h00 antes da preia-mar / janela de maior água.
+    marcar 1h00 antes do reponto/preia-mar.
 
 ================================================================================
 SECÇÃO 2 — SAÍDAS DAS DOCAS 21 E 22 (LISNAVE)
@@ -123,16 +126,20 @@ coordenar os amarradores do estaleiro (alagens) e sincronizar a abertura da
 comporta da doca com o momento de maré adequado.
 
 ================================================================================
-SECÇÃO 3 — MUDANÇA DE CAIS TANQUISADO OU ECO-OIL PARA DOCAS 21 OU 22 (LISNAVE)
+SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE
 ================================================================================
 
 Quando um navio está atracado no Tanquisado (IT-010) ou no Eco-Oil (IT-008) e
-precisa de mudar para as Docas 21 ou 22 do Lisnave, a mesma lógica aplica-se:
+precisa de mudar para a Lisnave, a referência normal é o reponto de maré no
+estaleiro.
 
-  Antecedência de marcação: 2 horas antes da preia-mar prevista.
+  Antecedência de marcação normal: 1 hora antes do reponto de maré pretendido.
 
-O percurso desde estes terminais até às docas inclui a navegação no Canal Sul
-até ao estaleiro, o que justifica a antecedência de 2 horas em relação à preia-mar.
+Exceção prática: para mudança para Doca 21 ou Doca 22, se o navio for grande de
+comprimento ou a operação exigir mais preparação na doca, pode ser necessário
+marcar 2 horas antes da preia-mar. Esta exceção não deve substituir a regra
+normal de 1 hora para mudanças Tanquisado/Eco-Oil -> Lisnave quando a pergunta
+não indicar doca seca grande ou condicionante de comprimento.
 
 ================================================================================
 SECÇÃO 4 — NAVIOS DE GRANDE CALADO PARA TMS 1 OU TMS 2
@@ -145,17 +152,21 @@ profundidade suficiente.
 
 CONDIÇÃO: Navios com calado entre 9 metros e 12 metros.
 
-  Antecedência de marcação: entre 1 hora e 1 hora e 30 minutos antes da preia-mar.
+  Entrada: marcar entre 1 hora e 1 hora e 30 minutos antes da preia-mar.
   A janela exacta dentro deste intervalo depende do calado específico do navio
   e da amplitude da maré do dia — calados mais próximos de 12 m requerem maior
   precisão e devem ser marcados com 1h30 antes; calados intermédios (9 a 10 m)
   podem ser marcados com 1h antes.
 
+  Saída: para navios de grande calado, marcar 30 minutos antes do reponto para
+  apanhar água praticamente parada na fase crítica da largada.
+
 Isto significa que, se a preia-mar for às 14h00, a requisição deve ser feita
-entre as 12h30 e as 13h00.
+entre as 12h30 e as 13h00 para entrada. Para saída de grande calado ao reponto
+das 14h00, marcar por volta das 13h30.
 
 ================================================================================
-SECÇÃO 5 — NAVIOS DE GRANDE CALADO PARA SAPEC GRANÉIS SÓLIDOS (TPS)
+SECÇÃO 5 — NAVIOS DE GRANDE CALADO PARA SAPEC GRANÉIS SÓLIDOS (TPS) E LÍQUIDOS (TGL)
 ================================================================================
 
 O Terminal de Granéis Sólidos da SAPEC (TPS, IT-029) tem calado máximo de
@@ -164,7 +175,21 @@ calados elevados, é necessária janela próxima da preia-mar.
 
 CONDIÇÃO: Navios com calado de 10 metros (ou próximo do máximo do terminal).
 
-  Antecedência de marcação: 1 hora e 30 minutos antes da preia-mar prevista.
+  Entrada TPS: marcar 1 hora e 30 minutos antes da preia-mar prevista.
+  Saída TPS com grande calado: marcar 30 minutos antes do reponto para ter água
+  parada na fase crítica de largada.
+
+No Terminal de Granéis Líquidos (TGL/SAPEC Líquidos), distinguir sempre carga
+IMO e não-IMO:
+  — Carga IMO: calado máximo de referência 9,5 m.
+  — Carga não-IMO: calado máximo de referência 10,0 m.
+  — Confirmar sempre a fórmula de calado praticável com a altura de água à hora
+    da manobra.
+
+Para TGL com calado condicionante ou próximo do máximo aplicável, planear a
+entrada junto da preia-mar / maior água; como referência prática, usar marcação
+1h30 antes da preia-mar quando a profundidade for o fator crítico. Para saída
+com grande calado, usar 30 minutos antes do reponto.
 
 ================================================================================
 SECÇÃO 6 — SAÍDAS DOS CAIS LISNAVE (EXCEPTO DOCAS 21 E 22), TANQUISADO E ECO-OIL
@@ -252,18 +277,28 @@ OPERAÇÕES QUE DEPENDEM DA PREIA-MAR:
     Marcar 2h00 antes da preia-mar.
 
   Mudança de cais Tanquisado ou Eco-Oil → Docas 21 ou 22 (Lisnave):
-    Marcar 2h00 antes da preia-mar.
+    Regra normal Tanquisado/Eco-Oil → Lisnave: marcar 1h00 antes do reponto.
+    Se for para Doca 21/22 com navio grande de comprimento ou preparação
+    especial de doca seca: pode exigir 2h00 antes da preia-mar.
 
   Navio com calado 9 a 12 m → TMS 1 ou TMS 2:
-    Marcar 1h00 a 1h30 antes da preia-mar.
+    Entrada: marcar 1h00 a 1h30 antes da preia-mar.
+    Saída com grande calado: marcar 30 min antes do reponto.
 
   Navio com calado ≈ 10 m → SAPEC Granéis Sólidos (TPS):
-    Marcar 1h30 antes da preia-mar.
+    Entrada: marcar 1h30 antes da preia-mar.
+    Saída com grande calado: marcar 30 min antes do reponto.
+
+  SAPEC Líquidos (TGL) com calado condicionante:
+    Distinguir carga IMO (referência 9,5 m) e não-IMO (referência 10,0 m),
+    aplicar a fórmula de calado praticável e, se a profundidade for crítica,
+    usar entrada 1h30 antes da preia-mar e saída 30 min antes do reponto.
 
   Teporset / Termitrena com calado condicionante:
-    Forte recomendação operacional para usar a preia-mar / janela de maior água.
-    Antecedência prática: 2h00 de fora da Barra, 1h30 do Fundeadouro Norte,
-    1h00 do Fundeadouro de Tróia.
+    Entrada: 2h00 de fora da Barra, 1h30 do Fundeadouro Norte, 1h00 do
+    Fundeadouro de Tróia, sempre para apanhar o reponto/preia-mar.
+    Saída: marcar 15 min antes do reponto; na Teporset, o reponto local ocorre
+    cerca de 15 min depois da hora nominal, deixando cerca de 30 min de margem.
 
 ================================================================================
 RESUMO DAS REGRAS EM LINGUAGEM OPERACIONAL DIRETA
@@ -274,11 +309,10 @@ para o Lisnave/Tanquisado/Eco-Oil?
 Resposta: 2 horas antes do reponto de maré pretendido.
 
 Pergunta: E para Teporset ou Termitrena com calado condicionante?
-Resposta: Como recomendação operacional forte, marcar para chegar junto da
-preia-mar ou janela de maior água. De fora da Barra, usar 2 horas de antecedência;
-do Fundeadouro Norte, 1h30; de Tróia, 1h. A razão é a profundidade na aproximação
-e o baixo de cerca de 7 m entre a Termitrena e a Teporset, que pode puxar a proa
-dos navios de maior calado.
+Resposta: Marcar para chegar junto do reponto/preia-mar. De fora da Barra, usar
+2 horas de antecedência; do Fundeadouro Norte, 1h30; de Tróia, 1h. A razão é a
+profundidade na aproximação e o baixo de cerca de 7 m entre a Termitrena e a
+Teporset, que pode puxar a proa dos navios de maior calado.
 
 Pergunta: Um navio fundeado em Tróia quer ir para o Lisnave. Com que antecedência
 se marca?
@@ -286,20 +320,35 @@ Resposta: 1 hora antes do reponto de maré.
 
 Pergunta: Um navio fundeado no Fundeadouro Norte quer ir para a Termitrena com
 calado condicionante. Com que antecedência se marca?
-Resposta: 1 hora e 30 minutos antes da preia-mar / janela de maior água.
+Resposta: 1 hora e 30 minutos antes do reponto/preia-mar.
 
 Pergunta: Um navio quer sair da Doca 22 do Lisnave. Quando se marca?
 Resposta: 2 horas antes da preia-mar.
 
 Pergunta: Um navio está no Tanquisado e quer mudar para a Doca 21. Quando se marca?
-Resposta: 2 horas antes da preia-mar.
+Resposta: Regra normal Tanquisado/Eco-Oil para Lisnave: 1 hora antes do reponto.
+Para Doca 21/22, se o navio for grande de comprimento ou a operação exigir
+preparação especial de doca seca, pode ser necessário marcar 2 horas antes da
+preia-mar.
 
 Pergunta: Um navio com 10,5 m de calado quer entrar no TMS 1. Quando se marca?
 Resposta: Entre 1 hora e 1 hora e 30 minutos antes da preia-mar, dependendo do
 calado exacto. Para 10,5 m, aproximar de 1h30 antes da preia-mar.
 
+Pergunta: Um navio de grande calado quer sair do TMS 1 ou TMS 2. Quando se marca?
+Resposta: 30 minutos antes do reponto, para largar na água praticamente parada.
+
 Pergunta: Um navio com 10 m de calado quer entrar no SAPEC Sólidos. Quando se marca?
 Resposta: 1 hora e 30 minutos antes da preia-mar.
+
+Pergunta: Um navio de grande calado quer sair da SAPEC. Quando se marca?
+Resposta: 30 minutos antes do reponto. Para SAPEC Líquidos confirmar ainda se a
+carga é IMO ou não-IMO e aplicar a fórmula de calado praticável.
+
+Pergunta: Um navio quer sair da Teporset ou da Termitrena. Quando se marca?
+Resposta: Cerca de 15 minutos antes do reponto. Na Teporset, o reponto local
+acontece cerca de 15 minutos depois da hora nominal, dando cerca de 30 minutos
+de margem operacional.
 
 Pergunta: Um navio quer sair do Cais de Reparação 2 do Lisnave (Ponte-Cais 2).
 Com que antecedência se marca?
@@ -323,10 +372,11 @@ Resposta: Marcar para o reponto significa que a manobra se executa no momento
 de corrente nula (mudança de sentido da maré). Marcar para a preia-mar significa
 que a manobra precisa do nível máximo de água para ter profundidade suficiente.
 Lisnave, Tanquisado, Eco-Oil e Secil usam o reponto quando a regra aplicável
-exige corrente nula. Teporset e Termitrena devem seguir os ITs; para navios de
-maior calado, há recomendação operacional forte para usar a preia-mar / maior
-água por causa da profundidade na aproximação. As saídas das docas secas e os
-navios de grande calado nos TMS e SAPEC usam a preia-mar (profundidade máxima).
+exige corrente nula. Teporset e Termitrena, com calado condicionante, devem ser
+marcadas para apanhar reponto/preia-mar; na Teporset, a saída marca-se 15 min
+antes do reponto nominal porque o reponto local acontece cerca de 15 min depois.
+As saídas das docas secas dependem da preia-mar. Navios de grande calado nos
+TMS e SAPEC entram na preia-mar e saem 30 min antes do reponto.
 
 ================================================================================
 FIM DO DOCUMENTO — REGRAS DE MARCAÇÃO DE MANOBRAS COM MARÉ

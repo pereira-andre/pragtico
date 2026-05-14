@@ -1823,7 +1823,8 @@ def _answer_fog_port_procedure_direct(question: str, clean_question: str) -> dic
     answer = (
         "Com nevoeiro em porto:\n"
         "- A pilotagem é suspensa e as manobras não se executam até a visibilidade operacional ser reposta.\n"
-        "- Os navios aguardam em fila de prioridade; quando levantar, retoma-se por reponto de maré/janela crítica, passageiros/animais/carga perecível, Ro-Ro, contentores e restantes, mantendo saídas sobre entradas.\n"
+        "- Os navios aguardam em fila de prioridade; quando levantar, retoma-se por reponto de maré/janela crítica, passageiros/animais vivos/reefers/carga perecível, Ro-Ro, contentores e restantes.\n"
+        "- Dentro da mesma prioridade e janela operacional, ordenar por tipo de manobra: saídas > mudanças > entradas.\n"
         "- As requisições continuam a ser registadas no sistema, mas não autorizam a execução enquanto a pilotagem não declarar o levantamento.\n"
         "- Se o navio já estiver a navegar no meio do nevoeiro, aí aplica-se também RIEAM/COLREG: velocidade de segurança, máquinas prontas, radar/vigia reforçados e coordenação VTS."
     )

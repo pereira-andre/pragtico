@@ -255,6 +255,6 @@
   {
     "document": "Condicoes_Meteorologicas_Prioridades.txt",
     "question": "Qual é o critério de prioridade entre manobras?",
-    "expected_substrings": ["reponto de maré", "passageiros", "RoRo", "contentores", "saídas sobre entradas"]
+    "expected_substrings": ["reponto de maré", "passageiros", "reefers", "RoRo", "contentores", "saídas > mudanças > entradas"]
   }
 ]

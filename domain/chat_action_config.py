@@ -329,6 +329,8 @@ SLASH_COMMAND_ALIASES = {
     "abortar-manobra": "abort_maneuver",
     "mares": "tides",
     "meteorologia": "weather",
+    "lua": "moon",
+    "luz": "daylight",
     "colreg-lista": "colreg_list",
     "colregs": "colreg_list",
     "rieam-lista": "colreg_list",

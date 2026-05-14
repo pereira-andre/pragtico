@@ -71,6 +71,20 @@
         template: "/it 015",
       },
       {
+        command: "/lua hoje",
+        label: "Lua",
+        description: "Mostra a fase da lua.",
+        keywords: "lua fase lunar iluminacao",
+        template: "/lua hoje",
+      },
+      {
+        command: "/luz hoje",
+        label: "Luz do dia",
+        description: "Mostra nascer do sol, pôr do sol e período luminoso.",
+        keywords: "luz dia nascer sol por do sol periodo luminoso daylight",
+        template: "/luz hoje",
+      },
+      {
         command: "/colreg-lista",
         label: "COLREG lista",
         description: "Lista as regras RIEAM/COLREG disponíveis.",

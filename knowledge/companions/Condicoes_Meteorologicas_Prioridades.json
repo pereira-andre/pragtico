@@ -14,7 +14,7 @@
     "Com a maré de enchente, a corrente actua a favor da aproximação da lancha, reduzindo o efeito combinado adverso de vento forte + corrente de vazante + ondulação.",
     "Com vento forte, a posição dos rebocadores deve seguir IT-016 e tug_operational_guidance.json: com bowthruster operacional em navios grandes, privilegiar popa; sem bowthruster, equilibrar proa e popa; em Ro-Ro com 2 rebocadores pode usar-se 1 à popa e 1 ao costado a empurrar.",
     "A pilotagem é suspensa.",
-    "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros."
+    "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais vivos/reefers/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Dentro da mesma prioridade operacional, aplicar saídas > mudanças > entradas."
   ],
   "faq": [
     {
@@ -88,12 +88,16 @@
     },
     {
       "question": "Qual o critério de prioridade entre manobras?",
-      "answer": "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Sempre com prioridade de saídas sobre entradas.",
+      "answer": "1.º navios com reponto de maré ou janela crítica de maré/profundidade; 2.º navios com passageiros/animais vivos/reefers/carga perecível; 3.º RoRo; 4.º contentores; 5.º outros. Dentro da mesma prioridade operacional, aplicar saídas > mudanças > entradas.",
       "keywords": [
         "criterio",
         "entre",
         "manobras",
-        "prioridade"
+        "prioridade",
+        "reefers",
+        "saidas",
+        "mudancas",
+        "entradas"
       ]
     },
     {
@@ -111,7 +115,7 @@
     },
     {
       "question": "Dois navios estão à espera: um porta-contentores a entrar e um graneleiro a sair. Qual manobra primeiro?",
-      "answer": "O graneleiro a sair, porque as saídas têm prioridade sobre as entradas independentemente do tipo de navio.",
+      "answer": "Em princípio o graneleiro a sair, porque dentro de uma mesma janela operacional a ordem é saídas > mudanças > entradas. Se o porta-contentores tiver uma janela crítica de maré/profundidade mais apertada, essa janela tem de ser ponderada primeiro.",
       "keywords": [
         "contentores",
         "dois",

@@ -11,6 +11,8 @@ LIVE_SLASH_ORIGIN_EMOJI = {
     "slash_tides": "🌕",
     "slash_wave": "🌊",
     "slash_local_warnings": "⚠️",
+    "slash_moon": "🌙",
+    "slash_daylight": "☀️",
 }
 OPERATIONAL_ORIGIN_EMOJI = {
     "slash_template": "📋",
@@ -20,12 +22,35 @@ OPERATIONAL_ORIGIN_EMOJI = {
     "operational_update": "📋",
     "operational_replace": "📋",
     "pending_action_confirmed": "✅",
+    "alstom_operational_rule": "📋",
+    "barra_draft_rule": "🌊",
+    "berth_capacity_rule": "📋",
+    "berth_profile_fact": "📋",
+    "checklist_rule": "📋",
+    "colreg_interpretation": "⚓",
+    "cost_formula": "📋",
+    "fog_underway_procedure": "⚠️",
+    "navigation_basics": "🧭",
+    "navigation_lights": "🧭",
+    "operational_clarification": "📋",
+    "operational_context_followup": "📋",
+    "operational_emergency_response": "⚠️",
+    "operational_rule": "📋",
+    "operational_route_transit": "🧭",
+    "operational_safety": "⚠️",
+    "operational_safety_limit": "⚠️",
+    "operational_tug_guidance": "⚓",
+    "secil_entry_timing": "🌕",
+    "secil_reponto_rule": "🌕",
+    "source_coverage": "📋",
 }
 CONTEXT_LINE_EMOJIS = (
     ("Condições meteorológicas", "🌦️"),
     ("Meteorologia", "🌦️"),
     ("Evolução prevista", "🌦️"),
     ("Marés", "🌕"),
+    ("Fase da lua", "🌙"),
+    ("Período luminoso", "☀️"),
     ("Leitura costeira", "🌊"),
     ("Ondulação", "🌊"),
     ("Avisos locais", "⚠️"),
@@ -47,6 +72,10 @@ KNOWN_PREFIXES = {
     "📂",
     "🚢",
     "⚓",
+    "🧭",
+    "🌙",
+    "☀️",
+    "🌬️",
 }
 LIVE_SOURCE_MODES = {"live_planner", "live_api", "structured"}
 OPERATIONAL_SOURCE_MODES = {
@@ -59,7 +88,8 @@ OPERATIONAL_SOURCE_MODES = {
 }
 LIVE_FEED_QUESTION_RE = re.compile(
     r"\b("
-    r"meteorologia|meteo|tempo|vento|mares|marés|preia|baixa|ondulacao|ondulação|"
+    r"meteorologia|meteo|tempo|vento|lua|fase lunar|luz do dia|periodo luminoso|período luminoso|"
+    r"mares|marés|preia|baixa|ondulacao|ondulação|"
     r"avisos?|anav|escala|escalas|manobra|manobras|chegadas?|sa[ií]das?|"
     r"planeamento|arquivo|navios?\s+em\s+porto|quadro"
     r")\b",
@@ -168,6 +198,10 @@ def _should_decorate_llm_response(payload: dict[str, Any], question: str) -> boo
 
 def _fallback_emoji_from_question(question: str) -> str:
     clean = str(question or "").lower()
+    if re.search(r"\b(lua|fase lunar|fase da lua)\b", clean):
+        return "🌙"
+    if re.search(r"\b(luz do dia|periodo luminoso|período luminoso|nascer do sol|por do sol|pôr do sol)\b", clean):
+        return "☀️"
     if re.search(r"\b(meteorologia|meteo|tempo|vento)\b", clean):
         return "🌦️"
     if re.search(r"\b(mar[eé]s|preia|baixa)\b", clean):
