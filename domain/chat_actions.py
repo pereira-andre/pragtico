@@ -115,6 +115,8 @@ def looks_like_operational_command(question: str) -> bool:
     has_strong_action = bool(OPERATIONAL_STRONG_ACTION_HINT_RE.search(clean))
     has_weak_action = bool(OPERATIONAL_WEAK_ACTION_HINT_RE.search(clean))
     has_timing_query = bool(OPERATIONAL_TIMING_QUERY_HINT_RE.search(clean))
+    if re.search(r"\b(?:o que|que|quais|qual)\b.*\b(?:precis\w*|falta\w*)\b.*\b(?:confirmar|validar|saber)\b", clean):
+        return False
     if has_query_hint and has_timing_query and not has_strong_action:
         return False
     if has_query_hint and not has_strong_action and not has_weak_action:

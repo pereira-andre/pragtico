@@ -17,7 +17,10 @@ LIVE_SLASH_ORIGIN_EMOJI = {
 OPERATIONAL_ORIGIN_EMOJI = {
     "slash_template": "📋",
     "slash_proposal": "📋",
+    "slash_redirect": "📋",
+    "slash_rule": "📋",
     "slash_validation": "📋",
+    "berth_profile": "📋",
     "operational_lookup": "📋",
     "operational_update": "📋",
     "operational_replace": "📋",
@@ -35,6 +38,7 @@ OPERATIONAL_ORIGIN_EMOJI = {
     "operational_clarification": "📋",
     "operational_context_followup": "📋",
     "operational_emergency_response": "⚠️",
+    "operational_priority": "📋",
     "operational_rule": "📋",
     "operational_route_transit": "🧭",
     "operational_safety": "⚠️",
@@ -43,6 +47,9 @@ OPERATIONAL_ORIGIN_EMOJI = {
     "secil_entry_timing": "🌕",
     "secil_reponto_rule": "🌕",
     "source_coverage": "📋",
+    "document_companion": "📋",
+    "document_companion_global": "📋",
+    "local_culture": "📍",
 }
 CONTEXT_LINE_EMOJIS = (
     ("Condições meteorológicas", "🌦️"),
@@ -76,6 +83,7 @@ KNOWN_PREFIXES = {
     "🌙",
     "☀️",
     "🌬️",
+    "📍",
 }
 LIVE_SOURCE_MODES = {"live_planner", "live_api", "structured"}
 OPERATIONAL_SOURCE_MODES = {

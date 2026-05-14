@@ -6,7 +6,13 @@ from core import services
 from core.operational_actions import finalize_operational_proposal
 from core.operational_test_suite import OperationalFlowSuite
 from domain.chat_action_config import SLASH_COMMAND_ALIASES
-from domain.chat_actions import build_slash_help, format_action_summary, parse_slash_command, proposal_missing_field_labels
+from domain.chat_actions import (
+    build_slash_help,
+    format_action_summary,
+    looks_like_operational_command,
+    parse_slash_command,
+    proposal_missing_field_labels,
+)
 
 
 class FakeStore:
@@ -58,6 +64,13 @@ class SlashActionTargetTests(unittest.TestCase):
 
         self.assertEqual(proposal["target"]["reference_code"], "PTSET26ABCD1234")
         self.assertEqual(proposal["target"]["maneuver_id"], "")
+
+    def test_question_about_what_to_confirm_is_not_action_command(self) -> None:
+        self.assertFalse(
+            looks_like_operational_command(
+                "Tenho uma entrada para Secil Este às 19:25. O que precisas confirmar?"
+            )
+        )
 
     def test_non_ptset_scale_reference_positional_stays_scale_reference(self) -> None:
         proposal = self._proposal("/editar-escala REF123")

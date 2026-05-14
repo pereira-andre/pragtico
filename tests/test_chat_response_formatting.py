@@ -39,3 +39,20 @@ def test_moon_and_daylight_slash_origins_use_specific_emoji() -> None:
 
     assert moon["answer"].startswith("🌙 ")
     assert daylight["answer"].startswith("☀️ ")
+
+
+def test_rule_and_companion_deterministic_origins_receive_list_emoji() -> None:
+    for origin in ("slash_rule", "berth_profile", "document_companion", "document_companion_global"):
+        payload = {"answer_origin": origin, "answer": "Resumo operacional da regra.", "sources": []}
+
+        decorated = add_contextual_response_emojis(payload, "/it 029")
+
+        assert decorated["answer"].startswith("📋 ")
+
+
+def test_local_culture_origin_uses_place_marker() -> None:
+    payload = {"answer_origin": "local_culture", "answer": "O Outão é estratégico na barra do Sado.", "sources": []}
+
+    decorated = add_contextual_response_emojis(payload, "Curiosidade sobre o Outão")
+
+    assert decorated["answer"].startswith("📍 ")

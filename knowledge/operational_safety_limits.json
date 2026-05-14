@@ -128,7 +128,7 @@
       {
         "id": "parted_tug_line",
         "priority": 3,
-        "trigger_terms": ["cabo do reboque", "reboque parte cabo", "rebocador parte cabo", "partiu o cabo do reboque"],
+        "trigger_terms": ["cabo do reboque", "cabo de reboque", "cabo de reboque partido", "reboque parte cabo", "rebocador parte cabo", "partiu o cabo do reboque"],
         "note": "Cabo do reboque partido: preparar para mandar cabo de amarracao do navio ao rebocador, solto e sem estar no guincho, para fazer firme ao reboque."
       },
       {

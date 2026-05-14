@@ -433,6 +433,13 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("sem estar no guincho", answer)
         self.assertIn("fazer firme ao reboque", answer)
 
+    def test_parted_tug_line_de_wording_uses_ship_mooring_line(self) -> None:
+        answer = self._answer("Cabo de reboque partido: que cabo devo preparar para o rebocador?")
+
+        self.assertIn("cabo de amarracao do navio", answer)
+        self.assertIn("sem estar no guincho", answer)
+        self.assertIn("fazer firme ao reboque", answer)
+
     def test_blackout_with_tug_reference_does_not_load_tug_guidance_source(self) -> None:
         question = (
             "Um navio teve um problema. Blackout, não tem o rebocadores pedidos "
@@ -504,6 +511,18 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("30-45 min", payload["answer"])
         self.assertIn("Atenção: o critério principal aqui não é apenas ser dia/noite", payload["answer"])
         self.assertNotIn("não há proibição", payload["answer"].lower())
+
+    def test_secil_e_confirmation_question_is_treated_as_qa_not_action(self) -> None:
+        payload = answer_direct_operational_query(
+            "Tenho uma entrada para Secil Este às 19:25. O que precisas confirmar?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_entry_timing", payload["answer_origin"])
+        self.assertIn("reponto de maré", payload["answer"])
+        self.assertIn("proveniência", payload["answer"])
+        self.assertIn("30-45 min", payload["answer"])
+        self.assertIn("45 min a 1 h", payload["answer"])
 
     def test_secil_w_reponto_question_gets_direct_rule_not_llm_fallback(self) -> None:
         payload = answer_direct_operational_query(
@@ -697,6 +716,38 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("rajadas 20 kts", payload["answer"])
         self.assertIn("ponderar atrasar", payload["answer"])
 
+    def test_bulk_strong_north_departure_rule_without_word_vento_uses_four_tugs(self) -> None:
+        payload = answer_direct_operational_query(
+            "Graneleiro grande a sair com Norte forte: qual é a regra prática dos rebocadores?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 4 rebocadores grandes", payload["answer"])
+        self.assertIn("a sair com vento Norte forte: considerar 4 rebocadores grandes", payload["answer"])
+
+    def test_tanquisado_east_wind_costado_question_without_tug_word_is_direct(self) -> None:
+        payload = answer_direct_operational_query(
+            "Com vento Leste forte a largar Tanquisado, que cuidado especial há no costado?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("3 rebocadores", payload["answer"])
+        self.assertIn("1 rebocador estabelecido à proa", payload["answer"])
+        self.assertIn("terceiro", payload["answer"])
+        self.assertIn("equivalência E=N", payload["answer"])
+
+    def test_small_deep_no_bowthruster_rejects_small_tug(self) -> None:
+        payload = answer_direct_operational_query(
+            "Navio de 118 m, sem bowthruster e calado 8,4 m: pequeno reboque chega?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("Recomendo 1 rebocador grande", payload["answer"])
+        self.assertIn("nao rebocador pequeno de 25 t", payload["answer"])
+
     def test_alstom_wind_limit_blocks_at_15_knots_with_practical_rules(self) -> None:
         answer = self._answer("Entrada para a Alstom desde a Barra com vento 15 kts pode avançar?")
 
@@ -786,6 +837,45 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("fog_visibility_km_reference", visibility)
         self.assertIn("1.0 km", visibility)
         self.assertIn("visibilidade operacional reduzida", visibility)
+
+    def test_visibility_threshold_accepts_limiar_and_decimal_value(self) -> None:
+        answer = self._answer("Se a visibilidade live aparecer a 0,8 km, isso é abaixo do teu limiar técnico?")
+
+        self.assertIn("fog_visibility_km_reference", answer)
+        self.assertIn("0,8 km está abaixo", answer)
+        self.assertIn("1,0 km", answer)
+
+    def test_tms2_capacity_and_positions_are_answered_directly(self) -> None:
+        adjacent = self._answer("No TMS 2, a lógica de ocupar cais adjacentes é semelhante ao TMS 1?")
+        positions = self._answer("O TMS 2 tem quantas posições no modelo atual?")
+
+        self.assertIn("pode ocupar posições adjacentes", adjacent)
+        self.assertIn("4 posições", adjacent)
+        self.assertIn("não continua para o Cais 8", adjacent)
+        self.assertIn("4 posições", positions)
+        self.assertIn("Posição A", positions)
+        self.assertIn("Posição D", positions)
+
+    def test_operational_priority_questions_are_answered_directly(self) -> None:
+        conflict = self._answer(
+            "Tenho no mesmo reponto um navio de passageiros e uma entrada normal de carga geral. Quem priorizo?"
+        )
+        order = self._answer("Qual é a ordem geral: passageiros, gado vivo, reefers, roro, contentores e outros?")
+
+        self.assertIn("reponto de maré", conflict)
+        self.assertIn("priorizo o navio de passageiros", conflict)
+        self.assertIn("saídas > mudanças > entradas", conflict)
+        self.assertIn("Passageiros, animais vivos/gado vivo, reefers", order)
+        self.assertIn("Ro-Ro", order)
+        self.assertIn("Contentores", order)
+
+    def test_local_culture_outao_answer_does_not_use_operational_route(self) -> None:
+        answer = self._answer("Conta-me uma curiosidade curta sobre o Forte do Outão, sem misturar com regras de manobra.")
+
+        self.assertIn("Outão", answer)
+        self.assertIn("1390", answer)
+        self.assertIn("Hospital Ortopédico", answer)
+        self.assertNotIn("milhas náuticas", answer)
 
     def test_checklist_answers_pull_terminal_specific_sources(self) -> None:
         eco = self._answer("A checklist puxa regras Eco-Oil para uma entrada?")

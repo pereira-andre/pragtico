@@ -171,6 +171,8 @@ def _is_strong_wind(question: str) -> bool:
         return True
     if re.search(r"\b(forte|fortes|muito|rijo|rijos)\b.{0,25}\b(vento|rajada|rajadas)\b", clean):
         return True
+    if re.search(r"\b(norte|sul|leste|este|oeste|sw|nw|ne|se|n|s|e|w)\b.{0,15}\b(forte|fortes|rijo|rijos)\b", clean):
+        return True
     return bool(re.search(r"\b(sustentado|rajada|rajadas)\b", clean))
 
 

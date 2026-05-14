@@ -26,14 +26,14 @@ EMERGENCY_RESPONSE_RE = re.compile(
     r"sem\s+m[aá]quina|perda\s+de\s+m[aá]quina|m[aá]quina\s+avariad\w*|"
     r"sem\s+governo|perda\s+de\s+governo|leme\s+avariad\w*|desgovernad\w*|"
     r"perd\w*\s+bow|bow\s*thruster\s+avariad\w*|h[eé]lice\s+de\s+proa\s+avariad\w*|"
-    r"part\w*\s+cabos?|cabos?\s+partid\w*|part\w*\s+o\s+cabo|cabo\s+do\s+reboque|"
+    r"part\w*\s+cabos?|cabos?\s+partid\w*|part\w*\s+o\s+cabo|cabo\s+(?:do|de)\s+reboque|"
     r"encalh\w*|colid\w*|colis[aã]o|abalro\w*|"
     r"deriva|a\s+derivar|largar\s+ferro|fundear\s+de\s+emerg[eê]ncia)\b",
     flags=re.IGNORECASE,
 )
 EMERGENCY_STANDALONE_RE = re.compile(
     r"\b(blackout|apag[aã]o|sem\s+m[aá]quina|perd\w*\s+bow|part\w*\s+cabos?|cabos?\s+partid\w*|"
-    r"cabo\s+do\s+reboque|encalh\w*|colid\w*|colis[aã]o|abalro\w*)\b",
+    r"cabo\s+(?:do|de)\s+reboque|encalh\w*|colid\w*|colis[aã]o|abalro\w*)\b",
     flags=re.IGNORECASE,
 )
 FOG_UNDERWAY_RE = re.compile(

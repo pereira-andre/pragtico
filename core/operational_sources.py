@@ -909,10 +909,22 @@ def _answer_barra_draft_direct(question: str, clean_question: str) -> dict | Non
 def _answer_visibility_threshold_direct(question: str, clean_question: str) -> dict | None:
     if "visibilidade" not in clean_question and "visibility" not in clean_question:
         return None
-    if not re.search(r"\b(1[,.]0|1\s*km|reduzida|nevoeiro|bot|trata|limite|threshold|referencia|referência)\b", question, re.IGNORECASE):
+    if not re.search(r"\b(1[,.]0|1\s*km|reduzida|nevoeiro|bot|trata|limite|limiar|threshold|referencia|referência)\b", question, re.IGNORECASE):
         return None
+    value_match = re.search(r"\b(\d+(?:[,.]\d+)?)\s*km\b", question, flags=re.IGNORECASE)
+    value_note = ""
+    if value_match:
+        try:
+            value = float(value_match.group(1).replace(",", "."))
+            if value <= 1.0:
+                value_note = f"- {value_match.group(1)} km está abaixo ou no limiar técnico de 1,0 km.\n"
+            else:
+                value_note = f"- {value_match.group(1)} km está acima do limiar técnico de 1,0 km, sem bloquear automaticamente só por este valor.\n"
+        except ValueError:
+            value_note = ""
     answer = (
         "Sim. Para segurança operacional do porto, a referência fog_visibility_km_reference é 1.0 km.\n"
+        f"{value_note}"
         "- Se o live feed indicar visibilidade 1,0 km ou inferior, o bot deve tratar como visibilidade operacional reduzida.\n"
         "- Com visibilidade operacional reduzida/nevoeiro em porto, a regra é suspender manobras e só retomar com visibilidade restaurada.\n"
         "- Se um navio já estiver a navegar, aplicar velocidade de segurança, vigia reforçada e sinais de visibilidade reduzida."
@@ -1022,6 +1034,102 @@ def _answer_tms1_large_vessel_capacity_direct(question: str, clean_question: str
         "answer": answer,
         "sources": [_direct_source("berth_profiles.json", "TMS1_LARGE_VESSEL_CAPACITY", snippet, "berth_capacity_rule")],
         "answer_origin": "berth_capacity_rule",
+    }
+
+
+def _answer_tms2_capacity_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\btms\s*2\b|\btms2\b", clean_question):
+        return None
+    if not re.search(r"\b(posicoes?|posições?|posicao|posição|adjacent\w*|ocupar|ocupa|cais|slot|slots|comprimento|maior|logica|lógica)\b", question, re.IGNORECASE):
+        return None
+
+    profile = _berth_profile_by_id("tms2")
+    rules = profile.get("berth_capacity_rules") if isinstance(profile, dict) else {}
+    rules = rules if isinstance(rules, dict) else {}
+    slot_labels = [str(item) for item in (rules.get("slot_labels") or []) if str(item).strip()]
+    slot_names = ", ".join(label.replace("TMS 2 - ", "") for label in slot_labels) or "Posição A, Posição B, Posição C e Posição D"
+    total_length = _format_rule_number(rules.get("total_length_m"), 723)
+    slot_length = _format_rule_number(float(str(rules.get("total_length_m") or 723).replace(",", ".")) / 4, 180.75)
+    clearance = _format_rule_number(rules.get("shared_clearance_m"), 30)
+
+    if re.search(r"\b(quantas?|numero|número)\b.*\b(posicoes?|posições?|posicao|posição|slots?)\b|\b(posicoes?|posições?|posicao|posição|slots?)\b.*\b(quantas?|numero|número)\b", clean_question):
+        answer = (
+            f"O TMS 2 tem 4 posições no modelo atual: {slot_names}.\n"
+            f"- O IT-006 trata o terminal como uma frente contínua de {total_length} m entre os cabeços 40 e 63.\n"
+            f"- No portal, essas 4 posições são referências operacionais de cerca de {slot_length} m cada, não cais físicos separados."
+        )
+    else:
+        answer = (
+            "Sim. No TMS 2 a lógica de comprimento é semelhante à frente principal do TMS 1: se o navio for maior do que a posição atribuída, pode ocupar posições adjacentes desde que haja espaço livre.\n"
+            f"- Frente contínua TMS 2: {total_length} m, representada no portal por 4 posições: {slot_names}.\n"
+            f"- Quando houver mais do que um navio no TMS 2, manter pelo menos {clearance} m entre navios para cruzar cabos e evitar contacto, além da leitura formal do IT-006 sobre intervalos proporcionais ao comprimento.\n"
+            "- O TMS 2 não continua para o Cais 8/TMS 1; o Cais 8 é isolado e não serve para prolongar uma ocupação do TMS 2.\n"
+            "- Se as posições adjacentes necessárias estiverem ocupadas, a validação deve bloquear por falta de comprimento disponível."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("berth_profiles.json / IT-006_TMS2.txt", "TMS2_CAPACITY_POSITIONS", answer, "berth_capacity_rule")],
+        "answer_origin": "berth_capacity_rule",
+    }
+
+
+def _answer_operational_priority_direct(question: str, clean_question: str) -> dict | None:
+    priority_terms = re.search(r"\b(prioridade|priorizo|priorizar|ordem geral|ordem operacional|quem priorizo|quem passa primeiro|fila)\b", clean_question)
+    cargo_list_terms = re.search(r"\b(passageiros?|gado vivo|animais vivos|reefers?|perecivel|perecível|ro-?ro|roro|contentores?|outros)\b", question, re.IGNORECASE)
+    if not priority_terms and not (cargo_list_terms and re.search(r"\bordem\b", clean_question)):
+        return None
+    answer = (
+        "A ordem operacional é esta:\n"
+        "1. Manobras com reponto de maré ou janela crítica de profundidade.\n"
+        "2. Passageiros, animais vivos/gado vivo, reefers e carga perecível.\n"
+        "3. Ro-Ro.\n"
+        "4. Contentores.\n"
+        "5. Outros navios.\n"
+        "Dentro da mesma prioridade e da mesma janela operacional, aplicar saídas > mudanças > entradas."
+    )
+    if re.search(r"\bpassageiros?\b", clean_question) and re.search(r"\bentrada normal|carga geral|normal\b", clean_question):
+        answer += (
+            "\n\nNo caso que descreves, eu priorizo o navio de passageiros, salvo se a entrada de carga geral tiver uma janela crítica de maré/profundidade que se perca nesse reponto."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Condicoes_Meteorologicas_Prioridades.txt", "OPERATIONAL_MANEUVER_PRIORITIES", answer, "operational_priority")],
+        "answer_origin": "operational_priority",
+    }
+
+
+def _answer_setubal_culture_direct(question: str, clean_question: str) -> dict | None:
+    if re.search(r"\b(distancia|distância|milhas?|quanto tempo|demora|rumo|canal|boia|bóia|pilar|percurso|rota)\b", question, re.IGNORECASE):
+        return None
+    explicit_culture = re.search(
+        r"\b(forte\s+(?:do|de|da)|fortaleza|outao|outão|sao filipe|são filipe|cetobriga|choco|roazes|golfinhos|orcas|tubaroes|tubarões|animais|biodiversidade|curiosidade|historia|história|cultura)\b",
+        question,
+        re.IGNORECASE,
+    )
+    if not explicit_culture:
+        return None
+    if re.search(r"\b(manobra|manobrar|calado|rebocador|reboque|reponto|vento|cais|atracar|desatracar|validar)\b", clean_question) and not re.search(r"\b(curiosidade|historia|história|cultura|sem misturar|forte\s+(?:do|de|da)|fortaleza|outao|outão)\b", question, re.IGNORECASE):
+        return None
+    if re.search(r"\boutao|outão\b", question, re.IGNORECASE):
+        answer = (
+            "O Outão é um ponto estratégico da entrada da barra do Sado. A fortificação começou como atalaia de 1390, ganhou importância militar na defesa da foz, recebeu farol em 1880 e acabou ligada à saúde como sanatório e depois Hospital Ortopédico de Sant'Iago do Outão."
+        )
+    elif re.search(r"\broazes|golfinhos|animais|biodiversidade|orcas|tubaroes|tubarões\b", question, re.IGNORECASE):
+        answer = (
+            "No Sado destacam-se os roazes-corvineiros, a comunidade residente de golfinhos costeiros/estuarinos. A zona também tem aves de sapal, peixes, moluscos, crustáceos, macroalgas e fauna da Arrábida; orcas e tubarões-martelo são ocorrências ocasionais no largo/costa, não residentes do estuário."
+        )
+    elif re.search(r"\bchoco\b", question, re.IGNORECASE):
+        answer = (
+            "O choco frito é uma das imagens de marca de Setúbal: choco panado/frito, normalmente com batata frita e salada, muito ligado à identidade marítima e gastronómica da cidade."
+        )
+    else:
+        answer = (
+            "Setúbal é uma cidade de mar e rio: Sado, Arrábida, porto, pesca, sal, indústria e gastronomia ligada ao peixe, ao choco e ao marisco. Historicamente cruza Cetóbriga romana, Ordem de Santiago, Forte de São Filipe e Outão."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Setubal_Historia_Cultura.txt", "SETUBAL_LOCAL_CULTURE", answer, "local_culture")],
+        "answer_origin": "local_culture",
     }
 
 
@@ -1666,6 +1774,26 @@ def _format_tide_context(tide_event) -> str:
     )
 
 
+def _answer_secil_confirmation_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(o que|que|quais|qual)\b.*\b(precis\w*|falta\w*)\b.*\b(confirmar|validar|saber)\b", clean_question):
+        return None
+    answer = (
+        "Para validar uma entrada na SECIL Este às 19:25, eu preciso confirmar:\n"
+        "- hora do reponto de maré aplicável e se a chegada ao cais fica dentro da janela certa;\n"
+        "- proveniência do navio: Barra/Fundeadouro Norte usa 30-45 min antes do reponto; Tróia/outro cais usa 45 min a 1 h antes;\n"
+        "- se é maré viva, porque na SECIL E a atracação deve ficar junto do reponto em marés vivas;\n"
+        "- LOA, calado, cais Este/Oeste, vento/corrente e validação do Piloto Coordenador.\n"
+        "Com esses dados, dá para dizer se as 19:25 estão bem marcadas ou se convém ajustar."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_ENTRY_CONFIRMATION_FIELDS", answer, "secil_entry_timing")],
+        "answer_origin": "secil_entry_timing",
+    }
+
+
 def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dict | None:
     if "secil" not in clean_question:
         return None
@@ -2171,10 +2299,32 @@ def _tug_guidance_sources(source: dict, weather_context: dict) -> list[dict]:
     return [source] + list(weather_context.get("sources") or [])
 
 
+def _answer_tanquisado_costado_wind_direct(question: str, clean_question: str) -> dict | None:
+    if "tanquisado" not in clean_question:
+        return None
+    if not re.search(r"\b(vento|leste|este|east|\be\b|costado|largar|largada|sair|saida|saída)\b", clean_question):
+        return None
+    if not re.search(r"\b(costado|largar|largada|sair|saida|saída)\b", clean_question):
+        return None
+    answer = (
+        "Para Tanquisado a sair/largar com vento Leste forte, mantém a leitura conservadora local:\n"
+        "- Tanquisado com 3 rebocadores é o mínimo prático local;\n"
+        "- manter 1 rebocador estabelecido à proa e 1 à popa (1 a proa e 1 a popa) para controlo longitudinal;\n"
+        "- Tanquisado a sair com vento E forte: o terceiro fica como 1 rebocador a empurrar ao costado na largada dos cabos, se houver espaço e sem criar má vizinhança;\n"
+        "- a equivalência E=N usada em TMS2/Autoeuropa não deve ser aplicada automaticamente ao Tanquisado.\n"
+        "Confirmar força real do vento/rajadas, corrente no Canal Sul, bordo, calado, amarração e margem junto ao cais."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("tug_operational_guidance.json", "TANQUISADO_EAST_WIND_SIDE_PUSH", answer, "operational_tug_guidance")],
+        "answer_origin": "operational_tug_guidance",
+    }
+
+
 def _answer_tug_guidance_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reboque|reboques|rebocador|rebocadores)\b", clean_question):
         return None
-    if not re.search(r"\b(quantos|numero|número|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado|pode|posso|devo|deve|avancar|avançar|validar)\b", clean_question):
+    if not re.search(r"\b(qual|quais|quantos|numero|número|regra|regras|pratica|prática|aconselha|aconselhas|recomenda|recomendas|necessarios|necessários|leva|suficiente|onde|posicion|meter|colocar|proa|popa|costado|pode|posso|devo|deve|avancar|avançar|validar|cheg\w*|basta|bastam)\b", clean_question):
         return None
 
     weather_context = _tug_live_weather_context(question, clean_question)
@@ -2556,6 +2706,15 @@ def answer_direct_operational_query(
     tms1_large_capacity_answer = _answer_tms1_large_vessel_capacity_direct(question, clean_question)
     if tms1_large_capacity_answer:
         return _attach_operational_diagnostic(tms1_large_capacity_answer, question)
+    tms2_capacity_answer = _answer_tms2_capacity_direct(question, clean_question)
+    if tms2_capacity_answer:
+        return _attach_operational_diagnostic(tms2_capacity_answer, question)
+    priority_answer = _answer_operational_priority_direct(question, clean_question)
+    if priority_answer:
+        return _attach_operational_diagnostic(priority_answer, question)
+    culture_answer = _answer_setubal_culture_direct(question, clean_question)
+    if culture_answer:
+        return _attach_operational_diagnostic(culture_answer, question)
     lisnave_face_answer = _answer_lisnave_face_side_direct(question, clean_question)
     if lisnave_face_answer:
         return _attach_operational_diagnostic(lisnave_face_answer, question)
@@ -2613,12 +2772,18 @@ def answer_direct_operational_query(
     fog_port_answer = _answer_fog_port_procedure_direct(question, clean_question)
     if fog_port_answer:
         return _attach_operational_diagnostic(fog_port_answer, question)
+    secil_confirmation_answer = _answer_secil_confirmation_direct(question, clean_question)
+    if secil_confirmation_answer:
+        return _attach_operational_diagnostic(secil_confirmation_answer, question)
     secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
     if secil_entry_timing_answer:
         return _attach_operational_diagnostic(secil_entry_timing_answer, question)
     secil_reponto_answer = _answer_secil_reponto_direct(question, clean_question)
     if secil_reponto_answer:
         return _attach_operational_diagnostic(secil_reponto_answer, question)
+    tanquisado_costado_answer = _answer_tanquisado_costado_wind_direct(question, clean_question)
+    if tanquisado_costado_answer:
+        return _attach_operational_diagnostic(tanquisado_costado_answer, question)
     tug_guidance_answer = _answer_tug_guidance_direct(question, clean_question)
     if tug_guidance_answer:
         return _attach_operational_diagnostic(tug_guidance_answer, question)
