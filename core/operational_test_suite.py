@@ -1087,12 +1087,11 @@ BOT_CRITICAL_TEST_MATRIX: list[dict] = [
         "runner": "slash_validation",
         "label": "/validar-manobra Eco-Oil",
         "question": "/validar-manobra para entrada Eco-Oil marcada para chegar ao reponto",
-        "expected_summary": "A resposta deve aplicar IT-008, reponto e leitura de calado/LOA sem depender do histórico.",
+        "expected_summary": "A resposta deve aplicar IT-008, reponto e leitura de calado/LOA sem depender do histórico; a decisão final pode endurecer com meteo/ondulação live.",
         "source": "Comando /validar-manobra + knowledge/berth_profiles.json",
         "fixture": "ecooil_entry_validation",
         "expected_tokens": (
             "Base documental acionada: IT-008_EcoOil.txt",
-            "Decisão: CHECKLIST ORIGINAL OK (JANELA PASSADA)",
             "A marcação acerta a janela de reponto",
             "Calado (atracação)",
         ),
