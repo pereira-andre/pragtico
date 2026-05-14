@@ -2230,15 +2230,21 @@ def operational_test_inventory() -> dict:
     matrix = critical_bot_test_matrix()
     automatic_count = sum(1 for item in matrix if item.get("runner") != "manual")
     manual_count = len(matrix) - automatic_count
+    railway_log = railway_bot_test_log_inventory()
+    railway_count = int(railway_log.get("count") or 0)
+    matrix_count = len(matrix)
+    capacity_tests = berth_capacity_test_matrix()
     matrix_payload = {
         "bot_matrix": matrix,
         "bot_matrix_groups": _critical_bot_test_matrix_groups(matrix),
-        "bot_matrix_count": len(matrix),
+        "bot_matrix_count": matrix_count,
         "bot_matrix_automatic_count": automatic_count,
         "bot_matrix_manual_count": manual_count,
-        "railway_log": railway_bot_test_log_inventory(),
-        "berth_capacity_tests": berth_capacity_test_matrix(),
-        "berth_capacity_test_count": len(berth_capacity_test_matrix()),
+        "railway_log": railway_log,
+        "bot_conversation_test_count": railway_count + matrix_count,
+        "bot_total_test_count": railway_count + matrix_count + len(capacity_tests),
+        "berth_capacity_tests": capacity_tests,
+        "berth_capacity_test_count": len(capacity_tests),
         "expected_module_count": 9,
     }
     try:

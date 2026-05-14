@@ -100,6 +100,8 @@ def test_operational_test_inventory_exposes_critical_matrix(monkeypatch) -> None
     assert inventory["railway_log"]["count"] == 150
     assert inventory["railway_log"]["passed_count"] == 150
     assert inventory["berth_capacity_test_count"] >= 20
+    assert inventory["bot_conversation_test_count"] == inventory["railway_log"]["count"] + inventory["bot_matrix_count"]
+    assert inventory["bot_total_test_count"] == inventory["bot_conversation_test_count"] + inventory["berth_capacity_test_count"]
 
 
 def test_berth_capacity_matrix_is_executable(monkeypatch) -> None:
@@ -136,6 +138,10 @@ def test_operational_tests_page_renders_matrix(monkeypatch) -> None:
     )
 
     assert "Matriz crítica" in html
+    assert "Ensaios do bot" in html
+    assert "Railway histórico" in html
+    assert "matriz crítica" in html
+    assert "capacidade à parte" in html
     assert "150 perguntas de bug hunting" in html
     assert "Download JSON" in html
     assert "Download CSV" in html

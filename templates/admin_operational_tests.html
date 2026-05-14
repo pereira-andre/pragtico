@@ -6,7 +6,7 @@
       <div>
         <p class="eyebrow">Validação operacional</p>
         <h1>Testes operacionais</h1>
-        <p class="lead">Execução admin controlada para validar escalas, manobras, comandos slash, live feed e os 150 ensaios Railway com resultados visíveis por módulo.</p>
+        <p class="lead">Execução admin controlada para validar escalas, manobras, comandos slash, live feed, matriz crítica do bot e ensaios Railway com resultados visíveis por módulo.</p>
       </div>
       <div class="admin-status-hero-tools">
         {% if result %}
@@ -41,7 +41,17 @@
         <small>{{ result.finished_at_label if result else "sem execução nesta vista" }}</small>
       </article>
       <article class="hero-stat">
-        <span>Railway</span>
+        <span>Ensaios do bot</span>
+        <strong>{{ inventory.bot_conversation_test_count }}</strong>
+        <small>{{ inventory.railway_log.count }} Railway · {{ inventory.bot_matrix_count }} matriz crítica · {{ inventory.berth_capacity_test_count }} capacidade à parte</small>
+      </article>
+      <article class="hero-stat">
+        <span>Matriz crítica</span>
+        <strong>{{ inventory.bot_matrix_count }}</strong>
+        <small>{{ inventory.bot_matrix_automatic_count }} auto · {{ inventory.bot_matrix_manual_count }} manual</small>
+      </article>
+      <article class="hero-stat">
+        <span>Railway histórico</span>
         <strong>{{ inventory.railway_log.count }}</strong>
         <small>{{ inventory.railway_log.passed_count }} OK · {{ inventory.railway_log.review_count }} dúvida(s) · {{ inventory.railway_log.failed_count }} falha(s)</small>
       </article>
@@ -55,10 +65,10 @@
         <h2>Casos de conversa e checklist</h2>
       </div>
       <span class="admin-status-badge is-degraded">
-        {{ inventory.bot_matrix_automatic_count }} auto · {{ inventory.bot_matrix_manual_count }} manual
+        {{ inventory.bot_matrix_count }} casos · {{ inventory.bot_matrix_automatic_count }} auto · {{ inventory.bot_matrix_manual_count }} manual
       </span>
     </div>
-    <p class="admin-status-note">Esta matriz fixa os casos que têm de continuar coerentes nas respostas do bot, no diagnóstico operacional e na checklist das manobras dos cais críticos.</p>
+    <p class="admin-status-note">Esta matriz fixa os casos que têm de continuar coerentes nas respostas do bot, no diagnóstico operacional e na checklist das manobras dos cais críticos. Não é o mesmo bloco dos 150 Railway; soma cobertura complementar.</p>
     <div class="operational-tests-scenario-list">
       {% for group in inventory.bot_matrix_groups %}
         <details class="planning-optional-box operational-tests-scenario operational-tests-matrix-group">
