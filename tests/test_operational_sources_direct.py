@@ -499,6 +499,31 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("10,0 m para não-IMO", payload["answer"])
         self.assertIn("fórmula de calado praticável", payload["answer"])
 
+    def test_sapec_tps_tgl_high_draft_summary_covers_entry_departure_and_imo_limits(self) -> None:
+        payload = answer_direct_operational_query(
+            "Como marco SAPEC Sólidos e Líquidos com calado alto, IMO e não-IMO?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("Entrada TPS: marcar 1 hora e 30 minutos antes da preia-mar", payload["answer"])
+        self.assertIn("Saída TPS com grande calado: marcar 30 minutos antes do reponto", payload["answer"])
+        self.assertIn("Carga IMO: calado máximo de referência 9,5 m", payload["answer"])
+        self.assertIn("Carga não-IMO: calado máximo de referência 10,0 m", payload["answer"])
+
+    def test_reponto_vs_preia_mar_question_does_not_fall_to_live_tides(self) -> None:
+        payload = answer_direct_operational_query(
+            "Qual é a diferença entre marcar para o reponto e marcar para a preia-mar?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("corrente nula", payload["answer"])
+        self.assertIn("profundidade suficiente", payload["answer"])
+        self.assertIn("LISNAVE", payload["answer"])
+        self.assertIn("Tanquisado", payload["answer"])
+        self.assertNotIn("Marés para", payload["answer"])
+
     def test_teporset_departure_uses_local_reponto_margin(self) -> None:
         payload = answer_direct_operational_query(
             "Saída da Teporset para o reponto das 20:03, a que horas marco?"

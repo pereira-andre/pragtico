@@ -1469,6 +1469,24 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     if wind_kts is not None and wind_kts > 25:
         return None
 
+    if (
+        re.search(r"\b(diferenca|diferença|distinguir|distincao|distinção)\b", clean_question)
+        and "reponto" in clean_question
+        and re.search(r"\bpreia\b|preia-mar", clean_question)
+    ):
+        answer = (
+            "🌕 Marcar para o reponto e marcar para a preia-mar não é exatamente a mesma coisa.\n"
+            "- Marcar para o reponto significa planear a manobra para o momento de corrente nula ou praticamente nula, quando a maré muda de sentido.\n"
+            "- Marcar para a preia-mar significa planear a manobra para a altura de maior água, quando o objetivo principal é ter profundidade suficiente.\n"
+            "- Em cais como LISNAVE, Tanquisado, Eco-Oil e SECIL, o reponto é crítico pela corrente; em navios de grande calado, TMS/SAPEC/Teporset podem exigir preia-mar ou janela de maior água.\n"
+            "Na prática, algumas manobras precisam das duas coisas: chegar com corrente controlada e com água suficiente."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Marcar_manobra_repontos_mare.txt", "REPONTO_VS_PREIA_MAR", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
     draft = _extract_draft_m_from_question(question)
     high_draft = draft is not None and draft >= 9
     mentions_high_draft = high_draft or re.search(r"\b(grande\s+calado|calado\s+alto|calado\s+condicionante|proximo\s+do\s+maximo|próximo\s+do\s+máximo)\b", clean_question)
@@ -1526,11 +1544,32 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
 
     if "sapec" in clean_question and mentions_high_draft:
         is_tgl = bool(re.search(r"\b(liquidos|líquidos|tgl)\b", clean_question))
-        if is_departure:
+        is_tps = bool(re.search(r"\b(solidos|s[oó]lidos|tps)\b", clean_question))
+        if not explicit_entry and not explicit_departure and (is_tgl or is_tps or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)):
+            answer = (
+                "🌕 Para SAPEC com calado alto, separa sempre SAPEC Sólidos/TPS de SAPEC Líquidos/TGL.\n"
+                "- Entrada TPS: marcar 1 hora e 30 minutos antes da preia-mar.\n"
+                "- Saída TPS com grande calado: marcar 30 minutos antes do reponto.\n"
+                "- SAPEC Líquidos/TGL: com profundidade condicionante, usar a mesma referência prática de entrada 1h30 antes da preia-mar e saída 30 min antes do reponto.\n"
+                "- Carga IMO: calado máximo de referência 9,5 m.\n"
+                "- Carga não-IMO: calado máximo de referência 10,0 m.\n"
+                "Em qualquer caso, aplicar a fórmula de calado praticável com altura de água, confirmar LOA, vento/ondulação, defensas/regras SAPEC e rebocadores."
+            )
+        elif is_departure:
             reponto_label, mark_label = _time_minus_label_from_question(question, 30)
             timing = (
                 f"Para saída SAPEC com grande calado, marcar cerca de 30 min antes do reponto; "
                 f"se o reponto é {reponto_label}, marca por volta das {mark_label}."
+            )
+            tgl_note = (
+                " No TGL, distinguir carga IMO e não-IMO: referência 9,5 m para IMO e 10,0 m para não-IMO, sempre com fórmula de calado praticável e altura de água."
+                if is_tgl or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)
+                else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
+            )
+            answer = (
+                f"🌕 {timing}\n"
+                f"{tgl_note}\n"
+                "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
             )
         elif is_entry:
             reponto_label, mark_label = _time_minus_label_from_question(question, 90)
@@ -1539,18 +1578,18 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
                 f"Para entrada {terminal} com calado condicionante, marcar cerca de 1h30 antes da preia-mar; "
                 f"se a preia-mar é {reponto_label}, marca por volta das {mark_label}."
             )
+            tgl_note = (
+                " No TGL, distinguir carga IMO e não-IMO: referência 9,5 m para IMO e 10,0 m para não-IMO, sempre com fórmula de calado praticável e altura de água."
+                if is_tgl or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)
+                else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
+            )
+            answer = (
+                f"🌕 {timing}\n"
+                f"{tgl_note}\n"
+                "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
+            )
         else:
             return None
-        tgl_note = (
-            " No TGL, distinguir carga IMO e não-IMO: referência 9,5 m para IMO e 10,0 m para não-IMO, sempre com fórmula de calado praticável e altura de água."
-            if is_tgl or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)
-            else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
-        )
-        answer = (
-            f"🌕 {timing}\n"
-            f"{tgl_note}\n"
-            "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
-        )
         return {
             "answer": answer,
             "sources": [_direct_source("IT-029_SAPEC.txt / Marcar_manobra_repontos_mare.txt", "SAPEC_HIGH_DRAFT_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
