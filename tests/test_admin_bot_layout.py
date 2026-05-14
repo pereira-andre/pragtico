@@ -41,3 +41,10 @@ def test_admin_bot_detailed_sections_are_collapsed_by_default() -> None:
         template,
     )
     assert open_detail_classes == []
+
+
+def test_admin_bot_playground_uses_canonical_csrf_header() -> None:
+    template = Path("templates/admin_bot.html").read_text(encoding="utf-8")
+
+    assert '"X-CSRF-Token": data.get("csrf_token")' in template
+    assert '"X-CSRFToken": data.get("csrf_token")' not in template

@@ -1163,7 +1163,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-CSRFToken": data.get("csrf_token"),
+            "X-CSRF-Token": data.get("csrf_token"),
           },
           body: JSON.stringify({ question }),
         });
