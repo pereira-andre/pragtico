@@ -1238,7 +1238,7 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
         return None
     answer = (
         "Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
-        "- Saída Doca 22 / LISNAVE: marcar para a fase crítica no cais/doca junto ao reponto de maré; D20/D21/D22 ficam com proa a norte.\n"
+        "- Saída Doca 22 / LISNAVE: marcar 2h antes da preia-mar; D20/D21/D22 ficam com proa a norte e a fase crítica deve cair na janela de reponto/maior água.\n"
         "- Entrada Tanquisado: marcar para chegar ao cais no reponto de maré; aplicar IT-010_Tanquisado.txt, calado e meios no momento.\n"
         "- Se forem no mesmo ciclo, deixa margem de trânsito entre bacias/canais e confirma com o Piloto Coordenador a ordem das manobras."
     )
@@ -1250,6 +1250,163 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
         ],
         "answer_origin": "berth_profile_fact",
     }
+
+
+def _extract_draft_m_from_question(question: str) -> float | None:
+    text = str(question or "").lower().replace(",", ".")
+    patterns = (
+        r"\b(?:calado|draft)\D{0,30}?(\d{1,2}(?:\.\d+)?)\s*m\b",
+        r"\b(\d{1,2}(?:\.\d+)?)\s*m(?:etros?)?\s*(?:de\s+)?(?:calado|draft)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            return float(match.group(1))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _time_minus_label_from_question(question: str, minutes: int) -> tuple[str, str]:
+    parsed = _parse_maneuver_time(question)
+    if not parsed:
+        return "o reponto pretendido", f"{minutes} min antes"
+    hour, minute, time_label = parsed
+    total = (hour * 60 + minute - minutes) % (24 * 60)
+    return time_label, f"{total // 60:02d}:{total % 60:02d}"
+
+
+def _time_range_before_label_from_question(question: str, min_minutes: int, max_minutes: int) -> tuple[str, str]:
+    parsed = _parse_maneuver_time(question)
+    if not parsed:
+        return "a preia-mar/reponto pretendido", f"{min_minutes}-{max_minutes} min antes"
+    hour, minute, time_label = parsed
+    total = hour * 60 + minute
+    early = (total - max_minutes) % (24 * 60)
+    late = (total - min_minutes) % (24 * 60)
+    return time_label, f"{early // 60:02d}:{early % 60:02d}-{late // 60:02d}:{late % 60:02d}"
+
+
+def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reponto|preia|baixa|mare|marcar|marco|quando|hora|entrada|saida|saída|sair|atracar|desatracar)\b", clean_question):
+        return None
+    wind_kts = _extract_wind_kts_from_question(question)
+    if wind_kts is not None and wind_kts > 25:
+        return None
+
+    draft = _extract_draft_m_from_question(question)
+    high_draft = draft is not None and draft >= 9
+    mentions_high_draft = high_draft or re.search(r"\b(grande\s+calado|calado\s+alto|calado\s+condicionante|proximo\s+do\s+maximo|próximo\s+do\s+máximo)\b", clean_question)
+    is_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
+    is_entry = bool(re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question)) or not is_departure
+
+    if re.search(r"\b(tms\s*1|tms1|tms\s*2|tms2)\b", clean_question) and mentions_high_draft:
+        if is_departure:
+            reponto_label, mark_label = _time_minus_label_from_question(question, 30)
+            answer = (
+                "🌕 Para TMS 1/TMS 2 com navio de grande calado, a saída deve ser marcada cerca de 30 min antes do reponto.\n"
+                f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}.\n"
+                "A ideia é apanhar a água parada/maior margem na fase crítica de largada e passagem inicial. "
+                "Confirmar calado real, altura de água, vento, corrente, ocupação do cais e rebocadores."
+            )
+        elif is_entry:
+            reponto_label, range_label = _time_range_before_label_from_question(question, 60, 90)
+            draft_note = f" Para calado {_format_measure(draft, ' m')}, eu puxava para o lado conservador da janela." if draft is not None else ""
+            answer = (
+                "🌕 Para TMS 1/TMS 2 com calado entre 9 m e 12 m, a entrada deve ser marcada 1h a 1h30 antes da preia-mar.\n"
+                f"Se a preia-mar de referência é {reponto_label}, a janela prática é {range_label}.{draft_note}\n"
+                "A validação final deve cruzar altura de maré, calado praticável, vento/rajadas, corrente, LOA/ocupação de slots e rebocadores."
+            )
+        else:
+            return None
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Marcar_manobra_repontos_mare.txt", "TMS_HIGH_DRAFT_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    if "sapec" in clean_question and mentions_high_draft:
+        is_tgl = bool(re.search(r"\b(liquidos|líquidos|tgl)\b", clean_question))
+        if is_departure:
+            reponto_label, mark_label = _time_minus_label_from_question(question, 30)
+            timing = (
+                f"Para saída SAPEC com grande calado, marcar cerca de 30 min antes do reponto; "
+                f"se o reponto é {reponto_label}, marca por volta das {mark_label}."
+            )
+        elif is_entry:
+            reponto_label, mark_label = _time_minus_label_from_question(question, 90)
+            terminal = "TGL/SAPEC Líquidos" if is_tgl else "TPS/SAPEC Sólidos"
+            timing = (
+                f"Para entrada {terminal} com calado condicionante, marcar cerca de 1h30 antes da preia-mar; "
+                f"se a preia-mar é {reponto_label}, marca por volta das {mark_label}."
+            )
+        else:
+            return None
+        tgl_note = (
+            " No TGL, distinguir carga IMO e não-IMO: referência 9,5 m para IMO e 10,0 m para não-IMO, sempre com fórmula de calado praticável e altura de água."
+            if is_tgl or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)
+            else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
+        )
+        answer = (
+            f"🌕 {timing}\n"
+            f"{tgl_note}\n"
+            "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-029_SAPEC.txt / Marcar_manobra_repontos_mare.txt", "SAPEC_HIGH_DRAFT_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    if re.search(r"\b(teporset|tepor\s*set|termitrena)\b", clean_question):
+        if is_departure:
+            reponto_label, mark_label = _time_minus_label_from_question(question, 15)
+            answer = (
+                "🌕 Para saída Teporset/Termitrena, marca cerca de 15 min antes do reponto.\n"
+                f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}. "
+                "Na Teporset, considerar que o reponto local acontece cerca de 15 min depois da hora de referência, deixando margem prática em torno da água parada.\n"
+                "Confirmar calado, vento, corrente, rebocadores e janela de segurança."
+            )
+        elif is_entry:
+            if "fundeadouro norte" in clean_question:
+                lead = 90
+                origin = "do Fundeadouro Norte"
+            elif re.search(r"\b(troia|tróia|fundeadouro\s+sul)\b", clean_question):
+                lead = 60
+                origin = "de Tróia/Fundeadouro Sul"
+            else:
+                lead = 120
+                origin = "da Barra/fora da Barra"
+            reponto_label, mark_label = _time_minus_label_from_question(question, lead)
+            answer = (
+                f"🌕 Para entrada Teporset/Termitrena com calado condicionante {origin}, marca cerca de {lead} min antes do reponto/preia-mar.\n"
+                f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}.\n"
+                "Confirmar calado praticável, altura de água, vento, corrente, rebocadores e se a janela de maior água é suficiente."
+            )
+        else:
+            return None
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Marcar_manobra_repontos_mare.txt", "TEPORSET_TERMITRENA_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    if "lisnave" in clean_question and re.search(r"\b(doca\s*21|doca\s*22|d21|d22)\b", clean_question) and is_departure:
+        reponto_label, mark_label = _time_minus_label_from_question(question, 120)
+        answer = (
+            "🌕 Para saída das Docas 21/22 da Lisnave, marca 2h antes da preia-mar.\n"
+            f"Se a preia-mar é {reponto_label}, a marcação deve ficar por volta das {mark_label}.\n"
+            "Esta regra é específica das docas secas; confirmar LOA, calado, vento, rebocadores, orientação e validação do Piloto Coordenador."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("Marcar_manobra_repontos_mare.txt / IT-014_Lisnave.txt", "LISNAVE_DOCKS_21_22_DEPARTURE_TIDE_SCHEDULING", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    return None
 
 
 def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) -> dict | None:
@@ -2417,6 +2574,9 @@ def answer_direct_operational_query(
     cross_reponto_answer = _answer_cross_reponto_scheduling_direct(question, clean_question)
     if cross_reponto_answer:
         return _attach_operational_diagnostic(cross_reponto_answer, question)
+    tide_scheduling_answer = _answer_tide_scheduling_direct(question, clean_question)
+    if tide_scheduling_answer:
+        return _attach_operational_diagnostic(tide_scheduling_answer, question)
     lisnave_night_length_answer = _answer_lisnave_night_length_direct(question, clean_question)
     if lisnave_night_length_answer:
         return _attach_operational_diagnostic(lisnave_night_length_answer, question)

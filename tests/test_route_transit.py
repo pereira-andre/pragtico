@@ -202,6 +202,32 @@ class RouteTransitAnswerTests(unittest.TestCase):
                 self.assertIn("18:33", answer["answer"])
                 self.assertIn("cais a sul", answer["answer"])
 
+    def test_barra_to_south_quays_reponto_lead_time_is_two_hours(self) -> None:
+        for destination in ("Lisnave", "Tanquisado", "Eco-Oil", "Teporset"):
+            with self.subTest(destination=destination):
+                answer = route_transit_answer(
+                    f"Navio da Barra para {destination} deve sair quando para chegar ao reponto das 20:03?"
+                )
+
+                self.assertIsNotNone(answer)
+                self.assertEqual("operational_route_transit", answer["answer_origin"])
+                self.assertIn("cerca de 2 horas", answer["answer"])
+                self.assertIn("20:03", answer["answer"])
+                self.assertIn("18:03", answer["answer"])
+                self.assertIn("cais a sul", answer["answer"])
+
+    def test_troia_to_south_quays_reponto_lead_time_is_one_hour(self) -> None:
+        answer = route_transit_answer(
+            "Navio de Troia para Eco-Oil deve sair quando para chegar ao reponto das 20:03?"
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("cerca de 1 hora", answer["answer"])
+        self.assertIn("20:03", answer["answer"])
+        self.assertIn("19:03", answer["answer"])
+        self.assertIn("Tróia/Fundeadouro Sul", answer["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

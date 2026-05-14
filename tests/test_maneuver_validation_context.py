@@ -278,6 +278,176 @@ def test_shift_from_ecooil_to_lisnave_uses_one_hour_reponto_window(monkeypatch) 
     assert "A marcação acerta a janela de reponto" in tide_check["detail"]
 
 
+def test_tms_high_draft_entry_uses_preia_mar_window(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "wave_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-tms-high-draft",
+            "vessel_type": "Contentores",
+            "vessel_loa_m": "210",
+            "vessel_beam_m": "32",
+            "vessel_gt_t": "35000",
+            "vessel_max_draft_m": "10.5",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "entry-tms-high-draft",
+            "type": "entry",
+            "state": "pending",
+            "planned_at": "2026-05-08T18:33:00+01:00",
+            "planned_input_value": "2026-05-08T18:33",
+            "origin": "Sines",
+            "destination": "TMS 1 - Cais 4",
+            "draft": "10.5",
+            "tug_count": "2",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "1h a 1h30 antes da preia-mar para TMS 1/TMS 2" in tide_check["detail"]
+    assert "preia-mar às 20:03" in tide_check["detail"]
+
+
+def test_sapec_high_draft_departure_uses_thirty_minutes_before_reponto(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "wave_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-sapec-high-draft",
+            "vessel_type": "Graneis solidos",
+            "vessel_loa_m": "180",
+            "vessel_beam_m": "28",
+            "vessel_gt_t": "26000",
+            "vessel_max_draft_m": "9.6",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "departure-sapec-high-draft",
+            "type": "departure",
+            "state": "pending",
+            "planned_at": "2026-05-08T19:33:00+01:00",
+            "planned_input_value": "2026-05-08T19:33",
+            "origin": "SAPEC Sólidos",
+            "destination": "Sines",
+            "draft": "9.6",
+            "tug_count": "2",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "30 min antes do reponto para saída SAPEC" in tide_check["detail"]
+    assert "preia-mar às 20:03" in tide_check["detail"]
+
+
+def test_teporset_departure_uses_fifteen_minutes_before_reponto(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "wave_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-teporset",
+            "vessel_type": "Carga geral",
+            "vessel_loa_m": "130",
+            "vessel_beam_m": "22",
+            "vessel_gt_t": "9000",
+            "vessel_max_draft_m": "7.5",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "departure-teporset",
+            "type": "departure",
+            "state": "pending",
+            "planned_at": "2026-05-08T19:48:00+01:00",
+            "planned_input_value": "2026-05-08T19:48",
+            "origin": "Teporset",
+            "destination": "Sines",
+            "tug_count": "2",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "15 min antes do reponto para saída Teporset/Termitrena" in tide_check["detail"]
+    assert "preia-mar às 20:03" in tide_check["detail"]
+
+
+def test_lisnave_dock_21_departure_uses_two_hours_before_high_tide(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services,
+        "tide_service",
+        TideService("resources/tides/mares.2026.201.9_setubal_troia.csv"),
+        raising=False,
+    )
+    monkeypatch.setattr(services, "weather_service", None, raising=False)
+    monkeypatch.setattr(services, "wave_service", None, raising=False)
+    monkeypatch.setattr(services, "KNOWLEDGE_DIR", "knowledge", raising=False)
+
+    assessment = _build_validation_operational_assessment(
+        {
+            "id": "pc-lisnave-dock",
+            "vessel_type": "Tanque",
+            "vessel_loa_m": "250",
+            "vessel_beam_m": "36",
+            "vessel_gt_t": "50000",
+            "vessel_max_draft_m": "8.5",
+            "vessel_bow_thruster": "yes",
+            "vessel_stern_thruster": "no",
+        },
+        {
+            "id": "departure-lisnave-dock",
+            "type": "departure",
+            "state": "pending",
+            "planned_at": "2026-05-08T18:03:00+01:00",
+            "planned_input_value": "2026-05-08T18:03",
+            "origin": "Lisnave - Doca 21",
+            "destination": "Sines",
+            "tug_count": "5",
+            "constraint_codes": [],
+        },
+        [],
+    )
+
+    tide_check = next(item for item in assessment["checks"] if item["title"] == "Maré/tempo")
+    assert tide_check["status"] == "ok"
+    assert "2h00 antes da preia-mar para saída das Docas 21/22" in tide_check["detail"]
+    assert "preia-mar às 20:03" in tide_check["detail"]
+
+
 def test_tanquisado_entry_with_two_tugs_blocks_on_minimum(monkeypatch) -> None:
     monkeypatch.setattr(
         services,

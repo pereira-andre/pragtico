@@ -503,6 +503,7 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
     maneuver_type = (maneuver.get("type") or "").strip().lower()
     origin_key = _operational_lookup_key(maneuver.get("origin"))
     destination_key = _operational_lookup_key(maneuver.get("destination"))
+    draft = _safe_float(maneuver.get("draft")) or _safe_float(maneuver.get("planned_draft_m"))
     if maneuver_type == "entry":
         if "alstom" in destination_key:
             return {
@@ -517,8 +518,20 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
                 "source": "Notas_Pilotagem.txt / Marcar_manobra_repontos_mare.txt",
             }
         if any(marker in destination_key for marker in ("tms 1", "tms1", "tms 2", "tms2", "auto europa", "autoeuropa", "roro", "ro ro")):
+            if draft is not None and draft >= 9:
+                return {
+                    "minutes": (60, 90),
+                    "label": "1h a 1h30 antes da preia-mar para TMS 1/TMS 2 com grande calado",
+                    "source": "Marcar_manobra_repontos_mare.txt",
+                }
             return {"minutes": (60, 60), "label": "cerca de 1h desde a Barra pelo Canal Norte", "source": "Notas_Pilotagem.txt"}
         if any(marker in destination_key for marker in ("praias", "sapec")):
+            if "sapec" in destination_key and draft is not None and draft >= 9:
+                return {
+                    "minutes": (90, 90),
+                    "label": "1h30 antes da preia-mar para SAPEC com calado condicionante",
+                    "source": "Marcar_manobra_repontos_mare.txt / IT-029_SAPEC.txt",
+                }
             return {"minutes": (80, 80), "label": "cerca de 1h20 desde a Barra", "source": "Notas_Pilotagem.txt"}
         if "secil" in destination_key:
             return {"minutes": (30, 45), "label": "30 a 45 min desde a Barra", "source": "Marcar_manobra_repontos_mare.txt"}
@@ -526,6 +539,37 @@ def _transit_window_for_maneuver(maneuver: dict) -> dict | None:
             return {"minutes": (45, 45), "label": "cerca de 45 min desde a Barra", "source": "Notas_Pilotagem.txt"}
         if "fundeadouro sul" in destination_key or "troia" in destination_key:
             return {"minutes": (45, 60), "label": "45 min a 1h desde a Barra", "source": "Notas_Pilotagem.txt"}
+    if maneuver_type == "departure":
+        if any(marker in origin_key for marker in ("lisnave", "mitrena")) and re.search(r"\b(doca\s*21|doca\s*22|d21|d22)\b", origin_key):
+            return {
+                "minutes": (120, 120),
+                "label": "2h00 antes da preia-mar para saída das Docas 21/22 da Lisnave",
+                "source": "Marcar_manobra_repontos_mare.txt / IT-014_Lisnave.txt",
+            }
+        if any(marker in origin_key for marker in ("teporset", "termitrena")):
+            return {
+                "minutes": (15, 15),
+                "label": "15 min antes do reponto para saída Teporset/Termitrena",
+                "source": "Marcar_manobra_repontos_mare.txt",
+            }
+        if "secil" in origin_key:
+            return {
+                "minutes": (15, 15),
+                "label": "15 min antes do reponto para saída da SECIL",
+                "source": "Marcar_manobra_repontos_mare.txt",
+            }
+        if draft is not None and draft >= 9 and "sapec" in origin_key:
+            return {
+                "minutes": (30, 30),
+                "label": "30 min antes do reponto para saída SAPEC com grande calado",
+                "source": "Marcar_manobra_repontos_mare.txt / IT-029_SAPEC.txt",
+            }
+        if draft is not None and draft >= 9 and any(marker in origin_key for marker in ("tms 1", "tms1", "tms 2", "tms2")):
+            return {
+                "minutes": (30, 30),
+                "label": "30 min antes do reponto para saída TMS 1/TMS 2 com grande calado",
+                "source": "Marcar_manobra_repontos_mare.txt",
+            }
     if maneuver_type == "shift":
         if "fundeadouro norte" in origin_key and "alstom" in destination_key:
             return {
@@ -679,6 +723,68 @@ def _weather_check_line(target_dt: datetime) -> dict:
     return {"status": "ok", "title": "Meteorologia", "detail": f"{detail} Sem limiar automático de suspensão."}
 
 
+def _wave_check_line(target_dt: datetime, maneuver: dict) -> dict:
+    maneuver_type = (maneuver.get("type") or "").strip().lower()
+    if maneuver_type == "shift":
+        return {
+            "status": "info",
+            "title": "Ondulação/barra",
+            "detail": "Mudança interna: ondulação não é fator primário, salvo condição excecional no Outão/barra ou ordem operacional específica.",
+        }
+    wave_service = getattr(services, "wave_service", None)
+    if not wave_service or not getattr(wave_service, "enabled", False):
+        return {
+            "status": "info",
+            "title": "Ondulação/barra",
+            "detail": "Leitura costeira live não configurada; confirmar ondulação fora da barra/Pilar 2 antes de validar entradas ou saídas.",
+        }
+    try:
+        conditions = (
+            wave_service.get_current_conditions()
+            if hasattr(wave_service, "get_current_conditions")
+            else wave_service.probe_current_conditions()
+        )
+    except Exception:
+        logger.exception("Falha ao obter ondulação para validação da manobra.")
+        return {
+            "status": "info",
+            "title": "Ondulação/barra",
+            "detail": "Não foi possível obter leitura costeira live; confirmar ondulação antes de validar a manobra.",
+        }
+    if not conditions:
+        return {
+            "status": "info",
+            "title": "Ondulação/barra",
+            "detail": "Sem leitura costeira disponível; confirmar ondulação antes de validar a manobra.",
+        }
+    significant = _safe_float(conditions.get("significant_height_m"))
+    max_height = _safe_float(conditions.get("max_height_m"))
+    detail = (
+        f"Leitura costeira {conditions.get('last_reading_label', '--')}: "
+        f"Hs {conditions.get('significant_height_label', '--')}; "
+        f"Hmax {conditions.get('max_height_label', '--')}; "
+        f"período {conditions.get('mean_period_label', '--')}; "
+        f"direção {conditions.get('direction', '--')}."
+    )
+    if significant is not None and significant >= 1.0:
+        return {
+            "status": "caution",
+            "title": "Ondulação/barra",
+            "detail": f"{detail} Hs >= 1,0 m; validar de forma conservadora calado/barra, conforto de embarque e margem no Outão.",
+        }
+    if max_height is not None and max_height >= 1.5:
+        return {
+            "status": "caution",
+            "title": "Ondulação/barra",
+            "detail": f"{detail} Altura máxima relevante; confirmar barra/Pilar 2 antes de avançar.",
+        }
+    return {
+        "status": "ok",
+        "title": "Ondulação/barra",
+        "detail": f"{detail} Sem alerta automático de ondulação para a barra.",
+    }
+
+
 def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dict) -> tuple[list[dict], datetime | None]:
     if not planned_at:
         return ([{"status": "caution", "title": "Maré/tempo", "detail": "Sem hora planeada não dá para cruzar reponto, trânsito e calado."}], None)
@@ -687,7 +793,7 @@ def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dic
     requires_reponto = _profile_requires_reponto(profile, maneuver_type)
     target_dt = planned_at
     checks: list[dict] = []
-    if transit and maneuver_type in {"entry", "shift"}:
+    if transit and maneuver_type in {"entry", "shift", "departure"}:
         min_minutes, max_minutes = transit["minutes"]
         arrival_start = planned_at + timedelta(minutes=min_minutes)
         arrival_end = planned_at + timedelta(minutes=max_minutes)
@@ -696,14 +802,21 @@ def _tide_timing_check(maneuver: dict, planned_at: datetime | None, profile: dic
         if tide_event:
             in_window = arrival_start <= tide_event.timestamp <= arrival_end
             delta_minutes = abs((tide_event.timestamp - target_dt).total_seconds()) / 60
+            needs_high_tide = "preia-mar" in _operational_lookup_key(transit.get("label"))
             if requires_reponto:
                 status = "ok" if in_window else "block"
+                if needs_high_tide and tide_event.tide_type != "preia-mar":
+                    status = "block"
             else:
                 status = "ok" if in_window or delta_minutes <= 30 else "caution"
+                if needs_high_tide and tide_event.tide_type != "preia-mar":
+                    status = "caution"
             reference_label = "hora de embarque/entrada da barra" if maneuver_type == "entry" else "hora de largada da origem"
+            if maneuver_type == "departure":
+                reference_label = "hora de marcação/largada inicial"
             timing = (
                 f"Se {_format_local_datetime(planned_at)} for {reference_label}, "
-                f"a chegada estimada ao destino é {_format_local_datetime(arrival_start)}-"
+                f"a fase crítica estimada é {_format_local_datetime(arrival_start)}-"
                 f"{_format_local_time(arrival_end)} ({transit['label']}). "
                 f"Reponto mais próximo: {tide_event.tide_type} às {_format_local_time(tide_event.timestamp)} "
                 f"({tide_event.height:.1f} m)."
@@ -1005,6 +1118,7 @@ def _build_validation_operational_assessment(port_call: dict, maneuver: dict, ch
     if reference_dt:
         weather_check = _weather_check_line(reference_dt)
         checks.append(weather_check)
+        checks.append(_wave_check_line(reference_dt, maneuver))
         checks.extend(_phase_dimension_draft_checks(phases, port_call, maneuver, reference_dt))
     else:
         checks.extend(_phase_dimension_draft_checks(phases, port_call, maneuver, reference_dt))

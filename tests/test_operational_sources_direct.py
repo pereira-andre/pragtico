@@ -341,6 +341,53 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Acima de 20 kt", payload["answer"])
         self.assertIn("25 kt", payload["answer"])
 
+    def test_tms_high_draft_entry_gets_tide_scheduling_answer(self) -> None:
+        payload = answer_direct_operational_query(
+            "Um navio com 10,5 m de calado quer entrar no TMS 1 à preia-mar das 14:00. Quando marco?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("TMS 1/TMS 2", payload["answer"])
+        self.assertIn("1h a 1h30 antes da preia-mar", payload["answer"])
+        self.assertIn("12:30-13:00", payload["answer"])
+        self.assertIn("calado praticável", payload["answer"])
+
+    def test_sapec_high_draft_departure_gets_tide_scheduling_answer(self) -> None:
+        payload = answer_direct_operational_query(
+            "Um navio de grande calado quer sair da SAPEC ao reponto das 14:00. Quando marco?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("SAPEC", payload["answer"])
+        self.assertIn("30 min antes do reponto", payload["answer"])
+        self.assertIn("13:30", payload["answer"])
+
+    def test_sapec_liquidos_imo_high_draft_mentions_limits_and_formula(self) -> None:
+        payload = answer_direct_operational_query(
+            "SAPEC Líquidos com 9,4 m de calado e carga IMO deve entrar à preia-mar das 14:00, quando marco?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("TGL/SAPEC Líquidos", payload["answer"])
+        self.assertIn("12:30", payload["answer"])
+        self.assertIn("9,5 m para IMO", payload["answer"])
+        self.assertIn("10,0 m para não-IMO", payload["answer"])
+        self.assertIn("fórmula de calado praticável", payload["answer"])
+
+    def test_teporset_departure_uses_local_reponto_margin(self) -> None:
+        payload = answer_direct_operational_query(
+            "Saída da Teporset para o reponto das 20:03, a que horas marco?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("15 min antes do reponto", payload["answer"])
+        self.assertIn("19:48", payload["answer"])
+        self.assertIn("reponto local acontece cerca de 15 min depois", payload["answer"])
+
     def test_numeric_wind_question_with_manobrar_uses_suspension_limit(self) -> None:
         payload = answer_direct_operational_query("Posso manobrar com 26 kt de vento se tiver reboques?")
 

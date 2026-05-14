@@ -350,6 +350,18 @@ def _format_minutes(total_minutes: int) -> str:
     return f"{hours} h {remainder:02d} min"
 
 
+def _format_duration_words(total_minutes: int) -> str:
+    minutes = max(int(round(total_minutes)), 0)
+    if minutes < 60:
+        return f"{minutes} minutos"
+    hours, remainder = divmod(minutes, 60)
+    hour_label = "1 hora" if hours == 1 else f"{hours} horas"
+    if remainder == 0:
+        return hour_label
+    minute_label = "1 minuto" if remainder == 1 else f"{remainder} minutos"
+    return f"{hour_label} e {minute_label}"
+
+
 def _route_preference(clean_question: str) -> str:
     if re.search(r"\bcanal\s+norte\b", clean_question):
         return "canal_norte"
@@ -1044,17 +1056,41 @@ def _subtract_minutes_label(hour: int, minute: int, delta_minutes: int) -> str:
     return f"{total // 60:02d}:{total % 60:02d}"
 
 
-def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str) -> dict | None:
-    if not (_matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and _matches_any(clean_question, DEST_SOUTH_QUAYS)):
+def _south_quay_reponto_lead_time_answer(question: str, clean_question: str) -> dict | None:
+    if not _matches_any(clean_question, DEST_SOUTH_QUAYS):
         return None
-    if "reponto" not in clean_question:
+    if not re.search(r"\b(reponto|preia|baixa|mare)\b", clean_question):
         return None
+
+    origin_label = ""
+    lead_minutes = 0
+    source_id = ""
+    if _matches_any(clean_question, ORIGIN_BARRA):
+        origin_label = "da Barra/fora da Barra"
+        lead_minutes = 120
+        source_id = "ROUTE_BARRA_CAIS_SUL_REPONTO_LEAD_TIME"
+    elif _matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE):
+        origin_label = "do Fundeadouro Norte"
+        lead_minutes = 90
+        source_id = "ROUTE_FUNDEADOURO_NORTE_CAIS_SUL_REPONTO_LEAD_TIME"
+    elif _matches_any(clean_question, ORIGIN_FUNDEADOURO_SUL):
+        origin_label = "de Tróia/Fundeadouro Sul"
+        lead_minutes = 60
+        source_id = "ROUTE_TROIA_CAIS_SUL_REPONTO_LEAD_TIME"
+    else:
+        return None
+
     parsed = _reponto_time_from_question(question)
     reponto_label = parsed[2] if parsed else "do reponto pretendido"
-    depart_label = _subtract_minutes_label(parsed[0], parsed[1], 90) if parsed else "cerca de 1 hora e 30 minutos antes"
+    depart_label = (
+        _subtract_minutes_label(parsed[0], parsed[1], lead_minutes)
+        if parsed
+        else f"cerca de {_format_duration_words(lead_minutes)} antes"
+    )
     answer = (
-        "Percurso/duracao: do Fundeadouro Norte para os cais a sul (LISNAVE/Mitrena, Tanquisado, Eco-Oil, Termitrena ou Teporset) conta com cerca de 1 hora e 30 minutos.\n"
-        f"Para chegar ao reponto das {reponto_label}, a largada deve ser por volta das {depart_label}.\n"
+        f"Percurso/duracao: {origin_label} para os cais a sul "
+        f"(LISNAVE/Mitrena, Tanquisado, Eco-Oil, Termitrena ou Teporset) conta com cerca de {_format_duration_words(lead_minutes)}.\n"
+        f"Para chegar ao reponto das {reponto_label}, a manobra/largada deve ser marcada por volta das {depart_label}.\n"
         "A fase critica no cais/doca é a referência: estes cais do Canal Sul devem ser trabalhados próximo do reponto de maré, porque ficam condicionados pela corrente.\n"
         "Confirmar ainda o cais/doca concreto, calado, vento, rebocadores e validação do Piloto Coordenador."
     )
@@ -1063,7 +1099,7 @@ def _fundeadouro_norte_lisnave_reponto_answer(question: str, clean_question: str
         "sources": [
             {
                 "document": "Marcar_manobra_repontos_mare.txt",
-                "source_id": "ROUTE_FUNDEADOURO_NORTE_CAIS_SUL_REPONTO_LEAD_TIME",
+                "source_id": source_id,
                 "retrieval_mode": "route_transit_summary",
                 "snippet": answer,
                 "question": question,
@@ -1078,7 +1114,7 @@ def route_transit_answer(question: str, clean_question: str | None = None) -> di
     pilot_distance = _pilot_station_distance_answer(question, clean)
     if pilot_distance:
         return pilot_distance
-    lisnave_reponto = _fundeadouro_norte_lisnave_reponto_answer(question, clean)
+    lisnave_reponto = _south_quay_reponto_lead_time_answer(question, clean)
     if lisnave_reponto:
         return lisnave_reponto
     route_order = _route_order_answer(question, clean)
