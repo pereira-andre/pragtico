@@ -478,10 +478,19 @@ def evaluate_answer(scenario: Scenario, result: TransportResult) -> dict[str, An
     normalized_question = normalize_text(scenario.question)
     normalized_answer = normalize_text(answer)
 
+    explicit_live_context = any(
+        token in normalized_question
+        for token in ("meteorologia", "ondulacao", "mares", "hoje", "atual", "condicoes atuais", "condições atuais")
+    )
+    declared_wind_scenario = bool(
+        "vento" in normalized_question
+        and re.search(r"\b(n|s|e|w|norte|sul|este|leste|oeste|forte|fraco|kt|kts|nos|nós)\b", normalized_question)
+        and not explicit_live_context
+    )
     live_question = any(
         token in normalized_question
         for token in ("meteorologia", "vento", "ondulacao", "mares", "mare", "hoje", "atual", "condicoes")
-    )
+    ) and not declared_wind_scenario
     if live_question:
         if not any(token in normalized_answer for token in ("atual", "hoje", "hora", "fonte", "meteorologia", "mare", "ondulacao", "disponivel")):
             warnings.append("live_context_not_explicit")

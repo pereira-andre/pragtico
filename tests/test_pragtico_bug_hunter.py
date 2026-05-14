@@ -66,6 +66,28 @@ def test_evaluate_answer_marks_non_strict_missing_as_review() -> None:
     assert checks["manual_review"] is True
 
 
+def test_evaluate_answer_does_not_require_live_feed_for_declared_wind_scenario() -> None:
+    scenario = Scenario(
+        id="wind-rule",
+        group="Rebocadores",
+        question="A sair de Tanquisado com vento E forte, onde meto o reboque?",
+        expected_substrings=("Tanquisado com 3 rebocadores", "1 rebocador a empurrar ao costado"),
+        strict=True,
+    )
+    result = TransportResult(
+        ok=True,
+        answer=(
+            "Tanquisado com 3 rebocadores: manter 1 a proa e 1 a popa. "
+            "Com vento E forte, o terceiro fica como 1 rebocador a empurrar ao costado na largada dos cabos."
+        ),
+    )
+
+    checks = evaluate_answer(scenario, result)
+
+    assert checks["verdict"] == "pass"
+    assert "live_context_not_explicit" not in checks["warnings"]
+
+
 def test_extract_csrf_token_from_login_form() -> None:
     html = '<input type="hidden" name="csrf_token" value="abc123">'
 

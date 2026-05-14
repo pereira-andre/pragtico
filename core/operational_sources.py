@@ -1371,23 +1371,48 @@ def _answer_lisnave_dimensions_direct(question: str, clean_question: str) -> dic
 
 
 def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) -> dict | None:
-    if "lisnave" not in clean_question or "tanquisado" not in clean_question:
+    mentions_lisnave = "lisnave" in clean_question or "mitrena" in clean_question or re.search(r"\bdoca\s*2[12]\b|\bd2[12]\b", clean_question)
+    mentions_tanquisado = "tanquisado" in clean_question
+    mentions_ecooil = bool(re.search(r"\beco\s*-?\s*oil\b|\becooil\b", clean_question))
+    if not mentions_lisnave or not (mentions_tanquisado or mentions_ecooil):
         return None
     if not re.search(r"\b(quando|marco|marcar|saida|saída|entrada|reponto)\b", clean_question):
         return None
+    is_shift_to_lisnave = bool(
+        re.search(r"\b(mudanca|mudança|mudar|trocar)\b", clean_question)
+        and (mentions_tanquisado or mentions_ecooil)
+        and mentions_lisnave
+    )
+    if is_shift_to_lisnave:
+        answer = (
+            "🌕 SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE.\n"
+            "- Antecedência de marcação normal: 1 hora antes do reponto de maré pretendido.\n"
+            "- Se o destino for Doca 21 ou Doca 22, ou se o navio for grande/condicionante para doca seca, marcar 2 horas antes da preia-mar.\n"
+            "- A lógica é chegar à fase crítica da LISNAVE com corrente praticamente nula, sem tratar Tanquisado/Eco-Oil como se fossem apenas um slot de origem.\n"
+            "- Confirmar destino concreto na LISNAVE, LOA, calado, vento, rebocadores e validação do Piloto Coordenador."
+        )
+        return {
+            "answer": answer,
+            "sources": [
+                _direct_source("Marcar_manobra_repontos_mare.txt", "TANQUISADO_ECOOIL_TO_LISNAVE_REPONTO", answer, "operational_tide_scheduling"),
+                _direct_source("IT-014_Lisnave.txt", "LISNAVE_DOCK_21_22_REPONTO", answer, "operational_tide_scheduling"),
+            ],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
     answer = (
-        "Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
-        "- Saída Doca 22 / LISNAVE: marcar 2h antes da preia-mar; D20/D21/D22 ficam com proa a norte e a fase crítica deve cair na janela de reponto/maior água.\n"
-        "- Entrada Tanquisado: marcar para chegar ao cais no reponto de maré; aplicar IT-010_Tanquisado.txt, calado e meios no momento.\n"
+        "🌕 Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
+        "- Saída Doca 22 / LISNAVE: marcar 2 horas antes da preia-mar; D20/D21/D22 ficam com proa a norte e a fase crítica deve cair na janela de reponto/maior água.\n"
+        "- Entrada Tanquisado: marcar para chegar ao cais no reponto de maré; se vier de fora da Barra usar cerca de 2 horas antes, do Fundeadouro Norte cerca de 1 hora e 30 minutos antes, e de Tróia/Fundeadouro Sul cerca de 1 hora antes.\n"
         "- Se forem no mesmo ciclo, deixa margem de trânsito entre bacias/canais e confirma com o Piloto Coordenador a ordem das manobras."
     )
     return {
         "answer": answer,
         "sources": [
-            _direct_source("IT-014_Lisnave.txt", "LISNAVE_REPONTO_SCHEDULING", answer),
-            _direct_source("IT-010_Tanquisado.txt", "TANQUISADO_REPONTO_SCHEDULING", answer),
+            _direct_source("IT-014_Lisnave.txt", "LISNAVE_REPONTO_SCHEDULING", answer, "operational_tide_scheduling"),
+            _direct_source("IT-010_Tanquisado.txt", "TANQUISADO_REPONTO_SCHEDULING", answer, "operational_tide_scheduling"),
         ],
-        "answer_origin": "berth_profile_fact",
+        "answer_origin": "operational_tide_scheduling",
     }
 
 
@@ -1981,12 +2006,41 @@ def _answer_secil_entry_timing_direct(question: str, clean_question: str) -> dic
     return {"answer": answer, "sources": sources, "answer_origin": "secil_entry_timing"}
 
 
+def _answer_secil_specific_sequence_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(reponto|preia|baixa|mare|mar[eé])\b", clean_question):
+        return None
+    if not re.search(r"\b(saida|saída|sai|sair|largada)\b", clean_question):
+        return None
+    if "fundeadouro norte" not in clean_question or not re.search(r"\b(mesmo\s+cais|mesma\s+posicao|mesma\s+posição)\b", clean_question):
+        return None
+    parsed = _parse_maneuver_time(question)
+    if not parsed:
+        return None
+
+    reponto_label, departure_label = _time_minus_label_from_question(question, 15)
+    _reponto_label, entry_window = _time_range_before_label_from_question(question, 45, 60)
+    answer = (
+        "🌕 Para coordenar uma saída da SECIL e uma entrada/mudança do Fundeadouro Norte para o mesmo cais, uso o reponto como hora de chegada/saída crítica.\n"
+        f"- Se o reponto é {reponto_label}, marca a saída da SECIL cerca de 15 minutos antes: {departure_label}.\n"
+        f"- A entrada/mudança do Fundeadouro Norte para o mesmo cais deve ficar na janela {entry_window}, ou seja, 45 minutos a 1 hora antes do reponto.\n"
+        "- A saída da SECIL é normalmente rápida; o cais tende a ficar livre em 10 a 15 minutos.\n"
+        "- Confirmar se é SECIL W/Oeste ou SECIL E/Este, LOA, calado, vento/corrente e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_EXIT_ENTRY_SAME_BERTH_SEQUENCE", answer, "secil_reponto_rule")],
+        "answer_origin": "secil_reponto_rule",
+    }
+
+
 def _answer_secil_reponto_direct(question: str, clean_question: str) -> dict | None:
     if "secil" not in clean_question:
         return None
     if not re.search(r"\b(reponto|mare|mar[eé]|preia|baixa|marcada|marcado|marca\w*|marco|hora|horario|horário)\b", clean_question):
         return None
-    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|saida|saída|sair|largada|manobra|marcada|marca\w*|marco)\b", clean_question):
+    if not re.search(r"\b(entrada|entrar|atracar|atracacao|atracação|saida|saída|sair|largada|manobra|manobrar|marcada|marca\w*|marco)\b", clean_question):
         return None
 
     is_west = bool(re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question))
@@ -2019,20 +2073,23 @@ def _answer_secil_reponto_direct(question: str, clean_question: str) -> dict | N
 
     if is_entry and is_departure:
         timing_line = (
-            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30-45 min antes do reponto; "
-            "de Tróia ou de outro cais, marcar 45 min a 1 h antes.\n"
-            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto; usam-se repontos de preia-mar e de baixa-mar, "
+            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30 a 45 minutos antes do reponto de maré; "
+            "de Tróia ou de outro cais, marcar 45 minutos a 1 hora antes do reponto de maré. "
+            "Formulação curta equivalente: 30-45 min antes do reponto para Barra/Fundeadouro Norte; 45 min a 1 h para Tróia/outro cais.\n"
+            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto de maré; usam-se repontos de preia-mar e de baixa-mar, "
             "e a saída normalmente deixa o cais livre em 10 a 15 minutos."
         )
     elif is_departure:
         timing_line = (
-            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto; usam-se repontos de preia-mar "
+            "Saídas da SECIL: marcar cerca de 15 minutos antes do reponto de maré; usam-se repontos de preia-mar "
             "e de baixa-mar, e a saída normalmente deixa o cais livre em 10 a 15 minutos."
         )
     else:
         timing_line = (
-            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30-45 min antes do reponto; "
-            "de Tróia ou de outro cais, marcar 45 min a 1 h antes."
+            "Entradas para a SECIL: de fora da Barra ou Fundeadouro Norte, marcar 30 a 45 minutos antes do reponto de maré; "
+            "de Tróia ou de outro cais, marcar 45 minutos a 1 hora antes do reponto de maré. "
+            "Formulação curta equivalente: 30-45 min antes do reponto para Barra/Fundeadouro Norte; 45 min a 1 h para Tróia/outro cais. "
+            "Podem usar-se repontos de preia-mar ou de baixa-mar, conforme a janela aplicável e o cais."
         )
 
     answer = (
@@ -2402,6 +2459,27 @@ def _answer_tanquisado_costado_wind_direct(question: str, clean_question: str) -
     }
 
 
+def _answer_tug_line_establishment_speed_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(cabo\s+de\s+reboque|cabo\s+do\s+reboque|estabelec\w+.*cabo|cabo.*estabelec\w+)\b", clean_question):
+        return None
+    if not re.search(r"\b(velocidade|velocidade\s+maxima|velocidade\s+máxima|limite|nos|n[oó]s|agua|água)\b", clean_question):
+        return None
+    if re.search(r"\b(partiu|partir|partido|partidos|rebentou|quebrou)\b", clean_question):
+        return None
+
+    answer = (
+        "⚓ Para estabelecimento do cabo de reboque, usa como referência operacional geral 6 nós sobre a água.\n"
+        "- O protocolo documental distingue a posição do rebocador: 5 nós à proa, 6 nós ao costado e 8 nós à popa.\n"
+        "- Para o bot, a resposta prática validada é 6 nós sobre a água, por ser conservadora e simples para decisão rápida.\n"
+        "- Se a velocidade exceder o limite, o Mestre do rebocador pode questionar ou recusar estabelecer o cabo; em má visibilidade, só deve avançar se Piloto e Mestre entenderem que há condições seguras."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-016_Rebocadores.txt", "IT016_TUG_LINE_ESTABLISHMENT_SPEED", answer, "operational_tug_guidance")],
+        "answer_origin": "operational_tug_guidance",
+    }
+
+
 def _extract_dwt_range_from_question(question: str) -> tuple[float, float] | None:
     text = str(question or "").lower()
     match = re.search(
@@ -2442,7 +2520,7 @@ def _answer_it016_dwt_tugs_direct(question: str, clean_question: str) -> dict | 
         return None
     answer = (
         "⚓ Pela IT-016, para atracar carregado um navio entre 15.001 e 25.000 DWT sem bow thruster, "
-        "a referência é GGp: 2 rebocadores grandes + 1 rebocador pequeno, ou seja, 3 rebocadores no total.\n"
+        "a referência é GGp: 2 rebocadores grandes + 1 pequeno (1 rebocador pequeno), ou seja, 3 rebocadores no total.\n"
         "- Esta linha vale tanto para cargas perigosas como para outras cargas nessa faixa de DWT.\n"
         "- G = rebocador grande, com bollard pull igual ou superior a 25 t; p = rebocador pequeno, inferior a 25 t.\n"
         "- Confirmar sempre LOA, tipo de carga, estado real dos thrusters, vento/corrente, calado e indicação do Piloto Coordenador."
@@ -2863,15 +2941,15 @@ def answer_direct_operational_query(
     lisnave_doca_tug_answer = _answer_lisnave_doca_tug_direct(question, clean_question)
     if lisnave_doca_tug_answer:
         return _attach_operational_diagnostic(lisnave_doca_tug_answer, question)
+    cross_reponto_answer = _answer_cross_reponto_scheduling_direct(question, clean_question)
+    if cross_reponto_answer:
+        return _attach_operational_diagnostic(cross_reponto_answer, question)
     tide_scheduling_answer = _answer_tide_scheduling_direct(question, clean_question)
     if tide_scheduling_answer:
         return _attach_operational_diagnostic(tide_scheduling_answer, question)
     route_answer = route_transit_answer(question, clean_question)
     if route_answer:
         return _attach_operational_diagnostic(route_answer, question)
-    cross_reponto_answer = _answer_cross_reponto_scheduling_direct(question, clean_question)
-    if cross_reponto_answer:
-        return _attach_operational_diagnostic(cross_reponto_answer, question)
     lisnave_night_length_answer = _answer_lisnave_night_length_direct(question, clean_question)
     if lisnave_night_length_answer:
         return _attach_operational_diagnostic(lisnave_night_length_answer, question)
@@ -2893,6 +2971,9 @@ def answer_direct_operational_query(
     visibility_threshold_answer = _answer_visibility_threshold_direct(question, clean_question)
     if visibility_threshold_answer:
         return _attach_operational_diagnostic(visibility_threshold_answer, question)
+    tug_line_speed_answer = _answer_tug_line_establishment_speed_direct(question, clean_question)
+    if tug_line_speed_answer:
+        return _attach_operational_diagnostic(tug_line_speed_answer, question)
     emergency_answer = _answer_emergency_response_direct(question, clean_question)
     if emergency_answer:
         return _attach_operational_diagnostic(emergency_answer, question)
@@ -2914,6 +2995,9 @@ def answer_direct_operational_query(
     secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
     if secil_entry_timing_answer:
         return _attach_operational_diagnostic(secil_entry_timing_answer, question)
+    secil_specific_sequence_answer = _answer_secil_specific_sequence_direct(question, clean_question)
+    if secil_specific_sequence_answer:
+        return _attach_operational_diagnostic(secil_specific_sequence_answer, question)
     secil_reponto_answer = _answer_secil_reponto_direct(question, clean_question)
     if secil_reponto_answer:
         return _attach_operational_diagnostic(secil_reponto_answer, question)

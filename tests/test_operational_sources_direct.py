@@ -302,6 +302,31 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("2 horas antes do reponto de maré pretendido", payload["answer"])
         self.assertNotIn("10,5 milhas náuticas", payload["answer"])
 
+    def test_repeated_reponto_question_handles_lisnave_exit_and_tanquisado_entry(self) -> None:
+        payload = answer_direct_operational_query(
+            "Quando marco uma saida da Doca 22 da Lisnave e uma entrada para Tanquisado?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("Saída Doca 22", payload["answer"])
+        self.assertIn("2 horas antes da preia-mar", payload["answer"])
+        self.assertIn("Entrada Tanquisado", payload["answer"])
+        self.assertIn("Fundeadouro Norte", payload["answer"])
+        self.assertNotIn("120 min antes", payload["answer"])
+
+    def test_tanquisado_ecooil_to_lisnave_shift_uses_specific_section(self) -> None:
+        payload = answer_direct_operational_query(
+            "Quando marco mudança de Tanquisado/Eco-Oil para Lisnave, incluindo Doca 21?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE", payload["answer"])
+        self.assertIn("Antecedência de marcação normal: 1 hora antes do reponto", payload["answer"])
+        self.assertIn("Doca 21 ou Doca 22", payload["answer"])
+        self.assertIn("2 horas antes da preia-mar", payload["answer"])
+
     def test_tms_high_draft_plural_calados_uses_tide_scheduling(self) -> None:
         payload = answer_direct_operational_query("Como marco TMS 1/TMS 2 com calados 9, 10,5 e 12 m?")
 
@@ -319,8 +344,56 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIsNotNone(payload)
         self.assertEqual("operational_tug_guidance", payload["answer_origin"])
         self.assertIn("2 rebocadores grandes", payload["answer"])
+        self.assertIn("1 pequeno", payload["answer"])
         self.assertIn("1 rebocador pequeno", payload["answer"])
         self.assertIn("GGp", payload["answer"])
+
+    def test_tug_line_establishment_speed_does_not_route_to_parted_line_emergency(self) -> None:
+        payload = answer_direct_operational_query(
+            "Qual é a velocidade máxima do navio durante o estabelecimento do cabo de reboque?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tug_guidance", payload["answer_origin"])
+        self.assertIn("6 nós sobre a água", payload["answer"])
+        self.assertIn("5 nós à proa", payload["answer"])
+        self.assertNotIn("Cabo do reboque partido", payload["answer"])
+
+    def test_secil_entry_from_barra_uses_full_reponto_wording(self) -> None:
+        payload = answer_direct_operational_query(
+            "Com que antecedência se marca uma entrada para a Secil vinda de fora da Barra?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_reponto_rule", payload["answer_origin"])
+        self.assertIn("30 a 45 minutos antes do reponto de maré", payload["answer"])
+        self.assertIn("preia-mar", payload["answer"])
+        self.assertIn("baixa-mar", payload["answer"])
+        self.assertIn("Piloto Coordenador", payload["answer"])
+
+    def test_secil_same_berth_exit_and_fundeadouro_entry_calculates_times(self) -> None:
+        payload = answer_direct_operational_query(
+            "Se um navio sai da Secil no reponto das 13:51 e outro vem do Fundeadouro Norte para o mesmo cais, como se marcam as manobras?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_reponto_rule", payload["answer_origin"])
+        self.assertIn("13:36", payload["answer"])
+        self.assertIn("45 minutos", payload["answer"])
+        self.assertIn("1 hora", payload["answer"])
+        self.assertIn("12:51", payload["answer"])
+        self.assertIn("13:06", payload["answer"])
+        self.assertIn("10 a 15 minutos", payload["answer"])
+
+    def test_secil_west_reponto_is_not_optional(self) -> None:
+        payload = answer_direct_operational_query("Para manobrar no Secil W, tenho de acertar com o reponto de mare?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_reponto_rule", payload["answer_origin"])
+        self.assertIn("SECIL W/Oeste", payload["answer"])
+        self.assertIn("todos os navios devem atracar próximo do reponto", payload["answer"])
+        self.assertIn("LOA > 170 m", payload["answer"])
+        self.assertNotIn("não existe imposição genérica", payload["answer"])
 
     def test_loss_of_engine_emergency_prioritizes_anchor_and_vts_channel(self) -> None:
         answer = self._answer(
