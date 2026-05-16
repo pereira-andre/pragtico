@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-mar)\b")
+TIDE_QUERY_RE = re.compile(r"\b(mare|mares|preia mar|preia-mar|baixa mar|baixa-mar|reponto|estoa)\b")
 WEATHER_QUERY_RE = re.compile(
     r"\b(meteorologia|meteorologic|meteo|condicoes meteorologicas|condicoes do tempo|estado do tempo|"
     r"metrologia|metrologica|metrologicas|metrologico|metrologicos|"
@@ -37,7 +37,7 @@ WARNING_QUERY_RE = re.compile(
 OPERATION_TIME_RE = re.compile(
     r"\b(?:as|às|para as|para às|para|pelas)\s*(?:\d{1,2}[:h]\d{2}|\d{3,4})\b"
     r"|\b\d{1,2}[:h]\d{2}\b"
-    r"|\b(?:hoje|amanha|amanhã|depois de amanha|depois de amanhã)\b"
+    r"|\b(?:hoje|amanha|amanhã|depois de amanha|depois de amanhã|agora|a partir de agora)\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b",
     flags=re.IGNORECASE,
 )

@@ -29,6 +29,18 @@ class ChatQueryRewriteTests(unittest.TestCase):
 
         self.assertFalse(_allow_companion_shortcut_for_question("E carga não IMO", plan))
 
+    def test_rewrites_draft_follow_up_using_previous_terminal(self) -> None:
+        history = [
+            {
+                "role": "user",
+                "content": "Tenho um navio para mudar do fundeadouro Norte para a Secil Este. A que horas devo marcar?",
+            }
+        ]
+
+        rewritten = _contextual_lookup_question("O navio tem 8,3 m de calado, há problema?", history)
+
+        self.assertEqual(rewritten, "O navio tem 8,3 m de calado, há problema? para Secil E")
+
     def test_standalone_question_can_use_companion_shortcut(self) -> None:
         plan = build_chat_execution_plan("Qual o calado máximo no TGL com carga não IMO?")
 

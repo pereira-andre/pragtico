@@ -780,10 +780,34 @@ def _contextual_entity_lookup_question(question: str, history: list[dict]) -> st
     return _intent_template_from_question(previous_question).format(entity=entity_name)
 
 
+def _contextual_technical_follow_up_question(question: str, history: list[dict]) -> str:
+    clean = _normalize_lookup_text(question)
+    if not clean or detect_port_entities(question):
+        return question
+    if not re.search(
+        r"\b(navio|calado|loa|comprimento|boca|draft|vento|rebocador|rebocadores|reboque|reboques)\b",
+        clean,
+    ):
+        return question
+    if not re.search(r"\b(problema|pode|posso|cabe|aceitavel|aceitável|suficiente|limite|maximo|máximo|ha|há)\b", clean):
+        return question
+    previous_question = _last_user_question_with_reusable_intent(history)
+    if not previous_question:
+        return question
+    entities = specific_entities(detect_port_entities(previous_question))
+    if not entities:
+        return question
+    entity_name = entity_names_from_matches(entities)[0]
+    return f"{question} para {entity_name}"
+
+
 def _contextual_lookup_question(question: str, history: list[dict]) -> str:
     entity_question = _contextual_entity_lookup_question(question, history)
     if entity_question != question:
         return entity_question
+    technical_question = _contextual_technical_follow_up_question(question, history)
+    if technical_question != question:
+        return technical_question
     if not _looks_like_route_duration_follow_up(question):
         return question
     stripped_question = _strip_follow_up_lead_in(question)
@@ -1648,7 +1672,7 @@ def handle_chat_turn(
                     }
         elif answer is None:
             answer = answer_direct_operational_query(
-                lookup_question if is_revision_attempt else clean_question,
+                lookup_question if (is_revision_attempt or lookup_question != clean_question) else clean_question,
                 plan=execution_plan,
             )
 

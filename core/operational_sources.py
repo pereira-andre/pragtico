@@ -1382,8 +1382,16 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
         re.search(r"\b(mudanca|mudança|mudar|trocar)\b", clean_question)
         and (mentions_tanquisado or mentions_ecooil)
         and mentions_lisnave
+        and (
+            re.search(r"\b(tanquisado|eco\s*-?\s*oil|ecooil)\b.{0,80}\bpara\b.{0,80}\b(lisnave|mitrena|doca\s*2[12]|d2[12])\b", clean_question)
+            or re.search(r"\b(de|da|do)\s+(tanquisado|eco\s*-?\s*oil|ecooil)\b.{0,80}\b(lisnave|mitrena|doca\s*2[12]|d2[12])\b", clean_question)
+        )
     )
     if is_shift_to_lisnave:
+        if _parse_maneuver_time(question) or re.search(r"\b(a partir de agora|agora|hoje|amanha|amanhã|que horas|a que horas|horas devo|horas marco)\b", clean_question):
+            concrete_answer = _answer_general_reponto_marking_direct(question, clean_question)
+            if concrete_answer:
+                return concrete_answer
         answer = (
             "🌕 SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE.\n"
             "- Antecedência de marcação normal: 1 hora antes do reponto de maré pretendido.\n"
@@ -1468,6 +1476,16 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     wind_kts = _extract_wind_kts_from_question(question)
     if wind_kts is not None and wind_kts > 25:
         return None
+
+    general_reponto_answer = _answer_general_reponto_marking_direct(question, clean_question)
+    if general_reponto_answer:
+        return general_reponto_answer
+    referenced_time_answer = _answer_referenced_tide_time_marking_direct(question, clean_question)
+    if referenced_time_answer:
+        return referenced_time_answer
+    secil_next_marking_answer = _answer_secil_next_marking_direct(question, clean_question)
+    if secil_next_marking_answer:
+        return secil_next_marking_answer
 
     draft = _extract_draft_m_from_question(question)
     high_draft = draft is not None and draft >= 9
@@ -1872,6 +1890,699 @@ def _format_tide_context(tide_event) -> str:
     )
 
 
+def _has_explicit_tide_date(question: str, clean_question: str) -> bool:
+    return bool(
+        re.search(r"\b(hoje|amanha|amanhã|ontem|depois de amanha|depois de amanhã)\b", clean_question)
+        or re.search(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b", question)
+        or re.search(r"\b20\d{2}-\d{2}-\d{2}\b", question)
+        or re.search(
+            r"\b\d{1,2}\s+de\s+"
+            r"(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b",
+            question,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def _forecast_and_reference_now_for_marking() -> tuple[dict | None, datetime]:
+    forecast = None
+    weather_service = getattr(services, "weather_service", None)
+    if weather_service and getattr(weather_service, "enabled", False):
+        try:
+            forecast = weather_service.get_forecast(days=3)
+        except Exception:
+            logger.exception("Falha ao obter meteorologia para cálculo de marcação.")
+            forecast = None
+    reference_dt = _parse_weather_reference_datetime(forecast or {}) if forecast else None
+    if reference_dt:
+        return forecast, reference_dt.replace(tzinfo=LISBON_TZ)
+    return forecast, datetime.now(LISBON_TZ)
+
+
+def _resolve_tide_dates_for_marking(question: str, clean_question: str, tide_service, reference_dt: datetime) -> list[date]:
+    dates: list[date] = []
+    if tide_service and hasattr(tide_service, "resolve_query_dates"):
+        try:
+            dates = list(tide_service.resolve_query_dates(question, reference_dt.date()))
+        except TypeError:
+            dates = list(tide_service.resolve_query_dates(question))
+        except Exception:
+            logger.exception("Falha ao resolver datas para cálculo de marcação.")
+            dates = []
+    if not dates:
+        dates = [reference_dt.date()]
+    if not _has_explicit_tide_date(question, clean_question):
+        for offset in (0, 1, 2):
+            candidate = reference_dt.date() + timedelta(days=offset)
+            if candidate not in dates:
+                dates.append(candidate)
+    return dates
+
+
+def _tide_events_for_marking(question: str, clean_question: str, tide_service, reference_dt: datetime) -> list:
+    if not tide_service or not hasattr(tide_service, "events_for_date"):
+        return []
+    events = []
+    for target_date in _resolve_tide_dates_for_marking(question, clean_question, tide_service, reference_dt):
+        try:
+            events.extend(tide_service.events_for_date(target_date))
+        except Exception:
+            logger.exception("Falha ao obter eventos de maré para cálculo de marcação.")
+    return sorted(events, key=lambda item: item.timestamp)
+
+
+def _mark_window_for_tide(tide_event, min_before: int, max_before: int) -> tuple[datetime, datetime]:
+    start_dt = tide_event.timestamp - timedelta(minutes=max_before)
+    end_dt = tide_event.timestamp - timedelta(minutes=min_before)
+    return start_dt, end_dt
+
+
+def _format_mark_window(start_dt: datetime, end_dt: datetime) -> str:
+    if start_dt.strftime("%H:%M") == end_dt.strftime("%H:%M"):
+        return start_dt.strftime("%H:%M")
+    return f"{start_dt.strftime('%H:%M')}-{end_dt.strftime('%H:%M')}"
+
+
+def _marking_candidates(
+    question: str,
+    clean_question: str,
+    tide_service,
+    reference_dt: datetime,
+    *,
+    min_before: int,
+    max_before: int,
+    require_high_tide: bool = False,
+) -> list[dict]:
+    candidates = []
+    for tide_event in _tide_events_for_marking(question, clean_question, tide_service, reference_dt):
+        if require_high_tide and getattr(tide_event, "tide_type", "") != "preia-mar":
+            continue
+        start_dt, end_dt = _mark_window_for_tide(tide_event, min_before, max_before)
+        if end_dt < reference_dt:
+            continue
+        candidates.append({"tide": tide_event, "start": start_dt, "end": end_dt})
+    return candidates
+
+
+def _parse_weather_slot_datetime(slot: dict) -> datetime | None:
+    raw = str(slot.get("timestamp") or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            parsed = datetime.strptime(raw, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=LISBON_TZ)
+            return parsed.astimezone(LISBON_TZ)
+        except ValueError:
+            continue
+    return None
+
+
+def _weather_status_for_marking_window(forecast: dict | None, start_dt: datetime, tide_dt: datetime) -> dict:
+    if not forecast:
+        return {"known": False}
+    window_start = start_dt - timedelta(minutes=30)
+    window_end = tide_dt + timedelta(minutes=15)
+    slots = []
+    for slot in build_weather_timeline(forecast, max_hours=96):
+        slot_dt = _parse_weather_slot_datetime(slot)
+        if slot_dt and window_start <= slot_dt <= window_end:
+            slots.append((slot_dt, slot))
+
+    current = forecast.get("current") or {}
+    location = forecast.get("location") or {}
+    current_dt = None
+    try:
+        current_dt = datetime.strptime(str(location.get("localtime") or ""), "%Y-%m-%d %H:%M").replace(tzinfo=LISBON_TZ)
+    except ValueError:
+        current_dt = None
+    if current_dt and window_start <= current_dt <= window_end:
+        slots.append((current_dt, current))
+
+    if not slots:
+        return {"known": False}
+
+    strongest = None
+    strongest_label = ""
+    fog_detected = False
+    for slot_dt, slot in slots:
+        wind = _safe_weather_float(slot.get("wind_kts"))
+        gust = _safe_weather_float(slot.get("gust_kts"))
+        for value in (wind, gust):
+            if value is not None and (strongest is None or value > strongest):
+                strongest = value
+                strongest_label = slot_dt.strftime("%H:%M")
+        visibility = _safe_weather_float(slot.get("vis_km"))
+        condition = str(slot.get("condition") or "").lower()
+        if (visibility is not None and visibility <= 1.0) or re.search(r"\b(nevoeiro|nevoa|névoa|fog|mist)\b", condition):
+            fog_detected = True
+
+    suspended = bool((strongest is not None and strongest > 25) or fog_detected)
+    caution = bool(strongest is not None and 20 <= strongest <= 25)
+    return {
+        "known": True,
+        "suspended": suspended,
+        "caution": caution,
+        "strongest_wind_kts": strongest,
+        "strongest_label": strongest_label,
+        "fog_detected": fog_detected,
+    }
+
+
+def _weather_note_for_marking(status: dict) -> str:
+    if not status.get("known"):
+        return "Meteorologia: não consegui confirmar a previsão horária; antes de fechar, validar vento, rajadas, visibilidade e ondulação."
+    strongest = status.get("strongest_wind_kts")
+    strongest_label = status.get("strongest_label") or "--"
+    wind_text = f"vento/rajada máximo previsto {_format_weather_kts(strongest)} às {strongest_label}"
+    if status.get("suspended"):
+        reason = "nevoeiro/visibilidade reduzida" if status.get("fog_detected") else wind_text
+        return f"Meteorologia: não fechar a janela se se confirmar {reason}; acima de 25 kt ou com nevoeiro, a manobra deve ficar suspensa."
+    if status.get("caution"):
+        return f"Meteorologia: {wind_text}; está perto do limite operacional, por isso convém confirmar tendência antes de requisitar meios."
+    return f"Meteorologia: {wind_text}; sem sinal automático de suspensão por vento/nevoeiro nesta janela."
+
+
+def _select_weather_aware_marking(candidates: list[dict], forecast: dict | None) -> tuple[dict | None, dict, dict | None, dict]:
+    if not candidates:
+        return None, {"known": False}, None, {"known": False}
+    first = candidates[0]
+    first_status = _weather_status_for_marking_window(forecast, first["start"], first["tide"].timestamp)
+    if not first_status.get("suspended"):
+        return first, first_status, None, {"known": False}
+    for candidate in candidates[1:]:
+        status = _weather_status_for_marking_window(forecast, candidate["start"], candidate["tide"].timestamp)
+        if not status.get("suspended"):
+            return candidate, status, first, first_status
+    return first, first_status, first, first_status
+
+
+def _reponto_lead_text(min_before: int, max_before: int) -> str:
+    if min_before == max_before:
+        if min_before == 120:
+            return "2 horas antes"
+        if min_before == 90:
+            return "1 hora e 30 minutos antes"
+        if min_before == 60:
+            return "1 hora antes"
+        return f"{min_before} min antes"
+    low, high = sorted((min_before, max_before))
+    if low == 60 and high == 90:
+        return "1h a 1h30 antes"
+    if low == 45 and high == 60:
+        return "45 min a 1h antes"
+    if low == 30 and high == 45:
+        return "30-45 min antes"
+    return f"{low}-{high} min antes"
+
+
+def _reponto_reference_phrase(reference_type: str, *, intended: bool = False) -> str:
+    if reference_type == "preia-mar":
+        return "da preia-mar pretendida" if intended else "da preia-mar"
+    return "do reponto de maré pretendido" if intended else "do reponto"
+
+
+def _reponto_origin_kind(clean_question: str) -> tuple[str, str]:
+    if re.search(r"\b(fundeadouro\s+norte|fundeadouro\s+n|fn)\b", clean_question):
+        return "north_anchorage", "Fundeadouro Norte"
+    if re.search(r"\b(troia|tróia|fundeadouro\s+sul|fundeadouro\s+s)\b", clean_question):
+        return "troia", "Tróia/Fundeadouro Sul"
+    if re.search(r"\b(fora\s+da\s+barra|barra|entrada\s+da\s+barra|pilot\s+station|posicao\s+de\s+embarque|posição\s+de\s+embarque)\b", clean_question):
+        return "bar", "fora da Barra"
+    if re.search(r"\b(outro\s+cais|de\s+cais|do\s+cais|da\s+doca|de\s+doca)\b", clean_question):
+        return "other_berth", "outro cais"
+    return "unknown", "origem não indicada"
+
+
+def _reponto_operation_kind(clean_question: str) -> str:
+    if re.search(r"\b(de|da|do|desde)\s+(fora\s+da\s+barra|barra|entrada\s+da\s+barra)\b.{0,80}\bpara\b", clean_question):
+        return "entry"
+    if re.search(r"\b(de|da|do|desde)\s+(fundeadouro\s+norte|fundeadouro\s+sul|troia|tróia|outro\s+cais)\b.{0,80}\bpara\b", clean_question):
+        return "shift"
+    if re.search(r"\b(saida|saída|sair|largada|largar|desatracar|desatracacao|desatracação)\b", clean_question):
+        return "departure"
+    if re.search(r"\b(mudanca|mudança|mudar|trocar|shift)\b", clean_question):
+        return "shift"
+    return "entry"
+
+
+def _reponto_target_terminal(clean_question: str) -> str | None:
+    if re.search(r"\b(tanquisado|eco\s*-?\s*oil|ecooil)\b.{0,80}\bpara\b.{0,80}\b(lisnave|mitrena|doca\s*2[12]|d2[12])\b", clean_question):
+        return "lisnave"
+    if re.search(r"\b(lisnave|mitrena|doca\s*2[12]|d2[12])\b.{0,80}\bpara\b.{0,80}\btanquisado\b", clean_question):
+        return "tanquisado"
+    if re.search(r"\b(lisnave|mitrena|doca\s*2[12]|d2[12])\b.{0,80}\bpara\b.{0,80}\b(eco\s*-?\s*oil|ecooil)\b", clean_question):
+        return "eco_oil"
+    if "secil" in clean_question:
+        return "secil"
+    if "alstom" in clean_question:
+        return "alstom"
+    if re.search(r"\b(sapec|tps|tgl)\b", clean_question):
+        return "sapec"
+    if re.search(r"\b(tms\s*1|tms1|tms\s*2|tms2)\b", clean_question):
+        return "tms"
+    if re.search(r"\b(teporset|tepor\s*set)\b", clean_question):
+        return "teporset"
+    if "termitrena" in clean_question:
+        return "termitrena"
+    if re.search(r"\b(eco\s*-?\s*oil|ecooil)\b", clean_question):
+        return "eco_oil"
+    if "tanquisado" in clean_question:
+        return "tanquisado"
+    if "lisnave" in clean_question or "mitrena" in clean_question or re.search(r"\b(doca\s*2[12]|d2[12]|hidrolift)\b", clean_question):
+        return "lisnave"
+    return None
+
+
+def _reponto_terminal_label(terminal: str, clean_question: str) -> str:
+    if terminal == "secil":
+        if re.search(r"\b(e|este|east|cais\s+e|cais\s+este|cais\s+b)\b", clean_question):
+            return "SECIL E/Este"
+        if re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question):
+            return "SECIL W/Oeste"
+        return "SECIL"
+    labels = {
+        "lisnave": "LISNAVE/Mitrena",
+        "tanquisado": "Tanquisado",
+        "eco_oil": "Eco-Oil",
+        "teporset": "Teporset",
+        "termitrena": "Termitrena",
+        "tms": "TMS 1/TMS 2",
+        "sapec": "SAPEC",
+        "alstom": "ALSTOM",
+    }
+    if terminal == "sapec" and re.search(r"\b(liquidos|líquidos|tgl)\b", clean_question):
+        return "TGL/SAPEC Líquidos"
+    if terminal == "sapec" and re.search(r"\b(solidos|sólidos|tps)\b", clean_question):
+        return "TPS/SAPEC Sólidos"
+    return labels.get(terminal, terminal)
+
+
+def _reponto_limits_note(terminal: str, clean_question: str) -> str:
+    if terminal == "secil":
+        if re.search(r"\b(e|este|east|cais\s+e|cais\s+este|cais\s+b)\b", clean_question):
+            return "Limites úteis SECIL E: LOA de referência 140 m e calado de referência 8,0 m."
+        if re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question):
+            return "Limites úteis SECIL W: LOA máximo 200 m, calado de referência 9,5 m; se LOA > 170 m, usar luz do dia e proximidade da preia-mar."
+        return "Limites úteis SECIL: distinguir Oeste/Este; Oeste 200 m/9,5 m de referência, Este 140 m/8,0 m de referência."
+    if terminal == "lisnave":
+        if re.search(r"\b(doca\s*21|d21)\b", clean_question):
+            return "Limites úteis LISNAVE Doca 21: 450 m de comprimento; calado depende da soleira/comporta, maré e destino interno."
+        if re.search(r"\b(doca\s*22|d22)\b", clean_question):
+            return "Limites úteis LISNAVE Doca 22: 350 m de comprimento; calado depende da soleira/comporta, maré e destino interno."
+        if "hidrolift" in clean_question:
+            return "Limites úteis Hidrolift/D31-D33: boca máxima 32 m; calado depende da água disponível no acesso."
+        return "Limites úteis LISNAVE: não há calado único global; LOA > 280 m só de dia, sempre junto do reponto."
+    if terminal == "tanquisado":
+        return "Limites úteis Tanquisado: 463 m incluindo duques d'alba; calado máximo absoluto 9,5 m; calado praticável diurno 6,3 m + altura de maré, com teto 9,5 m."
+    if terminal == "eco_oil":
+        return "Limites úteis Eco-Oil: calado máximo estacionado 7,5 m; manobra em preia-mar 7,0 m e em baixa-mar 5,5 m; atracação noturna proibida."
+    if terminal == "teporset":
+        return "Limites úteis Teporset: LOA de referência 200 m; calado = 7,4 m + altura da preia-mar, com teto 11,0 m."
+    if terminal == "termitrena":
+        return "Limites úteis Termitrena: LOA máximo 200 m; calado = 8,8 m + baixa-mar de referência, com teto 10,0 m."
+    if terminal == "tms":
+        return "Limites úteis TMS 1/TMS 2: regra de preia-mar aplica-se sobretudo a calados 9-12 m; validar calado praticável. TMS 2 tem calado máximo 12 m, TMS 1 varia por cabeços."
+    if terminal == "sapec":
+        if re.search(r"\b(liquidos|líquidos|tgl|imo|nao\s+imo|não\s+imo)\b", clean_question):
+            return "Limites úteis TGL/SAPEC Líquidos: referência 9,5 m para IMO e 10,0 m para não-IMO, sempre com fórmula de calado praticável."
+        return "Limites úteis SAPEC: distinguir TPS/TGL; no TGL, carga IMO usa referência 9,5 m e não-IMO 10,0 m; no TPS, confirmar carochas/defensas para calado elevado."
+    if terminal == "alstom":
+        return "Limites úteis ALSTOM: LOA máximo 120 m, atracação só por estibordo, manobra só de dia e vento inferior a 15 kt."
+    return ""
+
+
+def _resolve_reponto_marking_rule(question: str, clean_question: str) -> dict | None:
+    terminal = _reponto_target_terminal(clean_question)
+    if not terminal:
+        return None
+
+    operation = _reponto_operation_kind(clean_question)
+    is_departure = operation == "departure"
+    is_shift = operation == "shift"
+    is_entry_word = bool(re.search(r"\b(entrada|entrar|atracar|atracacao|atracação)\b", clean_question))
+    implicit_destination = bool(
+        re.search(r"\b(navio|manobra)\b.{0,40}\bpara\b", clean_question)
+        or re.search(r"\bpara\s+(a\s+|o\s+)?(secil|lisnave|mitrena|tanquisado|eco\s*-?\s*oil|ecooil|teporset|termitrena|sapec|tms\s*1|tms1|tms\s*2|tms2|alstom)\b", clean_question)
+    )
+    if re.search(r"\b(e\s+outro|e\s+outra|mesmo\s+cais|tambem|também)\b", clean_question):
+        return None
+    if is_departure and (is_entry_word or is_shift):
+        return None
+
+    draft = _extract_draft_m_from_question(question)
+    mentions_high_draft = bool(
+        (draft is not None and draft >= 9)
+        or re.search(r"\b(grande\s+calado|calado\s+alto|calado\s+condicionante|proximo\s+do\s+maximo|próximo\s+do\s+máximo)\b", clean_question)
+    )
+    high_draft_schedule = terminal in {"tms", "sapec"} and mentions_high_draft and re.search(r"\b(como|quando|marca\w*|marco|hora|horario|horário)\b", clean_question)
+    if not (is_departure or is_shift or is_entry_word or implicit_destination or high_draft_schedule):
+        return None
+    origin_kind, origin_label = _reponto_origin_kind(clean_question)
+    min_before = max_before = 0
+    reference_type = "reponto"
+    rule_description = ""
+    assumption_note = ""
+
+    if terminal == "secil":
+        if is_departure:
+            min_before = max_before = 15
+            rule_description = "saída da SECIL"
+        elif origin_kind in {"troia", "other_berth"}:
+            min_before, max_before = 45, 60
+            rule_description = f"{'mudança' if is_shift else 'entrada'} para SECIL vinda de {origin_label}"
+        else:
+            min_before, max_before = 30, 45
+            rule_description = f"{'mudança' if is_shift else 'entrada'} para SECIL vinda de {origin_label if origin_kind != 'unknown' else 'fora da Barra/Fundeadouro Norte'}"
+            if origin_kind == "unknown":
+                assumption_note = "Assumi origem fora da Barra/Fundeadouro Norte; se vier de Tróia ou outro cais, a janela passa para 45 min a 1h antes."
+    elif terminal in {"tanquisado", "eco_oil", "lisnave"}:
+        if terminal == "lisnave" and is_departure and re.search(r"\b(doca\s*21|doca\s*22|d21|d22)\b", clean_question):
+            min_before = max_before = 120
+            reference_type = "preia-mar"
+            rule_description = "saída das Docas 21/22 da LISNAVE"
+        elif terminal == "lisnave" and is_shift and re.search(r"\b(tanquisado|eco\s*-?\s*oil|ecooil)\b", clean_question):
+            if re.search(r"\b(doca\s*21|doca\s*22|d21|d22)\b", clean_question) and re.search(r"\b(grande|comprimento|doca\s+seca|condicionante)\b", clean_question):
+                min_before = max_before = 120
+                reference_type = "preia-mar"
+                rule_description = "mudança Tanquisado/Eco-Oil -> Doca 21/22 da LISNAVE com navio grande/condicionante"
+            else:
+                min_before = max_before = 60
+                rule_description = "mudança Tanquisado/Eco-Oil -> LISNAVE"
+        elif is_departure:
+            min_before = max_before = 60
+            rule_description = f"saída de {_reponto_terminal_label(terminal, clean_question)}"
+        else:
+            if origin_kind == "north_anchorage":
+                min_before = max_before = 90
+            elif origin_kind == "troia":
+                min_before = max_before = 60
+            else:
+                min_before = max_before = 120
+                if origin_kind == "unknown":
+                    assumption_note = "Assumi entrada de fora da Barra; se vier do Fundeadouro Norte usa 1h30 antes, e se vier de Tróia/Fundeadouro Sul usa 1h antes."
+            rule_description = f"{'mudança' if is_shift else 'entrada'} para {_reponto_terminal_label(terminal, clean_question)} vinda de {origin_label if origin_kind != 'unknown' else 'fora da Barra'}"
+    elif terminal in {"teporset", "termitrena"}:
+        if is_departure:
+            min_before = max_before = 15
+            rule_description = f"saída da {_reponto_terminal_label(terminal, clean_question)}"
+        else:
+            if origin_kind == "north_anchorage":
+                min_before = max_before = 90
+            elif origin_kind == "troia":
+                min_before = max_before = 60
+            else:
+                min_before = max_before = 120
+                if origin_kind == "unknown":
+                    assumption_note = "Assumi entrada de fora da Barra; se vier do Fundeadouro Norte usa 1h30 antes, e se vier de Tróia/Fundeadouro Sul usa 1h antes."
+            if mentions_high_draft or "preia" in clean_question:
+                reference_type = "preia-mar"
+            rule_description = f"{'mudança' if is_shift else 'entrada'} para {_reponto_terminal_label(terminal, clean_question)} vinda de {origin_label if origin_kind != 'unknown' else 'fora da Barra'}"
+    elif terminal == "tms":
+        if not mentions_high_draft:
+            return None
+        if is_departure:
+            min_before = max_before = 30
+            rule_description = "saída TMS 1/TMS 2 com grande calado"
+        else:
+            min_before, max_before = 60, 90
+            reference_type = "preia-mar"
+            rule_description = "entrada TMS 1/TMS 2 com calado entre 9 m e 12 m"
+    elif terminal == "sapec":
+        if not mentions_high_draft:
+            return None
+        if is_departure:
+            min_before = max_before = 30
+            rule_description = "saída SAPEC com grande calado"
+        else:
+            min_before = max_before = 90
+            reference_type = "preia-mar"
+            rule_description = f"entrada {_reponto_terminal_label(terminal, clean_question)} com calado condicionante"
+    elif terminal == "alstom":
+        reference_type = "preia-mar"
+        if origin_kind == "north_anchorage":
+            min_before = max_before = 45
+            rule_description = "mudança/entrada Fundeadouro Norte -> ALSTOM"
+        else:
+            min_before = max_before = 90
+            rule_description = "entrada da Barra -> ALSTOM"
+            if origin_kind == "unknown":
+                assumption_note = "Assumi entrada desde a Barra; se vier do Fundeadouro Norte, a antecedência prática é 45 min antes da preia-mar."
+    else:
+        return None
+
+    return {
+        "terminal": terminal,
+        "terminal_label": _reponto_terminal_label(terminal, clean_question),
+        "operation": operation,
+        "rule_description": rule_description,
+        "min_before": min_before,
+        "max_before": max_before,
+        "reference_type": reference_type,
+        "require_high_tide": reference_type == "preia-mar",
+        "assumption_note": assumption_note,
+        "limits_note": _reponto_limits_note(terminal, clean_question),
+    }
+
+
+def _answer_general_reponto_marking_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\b(reponto|preia|baixa|mare|mar[eé]|antecedencia|antecedência|marca\w*|marco|quando|hora|horario|horário|a partir de agora|agora)\b", clean_question):
+        return None
+    if "secil" in clean_question and re.search(
+        r"\b(com\s+que\s+antecedencia|com\s+que\s+antecedência|quanto\s+tempo\s+de\s+antecedencia|quanto\s+tempo\s+de\s+antecedência|"
+        r"marquei|marcada|marcado|corret\w*|correct\w*|certo|certa|tenho\s+de\s+ir)\b",
+        clean_question,
+    ):
+        return None
+    rule = _resolve_reponto_marking_rule(question, clean_question)
+    if not rule:
+        return None
+
+    parsed_time = _parse_maneuver_time(question)
+    wants_live_window = bool(
+        re.search(r"\b(a partir de agora|agora|hoje|amanha|amanhã|proxima|próxima|proximo|próximo|que horas|a que horas|horas devo|horas marco)\b", clean_question)
+        or _has_explicit_tide_date(question, clean_question)
+    )
+    min_before = int(rule["min_before"])
+    max_before = int(rule["max_before"])
+    lead_text = _reponto_lead_text(min_before, max_before)
+    reference_type = str(rule["reference_type"])
+    reference_phrase = _reponto_reference_phrase(reference_type)
+    selected = None
+    selected_status = {"known": False}
+    skipped = None
+    skipped_status = {"known": False}
+    tide_label = "preia-mar pretendida" if reference_type == "preia-mar" else "reponto de maré pretendido"
+    window_label = f"{lead_text} {_reponto_reference_phrase(reference_type, intended=True)}"
+    forecast = None
+
+    if parsed_time:
+        if min_before == max_before:
+            tide_label, window_label = _time_minus_label_from_question(question, min_before)
+        else:
+            tide_label, window_label = _time_range_before_label_from_question(question, min_before, max_before)
+        forecast, reference_dt = _forecast_and_reference_now_for_marking()
+        hour, minute, _time_label = parsed_time
+        tide_dt = reference_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if tide_dt < reference_dt:
+            tide_dt += timedelta(days=1)
+        selected_status = _weather_status_for_marking_window(forecast, tide_dt - timedelta(minutes=max_before), tide_dt)
+    elif wants_live_window:
+        tide_service = getattr(services, "tide_service", None)
+        forecast, reference_dt = _forecast_and_reference_now_for_marking()
+        candidates = _marking_candidates(
+            question,
+            clean_question,
+            tide_service,
+            reference_dt,
+            min_before=min_before,
+            max_before=max_before,
+            require_high_tide=bool(rule["require_high_tide"]),
+        )
+        selected, selected_status, skipped, skipped_status = _select_weather_aware_marking(candidates, forecast)
+        if selected:
+            window_label = _format_mark_window(selected["start"], selected["end"])
+            tide_label = _format_tide_context(selected["tide"])
+
+    skipped_note = ""
+    if skipped and selected and skipped is not selected:
+        skipped_note = (
+            f"- Não escolhi a primeira janela ({_format_mark_window(skipped['start'], skipped['end'])} para {_format_tide_context(skipped['tide'])}) "
+            f"porque a meteorologia prevista passa o limite: {_weather_note_for_marking(skipped_status)}\n"
+        )
+    local_note = ""
+    if rule["terminal"] == "teporset":
+        local_note = "- Teporset: considera que o reponto local acontece cerca de 15 min depois da hora nominal.\n"
+    if rule["terminal"] == "alstom":
+        local_note = "- ALSTOM: não usar baixa-mar; a referência é sempre a preia-mar, com luz do dia e vento inferior a 15 kt.\n"
+    assumption = f"- {rule['assumption_note']}\n" if rule.get("assumption_note") else ""
+    limits = f"- {rule['limits_note']}\n" if rule.get("limits_note") else ""
+    weather_note = f"- {_weather_note_for_marking(selected_status)}\n" if (parsed_time or wants_live_window) else ""
+    answer = (
+        f"🌕 Para {rule['rule_description']}, marca {window_label}.\n"
+        f"- Referência usada: {tide_label}.\n"
+        f"- Regra aplicada: {lead_text} {reference_phrase}.\n"
+        f"{skipped_note}"
+        f"{assumption}"
+        f"{local_note}"
+        f"{limits}"
+        f"{weather_note}"
+        "- Antes de fechar, confirmar LOA, calado real, altura de água, vento/rajadas, visibilidade, corrente, rebocadores e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("Marcar_manobra_repontos_mare.txt / berth_profiles.json", "GENERAL_REPONTO_MARKING", answer, "operational_tide_scheduling")],
+        "answer_origin": "operational_tide_scheduling",
+    }
+
+
+def _answer_referenced_tide_time_marking_direct(question: str, clean_question: str) -> dict | None:
+    if re.search(
+        r"\b(secil|sapec|tms\s*1|tms\s*2|teporset|termitrena|lisnave|tanquisado|eco[-\s]?oil|ecooil|autoeuropa|alstom)\b",
+        clean_question,
+    ):
+        return None
+    if not re.search(r"\b(entao|então|se\s+(a\s+)?(mare|mar[eé]|preia|baixa|reponto))\b", clean_question):
+        return None
+    if not re.search(r"\b(mare|mar[eé]|reponto|preia|baixa)\b", clean_question):
+        return None
+    if not re.search(r"\b(marco|marcar|marca\w*|hora|horario|horário)\b", clean_question):
+        return None
+    parsed_time = _parse_maneuver_time(question)
+    if not parsed_time:
+        return None
+    reponto_label, fn_window = _time_range_before_label_from_question(question, 30, 45)
+    _reponto_label, troia_window = _time_range_before_label_from_question(question, 45, 60)
+    _reponto_label, departure_label = _time_minus_label_from_question(question, 15)
+    forecast, reference_dt = _forecast_and_reference_now_for_marking()
+    hour, minute, _time_label = parsed_time
+    tide_dt = reference_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if tide_dt < reference_dt:
+        tide_dt += timedelta(days=1)
+    status = _weather_status_for_marking_window(forecast, tide_dt - timedelta(minutes=45), tide_dt)
+    answer = (
+        "🌕 Assumindo a situação anterior, Fundeadouro Norte -> SECIL E, usa a janela 30-45 min antes do reponto.\n"
+        f"- Se o reponto/maré de referência é {reponto_label}, marca a manobra na janela {fn_window}.\n"
+        f"- Eu apontaria para o início/meio da janela se quiseres margem, e nunca para depois de {fn_window.split('-')[-1]}.\n"
+        f"- Se fosse de Tróia/outro cais, a janela passava para {troia_window}; se fosse saída da SECIL, seria cerca de {departure_label}.\n"
+        f"- {_weather_note_for_marking(status)}\n"
+        "Confirmar SECIL E/Oeste, LOA, calado, vento/rajadas, visibilidade, ondulação e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_REFERENCED_TIDE_TIME_MARKING", answer, "operational_tide_scheduling")],
+        "answer_origin": "operational_tide_scheduling",
+    }
+
+
+def _answer_secil_next_marking_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    if not re.search(r"\b(marco|marcar|marca\w*|quando|hora|horario|horário|a partir de agora|agora)\b", clean_question):
+        return None
+    if not re.search(r"\b(manobra|entrada|entrar|atracar|atracacao|atracação|mudar|mudanca|mudança|saida|saída|sair|largada)\b", clean_question):
+        return None
+    parsed_time = _parse_maneuver_time(question)
+    if parsed_time:
+        return None
+    wants_concrete_window = bool(
+        re.search(
+            r"\b(a partir de agora|agora|hoje|amanha|amanhã|depois|proxima|próxima|proximo|próximo|que horas|a que horas|horas devo|horas marco)\b",
+            clean_question,
+        )
+        or _has_explicit_tide_date(question, clean_question)
+    )
+    if not wants_concrete_window:
+        return None
+
+    is_east = bool(re.search(r"\b(e|este|east|cais e|cais este|cais b)\b", clean_question))
+    is_west = bool(re.search(r"\b(w|oeste|west|cais w|cais oeste|cais a)\b", clean_question))
+    is_departure = bool(re.search(r"\b(saida|saída|sair|largada|desatracar|desatracacao|desatracação)\b", clean_question))
+    from_troia_or_other = bool(re.search(r"\b(troia|tróia|fundeadouro sul|outro cais|de cais|do cais)\b", clean_question))
+    from_north_or_bar = bool(re.search(r"\b(fundeadouro norte|fora da barra|barra)\b", clean_question))
+    if is_departure:
+        min_before = max_before = 15
+        route_label = "saída da SECIL"
+    elif from_troia_or_other:
+        min_before, max_before = 45, 60
+        route_label = "entrada/mudança para SECIL vinda de Tróia/Fundeadouro Sul ou outro cais"
+    else:
+        min_before, max_before = 30, 45
+        route_label = "entrada/mudança para SECIL vinda de fora da Barra ou do Fundeadouro Norte"
+        if not from_north_or_bar:
+            route_label += " (assumi esta origem por defeito; confirma se vier de Tróia/outro cais)"
+
+    tide_service = getattr(services, "tide_service", None)
+    forecast, reference_dt = _forecast_and_reference_now_for_marking()
+    candidates = _marking_candidates(
+        question,
+        clean_question,
+        tide_service,
+        reference_dt,
+        min_before=min_before,
+        max_before=max_before,
+    )
+    selected, selected_status, skipped, skipped_status = _select_weather_aware_marking(candidates, forecast)
+    if not selected:
+        answer = (
+            "🌕 Não encontrei uma janela de maré futura para calcular a marcação.\n"
+            "Confirma a data pretendida ou pede, por exemplo: 'para hoje' / 'amanhã' / 'dia 18'."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_NEXT_TIDE_MARKING_NO_TIDE", answer, "operational_tide_scheduling")],
+            "answer_origin": "operational_tide_scheduling",
+        }
+
+    tide_event = selected["tide"]
+    window_label = _format_mark_window(selected["start"], selected["end"])
+    tide_label = _format_tide_context(tide_event)
+    berth_label = "SECIL E/Este" if is_east else "SECIL W/Oeste" if is_west else "SECIL"
+    spring_tide = _is_operational_spring_tide(tide_event, tide_service)
+    tide_note = ""
+    if is_east and spring_tide is True:
+        tide_note = "- SECIL E: pelo critério disponível, é maré viva; a chegada deve ficar junto do reponto.\n"
+    elif is_east:
+        tide_note = "- SECIL E: mesmo fora de maré viva, a prática favorece a menor corrente junto do reponto.\n"
+    skipped_note = ""
+    if skipped and skipped is not selected:
+        skipped_note = (
+            f"- Não escolhi a primeira janela ({_format_mark_window(skipped['start'], skipped['end'])} para {_format_tide_context(skipped['tide'])}) "
+            f"porque a meteorologia prevista passa o limite: {_weather_note_for_marking(skipped_status)}\n"
+        )
+    if min_before == max_before:
+        rule_line = f"- Regra aplicada: {min_before} min antes do reponto.\n"
+    else:
+        rule_line = f"- Regra aplicada: {_reponto_lead_text(min_before, max_before)} do reponto.\n"
+
+    answer = (
+        f"🌕 Para {route_label}, eu marcava {window_label}.\n"
+        f"- Referência usada: {tide_label}.\n"
+        f"- Agora: {reference_dt.strftime('%d/%m/%Y %H:%M')}.\n"
+        f"{skipped_note}"
+        f"{rule_line}"
+        f"{tide_note}"
+        f"- {_weather_note_for_marking(selected_status)}\n"
+        f"- Doca/cais: {berth_label}; confirmar LOA, calado, vento/corrente, rebocadores e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [
+            _direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_NEXT_TIDE_MARKING", answer, "operational_tide_scheduling"),
+            {
+                "document": "Marés Setúbal / Troia",
+                "source_id": "SECIL_NEXT_TIDE_MARKING_TIDE",
+                "chunk_id": 0,
+                "score": 1.0,
+                "retrieval_mode": "structured",
+                "snippet": f"Reponto selecionado: {tide_label}. Janela de marcação: {window_label}.",
+            },
+        ],
+        "answer_origin": "operational_tide_scheduling",
+    }
+
+
 def _answer_secil_confirmation_direct(question: str, clean_question: str) -> dict | None:
     if "secil" not in clean_question:
         return None
@@ -1889,6 +2600,60 @@ def _answer_secil_confirmation_direct(question: str, clean_question: str) -> dic
         "answer": answer,
         "sources": [_direct_source("IT-009_Secil.txt / Marcar_manobra_repontos_mare.txt", "SECIL_ENTRY_CONFIRMATION_FIELDS", answer, "secil_entry_timing")],
         "answer_origin": "secil_entry_timing",
+    }
+
+
+def _answer_secil_draft_direct(question: str, clean_question: str) -> dict | None:
+    if "secil" not in clean_question:
+        return None
+    draft = _extract_draft_m_from_question(question)
+    if draft is None:
+        return None
+    if not re.search(r"\b(calado|draft|problema|pode|avancar|avançar|operar|atracar|entrar)\b", clean_question):
+        return None
+
+    is_east = bool(re.search(r"\b(e|este|east|cais\s+e|cais\s+este|cais\s+b)\b", clean_question))
+    is_west = bool(re.search(r"\b(w|oeste|west|cais\s+w|cais\s+oeste|cais\s+a)\b", clean_question))
+    if is_east:
+        limit = 8.0
+        berth = "SECIL E/Este"
+        extra = "O Cais de Este tem LOA de referência 140 m e calado máximo de referência 8,0 m."
+    elif is_west:
+        limit = 9.5
+        berth = "SECIL W/Oeste"
+        extra = "O Cais de Oeste tem LOA máximo 200 m e calado de referência 9,5 m; se LOA > 170 m, usar luz do dia e proximidade da preia-mar."
+    else:
+        answer = (
+            f"📏 O calado indicado é {_format_measure(draft, ' m')}, mas preciso de distinguir SECIL W/Oeste e SECIL E/Este.\n"
+            "- SECIL E/Este: calado máximo de referência 8,0 m.\n"
+            "- SECIL W/Oeste: calado de referência 9,5 m.\n"
+            "Confirma o cais concreto, LOA, altura de água/maré e validação do Piloto Coordenador."
+        )
+        return {
+            "answer": answer,
+            "sources": [_direct_source("IT-009_Secil.txt", "SECIL_DRAFT_DIRECT_UNSPECIFIED", answer, "secil_draft_rule")],
+            "answer_origin": "secil_draft_rule",
+        }
+
+    draft_label = f"{draft:.1f}".replace(".", ",") + " m"
+    limit_label = f"{limit:.1f}".replace(".", ",") + " m"
+    if draft > limit:
+        answer = (
+            f"📏 Sim, há problema para {berth}: o navio tem {draft_label} de calado e excede a referência de {limit_label}.\n"
+            f"- {extra}\n"
+            "- Com base no IT-009, não fechar a manobra para esse cais sem rever destino/condições e validação expressa do Piloto Coordenador.\n"
+            "- Se a alternativa for SECIL W/Oeste, avaliar separadamente porque os limites e regras de maré/luz são diferentes."
+        )
+    else:
+        answer = (
+            f"📏 Para {berth}, o calado {draft_label} fica dentro da referência de {limit_label}.\n"
+            f"- {extra}\n"
+            "- Isto só resolve a dimensão de calado; ainda tens de confirmar LOA, reponto/preia-mar aplicável, altura de água, vento/corrente, rebocadores e validação do Piloto Coordenador."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-009_Secil.txt", "SECIL_DRAFT_DIRECT", answer, "secil_draft_rule")],
+        "answer_origin": "secil_draft_rule",
     }
 
 
@@ -2992,6 +3757,9 @@ def answer_direct_operational_query(
     secil_confirmation_answer = _answer_secil_confirmation_direct(question, clean_question)
     if secil_confirmation_answer:
         return _attach_operational_diagnostic(secil_confirmation_answer, question)
+    secil_draft_answer = _answer_secil_draft_direct(question, clean_question)
+    if secil_draft_answer:
+        return _attach_operational_diagnostic(secil_draft_answer, question)
     secil_entry_timing_answer = _answer_secil_entry_timing_direct(question, clean_question)
     if secil_entry_timing_answer:
         return _attach_operational_diagnostic(secil_entry_timing_answer, question)
