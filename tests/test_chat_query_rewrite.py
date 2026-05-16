@@ -41,6 +41,21 @@ class ChatQueryRewriteTests(unittest.TestCase):
 
         self.assertEqual(rewritten, "O navio tem 8,3 m de calado, há problema? para Secil E")
 
+    def test_rewrites_tide_marking_follow_up_using_previous_maneuver(self) -> None:
+        history = [
+            {
+                "role": "user",
+                "content": "Tenho também outro navio para mudar do fundeadouro Tróia para a Eco-Oil. A que horas devo marcar manobra?",
+            }
+        ]
+
+        rewritten = _contextual_lookup_question("e se fosse para marcar hoje a manobra?", history)
+
+        self.assertEqual(
+            rewritten,
+            "Tenho também outro navio para mudar do fundeadouro Tróia para a Eco-Oil. A que horas devo marcar manobra? e se fosse para marcar hoje a manobra?",
+        )
+
     def test_standalone_question_can_use_companion_shortcut(self) -> None:
         plan = build_chat_execution_plan("Qual o calado máximo no TGL com carga não IMO?")
 

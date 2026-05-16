@@ -50,13 +50,20 @@ def test_rule_and_companion_deterministic_origins_receive_list_emoji() -> None:
         assert decorated["answer"].startswith("📋 ")
 
 
-def test_tide_deterministic_origins_receive_tide_emoji() -> None:
-    for origin in ("operational_tide_rule", "operational_tide_scheduling"):
-        payload = {"answer_origin": origin, "answer": "Marca 2 horas antes do reponto.", "sources": []}
+def test_tide_rule_origin_receives_wave_emoji() -> None:
+    payload = {"answer_origin": "operational_tide_rule", "answer": "Maré viva depende da preia e baixa.", "sources": []}
 
-        decorated = add_contextual_response_emojis(payload, "Quando marco para o reponto?")
+    decorated = add_contextual_response_emojis(payload, "Quando se considera maré viva?")
 
-        assert decorated["answer"].startswith("🌕 ")
+    assert decorated["answer"].startswith("🌊 ")
+
+
+def test_tide_scheduling_origin_receives_ship_emoji() -> None:
+    payload = {"answer_origin": "operational_tide_scheduling", "answer": "Marca 2 horas antes do reponto.", "sources": []}
+
+    decorated = add_contextual_response_emojis(payload, "Quando marco a manobra para o reponto?")
+
+    assert decorated["answer"].startswith("🚢 ")
 
 
 def test_local_culture_origin_uses_place_marker() -> None:

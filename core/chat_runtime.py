@@ -801,6 +801,40 @@ def _contextual_technical_follow_up_question(question: str, history: list[dict])
     return f"{question} para {entity_name}"
 
 
+def _looks_like_tide_marking_follow_up(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean or detect_port_entities(question):
+        return False
+    if not (
+        _starts_like_follow_up(question)
+        or re.search(r"\b(hoje|amanha|amanhã|agora|a partir de agora|proxima|próxima|proximo|próximo)\b", clean)
+    ):
+        return False
+    return bool(
+        re.search(r"\b(marcar|marca|marco|agendar|requisitar|requisito|hora|horas|horario|horário)\b", clean)
+        and re.search(r"\b(manobra|reponto|mare|mar[eé]|preia|baixa|hoje|amanha|amanhã|agora)\b", clean)
+    )
+
+
+def _looks_like_tide_marking_context(question: str) -> bool:
+    clean = _normalize_lookup_text(question)
+    if not clean or not specific_entities(detect_port_entities(question)):
+        return False
+    return bool(
+        re.search(r"\b(manobra|mudar|mudanca|mudança|entrada|entrar|atracar|saida|saída|sair|marcar|marca|marco|agendar|reponto|mare|mar[eé]|preia|baixa)\b", clean)
+        and re.search(r"\b(fundeadouro|barra|troia|tróia|cais|doca|para|de|da|do|desde)\b", clean)
+    )
+
+
+def _contextual_tide_marking_follow_up_question(question: str, history: list[dict]) -> str:
+    if not _looks_like_tide_marking_follow_up(question):
+        return question
+    previous_question = _last_user_question_with_reusable_intent(history)
+    if not previous_question or not _looks_like_tide_marking_context(previous_question):
+        return question
+    return f"{previous_question} {question}"
+
+
 def _contextual_lookup_question(question: str, history: list[dict]) -> str:
     entity_question = _contextual_entity_lookup_question(question, history)
     if entity_question != question:
@@ -808,6 +842,9 @@ def _contextual_lookup_question(question: str, history: list[dict]) -> str:
     technical_question = _contextual_technical_follow_up_question(question, history)
     if technical_question != question:
         return technical_question
+    tide_marking_question = _contextual_tide_marking_follow_up_question(question, history)
+    if tide_marking_question != question:
+        return tide_marking_question
     if not _looks_like_route_duration_follow_up(question):
         return question
     stripped_question = _strip_follow_up_lead_in(question)

@@ -8,7 +8,7 @@ from typing import Any
 
 LIVE_SLASH_ORIGIN_EMOJI = {
     "slash_weather": "🌦️",
-    "slash_tides": "🌕",
+    "slash_tides": "🌊",
     "slash_wave": "🌊",
     "slash_local_warnings": "⚠️",
     "slash_moon": "🌙",
@@ -43,11 +43,11 @@ OPERATIONAL_ORIGIN_EMOJI = {
     "operational_route_transit": "🧭",
     "operational_safety": "⚠️",
     "operational_safety_limit": "⚠️",
-    "operational_tide_rule": "🌕",
-    "operational_tide_scheduling": "🌕",
+    "operational_tide_rule": "🌊",
+    "operational_tide_scheduling": "🚢",
     "operational_tug_guidance": "⚓",
-    "secil_entry_timing": "🌕",
-    "secil_reponto_rule": "🌕",
+    "secil_entry_timing": "🚢",
+    "secil_reponto_rule": "🚢",
     "source_coverage": "📋",
     "document_companion": "📋",
     "document_companion_global": "📋",
@@ -57,7 +57,7 @@ CONTEXT_LINE_EMOJIS = (
     ("Condições meteorológicas", "🌦️"),
     ("Meteorologia", "🌦️"),
     ("Evolução prevista", "🌦️"),
-    ("Marés", "🌕"),
+    ("Marés", "🌊"),
     ("Fase da lua", "🌙"),
     ("Período luminoso", "☀️"),
     ("Leitura costeira", "🌊"),
@@ -215,7 +215,7 @@ def _fallback_emoji_from_question(question: str) -> str:
     if re.search(r"\b(meteorologia|meteo|tempo|vento)\b", clean):
         return "🌦️"
     if re.search(r"\b(mar[eé]s|preia|baixa)\b", clean):
-        return "🌕"
+        return "🌊"
     if re.search(r"\b(ondulacao|ondulação|agita[cç][aã]o|leitura costeira)\b", clean):
         return "🌊"
     if re.search(r"\b(avisos?|anav|alerta)\b", clean):
@@ -227,7 +227,7 @@ def _fallback_emoji_from_question(question: str) -> str:
     if re.search(r"\b(arquivo|hist[oó]rico)\b", clean):
         return "📂"
     if re.search(r"\b(manobra|manobras|planeamento)\b", clean):
-        return "🗓️"
+        return "🚢"
     if re.search(r"\b(escala|escalas|navio|navios)\b", clean):
         return "📋"
     return "📋"

@@ -1393,7 +1393,7 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
             if concrete_answer:
                 return concrete_answer
         answer = (
-            "🌕 SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE.\n"
+            "🚢 SECÇÃO 3 — MUDANÇA TANQUISADO OU ECO-OIL PARA LISNAVE.\n"
             "- Antecedência de marcação normal: 1 hora antes do reponto de maré pretendido.\n"
             "- Se o destino for Doca 21 ou Doca 22, ou se o navio for grande/condicionante para doca seca, marcar 2 horas antes da preia-mar.\n"
             "- A lógica é chegar à fase crítica da LISNAVE com corrente praticamente nula, sem tratar Tanquisado/Eco-Oil como se fossem apenas um slot de origem.\n"
@@ -1409,7 +1409,7 @@ def _answer_cross_reponto_scheduling_direct(question: str, clean_question: str) 
         }
 
     answer = (
-        "🌕 Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
+        "🚢 Para uma saída da Doca 22 da LISNAVE e uma entrada para Tanquisado, trata como duas manobras dependentes de reponto:\n"
         "- Saída Doca 22 / LISNAVE: marcar 2 horas antes da preia-mar; D20/D21/D22 ficam com proa a norte e a fase crítica deve cair na janela de reponto/maior água.\n"
         "- Entrada Tanquisado: marcar para chegar ao cais no reponto de maré; se vier de fora da Barra usar cerca de 2 horas antes, do Fundeadouro Norte cerca de 1 hora e 30 minutos antes, e de Tróia/Fundeadouro Sul cerca de 1 hora antes.\n"
         "- Se forem no mesmo ciclo, deixa margem de trânsito entre bacias/canais e confirma com o Piloto Coordenador a ordem das manobras."
@@ -1470,6 +1470,73 @@ def _time_range_before_label_from_question(question: str, min_minutes: int, max_
     return time_label, f"{early // 60:02d}:{early % 60:02d}-{late // 60:02d}:{late % 60:02d}"
 
 
+def _question_requests_past_tide_context(clean_question: str) -> bool:
+    return bool(re.search(r"\b(ontem|anterior|passad\w*|ha\s+bocado|há\s+bocado|ja\s+foi|já\s+foi)\b", clean_question))
+
+
+def _find_mentioned_low_tide_event(question: str, clean_question: str, reference_dt: datetime):
+    parsed = _parse_maneuver_time(question)
+    if not parsed:
+        return None
+    tide_service = getattr(services, "tide_service", None)
+    if not tide_service or not hasattr(tide_service, "events_for_date"):
+        return None
+    hour, minute, _label = parsed
+    events = [
+        event
+        for event in _tide_events_for_marking(question, clean_question, tide_service, reference_dt)
+        if getattr(event, "tide_type", "") == "baixa-mar"
+        and event.timestamp.hour == hour
+        and event.timestamp.minute == minute
+    ]
+    if not events:
+        return None
+    return min(events, key=lambda item: abs((item.timestamp - reference_dt).total_seconds()))
+
+
+def _answer_eco_oil_low_tide_rule_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\beco\s*-?\s*oil\b|\becooil\b|\becoil\b", clean_question):
+        return None
+    if "baixa" not in clean_question:
+        return None
+    if not re.search(r"\b(atracar|atracacao|atracação|manobra|manobrar|operar|podia|pode|posso|permit\w*|contra|regra|regras)\b", clean_question):
+        return None
+
+    _forecast, reference_dt = _forecast_and_reference_now_for_marking()
+    tide_event = _find_mentioned_low_tide_event(question, clean_question, reference_dt)
+    height = getattr(tide_event, "height", None) if tide_event else None
+    tide_label = _format_tide_context(tide_event) if tide_event else "baixa-mar indicada"
+
+    if height is None:
+        loa_line = "- LOA em baixa-mar: até 250 m; pode ir até 255 m se essa baixa-mar tiver altura >= 0,9 m."
+    elif height >= 0.9:
+        loa_line = f"- LOA em {tide_label}: até 255 m, porque a baixa-mar é >= 0,9 m."
+    else:
+        loa_line = f"- LOA em {tide_label}: até 250 m; os 255 m só entram quando a baixa-mar é >= 0,9 m."
+
+    past_note = ""
+    if tide_event and tide_event.timestamp < reference_dt and not _question_requests_past_tide_context(clean_question):
+        past_note = (
+            f"- Nota temporal: se estamos a planear hoje a partir de agora, a {tide_event.tide_type} das "
+            f"{tide_event.timestamp.strftime('%H:%M')} já passou; usa o próximo reponto futuro para marcação.\n"
+        )
+
+    answer = (
+        "🚢 Eco-Oil em baixa-mar:\n"
+        "- Não é contra as regras apenas por ser baixa-mar, desde que a manobra seja diurna e cumpra os limites do IT-008.\n"
+        "- Calado em manobra na baixa-mar: máximo 5,5 m. Em preia-mar: máximo 7,0 m. Calado máximo estacionado: 7,5 m.\n"
+        f"{loa_line}\n"
+        "- Atracação noturna: proibida em qualquer condição. Desatracação noturna: só em preia-mar e até 255 m de LOA.\n"
+        f"{past_note}"
+        "- Antes de fechar, confirmar LOA, calado real, altura de água, vento/rajadas, visibilidade, corrente, rebocadores e validação do Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-008_EcoOil.txt", "ECO_OIL_LOW_TIDE_RULE", answer, "operational_rule")],
+        "answer_origin": "operational_tide_scheduling",
+    }
+
+
 def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict | None:
     if not re.search(r"\b(reponto|preia|baixa|mare|antecedencia|antecedência|marca\w*|marco|quando|hora|entrada|saida|saída|sair|atracar|desatracar)\b", clean_question):
         return None
@@ -1477,13 +1544,17 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     if wind_kts is not None and wind_kts > 25:
         return None
 
+    eco_low_tide_answer = _answer_eco_oil_low_tide_rule_direct(question, clean_question)
+    if eco_low_tide_answer:
+        return eco_low_tide_answer
+
     if (
         re.search(r"\b(diferenca|diferença|distinguir|distincao|distinção)\b", clean_question)
         and "reponto" in clean_question
         and re.search(r"\bpreia\b|preia-mar", clean_question)
     ):
         answer = (
-            "🌕 Marcar para o reponto e marcar para a preia-mar não é exatamente a mesma coisa.\n"
+            "🌊 Marcar para o reponto e marcar para a preia-mar não é exatamente a mesma coisa.\n"
             "- Marcar para o reponto significa planear a manobra para o momento de corrente nula ou praticamente nula, quando a maré muda de sentido.\n"
             "- Marcar para a preia-mar significa planear a manobra para a altura de maior água, quando o objetivo principal é ter profundidade suficiente.\n"
             "- Em cais como LISNAVE, Tanquisado, Eco-Oil e SECIL, o reponto é crítico pela corrente; em navios de grande calado, TMS/SAPEC/Teporset podem exigir preia-mar ou janela de maior água.\n"
@@ -1517,7 +1588,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         if is_departure:
             reponto_label, mark_label = _time_minus_label_from_question(question, 30)
             answer = (
-                "🌕 Para TMS 1/TMS 2 com navio de grande calado, a saída deve ser marcada cerca de 30 min antes do reponto.\n"
+                "🚢 Para TMS 1/TMS 2 com navio de grande calado, a saída deve ser marcada cerca de 30 min antes do reponto.\n"
                 f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}.\n"
                 "A ideia é apanhar a água parada/maior margem na fase crítica de largada e passagem inicial. "
                 "Confirmar calado real, altura de água, vento, corrente, ocupação do cais e rebocadores."
@@ -1526,7 +1597,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
             reponto_label, range_label = _time_range_before_label_from_question(question, 60, 90)
             draft_note = f" Para calado {_format_measure(draft, ' m')}, eu puxava para o lado conservador da janela." if draft is not None else ""
             answer = (
-                "🌕 Para TMS 1/TMS 2 com calado entre 9 m e 12 m, a entrada deve ser marcada 1h a 1h30 antes da preia-mar.\n"
+                "🚢 Para TMS 1/TMS 2 com calado entre 9 m e 12 m, a entrada deve ser marcada 1h a 1h30 antes da preia-mar.\n"
                 f"Se a preia-mar de referência é {reponto_label}, a janela prática é {range_label}.{draft_note}\n"
                 "A validação final deve cruzar altura de maré, calado praticável, vento/rajadas, corrente, LOA/ocupação de slots e rebocadores."
             )
@@ -1550,7 +1621,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         else:
             timing_line = f"Se o reponto de referência é {reponto_label}, a marcação deve ficar por volta das {mark_label}."
         answer = (
-            "🌕 Para uma entrada de fora da Barra para a LISNAVE/Mitrena, marca 2 horas antes do reponto de maré pretendido.\n"
+            "🚢 Para uma entrada de fora da Barra para a LISNAVE/Mitrena, marca 2 horas antes do reponto de maré pretendido.\n"
             f"{timing_line}\n"
             "Esta é uma regra de marcação para chegar ao estaleiro na fase crítica de corrente nula; depois confirma cais/doca concreta, calado, LOA, vento, rebocadores e validação do Piloto Coordenador."
         )
@@ -1565,7 +1636,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         is_tps = bool(re.search(r"\b(solidos|s[oó]lidos|tps)\b", clean_question))
         if not explicit_entry and not explicit_departure and (is_tgl or is_tps or re.search(r"\b(imo|nao\s+imo|não\s+imo)\b", clean_question)):
             answer = (
-                "🌕 Para SAPEC com calado alto, separa sempre SAPEC Sólidos/TPS de SAPEC Líquidos/TGL.\n"
+                "🚢 Para SAPEC com calado alto, separa sempre SAPEC Sólidos/TPS de SAPEC Líquidos/TGL.\n"
                 "- Entrada TPS: marcar 1 hora e 30 minutos antes da preia-mar.\n"
                 "- Saída TPS com grande calado: marcar 30 minutos antes do reponto.\n"
                 "- SAPEC Líquidos/TGL: com profundidade condicionante, usar a mesma referência prática de entrada 1h30 antes da preia-mar e saída 30 min antes do reponto.\n"
@@ -1585,7 +1656,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
                 else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
             )
             answer = (
-                f"🌕 {timing}\n"
+                f"🚢 {timing}\n"
                 f"{tgl_note}\n"
                 "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
             )
@@ -1602,7 +1673,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
                 else " Confirmar se é TPS ou TGL; no TGL, a carga IMO/não-IMO muda o limite de referência."
             )
             answer = (
-                f"🌕 {timing}\n"
+                f"🚢 {timing}\n"
                 f"{tgl_note}\n"
                 "Antes de aprovar, cruzar calado real, altura de maré, vento/ondulação, LOA, defensas/regras SAPEC e rebocadores."
             )
@@ -1617,7 +1688,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     if re.search(r"\b(teporset|tepor\s*set|termitrena)\b", clean_question):
         if not explicit_entry and not explicit_departure and re.search(r"\b(reponto|mare|preia|baixa|acertar)\b", clean_question):
             answer = (
-                "🌕 Sim, para Teporset/Termitrena deves tratar a maré como condicionante quando o calado ou a janela de maior água forem críticos.\n"
+                "🚢 Sim, para Teporset/Termitrena deves tratar a maré como condicionante quando o calado ou a janela de maior água forem críticos.\n"
                 "- Entrada de fora da Barra: marcar cerca de 2 h antes do reponto/preia-mar.\n"
                 "- Entrada do Fundeadouro Norte: marcar cerca de 1 h 30 min antes.\n"
                 "- Entrada de Tróia/Fundeadouro Sul: marcar cerca de 1 h antes.\n"
@@ -1627,7 +1698,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
         elif is_departure:
             reponto_label, mark_label = _time_minus_label_from_question(question, 15)
             answer = (
-                "🌕 Para saída Teporset/Termitrena, marca cerca de 15 min antes do reponto.\n"
+                "🚢 Para saída Teporset/Termitrena, marca cerca de 15 min antes do reponto.\n"
                 f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}. "
                 "Na Teporset, considerar que o reponto local acontece cerca de 15 min depois da hora de referência, deixando margem prática em torno da água parada.\n"
                 "Confirmar calado, vento, corrente, rebocadores e janela de segurança."
@@ -1644,7 +1715,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
                 origin = "da Barra/fora da Barra"
             reponto_label, mark_label = _time_minus_label_from_question(question, lead)
             answer = (
-                f"🌕 Para entrada Teporset/Termitrena com calado condicionante {origin}, marca cerca de {lead} min antes do reponto/preia-mar.\n"
+                f"🚢 Para entrada Teporset/Termitrena com calado condicionante {origin}, marca cerca de {lead} min antes do reponto/preia-mar.\n"
                 f"Se o reponto de referência é {reponto_label}, marca por volta das {mark_label}.\n"
                 "Confirmar calado praticável, altura de água, vento, corrente, rebocadores e se a janela de maior água é suficiente."
             )
@@ -1659,7 +1730,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
     if "lisnave" in clean_question and re.search(r"\b(doca\s*21|doca\s*22|d21|d22)\b", clean_question) and is_departure:
         reponto_label, mark_label = _time_minus_label_from_question(question, 120)
         answer = (
-            "🌕 Para saída das Docas 21/22 da Lisnave, marca 2h antes da preia-mar.\n"
+            "🚢 Para saída das Docas 21/22 da Lisnave, marca 2h antes da preia-mar.\n"
             f"Se a preia-mar é {reponto_label}, a marcação deve ficar por volta das {mark_label}.\n"
             "Esta regra é específica das docas secas; confirmar LOA, calado, vento, rebocadores, orientação e validação do Piloto Coordenador."
         )
@@ -1730,8 +1801,7 @@ def _answer_eco_oil_limits_direct(question: str, clean_question: str) -> dict | 
         "- Atracação diurna em preia-mar: sem limite documental de comprimento.\n"
         "- Atracação/desatracação diurna em baixa-mar: até 250 m, ou até 255 m se a baixa-mar for >= 0,9 m.\n"
         "- Atracacao noturna proibida em qualquer condição.\n"
-        "- Desatracação noturna só em preia-mar e até 255 m de LOA.\n"
-        "- Se quiseres que o bot responda também pelo comprimento físico com duques d'alba, esse dado deve ficar explícito na base Eco-Oil."
+        "- Desatracação noturna só em preia-mar e até 255 m de LOA."
     )
     return {
         "answer": answer,
@@ -2465,7 +2535,7 @@ def _answer_general_reponto_marking_direct(question: str, clean_question: str) -
     limits = f"- {rule['limits_note']}\n" if rule.get("limits_note") else ""
     weather_note = f"- {_weather_note_for_marking(selected_status)}\n" if (parsed_time or wants_live_window) else ""
     answer = (
-        f"🌕 Para {rule['rule_description']}, marca {window_label}.\n"
+        f"🚢 Para {rule['rule_description']}, marca {window_label}.\n"
         f"- Referência usada: {tide_label}.\n"
         f"- Regra aplicada: {lead_text} {reference_phrase}.\n"
         f"{skipped_note}"
@@ -2507,7 +2577,7 @@ def _answer_referenced_tide_time_marking_direct(question: str, clean_question: s
         tide_dt += timedelta(days=1)
     status = _weather_status_for_marking_window(forecast, tide_dt - timedelta(minutes=45), tide_dt)
     answer = (
-        "🌕 Assumindo a situação anterior, Fundeadouro Norte -> SECIL E, usa a janela 30-45 min antes do reponto.\n"
+        "🚢 Assumindo a situação anterior, Fundeadouro Norte -> SECIL E, usa a janela 30-45 min antes do reponto.\n"
         f"- Se o reponto/maré de referência é {reponto_label}, marca a manobra na janela {fn_window}.\n"
         f"- Eu apontaria para o início/meio da janela se quiseres margem, e nunca para depois de {fn_window.split('-')[-1]}.\n"
         f"- Se fosse de Tróia/outro cais, a janela passava para {troia_window}; se fosse saída da SECIL, seria cerca de {departure_label}.\n"
@@ -2571,7 +2641,7 @@ def _answer_secil_next_marking_direct(question: str, clean_question: str) -> dic
     selected, selected_status, skipped, skipped_status = _select_weather_aware_marking(candidates, forecast)
     if not selected:
         answer = (
-            "🌕 Não encontrei uma janela de maré futura para calcular a marcação.\n"
+            "🚢 Não encontrei uma janela de maré futura para calcular a marcação.\n"
             "Confirma a data pretendida ou pede, por exemplo: 'para hoje' / 'amanhã' / 'dia 18'."
         )
         return {
@@ -2602,7 +2672,7 @@ def _answer_secil_next_marking_direct(question: str, clean_question: str) -> dic
         rule_line = f"- Regra aplicada: {_reponto_lead_text(min_before, max_before)} do reponto.\n"
 
     answer = (
-        f"🌕 Para {route_label}, eu marcava {window_label}.\n"
+        f"🚢 Para {route_label}, eu marcava {window_label}.\n"
         f"- Referência usada: {tide_label}.\n"
         f"- Agora: {reference_dt.strftime('%d/%m/%Y %H:%M')}.\n"
         f"{skipped_note}"
@@ -2832,7 +2902,7 @@ def _answer_secil_specific_sequence_direct(question: str, clean_question: str) -
     reponto_label, departure_label = _time_minus_label_from_question(question, 15)
     _reponto_label, entry_window = _time_range_before_label_from_question(question, 45, 60)
     answer = (
-        "🌕 Para coordenar uma saída da SECIL e uma entrada/mudança do Fundeadouro Norte para o mesmo cais, uso o reponto como hora de chegada/saída crítica.\n"
+        "🚢 Para coordenar uma saída da SECIL e uma entrada/mudança do Fundeadouro Norte para o mesmo cais, uso o reponto como hora de chegada/saída crítica.\n"
         f"- Se o reponto é {reponto_label}, marca a saída da SECIL cerca de 15 minutos antes: {departure_label}.\n"
         f"- A entrada/mudança do Fundeadouro Norte para o mesmo cais deve ficar na janela {entry_window}, ou seja, 45 minutos a 1 hora antes do reponto.\n"
         "- A saída da SECIL é normalmente rápida; o cais tende a ficar livre em 10 a 15 minutos.\n"

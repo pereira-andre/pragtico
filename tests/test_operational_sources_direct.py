@@ -407,6 +407,40 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("Fundeadouro Norte", payload["answer"])
         self.assertNotIn("120 min antes", payload["answer"])
 
+    def test_troia_to_ecooil_today_uses_next_future_reponto_and_shift_context(self) -> None:
+        services.tide_service = FakeSchedulingTideService()
+        services.weather_service = FakeSchedulingWeatherService()
+
+        payload = answer_direct_operational_query(
+            "Tenho outro navio para mudar do fundeadouro Tróia para a Eco-Oil. A que horas devo marcar manobra? e se fosse para marcar hoje a manobra?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("mudança para Eco-Oil vinda de Tróia/Fundeadouro Sul", payload["answer"])
+        self.assertIn("14:28", payload["answer"])
+        self.assertIn("preia-mar às 15:28", payload["answer"])
+        self.assertIn("1 hora antes", payload["answer"])
+        self.assertNotIn("08:11", payload["answer"])
+        self.assertNotIn("07:11", payload["answer"])
+
+    def test_ecooil_low_tide_rule_does_not_assume_barra_schedule(self) -> None:
+        services.tide_service = FakeSchedulingTideService()
+        services.weather_service = FakeSchedulingWeatherService()
+
+        payload = answer_direct_operational_query(
+            "Podia atracar no baixa-mar das 09:11 na Eco-Oil, ou isso é contra as regras?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_tide_scheduling", payload["answer_origin"])
+        self.assertIn("Eco-Oil em baixa-mar", payload["answer"])
+        self.assertIn("máximo 5,5 m", payload["answer"])
+        self.assertIn("até 250 m", payload["answer"])
+        self.assertIn("09:11 já passou", payload["answer"])
+        self.assertNotIn("fora da Barra", payload["answer"])
+        self.assertNotIn("07:11", payload["answer"])
+
     def test_tanquisado_ecooil_to_lisnave_shift_uses_specific_section(self) -> None:
         payload = answer_direct_operational_query(
             "Quando marco mudança de Tanquisado/Eco-Oil para Lisnave, incluindo Doca 21?"
