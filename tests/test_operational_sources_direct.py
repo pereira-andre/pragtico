@@ -146,6 +146,68 @@ class FakeTideService:
         return [item for item in self.events if item.date_value == target_date]
 
 
+class FakeSchedulingTideService:
+    def __init__(self) -> None:
+        self.events = [
+            FakeTideEvent(2026, 5, 16, 3, 4, 3.4),
+            FakeTideEvent(2026, 5, 16, 9, 11, 0.5),
+            FakeTideEvent(2026, 5, 16, 15, 28, 3.5),
+            FakeTideEvent(2026, 5, 16, 21, 37, 0.4),
+            FakeTideEvent(2026, 5, 17, 3, 42, 3.4),
+        ]
+
+    def resolve_query_dates(self, question: str, reference_date: date | None = None) -> list[date]:
+        clean = (question or "").lower()
+        ref = reference_date or date(2026, 5, 16)
+        if "amanh" in clean:
+            return [ref.replace(day=17)]
+        if "hoje" in clean:
+            return [ref]
+        return [ref]
+
+    def events_for_date(self, target_date: date) -> list[FakeTideEvent]:
+        return [item for item in self.events if item.date_value == target_date]
+
+
+class FakeSchedulingWeatherService(FakeWeatherService):
+    forecast = deepcopy(FakeWeatherService.forecast)
+    forecast["location"] = {"name": "Setúbal", "localtime": "2026-05-16 10:40"}
+    forecast["current"] = {
+        "condition": "Sol",
+        "temp_c": 17,
+        "wind_kts": 8,
+        "gust_kts": 12,
+        "wind_dir": "NW",
+        "humidity": 70,
+        "vis_km": 10,
+        "precip_mm": 0,
+    }
+    forecast["hourly_groups"] = [
+        {
+            "date": "2026-05-16",
+            "date_label": "16/05/2026",
+            "hours": [
+                {"timestamp": "2026-05-16 15:00", "time": "15:00", "condition": "Sol", "temp_c": 19, "wind_kts": 9, "gust_kts": 13, "wind_dir": "NW", "chance_of_rain": 0},
+                {"timestamp": "2026-05-16 21:00", "time": "21:00", "condition": "Limpo", "temp_c": 16, "wind_kts": 8, "gust_kts": 11, "wind_dir": "N", "chance_of_rain": 0},
+            ],
+        }
+    ]
+
+
+class FakeBadThenSafeWeatherService(FakeSchedulingWeatherService):
+    forecast = deepcopy(FakeSchedulingWeatherService.forecast)
+    forecast["hourly_groups"] = [
+        {
+            "date": "2026-05-16",
+            "date_label": "16/05/2026",
+            "hours": [
+                {"timestamp": "2026-05-16 15:00", "time": "15:00", "condition": "Vento forte", "temp_c": 19, "wind_kts": 27, "gust_kts": 31, "wind_dir": "NW", "chance_of_rain": 0},
+                {"timestamp": "2026-05-16 21:00", "time": "21:00", "condition": "Abertas", "temp_c": 16, "wind_kts": 12, "gust_kts": 16, "wind_dir": "N", "chance_of_rain": 0},
+            ],
+        }
+    ]
+
+
 class OperationalSourcesDirectTests(unittest.TestCase):
     def setUp(self) -> None:
         self.previous_store = services.store
@@ -260,6 +322,36 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("TMS 2 - Posição A", answer)
         self.assertIn("dep-12345678", answer)
         self.assertIn("Navex Setúbal", answer)
+
+    def test_secil_north_anchorage_next_tide_calculates_marking_window(self) -> None:
+        services.tide_service = FakeSchedulingTideService()
+        services.weather_service = FakeSchedulingWeatherService()
+
+        answer = self._answer("Tenho um navio para mudar do fundeadouro Norte para a Secil Este. A que horas devo marcar manobra a partir de agora?")
+
+        self.assertIn("14:43-14:58", answer)
+        self.assertIn("preia-mar às 15:28", answer)
+        self.assertIn("Fundeadouro Norte", answer)
+        self.assertIn("Meteorologia", answer)
+
+    def test_referenced_tide_time_uses_previous_secil_context_assumption(self) -> None:
+        services.weather_service = FakeSchedulingWeatherService()
+        answer = self._answer("Então se a maré é às 15:28, marco a que horas?")
+
+        self.assertIn("Assumindo a situação anterior", answer)
+        self.assertIn("14:43-14:58", answer)
+        self.assertIn("SECIL E", answer)
+        self.assertIn("Meteorologia", answer)
+
+    def test_unfavorable_weather_skips_first_tide_window(self) -> None:
+        services.tide_service = FakeSchedulingTideService()
+        services.weather_service = FakeBadThenSafeWeatherService()
+
+        answer = self._answer("Tenho um navio para mudar do fundeadouro Norte para a Secil Este. A que horas devo marcar manobra a partir de agora?")
+
+        self.assertIn("20:52-21:07", answer)
+        self.assertIn("Não escolhi a primeira janela", answer)
+        self.assertIn("acima de 25 kt", answer)
 
     def test_tms1_large_vessel_capacity_answer_uses_rule_not_live_berthed_list(self) -> None:
         answer = self._answer("Quantos navios grandes podem estar atracados no TMS 1 ao mesmo tempo?")
@@ -670,6 +762,29 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("proveniência", payload["answer"])
         self.assertIn("30-45 min", payload["answer"])
         self.assertIn("45 min a 1 h", payload["answer"])
+
+    def test_secil_e_draft_above_reference_is_not_emergency(self) -> None:
+        payload = answer_direct_operational_query(
+            "O navio vai para a Secil Este e tem 8,3 m de calado, há problema?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_draft_rule", payload["answer_origin"])
+        self.assertIn("há problema", payload["answer"])
+        self.assertIn("8,3 m", payload["answer"])
+        self.assertIn("8,0 m", payload["answer"])
+        self.assertIn("não fechar a manobra", payload["answer"])
+        self.assertNotIn("Emergencia operacional", payload["answer"])
+
+    def test_contextualized_secil_e_draft_followup_gets_draft_rule(self) -> None:
+        payload = answer_direct_operational_query(
+            "O navio tem 8,3 m de calado, há problema? para Secil E"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("secil_draft_rule", payload["answer_origin"])
+        self.assertIn("SECIL E/Este", payload["answer"])
+        self.assertIn("excede", payload["answer"])
 
     def test_secil_w_reponto_question_gets_direct_rule_not_llm_fallback(self) -> None:
         payload = answer_direct_operational_query(

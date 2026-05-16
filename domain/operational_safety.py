@@ -22,7 +22,7 @@ MANEUVER_QUERY_RE = re.compile(
     flags=re.IGNORECASE,
 )
 EMERGENCY_RESPONSE_RE = re.compile(
-    r"\b(emerg[eê]ncia|urg[eê]ncia|socorro|perigo|avaria|problema|blackout|apag[aã]o|"
+    r"\b(emerg[eê]ncia|urg[eê]ncia|socorro|perigo|avaria|blackout|apag[aã]o|"
     r"sem\s+m[aá]quina|perda\s+de\s+m[aá]quina|m[aá]quina\s+avariad\w*|"
     r"sem\s+governo|perda\s+de\s+governo|leme\s+avariad\w*|desgovernad\w*|"
     r"perd\w*\s+bow|bow\s*thruster\s+avariad\w*|h[eé]lice\s+de\s+proa\s+avariad\w*|"

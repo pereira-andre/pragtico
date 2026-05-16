@@ -37,6 +37,12 @@ class ChatPlannerLiveFacetTests(unittest.TestCase):
         self.assertIn("tides", plan.live_facets)
         self.assertTrue(plan.requires_live_reasoning)
 
+    def test_reponto_marking_from_now_uses_tide_live_facet(self) -> None:
+        plan = build_chat_execution_plan("Navio do Fundeadouro Norte para a Secil E. A que horas marco a manobra a partir de agora?")
+
+        self.assertIn("tides", plan.live_facets)
+        self.assertTrue(plan.requires_live_reasoning)
+
 
 if __name__ == "__main__":
     unittest.main()
