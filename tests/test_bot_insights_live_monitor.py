@@ -28,8 +28,18 @@ def test_sources_snapshot_marks_empty_port_activity_as_active(monkeypatch, tmp_p
 
     assert operational_source["label"] == "Escalas e atividade do porto"
     assert operational_source["state"] == "online"
+    assert operational_source["action_url"] == "/port-calls/register"
     assert operational_source["meta"] == "Portal acessível; sem escalas resolvidas."
     assert "monitor live" in operational_source["description"]
+
+    tuning = bot_insights.build_tuning_map_snapshot()
+    port_activity_component = next(
+        component
+        for group in tuning["groups"]
+        for component in group["components"]
+        if component["source_name"] == "port_calls"
+    )
+    assert port_activity_component["action_url"] == "/port-calls/register"
 
 
 def test_monitor_live_card_counts_live_services_not_empty_portal(monkeypatch) -> None:

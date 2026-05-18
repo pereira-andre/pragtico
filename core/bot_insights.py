@@ -658,7 +658,7 @@ def build_sources_snapshot() -> list[dict]:
     snapshot["operational_data"].update(
         count=port_calls_total,
         state="online" if port_activity_available else "offline",
-        action_url="/port-calls",
+        action_url="/port-calls/register",
         meta=(
             f"{port_calls_total} escala(s) resolvidas"
             if port_calls_total
@@ -1355,7 +1355,7 @@ def build_tuning_map_snapshot(
                         ),
                         "Serve de contexto à operação, não substitui as regras.",
                     ],
-                    action_url="/port-calls",
+                    action_url="/port-calls/register",
                     action_label="Ver escalas",
                 ),
             ],
