@@ -144,22 +144,36 @@ def _component_state_label(state: str) -> str:
     return "Sem dados"
 
 
-def _count_live_operational_services() -> tuple[int, int]:
-    total = 4
-    active = 0
+def _enabled_state(enabled: bool, *, degraded: bool = False) -> str:
+    if not enabled:
+        return "offline"
+    return "degraded" if degraded else "online"
+
+
+def _service_enabled(service: Any) -> bool:
+    if service is None:
+        return False
+    enabled = getattr(service, "enabled", True)
+    return bool(enabled() if callable(enabled) else enabled)
+
+
+def _tide_service_enabled() -> bool:
     tide_service = getattr(services, "tide_service", None)
-    if tide_service and getattr(tide_service, "csv_path", ""):
-        active += 1
-    weather_service = getattr(services, "weather_service", None)
-    if weather_service and getattr(weather_service, "enabled", False):
-        active += 1
-    wave_service = getattr(services, "wave_service", None)
-    if wave_service and getattr(wave_service, "enabled", False):
-        active += 1
-    warning_service = getattr(services, "local_warning_service", None)
-    if warning_service and getattr(warning_service, "enabled", False):
-        active += 1
-    return active, total
+    return bool(tide_service and getattr(tide_service, "csv_path", ""))
+
+
+def _live_operational_service_items() -> list[tuple[str, bool]]:
+    return [
+        ("marés", _tide_service_enabled()),
+        ("meteo", _service_enabled(getattr(services, "weather_service", None))),
+        ("ondulação", _service_enabled(getattr(services, "wave_service", None))),
+        ("avisos", _service_enabled(getattr(services, "local_warning_service", None))),
+    ]
+
+
+def _count_live_operational_services() -> tuple[int, int]:
+    items = _live_operational_service_items()
+    return sum(1 for _, enabled in items if enabled), len(items)
 
 
 def _feedback_source_label(source: str) -> str:
@@ -522,8 +536,11 @@ _SOURCE_DEFS = (
     },
     {
         "id": "operational_data",
-        "label": "Dados operacionais vivos",
-        "description": "Escalas, manobras, maré, meteorologia e agulhas em tempo real.",
+        "label": "Escalas e atividade do porto",
+        "description": (
+            "Escalas e manobras registadas no portal; marés, meteorologia, ondulação e avisos "
+            "aparecem no monitor live."
+        ),
     },
     {
         "id": "practice",
@@ -591,11 +608,15 @@ def build_sources_snapshot() -> list[dict]:
             practice_total = 0
 
     port_calls_total = 0
+    port_activity_available = False
     try:
         if store:
-            port_calls_total = len(store.get_port_activity_snapshot(window_days=3650).get("arrivals", []) or [])
+            port_activity = store.get_port_activity_snapshot(window_days=3650)
+            port_activity_available = True
+            port_calls_total = len(port_activity.get("arrivals", []) or [])
     except Exception:
         port_calls_total = 0
+        port_activity_available = False
 
     snapshot: dict[str, dict] = {}
     for source in _SOURCE_DEFS:
@@ -636,9 +657,13 @@ def build_sources_snapshot() -> list[dict]:
         )
     snapshot["operational_data"].update(
         count=port_calls_total,
-        state="online" if port_calls_total else "offline",
+        state="online" if port_calls_total else "degraded" if port_activity_available else "offline",
         action_url="/port-calls",
-        meta=f"{port_calls_total} escala(s) resolvidas",
+        meta=(
+            f"{port_calls_total} escala(s) resolvidas"
+            if port_calls_total
+            else "Sem escalas resolvidas no portal."
+        ),
     )
     snapshot["evals"].update(
         count=evals_static + evals_feedback,
@@ -1657,19 +1682,6 @@ def _source_by_id(sources: list[dict], source_id: str) -> dict:
     return {}
 
 
-def _enabled_state(enabled: bool, *, degraded: bool = False) -> str:
-    if not enabled:
-        return "offline"
-    return "degraded" if degraded else "online"
-
-
-def _service_enabled(service: Any) -> bool:
-    if service is None:
-        return False
-    enabled = getattr(service, "enabled", True)
-    return bool(enabled() if callable(enabled) else enabled)
-
-
 def _service_status_detail(service: Any, fallback: str) -> str:
     if service is None:
         return "Serviço não inicializado."
@@ -1756,15 +1768,15 @@ def build_bot_monitor_snapshot(
     )
 
     portal_source = _source_by_id(sources, "operational_data")
-    live_items = [
-        ("portal", portal_source.get("state") == "online"),
-        ("marés", getattr(services, "tide_service", None) is not None),
-        ("meteo", _service_enabled(getattr(services, "weather_service", None))),
-        ("ondulação", _service_enabled(getattr(services, "wave_service", None))),
-        ("avisos", _service_enabled(getattr(services, "local_warning_service", None))),
-    ]
+    live_items = _live_operational_service_items()
     live_online = sum(1 for _, enabled in live_items if enabled)
-    live_state = "online" if live_online >= 4 else "degraded" if live_online else "offline"
+    live_state = (
+        "online"
+        if live_items and live_online == len(live_items)
+        else "degraded"
+        if live_online
+        else "offline"
+    )
 
     feedback_cases = int(quality.get("feedback_cases_total") or 0)
     feedback_enabled = bool(
@@ -1915,9 +1927,18 @@ def build_bot_monitor_snapshot(
         getattr(services, "local_warning_service", None),
         "Avisos locais configurados.",
     )
+    tide_enabled = _tide_service_enabled()
     live_details = [
-        {"label": "Portal", "state": portal_source.get("state", "offline"), "detail": portal_source.get("meta", "")},
-        {"label": "Marés", "state": "online" if getattr(services, "tide_service", None) else "offline", "detail": "CSV local ativo."},
+        {
+            "label": "Portal",
+            "state": portal_source.get("state", "offline"),
+            "detail": portal_source.get("meta", "") or "Sem escalas resolvidas no portal.",
+        },
+        {
+            "label": "Marés",
+            "state": _enabled_state(tide_enabled),
+            "detail": "CSV local ativo." if tide_enabled else "Sem CSV local ativo.",
+        },
         {
             "label": "Meteorologia",
             "state": _enabled_state(weather_enabled),
