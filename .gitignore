@@ -20,6 +20,10 @@ venv/
 # O repositorio publico deve conter o codigo do projeto, nao a pasta de trabalho
 # do relatorio.
 REPORT_UAb/
+REPORT_UAb*/
+report_archive/
+review/
+backups/
 
 data/
 knowledge/*

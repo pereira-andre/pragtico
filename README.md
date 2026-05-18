@@ -177,6 +177,15 @@ docs/                   documentacao tecnica e auditorias
 scripts/                auditorias e utilitarios locais
 ```
 
+Notas de organizacao:
+
+- `core/operational_test_cases.py` guarda matrizes e casos estaticos de QA;
+  `core/operational_test_suite.py` fica focado na execucao dos testes.
+- `core/operational_source_patterns.py` concentra expressoes regulares usadas
+  pelas respostas operacionais deterministicas.
+- `core/admin_backup_config.py` isola a configuracao de exportacao, reposicao e
+  backups usada pelo painel de administracao.
+
 ## Requisitos
 
 - Python 3.11 em producao; Python 3.10+ funciona nos testes locais atuais.
@@ -396,7 +405,7 @@ python3 scripts/audit_knowledge_chunks.py --sample 0
 python3 scripts/run_rag_evals.py
 ```
 
-Na ultima validacao local, a suite principal passou com `182 passed`.
+Na ultima validacao local, a suite principal passou com `389 passed`.
 
 ## Manutencao recomendada
 
@@ -409,6 +418,8 @@ Na ultima validacao local, a suite principal passou com `182 passed`.
 - Manter `docs/CATALOGO_ERROS_E_DEBUG.md` atualizado quando surgirem novos
   codigos.
 - Evitar editar diretamente dados em producao sem backup recente.
+- Manter fora do Git os artefactos locais de avaliacao, revisao e arquivo:
+  `REPORT_UAb*/`, `report_archive/`, `review/` e `backups/`.
 
 ## Pontos conhecidos
 
