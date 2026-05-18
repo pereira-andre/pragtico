@@ -657,12 +657,12 @@ def build_sources_snapshot() -> list[dict]:
         )
     snapshot["operational_data"].update(
         count=port_calls_total,
-        state="online" if port_calls_total else "degraded" if port_activity_available else "offline",
+        state="online" if port_activity_available else "offline",
         action_url="/port-calls",
         meta=(
             f"{port_calls_total} escala(s) resolvidas"
             if port_calls_total
-            else "Sem escalas resolvidas no portal."
+            else "Portal acessível; sem escalas resolvidas."
         ),
     )
     snapshot["evals"].update(
@@ -1127,11 +1127,15 @@ def build_tuning_map_snapshot(
     )
 
     port_calls_total = 0
+    port_activity_available = False
     try:
         if store:
-            port_calls_total = len(store.get_port_activity_snapshot(window_days=3650).get("arrivals", []) or [])
+            port_activity = store.get_port_activity_snapshot(window_days=3650)
+            port_activity_available = True
+            port_calls_total = len(port_activity.get("arrivals", []) or [])
     except Exception:
         logger.exception("Falha a listar atividade portuária para mapa de afinação.")
+        port_activity_available = False
 
     tide_service = getattr(services, "tide_service", None)
     tide_csv_path = str(getattr(tide_service, "csv_path", "") or "")
@@ -1339,12 +1343,16 @@ def build_tuning_map_snapshot(
                 ),
                 _build_tuning_component(
                     label="Escalas e atividade do porto",
-                    state=_component_state(bool(port_calls_total), partial=True),
+                    state=_component_state(port_activity_available),
                     source_name="port_calls",
                     runtime_hook="store.get_port_activity_snapshot",
                     detail="Contexto operativo vivo e histórico de escalas que o bot usa para responder sobre atividade recente.",
                     facts=[
-                        f"{port_calls_total} escala(s) resolvida(s)",
+                        (
+                            f"{port_calls_total} escala(s) resolvida(s)"
+                            if port_calls_total
+                            else "Portal acessível; sem escalas resolvidas."
+                        ),
                         "Serve de contexto à operação, não substitui as regras.",
                     ],
                     action_url="/port-calls",

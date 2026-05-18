@@ -16,7 +16,7 @@ class EmptyPortActivityStore:
         return {"arrivals": []}
 
 
-def test_sources_snapshot_marks_empty_port_activity_as_partial(monkeypatch, tmp_path) -> None:
+def test_sources_snapshot_marks_empty_port_activity_as_active(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(
         bot_insights,
         "services",
@@ -27,8 +27,8 @@ def test_sources_snapshot_marks_empty_port_activity_as_partial(monkeypatch, tmp_
     operational_source = next(item for item in sources if item["id"] == "operational_data")
 
     assert operational_source["label"] == "Escalas e atividade do porto"
-    assert operational_source["state"] == "degraded"
-    assert operational_source["meta"] == "Sem escalas resolvidas no portal."
+    assert operational_source["state"] == "online"
+    assert operational_source["meta"] == "Portal acessível; sem escalas resolvidas."
     assert "monitor live" in operational_source["description"]
 
 
@@ -48,9 +48,9 @@ def test_monitor_live_card_counts_live_services_not_empty_portal(monkeypatch) ->
         {
             "id": "operational_data",
             "label": "Escalas e atividade do porto",
-            "state": "degraded",
+            "state": "online",
             "count": 0,
-            "meta": "Sem escalas resolvidas no portal.",
+            "meta": "Portal acessível; sem escalas resolvidas.",
         }
     ]
 
@@ -69,5 +69,29 @@ def test_monitor_live_card_counts_live_services_not_empty_portal(monkeypatch) ->
     assert live_card["value"] == "4/4"
     assert live_card["detail"] == "marés · meteo · ondulação · avisos"
     assert live_card["state"] == "online"
-    assert portal_detail["state"] == "degraded"
-    assert portal_detail["detail"] == "Sem escalas resolvidas no portal."
+    assert portal_detail["state"] == "online"
+    assert portal_detail["detail"] == "Portal acessível; sem escalas resolvidas."
+
+
+def test_empty_port_activity_does_not_penalize_source_coverage(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(
+        bot_insights,
+        "services",
+        SimpleNamespace(store=EmptyPortActivityStore(str(tmp_path)), KNOWLEDGE_DIR=str(tmp_path)),
+    )
+    sources = bot_insights.build_sources_snapshot()
+    health_sources = [
+        item if item["id"] == "operational_data" else {**item, "state": "online"}
+        for item in sources
+    ]
+
+    health = bot_insights.compute_health_score(
+        quality={"pass_rate_pct": 100},
+        signals={"positives": {"total": 1}, "negatives": {"total": 0}},
+        exceptions={"severity_counts": {"high": 0}},
+        sources=health_sources,
+    )
+
+    assert next(item for item in sources if item["id"] == "operational_data")["state"] == "online"
+    assert health["coverage_pct"] == 100
+    assert health["score"] == 100
