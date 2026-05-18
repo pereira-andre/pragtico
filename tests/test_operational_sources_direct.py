@@ -625,6 +625,17 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("10,0 m para não-IMO", payload["answer"])
         self.assertIn("fórmula de calado praticável", payload["answer"])
 
+    def test_sapec_liquidos_implicit_draft_blocks_excessive_draft(self) -> None:
+        payload = answer_direct_operational_query("Posso atracar um navio com 12 m no cais da SAPEC Líquidos?")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_rule", payload["answer_origin"])
+        self.assertIn("Não", payload["answer"])
+        self.assertIn("9,5 metros", payload["answer"])
+        self.assertIn("10,0 metros", payload["answer"])
+        self.assertIn("12 m", payload["answer"])
+        self.assertIn("ultrapassa ambos os limites", payload["answer"])
+
     def test_sapec_tps_tgl_high_draft_summary_covers_entry_departure_and_imo_limits(self) -> None:
         payload = answer_direct_operational_query(
             "Como marco SAPEC Sólidos e Líquidos com calado alto, IMO e não-IMO?"
@@ -648,6 +659,7 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("profundidade suficiente", payload["answer"])
         self.assertIn("LISNAVE", payload["answer"])
         self.assertIn("Tanquisado", payload["answer"])
+        self.assertIn("TMS e SAPEC", payload["answer"])
         self.assertNotIn("Marés para", payload["answer"])
 
     def test_teporset_departure_uses_local_reponto_margin(self) -> None:

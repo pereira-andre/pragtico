@@ -1016,7 +1016,7 @@ def _answer_operational_priority_direct(question: str, clean_question: str) -> d
             "tem prioridade o primeiro navio a cruzar o arco de 8 milhas náuticas centrado na Baliza número 2 da Barra, "
             "salvo impedimento técnico ou decisão operacional justificada.\n"
             "- Esta é a referência de chegada em frente da barra para prioridade de acostagem.\n"
-            "- A ordem passageiros/gado/reefers/Ro-Ro/contentores e saídas > mudanças > entradas fica para planeamento geral, janelas concorrentes ou desempate operacional quando a regra do mesmo cais não resolver tudo."
+            "- A ordem passageiros/gado/reefers/RoRo (Ro-Ro)/contentores e saídas > mudanças > entradas fica para planeamento geral, janelas concorrentes ou desempate operacional quando a regra do mesmo cais não resolver tudo."
         )
         return {
             "answer": answer,
@@ -1027,7 +1027,7 @@ def _answer_operational_priority_direct(question: str, clean_question: str) -> d
         "A ordem operacional é esta:\n"
         "1. Manobras com reponto de maré ou janela crítica de profundidade.\n"
         "2. Passageiros, animais vivos/gado vivo, reefers e carga perecível.\n"
-        "3. Ro-Ro.\n"
+        "3. RoRo (Ro-Ro).\n"
         "4. Contentores.\n"
         "5. Outros navios.\n"
         "Dentro da mesma prioridade e da mesma janela operacional, aplicar saídas > mudanças > entradas."
@@ -1471,7 +1471,7 @@ def _answer_tide_scheduling_direct(question: str, clean_question: str) -> dict |
             "🌊 Marcar para o reponto e marcar para a preia-mar não é exatamente a mesma coisa.\n"
             "- Marcar para o reponto significa planear a manobra para o momento de corrente nula ou praticamente nula, quando a maré muda de sentido.\n"
             "- Marcar para a preia-mar significa planear a manobra para a altura de maior água, quando o objetivo principal é ter profundidade suficiente.\n"
-            "- Em cais como LISNAVE, Tanquisado, Eco-Oil e SECIL, o reponto é crítico pela corrente; em navios de grande calado, TMS/SAPEC/Teporset podem exigir preia-mar ou janela de maior água.\n"
+            "- Em cais como LISNAVE, Tanquisado, Eco-Oil e SECIL, o reponto é crítico pela corrente; em navios de grande calado, TMS e SAPEC, além da Teporset, podem exigir preia-mar ou janela de maior água.\n"
             "Na prática, algumas manobras precisam das duas coisas: chegar com corrente controlada e com água suficiente."
         )
         return {
@@ -1672,6 +1672,60 @@ def _answer_sapec_non_imo_followup_direct(question: str, clean_question: str) ->
         "answer": answer,
         "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_NON_IMO_CONTEXT_FOLLOWUP", answer)],
         "answer_origin": "operational_context_followup",
+    }
+
+
+def _implicit_sapec_liquidos_draft(question: str, clean_question: str) -> float | None:
+    if not re.search(r"\b(sapec|tgl)\b", clean_question):
+        return None
+    if not re.search(r"\b(liquidos|tgl)\b", clean_question):
+        return None
+    if re.search(r"\b(loa|comprimento)\b", clean_question):
+        return None
+    if not re.search(r"\b(posso|pode|podemos|atracar|atracacao|atracação|entrar|entrada|operar|aceit\w*|permit\w*)\b", clean_question):
+        return None
+
+    explicit_draft = _extract_draft_m_from_question(question)
+    if explicit_draft is not None:
+        return explicit_draft
+
+    match = re.search(r"\b(?:com|de)\s+(\d{1,2}(?:[,.]\d+)?)\s*m\b", str(question or ""), flags=re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        value = float(match.group(1).replace(",", "."))
+    except ValueError:
+        return None
+    if 0 < value <= 25:
+        return value
+    return None
+
+
+def _answer_sapec_liquidos_draft_limit_direct(question: str, clean_question: str) -> dict | None:
+    draft = _implicit_sapec_liquidos_draft(question, clean_question)
+    if draft is None:
+        return None
+    draft_label = f"{draft:g} m"
+
+    if draft > 10.0:
+        answer = (
+            "Não. No SAPEC Líquidos / TGL, trato esse valor como calado porque a pergunta é de atracação/compatibilidade operacional.\n"
+            "- Carga IMO/perigosa: calado máximo 9,5 metros.\n"
+            "- Carga não IMO: calado máximo 10,0 metros.\n"
+            f"- Um navio com {draft_label} de calado ultrapassa ambos os limites e não deve ser aceite em condições normais.\n"
+            "Só uma validação excecional, documentada pelo Piloto Coordenador e cruzada com maré/hora, carga, vento, ondulação e amarração, poderia alterar esta conclusão."
+        )
+    else:
+        answer = (
+            f"O calado indicado é {draft_label} no SAPEC Líquidos / TGL.\n"
+            "- Se a carga for IMO/perigosa, o limite documental é 9,5 metros.\n"
+            "- Se a carga for não IMO, o limite documental é 10,0 metros.\n"
+            "Antes de aceitar a manobra, confirma tipo de carga, altura de água à hora prevista, fórmula de calado praticável, vento, ondulação e validação do Piloto Coordenador."
+        )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-029_SAPEC.txt", "SAPEC_LIQUIDOS_DRAFT_LIMIT", answer, "operational_rule")],
+        "answer_origin": "operational_rule",
     }
 
 
@@ -3798,6 +3852,9 @@ def answer_direct_operational_query(
     secil_reponto_answer = _answer_secil_reponto_direct(question, clean_question)
     if secil_reponto_answer:
         return _attach_operational_diagnostic(secil_reponto_answer, question)
+    sapec_liquidos_draft_answer = _answer_sapec_liquidos_draft_limit_direct(question, clean_question)
+    if sapec_liquidos_draft_answer:
+        return _attach_operational_diagnostic(sapec_liquidos_draft_answer, question)
     tanquisado_costado_answer = _answer_tanquisado_costado_wind_direct(question, clean_question)
     if tanquisado_costado_answer:
         return _attach_operational_diagnostic(tanquisado_costado_answer, question)
