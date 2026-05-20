@@ -614,6 +614,17 @@ def _route_summary_answer(question: str, clean_question: str) -> dict | None:
     has_north_quays = bool(re.search(r"\bcais\s+(?:a\s+)?norte\b|\bcais\s+do\s+norte\b", clean_question))
     has_south_quays = bool(re.search(r"\bcais\s+(?:a\s+)?sul\b|\bcais\s+do\s+sul\b", clean_question))
     has_secil = "secil" in clean_question
+    mentions_barra = _matches_any(clean_question, ORIGIN_BARRA)
+    mentions_tms2 = _matches_any(clean_question, DEST_TMS2)
+    mentions_autoeuropa = _matches_any(clean_question, DEST_AUTOEUROPA)
+    if mentions_barra and mentions_tms2 and mentions_autoeuropa:
+        answer = (
+            "Da entrada da Barra pelo Canal Norte até ao TMS2 / TMS 2 e à Autoeuropa/Ro-Ro, "
+            "conta com cerca de 1 hora em condições normais. O TMS2 fica antes da Autoeuropa "
+            "na sequência TMS 1 -> TMS 2 -> Autoeuropa/Ro-Ro."
+        )
+        return _route_summary_payload(question, answer, "ROUTE_BARRA_TMS2_AUTOEUROPA_TIME")
+
     if _matches_any(clean_question, ORIGIN_FUNDEADOURO_NORTE) and has_north_quays and has_south_quays and has_secil:
         answer = (
             "Do Fundeadouro Norte para os cais a norte, isto é, de TMS 1 até SAPEC Líquidos, "
@@ -632,7 +643,6 @@ def _route_summary_answer(question: str, clean_question: str) -> dict | None:
         )
         return _route_summary_payload(question, answer, "ROUTE_CANAL_SUL_MULTI_TIME")
 
-    mentions_barra = _matches_any(clean_question, ORIGIN_BARRA)
     mentions_sapec_or_praias = bool(re.search(r"\bsapec\b|\bpraias\s+do\s+sado\b|\bpraias\b", clean_question))
     mentions_fundeadouros = bool(re.search(r"\bfundeadouros?\b|\bfund\s+norte\b|\bfund\s+troia\b", clean_question))
     if mentions_barra and has_secil and mentions_sapec_or_praias and mentions_fundeadouros:

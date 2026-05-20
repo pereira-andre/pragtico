@@ -78,6 +78,15 @@ class RouteTransitAnswerTests(unittest.TestCase):
         self.assertIn("TMS 1 -> Bóia 5CC", answer["answer"])
         self.assertIn("Bóia 5CC -> TMS 2", answer["answer"])
 
+    def test_barra_to_tms2_and_autoeuropa_mentions_both_destinations(self) -> None:
+        answer = route_transit_answer("Quanto tempo demora da barra ao TMS2 e à Autoeuropa?")
+
+        self.assertIsNotNone(answer)
+        self.assertEqual("operational_route_transit", answer["answer_origin"])
+        self.assertIn("TMS2 / TMS 2", answer["answer"])
+        self.assertIn("Autoeuropa", answer["answer"])
+        self.assertIn("1 hora", answer["answer"])
+
     def test_pilot_wording_does_not_override_explicit_route_points(self) -> None:
         answer = route_transit_answer("Como piloto, da entrada da barra ao TMS2 pelo canal norte, quanto falta?")
 

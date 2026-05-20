@@ -1043,6 +1043,27 @@ def _answer_operational_priority_direct(question: str, clean_question: str) -> d
     }
 
 
+def _answer_anchorage_recommendation_direct(question: str, clean_question: str) -> dict | None:
+    if not re.search(r"\bfundeadouros?\b", clean_question):
+        return None
+    asks_recommendation = re.search(r"\b(recomenda|recomendas|recomendarias|melhor|preferivel|preferível)\b", clean_question)
+    high_draft = re.search(r"\b(grande\s+calado|calado\s+(?:superior|acima)|superior\s+a\s+9|acima\s+de\s+9|>\s*9)\b", clean_question)
+    if not (asks_recommendation and high_draft):
+        return None
+
+    answer = (
+        "Para um navio de grande calado superior a 9 metros, recomendo o Fundeadouro Sul / Tróia como referência preferencial: "
+        "é o mais profundo e mais amplo para esse perfil.\n"
+        "- O Fundeadouro Norte pode servir para espera/gestão corrente, mas para grande calado fica mais condicionado.\n"
+        "- Em emergência, a escolha final deve considerar posição real, tráfego, vento, corrente, calado praticável e instrução do VTS/Piloto Coordenador."
+    )
+    return {
+        "answer": answer,
+        "sources": [_direct_source("IT-015_Fundeadouros.txt", "ANCHORAGE_HIGH_DRAFT_RECOMMENDATION", answer, "operational_rule")],
+        "answer_origin": "operational_rule",
+    }
+
+
 def _answer_setubal_culture_direct(question: str, clean_question: str) -> dict | None:
     if re.search(r"\b(distancia|distância|milhas?|quanto tempo|demora|rumo|canal|boia|bóia|pilar|percurso|rota)\b", question, re.IGNORECASE):
         return None
@@ -3774,6 +3795,9 @@ def answer_direct_operational_query(
     priority_answer = _answer_operational_priority_direct(question, clean_question)
     if priority_answer:
         return _attach_operational_diagnostic(priority_answer, question)
+    anchorage_recommendation_answer = _answer_anchorage_recommendation_direct(question, clean_question)
+    if anchorage_recommendation_answer:
+        return _attach_operational_diagnostic(anchorage_recommendation_answer, question)
     culture_answer = _answer_setubal_culture_direct(question, clean_question)
     if culture_answer:
         return _attach_operational_diagnostic(culture_answer, question)

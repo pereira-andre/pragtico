@@ -636,6 +636,19 @@ class OperationalSourcesDirectTests(unittest.TestCase):
         self.assertIn("12 m", payload["answer"])
         self.assertIn("ultrapassa ambos os limites", payload["answer"])
 
+    def test_high_draft_anchorage_recommendation_is_direct(self) -> None:
+        payload = answer_direct_operational_query(
+            "Que fundeadouro recomendas para um navio de grande calado superior a 9 metros?"
+        )
+
+        self.assertIsNotNone(payload)
+        self.assertEqual("operational_rule", payload["answer_origin"])
+        self.assertIn("Fundeadouro Sul / Tróia", payload["answer"])
+        self.assertIn("mais profundo", payload["answer"])
+        self.assertIn("mais amplo", payload["answer"])
+        self.assertIn("Fundeadouro Norte", payload["answer"])
+        self.assertIn("emergência", payload["answer"])
+
     def test_sapec_tps_tgl_high_draft_summary_covers_entry_departure_and_imo_limits(self) -> None:
         payload = answer_direct_operational_query(
             "Como marco SAPEC Sólidos e Líquidos com calado alto, IMO e não-IMO?"
