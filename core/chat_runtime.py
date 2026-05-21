@@ -60,6 +60,7 @@ from domain.chat_actions import (
 )
 from domain.answer_contract import answer_contract_trace, build_response_contract_source
 from domain.chat_response_formatting import add_contextual_response_emojis
+from domain.scope_guard import build_scope_guard_answer, evaluate_scope_guard
 from domain.berth_layout import canonicalize_berth_label
 from domain.berth_profiles import (
     build_berth_profile_answer,
@@ -1228,6 +1229,15 @@ def playground_answer(
     with chat_actor_context(username=username, role=role):
         refresh_knowledge_state(force_reindex=False)
         execution_plan = build_chat_execution_plan(clean_question)
+        scope_guard_decision = evaluate_scope_guard(clean_question, plan=execution_plan)
+        if scope_guard_decision.blocked:
+            answer = build_scope_guard_answer(scope_guard_decision)
+            answer["trace"] = _build_playground_trace(
+                execution_plan=execution_plan,
+                answer_origin=answer["answer_origin"],
+                sources=answer["sources"],
+            )
+            return answer
 
         settings = load_bot_settings()
         if settings.get("auto_trust_positive_feedback", True):
@@ -1708,10 +1718,18 @@ def handle_chat_turn(
                         "answer_origin": "slash_rejected",
                     }
         elif answer is None:
-            answer = answer_direct_operational_query(
-                lookup_question if (is_revision_attempt or lookup_question != clean_question) else clean_question,
+            scope_guard_decision = evaluate_scope_guard(
+                clean_question,
                 plan=execution_plan,
+                history=history,
             )
+            if scope_guard_decision.blocked:
+                answer = build_scope_guard_answer(scope_guard_decision)
+            else:
+                answer = answer_direct_operational_query(
+                    lookup_question if (is_revision_attempt or lookup_question != clean_question) else clean_question,
+                    plan=execution_plan,
+                )
 
         if answer is None:
             if existing_pending:
@@ -2060,6 +2078,8 @@ def handle_chat_turn(
         assistant_channel_metadata = dict(answer.get("channel_metadata") or {})
         if answer.get("operational_diagnostic"):
             assistant_channel_metadata["operational_diagnostic"] = answer.get("operational_diagnostic")
+        if answer.get("scope_guard"):
+            assistant_channel_metadata["scope_guard"] = answer.get("scope_guard")
 
         assistant_message = services.store.append_chat_message(
             username=username,

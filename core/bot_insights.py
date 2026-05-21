@@ -728,6 +728,7 @@ def build_quality_snapshot() -> dict:
         "companion": "Companions/RAG curado",
         "direct_operational": "Decisão operacional direta",
         "full_pipeline": "Pipeline completo",
+        "scope_guard": "Escopo e segurança",
     }
     type_summary: dict[str, dict] = {}
     for item in results:

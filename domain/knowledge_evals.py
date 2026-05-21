@@ -288,6 +288,15 @@ def evaluate_companion_case(case: dict, knowledge_dir: str | Path) -> dict:
         result = answer_direct_operational_query(case["question"]) or {}
         answer = str(result.get("answer") or "")
         answer_origin = str(result.get("answer_origin") or "")
+    elif eval_type == "scope_guard":
+        from core.chat_planner import build_chat_execution_plan
+        from domain.scope_guard import build_scope_guard_answer, evaluate_scope_guard
+
+        plan = build_chat_execution_plan(case["question"])
+        decision = evaluate_scope_guard(case["question"], plan=plan)
+        result = build_scope_guard_answer(decision) if decision.blocked else {}
+        answer = str(result.get("answer") or "")
+        answer_origin = str(result.get("answer_origin") or "")
     else:
         companion = load_document_companion(case["document"], knowledge_dir)
         answer = build_companion_answer(case["question"], companion) if companion else ""
