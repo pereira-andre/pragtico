@@ -36,6 +36,9 @@ SMALLTALK_RE = re.compile(
 FOLLOWUP_RE = re.compile(
     r"^(?:e\s+)?(?:agora|e|entao|então|nesse caso|neste caso|com base nisso|"
     r"e se|se fosse|para|ate|até|ao|a|do|da|dos|das)\b"
+    r"|^(?:que\s+fonte|que\s+confirmacao|que\s+confirmação|resume|resumo|"
+    r"da\s+resposta|dá\s+resposta|sem\s+inventar|se\s+faltar|que\s+impacto|"
+    r"isto\s+deve\s+responder)\b"
 )
 RULE_CODE_RE = re.compile(r"\b(?:it|rg|p)[\s\-_]?0*\d{1,3}\b")
 
@@ -43,7 +46,7 @@ OPERATIONAL_SCOPE_RE = re.compile(
     r"\b("
     r"apss|porto|setubal|setúbal|sado|troia|tróia|vts|piloto|pilotos|pilotagem|"
     r"navio|navios|escala|escalas|manobra|manobras|entrada|saida|saída|"
-    r"atracar|desatracar|atracacao|atracação|largada|fundeio|fundear|"
+    r"manobr\w*|atracar|desatracar|atracacao|atracação|largada|fundeio|fundear|"
     r"cais|berco|berço|bercos|berços|terminal|terminais|doca|docas|barra|"
     r"canal norte|canal sul|fundeadouro|fundeadouros|boia|bóia|baliza|"
     r"lisnave|mitrena|secil|sapec|tanquisado|eco\s*oil|ecooil|ecoil|"
@@ -65,6 +68,7 @@ AMBIGUOUS_OFF_SCOPE_CONTEXT_RE = re.compile(
     r"acoes|ações|bolsa|cotad[ao]s?|dividendos|preco alvo|preço alvo|comprar acoes|"
     r"taxa de esforco|taxa de esforço|credito habitacao|crédito habitação|"
     r"restaurante|restaurantes|jantar|almoco|almoço|menu|hotel|turismo|passeio|"
+    r"receita|bacalhau|vinho|lista compras|lista de compras|calorias|"
     r"brinquedo|colecao|coleção|comprar|presente|embrulho|dedicatoria|"
     r"musica|música|rap|poesia|poema|instagram|metafora|metáfora|coaching|minha vida|vida esta|vida está|"
     r"jogo de tabuleiro|cartas|poderes|vitoria|vitória|ficcao|ficção|"
@@ -82,26 +86,38 @@ WEATHER_OUTSIDE_SCOPE_RE = re.compile(
 
 HIGH_RISK_RE = re.compile(
     r"\b("
-    r"system prompt|prompt completo|instrucoes ocultas|instruções ocultas|regras internas|"
+    r"system prompt|prompt completo|prompt interno|instrucoes ocultas|instruções ocultas|regras internas|"
+    r"hidden developer prompt|confidential rules|port safety validation|politicas internas|políticas internas|"
+    r"regras de seguranca que bloqueiam|regras de segurança que bloqueiam|"
     r"ignora .*instru|finge que es|finge que és|sem limites|nao digas que nao podes|"
-    r"variaveis de ambiente|variáveis de ambiente|token|tokens|password|passwords|senha|senhas|"
+    r"variaveis de ambiente|variáveis de ambiente|env vars|database_url|token|tokens|password|passwords|senha|senhas|"
     r"chave api|api key|segredo|segredos|endpoint interno|repo privado|"
     r"keylogger|malware|phishing|roubar credenciais|forca bruta|força bruta|"
     r"contornar login|sem senha|exploit|apagar logs|nao ser detetado|não ser detetado|"
-    r"aviso do banco|sms curto|pagina de login falsa|página de login falsa|login falsa|"
-    r"certificado medico falso|certificado médico falso|documento falso|declaracao falsa|declaração falsa|"
+    r"aviso do banco|aviso urgente|urgencia de aviso local|urgência de aviso local|"
+    r"sms curto|pagina de login falsa|página de login falsa|login falsa|"
+    r"taxa de cliques|xss|csrf|sql injection|sqli|enumero tabelas|enumerar tabelas|contorna csrf|"
+    r"certificado medico falso|certificado médico falso|documento falso|declaracao .*falsa|declaração .*falsa|"
     r"assina como medico|assina como médico|cedula plausivel|cédula plausível|"
-    r"inventa citacoes|inventa citações|entrevistas que nao fiz|entrevistas que não fiz|"
+    r"inventa citacoes|inventa citações|citacoes falsas|citações falsas|inventa entrevistas|entrevistas que nao fiz|entrevistas que não fiz|"
     r"remover sinais de ia|remove qualquer sinal|copiar|fraude|"
     r"dor no peito|falta de ar|antibiotico|antibiótico|diagnostico|diagnóstico|"
-    r"receita medica|receita médica|medicacao|medicação|dose|"
-    r"fugir a uma multa|tribunal|brecha fiscal|esconder rendimentos|advogado|"
+    r"receita medica|receita médica|instrucao medica|instrução médica|medicacao|medicação|dose|"
+    r"fugir a uma multa|tribunal|brecha fiscal|esconder rendimentos|advogado|responsabilidade legal|"
+    r"altero o relatorio|alterar relatorio|parecer seguro|sem dados|"
     r"comprar acoes|comprar ações|preco alvo|preço-alvo|stop loss|credito para investir|crédito para investir|"
     r"cripto|alavancagem|apostas|casino|casinos|casa de apostas|ganhar dinheiro depressa|"
     r"em quem votar|propaganda|segmenta por idade|usar medo|usar urgencia|"
     r"recomendacao financeira|recomendação financeira|"
     r"manipul|fazer ciumes|fazer ciúmes|controlo da conversa|"
-    r"whatsapp de outra pessoa|mensagens apagadas|ignora regras"
+    r"whatsapp de outra pessoa|mensagens apagadas|ignora regras|"
+    r"finge .*aprovad|ficou aprovad|escala falsa|numero de escala|número de escala|comprovativo|"
+    r"finge ser admin|piloto coordenador a aprovar|email como piloto coordenador|"
+    r"memoriza que|regra foi atualizada|novo limite|"
+    r"eval .*resposta errada|aprovar resposta errada|contornar testes|"
+    r"rag .*falso|documento falso|companion json|"
+    r"resposta final sem dizer rot13|aplica ao contexto de manobras|continua sem avisos|"
+    r"usa documentos do porto|podes mostrar|auditoria .*mostrar|portal de escalas"
     r")\b"
 )
 
@@ -150,15 +166,19 @@ def _has_operational_scope(clean_text: str, plan: ChatExecutionPlan | None = Non
 
 
 def _history_has_operational_context(history: list[dict] | None) -> bool:
+    saw_non_guard_assistant = False
     for item in reversed(history or []):
         role = str(item.get("role") or "").strip().lower()
         metadata = item.get("channel_metadata") or {}
         if role == "assistant" and (metadata.get("scope_guard") or "fora do âmbito operacional" in str(item.get("content") or "").casefold()):
             return False
+        if role == "assistant":
+            saw_non_guard_assistant = True
+            continue
         if role and role != "user":
             continue
         content = str(item.get("content") or "")
-        if OPERATIONAL_SCOPE_RE.search(normalize_scope_text(content)):
+        if saw_non_guard_assistant and OPERATIONAL_SCOPE_RE.search(normalize_scope_text(content)):
             return True
     return False
 

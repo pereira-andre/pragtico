@@ -51,7 +51,10 @@ def test_scope_guard_allows_operational_questions(question: str) -> None:
 
 def test_scope_guard_allows_short_followup_only_with_operational_history() -> None:
     question = "E para Lisboa?"
-    history = [{"role": "user", "content": "Quanto tempo demora da barra até à LISNAVE?"}]
+    history = [
+        {"role": "user", "content": "Quanto tempo demora da barra até à LISNAVE?"},
+        {"role": "assistant", "content": "Da barra até à LISNAVE conta cerca de 1h30 a 2h."},
+    ]
 
     blocked_without_history = evaluate_scope_guard(question, plan=build_chat_execution_plan(question))
     allowed_with_history = evaluate_scope_guard(
