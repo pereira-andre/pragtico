@@ -40,6 +40,8 @@ def test_admin_audit_console_has_non_overlapping_columns() -> None:
 
     assert "grid-template-columns: 132px 112px 92px minmax(150px, 210px) minmax(420px, 1fr);" in stylesheet
     assert "min-width: 1020px;" in stylesheet
+    assert ".admin-audit-log-time span,\n.admin-audit-log-event strong" in stylesheet
+    assert ".admin-audit-log-time {\n  display: grid;" in stylesheet
     assert ".admin-audit-log-detail" in stylesheet
     assert "grid-template-columns: repeat(2, minmax(92px, max-content));" in stylesheet
     assert "overflow-x: auto;" in stylesheet

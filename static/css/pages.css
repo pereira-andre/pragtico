@@ -7889,7 +7889,7 @@ button:hover {
 }
 
 .admin-audit-log-row {
-  min-height: 38px;
+  min-height: 44px;
   padding: 6px 14px;
   border-bottom: 1px solid rgba(139, 163, 190, 0.1);
   color: var(--text);
@@ -7906,9 +7906,8 @@ button:hover {
 }
 
 .admin-audit-log-time {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -7926,6 +7925,7 @@ button:hover {
 }
 
 .admin-audit-log-time strong,
+.admin-audit-log-time span,
 .admin-audit-log-event strong,
 .admin-audit-log-actor,
 .admin-audit-log-request,
@@ -7938,12 +7938,11 @@ button:hover {
 }
 
 .admin-audit-log-time strong {
-  flex: 0 0 auto;
-  max-width: 92px;
+  max-width: 100%;
 }
 
 .admin-audit-log-time span {
-  flex: 1 1 auto;
+  max-width: 100%;
 }
 
 .admin-audit-log-request {
